@@ -14,20 +14,21 @@ use crate::{
     conn_lock,
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk},
+        endpoint::{
+            CorsLsResponse, CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk,
+            ResponseOkLs,
+        },
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
-    model::{
-        user::QueryUser,
-        user::{
-            auth::{AuthUser, BearerToken},
-            same_user,
-            token::{InsertToken, QueryToken, UpdateToken},
-        },
+    model::user::{
+        auth::{AuthUser, BearerToken},
+        same_user,
+        token::{InsertToken, QueryToken, UpdateToken},
+        QueryUser, UserId,
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -65,8 +66,8 @@ pub async fn user_tokens_options(
     _path_params: Path<UserTokensParams>,
     _pagination_params: Query<UserTokensPagination>,
     _query_params: Query<UserTokensQuery>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+) -> Result<CorsLsResponse, HttpError> {
+    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
 }
 
 /// List tokens for a user
@@ -84,9 +85,9 @@ pub async fn user_tokens_get(
     path_params: Path<UserTokensParams>,
     pagination_params: Query<UserTokensPagination>,
     query_params: Query<UserTokensQuery>,
-) -> Result<ResponseOk<JsonTokens>, HttpError> {
+) -> Result<ResponseOkLs<JsonTokens>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
         pagination_params.into_inner(),
@@ -94,7 +95,7 @@ pub async fn user_tokens_get(
         &auth_user,
     )
     .await?;
-    Ok(Get::auth_response_ok(json))
+    Ok(Get::auth_response_ok_ls(json, total_count))
 }
 
 async fn get_ls_inner(
@@ -103,12 +104,34 @@ async fn get_ls_inner(
     pagination_params: UserTokensPagination,
     query_params: UserTokensQuery,
     auth_user: &AuthUser,
-) -> Result<JsonTokens, HttpError> {
+) -> Result<(JsonTokens, TotalCount), HttpError> {
     let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
+    let tokens = get_ls_query(&pagination_params, &query_params, query_user.id)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryToken>(conn_lock!(context))
+        .map_err(resource_not_found_err!(Token, auth_user))?
+        .into_iter()
+        .map(|query_token| query_token.into_json_for_user(auth_user))
+        .collect();
+    let total_count = get_ls_query(&pagination_params, &query_params, query_user.id)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(Token, auth_user))?
+        .try_into()?;
+
+    Ok((tokens, total_count))
+}
+
+fn get_ls_query<'q>(
+    pagination_params: &UserTokensPagination,
+    query_params: &'q UserTokensQuery,
+    user_id: UserId,
+) -> schema::token::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::token::table
-        .filter(schema::token::user_id.eq(query_user.id))
+        .filter(schema::token::user_id.eq(user_id))
         .into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
@@ -122,7 +145,7 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         UserTokensSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => {
                 query.order((schema::token::name.asc(), schema::token::expiration.asc()))
@@ -131,17 +154,7 @@ async fn get_ls_inner(
                 query.order((schema::token::name.desc(), schema::token::expiration.desc()))
             },
         },
-    };
-
-    let user = &query_user;
-    Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryToken>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Token, user))?
-        .into_iter()
-        .map(|query_token| query_token.into_json_for_user(user))
-        .collect())
+    }
 }
 
 /// Create a token

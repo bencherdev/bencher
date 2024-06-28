@@ -18,7 +18,7 @@ const description =
 	"Sign up for Bencher! Add continuous benchmarking to your project and catch performance regressions in CI.";
 ---
 
-<BaseLayout title={title} description={description} isConsole={true}>
+<BaseLayout title={title} description={description}>
   <ConsoleNavbar slot="navbar" apiUrl={apiUrl} params={params} />
   <AnonRedirect client:only="solid-js" path={redirect ?? "/auth/login"} />
   <div class="is-widescreen">

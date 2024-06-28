@@ -903,7 +903,7 @@ jobs:
             git push
 
   # UI Netlify
-  deploy_ui_netlify_dev:
+  deploy_console_netlify_dev:
     name: Deploy Console UI to Netlify Dev
     runs-on: ubuntu-latest
     needs: deploy_api_fly_dev
@@ -957,12 +957,13 @@ jobs:
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          DEPLOY_MESSAGE: "${{ github.event.head_commit.message }}"
         run: |
           npx netlify-cli \
           deploy \
           --prod \
           --alias ${GITHUB_REF#refs/*/} \
-          --message "${{ github.event.head_commit.message }}" \
+          --message '${{ env.DEPLOY_MESSAGE }}' \
           --json \
           | tee netlify.json
       - uses: rui314/setup-mold@v1

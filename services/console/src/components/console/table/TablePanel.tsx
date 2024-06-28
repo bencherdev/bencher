@@ -147,6 +147,7 @@ const TablePanel = (props: Props) => {
 							: TableState.END
 						: TableState.OK,
 				);
+				console.log(resp?.headers?.["x-total-count"]);
 				return resp?.data;
 			})
 			.catch((error) => {
