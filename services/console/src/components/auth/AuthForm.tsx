@@ -147,7 +147,13 @@ const AuthForm = (props: Props) => {
 	});
 
 	return (
-		<form class="box">
+		<form
+			class="box"
+			onSubmit={(e) => {
+				e.preventDefault();
+				handleSubmit();
+			}}
+		>
 			{props.newUser && (
 				<Field
 					kind={FieldKind.INPUT}
