@@ -877,6 +877,7 @@ jobs:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        fetch-depth: 0
       - name: Download Litestream Artifact
         uses: actions/download-artifact@v4
         with:
