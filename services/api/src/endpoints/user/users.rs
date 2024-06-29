@@ -13,7 +13,7 @@ use crate::{
     conn_lock,
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Patch, ResponseOk},
+        endpoint::{CorsLsResponse, CorsResponse, Get, Patch, ResponseOk, ResponseOkLs},
         Endpoint,
     },
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
@@ -23,7 +23,7 @@ use crate::{
         same_user, QueryUser, UpdateUser,
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 pub type UsersPagination = JsonPagination<UsersSort>;
@@ -54,8 +54,8 @@ pub async fn users_options(
     _rqctx: RequestContext<ApiContext>,
     _pagination_params: Query<UsersPagination>,
     _query_params: Query<UsersQuery>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into()]))
+) -> Result<CorsLsResponse, HttpError> {
+    Ok(Endpoint::cors_ls(&[Get.into()]))
 }
 
 /// List users
@@ -72,22 +72,43 @@ pub async fn users_get(
     bearer_token: BearerToken,
     pagination_params: Query<UsersPagination>,
     query_params: Query<UsersQuery>,
-) -> Result<ResponseOk<JsonUsers>, HttpError> {
+) -> Result<ResponseOkLs<JsonUsers>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         pagination_params.into_inner(),
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::auth_response_ok(json))
+    Ok(Get::auth_response_ok_ls(json, total_count))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
     pagination_params: UsersPagination,
     query_params: UsersQuery,
-) -> Result<JsonUsers, HttpError> {
+) -> Result<(JsonUsers, TotalCount), HttpError> {
+    let users = get_ls_query(&pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryUser>(conn_lock!(context))
+        .map_err(resource_not_found_err!(User))?
+        .into_iter()
+        .map(QueryUser::into_json)
+        .collect();
+    let total_count = get_ls_query(&pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(User))?
+        .try_into()?;
+
+    Ok((users, total_count))
+}
+
+fn get_ls_query<'q>(
+    pagination_params: &UsersPagination,
+    query_params: &'q UsersQuery,
+) -> schema::user::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::user::table.into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
@@ -102,7 +123,7 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         UsersSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => {
                 query.order((schema::user::name.asc(), schema::user::slug.asc()))
@@ -111,16 +132,7 @@ async fn get_ls_inner(
                 query.order((schema::user::name.desc(), schema::user::slug.desc()))
             },
         },
-    };
-
-    Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryUser>(conn_lock!(context))
-        .map_err(resource_not_found_err!(User))?
-        .into_iter()
-        .map(QueryUser::into_json)
-        .collect())
+    }
 }
 
 #[derive(Deserialize, JsonSchema)]
