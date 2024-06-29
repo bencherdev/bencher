@@ -1,4 +1,4 @@
-import type { Accessor } from "solid-js";
+import { createMemo, type Accessor } from "solid-js";
 
 export enum PaginationSize {
 	SMALL = "is-small",
@@ -12,8 +12,13 @@ const Pagination = (props: {
 	data_len: Accessor<undefined | number>;
 	per_page: Accessor<number>;
 	page: Accessor<number>;
+	total_count: Accessor<number>;
 	handlePage: (page: number) => void;
 }) => {
+	const max_page = createMemo(() =>
+		Math.ceil(props.total_count() / props.per_page()),
+	);
+
 	return (
 		<nav
 			class={`pagination is-centered is-rounded ${props.size}`}
@@ -78,7 +83,7 @@ const Pagination = (props: {
 						{props.page() ? props.page() : 0}
 					</button>
 				</li>
-				{props.data_len() === props.per_page() && (
+				{props.page() < max_page() && (
 					<li>
 						<button
 							class="pagination-link"
@@ -90,6 +95,26 @@ const Pagination = (props: {
 							}}
 						>
 							{props.page() + 1}
+						</button>
+					</li>
+				)}
+				{props.page() < max_page() - 1 && (
+					<li>
+						<span class="pagination-ellipsis">&hellip;</span>
+					</li>
+				)}
+				{props.page() < max_page() - 1 && (
+					<li>
+						<button
+							class="pagination-link"
+							type="button"
+							title={`Go to last page ${max_page()}`}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								props.handlePage(max_page());
+							}}
+						>
+							{max_page()}
 						</button>
 					</li>
 				)}

@@ -2,7 +2,7 @@ import type { Params } from "astro";
 import type { FieldValue, FieldValueHandler } from "../Field";
 import { For, createMemo, createResource, createSignal } from "solid-js";
 import Pagination, { PaginationSize } from "../../site/Pagination";
-import { httpGet } from "../../../util/http";
+import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
 
 export type RadioValue = string;
@@ -30,6 +30,7 @@ const Radio = (props: Props) => {
 	const per_page = createMemo(() => 8);
 	const [page, setPage] = createSignal(1);
 
+	const [totalCount, setTotalCount] = createSignal(0);
 	const fetcher = createMemo(() => {
 		return {
 			url: props.config?.url(params(), per_page(), page()),
@@ -41,7 +42,10 @@ const Radio = (props: Props) => {
 		token: undefined | string;
 	}) => {
 		return await httpGet(props.apiUrl, fetcher.url, fetcher.token)
-			.then((resp) => resp?.data)
+			.then((resp) => {
+				setTotalCount(resp?.headers?.[X_TOTAL_COUNT]);
+				return resp?.data;
+			})
 			.catch((error) => {
 				console.error(error);
 				return [];
@@ -109,6 +113,7 @@ const Radio = (props: Props) => {
 						data_len={dataLength}
 						per_page={per_page}
 						page={page}
+						total_count={totalCount}
 						handlePage={setPage}
 					/>
 				</div>

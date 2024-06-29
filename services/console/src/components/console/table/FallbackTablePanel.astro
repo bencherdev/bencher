@@ -1,9 +1,6 @@
 ---
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import FallbackTable from "./FallbackTable";
-
-const DEFAULT_PER_PAGE = 8;
-const DEFAULT_PAGE = 1;
 ---
 
 <div>
@@ -20,8 +17,9 @@ const DEFAULT_PAGE = 1;
         <Pagination
             size={PaginationSize.REGULAR}
             data_len={() => 0}
-            per_page={() => DEFAULT_PER_PAGE}
-            page={() => DEFAULT_PAGE}
+            per_page={() => 8}
+            page={() => 1}
+            total_count={() => 0}
             handlePage={(_page) => {}}
         />
       </div>

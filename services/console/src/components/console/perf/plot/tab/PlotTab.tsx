@@ -62,6 +62,12 @@ export interface Props {
 	testbeds_page: Accessor<number>;
 	benchmarks_page: Accessor<number>;
 	plots_page: Accessor<number>;
+	// Total Count
+	reports_total_count: Accessor<number>;
+	branches_total_count: Accessor<number>;
+	testbeds_total_count: Accessor<number>;
+	benchmarks_total_count: Accessor<number>;
+	plots_total_count: Accessor<number>;
 	// Search
 	reports_start_date: Accessor<undefined | string>;
 	reports_end_date: Accessor<undefined | string>;
@@ -144,6 +150,23 @@ const PlotTab = (props: Props) => {
 				return console.error("No handle for tab", props.tab(), page);
 		}
 	};
+
+	const totalCount = createMemo(() => {
+		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.reports_total_count();
+			case PerfTab.BRANCHES:
+				return props.branches_total_count();
+			case PerfTab.TESTBEDS:
+				return props.testbeds_total_count();
+			case PerfTab.BENCHMARKS:
+				return props.benchmarks_total_count();
+			case PerfTab.PLOTS:
+				return props.plots_total_count();
+			default:
+				return 0;
+		}
+	});
 
 	const handleChecked = (index?: number, uuid?: string) => {
 		switch (props.tab()) {
@@ -333,6 +356,7 @@ const PlotTab = (props: Props) => {
 								data_len={tabLength}
 								per_page={perPage}
 								page={page}
+								total_count={totalCount}
 								handlePage={handlePage}
 							/>
 							<br />

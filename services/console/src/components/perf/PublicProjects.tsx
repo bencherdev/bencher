@@ -6,9 +6,10 @@ import {
 	createResource,
 	Switch,
 	Match,
+	createSignal,
 } from "solid-js";
 import type { JsonProject } from "../../types/bencher";
-import { httpGet } from "../../util/http";
+import { X_TOTAL_COUNT, httpGet } from "../../util/http";
 import { useSearchParams } from "../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../util/valid";
 import Pagination, { PaginationSize } from "../site/Pagination";
@@ -56,6 +57,7 @@ const PublicProjects = (props: Props) => {
 	);
 	const search = createMemo(() => searchParams[SEARCH_PARAM]);
 
+	const [totalCount, setTotalCount] = createSignal(0);
 	const pagination = createMemo(() => {
 		return {
 			per_page: per_page(),
@@ -84,7 +86,10 @@ const PublicProjects = (props: Props) => {
 		}
 		const path = `/v0/projects?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, null)
-			.then((resp) => resp?.data)
+			.then((resp) => {
+				setTotalCount(resp?.headers?.[X_TOTAL_COUNT]);
+				return resp?.data;
+			})
 			.catch((error) => {
 				console.error(error);
 				return EMPTY_ARRAY;
@@ -173,6 +178,7 @@ const PublicProjects = (props: Props) => {
 					data_len={projectsLength}
 					per_page={per_page}
 					page={page}
+					total_count={totalCount}
 					handlePage={handlePage}
 				/>
 			</div>

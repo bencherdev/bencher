@@ -1,8 +1,5 @@
 ---
 import Pagination, { PaginationSize } from "../../site/Pagination";
-
-const DEFAULT_PER_PAGE = 4;
-const DEFAULT_PAGE = 1;
 ---
 
 <div class="columns">
@@ -73,8 +70,9 @@ const DEFAULT_PAGE = 1;
 							<Pagination
 								size={PaginationSize.SMALL}
 								data_len={() => 0}
-                                per_page={() => DEFAULT_PER_PAGE}
-                                page={() => DEFAULT_PAGE}
+                                per_page={() => 4}
+                                page={() => 1}
+                                total_count={() => 0}
                                 handlePage={(_page) => {}}
 							/>
 							<br />

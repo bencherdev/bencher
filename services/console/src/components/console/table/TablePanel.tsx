@@ -13,7 +13,7 @@ import {
 	resourcePlural,
 } from "../../../config/types";
 import { authUser } from "../../../util/auth";
-import { httpGet } from "../../../util/http";
+import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
 import { DEBOUNCE_DELAY, validJwt, validU32 } from "../../../util/valid";
@@ -26,6 +26,7 @@ import {
 	timeToDate,
 	timeToDateOnlyIso,
 } from "../../../util/convert";
+import { create } from "d3";
 
 const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
@@ -114,6 +115,7 @@ const TablePanel = (props: Props) => {
 	});
 
 	const [state, setState] = createSignal(TableState.LOADING);
+	const [totalCount, setTotalCount] = createSignal(0);
 	const getData = async (fetcher: {
 		bencher_valid: InitOutput;
 		searchQuery: {
@@ -147,7 +149,7 @@ const TablePanel = (props: Props) => {
 							: TableState.END
 						: TableState.OK,
 				);
-				console.log(resp?.headers?.["x-total-count"]);
+				setTotalCount(resp?.headers?.[X_TOTAL_COUNT]);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -223,6 +225,7 @@ const TablePanel = (props: Props) => {
 						data_len={tableDataLength}
 						per_page={per_page}
 						page={page}
+						total_count={totalCount}
 						handlePage={handlePage}
 					/>
 				</div>

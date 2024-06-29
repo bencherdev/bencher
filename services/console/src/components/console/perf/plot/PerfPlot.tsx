@@ -70,6 +70,11 @@ export interface Props {
 	testbeds_page: Accessor<number>;
 	benchmarks_page: Accessor<number>;
 	plots_page: Accessor<number>;
+	reports_total_count: Accessor<number>;
+	branches_total_count: Accessor<number>;
+	testbeds_total_count: Accessor<number>;
+	benchmarks_total_count: Accessor<number>;
+	plots_total_count: Accessor<number>;
 	reports_start_date: Accessor<undefined | string>;
 	reports_end_date: Accessor<undefined | string>;
 	branches_search: Accessor<undefined | string>;
@@ -218,6 +223,11 @@ const PerfPlot = (props: Props) => {
 							testbeds_page={props.testbeds_page}
 							benchmarks_page={props.benchmarks_page}
 							plots_page={props.plots_page}
+							reports_total_count={props.reports_total_count}
+							branches_total_count={props.branches_total_count}
+							testbeds_total_count={props.testbeds_total_count}
+							benchmarks_total_count={props.benchmarks_total_count}
+							plots_total_count={props.plots_total_count}
 							reports_start_date={props.reports_start_date}
 							reports_end_date={props.reports_end_date}
 							branches_search={props.branches_search}

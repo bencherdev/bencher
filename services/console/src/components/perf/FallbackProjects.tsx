@@ -2,7 +2,6 @@ import { For } from "solid-js";
 import Pagination, { PaginationSize } from "../site/Pagination";
 
 const DEFAULT_PER_PAGE = 8;
-const DEFAULT_PAGE = 1;
 
 const FallbackProjects = () => {
 	return (
@@ -40,7 +39,8 @@ const FallbackProjects = () => {
 					size={PaginationSize.REGULAR}
 					data_len={() => 0}
 					per_page={() => DEFAULT_PER_PAGE}
-					page={() => DEFAULT_PAGE}
+					page={() => 1}
+					total_count={() => 0}
 					handlePage={(_page) => {}}
 				/>
 			</div>

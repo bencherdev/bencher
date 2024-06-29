@@ -33,7 +33,7 @@ import {
 	timeToDate,
 	timeToDateOnlyIso,
 } from "../../../util/convert";
-import { httpGet } from "../../../util/http";
+import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
 import {
 	MAX_NOTIFY_TIMEOUT,
 	NOTIFY_TIMEOUT_PARAM,
@@ -616,6 +616,12 @@ const PerfPanel = (props: Props) => {
 	>([]);
 	const [plots_tab, setPlotsTab] = createStore<TabList<JsonPlot>>([]);
 
+	const [reportsTotalCount, setReportsTotalCount] = createSignal(0);
+	const [branchesTotalCount, setBranchesTotalCount] = createSignal(0);
+	const [testbedsTotalCount, setTestbedsTotalCount] = createSignal(0);
+	const [benchmarksTotalCount, setBenchmarksTotalCount] = createSignal(0);
+	const [plotsTotalCount, setPlotsTotalCount] = createSignal(0);
+
 	// Resource tabs data: Reports, Branches, Testbeds, Benchmarks, Plots
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
@@ -629,6 +635,7 @@ const PerfPanel = (props: Props) => {
 			refresh: number;
 			token: string;
 		},
+		totalCount: (headers: object) => void,
 	) {
 		const EMPTY_ARRAY: T[] = [];
 		if (!fetcher.project_slug) {
@@ -663,6 +670,7 @@ const PerfPanel = (props: Props) => {
 		}/${perfTab}?${search_params.toString()}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
+				totalCount(resp?.headers);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -683,7 +691,9 @@ const PerfPanel = (props: Props) => {
 		};
 	});
 	const [reports_data] = createResource(reports_fetcher, async (fetcher) =>
-		getPerfTab<JsonReport>(PerfTab.REPORTS, fetcher),
+		getPerfTab<JsonReport>(PerfTab.REPORTS, fetcher, (headers) =>
+			setReportsTotalCount(headers?.[X_TOTAL_COUNT]),
+		),
 	);
 	createEffect(() => {
 		const data = reports_data();
@@ -718,7 +728,9 @@ const PerfPanel = (props: Props) => {
 		};
 	});
 	const [branches_data] = createResource(branches_fetcher, async (fetcher) =>
-		getPerfTab<JsonBranch>(PerfTab.BRANCHES, fetcher),
+		getPerfTab<JsonBranch>(PerfTab.BRANCHES, fetcher, (headers) =>
+			setBranchesTotalCount(headers?.[X_TOTAL_COUNT]),
+		),
 	);
 	createEffect(() => {
 		const data = branches_data();
@@ -738,7 +750,9 @@ const PerfPanel = (props: Props) => {
 		};
 	});
 	const [testbeds_data] = createResource(testbeds_fetcher, async (fetcher) =>
-		getPerfTab<JsonTestbed>(PerfTab.TESTBEDS, fetcher),
+		getPerfTab<JsonTestbed>(PerfTab.TESTBEDS, fetcher, (headers) =>
+			setTestbedsTotalCount(headers?.[X_TOTAL_COUNT]),
+		),
 	);
 	createEffect(() => {
 		const data = testbeds_data();
@@ -759,7 +773,10 @@ const PerfPanel = (props: Props) => {
 	});
 	const [benchmarks_data] = createResource(
 		benchmarks_fetcher,
-		async (fetcher) => getPerfTab<JsonBenchmark>(PerfTab.BENCHMARKS, fetcher),
+		async (fetcher) =>
+			getPerfTab<JsonBenchmark>(PerfTab.BENCHMARKS, fetcher, (headers) =>
+				setBenchmarksTotalCount(headers?.[X_TOTAL_COUNT]),
+			),
 	);
 	createEffect(() => {
 		const data = benchmarks_data();
@@ -779,7 +796,9 @@ const PerfPanel = (props: Props) => {
 		};
 	});
 	const [plots_data] = createResource(plots_fetcher, async (fetcher) =>
-		getPerfTab<JsonPlot>(PerfTab.PLOTS, fetcher),
+		getPerfTab<JsonPlot>(PerfTab.PLOTS, fetcher, (headers) =>
+			setPlotsTotalCount(headers?.[X_TOTAL_COUNT]),
+		),
 	);
 	createEffect(() => {
 		const data = plots_data();
@@ -1112,6 +1131,11 @@ const PerfPanel = (props: Props) => {
 				testbeds_page={testbeds_page}
 				benchmarks_page={benchmarks_page}
 				plots_page={plots_page}
+				reports_total_count={reportsTotalCount}
+				branches_total_count={branchesTotalCount}
+				testbeds_total_count={testbedsTotalCount}
+				benchmarks_total_count={benchmarksTotalCount}
+				plots_total_count={plotsTotalCount}
 				reports_start_date={reports_start_date}
 				reports_end_date={reports_end_date}
 				branches_search={branches_search}

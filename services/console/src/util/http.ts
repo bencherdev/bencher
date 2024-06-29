@@ -1,5 +1,7 @@
 import axios from "axios";
 
+export const X_TOTAL_COUNT = "x-total-count";
+
 enum HttpMethod {
 	GET = "GET",
 	POST = "POST",
