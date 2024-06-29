@@ -14,12 +14,10 @@ const AUTH_HEADERS: &str = "Content-Type, Authorization";
 const EXPOSE_HEADERS: &str = "X-Total-Count";
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub struct CorsHeaders {
-    #[serde(rename = "Access-Control-Allow-Origin")]
     pub access_control_allow_origin: String,
-    #[serde(rename = "Access-Control-Allow-Methods")]
     pub access_control_allow_methods: String,
-    #[serde(rename = "Access-Control-Allow-Headers")]
     pub access_control_allow_headers: String,
 }
 
@@ -67,16 +65,12 @@ where
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub struct CorsLsHeaders {
-    #[serde(rename = "Access-Control-Allow-Origin")]
     pub access_control_allow_origin: String,
-    #[serde(rename = "Access-Control-Allow-Methods")]
     pub access_control_allow_methods: String,
-    #[serde(rename = "Access-Control-Allow-Headers")]
     pub access_control_allow_headers: String,
-    #[serde(rename = "Access-Control-Expose-Headers")]
     pub access_control_expose_headers: String,
-    #[serde(rename = "X-Total-Count")]
     pub x_total_count: String,
 }
 
