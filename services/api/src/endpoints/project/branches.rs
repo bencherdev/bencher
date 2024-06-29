@@ -17,7 +17,8 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+            CorsLsResponse, CorsResponse, Delete, Get, Patch, Post, ResponseCreated,
+            ResponseDeleted, ResponseOk, ResponseOkLs,
         },
         Endpoint,
     },
@@ -31,7 +32,7 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -42,7 +43,7 @@ pub struct ProjBranchesParams {
 
 pub type ProjBranchesPagination = JsonPagination<ProjBranchesSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjBranchesSort {
     /// Sort by branch name.
@@ -50,7 +51,7 @@ pub enum ProjBranchesSort {
     Name,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ProjBranchesQuery {
     /// Filter by branch name, exact match.
     pub name: Option<BranchName>,
@@ -69,8 +70,8 @@ pub async fn proj_branches_options(
     _path_params: Path<ProjBranchesParams>,
     _pagination_params: Query<ProjBranchesPagination>,
     _query_params: Query<ProjBranchesQuery>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+) -> Result<CorsLsResponse, HttpError> {
+    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
 }
 
 /// List branches for a project
@@ -89,9 +90,9 @@ pub async fn proj_branches_get(
     path_params: Path<ProjBranchesParams>,
     pagination_params: Query<ProjBranchesPagination>,
     query_params: Query<ProjBranchesQuery>,
-) -> Result<ResponseOk<JsonBranches>, HttpError> {
+) -> Result<ResponseOkLs<JsonBranches>, HttpError> {
     let auth_user = AuthUser::new_pub(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
@@ -99,7 +100,7 @@ pub async fn proj_branches_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
 }
 
 async fn get_ls_inner(
@@ -108,7 +109,7 @@ async fn get_ls_inner(
     path_params: ProjBranchesParams,
     pagination_params: ProjBranchesPagination,
     query_params: ProjBranchesQuery,
-) -> Result<JsonBranches, HttpError> {
+) -> Result<(JsonBranches, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
@@ -116,7 +117,47 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let mut query = QueryBranch::belonging_to(&query_project).into_boxed();
+    let branches = conn_lock!(context, |conn| get_ls_query(
+        &query_project,
+        &pagination_params,
+        &query_params
+    )
+    .offset(pagination_params.offset())
+    .limit(pagination_params.limit())
+    .load::<QueryBranch>(conn)
+    .map_err(resource_not_found_err!(
+        Branch,
+        (&query_project, &pagination_params, &query_params)
+    ))?
+    .into_iter()
+    .filter_map(|branch| match branch.into_json(conn) {
+        Ok(branch) => Some(branch),
+        Err(err) => {
+            debug_assert!(false, "{err}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&err);
+            None
+        },
+    })
+    .collect());
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Branch,
+            (&query_project, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((branches, total_count))
+}
+
+fn get_ls_query<'q>(
+    query_project: &'q QueryProject,
+    pagination_params: &ProjBranchesPagination,
+    query_params: &'q ProjBranchesQuery,
+) -> schema::branch::BoxedQuery<'q, diesel::sqlite::Sqlite> {
+    let mut query = QueryBranch::belonging_to(query_project).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::branch::name.eq(name));
@@ -130,29 +171,12 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         ProjBranchesSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::branch::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::branch::name.desc()),
         },
-    };
-
-    conn_lock!(context, |conn| Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryBranch>(conn)
-        .map_err(resource_not_found_err!(Branch, &query_project))?
-        .into_iter()
-        .filter_map(|branch| match branch.into_json(conn) {
-            Ok(branch) => Some(branch),
-            Err(err) => {
-                debug_assert!(false, "{err}");
-                #[cfg(feature = "sentry")]
-                sentry::capture_error(&err);
-                None
-            },
-        })
-        .collect()))
+    }
 }
 
 /// Create a branch

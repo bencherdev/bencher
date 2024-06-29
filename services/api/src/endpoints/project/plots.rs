@@ -16,21 +16,21 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+            CorsLsResponse, CorsResponse, Delete, Get, Patch, Post, ResponseCreated,
+            ResponseDeleted, ResponseOk, ResponseOkLs,
         },
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
-    model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
             plot::{InsertPlot, QueryPlot, UpdatePlot},
             QueryProject,
         },
-        user::auth::BearerToken,
+        user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -41,7 +41,7 @@ pub struct ProjPlotsParams {
 
 pub type ProjPlotsPagination = JsonPagination<ProjPlotsSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjPlotsSort {
     /// Sort by plot index.
@@ -51,7 +51,7 @@ pub enum ProjPlotsSort {
     Title,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ProjPlotsQuery {
     /// Filter by plot title, exact match.
     pub title: Option<ResourceName>,
@@ -70,8 +70,8 @@ pub async fn proj_plots_options(
     _path_params: Path<ProjPlotsParams>,
     _pagination_params: Query<ProjPlotsPagination>,
     _query_params: Query<ProjPlotsQuery>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+) -> Result<CorsLsResponse, HttpError> {
+    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
 }
 
 /// List plots for a project
@@ -90,9 +90,9 @@ pub async fn proj_plots_get(
     path_params: Path<ProjPlotsParams>,
     pagination_params: Query<ProjPlotsPagination>,
     query_params: Query<ProjPlotsQuery>,
-) -> Result<ResponseOk<JsonPlots>, HttpError> {
+) -> Result<ResponseOkLs<JsonPlots>, HttpError> {
     let auth_user = AuthUser::new_pub(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
@@ -100,7 +100,7 @@ pub async fn proj_plots_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
 }
 
 async fn get_ls_inner(
@@ -109,7 +109,7 @@ async fn get_ls_inner(
     path_params: ProjPlotsParams,
     pagination_params: ProjPlotsPagination,
     query_params: ProjPlotsQuery,
-) -> Result<JsonPlots, HttpError> {
+) -> Result<(JsonPlots, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
@@ -117,6 +117,48 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
+    let plots = conn_lock!(context, |conn| get_ls_query(
+        &query_project,
+        &pagination_params,
+        &query_params
+    )
+    .offset(pagination_params.offset())
+    .limit(pagination_params.limit())
+    .load::<QueryPlot>(conn)
+    .map_err(resource_not_found_err!(
+        Plot,
+        (&query_project, &pagination_params, &query_params)
+    ))?
+    .into_iter()
+    .filter_map(
+        |plot| match plot.into_json_for_project(conn, &query_project) {
+            Ok(plot) => Some(plot),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+                None
+            },
+        }
+    )
+    .collect());
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Plot,
+            (&query_project, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((plots, total_count))
+}
+
+fn get_ls_query<'q>(
+    query_project: &'q QueryProject,
+    pagination_params: &ProjPlotsPagination,
+    query_params: &'q ProjPlotsQuery,
+) -> schema::plot::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = QueryPlot::belonging_to(&query_project).into_boxed();
 
     if let Some(title) = query_params.title.as_ref() {
@@ -131,7 +173,7 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         ProjPlotsSort::Index => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::plot::rank.asc()),
             Some(JsonDirection::Desc) => query.order(schema::plot::rank.desc()),
@@ -140,26 +182,7 @@ async fn get_ls_inner(
             Some(JsonDirection::Asc) | None => query.order(schema::plot::title.asc()),
             Some(JsonDirection::Desc) => query.order(schema::plot::title.desc()),
         },
-    };
-
-    conn_lock!(context, |conn| Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryPlot>(conn)
-        .map_err(resource_not_found_err!(Plot, &query_project))?
-        .into_iter()
-        .filter_map(
-            |plot| match plot.into_json_for_project(conn, &query_project) {
-                Ok(plot) => Some(plot),
-                Err(err) => {
-                    debug_assert!(false, "{err}");
-                    #[cfg(feature = "sentry")]
-                    sentry::capture_error(&err);
-                    None
-                },
-            }
-        )
-        .collect()))
+    }
 }
 
 /// Create a plot

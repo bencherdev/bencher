@@ -16,21 +16,21 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+            CorsLsResponse, CorsResponse, Delete, Get, Patch, Post, ResponseCreated,
+            ResponseDeleted, ResponseOk, ResponseOkLs,
         },
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
-    model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
             testbed::{InsertTestbed, QueryTestbed, UpdateTestbed},
             QueryProject,
         },
-        user::auth::BearerToken,
+        user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -41,7 +41,7 @@ pub struct ProjTestbedsParams {
 
 pub type ProjTestbedsPagination = JsonPagination<ProjTestbedsSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjTestbedsSort {
     /// Sort by testbed name.
@@ -49,7 +49,7 @@ pub enum ProjTestbedsSort {
     Name,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ProjTestbedsQuery {
     /// Filter by testbed name, exact match.
     pub name: Option<ResourceName>,
@@ -68,8 +68,8 @@ pub async fn proj_testbeds_options(
     _path_params: Path<ProjTestbedsParams>,
     _pagination_params: Query<ProjTestbedsPagination>,
     _query_params: Query<ProjTestbedsQuery>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+) -> Result<CorsLsResponse, HttpError> {
+    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
 }
 
 /// List testbeds for a project
@@ -88,9 +88,9 @@ pub async fn proj_testbeds_get(
     path_params: Path<ProjTestbedsParams>,
     pagination_params: Query<ProjTestbedsPagination>,
     query_params: Query<ProjTestbedsQuery>,
-) -> Result<ResponseOk<JsonTestbeds>, HttpError> {
+) -> Result<ResponseOkLs<JsonTestbeds>, HttpError> {
     let auth_user = AuthUser::new_pub(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
@@ -98,7 +98,7 @@ pub async fn proj_testbeds_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
 }
 
 async fn get_ls_inner(
@@ -107,7 +107,7 @@ async fn get_ls_inner(
     path_params: ProjTestbedsParams,
     pagination_params: ProjTestbedsPagination,
     query_params: ProjTestbedsQuery,
-) -> Result<JsonTestbeds, HttpError> {
+) -> Result<(JsonTestbeds, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
@@ -115,7 +115,35 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let mut query = QueryTestbed::belonging_to(&query_project).into_boxed();
+    let testbeds = get_ls_query(&query_project, &pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryTestbed>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Testbed,
+            (&query_project, &pagination_params, &query_params)
+        ))?
+        .into_iter()
+        .map(|testbed| testbed.into_json_for_project(&query_project))
+        .collect();
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Testbed,
+            (&query_project, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((testbeds, total_count))
+}
+
+fn get_ls_query<'q>(
+    query_project: &'q QueryProject,
+    pagination_params: &ProjTestbedsPagination,
+    query_params: &'q ProjTestbedsQuery,
+) -> schema::testbed::BoxedQuery<'q, diesel::sqlite::Sqlite> {
+    let mut query = QueryTestbed::belonging_to(query_project).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::testbed::name.eq(name));
@@ -129,21 +157,12 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         ProjTestbedsSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::testbed::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::testbed::name.desc()),
         },
-    };
-
-    Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryTestbed>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Testbed, &query_project))?
-        .into_iter()
-        .map(|testbed| testbed.into_json_for_project(&query_project))
-        .collect())
+    }
 }
 
 /// Create a testbed

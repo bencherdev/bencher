@@ -16,7 +16,8 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+            CorsLsResponse, CorsResponse, Delete, Get, Patch, Post, ResponseCreated,
+            ResponseDeleted, ResponseOk, ResponseOkLs,
         },
         Endpoint,
     },
@@ -29,7 +30,7 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -40,7 +41,7 @@ pub struct ProjBenchmarksParams {
 
 pub type ProjBenchmarksPagination = JsonPagination<ProjBenchmarksSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjBenchmarksSort {
     /// Sort by benchmark name.
@@ -48,7 +49,7 @@ pub enum ProjBenchmarksSort {
     Name,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ProjBenchmarksQuery {
     /// Filter by benchmark name, exact match.
     pub name: Option<BenchmarkName>,
@@ -67,8 +68,8 @@ pub async fn proj_benchmarks_options(
     _path_params: Path<ProjBenchmarksParams>,
     _pagination_params: Query<ProjBenchmarksPagination>,
     _query_params: Query<ProjBenchmarksQuery>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+) -> Result<CorsLsResponse, HttpError> {
+    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
 }
 
 /// List benchmarks for a project
@@ -87,9 +88,9 @@ pub async fn proj_benchmarks_get(
     path_params: Path<ProjBenchmarksParams>,
     pagination_params: Query<ProjBenchmarksPagination>,
     query_params: Query<ProjBenchmarksQuery>,
-) -> Result<ResponseOk<JsonBenchmarks>, HttpError> {
+) -> Result<ResponseOkLs<JsonBenchmarks>, HttpError> {
     let auth_user = AuthUser::new_pub(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
@@ -97,7 +98,7 @@ pub async fn proj_benchmarks_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
 }
 
 async fn get_ls_inner(
@@ -106,7 +107,7 @@ async fn get_ls_inner(
     path_params: ProjBenchmarksParams,
     pagination_params: ProjBenchmarksPagination,
     query_params: ProjBenchmarksQuery,
-) -> Result<JsonBenchmarks, HttpError> {
+) -> Result<(JsonBenchmarks, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
@@ -114,6 +115,34 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
+    let benchmarks = get_ls_query(&query_project, &pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryBenchmark>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Benchmark,
+            (&query_project, &pagination_params, &query_params)
+        ))?
+        .into_iter()
+        .map(|benchmark| benchmark.into_json_for_project(&query_project))
+        .collect();
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Plot,
+            (&query_project, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((benchmarks, total_count))
+}
+
+fn get_ls_query<'q>(
+    query_project: &'q QueryProject,
+    pagination_params: &ProjBenchmarksPagination,
+    query_params: &'q ProjBenchmarksQuery,
+) -> schema::benchmark::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = QueryBenchmark::belonging_to(&query_project).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
@@ -128,21 +157,12 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         ProjBenchmarksSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::benchmark::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::benchmark::name.desc()),
         },
-    };
-
-    Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryBenchmark>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Benchmark, &query_project))?
-        .into_iter()
-        .map(|benchmark| benchmark.into_json_for_project(&query_project))
-        .collect())
+    }
 }
 
 /// Create a benchmark

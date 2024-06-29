@@ -39,7 +39,7 @@ pub struct UserTokensParams {
 
 pub type UserTokensPagination = JsonPagination<UserTokensSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum UserTokensSort {
     /// Sort by token name.
@@ -47,7 +47,7 @@ pub enum UserTokensSort {
     Name,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct UserTokensQuery {
     /// Filter by token name, exact match.
     pub name: Option<ResourceName>,
@@ -112,14 +112,20 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryToken>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Token, auth_user))?
+        .map_err(resource_not_found_err!(
+            Token,
+            (&pagination_params, &query_params, auth_user)
+        ))?
         .into_iter()
         .map(|query_token| query_token.into_json_for_user(auth_user))
         .collect();
     let total_count = get_ls_query(&pagination_params, &query_params, query_user.id)
         .count()
         .get_result::<i64>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Token, auth_user))?
+        .map_err(resource_not_found_err!(
+            Token,
+            (&pagination_params, &query_params, auth_user)
+        ))?
         .try_into()?;
 
     Ok((tokens, total_count))
