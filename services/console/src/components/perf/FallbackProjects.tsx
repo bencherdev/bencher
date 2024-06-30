@@ -27,7 +27,7 @@ const FallbackProjects = () => {
 							<For each={Array(DEFAULT_PER_PAGE)}>
 								{() => (
 									<div class="box">
-										<p>Loading...</p>
+										<p>&nbsp;</p>
 									</div>
 								)}
 							</For>

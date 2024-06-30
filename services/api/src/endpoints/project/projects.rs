@@ -26,12 +26,12 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectsSort {
     /// Sort by project name.
@@ -39,7 +39,7 @@ pub enum ProjectsSort {
     Name,
 }
 
-#[derive(Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ProjectsQuery {
     /// Filter by project name, exact match.
     pub name: Option<ResourceName>,
@@ -80,14 +80,18 @@ pub async fn projects_get(
     query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         pagination_params.into_inner(),
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok_with_total_count(
+        json,
+        auth_user.is_some(),
+        total_count,
+    ))
 }
 
 async fn get_ls_inner(
@@ -95,7 +99,46 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     pagination_params: ProjectsPagination,
     query_params: ProjectsQuery,
-) -> Result<JsonProjects, HttpError> {
+) -> Result<(JsonProjects, TotalCount), HttpError> {
+    let projects = get_ls_query(context, auth_user, &pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryProject>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Project,
+            (auth_user, &pagination_params, &query_params)
+        ))?;
+
+    let mut json_projects = Vec::with_capacity(projects.len());
+    for project in projects {
+        match project.into_json(conn_lock!(context)) {
+            Ok(project) => json_projects.push(project),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+            },
+        }
+    }
+
+    let total_count = get_ls_query(context, auth_user, &pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Project,
+            (auth_user, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((json_projects.into(), total_count))
+}
+
+fn get_ls_query<'q>(
+    context: &ApiContext,
+    auth_user: Option<&AuthUser>,
+    pagination_params: &ProjectsPagination,
+    query_params: &'q ProjectsQuery,
+) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::project::table.into_boxed();
 
     // All users should just see the public projects if the query is for public projects
@@ -124,29 +167,12 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         ProjectsSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::project::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::project::name.desc()),
         },
-    };
-
-    conn_lock!(context, |conn| Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryProject>(conn)
-        .map_err(resource_not_found_err!(Project))?
-        .into_iter()
-        .filter_map(|project| match project.into_json(conn) {
-            Ok(project) => Some(project),
-            Err(err) => {
-                debug_assert!(false, "{err}");
-                #[cfg(feature = "sentry")]
-                sentry::capture_error(&err);
-                None
-            },
-        })
-        .collect()))
+    }
 }
 
 #[derive(Deserialize, JsonSchema)]

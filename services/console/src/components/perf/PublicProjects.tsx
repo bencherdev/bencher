@@ -144,7 +144,7 @@ const PublicProjects = (props: Props) => {
 									<For each={Array(per_page())}>
 										{() => (
 											<div class="box">
-												<p>Loading...</p>
+												<p>&nbsp;</p>
 											</div>
 										)}
 									</For>
