@@ -35,7 +35,7 @@ use crate::{
         user::auth::{AuthUser, BearerToken},
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -46,7 +46,7 @@ pub struct OrgProjectsParams {
 
 pub type OrgProjectsPagination = JsonPagination<OrgProjectsSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrgProjectsSort {
     /// Sort by project name.
@@ -54,7 +54,7 @@ pub enum OrgProjectsSort {
     Name,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct OrgProjectsQuery {
     /// Filter by project name, exact match.
     pub name: Option<ResourceName>,
@@ -94,7 +94,7 @@ pub async fn org_projects_get(
     query_params: Query<OrgProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
         pagination_params.into_inner(),
@@ -102,7 +102,7 @@ pub async fn org_projects_get(
         &auth_user,
     )
     .await?;
-    Ok(Get::auth_response_ok(json))
+    Ok(Get::auth_response_ok_with_total_count(json, total_count))
 }
 
 async fn get_ls_inner(
@@ -111,7 +111,7 @@ async fn get_ls_inner(
     pagination_params: OrgProjectsPagination,
     query_params: OrgProjectsQuery,
     auth_user: &AuthUser,
-) -> Result<JsonProjects, HttpError> {
+) -> Result<(JsonProjects, TotalCount), HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
         conn_lock!(context),
         &context.rbac,
@@ -120,7 +120,38 @@ async fn get_ls_inner(
         Permission::View,
     )?;
 
-    let mut query = QueryProject::belonging_to(&query_organization).into_boxed();
+    let projects = get_ls_query(&query_organization, &pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryProject>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Project,
+            (&query_organization, &pagination_params, &query_params)
+        ))?;
+
+    let json_projects = projects
+        .into_iter()
+        .map(|project| project.into_json_for_organization(&query_organization))
+        .collect();
+
+    let total_count = get_ls_query(&query_organization, &pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Project,
+            (&query_organization, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((json_projects, total_count))
+}
+
+fn get_ls_query<'q>(
+    query_organization: &'q QueryOrganization,
+    pagination_params: &OrgProjectsPagination,
+    query_params: &'q OrgProjectsQuery,
+) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
+    let mut query = QueryProject::belonging_to(query_organization).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::project::name.eq(name));
@@ -134,22 +165,12 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         OrgProjectsSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::project::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::project::name.desc()),
         },
-    };
-
-    let organization = &query_organization;
-    Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryProject>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Project, organization))?
-        .into_iter()
-        .map(|project| project.into_json_for_organization(organization))
-        .collect())
+    }
 }
 
 /// Create a project for an organization
