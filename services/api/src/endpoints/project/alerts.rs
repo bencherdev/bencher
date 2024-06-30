@@ -104,57 +104,15 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let mut query = schema::alert::table
-        .inner_join(
-            schema::boundary::table.inner_join(
-                schema::metric::table.inner_join(
-                    schema::report_benchmark::table
-                        .inner_join(schema::report::table)
-                        .inner_join(schema::benchmark::table),
-                ),
-            ),
-        )
-        .filter(schema::benchmark::project_id.eq(query_project.id))
-        .select(QueryAlert::as_select())
-        .into_boxed();
-
-    query = match pagination_params.order() {
-        ProjAlertsSort::Created => match pagination_params.direction {
-            Some(JsonDirection::Asc) | None => query.order((
-                schema::alert::status.asc(),
-                schema::report::start_time.asc(),
-                schema::benchmark::name.asc(),
-                schema::report_benchmark::iteration.asc(),
-            )),
-            Some(JsonDirection::Desc) => query.order((
-                schema::alert::status.asc(),
-                schema::report::start_time.desc(),
-                schema::benchmark::name.asc(),
-                schema::report_benchmark::iteration.asc(),
-            )),
-        },
-        ProjAlertsSort::Modified => match pagination_params.direction {
-            Some(JsonDirection::Asc) => query.order((
-                schema::alert::status.asc(),
-                schema::alert::modified.asc(),
-                schema::benchmark::name.asc(),
-                schema::report_benchmark::iteration.asc(),
-            )),
-            Some(JsonDirection::Desc) | None => query.order((
-                schema::alert::status.asc(),
-                schema::alert::modified.desc(),
-                schema::benchmark::name.asc(),
-                schema::report_benchmark::iteration.asc(),
-            )),
-        },
-    };
-
     // Separate out this query to prevent a deadlock when getting the conn_lock
-    let alerts = query
+    let alerts = get_ls_query(&query_project, &pagination_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load(conn_lock!(context))
-        .map_err(resource_not_found_err!(Alert, &query_project))?;
+        .map_err(resource_not_found_err!(
+            Alert,
+            (&query_project, &pagination_params)
+        ))?;
 
     let mut json_alerts = Vec::with_capacity(alerts.len());
     for alert in alerts {
@@ -168,14 +126,23 @@ async fn get_ls_inner(
         }
     }
 
-    Ok((json_alerts.into(), TotalCount::default()))
+    let total_count = get_ls_query(&query_project, &pagination_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Alert,
+            (&query_project, &pagination_params)
+        ))?
+        .try_into()?;
+
+    Ok((json_alerts.into(), total_count))
 }
 
 fn get_ls_query<'q>(
     query_project: &'q QueryProject,
     pagination_params: &ProjAlertsPagination,
-) -> Next<'q> {
-    let mut query = schema::alert::table
+) -> BoxedQuery<'q> {
+    let query = schema::alert::table
         .inner_join(
             schema::boundary::table.inner_join(
                 schema::metric::table.inner_join(
@@ -228,16 +195,28 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
     diesel::internal::table_macro::FromClause<
         diesel::helper_types::InnerJoinQuerySource<
             schema::alert::table,
-            diesel::helper_types::InnerJoinQuerySource<
-                schema::boundary::table,
-                diesel::helper_types::InnerJoinQuerySource<
-                    schema::metric::table,
+            diesel::internal::table_macro::SelectStatement<
+                diesel::internal::table_macro::FromClause<
                     diesel::helper_types::InnerJoinQuerySource<
-                        diesel::helper_types::InnerJoin<
-                            schema::report_benchmark::table,
-                            schema::report::table,
+                        schema::boundary::table,
+                        diesel::internal::table_macro::SelectStatement<
+                            diesel::internal::table_macro::FromClause<
+                                diesel::helper_types::InnerJoinQuerySource<
+                                    schema::metric::table,
+                                    diesel::internal::table_macro::SelectStatement<
+                                        diesel::internal::table_macro::FromClause<
+                                            diesel::helper_types::InnerJoinQuerySource<
+                                                diesel::helper_types::InnerJoinQuerySource<
+                                                    schema::report_benchmark::table,
+                                                    schema::report::table,
+                                                >,
+                                                schema::benchmark::table,
+                                            >,
+                                        >,
+                                    >,
+                                >,
+                            >,
                         >,
-                        schema::benchmark::table,
                     >,
                 >,
             >,
@@ -245,194 +224,6 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
     >,
     diesel::sqlite::Sqlite,
 >;
-
-type Next<'q> = diesel::internal::table_macro::BoxedSelectStatement<
-    'q,
-    diesel::helper_types::AsSelect<QueryAlert, diesel::sqlite::Sqlite>,
-    diesel::internal::table_macro::FromClause<
-        diesel::internal::table_macro::JoinOn<
-            diesel::internal::table_macro::Join<
-                schema::alert::table,
-                diesel::internal::table_macro::SelectStatement<
-                    diesel::internal::table_macro::FromClause<
-                        diesel::internal::table_macro::JoinOn<
-                            diesel::internal::table_macro::Join<
-                                schema::boundary::table,
-                                diesel::internal::table_macro::SelectStatement<
-                                    diesel::internal::table_macro::FromClause<
-                                        diesel::internal::table_macro::JoinOn<
-                                            diesel::internal::table_macro::Join<
-                                                schema::metric::table,
-                                                diesel::internal::table_macro::SelectStatement<
-                                                    diesel::internal::table_macro::FromClause<
-                                                        diesel::internal::table_macro::JoinOn<
-                                                            diesel::internal::table_macro::Join<
-                                                                diesel::internal::table_macro::JoinOn<
-                                                                    diesel::internal::table_macro::Join<
-                                                                        schema::report_benchmark::table,
-                                                                        schema::report::table,
-                                                                        diesel::internal::table_macro::Inner
-                                                                    >,
-                                                                    // diesel::dsl::Grouped<
-                                                                        diesel::dsl::Eq<
-                                                                            diesel::internal::table_macro::NullableExpression<
-                                                                                schema::report_benchmark::columns::report_id
-                                                                            >,
-                                                                            diesel::internal::table_macro::NullableExpression<
-                                                                                schema::report::columns::id
-                                                                            >
-                                                                        >
-                                                                    // >
-                                                                >,
-                                                                schema::benchmark::table,
-                                                                diesel::internal::table_macro::Inner
-                                                            >,
-                                                            // diesel::dsl::Grouped<
-                                                                diesel::dsl::Eq<
-                                                                    diesel::internal::table_macro::NullableExpression<
-                                                                        schema::report_benchmark::columns::benchmark_id
-                                                                    >,
-                                                                    diesel::internal::table_macro::NullableExpression<
-                                                                        schema::benchmark::columns::id
-                                                                    >
-                                                                >
-                                                            // >
-                                                        >
-                                                    >
-                                                >,
-                                                diesel::internal::table_macro::Inner
-                                            >,
-                                            // diesel::dsl::Grouped<
-                                                diesel::dsl::Eq<
-                                                    diesel::internal::table_macro::NullableExpression<
-                                                        schema::metric::columns::report_benchmark_id
-                                                    >,
-                                                    diesel::internal::table_macro::NullableExpression<
-                                                        schema::report_benchmark::columns::id
-                                                    >
-                                                >
-                                            // >
-                                        >
-                                    >
-                                >,
-                                diesel::internal::table_macro::Inner
-                            >,
-                            // diesel::dsl::Grouped<
-                                diesel::dsl::Eq<
-                                    diesel::internal::table_macro::NullableExpression<
-                                        schema::boundary::columns::metric_id
-                                    >,
-                                    diesel::internal::table_macro::NullableExpression<
-                                        schema::metric::columns::id
-                                    >
-                                >
-                            // >
-                        >
-                    >
-                >,
-                diesel::internal::table_macro::Inner
-            >,
-            // diesel::dsl::Grouped<
-                diesel::dsl::Eq<
-                    diesel::internal::table_macro::NullableExpression<
-                        schema::alert::columns::boundary_id
-                    >,
-                    diesel::internal::table_macro::NullableExpression<
-                        schema::boundary::columns::id
-                    >
-                >
-            // >
-        >
-    >,
-    diesel::sqlite::Sqlite,
->;
-
-// type Verbose<'q> = diesel::internal::table_macro::BoxedSelectStatement<
-// 'q,
-// diesel::helper_types::AsSelect<QueryAlert, diesel::sqlite::Sqlite>,
-// diesel::internal::table_macro::FromClause<
-//     diesel::query_source::joins::JoinOn<
-//         diesel::query_source::joins::Join<
-//             schema::alert::table,
-//             diesel::internal::table_macro::SelectStatement<
-//                 diesel::query_builder::from_clause::FromClause<
-//                     diesel::query_source::joins::JoinOn<
-//                         diesel::query_source::joins::Join<
-//                             schema::boundary::table,
-//                             diesel::internal::table_macro::SelectStatement<
-//                                 diesel::query_builder::from_clause::FromClause<
-//                                     diesel::query_source::joins::JoinOn<
-//                                     diesel::query_source::joins::Join<
-//                                         schema::metric::table,
-//                                         diesel::internal::table_macro::SelectStatement<
-//                                             diesel::query_builder::from_clause::FromClause<
-//                                                 diesel::query_source::joins::JoinOn<
-//                                                     diesel::query_source::joins::Join<
-//                                                         diesel::query_source::joins::JoinOn<
-//                                                             diesel::query_source::joins::Join<
-//                                                                 schema::report_benchmark::table,
-//                                                                 schema::report::table,
-//                                                                 diesel::query_source::joins::Inner
-//                                                         >,
-//                                                         diesel::expression::grouped::Grouped<
-//                                                             diesel::expression::operators::Eq<
-//                                                                 diesel::expression::nullable::Nullable<
-//                                                                     schema::report_benchmark::columns::report_id
-//                                                                 >,
-//                                                                 diesel::expression::nullable::Nullable<
-//                                                                     schema::report::columns::id
-//                                                                 >
-//                                                             >
-//                                                         >
-//                                                     >,
-//                                                     schema::benchmark::table,
-//                                                     diesel::query_source::joins::Inner
-//                                                 >,
-//                                                 diesel::expression::grouped::Grouped<
-//                                                     diesel::expression::operators::Eq<
-//                                                         diesel::expression::nullable::Nullable<
-//                                                             schema::report_benchmark::columns::benchmark_id
-//                                                         >,
-//                                                         diesel::expression::nullable::Nullable<
-//                                                             schema::benchmark::columns::id
-//                                                         >
-//                                                     >
-//                                                 >
-//                                             >
-//                                         >
-//                                     >,
-//                                     diesel::query_source::joins::Inner
-//                                 >,
-//                                 diesel::expression::grouped::Grouped<
-//                                     diesel::expression::operators::Eq<
-//                                         diesel::expression::nullable::Nullable<
-//                                             schema::metric::columns::report_benchmark_id
-//                                         >,
-//                                         diesel::expression::nullable::Nullable<
-//                                             schema::report_benchmark::columns::id
-//                                         >
-//                                     >
-//                                 >
-//                             >
-//                         >
-//                     >,
-//                     diesel::query_source::joins::Inner
-//                 >,
-//                 diesel::expression::grouped::Grouped<
-//                     diesel::expression::operators::Eq<
-//                         diesel::expression::nullable::Nullable<
-//                             schema::boundary::columns::metric_id
-//                         >,
-//                         diesel::expression::nullable::Nullable<
-//                             schema::metric::columns::id
-//                         >
-//                     >
-//                 >
-//             >
-//         >
-//     >,
-//     diesel::query_source::joins::Inner
-// >, diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<diesel::expression::nullable::Nullable<schema::alert::columns::boundary_id>, diesel::expression::nullable::Nullable<schema::boundary::columns::id>>>>>, diesel::sqlite::Sqlite>;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAlertParams {
