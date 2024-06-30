@@ -16,8 +16,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse,  Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted,
-            ResponseOk, 
+            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
         },
         Endpoint,
     },
