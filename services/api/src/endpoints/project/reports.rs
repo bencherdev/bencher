@@ -51,7 +51,7 @@ pub struct ProjReportsParams {
 
 pub type ProjReportsPagination = JsonPagination<ProjReportsSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjReportsSort {
     /// Sort by date time.
@@ -180,6 +180,118 @@ async fn get_ls_inner(
     }
 
     Ok(json_reports.into())
+}
+
+// type D = diesel::dsl::IntoBoxed<'static, diesel::dsl::Filter<diesel::dsl::Filter<diesel::dsl::Filter<diesel::dsl::InnerJoin<diesel::dsl::Select<schema::report::table, dsl::AsSelect<Node>>, farm_devices::table>, dsl::IsNotNull<farm_node::device_id>>, dsl::Eq<farm_devices::is_active, bool>>, dsl:::Eq<farm_node::room_id, WhateverIsTheTypeOfSelfId>>, diesel::sqlite::Sqlite>;
+
+fn get_ls_query<'q>(
+    query_project: &'q QueryProject,
+    log: &Logger,
+    pagination_params: &ProjReportsPagination,
+    query_params: &'q JsonReportQuery,
+) -> Result<
+    diesel::internal::table_macro::BoxedSelectStatement<
+        'q,
+        (
+            (
+                diesel::sql_types::Integer,
+                diesel::sql_types::Text,
+                diesel::sql_types::Integer,
+                diesel::sql_types::Integer,
+                diesel::sql_types::Integer,
+                diesel::sql_types::Integer,
+                diesel::sql_types::Integer,
+                diesel::sql_types::Integer,
+                diesel::sql_types::BigInt,
+                diesel::sql_types::BigInt,
+                diesel::sql_types::BigInt,
+            ),
+            (
+                diesel::sql_types::Integer,
+                diesel::sql_types::Text,
+                diesel::sql_types::Integer,
+                diesel::sql_types::Text,
+                diesel::sql_types::Text,
+                diesel::sql_types::Nullable<diesel::sql_types::Integer>,
+                diesel::sql_types::BigInt,
+                diesel::sql_types::BigInt,
+            ),
+            (
+                diesel::sql_types::Integer,
+                diesel::sql_types::Text,
+                diesel::sql_types::Integer,
+                diesel::sql_types::Text,
+                diesel::sql_types::Text,
+                diesel::sql_types::BigInt,
+                diesel::sql_types::BigInt,
+            ),
+        ),
+        diesel::internal::table_macro::FromClause<
+            diesel::internal::table_macro::JoinOn<
+                diesel::internal::table_macro::Join<
+                    diesel::internal::table_macro::JoinOn<
+                        diesel::internal::table_macro::Join<
+                            schema::report::table,
+                            schema::branch::table,
+                            diesel::internal::table_macro::Inner,
+                        >,
+                        diesel::helper_types::Eq<
+                            diesel::internal::table_macro::NullableExpression<
+                                schema::report::columns::branch_id,
+                            >,
+                            diesel::internal::table_macro::NullableExpression<
+                                schema::branch::columns::id,
+                            >,
+                        >,
+                    >,
+                    schema::testbed::table,
+                    diesel::internal::table_macro::Inner,
+                >,
+                diesel::helper_types::Eq<
+                    diesel::internal::table_macro::NullableExpression<
+                        schema::report::columns::testbed_id,
+                    >,
+                    diesel::internal::table_macro::NullableExpression<schema::testbed::columns::id>,
+                >,
+            >,
+        >,
+        diesel::sqlite::Sqlite,
+    >,
+    HttpError,
+> {
+    let mut query = QueryReport::belonging_to(&query_project)
+        .inner_join(schema::branch::table)
+        .inner_join(schema::testbed::table)
+        .into_boxed();
+
+    if let Some(branch) = query_params.branch.as_ref() {
+        filter_branch_name_id!(query, branch);
+    }
+    if let Some(testbed) = query_params.testbed.as_ref() {
+        filter_testbed_name_id!(query, testbed);
+    }
+
+    if let Some(start_time) = query_params.start_time {
+        query = query.filter(schema::report::start_time.ge(start_time));
+    }
+    if let Some(end_time) = query_params.end_time {
+        query = query.filter(schema::report::end_time.le(end_time));
+    }
+
+    Ok(match pagination_params.order() {
+        ProjReportsSort::DateTime => match pagination_params.direction {
+            Some(JsonDirection::Asc) => query.order((
+                schema::report::start_time.asc(),
+                schema::report::end_time.asc(),
+                schema::report::created.asc(),
+            )),
+            Some(JsonDirection::Desc) | None => query.order((
+                schema::report::start_time.desc(),
+                schema::report::end_time.desc(),
+                schema::report::created.desc(),
+            )),
+        },
+    })
 }
 
 /// Create a report
