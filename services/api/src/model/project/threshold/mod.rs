@@ -151,12 +151,14 @@ impl QueryThreshold {
             modified,
             ..
         } = self;
+        let query_project = QueryProject::get(conn, project_id)?;
         Ok(JsonThreshold {
             uuid,
-            project: QueryProject::get_uuid(conn, project_id)?,
-            branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
-            testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
-            measure: QueryMeasure::get(conn, measure_id)?.into_json(conn)?,
+            project: query_project.uuid,
+            branch: QueryBranch::get(conn, branch_id)?
+                .into_json_for_project(conn, &query_project)?,
+            testbed: QueryTestbed::get(conn, testbed_id)?.into_json_for_project(&query_project),
+            measure: QueryMeasure::get(conn, measure_id)?.into_json_for_project(&query_project),
             // TODO remove in due time
             statistic: Some(model),
             model,

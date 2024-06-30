@@ -115,11 +115,6 @@ impl QueryMeasure {
         Self::get_id(conn, insert_measure.uuid)
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMeasure, HttpError> {
-        let project = QueryProject::get(conn, self.project_id)?;
-        Ok(self.into_json_for_project(&project))
-    }
-
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonMeasure {
         let Self {
             uuid,

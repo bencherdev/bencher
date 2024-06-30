@@ -117,29 +117,28 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let branches = conn_lock!(context, |conn| get_ls_query(
-        &query_project,
-        &pagination_params,
-        &query_params
-    )
-    .offset(pagination_params.offset())
-    .limit(pagination_params.limit())
-    .load::<QueryBranch>(conn)
-    .map_err(resource_not_found_err!(
-        Branch,
-        (&query_project, &pagination_params, &query_params)
-    ))?
-    .into_iter()
-    .filter_map(|branch| match branch.into_json(conn) {
-        Ok(branch) => Some(branch),
-        Err(err) => {
-            debug_assert!(false, "{err}");
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&err);
-            None
-        },
-    })
-    .collect());
+    // Drop connection lock before iterating
+    let branches = get_ls_query(&query_project, &pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryBranch>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Branch,
+            (&query_project, &pagination_params, &query_params)
+        ))?;
+
+    let mut json_branches = Vec::with_capacity(branches.len());
+    for branch in branches {
+        match branch.into_json_for_project(conn_lock!(context), &query_project) {
+            Ok(branch) => json_branches.push(branch),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+            },
+        }
+    }
+
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
         .get_result::<i64>(conn_lock!(context))
@@ -149,7 +148,7 @@ async fn get_ls_inner(
         ))?
         .try_into()?;
 
-    Ok((branches, total_count))
+    Ok((json_branches.into(), total_count))
 }
 
 fn get_ls_query<'q>(

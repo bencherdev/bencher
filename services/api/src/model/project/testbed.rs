@@ -80,11 +80,6 @@ impl QueryTestbed {
         Self::get_id(conn_lock!(context), insert_testbed.uuid)
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, HttpError> {
-        let project = QueryProject::get(conn, self.project_id)?;
-        Ok(self.into_json_for_project(&project))
-    }
-
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonTestbed {
         let Self {
             uuid,

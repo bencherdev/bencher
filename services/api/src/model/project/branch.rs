@@ -354,11 +354,6 @@ impl QueryBranch {
         format!("{branch_name}/{version_suffix}")
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBranch, HttpError> {
-        let project = QueryProject::get(conn, self.project_id)?;
-        self.into_json_for_project(conn, &project)
-    }
-
     pub fn into_json_for_project(
         self,
         conn: &mut DbConnection,

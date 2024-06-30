@@ -122,10 +122,14 @@ async fn get_ls_inner(
         .map_err(resource_not_found_err!(
             Benchmark,
             (&query_project, &pagination_params, &query_params)
-        ))?
+        ))?;
+
+    // Drop connection lock before iterating
+    let json_benchmarks = benchmarks
         .into_iter()
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .collect();
+
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
         .get_result::<i64>(conn_lock!(context))
@@ -135,7 +139,7 @@ async fn get_ls_inner(
         ))?
         .try_into()?;
 
-    Ok((benchmarks, total_count))
+    Ok((json_benchmarks, total_count))
 }
 
 fn get_ls_query<'q>(
