@@ -169,7 +169,7 @@ fn get_ls_query<'q>(
     pagination_params: &ProjReportsPagination,
     query_params: &'q JsonReportQuery,
 ) -> Result<BoxedQuery<'q>, HttpError> {
-    let mut query = QueryReport::belonging_to(&query_project)
+    let mut query = QueryReport::belonging_to(query_project)
         .inner_join(schema::branch::table)
         .inner_join(schema::testbed::table)
         .into_boxed();
@@ -205,6 +205,7 @@ fn get_ls_query<'q>(
     .select(QueryReport::as_select()))
 }
 
+// TODO refactor out internal types
 type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
     'q,
     diesel::helper_types::AsSelect<QueryReport, diesel::sqlite::Sqlite>,

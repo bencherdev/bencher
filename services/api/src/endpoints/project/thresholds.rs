@@ -16,7 +16,8 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse, Delete, Get, Post, Put, ResponseCreated, ResponseDeleted, ResponseOk,
+            CorsLsResponse, CorsResponse, Delete, Get, Post, Put, ResponseCreated, ResponseDeleted,
+            ResponseOk, ResponseOkLs,
         },
         Endpoint,
     },
@@ -35,7 +36,10 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::name_id::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id},
+    util::{
+        headers::TotalCount,
+        name_id::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id},
+    },
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -46,7 +50,7 @@ pub struct ProjThresholdsParams {
 
 pub type ProjThresholdsPagination = JsonPagination<ProjThresholdsSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjThresholdsSort {
     /// Sort by threshold creation date time.
@@ -67,8 +71,8 @@ pub async fn proj_thresholds_options(
     _path_params: Path<ProjThresholdsParams>,
     _pagination_params: Query<ProjThresholdsPagination>,
     _query_params: Query<JsonThresholdQueryParams>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+) -> Result<CorsLsResponse, HttpError> {
+    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
 }
 
 /// List thresholds for a project
@@ -87,7 +91,7 @@ pub async fn proj_thresholds_get(
     path_params: Path<ProjThresholdsParams>,
     pagination_params: Query<ProjThresholdsPagination>,
     query_params: Query<JsonThresholdQueryParams>,
-) -> Result<ResponseOk<JsonThresholds>, HttpError> {
+) -> Result<ResponseOkLs<JsonThresholds>, HttpError> {
     // Second round of marshaling
     let json_threshold_query = query_params
         .into_inner()
@@ -95,7 +99,7 @@ pub async fn proj_thresholds_get(
         .map_err(bad_request_error)?;
 
     let auth_user = AuthUser::new_pub(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
@@ -103,7 +107,7 @@ pub async fn proj_thresholds_get(
         json_threshold_query,
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
 }
 
 async fn get_ls_inner(
@@ -111,8 +115,8 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     path_params: ProjThresholdsParams,
     pagination_params: ProjThresholdsPagination,
-    json_threshold_query: JsonThresholdQuery,
-) -> Result<JsonThresholds, HttpError> {
+    query_params: JsonThresholdQuery,
+) -> Result<(JsonThresholds, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
@@ -120,23 +124,62 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let mut query = QueryThreshold::belonging_to(&query_project)
+    // Separate out this query to prevent a deadlock when getting the conn_lock
+    let thresholds = get_ls_query(&query_project, &pagination_params, &query_params)?
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryThreshold>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Threshold,
+            (&query_project, &pagination_params, &query_params)
+        ))?;
+
+    let mut json_thresholds = Vec::with_capacity(thresholds.len());
+    for threshold in thresholds {
+        match threshold.into_json(conn_lock!(context)) {
+            Ok(threshold) => json_thresholds.push(threshold),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+            },
+        }
+    }
+
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)?
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Threshold,
+            (&query_project, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((json_thresholds.into(), total_count))
+}
+
+fn get_ls_query<'q>(
+    query_project: &'q QueryProject,
+    pagination_params: &ProjThresholdsPagination,
+    query_params: &'q JsonThresholdQuery,
+) -> Result<BoxedQuery<'q>, HttpError> {
+    let mut query = QueryThreshold::belonging_to(query_project)
         .inner_join(schema::branch::table)
         .inner_join(schema::testbed::table)
         .inner_join(schema::measure::table)
         .into_boxed();
 
-    if let Some(branch) = json_threshold_query.branch.as_ref() {
+    if let Some(branch) = query_params.branch.as_ref() {
         filter_branch_name_id!(query, branch);
     }
-    if let Some(testbed) = json_threshold_query.testbed.as_ref() {
+    if let Some(testbed) = query_params.testbed.as_ref() {
         filter_testbed_name_id!(query, testbed);
     }
-    if let Some(measure) = json_threshold_query.measure.as_ref() {
+    if let Some(measure) = query_params.measure.as_ref() {
         filter_measure_name_id!(query, measure);
     }
 
-    query = match pagination_params.order() {
+    Ok(match pagination_params.order() {
         ProjThresholdsSort::Created => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::threshold::created.asc()),
             Some(JsonDirection::Desc) => query.order(schema::threshold::created.desc()),
@@ -145,26 +188,28 @@ async fn get_ls_inner(
             Some(JsonDirection::Asc) => query.order(schema::threshold::modified.asc()),
             Some(JsonDirection::Desc) | None => query.order(schema::threshold::modified.desc()),
         },
-    };
-
-    conn_lock!(context, |conn| Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .select(QueryThreshold::as_select())
-        .load::<QueryThreshold>(conn)
-        .map_err(resource_not_found_err!(Threshold, &query_project))?
-        .into_iter()
-        .filter_map(|threshold| match threshold.into_json(conn) {
-            Ok(threshold) => Some(threshold),
-            Err(err) => {
-                debug_assert!(false, "{err}");
-                #[cfg(feature = "sentry")]
-                sentry::capture_error(&err);
-                None
-            },
-        })
-        .collect()))
+    }
+    .select(QueryThreshold::as_select()))
 }
+
+// TODO refactor out internal types
+type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
+    'q,
+    diesel::helper_types::AsSelect<QueryThreshold, diesel::sqlite::Sqlite>,
+    diesel::internal::table_macro::FromClause<
+        diesel::helper_types::InnerJoinQuerySource<
+            diesel::helper_types::InnerJoinQuerySource<
+                diesel::helper_types::InnerJoinQuerySource<
+                    schema::threshold::table,
+                    schema::branch::table,
+                >,
+                schema::testbed::table,
+            >,
+            schema::measure::table,
+        >,
+    >,
+    diesel::sqlite::Sqlite,
+>;
 
 /// Create a threshold
 ///
