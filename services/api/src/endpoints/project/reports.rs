@@ -24,11 +24,13 @@ use crate::{
     conn_lock,
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
+        endpoint::{
+            CorsLsResponse, CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted,
+            ResponseOk, ResponseOkLs,
+        },
         Endpoint,
     },
     error::{bad_request_error, issue_error, resource_conflict_err, resource_not_found_err},
-    model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
             branch::{BranchId, QueryBranch},
@@ -37,10 +39,13 @@ use crate::{
             version::{QueryVersion, VersionId},
             QueryProject,
         },
-        user::auth::BearerToken,
+        user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::name_id::{filter_branch_name_id, filter_testbed_name_id},
+    util::{
+        headers::TotalCount,
+        name_id::{filter_branch_name_id, filter_testbed_name_id},
+    },
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -70,8 +75,8 @@ pub async fn proj_reports_options(
     _path_params: Path<ProjReportsParams>,
     _pagination_params: Query<ProjReportsPagination>,
     _query_params: Query<JsonReportQueryParams>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+) -> Result<CorsLsResponse, HttpError> {
+    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
 }
 
 /// List reports for a project
@@ -90,7 +95,7 @@ pub async fn proj_reports_get(
     path_params: Path<ProjReportsParams>,
     pagination_params: Query<ProjReportsPagination>,
     query_params: Query<JsonReportQueryParams>,
-) -> Result<ResponseOk<JsonReports>, HttpError> {
+) -> Result<ResponseOkLs<JsonReports>, HttpError> {
     // Second round of marshaling
     let json_report_query = query_params
         .into_inner()
@@ -98,7 +103,7 @@ pub async fn proj_reports_get(
         .map_err(bad_request_error)?;
 
     let auth_user = AuthUser::new_pub(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         &rqctx.log,
         rqctx.context(),
         auth_user.as_ref(),
@@ -107,7 +112,7 @@ pub async fn proj_reports_get(
         json_report_query,
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
 }
 
 async fn get_ls_inner(
@@ -116,8 +121,8 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     path_params: ProjReportsParams,
     pagination_params: ProjReportsPagination,
-    json_report_query: JsonReportQuery,
-) -> Result<JsonReports, HttpError> {
+    query_params: JsonReportQuery,
+) -> Result<(JsonReports, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
@@ -125,47 +130,15 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let mut query = QueryReport::belonging_to(&query_project)
-        .inner_join(schema::branch::table)
-        .inner_join(schema::testbed::table)
-        .into_boxed();
-
-    if let Some(branch) = json_report_query.branch.as_ref() {
-        filter_branch_name_id!(query, branch);
-    }
-    if let Some(testbed) = json_report_query.testbed.as_ref() {
-        filter_testbed_name_id!(query, testbed);
-    }
-
-    if let Some(start_time) = json_report_query.start_time {
-        query = query.filter(schema::report::start_time.ge(start_time));
-    }
-    if let Some(end_time) = json_report_query.end_time {
-        query = query.filter(schema::report::end_time.le(end_time));
-    }
-
-    query = match pagination_params.order() {
-        ProjReportsSort::DateTime => match pagination_params.direction {
-            Some(JsonDirection::Asc) => query.order((
-                schema::report::start_time.asc(),
-                schema::report::end_time.asc(),
-                schema::report::created.asc(),
-            )),
-            Some(JsonDirection::Desc) | None => query.order((
-                schema::report::start_time.desc(),
-                schema::report::end_time.desc(),
-                schema::report::created.desc(),
-            )),
-        },
-    };
-
     // Separate out this query to prevent a deadlock when getting the conn_lock
-    let reports = query
+    let reports = get_ls_query(&query_project, &pagination_params, &query_params)?
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .select(QueryReport::as_select())
         .load(conn_lock!(context))
-        .map_err(resource_not_found_err!(Report, &query_project))?;
+        .map_err(resource_not_found_err!(
+            Report,
+            (&query_project, &pagination_params, &query_params)
+        ))?;
 
     let mut json_reports = Vec::with_capacity(reports.len());
     for report in reports {
@@ -179,86 +152,23 @@ async fn get_ls_inner(
         }
     }
 
-    Ok(json_reports.into())
-}
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)?
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Report,
+            (&query_project, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
 
-// type D = diesel::dsl::IntoBoxed<'static, diesel::dsl::Filter<diesel::dsl::Filter<diesel::dsl::Filter<diesel::dsl::InnerJoin<diesel::dsl::Select<schema::report::table, dsl::AsSelect<Node>>, farm_devices::table>, dsl::IsNotNull<farm_node::device_id>>, dsl::Eq<farm_devices::is_active, bool>>, dsl:::Eq<farm_node::room_id, WhateverIsTheTypeOfSelfId>>, diesel::sqlite::Sqlite>;
+    Ok((json_reports.into(), total_count))
+}
 
 fn get_ls_query<'q>(
     query_project: &'q QueryProject,
-    log: &Logger,
     pagination_params: &ProjReportsPagination,
     query_params: &'q JsonReportQuery,
-) -> Result<
-    diesel::internal::table_macro::BoxedSelectStatement<
-        'q,
-        (
-            (
-                diesel::sql_types::Integer,
-                diesel::sql_types::Text,
-                diesel::sql_types::Integer,
-                diesel::sql_types::Integer,
-                diesel::sql_types::Integer,
-                diesel::sql_types::Integer,
-                diesel::sql_types::Integer,
-                diesel::sql_types::Integer,
-                diesel::sql_types::BigInt,
-                diesel::sql_types::BigInt,
-                diesel::sql_types::BigInt,
-            ),
-            (
-                diesel::sql_types::Integer,
-                diesel::sql_types::Text,
-                diesel::sql_types::Integer,
-                diesel::sql_types::Text,
-                diesel::sql_types::Text,
-                diesel::sql_types::Nullable<diesel::sql_types::Integer>,
-                diesel::sql_types::BigInt,
-                diesel::sql_types::BigInt,
-            ),
-            (
-                diesel::sql_types::Integer,
-                diesel::sql_types::Text,
-                diesel::sql_types::Integer,
-                diesel::sql_types::Text,
-                diesel::sql_types::Text,
-                diesel::sql_types::BigInt,
-                diesel::sql_types::BigInt,
-            ),
-        ),
-        diesel::internal::table_macro::FromClause<
-            diesel::internal::table_macro::JoinOn<
-                diesel::internal::table_macro::Join<
-                    diesel::internal::table_macro::JoinOn<
-                        diesel::internal::table_macro::Join<
-                            schema::report::table,
-                            schema::branch::table,
-                            diesel::internal::table_macro::Inner,
-                        >,
-                        diesel::helper_types::Eq<
-                            diesel::internal::table_macro::NullableExpression<
-                                schema::report::columns::branch_id,
-                            >,
-                            diesel::internal::table_macro::NullableExpression<
-                                schema::branch::columns::id,
-                            >,
-                        >,
-                    >,
-                    schema::testbed::table,
-                    diesel::internal::table_macro::Inner,
-                >,
-                diesel::helper_types::Eq<
-                    diesel::internal::table_macro::NullableExpression<
-                        schema::report::columns::testbed_id,
-                    >,
-                    diesel::internal::table_macro::NullableExpression<schema::testbed::columns::id>,
-                >,
-            >,
-        >,
-        diesel::sqlite::Sqlite,
-    >,
-    HttpError,
-> {
+) -> Result<BoxedQuery<'q>, HttpError> {
     let mut query = QueryReport::belonging_to(&query_project)
         .inner_join(schema::branch::table)
         .inner_join(schema::testbed::table)
@@ -291,8 +201,24 @@ fn get_ls_query<'q>(
                 schema::report::created.desc(),
             )),
         },
-    })
+    }
+    .select(QueryReport::as_select()))
 }
+
+type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
+    'q,
+    diesel::helper_types::AsSelect<QueryReport, diesel::sqlite::Sqlite>,
+    diesel::internal::table_macro::FromClause<
+        diesel::helper_types::InnerJoinQuerySource<
+            diesel::helper_types::InnerJoinQuerySource<
+                schema::report::table,
+                schema::branch::table,
+            >,
+            schema::testbed::table,
+        >,
+    >,
+    diesel::sqlite::Sqlite,
+>;
 
 /// Create a report
 ///
