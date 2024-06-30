@@ -16,8 +16,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsLsResponse, CorsResponse, Delete, Get, Patch, Post, ResponseCreated,
-            ResponseDeleted, ResponseOk, ResponseOkLs,
+            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
         },
         Endpoint,
     },
@@ -70,8 +69,8 @@ pub async fn proj_plots_options(
     _path_params: Path<ProjPlotsParams>,
     _pagination_params: Query<ProjPlotsPagination>,
     _query_params: Query<ProjPlotsQuery>,
-) -> Result<CorsLsResponse, HttpError> {
-    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 /// List plots for a project
@@ -90,7 +89,7 @@ pub async fn proj_plots_get(
     path_params: Path<ProjPlotsParams>,
     pagination_params: Query<ProjPlotsPagination>,
     query_params: Query<ProjPlotsQuery>,
-) -> Result<ResponseOkLs<JsonPlots>, HttpError> {
+) -> Result<ResponseOk<JsonPlots>, HttpError> {
     let auth_user = AuthUser::new_pub(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
@@ -100,7 +99,11 @@ pub async fn proj_plots_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
+    Ok(Get::response_ok_with_total_count(
+        json,
+        auth_user.is_some(),
+        total_count,
+    ))
 }
 
 async fn get_ls_inner(

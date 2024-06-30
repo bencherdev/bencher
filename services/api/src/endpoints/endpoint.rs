@@ -7,12 +7,10 @@ use dropshot::{
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::util::headers::{CorsHeaders, CorsLsHeaders, TotalCount};
+use crate::util::headers::{CorsHeaders, TotalCount};
 
 pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<()>, CorsHeaders>;
-pub type CorsLsResponse = HttpResponseHeaders<HttpResponseOk<()>, CorsLsHeaders>;
 pub type ResponseOk<T> = HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>;
-pub type ResponseOkLs<T> = HttpResponseHeaders<HttpResponseOk<T>, CorsLsHeaders>;
 pub type ResponseCreated<T> = HttpResponseHeaders<HttpResponseCreated<T>, CorsHeaders>;
 pub type ResponseAccepted<T> = HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>;
 pub type ResponseDeleted = HttpResponseHeaders<HttpResponseDeleted, CorsHeaders>;
@@ -29,10 +27,6 @@ pub enum Endpoint {
 impl Endpoint {
     pub fn cors(endpoints: &[Self]) -> CorsResponse {
         HttpResponseHeaders::new(HttpResponseOk(()), CorsHeaders::new(endpoints))
-    }
-
-    pub fn cors_ls(endpoints: &[Self]) -> CorsLsResponse {
-        HttpResponseHeaders::new(HttpResponseOk(()), CorsLsHeaders::new(endpoints))
     }
 }
 
@@ -161,37 +155,42 @@ impl_method!(Get, GET);
 impl_response_ok!(Get);
 
 impl Get {
-    pub fn response_ok_ls<T>(body: T, auth: bool, total_count: TotalCount) -> ResponseOkLs<T>
+    pub fn response_ok_with_total_count<T>(
+        body: T,
+        auth: bool,
+        total_count: TotalCount,
+    ) -> ResponseOk<T>
     where
         T: JsonSchema + Serialize + Send + Sync,
     {
         if auth {
-            Self::auth_response_ok_ls(body, total_count)
+            Self::auth_response_ok_with_total_count(body, total_count)
         } else {
-            Self::pub_response_ok_ls(body, total_count)
+            Self::pub_response_ok_with_total_count(body, total_count)
         }
     }
 
-    pub fn pub_response_ok_ls<T>(body: T, total_count: TotalCount) -> ResponseOkLs<T>
+    pub fn pub_response_ok_with_total_count<T>(body: T, total_count: TotalCount) -> ResponseOk<T>
     where
         T: JsonSchema + Serialize + Send + Sync,
     {
-        let headers = CorsLsHeaders::new_pub(&http::Method::from(Self), total_count);
-        Self::response_ok_ls_inner(body, headers)
+        let headers = CorsHeaders::new_pub_with_total_count(&http::Method::from(Self), total_count);
+        Self::response_ok_with_total_count_inner(body, headers)
     }
 
-    pub fn auth_response_ok_ls<T>(body: T, total_count: TotalCount) -> ResponseOkLs<T>
+    pub fn auth_response_ok_with_total_count<T>(body: T, total_count: TotalCount) -> ResponseOk<T>
     where
         T: JsonSchema + Serialize + Send + Sync,
     {
-        let headers = CorsLsHeaders::new_auth(&http::Method::from(Self), total_count);
-        Self::response_ok_ls_inner(body, headers)
+        let headers =
+            CorsHeaders::new_auth_with_total_count(&http::Method::from(Self), total_count);
+        Self::response_ok_with_total_count_inner(body, headers)
     }
 
-    fn response_ok_ls_inner<T, H>(body: T, headers: H) -> ResponseOkLs<T>
+    fn response_ok_with_total_count_inner<T, H>(body: T, headers: H) -> ResponseOk<T>
     where
         T: JsonSchema + Serialize + Send + Sync,
-        H: Into<CorsLsHeaders>,
+        H: Into<CorsHeaders>,
     {
         HttpResponseHeaders::new(HttpResponseOk(body), headers.into())
     }

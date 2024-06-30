@@ -16,8 +16,8 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsLsResponse, CorsResponse, Delete, Get, Patch, Post, ResponseCreated,
-            ResponseDeleted, ResponseOk, ResponseOkLs,
+            CorsResponse,  Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted,
+            ResponseOk, 
         },
         Endpoint,
     },
@@ -68,8 +68,8 @@ pub async fn proj_testbeds_options(
     _path_params: Path<ProjTestbedsParams>,
     _pagination_params: Query<ProjTestbedsPagination>,
     _query_params: Query<ProjTestbedsQuery>,
-) -> Result<CorsLsResponse, HttpError> {
-    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 /// List testbeds for a project
@@ -88,7 +88,7 @@ pub async fn proj_testbeds_get(
     path_params: Path<ProjTestbedsParams>,
     pagination_params: Query<ProjTestbedsPagination>,
     query_params: Query<ProjTestbedsQuery>,
-) -> Result<ResponseOkLs<JsonTestbeds>, HttpError> {
+) -> Result<ResponseOk<JsonTestbeds>, HttpError> {
     let auth_user = AuthUser::new_pub(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
@@ -98,7 +98,11 @@ pub async fn proj_testbeds_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
+    Ok(Get::response_ok_with_total_count(
+        json,
+        auth_user.is_some(),
+        total_count,
+    ))
 }
 
 async fn get_ls_inner(

@@ -13,7 +13,7 @@ use crate::{
     conn_lock,
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsLsResponse, CorsResponse, Get, Patch, ResponseOk, ResponseOkLs},
+        endpoint::{CorsResponse, Get, Patch, ResponseOk},
         Endpoint,
     },
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
@@ -54,8 +54,8 @@ pub async fn users_options(
     _rqctx: RequestContext<ApiContext>,
     _pagination_params: Query<UsersPagination>,
     _query_params: Query<UsersQuery>,
-) -> Result<CorsLsResponse, HttpError> {
-    Ok(Endpoint::cors_ls(&[Get.into()]))
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 /// List users
@@ -72,7 +72,7 @@ pub async fn users_get(
     bearer_token: BearerToken,
     pagination_params: Query<UsersPagination>,
     query_params: Query<UsersQuery>,
-) -> Result<ResponseOkLs<JsonUsers>, HttpError> {
+) -> Result<ResponseOk<JsonUsers>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
@@ -80,7 +80,7 @@ pub async fn users_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::auth_response_ok_ls(json, total_count))
+    Ok(Get::auth_response_ok_with_total_count(json, total_count))
 }
 
 async fn get_ls_inner(

@@ -24,10 +24,7 @@ use crate::{
     conn_lock,
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            CorsLsResponse, CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted,
-            ResponseOk, ResponseOkLs,
-        },
+        endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
         Endpoint,
     },
     error::{bad_request_error, issue_error, resource_conflict_err, resource_not_found_err},
@@ -75,8 +72,8 @@ pub async fn proj_reports_options(
     _path_params: Path<ProjReportsParams>,
     _pagination_params: Query<ProjReportsPagination>,
     _query_params: Query<JsonReportQueryParams>,
-) -> Result<CorsLsResponse, HttpError> {
-    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 /// List reports for a project
@@ -95,7 +92,7 @@ pub async fn proj_reports_get(
     path_params: Path<ProjReportsParams>,
     pagination_params: Query<ProjReportsPagination>,
     query_params: Query<JsonReportQueryParams>,
-) -> Result<ResponseOkLs<JsonReports>, HttpError> {
+) -> Result<ResponseOk<JsonReports>, HttpError> {
     // Second round of marshaling
     let json_report_query = query_params
         .into_inner()
@@ -112,7 +109,11 @@ pub async fn proj_reports_get(
         json_report_query,
     )
     .await?;
-    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
+    Ok(Get::response_ok_with_total_count(
+        json,
+        auth_user.is_some(),
+        total_count,
+    ))
 }
 
 async fn get_ls_inner(

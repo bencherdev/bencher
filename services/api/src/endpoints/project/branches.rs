@@ -17,8 +17,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsLsResponse, CorsResponse, Delete, Get, Patch, Post, ResponseCreated,
-            ResponseDeleted, ResponseOk, ResponseOkLs,
+            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
         },
         Endpoint,
     },
@@ -70,8 +69,8 @@ pub async fn proj_branches_options(
     _path_params: Path<ProjBranchesParams>,
     _pagination_params: Query<ProjBranchesPagination>,
     _query_params: Query<ProjBranchesQuery>,
-) -> Result<CorsLsResponse, HttpError> {
-    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 /// List branches for a project
@@ -90,7 +89,7 @@ pub async fn proj_branches_get(
     path_params: Path<ProjBranchesParams>,
     pagination_params: Query<ProjBranchesPagination>,
     query_params: Query<ProjBranchesQuery>,
-) -> Result<ResponseOkLs<JsonBranches>, HttpError> {
+) -> Result<ResponseOk<JsonBranches>, HttpError> {
     let auth_user = AuthUser::new_pub(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
@@ -100,7 +99,11 @@ pub async fn proj_branches_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::response_ok_ls(json, auth_user.is_some(), total_count))
+    Ok(Get::response_ok_with_total_count(
+        json,
+        auth_user.is_some(),
+        total_count,
+    ))
 }
 
 async fn get_ls_inner(

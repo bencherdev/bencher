@@ -14,10 +14,7 @@ use crate::{
     conn_lock,
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            CorsLsResponse, CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk,
-            ResponseOkLs,
-        },
+        endpoint::{CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk},
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
@@ -66,8 +63,8 @@ pub async fn user_tokens_options(
     _path_params: Path<UserTokensParams>,
     _pagination_params: Query<UserTokensPagination>,
     _query_params: Query<UserTokensQuery>,
-) -> Result<CorsLsResponse, HttpError> {
-    Ok(Endpoint::cors_ls(&[Get.into(), Post.into()]))
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 /// List tokens for a user
@@ -85,7 +82,7 @@ pub async fn user_tokens_get(
     path_params: Path<UserTokensParams>,
     pagination_params: Query<UserTokensPagination>,
     query_params: Query<UserTokensQuery>,
-) -> Result<ResponseOkLs<JsonTokens>, HttpError> {
+) -> Result<ResponseOk<JsonTokens>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
@@ -95,7 +92,7 @@ pub async fn user_tokens_get(
         &auth_user,
     )
     .await?;
-    Ok(Get::auth_response_ok_ls(json, total_count))
+    Ok(Get::auth_response_ok_with_total_count(json, total_count))
 }
 
 async fn get_ls_inner(
