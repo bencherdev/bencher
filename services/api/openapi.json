@@ -714,7 +714,7 @@
           "organizations"
         ],
         "summary": "Create an organization",
-        "description": "Create a new organization. The user must be an admin on the server to use this route.",
+        "description": "Create a new organization. The user must be authenticated to use this route. ➕ Bencher Plus: This route can be limited to admins on self-hosted instances.",
         "operationId": "organization_post",
         "requestBody": {
           "content": {
@@ -846,6 +846,73 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonOrganization"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Delete an organization",
+        "description": "Delete an organization where the user is a member. The user must have `delete` permissions for the organization.",
+        "operationId": "organization_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "description": "The slug or UUID for an organization.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
                 }
               }
             }

@@ -26,6 +26,10 @@ pub enum CliOrganization {
     /// Update an organization
     #[clap(alias = "edit")]
     Update(CliOrganizationUpdate),
+    /// Delete an organization
+    #[clap(alias = "rm")]
+    Delete(CliOrganizationDelete),
+
     /// Check organization permission
     Allowed(CliOrganizationAllowed),
 
@@ -130,4 +134,13 @@ pub enum CliOrganizationPermission {
     CreateRole,
     EditRole,
     DeleteRole,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliOrganizationDelete {
+    /// Organization slug or UUID
+    pub organization: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }

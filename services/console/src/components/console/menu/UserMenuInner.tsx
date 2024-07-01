@@ -15,6 +15,9 @@ const UserMenu = (props: { user?: JsonAuthUser }) => {
 			<p class="menu-label">User</p>
 			<ul class="menu-list">
 				<li>
+					<a href="/console/organizations">Organizations</a>
+				</li>
+				<li>
 					<a href={path(Section.TOKENS)}>API Tokens</a>
 				</li>
 				<li>

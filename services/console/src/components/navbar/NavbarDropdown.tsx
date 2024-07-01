@@ -19,6 +19,9 @@ const NavbarDropdown = () => {
 				{(user?.user?.name ? user.user.name : "Account").padStart(12, "\xa0")}
 			</a>
 			<div class="navbar-dropdown">
+				<a class="navbar-item" href="/console/organizations">
+					Organizations
+				</a>
 				<a
 					class="navbar-item"
 					href={`/console/users/${user?.user?.slug}/tokens`}

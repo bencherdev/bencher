@@ -15,7 +15,9 @@ use crate::{
     conn_lock,
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk},
+        endpoint::{
+            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+        },
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
@@ -24,10 +26,7 @@ use crate::{
             organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
             UpdateOrganization,
         },
-        user::{
-            admin::AdminUser,
-            auth::{AuthUser, BearerToken},
-        },
+        user::auth::{AuthUser, BearerToken},
     },
     schema,
     util::{headers::TotalCount, search::Search},
@@ -168,7 +167,8 @@ fn get_ls_query<'q>(
 /// Create an organization
 ///
 /// Create a new organization.
-/// The user must be an admin on the server to use this route.
+/// The user must be authenticated to use this route.
+/// ➕ Bencher Plus: This route can be limited to admins on self-hosted instances.
 #[endpoint {
     method = POST,
     path = "/v0/organizations",
@@ -179,15 +179,15 @@ pub async fn organization_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonNewOrganization>,
 ) -> Result<ResponseCreated<JsonOrganization>, HttpError> {
-    let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(rqctx.context(), body.into_inner(), &admin_user).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
     Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(
     context: &ApiContext,
     json_organization: JsonNewOrganization,
-    admin_user: &AdminUser,
+    auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
     // Create the organization
     let insert_organization =
@@ -204,7 +204,7 @@ async fn post_inner(
     let timestamp = DateTime::now();
     // Connect the user to the organization as a `Maintainer`
     let insert_org_role = InsertOrganizationRole {
-        user_id: admin_user.user().id,
+        user_id: auth_user.id,
         organization_id: query_organization.id,
         role: OrganizationRole::Leader,
         created: timestamp,
@@ -351,4 +351,46 @@ async fn patch_inner(
         .map_err(resource_conflict_err!(Organization, update_organization))?;
 
     Ok(QueryOrganization::get(conn_lock!(context), query_organization.id)?.into_json())
+}
+
+/// Delete an organization
+///
+/// Delete an organization where the user is a member.
+/// The user must have `delete` permissions for the organization.
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/organizations/{organization}",
+    tags = ["organizations"]
+}]
+pub async fn organization_delete(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<OrganizationParams>,
+) -> Result<ResponseDeleted, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_deleted())
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: OrganizationParams,
+    auth_user: &AuthUser,
+) -> Result<(), HttpError> {
+    // Verify that the user is allowed
+    let query_organization = QueryOrganization::is_allowed_resource_id(
+        conn_lock!(context),
+        &context.rbac,
+        &path_params.organization,
+        auth_user,
+        Permission::Delete,
+    )?;
+
+    diesel::delete(
+        schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
+    )
+    .execute(conn_lock!(context))
+    .map_err(resource_conflict_err!(Organization, query_organization))?;
+
+    Ok(())
 }
