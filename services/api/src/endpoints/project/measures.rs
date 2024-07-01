@@ -77,6 +77,7 @@ pub async fn proj_measures_options(
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 /// By default, the measures are sorted in alphabetical order by name.
+/// The HTTP response header `X-Total-Count` contains the total number of measures.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/measures",

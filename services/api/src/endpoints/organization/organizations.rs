@@ -30,12 +30,12 @@ use crate::{
         },
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrganizationsSort {
     /// Sort by organization name.
@@ -43,7 +43,7 @@ pub enum OrganizationsSort {
     Name,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct OrganizationsQuery {
     /// Filter by organization name, exact match.
     pub name: Option<ResourceName>,
@@ -70,6 +70,7 @@ pub async fn organizations_options(
 /// List all organizations where the user is a member.
 /// The user must have `view` permissions for each organization.
 /// By default, the organizations are sorted in alphabetical order by name.
+/// The HTTP response header `X-Total-Count` contains the total number of organizations.
 #[endpoint {
     method = GET,
     path = "/v0/organizations",
@@ -82,14 +83,14 @@ pub async fn organizations_get(
     query_params: Query<OrganizationsQuery>,
 ) -> Result<ResponseOk<JsonOrganizations>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         &auth_user,
         pagination_params.into_inner(),
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::auth_response_ok(json))
+    Ok(Get::auth_response_ok_with_total_count(json, total_count))
 }
 
 async fn get_ls_inner(
@@ -97,7 +98,40 @@ async fn get_ls_inner(
     auth_user: &AuthUser,
     pagination_params: OrganizationsPagination,
     query_params: OrganizationsQuery,
-) -> Result<JsonOrganizations, HttpError> {
+) -> Result<(JsonOrganizations, TotalCount), HttpError> {
+    let organizations = get_ls_query(context, auth_user, &pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryOrganization>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Organization,
+            (auth_user, &pagination_params, &query_params)
+        ))?;
+
+    // Drop connection lock before iterating
+    let json_organizations = organizations
+        .into_iter()
+        .map(QueryOrganization::into_json)
+        .collect();
+
+    let total_count = get_ls_query(context, auth_user, &pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Organization,
+            (auth_user, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((json_organizations, total_count))
+}
+
+fn get_ls_query<'q>(
+    context: &ApiContext,
+    auth_user: &AuthUser,
+    pagination_params: &OrganizationsPagination,
+    query_params: &'q OrganizationsQuery,
+) -> schema::organization::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::organization::table.into_boxed();
 
     if !auth_user.is_admin(&context.rbac) {
@@ -117,7 +151,7 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         OrganizationsSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order((
                 schema::organization::name.asc(),
@@ -128,16 +162,7 @@ async fn get_ls_inner(
                 schema::organization::slug.desc(),
             )),
         },
-    };
-
-    Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryOrganization>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Organization))?
-        .into_iter()
-        .map(QueryOrganization::into_json)
-        .collect())
+    }
 }
 
 /// Create an organization

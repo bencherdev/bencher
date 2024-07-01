@@ -72,6 +72,7 @@ pub async fn user_tokens_options(
 /// List all API tokens for a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
 /// By default, the tokens are sorted in alphabetical order by name.
+/// The HTTP response header `X-Total-Count` contains the total number of tokens.
 #[endpoint {
     method = GET,
     path =  "/v0/users/{user}/tokens",
@@ -112,10 +113,14 @@ async fn get_ls_inner(
         .map_err(resource_not_found_err!(
             Token,
             (&pagination_params, &query_params, auth_user)
-        ))?
+        ))?;
+
+    // Drop connection lock before iterating
+    let json_tokens = tokens
         .into_iter()
         .map(|query_token| query_token.into_json_for_user(auth_user))
         .collect();
+
     let total_count = get_ls_query(&pagination_params, &query_params, query_user.id)
         .count()
         .get_result::<i64>(conn_lock!(context))
@@ -125,7 +130,7 @@ async fn get_ls_inner(
         ))?
         .try_into()?;
 
-    Ok((tokens, total_count))
+    Ok((json_tokens, total_count))
 }
 
 fn get_ls_query<'q>(

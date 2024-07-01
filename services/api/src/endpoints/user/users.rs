@@ -62,6 +62,7 @@ pub async fn users_options(
 ///
 /// List all users.
 /// The user must be an admin on the server to use this route.
+/// The HTTP response header `X-Total-Count` contains the total number of users.
 #[endpoint {
     method = GET,
     path =  "/v0/users",
@@ -92,17 +93,18 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryUser>(conn_lock!(context))
-        .map_err(resource_not_found_err!(User))?
-        .into_iter()
-        .map(QueryUser::into_json)
-        .collect();
+        .map_err(resource_not_found_err!(User))?;
+
+    // Drop connection lock before iterating
+    let json_users = users.into_iter().map(QueryUser::into_json).collect();
+
     let total_count = get_ls_query(&pagination_params, &query_params)
         .count()
         .get_result::<i64>(conn_lock!(context))
         .map_err(resource_not_found_err!(User))?
         .try_into()?;
 
-    Ok((users, total_count))
+    Ok((json_users, total_count))
 }
 
 fn get_ls_query<'q>(

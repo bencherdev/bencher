@@ -82,6 +82,7 @@ pub async fn proj_reports_options(
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 /// By default, the reports are sorted by date time in reverse chronological order.
+/// The HTTP response header `X-Total-Count` contains the total number of reports.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/reports",
@@ -131,7 +132,6 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    // Separate out this query to prevent a deadlock when getting the conn_lock
     let reports = get_ls_query(&query_project, &pagination_params, &query_params)?
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
@@ -141,6 +141,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    // Separate out these queries to prevent a deadlock when getting the conn_lock
     let mut json_reports = Vec::with_capacity(reports.len());
     for report in reports {
         match report.into_json(log, context).await {
@@ -428,7 +429,6 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    // Separate out this query to prevent a deadlock when getting the conn_lock
     let report = QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .first::<QueryReport>(conn_lock!(context))
@@ -437,6 +437,7 @@ async fn get_one_inner(
             (&query_project, path_params.report)
         ))?;
 
+    // Separate out this query to prevent a deadlock when getting the conn_lock
     report.into_json(log, context).await
 }
 

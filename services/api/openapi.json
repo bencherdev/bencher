@@ -15,28 +15,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -84,28 +91,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -155,28 +169,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -221,28 +242,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -287,28 +315,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -353,28 +388,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -421,28 +463,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -487,28 +536,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -539,7 +595,7 @@
           "organizations"
         ],
         "summary": "List organizations",
-        "description": "List all organizations where the user is a member. The user must have `view` permissions for each organization. By default, the organizations are sorted in alphabetical order by name.",
+        "description": "List all organizations where the user is a member. The user must have `view` permissions for each organization. By default, the organizations are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of organizations.",
         "operationId": "organizations_get",
         "parameters": [
           {
@@ -601,28 +657,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -667,28 +730,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -736,28 +806,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -813,28 +890,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -890,28 +974,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -943,7 +1034,7 @@
           "members"
         ],
         "summary": "List organization members",
-        "description": "List members for an organization. The user must have `view_role` permissions for the organization. By default, the members are sorted in alphabetical order by name.",
+        "description": "List members for an organization. The user must have `view_role` permissions for the organization. By default, the members are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of members.",
         "operationId": "org_members_get",
         "parameters": [
           {
@@ -1014,28 +1105,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1092,28 +1190,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1171,28 +1276,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1248,28 +1360,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1328,28 +1447,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1396,28 +1522,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1472,28 +1605,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1546,28 +1686,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1592,7 +1739,7 @@
           "projects"
         ],
         "summary": "List organization projects",
-        "description": "List projects for an organization. The user must have `view` permissions for the organization. By default, the projects are sorted in alphabetical order by name.",
+        "description": "List projects for an organization. The user must have `view` permissions for the organization. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of organization projects.",
         "operationId": "org_projects_get",
         "parameters": [
           {
@@ -1663,28 +1810,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1741,28 +1895,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1811,28 +1972,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1863,7 +2031,7 @@
           "projects"
         ],
         "summary": "List projects",
-        "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned. By default, the projects are sorted in alphabetical order by name.",
+        "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of projects.",
         "operationId": "projects_get",
         "parameters": [
           {
@@ -1925,28 +2093,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -1994,28 +2169,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2061,28 +2243,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2131,28 +2320,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2184,7 +2380,7 @@
           "alerts"
         ],
         "summary": "List alerts for a project",
-        "description": "List all alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order.",
+        "description": "List all alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of alerts.",
         "operationId": "proj_alerts_get",
         "parameters": [
           {
@@ -2239,28 +2435,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2318,28 +2521,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2405,28 +2615,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2482,28 +2699,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2535,7 +2759,7 @@
           "benchmarks"
         ],
         "summary": "List benchmarks for a project",
-        "description": "List all benchmarks for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the benchmarks are sorted in alphabetical order by name.",
+        "description": "List all benchmarks for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the benchmarks are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of benchmarks.",
         "operationId": "proj_benchmarks_get",
         "parameters": [
           {
@@ -2606,28 +2830,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2684,28 +2915,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2763,28 +3001,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2840,28 +3085,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2920,28 +3172,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -2973,7 +3232,7 @@
           "branches"
         ],
         "summary": "List branches for a project",
-        "description": "List all branches for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the branches are sorted in alphabetical order by name.",
+        "description": "List all branches for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the branches are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of branches.",
         "operationId": "proj_branches_get",
         "parameters": [
           {
@@ -3044,28 +3303,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3122,28 +3388,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3201,28 +3474,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3278,28 +3558,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3358,28 +3645,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3411,7 +3705,7 @@
           "measures"
         ],
         "summary": "List measures for a project",
-        "description": "List all measures for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the measures are sorted in alphabetical order by name.",
+        "description": "List all measures for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the measures are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of measures.",
         "operationId": "proj_measures_get",
         "parameters": [
           {
@@ -3482,28 +3776,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3560,28 +3861,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3639,28 +3947,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3716,28 +4031,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3796,28 +4118,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3875,28 +4204,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -3997,28 +4333,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4143,7 +4486,7 @@
           "plots"
         ],
         "summary": "List plots for a project",
-        "description": "List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the plots are sorted in their index order.",
+        "description": "List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the plots are sorted in their index order. The HTTP response header `X-Total-Count` contains the total number of plots.",
         "operationId": "proj_plots_get",
         "parameters": [
           {
@@ -4214,28 +4557,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4292,28 +4642,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4371,28 +4728,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4448,28 +4812,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4528,28 +4899,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4581,7 +4959,7 @@
           "reports"
         ],
         "summary": "List reports for a project",
-        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the reports are sorted by date time in reverse chronological order.",
+        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the reports are sorted by date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of reports.",
         "operationId": "proj_reports_get",
         "parameters": [
           {
@@ -4670,28 +5048,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4748,28 +5133,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4827,28 +5219,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4904,28 +5303,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -4967,28 +5373,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5020,7 +5433,7 @@
           "testbeds"
         ],
         "summary": "List testbeds for a project",
-        "description": "List all testbeds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the testbeds are sorted in alphabetical order by name.",
+        "description": "List all testbeds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the testbeds are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of testbeds.",
         "operationId": "proj_testbeds_get",
         "parameters": [
           {
@@ -5091,28 +5504,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5169,28 +5589,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5248,28 +5675,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5325,28 +5759,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5405,28 +5846,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5458,7 +5906,7 @@
           "thresholds"
         ],
         "summary": "List thresholds for a project",
-        "description": "List all thresholds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the thresholds are sorted by creation date time in chronological order.",
+        "description": "List all thresholds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the thresholds are sorted by creation date time in chronological order. The HTTP response header `X-Total-Count` contains the total number of thresholds.",
         "operationId": "proj_thresholds_get",
         "parameters": [
           {
@@ -5540,28 +5988,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5618,28 +6073,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5705,28 +6167,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5792,28 +6261,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5869,28 +6345,35 @@
           "204": {
             "description": "successful deletion",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5930,28 +6413,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -5988,28 +6478,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6054,28 +6551,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6112,28 +6616,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6169,28 +6680,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6237,28 +6755,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6299,28 +6824,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6358,28 +6890,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6423,28 +6962,35 @@
           "202": {
             "description": "successfully enqueued operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6485,28 +7031,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6537,7 +7090,7 @@
           "users"
         ],
         "summary": "List users",
-        "description": "List all users. The user must be an admin on the server to use this route.",
+        "description": "List all users. The user must be an admin on the server to use this route. The HTTP response header `X-Total-Count` contains the total number of users.",
         "operationId": "users_get",
         "parameters": [
           {
@@ -6599,28 +7152,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6668,28 +7228,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6745,28 +7312,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6798,7 +7372,7 @@
           "tokens"
         ],
         "summary": "List tokens for a user",
-        "description": "List all API tokens for a user. Only the authenticated user themselves and server admins have access to this endpoint. By default, the tokens are sorted in alphabetical order by name.",
+        "description": "List all API tokens for a user. Only the authenticated user themselves and server admins have access to this endpoint. By default, the tokens are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of tokens.",
         "operationId": "user_tokens_get",
         "parameters": [
           {
@@ -6869,28 +7443,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -6947,28 +7528,35 @@
           "201": {
             "description": "successful creation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -7027,28 +7615,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -7115,28 +7710,35 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
+              "access-control-allow-headers": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Methods": {
+              "access-control-allow-methods": {
                 "style": "simple",
                 "required": true,
                 "schema": {
                   "type": "string"
                 }
               },
-              "Access-Control-Allow-Origin": {
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
                 "style": "simple",
                 "required": true,
                 "schema": {

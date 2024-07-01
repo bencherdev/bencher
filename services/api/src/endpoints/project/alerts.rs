@@ -65,6 +65,7 @@ pub async fn proj_alerts_options(
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 /// By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order.
+/// The HTTP response header `X-Total-Count` contains the total number of alerts.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/alerts",
@@ -104,7 +105,6 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    // Separate out this query to prevent a deadlock when getting the conn_lock
     let alerts = get_ls_query(&query_project, &pagination_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
@@ -114,6 +114,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params)
         ))?;
 
+    // Separate out these queries to prevent a deadlock when getting the conn_lock
     let mut json_alerts = Vec::with_capacity(alerts.len());
     for alert in alerts {
         match alert.into_json(context).await {
@@ -283,7 +284,6 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    // Separate out this query to prevent a deadlock when getting the conn_lock
     let alert = QueryAlert::from_uuid(conn_lock!(context), query_project.id, path_params.alert)?;
 
     alert.into_json(context).await
@@ -339,9 +339,9 @@ async fn patch_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
-    // Separate out this query to prevent a deadlock when getting the conn_lock
     let alert = QueryAlert::get(conn_lock!(context), query_alert.id)?;
 
+    // Separate out this query to prevent a deadlock when getting the conn_lock
     alert.into_json(context).await
 }
 

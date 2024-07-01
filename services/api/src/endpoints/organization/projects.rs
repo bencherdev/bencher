@@ -82,6 +82,7 @@ pub async fn org_projects_options(
 /// List projects for an organization.
 /// The user must have `view` permissions for the organization.
 /// By default, the projects are sorted in alphabetical order by name.
+/// The HTTP response header `X-Total-Count` contains the total number of organization projects.
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/projects",
@@ -129,6 +130,7 @@ async fn get_ls_inner(
             (&query_organization, &pagination_params, &query_params)
         ))?;
 
+    // Drop connection lock before iterating
     let json_projects = projects
         .into_iter()
         .map(|project| project.into_json_for_organization(&query_organization))

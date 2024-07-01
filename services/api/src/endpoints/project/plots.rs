@@ -79,6 +79,7 @@ pub async fn proj_plots_options(
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 /// By default, the plots are sorted in their index order.
+/// The HTTP response header `X-Total-Count` contains the total number of plots.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/plots",
@@ -120,7 +121,6 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    // Drop connection lock before iterating
     let plots = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
@@ -130,6 +130,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    // Separate out these queries to prevent a deadlock when getting the conn_lock
     let mut json_plots = Vec::with_capacity(plots.len());
     for plot in plots {
         match plot.into_json_for_project(conn_lock!(context), &query_project) {

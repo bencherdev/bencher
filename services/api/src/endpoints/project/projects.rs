@@ -68,6 +68,7 @@ pub async fn projects_options(
 /// If the user is authenticated, then all public projects and
 /// any private project where the user has `view` permissions are returned.
 /// By default, the projects are sorted in alphabetical order by name.
+/// The HTTP response header `X-Total-Count` contains the total number of projects.
 #[endpoint {
     method = GET,
     path =  "/v0/projects",
@@ -109,6 +110,7 @@ async fn get_ls_inner(
             (auth_user, &pagination_params, &query_params)
         ))?;
 
+    // Separate out these queries to prevent a deadlock when getting the conn_lock
     let mut json_projects = Vec::with_capacity(projects.len());
     for project in projects {
         match project.into_json(conn_lock!(context)) {

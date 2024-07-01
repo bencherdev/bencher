@@ -80,6 +80,7 @@ pub async fn proj_thresholds_options(
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 /// By default, the thresholds are sorted by creation date time in chronological order.
+/// The HTTP response header `X-Total-Count` contains the total number of thresholds.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/thresholds",
@@ -127,7 +128,6 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    // Separate out this query to prevent a deadlock when getting the conn_lock
     let thresholds = get_ls_query(&query_project, &pagination_params, &query_params)?
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
@@ -137,6 +137,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    // Separate out these queries to prevent a deadlock when getting the conn_lock
     let mut json_thresholds = Vec::with_capacity(thresholds.len());
     for threshold in thresholds {
         match threshold.into_json(conn_lock!(context)) {

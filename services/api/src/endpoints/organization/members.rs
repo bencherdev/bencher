@@ -22,16 +22,15 @@ use crate::{
         Endpoint,
     },
     error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err},
-    model::user::{
-        auth::{AuthUser, BearerToken},
-        QueryUser,
-    },
     model::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
-        user::UserId,
+        user::{
+            auth::{AuthUser, BearerToken},
+            QueryUser, UserId,
+        },
     },
     schema,
-    util::search::Search,
+    util::{headers::TotalCount, search::Search},
 };
 
 // TODO Custom max TTL
@@ -45,7 +44,7 @@ pub struct OrgMembersParams {
 
 pub type OrgMembersPagination = JsonPagination<OrgMembersSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrgMembersSort {
     /// Sort by user name.
@@ -53,7 +52,7 @@ pub enum OrgMembersSort {
     Name,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct OrgMembersQuery {
     /// Filter by user name, exact match.
     pub name: Option<UserName>,
@@ -81,6 +80,7 @@ pub async fn org_members_options(
 /// List members for an organization.
 /// The user must have `view_role` permissions for the organization.
 /// By default, the members are sorted in alphabetical order by name.
+/// The HTTP response header `X-Total-Count` contains the total number of members.
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/members",
@@ -93,7 +93,7 @@ pub async fn org_members_get(
     query_params: Query<OrgMembersQuery>,
 ) -> Result<ResponseOk<JsonMembers>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let json = get_ls_inner(
+    let (json, total_count) = get_ls_inner(
         rqctx.context(),
         &auth_user,
         path_params.into_inner(),
@@ -101,7 +101,7 @@ pub async fn org_members_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::auth_response_ok(json))
+    Ok(Get::auth_response_ok_with_total_count(json, total_count))
 }
 
 async fn get_ls_inner(
@@ -110,7 +110,7 @@ async fn get_ls_inner(
     path_params: OrgMembersParams,
     pagination_params: OrgMembersPagination,
     query_params: OrgMembersQuery,
-) -> Result<JsonMembers, HttpError> {
+) -> Result<(JsonMembers, TotalCount), HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
         conn_lock!(context),
         &context.rbac,
@@ -119,6 +119,35 @@ async fn get_ls_inner(
         Permission::ViewRole,
     )?;
 
+    let members = get_ls_query(&query_organization, &pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryMember>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            OrganizationRole,
+            (&query_organization, &pagination_params, &query_params)
+        ))?;
+
+    // Drop connection lock before iterating
+    let json_members = members.into_iter().map(QueryMember::into_json).collect();
+
+    let total_count = get_ls_query(&query_organization, &pagination_params, &query_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            OrganizationRole,
+            (&query_organization, &pagination_params, &query_params)
+        ))?
+        .try_into()?;
+
+    Ok((json_members, total_count))
+}
+
+fn get_ls_query<'q>(
+    query_organization: &QueryOrganization,
+    pagination_params: &OrgMembersPagination,
+    query_params: &'q OrgMembersQuery,
+) -> BoxedQuery<'q> {
     let mut query = schema::user::table
         .inner_join(schema::organization_role::table)
         .filter(schema::organization_role::organization_id.eq(query_organization.id))
@@ -145,7 +174,7 @@ async fn get_ls_inner(
         );
     }
 
-    query = match pagination_params.order() {
+    match pagination_params.order() {
         OrgMembersSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => {
                 query.order((schema::user::name.asc(), schema::user::slug.asc()))
@@ -154,20 +183,29 @@ async fn get_ls_inner(
                 query.order((schema::user::name.desc(), schema::user::slug.desc()))
             },
         },
-    };
-
-    Ok(query
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryMember>(conn_lock!(context))
-        .map_err(resource_not_found_err!(
-            OrganizationRole,
-            query_organization
-        ))?
-        .into_iter()
-        .map(QueryMember::into_json)
-        .collect())
+    }
 }
+
+// TODO refactor out internal types
+type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
+    'q,
+    (
+        diesel::sql_types::Text,
+        diesel::sql_types::Text,
+        diesel::sql_types::Text,
+        diesel::sql_types::Text,
+        diesel::sql_types::Text,
+        diesel::sql_types::BigInt,
+        diesel::sql_types::BigInt,
+    ),
+    diesel::internal::table_macro::FromClause<
+        diesel::helper_types::InnerJoinQuerySource<
+            schema::user::table,
+            schema::organization_role::table,
+        >,
+    >,
+    diesel::sqlite::Sqlite,
+>;
 
 /// Invite a user to an organization
 ///
