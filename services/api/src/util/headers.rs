@@ -82,7 +82,7 @@ impl CorsHeaders {
             access_control_allow_methods: methods,
             access_control_allow_headers: headers,
             access_control_expose_headers: EXPOSE_HEADERS.to_owned(),
-            x_total_count: total_count.unwrap_or_default().to_string(),
+            x_total_count: total_count.unwrap_or(TotalCount::ONE).to_string(),
         }
     }
 }
@@ -117,14 +117,13 @@ impl TryFrom<i64> for TotalCount {
     }
 }
 
-impl Default for TotalCount {
-    fn default() -> Self {
-        Self(1)
-    }
-}
-
 impl fmt::Display for TotalCount {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
+}
+
+impl TotalCount {
+    pub const ZERO: Self = TotalCount(0);
+    pub const ONE: Self = TotalCount(1);
 }

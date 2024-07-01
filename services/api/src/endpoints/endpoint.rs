@@ -228,12 +228,14 @@ impl Delete {
     }
 
     pub fn pub_response_deleted() -> ResponseDeleted {
-        let headers = CorsHeaders::new_pub(&http::Method::from(Self));
+        let headers =
+            CorsHeaders::new_pub_with_total_count(&http::Method::from(Self), TotalCount::ZERO);
         Self::response_deleted_inner(headers)
     }
 
     pub fn auth_response_deleted() -> ResponseDeleted {
-        let headers = CorsHeaders::new_auth(&http::Method::from(Self));
+        let headers =
+            CorsHeaders::new_auth_with_total_count(&http::Method::from(Self), TotalCount::ZERO);
         Self::response_deleted_inner(headers)
     }
 
