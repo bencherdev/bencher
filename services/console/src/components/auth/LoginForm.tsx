@@ -3,7 +3,12 @@ import { EMAIL } from "./authFields";
 
 const LoginForm = () => {
 	return (
-		<form class="box">
+		<form
+			class="box"
+			onSubmit={(e) => {
+				e.preventDefault();
+			}}
+		>
 			<div class="field">
 				{<label class="label is-medium">Email</label>}
 				<Input

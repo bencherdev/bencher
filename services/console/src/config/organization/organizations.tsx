@@ -1,9 +1,10 @@
 import type { JsonOrganization } from "../../types/bencher";
-import { Button, Card, Display, Row } from "../types";
-import { parentPath, viewSlugPath } from "../util";
+import { ActionButton, Button, Card, Display, Row } from "../types";
+import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 import { Operation } from "../types";
 import type { Params } from "../../util/url";
 import {
+	isAllowedOrganizationDelete,
 	isAllowedOrganizationEdit,
 	isAllowedOrganizationManage,
 } from "../../util/auth";
@@ -43,7 +44,16 @@ const organizationsConfig = {
 		operation: Operation.LIST,
 		header: {
 			title: "Organizations",
-			buttons: [{ kind: Button.SEARCH }, { kind: Button.REFRESH }],
+			buttons: [
+				{ kind: Button.SEARCH },
+				{
+					kind: Button.ADD,
+					title: "Testbed",
+					path: addPath,
+					is_allowed: async (_apiUrl: string, _params: Params) => true,
+				},
+				{ kind: Button.REFRESH },
+			],
 		},
 		table: {
 			url: (_params: Params) => "/v0/organizations",
@@ -65,6 +75,29 @@ const organizationsConfig = {
 				},
 			},
 			name: "organizations",
+		},
+	},
+	[Operation.ADD]: {
+		operation: Operation.ADD,
+		header: {
+			title: "Add Organization",
+			path: parentPath,
+			path_to: "Organizations",
+		},
+		form: {
+			url: (_params: Params) => "/v0/organizations",
+			fields: [
+				{
+					kind: FieldKind.INPUT,
+					label: "Name",
+					key: "name",
+					value: "",
+					valid: null,
+					validate: true,
+					config: ORGANIZATION_FIELDS.name,
+				},
+			],
+			path: createdSlugPath,
 		},
 	},
 	[Operation.VIEW]: {
@@ -134,6 +167,15 @@ const organizationsConfig = {
 						nullable: true,
 						config: ORGANIZATION_FIELDS.license,
 					},
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle:
+						"⚠️ All data associated with this organization will be deleted! ⚠️",
+					path: (_pathname: string) => "/console/organizations",
+					is_allowed: isAllowedOrganizationDelete,
 				},
 			],
 		},

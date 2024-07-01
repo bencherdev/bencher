@@ -50,7 +50,12 @@ const DeckButton = (props: Props) => {
 			<Match when={props.config?.kind === ActionButton.DELETE && isAllowed()}>
 				<div class="columns">
 					<div class="column">
-						<form class="box">
+						<form
+							class="box"
+							onSubmit={(e) => {
+								e.preventDefault();
+							}}
+						>
 							<div class="field">
 								<p class="control">
 									<DeleteButton

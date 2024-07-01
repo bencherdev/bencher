@@ -166,7 +166,13 @@ const ConfirmForm = (props: Props) => {
 
 	return (
 		<>
-			<form class="box">
+			<form
+				class="box"
+				onSubmit={(e) => {
+					e.preventDefault();
+					handleSubmit();
+				}}
+			>
 				<Field
 					kind={FieldKind.INPUT}
 					fieldKey="token"

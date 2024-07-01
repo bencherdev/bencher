@@ -392,6 +392,7 @@ const PinnedRank = (props: {
 		<form
 			onSubmit={(e) => {
 				e.preventDefault();
+				setSubmitting(true);
 			}}
 		>
 			<Field

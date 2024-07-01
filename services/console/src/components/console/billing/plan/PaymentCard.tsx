@@ -144,7 +144,13 @@ const PaymentCard = (props: Props) => {
 	};
 
 	return (
-		<form class="box">
+		<form
+			class="box"
+			onSubmit={(e) => {
+				e.preventDefault();
+				sendForm();
+			}}
+		>
 			<Field
 				params={props.params}
 				kind={FieldKind.INPUT}

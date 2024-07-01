@@ -262,6 +262,7 @@ const OnboardProject = (props: Props) => {
 								<form
 									onSubmit={(e) => {
 										e.preventDefault();
+										setSubmitting(true);
 									}}
 								>
 									<Field

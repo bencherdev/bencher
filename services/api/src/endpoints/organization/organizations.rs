@@ -234,7 +234,7 @@ pub async fn organization_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrganizationParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Patch.into()]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 /// View an organization

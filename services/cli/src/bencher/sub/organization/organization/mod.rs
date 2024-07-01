@@ -29,7 +29,7 @@ impl TryFrom<CliOrganization> for Organization {
             CliOrganization::Create(create) => Self::Create(create.try_into()?),
             CliOrganization::View(view) => Self::View(view.try_into()?),
             CliOrganization::Update(update) => Self::Update(update.try_into()?),
-            CliOrganization::Delete(delete) => Self::Delete(update.try_into()?),
+            CliOrganization::Delete(delete) => Self::Delete(delete.try_into()?),
             CliOrganization::Allowed(allowed) => Self::Allowed(allowed.try_into()?),
             #[cfg(feature = "plus")]
             CliOrganization::Usage(usage) => Self::Usage(usage.try_into()?),

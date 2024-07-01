@@ -111,7 +111,13 @@ const PinModal = (props: Props) => {
 	};
 
 	return (
-		<form class={`modal ${props.pin() && "is-active"}`}>
+		<form
+			class={`modal ${props.pin() && "is-active"}`}
+			onSubmit={(e) => {
+				e.preventDefault();
+				handleSubmit();
+			}}
+		>
 			<div
 				class="modal-background"
 				onMouseDown={(e) => {

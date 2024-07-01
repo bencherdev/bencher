@@ -204,7 +204,13 @@ const Poster = (props: Props) => {
 	return (
 		<div class="columns">
 			<div class="column">
-				<form class="box">
+				<form
+					class="box"
+					onSubmit={(e) => {
+						e.preventDefault();
+						sendForm();
+					}}
+				>
 					<For each={props.config?.fields}>
 						{(field, _i) => (
 							<Field

@@ -3,7 +3,12 @@ import { EMAIL, USERNAME } from "./authFields";
 
 const SignupForm = () => {
 	return (
-		<form class="box">
+		<form
+			class="box"
+			onSubmit={(e) => {
+				e.preventDefault();
+			}}
+		>
 			<div class="field">
 				{<label class="label is-medium">Name</label>}
 				<Input value="" valid={null} config={USERNAME} handleField={() => {}} />
