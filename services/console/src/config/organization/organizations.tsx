@@ -11,6 +11,7 @@ import {
 import FieldKind from "../../components/field/kind";
 import { validResourceName, validOptionJwt, validSlug } from "../../util/valid";
 import { isBencherCloud } from "../../util/ext";
+import { clearOrganization, setOrganization } from "../../util/organization";
 
 const ORGANIZATION_FIELDS = {
 	name: {
@@ -72,6 +73,7 @@ const organizationsConfig = {
 					text: "Select",
 					path: (pathname: string, datum: JsonOrganization) =>
 						`${viewSlugPath(pathname, datum)}/projects`,
+					effect: (datum: JsonOrganization) => setOrganization(datum),
 				},
 			},
 			name: "organizations",
@@ -176,6 +178,7 @@ const organizationsConfig = {
 						"⚠️ All data associated with this organization will be deleted! ⚠️",
 					path: (_pathname: string) => "/console/organizations",
 					is_allowed: isAllowedOrganizationDelete,
+					effect: () => clearOrganization(),
 				},
 			],
 		},

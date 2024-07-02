@@ -68,6 +68,7 @@ const Table = (props: Props) => {
 							class="box"
 							style="margin-bottom: 1rem;"
 							href={rowHref(props.config?.row?.button, datum)}
+							onMouseDown={(_e) => rowEffect(props.config?.row?.button, datum)}
 						>
 							{rowText(props.config?.row, datum)}
 						</a>
@@ -135,6 +136,7 @@ export interface ItemConfig {
 export interface RowsButtonConfig {
 	text: string;
 	path: (pathname: string, datum: { [slug: string]: Slug }) => string;
+	effect: (datum: { [slug: string]: Slug }) => void;
 }
 
 const rowText = (config: RowConfig, datum: Record<string, string>) => {
@@ -146,6 +148,9 @@ const rowText = (config: RowConfig, datum: Record<string, string>) => {
 
 const rowHref = (config: RowsButtonConfig, datum: Record<string, string>) =>
 	`${config?.path?.(pathname(), datum)}?${BACK_PARAM}=${encodePath()}`;
+
+const rowEffect = (config: RowsButtonConfig, datum: Record<string, string>) =>
+	config?.effect?.(datum);
 
 const BackButton = (props: {
 	name: string;

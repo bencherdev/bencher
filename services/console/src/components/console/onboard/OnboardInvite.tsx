@@ -25,6 +25,7 @@ import OnboardSteps from "./OnboardSteps";
 import { createStore } from "solid-js/store";
 import { MEMBER_FIELDS } from "../../../config/organization/members";
 import { OnboardStep } from "./OnboardStepsInner";
+import { getOrganization, setOrganization } from "../../../util/organization";
 
 export interface Props {
 	apiUrl: string;
@@ -63,6 +64,10 @@ const OnboardInvite = (props: Props) => {
 		bencher_valid: InitOutput;
 		token: string;
 	}) => {
+		const cachedOrganization = getOrganization();
+		if (cachedOrganization) {
+			return [cachedOrganization];
+		}
 		if (!fetcher.bencher_valid) {
 			return;
 		}
@@ -86,9 +91,14 @@ const OnboardInvite = (props: Props) => {
 
 	const organization = createMemo(() => {
 		const orgs = organizations();
-		return Array.isArray(orgs) && (orgs?.length ?? 0) > 0
-			? (orgs?.[0] as JsonOrganization)
-			: undefined;
+		if (Array.isArray(orgs) && (orgs?.length ?? 0) > 0) {
+			const org = orgs?.[0] as JsonOrganization;
+			if (orgs.length === 1) {
+				setOrganization(org);
+			}
+			return org;
+		}
+		return undefined;
 	});
 
 	const [invited, setInvited] = createStore<JsonNewMember[]>([]);

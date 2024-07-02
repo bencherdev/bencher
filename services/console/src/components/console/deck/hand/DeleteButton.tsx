@@ -23,6 +23,7 @@ export interface Props {
 	subtitle: string;
 	redirect: (pathname: string, data: object) => string;
 	notify?: boolean;
+	effect?: undefined | (() => void);
 }
 
 const DeleteButton = (props: Props) => {
@@ -45,6 +46,7 @@ const DeleteButton = (props: Props) => {
 		httpDelete(props.apiUrl, props.path(), token)
 			.then((_resp) => {
 				setDeleting(false);
+				props.effect?.();
 				if (props.notify ?? true) {
 					navigateNotify(
 						NotifyKind.OK,

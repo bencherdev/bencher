@@ -25,6 +25,7 @@ export interface DeckButtonConfig {
 	subtitle: string;
 	path: (pathname: string, data: object) => string;
 	is_allowed?: (apiUrl: string, data: object) => boolean;
+	effect?: () => void;
 }
 
 const DeckButton = (props: Props) => {
@@ -65,6 +66,7 @@ const DeckButton = (props: Props) => {
 										data={props.data}
 										subtitle={props.config.subtitle}
 										redirect={props.config.path}
+										effect={props.config.effect}
 									/>
 								</p>
 							</div>

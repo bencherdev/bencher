@@ -16,6 +16,7 @@ import OnboardSteps from "./OnboardSteps";
 import { isBencherCloud } from "../../../util/ext";
 import CopyButton from "./CopyButton";
 import { OnboardStep } from "./OnboardStepsInner";
+import { getOrganization, setOrganization } from "../../../util/organization";
 
 export interface Props {
 	apiUrl: string;
@@ -54,6 +55,10 @@ const OnboardRun = (props: Props) => {
 		bencher_valid: InitOutput;
 		token: string;
 	}) => {
+		const cachedOrganization = getOrganization();
+		if (cachedOrganization) {
+			return [cachedOrganization];
+		}
 		if (!fetcher.bencher_valid) {
 			return undefined;
 		}
@@ -75,11 +80,17 @@ const OnboardRun = (props: Props) => {
 		getOrganizations,
 	);
 
-	const organization = createMemo(() =>
-		Array.isArray(organizations()) && (organizations()?.length ?? 0) > 0
-			? (organizations()?.[0] as JsonOrganization)
-			: null,
-	);
+	const organization = createMemo(() => {
+		const orgs = organizations();
+		if (Array.isArray(orgs) && (orgs?.length ?? 0) > 0) {
+			const org = orgs?.[0] as JsonOrganization;
+			if (orgs.length === 1) {
+				setOrganization(org);
+			}
+			return org;
+		}
+		return undefined;
+	});
 
 	const projectsFetcher = createMemo(() => {
 		return {

@@ -14,6 +14,7 @@ import { createMemo, createResource } from "solid-js";
 import { validJwt } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
 import type { JsonOrganization, JsonProject } from "../../../types/bencher";
+import { getOrganization, setOrganization } from "../../../util/organization";
 
 export interface Props {
 	apiUrl: string;
@@ -51,6 +52,17 @@ const ConsoleRedirect = (props: Props) => {
 		bencher_valid: InitOutput;
 		token: string;
 	}) => {
+		const cachedOrganization = getOrganization();
+		if (cachedOrganization) {
+			navigate(
+				forwardParams(
+					`/console/organizations/${cachedOrganization?.slug}/projects`,
+					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM],
+					null,
+				),
+				{ replace: true },
+			);
+		}
 		if (!fetcher.bencher_valid) {
 			return;
 		}
@@ -87,9 +99,14 @@ const ConsoleRedirect = (props: Props) => {
 
 	const organization = createMemo(() => {
 		const orgs = organizations();
-		return Array.isArray(orgs) && (orgs?.length ?? 0) > 0
-			? (orgs?.[0] as JsonOrganization)
-			: undefined;
+		if (Array.isArray(orgs) && (orgs?.length ?? 0) > 0) {
+			const org = orgs?.[0] as JsonOrganization;
+			if (orgs.length === 1) {
+				setOrganization(org);
+			}
+			return org;
+		}
+		return undefined;
 	});
 
 	const projectsFetcher = createMemo(() => {
