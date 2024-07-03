@@ -6,10 +6,10 @@ kill_timeout = "6s"
 [build]
 image = "registry.fly.io/bencher-api"
 
-[[mounts]]
-source = "bencher_data_machines"
-destination = "/var/lib/bencher/data"
-processes = ["app"]
+# [[mounts]]
+# source = "bencher_data_machines"
+# destination = "/var/lib/bencher/data"
+# processes = ["app"]
 
 [[services]]
 protocol = "tcp"
