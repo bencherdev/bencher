@@ -9,6 +9,9 @@ image = "registry.fly.io/bencher-api-test"
 [[services]]
 protocol = "tcp"
 internal_port = 61016
+auto_start_machines = false
+auto_stop_machines = false
+min_machines_running = 1
 
 [[services.ports]]
 port = 80
@@ -21,10 +24,20 @@ handlers = ["tls", "http"]
 
 [services.concurrency]
 type = "connections"
-hard_limit = 1024
 soft_limit = 1024
+hard_limit = 1024
+
+[[services.tcp_checks]]
+grace_period = "24s"
+interval = "12s"
+timeout = "2s"
+restart_limit = 0
 
 [[vm]]
 cpu_kind = "shared"
 cpus = 1
 memory_mb = 256
+
+[[restart]]
+policy = "on-failure"
+retries = 6
