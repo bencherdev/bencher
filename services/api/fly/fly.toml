@@ -28,3 +28,8 @@ handlers = ["tls", "http"]
 type = "connections"
 hard_limit = 1024
 soft_limit = 1024
+
+[[vm]]
+cpu_kind = "shared"
+cpus = 2
+memory_mb = 1024

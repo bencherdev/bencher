@@ -827,7 +827,6 @@ jobs:
     name: Backup Database
     runs-on: ubuntu-latest
     # This will fail whenever Bencher Cloud is down
-    # or there are any breaking changes to the report format
     continue-on-error: true
     timeout-minutes: 5
     needs:
