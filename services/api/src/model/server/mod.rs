@@ -17,6 +17,7 @@ use crate::{
     model::{organization::plan::LicenseUsage, user::QueryUser},
     schema::{self, server as server_table},
     util::fn_get::fn_get,
+    API_VERSION,
 };
 
 mod stats;
@@ -190,7 +191,11 @@ impl QueryServer {
 
     pub fn into_json(self) -> JsonServer {
         let Self { uuid, created, .. } = self;
-        JsonServer { uuid, created }
+        JsonServer {
+            uuid,
+            created,
+            version: Some(API_VERSION.into()),
+        }
     }
 }
 

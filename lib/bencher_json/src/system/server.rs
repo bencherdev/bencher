@@ -14,6 +14,7 @@ crate::typed_uuid::typed_uuid!(ServerUuid);
 pub struct JsonServer {
     pub uuid: ServerUuid,
     pub created: DateTime,
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
