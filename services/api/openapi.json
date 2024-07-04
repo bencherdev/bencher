@@ -10798,6 +10798,10 @@
           },
           "uuid": {
             "$ref": "#/components/schemas/ServerUuid"
+          },
+          "version": {
+            "nullable": true,
+            "type": "string"
           }
         },
         "required": [
