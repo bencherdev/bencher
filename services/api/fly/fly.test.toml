@@ -33,6 +33,14 @@ interval = "12s"
 timeout = "2s"
 restart_limit = 0
 
+[[services.http_checks]]
+grace_period = "24s"
+interval = "12s"
+timeout = "2s"
+method = "get"
+path = "/v0/projects?per_page=0"
+protocol = "http"
+
 [[vm]]
 cpu_kind = "shared"
 cpus = 1
