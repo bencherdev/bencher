@@ -6,7 +6,7 @@ export const NOTIFY_TIMEOUT_PARAM = "notify_timeout";
 export const NOTIFY_LINK_URL_PARAM = "notify_link_url";
 export const NOTIFY_LINK_TEXT_PARAM = "notify_link_text";
 
-export const NOTIFY_TIMEOUT = 4321;
+export const NOTIFY_TIMEOUT = 3210;
 export const MAX_NOTIFY_TIMEOUT = 2147483647;
 
 export enum NotifyKind {

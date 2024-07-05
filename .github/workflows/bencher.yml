@@ -931,7 +931,7 @@ jobs:
           npx netlify-cli \
           deploy \
           --alias ${GITHUB_REF#refs/*/} \
-          --message '${{ env.DEPLOY_MESSAGE }}' \
+          --message "$DEPLOY_MESSAGE" \
           --json \
           | tee netlify.json
       - uses: rui314/setup-mold@v1
@@ -966,7 +966,7 @@ jobs:
           deploy \
           --prod \
           --alias ${GITHUB_REF#refs/*/} \
-          --message '${{ env.DEPLOY_MESSAGE }}' \
+          --message "$DEPLOY_MESSAGE" \
           --json \
           | tee netlify.json
       - uses: rui314/setup-mold@v1

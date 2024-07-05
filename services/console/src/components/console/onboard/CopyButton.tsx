@@ -1,6 +1,6 @@
 import { Show, createSignal } from "solid-js";
 
-export const COPY_TIMEOUT = 2110;
+const COPY_TIMEOUT = 2110;
 
 interface Props {
 	text: string;

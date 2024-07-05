@@ -14,6 +14,7 @@ import ConsoleButton from "./ConsoleButton";
 import PerfButton from "./PerfButton";
 import StatusButton from "./StatusButton";
 import { authUser } from "../../../../util/auth";
+import RefreshButton from "../../../site/RefreshButton";
 
 export interface Props {
 	isConsole: boolean;
@@ -95,20 +96,10 @@ const DeckHeaderButton = (props: Props) => {
 				/>
 			</Match>
 			<Match when={props.button.kind === Button.REFRESH}>
-				<button
-					class="button is-fullwidth"
-					type="button"
+				<RefreshButton
 					title={`Refresh ${props.title()}`}
-					onMouseDown={(e) => {
-						e.preventDefault();
-						props.handleRefresh();
-					}}
-				>
-					<span class="icon">
-						<i class="fas fa-sync-alt" />
-					</span>
-					<span>Refresh</span>
-				</button>
+					handleRefresh={props.handleRefresh}
+				/>
 			</Match>
 		</Switch>
 	);
