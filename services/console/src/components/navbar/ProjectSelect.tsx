@@ -136,7 +136,7 @@ const ProjectSelect = (props: Props) => {
 			const project = p[i];
 			const slug = project?.slug;
 			if (slug === target) {
-				navigate(`/console/projects/${slug}/perf`);
+				navigate(`/console/projects/${slug}/plots`);
 				break;
 			}
 		}
