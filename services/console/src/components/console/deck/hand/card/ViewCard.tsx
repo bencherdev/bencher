@@ -20,15 +20,25 @@ const ViewCard = (props: Props) => {
 	);
 
 	return (
-		<div id={props.card?.label} class="card">
-			<div class="card-header">
-				<div class="card-header-title">{props.card?.label}</div>
-			</div>
-			<div class="card-content">
-				<div class="content">
+		<form>
+			<div id={props.card?.label} class="field is-horizontal">
+				<div class="field-label is-normal">
+					<label class="label">{props.card?.label}</label>
+				</div>
+				<div class="field-body">
 					<Switch>
 						<Match when={props.card?.display === Display.RAW}>
-							<p style="word-break: break-word;">{props.value}</p>
+							<div class="field">
+								<p class="control is-expanded">
+									<input
+										class="input is-static"
+										type="text"
+										placeholder={props.value}
+										value={props.value}
+										readonly
+									/>
+								</p>
+							</div>
 						</Match>
 						<Match when={props.card?.display === Display.SWITCH}>
 							<div class="field">
@@ -70,23 +80,25 @@ const ViewCard = (props: Props) => {
 							<GitHashCard {...props} />
 						</Match>
 					</Switch>
+					<Show when={is_allowed()}>
+						<div class="field">
+							<div class="control">
+								<button
+									type="button"
+									class="button"
+									onMouseDown={(e) => {
+										e.preventDefault();
+										props.toggleUpdate();
+									}}
+								>
+									Update
+								</button>
+							</div>
+						</div>
+					</Show>
 				</div>
 			</div>
-			{is_allowed() && (
-				<div class="card-footer">
-					{/* biome-ignore lint/a11y/useValidAnchor: card link */}
-					<a
-						class="card-footer-item"
-						onMouseDown={(e) => {
-							e.preventDefault();
-							props.toggleUpdate();
-						}}
-					>
-						Update
-					</a>
-				</div>
-			)}
-		</div>
+		</form>
 	);
 };
 

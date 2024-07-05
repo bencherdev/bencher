@@ -19,35 +19,37 @@ export interface Props {
 
 const DeckCard = (props: Props) => {
 	return (
-		<Switch>
-			<Match when={props.card?.kind === Card.FIELD}>
-				<FieldCard
-					apiUrl={props.apiUrl}
-					params={props.params}
-					user={props.user}
-					path={props.path}
-					card={props.card}
-					value={props.card?.key ? props.data()?.[props.card?.key] : null}
-					handleRefresh={props.handleRefresh}
-					handleLoopback={props.handleLoopback}
-				/>
-			</Match>
-			<Match when={props.card?.kind === Card.TABLE}>
-				<div>Table Card</div>
-			</Match>
-			<Match when={props.card?.kind === Card.NESTED_FIELD}>
-				<FieldCard
-					apiUrl={props.apiUrl}
-					params={props.params}
-					user={props.user}
-					path={props.path}
-					card={props.card}
-					value={fmtNestedValue(props.data(), props.card?.keys)}
-					handleRefresh={props.handleRefresh}
-					handleLoopback={props.handleLoopback}
-				/>
-			</Match>
-		</Switch>
+		<div style="margin-bottom: 0.5rem;">
+			<Switch>
+				<Match when={props.card?.kind === Card.FIELD}>
+					<FieldCard
+						apiUrl={props.apiUrl}
+						params={props.params}
+						user={props.user}
+						path={props.path}
+						card={props.card}
+						value={props.card?.key ? props.data()?.[props.card?.key] : null}
+						handleRefresh={props.handleRefresh}
+						handleLoopback={props.handleLoopback}
+					/>
+				</Match>
+				<Match when={props.card?.kind === Card.TABLE}>
+					<div>Table Card</div>
+				</Match>
+				<Match when={props.card?.kind === Card.NESTED_FIELD}>
+					<FieldCard
+						apiUrl={props.apiUrl}
+						params={props.params}
+						user={props.user}
+						path={props.path}
+						card={props.card}
+						value={fmtNestedValue(props.data(), props.card?.keys)}
+						handleRefresh={props.handleRefresh}
+						handleLoopback={props.handleLoopback}
+					/>
+				</Match>
+			</Switch>
+		</div>
 	);
 };
 

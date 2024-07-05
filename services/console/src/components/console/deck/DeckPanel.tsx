@@ -100,17 +100,24 @@ const DeckPanel = (props: Props) => {
 				data={deckData}
 				handleRefresh={refetch}
 			/>
-			<Deck
-				apiUrl={props.apiUrl}
-				params={props.params}
-				user={user}
-				config={config()?.deck}
-				path={path}
-				data={deckData}
-				// refresh={refresh}
-				handleRefresh={refetch}
-				handleLoopback={setLoopback}
-			/>
+			<section class="section">
+				<div class="container">
+					<div class="columns is-mobile">
+						<div class="column">
+							<Deck
+								apiUrl={props.apiUrl}
+								params={props.params}
+								user={user}
+								config={config()?.deck}
+								path={path}
+								data={deckData}
+								handleRefresh={refetch}
+								handleLoopback={setLoopback}
+							/>
+						</div>
+					</div>
+				</div>
+			</section>
 		</>
 	);
 };

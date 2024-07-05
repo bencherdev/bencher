@@ -173,54 +173,56 @@ const UpdateCard = (props: Props) => {
 	};
 
 	return (
-		<div class="card">
-			<div class="card-header">
-				<div class="card-header-title">{props.card?.label}</div>
-			</div>
-			<div class="card-content">
-				<div class="content">
-					<form
-						onSubmit={(e) => {
-							e.preventDefault();
-							sendForm();
-						}}
-					>
-						<Field
-							params={props.params}
-							kind={props.card?.field?.kind}
-							fieldKey={props.card?.field?.key}
-							value={form?.[props.card?.field?.key]?.value}
-							valid={form?.[props.card?.field?.key]?.valid}
-							config={props.card?.field?.config}
-							handleField={handleField}
-						/>
-					</form>
+		<form
+			onSubmit={(e) => {
+				e.preventDefault();
+				sendForm();
+			}}
+		>
+			<div id={props.card?.label} class="field is-horizontal">
+				<div class="field-label is-normal">
+					<label class="label">{props.card?.label}</label>
+				</div>
+				<div class="field-body">
+					<Field
+						params={props.params}
+						kind={props.card?.field?.kind}
+						fieldKey={props.card?.field?.key}
+						value={form?.[props.card?.field?.key]?.value}
+						valid={form?.[props.card?.field?.key]?.valid}
+						config={props.card?.field?.config}
+						handleField={handleField}
+					/>
+					<div class="field">
+						<div class="control">
+							<div class="buttons">
+								<button
+									type="button"
+									class="button"
+									disabled={!isSendable()}
+									onMouseDown={(e) => {
+										e.preventDefault();
+										sendForm();
+									}}
+								>
+									Save
+								</button>
+								<button
+									type="button"
+									class="button"
+									onMouseDown={(e) => {
+										e.preventDefault();
+										props.toggleUpdate();
+									}}
+								>
+									Cancel
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
-			<div class="card-footer">
-				{/* biome-ignore lint/a11y/useValidAnchor: card link */}
-				<a
-					class="card-footer-item"
-					style={!isSendable() ? "pointer-events:none;color:#fdb07e;" : ""}
-					onMouseDown={(e) => {
-						e.preventDefault();
-						sendForm();
-					}}
-				>
-					Save
-				</a>
-				{/* biome-ignore lint/a11y/useValidAnchor: card link */}
-				<a
-					class="card-footer-item"
-					onMouseDown={(e) => {
-						e.preventDefault();
-						props.toggleUpdate();
-					}}
-				>
-					Cancel
-				</a>
-			</div>
-		</div>
+		</form>
 	);
 };
 
