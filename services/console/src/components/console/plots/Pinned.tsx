@@ -485,7 +485,6 @@ const PinnedSetting = (props: {
 				handleRefresh={handleUpdate}
 				handleLoopback={handleUpdate}
 			/>
-			<br />
 			<DeckCard
 				apiUrl={props.apiUrl}
 				params={props.params}

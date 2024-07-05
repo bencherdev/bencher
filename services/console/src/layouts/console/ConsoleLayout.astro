@@ -21,21 +21,19 @@ const description =
 <BaseLayout title={title} description={description}>
   <ConsoleNavbar slot="navbar" apiUrl={apiUrl} params={params} />
   <AnonRedirect client:only="solid-js" path={redirect ?? "/auth/login"} />
-  <div class="is-widescreen">
-    <div class="columns is-reverse-mobile">
-      <div class="columns">
-        <div class="column is-narrow">
-          <slot name="menu" />
+  <div class="columns is-reverse-mobile">
+    <div class="columns">
+      <div class="column is-narrow">
+        <slot name="menu" />
+      </div>
+    </div>
+    <div class="column is-10">
+      <Notification client:only="solid-js" suppress={suppressNotification} />
+      <section class="section">
+        <div class="continer">
+          <slot />
         </div>
-      </div>
-      <div class="column is-10">
-        <Notification client:only="solid-js" suppress={suppressNotification} />
-        <section class="section">
-          <div class="continer">
-            <slot />
-          </div>
-        </section>
-      </div>
+      </section>
     </div>
   </div>
   <div slot="footer" />

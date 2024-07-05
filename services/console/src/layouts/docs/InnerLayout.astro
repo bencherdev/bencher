@@ -49,51 +49,49 @@ const {
   author={author}
   canonical={canonical}
 >
-  <div class="is-widescreen">
-    <div class="columns is-reverse-mobile">
-      <div class="columns">
-        <div class="column is-narrow">
-          <DocsMenu tab={tab ?? DocsTab.Docs} lang={lang} collection={collection} slug={slug}/>
-        </div>
+  <div class="columns is-reverse-mobile">
+    <div class="columns">
+      <div class="column is-narrow">
+        <DocsMenu tab={tab ?? DocsTab.Docs} lang={lang} collection={collection} slug={slug}/>
       </div>
-      <div class="column is-two-thirds">
-        <section class="section">
-          <div class="continer">
-            {
-              heading ? (
-                <div class="content">
-                  <h1 class="title is-1">{heading}</h1>
-                  { author === Author.everett &&
-                    <a class="subtitle level" href="/author/everett-pompeii">
-                      <div class="level-left">
-                        <div class="level is-mobile">
-                          <div class="level-item">
-                              <img src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" style="border-radius: 50%;" width="32" alt="Everett Pompeii" />
-                          </div>
-                          <div class="level-item">
-                            <p>Everett Pompeii</p>
-                          </div>
+    </div>
+    <div class="column is-two-thirds">
+      <section class="section">
+        <div class="continer">
+          {
+            heading ? (
+              <div class="content">
+                <h1 class="title is-1">{heading}</h1>
+                { author === Author.everett &&
+                  <a class="subtitle level" href="/author/everett-pompeii">
+                    <div class="level-left">
+                      <div class="level is-mobile">
+                        <div class="level-item">
+                            <img src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" style="border-radius: 50%;" width="32" alt="Everett Pompeii" />
+                        </div>
+                        <div class="level-item">
+                          <p>Everett Pompeii</p>
                         </div>
                       </div>
-                    </a>
-                  }
-                  <hr />
-                  <slot />
-                </div>
-              ) : (
+                    </div>
+                  </a>
+                }
+                <hr />
                 <slot />
-              )
-            }
-            {published &&
-              <br />
-              <hr />
-              <p>Published: {fmtDateTime(published)}
-              {modified && modified !== published && <>| Last Updated: {fmtDateTime(modified)}</>}
-              </p>
-            }
-          </div>
-        </section>
-      </div>
+              </div>
+            ) : (
+              <slot />
+            )
+          }
+          {published &&
+            <br />
+            <hr />
+            <p>Published: {fmtDateTime(published)}
+            {modified && modified !== published && <>| Last Updated: {fmtDateTime(modified)}</>}
+            </p>
+          }
+        </div>
+      </section>
     </div>
   </div>
 </BaseLayout>

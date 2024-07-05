@@ -72,16 +72,21 @@ const DeleteButton = (props: Props) => {
 	return (
 		<Switch>
 			<Match when={deleteClicked() === false}>
-				<button
-					class="button is-danger is-fullwidth is-small"
-					type="button"
-					onMouseDown={(e) => {
-						e.preventDefault();
-						setDeleteClicked(true);
-					}}
-				>
-					Delete
-				</button>
+				<div class="buttons is-right">
+					<button
+						class="button is-small"
+						type="button"
+						onMouseDown={(e) => {
+							e.preventDefault();
+							setDeleteClicked(true);
+						}}
+					>
+						<span class="icon">
+							<i class="far fa-trash-alt" />
+						</span>
+						<span>Delete</span>
+					</button>
+				</div>
 			</Match>
 			<Match when={deleteClicked() === true}>
 				<div class="content has-text-centered">

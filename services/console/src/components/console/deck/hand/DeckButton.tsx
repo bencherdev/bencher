@@ -52,7 +52,6 @@ const DeckButton = (props: Props) => {
 				<div class="columns">
 					<div class="column">
 						<form
-							class="box"
 							onSubmit={(e) => {
 								e.preventDefault();
 							}}

@@ -40,6 +40,7 @@ const Deck = (props: Props) => {
 					/>
 				)}
 			</For>
+			<br />
 			<Show when={props.isConsole !== false && props.config?.buttons}>
 				<For each={props.config?.buttons}>
 					{(button) => (

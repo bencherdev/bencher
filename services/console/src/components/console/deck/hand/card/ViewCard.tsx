@@ -22,64 +22,85 @@ const ViewCard = (props: Props) => {
 	return (
 		<form>
 			<div id={props.card?.label} class="field is-horizontal">
-				<div class="field-label is-normal">
+				<div
+					class={`field-label${(() => {
+						switch (props.card?.display) {
+							case Display.RAW:
+							case Display.SWITCH:
+							case Display.SELECT:
+								return " is-normal";
+							default:
+								return "";
+						}
+					})()}`}
+				>
 					<label class="label">{props.card?.label}</label>
 				</div>
 				<div class="field-body">
-					<Switch>
-						<Match when={props.card?.display === Display.RAW}>
-							<div class="field">
-								<p class="control is-expanded">
-									<input
-										class="input is-static"
-										type="text"
-										placeholder={props.value}
-										value={props.value}
-										readonly
-									/>
-								</p>
-							</div>
-						</Match>
-						<Match when={props.card?.display === Display.SWITCH}>
-							<div class="field">
-								<input
-									type="checkbox"
-									class="switch"
-									checked={
-										typeof props.value === "boolean" ? props.value : false
-									}
-									disabled={true}
-								/>
-								<label />
-							</div>
-						</Match>
-						<Match when={props.card?.display === Display.SELECT}>
-							{props.card?.field?.value?.options.reduce((field, option) => {
-								if (props.value === option.value) {
-									return option.option;
-								}
-								return field;
-							}, props.value)}
-						</Match>
-						<Match when={props.card?.display === Display.START_POINT}>
-							<Show when={props.value}>
-								<a
-									href={`/console/projects/${props.params?.project}/branches/${props.value?.branch}`}
-								>
-									View Start Point
-									<br />
-									Version Number: {props.value?.version?.number}
-									<br />
-									{props.value?.version?.hash && (
-										<>Version Hash: {props.value?.version?.hash}</>
-									)}
-								</a>
+					<div class="field is-expanded">
+						<div class="control">
+							<Show when={props.value} fallback={<>&nbsp;</>}>
+								<Switch>
+									<Match when={props.card?.display === Display.RAW}>
+										<input
+											class="input is-static"
+											type="text"
+											placeholder={props.value}
+											value={props.value}
+											readonly
+										/>
+									</Match>
+									<Match when={props.card?.display === Display.SWITCH}>
+										<input
+											type="checkbox"
+											class="switch"
+											checked={
+												typeof props.value === "boolean" ? props.value : false
+											}
+											disabled={true}
+										/>
+										<label />
+									</Match>
+									<Match when={props.card?.display === Display.SELECT}>
+										{(() => {
+											const value = props.card?.field?.value?.options.reduce(
+												(field, option) => {
+													if (props.value === option.value) {
+														return option.option;
+													}
+													return field;
+												},
+												props.value,
+											);
+											return (
+												<input
+													class="input is-static"
+													type="text"
+													placeholder={value}
+													value={value}
+													readonly
+												/>
+											);
+										})()}
+									</Match>
+									<Match when={props.card?.display === Display.START_POINT}>
+										<a
+											href={`/console/projects/${props.params?.project}/branches/${props.value?.branch}`}
+										>
+											Version Number: {props.value?.version?.number}
+											<br />
+											{props.value?.version?.hash && (
+												<>Version Hash: {props.value?.version?.hash}</>
+											)}
+										</a>
+									</Match>
+									<Match when={props.card?.display === Display.GIT_HASH}>
+										<GitHashCard {...props} />
+									</Match>
+								</Switch>
 							</Show>
-						</Match>
-						<Match when={props.card?.display === Display.GIT_HASH}>
-							<GitHashCard {...props} />
-						</Match>
-					</Switch>
+						</div>
+					</div>
 					<Show when={is_allowed()}>
 						<div class="field">
 							<div class="control">
