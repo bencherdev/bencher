@@ -5,6 +5,7 @@ import type CardConfig from "./CardConfig";
 import { authUser } from "../../../../../util/auth";
 import { httpGet } from "../../../../../util/http";
 import type { JsonProject } from "../../../../../types/bencher";
+import { BACK_PARAM, encodePath } from "../../../../../util/url";
 
 export interface Props {
 	apiUrl: string;
@@ -39,7 +40,12 @@ const ViewCard = (props: Props) => {
 				<div class="field-body">
 					<div class="field is-expanded">
 						<div class="control">
-							<Show when={props.value} fallback={<>&nbsp;</>}>
+							<Show
+								when={props.value}
+								fallback={
+									<input class="input is-static" type="text" readonly />
+								}
+							>
 								<Switch>
 									<Match when={props.card?.display === Display.RAW}>
 										<input
@@ -85,7 +91,11 @@ const ViewCard = (props: Props) => {
 									</Match>
 									<Match when={props.card?.display === Display.START_POINT}>
 										<a
-											href={`/console/projects/${props.params?.project}/branches/${props.value?.branch}`}
+											href={`/console/projects/${
+												props.params?.project
+											}/branches/${
+												props.value?.branch
+											}?${BACK_PARAM}=${encodePath()}`}
 										>
 											Version Number: {props.value?.version?.number}
 											<br />
