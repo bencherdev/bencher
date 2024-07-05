@@ -66,9 +66,8 @@ impl QueryProject {
     }
 
     #[cfg(not(feature = "plus"))]
-    pub fn is_visibility_public(visibility: Option<Visibility>) -> Result<(), HttpError> {
+    pub fn is_visibility_public(visibility: Visibility) -> Result<(), HttpError> {
         visibility
-            .unwrap_or_default()
             .is_public()
             .then_some(())
             .ok_or(crate::error::payment_required_error(format!(

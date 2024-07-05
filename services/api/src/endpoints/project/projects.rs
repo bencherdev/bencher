@@ -281,16 +281,19 @@ async fn patch_inner(
     )?;
 
     // Check project visibility
-    #[cfg(not(feature = "plus"))]
-    QueryProject::is_visibility_public(json_project.visibility())?;
-    #[cfg(feature = "plus")]
-    PlanKind::check_for_project(
-        conn_lock!(context),
-        context.biller.as_ref(),
-        &context.licensor,
-        &query_project,
-    )
-    .await?;
+    if let Some(visibility) = json_project.visibility() {
+        #[cfg(not(feature = "plus"))]
+        QueryProject::is_visibility_public(visibility)?;
+        #[cfg(feature = "plus")]
+        PlanKind::check_for_project(
+            conn_lock!(context),
+            context.biller.as_ref(),
+            &context.licensor,
+            &query_project,
+            visibility,
+        )
+        .await?;
+    }
 
     let update_project = UpdateProject::from(json_project.clone());
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))

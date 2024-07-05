@@ -301,13 +301,15 @@ impl PlanKind {
         conn: &mut DbConnection,
         biller: Option<&Biller>,
         licensor: &Licensor,
-        project: &QueryProject,
+        query_project: &QueryProject,
+        visibility: Visibility,
     ) -> Result<(), HttpError> {
         // Check if the project is public to skip having to call the billing backend
-        if project.visibility.is_public() {
+        if visibility.is_public() {
             return Ok(());
         }
-        Self::new_for_project(conn, biller, licensor, project).await?;
+        let query_organization = QueryOrganization::get(conn, query_project.organization_id)?;
+        Self::new(conn, biller, licensor, &query_organization, visibility).await?;
         Ok(())
     }
 

@@ -214,18 +214,20 @@ async fn post_inner(
     let query_organization =
         QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
 
-    // Check project visibility
-    #[cfg(not(feature = "plus"))]
-    QueryProject::is_visibility_public(json_project.visibility)?;
-    #[cfg(feature = "plus")]
-    PlanKind::check_for_organization(
-        conn_lock!(context),
-        context.biller.as_ref(),
-        &context.licensor,
-        &query_organization,
-        json_project.visibility.unwrap_or_default(),
-    )
-    .await?;
+    if let Some(visibility) = json_project.visibility {
+        // Check project visibility
+        #[cfg(not(feature = "plus"))]
+        QueryProject::is_visibility_public(visibility)?;
+        #[cfg(feature = "plus")]
+        PlanKind::check_for_organization(
+            conn_lock!(context),
+            context.biller.as_ref(),
+            &context.licensor,
+            &query_organization,
+            visibility,
+        )
+        .await?;
+    }
 
     // Create the project
     let insert_project =
