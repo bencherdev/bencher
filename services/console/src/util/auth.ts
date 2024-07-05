@@ -8,6 +8,7 @@ import { validUser } from "./valid";
 import { httpGet } from "./http";
 import type { Params } from "astro";
 import { dateTimeMillis } from "./convert";
+import { removeOrganization } from "./organization";
 
 const BENCHER_USER_KEY: string = "BENCHER_USER";
 
@@ -66,6 +67,7 @@ setInterval(() => {
 		(dateTimeMillis(userRaw?.expiration) ?? 0) < Date.now()
 	) {
 		removeUser();
+		removeOrganization();
 		setAuthUsr(defaultUser);
 	}
 }, 100);

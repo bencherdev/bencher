@@ -14,7 +14,11 @@ import { createMemo, createResource } from "solid-js";
 import { validJwt } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
 import type { JsonOrganization, JsonProject } from "../../../types/bencher";
-import { getOrganization, setOrganization } from "../../../util/organization";
+import {
+	getOrganization,
+	removeOrganization,
+	setOrganization,
+} from "../../../util/organization";
 
 export interface Props {
 	apiUrl: string;
@@ -29,6 +33,7 @@ const ConsoleRedirect = (props: Props) => {
 
 	const logout = () => {
 		removeUser();
+		removeOrganization();
 		navigate("/auth/login", { replace: true });
 	};
 	const help = () => {

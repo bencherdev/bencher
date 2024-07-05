@@ -17,12 +17,12 @@ export const getOrganization = () => {
 		if (organization) {
 			return JSON.parse(organization);
 		}
-		clearOrganization();
+		removeOrganization();
 	}
 	return null;
 };
 
-export const clearOrganization = () => {
+export const removeOrganization = () => {
 	if (typeof localStorage !== "undefined") {
 		localStorage.removeItem(BENCHER_ORGANIZATION_KEY);
 	}
