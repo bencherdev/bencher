@@ -34,7 +34,7 @@ if (params.project && params.project !== "undefined") {
 		}
 	} catch (e) {
 		console.error(`Failed to fetch project data: ${e}`);
-    Sentry.captureException(e);
+		Sentry.captureException(e);
 	}
 }
 
