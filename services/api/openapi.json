@@ -8733,7 +8733,15 @@
       "JsonLitestream": {
         "type": "object",
         "properties": {
+          "busy_timeout": {
+            "nullable": true,
+            "description": "The database busy timeout in milliseconds",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "replicas": {
+            "description": "Disaster recovery replicas",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonReplica"
