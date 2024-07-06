@@ -68,6 +68,7 @@ sentry = { version = "0.34", optional = true, default-features = false, features
     "reqwest",
     "rustls",
 ] }
+tokio-rustls = "0.25"
 
 # https://github.com/diesel-rs/diesel/blob/ba2f567b038179d16cea939c0bcaaecc216ea947/diesel/Cargo.toml#L19
 # https://github.com/tauri-apps/tauri/discussions/6183

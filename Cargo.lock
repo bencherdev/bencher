@@ -901,6 +901,7 @@ dependencies = [
  "slug",
  "thiserror",
  "tokio",
+ "tokio-rustls 0.25.0",
  "url",
  "uuid 1.8.0",
 ]

@@ -123,11 +123,12 @@ impl FmtBody for ButtonBody {
         );
 
         slog::debug!(log, "Inlining CSS into HTML");
-        // TODO log this error
         match css_inline::inline(&html) {
             Ok(html) => html,
-            Err(e) => {
-                slog::error!(log, "Failed to inline CSS: {e}");
+            Err(err) => {
+                slog::error!(log, "Failed to inline CSS: {err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
                 html
             },
         }
