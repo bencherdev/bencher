@@ -52,6 +52,19 @@ impl From<TaskExample> for Example {
 
 impl Examples {
     pub fn exec(&self) -> anyhow::Result<()> {
+        // Install `bencher` CLI
+        let status = Command::new("cargo")
+            .args([
+                "install",
+                "--debug",
+                "--path",
+                "services/cli",
+                "--locked",
+                "--force",
+            ])
+            .status()?;
+        assert!(status.success(), "{status}");
+
         if let Some(example) = self.example {
             run_example(&self.url, &self.token, example)
         } else {

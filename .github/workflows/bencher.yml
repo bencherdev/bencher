@@ -152,14 +152,14 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-all-features
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Add clippy
         run: rustup component add clippy
       - name: Run clippy
-        run: cargo clippy --no-deps -- -Dwarnings
+        run: cargo clippy --no-deps --all-features -- -Dwarnings
 
   check_generated:
     name: Check Generated
@@ -199,7 +199,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-all-features
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -248,14 +248,12 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-api
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      - name: Install `bencher` CLI
-        run: cargo install --debug --path services/cli --locked --force
       - name: Run Smoke Test
-        run: cargo test-api smoke localhost
+        run: cargo test-api smoke ci
 
   release_api_smoke_test:
     name: Release API Smoke Test
@@ -263,13 +261,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - os: ubuntu-latest
           - os: macos-latest
           - os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install `bencher` CLI
-        run: cargo install --debug --path services/cli --locked --force
+      - uses: rui314/setup-mold@v1
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
         run: cargo test-api smoke localhost
 
@@ -294,8 +295,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      - name: Install `bencher` CLI
-        run: cargo install --debug --path services/cli --locked --force
       - name: Run Smoke Test
         run: cargo test-api smoke docker
 
@@ -342,7 +341,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release
+          key: ${{ runner.os }}-cargo-cli
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -378,7 +377,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-audit
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -790,8 +789,6 @@ jobs:
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      - name: Install `bencher` CLI
-        run: cargo install --debug --path services/cli --locked --force
       - name: Run Smoke Test
         run: cargo test-api smoke dev
 

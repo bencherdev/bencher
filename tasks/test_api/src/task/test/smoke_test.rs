@@ -28,6 +28,7 @@ pub struct SmokeTest {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Environment {
+    Ci,
     Localhost,
     Docker,
     Dev,
@@ -49,6 +50,7 @@ impl TryFrom<TaskSmokeTest> for SmokeTest {
 impl From<TaskTestEnvironment> for Environment {
     fn from(environment: TaskTestEnvironment) -> Self {
         match environment {
+            TaskTestEnvironment::Ci => Self::Ci,
             TaskTestEnvironment::Localhost => Self::Localhost,
             TaskTestEnvironment::Docker => Self::Docker,
             TaskTestEnvironment::Dev => Self::Dev,
@@ -61,7 +63,7 @@ impl From<TaskTestEnvironment> for Environment {
 impl SmokeTest {
     pub fn exec(&self) -> anyhow::Result<()> {
         let child = match self.environment {
-            Environment::Localhost => Some(api_run()?),
+            Environment::Ci | Environment::Localhost => Some(api_run()?),
             Environment::Docker => bencher_up().map(|()| None)?,
             Environment::Dev | Environment::Test | Environment::Prod => None,
         };
@@ -70,15 +72,16 @@ impl SmokeTest {
         test_api_version(&api_url)?;
 
         match self.environment {
+            Environment::Ci => {
+                test(&api_url, None, false)?;
+                kill_child(child)?;
+            },
             Environment::Localhost => {
-                test(&api_url, None)?;
-                child
-                    .expect("Child process is expected for `localhost`")
-                    .kill()
-                    .ok();
+                test(&api_url, None, true)?;
+                kill_child(child)?;
             },
             Environment::Docker => bencher_down()?,
-            Environment::Dev => test(&api_url, Some(&DEV_BENCHER_API_TOKEN))?,
+            Environment::Dev => test(&api_url, Some(&DEV_BENCHER_API_TOKEN), false)?,
             Environment::Test | Environment::Prod => {},
         }
 
@@ -89,7 +92,7 @@ impl SmokeTest {
 impl Environment {
     fn as_url(self) -> Url {
         match self {
-            Self::Localhost | Self::Docker => LOCALHOST_BENCHER_API_URL.clone(),
+            Self::Ci | Self::Localhost | Self::Docker => LOCALHOST_BENCHER_API_URL.clone(),
             Self::Dev => DEV_BENCHER_API_URL.clone(),
             Self::Test => TEST_BENCHER_API_URL.clone(),
             Self::Prod => PROD_BENCHER_API_URL.clone(),
@@ -166,8 +169,12 @@ fn test_api_version(api_url: &Url) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn test(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
-    seed(api_url, token).and_then(|()| examples(api_url, token))
+fn test(api_url: &Url, token: Option<&Jwt>, run_examples: bool) -> anyhow::Result<()> {
+    seed(api_url, token)?;
+    if run_examples {
+        examples(api_url, token)?;
+    }
+    Ok(())
 }
 
 fn seed(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
@@ -187,4 +194,11 @@ fn examples(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
         example: None,
     })?;
     examples.exec()
+}
+
+fn kill_child(child: Option<Child>) -> anyhow::Result<()> {
+    child
+        .expect("Child process is expected for `localhost`")
+        .kill()
+        .map_err(Into::into)
 }

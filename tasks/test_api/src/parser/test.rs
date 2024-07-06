@@ -51,8 +51,10 @@ pub struct TaskSmokeTest {
 #[clap(rename_all = "snake_case")]
 #[allow(clippy::doc_markdown)]
 pub enum TaskTestEnvironment {
-    /// https://localhost:61016
     #[default]
+    /// https://localhost:61016
+    Ci,
+    /// https://localhost:61016
     Localhost,
     /// Docker https://localhost:61016
     Docker,
