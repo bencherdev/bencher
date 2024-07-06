@@ -27,6 +27,7 @@ import OnboardSteps from "./OnboardSteps";
 import CopyButton from "./CopyButton";
 import { OnboardStep } from "./OnboardStepsInner";
 import { getOrganization, setOrganization } from "../../../util/organization";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -82,6 +83,7 @@ const OnboardProject = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};
@@ -127,6 +129,7 @@ const OnboardProject = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};
@@ -180,6 +183,7 @@ const OnboardProject = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};
@@ -248,6 +252,7 @@ const OnboardProject = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};

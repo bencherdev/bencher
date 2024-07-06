@@ -19,6 +19,7 @@ import {
 	removeOrganization,
 	setOrganization,
 } from "../../../util/organization";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -93,6 +94,7 @@ const ConsoleRedirect = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				help();
 				return;
 			});
@@ -165,6 +167,7 @@ const ConsoleRedirect = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				help();
 				return;
 			});

@@ -17,6 +17,7 @@ import DeckHeaderButton from "../console/deck/header/DeckHeaderButton";
 import { httpGet } from "../../util/http";
 import alertsConfig from "../../config/project/alerts";
 import { BACK_PARAM, decodePath, useSearchParams } from "../../util/url";
+import * as Sentry from "@sentry/astro";
 
 const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
 
@@ -60,6 +61,7 @@ const PublicAlert = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return {};
 			});
 	};

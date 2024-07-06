@@ -4,6 +4,7 @@ import { For, createMemo, createResource, createSignal } from "solid-js";
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
+import * as Sentry from "@sentry/astro";
 
 export type RadioValue = string;
 
@@ -48,6 +49,7 @@ const Radio = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return [];
 			});
 	};

@@ -18,6 +18,7 @@ import { PLOT_FIELDS } from "../../../config/project/plot";
 import FieldKind from "../../field/kind";
 import { httpGet, httpPatch } from "../../../util/http";
 import Field, { type FieldHandler } from "../../field/Field";
+import * as Sentry from "@sentry/astro";
 
 enum PinnedState {
 	Front = "front",
@@ -71,6 +72,7 @@ const Pinned = (props: {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return fetcher.plot;
 			});
 	};
@@ -215,6 +217,7 @@ const PinnedButtons = (props: {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};
@@ -383,6 +386,7 @@ const PinnedRank = (props: {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};

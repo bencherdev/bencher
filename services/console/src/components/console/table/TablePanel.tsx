@@ -26,7 +26,7 @@ import {
 	timeToDate,
 	timeToDateOnlyIso,
 } from "../../../util/convert";
-import { create } from "d3";
+import * as Sentry from "@sentry/astro";
 
 const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
@@ -155,6 +155,7 @@ const TablePanel = (props: Props) => {
 			.catch((error) => {
 				setState(TableState.ERR);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to fetch ${resourcePlural(

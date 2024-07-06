@@ -9,6 +9,7 @@ import { httpGet } from "./http";
 import type { Params } from "astro";
 import { dateTimeMillis } from "./convert";
 import { removeOrganization } from "./organization";
+import * as Sentry from "@sentry/astro";
 
 const BENCHER_USER_KEY: string = "BENCHER_USER";
 
@@ -31,7 +32,9 @@ export const setUser = (user: JsonAuthUser): boolean => {
 		window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
 		return true;
 	}
-	console.error("Invalid user", user);
+	const err = `Invalid user: ${JSON.stringify(user)}`;
+	console.error(err);
+	Sentry.captureMessage(err);
 	return false;
 };
 
@@ -40,7 +43,9 @@ export const getUser = (): JsonAuthUser => {
 	if (validUser(user)) {
 		return user;
 	}
-	console.error("Invalid user", user);
+	const err = `Invalid user: ${JSON.stringify(user)}`;
+	console.error(err);
+	Sentry.captureMessage(err);
 	return defaultUser;
 };
 
@@ -114,6 +119,7 @@ export const isAllowed = async (
 		.then((resp) => resp?.data?.allowed)
 		.catch((error) => {
 			console.error(error);
+			Sentry.captureException(error);
 			return false;
 		});
 };

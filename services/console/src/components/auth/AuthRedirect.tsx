@@ -10,6 +10,7 @@ import type {
 } from "../../types/bencher";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
+import * as Sentry from "@sentry/astro";
 
 const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 	const [searchParams, _setSearchParams] = useSearchParams();
@@ -45,6 +46,7 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				navigateNotify(
 					NotifyKind.ERROR,
 					"Invalid invitation. Please, try again.",

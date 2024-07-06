@@ -37,6 +37,7 @@ import BillingHeader from "./BillingHeader";
 import BillingForm from "./plan/BillingForm";
 import PaymentMethod from "./plan/PaymentMethod";
 import ConsoleFallbackPricingTable from "../../pricing/ConsoleFallbackPricingTable";
+import * as Sentry from "@sentry/astro";
 
 interface Props {
 	apiUrl: string;
@@ -369,6 +370,7 @@ const SelfHostedFreePanel = (props: {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					"Lettuce romaine calm! Failed to post license. Please, try again.",

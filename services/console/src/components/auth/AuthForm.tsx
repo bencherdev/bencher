@@ -21,6 +21,7 @@ import { validJwt, validPlanLevel } from "../../util/valid";
 import Field, { type FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, EMAIL_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -122,6 +123,7 @@ const AuthForm = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					`Failed to ${props.newUser ? "signup" : "login"}. Please, try again.`,

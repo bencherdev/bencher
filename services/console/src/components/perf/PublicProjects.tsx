@@ -16,6 +16,7 @@ import Pagination, { PaginationSize } from "../site/Pagination";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import { debounce } from "@solid-primitives/scheduled";
+import * as Sentry from "@sentry/astro";
 
 // const SORT_PARAM = "sort";
 // const DIRECTION_PARAM = "direction";
@@ -92,6 +93,7 @@ const PublicProjects = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return EMPTY_ARRAY;
 			});
 	};

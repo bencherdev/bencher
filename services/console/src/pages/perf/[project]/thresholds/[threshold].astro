@@ -6,6 +6,7 @@ import type { JsonThreshold } from "../../../../types/bencher";
 import PublicThreshold from "../../../../components/perf/PublicThreshold";
 import Tetris from "../../../../components/site/Tetris.astro";
 import { fetchSSR } from "../../../../components/perf/util";
+import * as Sentry from "@sentry/astro";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -34,6 +35,7 @@ if (params.project && params.project !== "undefined") {
 		}
 	} catch (e) {
 		console.error(`Failed to fetch threshold data: ${e}`);
+    Sentry.captureException(e);
 	}
 }
 ---

@@ -17,6 +17,7 @@ import DeckHeaderButton from "../console/deck/header/DeckHeaderButton";
 import { httpGet } from "../../util/http";
 import { BACK_PARAM, decodePath, useSearchParams } from "../../util/url";
 import metricsConfig from "../../config/project/metrics";
+import * as Sentry from "@sentry/astro";
 
 const deck = metricsConfig[Operation.VIEW]?.deck as DeckConfig;
 
@@ -63,6 +64,7 @@ const PublicMetric = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return {};
 			});
 	};

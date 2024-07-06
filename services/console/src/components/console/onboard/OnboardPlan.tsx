@@ -11,6 +11,7 @@ import OnboardSteps from "./OnboardSteps";
 import BillingPanel from "../billing/BillingPanel";
 import { OnboardStep } from "./OnboardStepsInner";
 import { getOrganization, setOrganization } from "../../../util/organization";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -66,6 +67,7 @@ const OnboardPlan = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};

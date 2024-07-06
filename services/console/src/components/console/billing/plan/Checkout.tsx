@@ -10,6 +10,7 @@ import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { useNavigate } from "../../../../util/url";
 import { validJwt } from "../../../../util/valid";
+import * as Sentry from "@sentry/astro";
 
 interface Props {
 	apiUrl: string;
@@ -61,6 +62,7 @@ const Checkout = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					"Lettuce romaine calm! Failed to enroll. Please, try again.",

@@ -26,6 +26,7 @@ import { createStore } from "solid-js/store";
 import { MEMBER_FIELDS } from "../../../config/organization/members";
 import { OnboardStep } from "./OnboardStepsInner";
 import { getOrganization, setOrganization } from "../../../util/organization";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -81,6 +82,7 @@ const OnboardInvite = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};
@@ -171,6 +173,7 @@ const OnboardInvite = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				return null;
 			});
 	};

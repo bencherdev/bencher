@@ -12,6 +12,7 @@ import {
 	untrack,
 } from "solid-js";
 import { decodeBase64, encodeBase64 } from "./convert";
+import * as Sentry from "@sentry/astro";
 
 export type Params = Record<string, string>;
 export declare type SetParams = Record<
@@ -151,6 +152,7 @@ export function createLocation(
 				return new URL(path_, origin);
 			} catch (err) {
 				console.error(`Invalid path ${path_}`);
+				Sentry.captureException(err);
 				return prev;
 			}
 		},
@@ -285,6 +287,7 @@ export const encodePath = createMemo(() => {
 		return back;
 	} catch (e) {
 		console.error(e);
+		Sentry.captureException(e);
 		return "L2hlbHA=";
 	}
 });
@@ -299,6 +302,7 @@ export const decodePath = (fallback: string) => {
 		return fallback;
 	} catch (e) {
 		console.error(e);
+		Sentry.captureException(e);
 		return fallback;
 	}
 };

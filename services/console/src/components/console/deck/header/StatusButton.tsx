@@ -9,6 +9,7 @@ import { AlertStatus, type JsonAuthUser } from "../../../../types/bencher";
 import { httpPatch } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { validJwt } from "../../../../util/valid";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -60,6 +61,7 @@ const StatusButton = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to ${

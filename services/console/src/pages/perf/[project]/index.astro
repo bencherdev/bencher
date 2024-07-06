@@ -8,6 +8,7 @@ import Tetris from "../../../components/site/Tetris.astro";
 import Notification from "../../../components/site/Notification";
 import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
 import FallbackPerfPanel from "../../../components/console/perf/FallbackPerfPanel.astro";
+import * as Sentry from "@sentry/astro";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -36,6 +37,7 @@ if (params.project && params.project !== "undefined") {
 		}
 	} catch (e) {
 		console.error(`Failed to fetch project data: ${e}`);
+    Sentry.captureException(e);
 	}
 }
 

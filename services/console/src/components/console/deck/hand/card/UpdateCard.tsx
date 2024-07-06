@@ -14,6 +14,7 @@ import {
 	navigateNotify,
 	pageNotify,
 } from "../../../../../util/notify";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -122,6 +123,7 @@ const UpdateCard = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to update ${props.card?.field?.label?.toLowerCase()}. Please, try again.`,

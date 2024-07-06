@@ -47,6 +47,7 @@ import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
 import { debounce } from "@solid-primitives/scheduled";
 import { themeSignal } from "../../navbar/theme/util";
+import * as Sentry from "@sentry/astro";
 
 // Perf query params
 const BRANCHES_PARAM = PerfQueryKey.Branches;
@@ -543,6 +544,7 @@ const PerfPanel = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return EMPTY_OBJECT;
 			});
 	};
@@ -587,6 +589,7 @@ const PerfPanel = (props: Props) => {
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				// If the URL is exactly 2000 characters, then it may have been truncated by the browser.
 				// There isn't much that we can do other than notify the user.
 				if (window.location.href.length === 2000) {
@@ -675,6 +678,7 @@ const PerfPanel = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return EMPTY_ARRAY;
 			});
 	}

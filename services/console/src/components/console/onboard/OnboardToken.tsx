@@ -14,6 +14,7 @@ import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps from "./OnboardSteps";
 import CopyButton from "./CopyButton";
 import { OnboardStep } from "./OnboardStepsInner";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -69,6 +70,7 @@ const OnboardToken = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};
@@ -109,6 +111,7 @@ const OnboardToken = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};

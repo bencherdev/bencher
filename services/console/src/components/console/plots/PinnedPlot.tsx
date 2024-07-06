@@ -9,6 +9,7 @@ import { createMemo, createResource } from "solid-js";
 import { httpGet } from "../../../util/http";
 import type { JsonPlot } from "../../../types/bencher";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -34,6 +35,7 @@ const PinnedPlot = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};

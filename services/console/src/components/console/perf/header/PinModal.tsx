@@ -14,6 +14,7 @@ import { useNavigate } from "../../../../util/url";
 import { createStore } from "solid-js/store";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { PLOT_FIELDS } from "../../../../config/project/plot";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -106,6 +107,7 @@ const PinModal = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(NotifyKind.ERROR, "Failed to save plot. Please, try again.");
 			});
 	};

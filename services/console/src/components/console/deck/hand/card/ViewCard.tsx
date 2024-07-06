@@ -6,6 +6,7 @@ import { authUser } from "../../../../../util/auth";
 import { httpGet } from "../../../../../util/http";
 import type { JsonProject } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -157,6 +158,7 @@ const GitHashCard = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return EMPTY_OBJECT;
 			});
 	};

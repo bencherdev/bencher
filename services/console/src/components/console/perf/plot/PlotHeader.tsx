@@ -18,6 +18,7 @@ import { httpGet } from "../../../../util/http";
 import { BENCHER_MEASURE_ID } from "./util";
 import { BACK_PARAM, encodePath } from "../../../../util/url";
 import { type Theme, themeWordmark } from "../../../navbar/theme/theme";
+import * as Sentry from "@sentry/astro";
 
 const BENCHER_MEASURE = "--bencher-measure--";
 
@@ -99,6 +100,7 @@ const FullPlotHeader = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return [SELECT_MEASURE];
 			});
 	};

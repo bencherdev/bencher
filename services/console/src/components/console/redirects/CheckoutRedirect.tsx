@@ -12,6 +12,7 @@ import {
 } from "../../../util/valid";
 import { httpPost } from "../../../util/http";
 import type { JsonNewPlan } from "../../../types/bencher";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -74,6 +75,7 @@ const CheckoutRedirect = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				navigateNotify(
 					NotifyKind.ERROR,
 					"Lettuce romaine calm! Failed to enroll. Please, try again.",

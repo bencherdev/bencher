@@ -14,6 +14,7 @@ import {
 import { httpPost, httpPut } from "../../../util/http";
 import type { Params } from "astro";
 import { NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -160,6 +161,7 @@ const Poster = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to post ${resourceSingular(

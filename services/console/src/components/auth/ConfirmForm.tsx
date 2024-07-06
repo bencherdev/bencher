@@ -23,6 +23,7 @@ import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -91,6 +92,7 @@ const ConfirmForm = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					"Failed to confirm token. Please, try again.",
@@ -119,6 +121,7 @@ const ConfirmForm = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					`Failed to resend email to ${email()}. Please, try again.`,

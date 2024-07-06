@@ -7,6 +7,7 @@ import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
 import { PLAN_PARAM } from "./auth";
 import { validJwt, validPlanLevel } from "../../util/valid";
+import * as Sentry from "@sentry/astro";
 
 const CODE_PARAM = "code";
 const STATE_PARAM = "state";
@@ -80,6 +81,7 @@ const AuthGitHub = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				navigateNotify(
 					NotifyKind.ERROR,
 					"Invalid user. Please, try again.",

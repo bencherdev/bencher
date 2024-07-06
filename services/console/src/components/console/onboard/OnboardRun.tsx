@@ -17,6 +17,7 @@ import { isBencherCloud } from "../../../util/ext";
 import CopyButton from "./CopyButton";
 import { OnboardStep } from "./OnboardStepsInner";
 import { getOrganization, setOrganization } from "../../../util/organization";
+import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -72,6 +73,7 @@ const OnboardRun = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return null;
 			});
 	};
@@ -126,6 +128,7 @@ const OnboardRun = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return null;
 			});
 	};
@@ -161,6 +164,7 @@ const OnboardRun = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return null;
 			});
 	};

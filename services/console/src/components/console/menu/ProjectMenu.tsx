@@ -6,6 +6,7 @@ import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { validJwt } from "../../../util/valid";
 import ProjectMenuInner from "./ProjectMenuInner";
+import * as Sentry from "@sentry/astro";
 
 interface Props {
 	apiUrl: string;
@@ -47,6 +48,7 @@ const ProjectMenu = (props: Props) => {
 			.then((resp) => resp.data)
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return DEFAULT_ALERT_STATS;
 			});
 	};

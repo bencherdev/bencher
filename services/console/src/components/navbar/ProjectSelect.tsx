@@ -15,6 +15,7 @@ import {
 import { httpGet } from "../../util/http";
 import { useNavigate } from "../../util/url";
 import { validJwt } from "../../util/valid";
+import * as Sentry from "@sentry/astro";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all--projects--";
 
@@ -63,6 +64,7 @@ const ProjectSelect = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return;
 			});
 	};
@@ -116,6 +118,7 @@ const ProjectSelect = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return [ALL_PROJECTS];
 			});
 	};

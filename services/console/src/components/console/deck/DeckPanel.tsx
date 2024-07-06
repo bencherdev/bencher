@@ -19,6 +19,7 @@ import { pathname, useSearchParams } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 import Deck, { type DeckConfig } from "./hand/Deck";
 import DeckHeader, { type DeckHeaderConfig } from "./header/DeckHeader";
+import * as Sentry from "@sentry/astro";
 
 interface Props {
 	apiUrl: string;
@@ -67,6 +68,7 @@ const DeckPanel = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to get ${resourceSingular(

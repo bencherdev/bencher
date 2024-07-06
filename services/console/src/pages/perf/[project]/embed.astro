@@ -5,6 +5,7 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import type { JsonProject } from "../../../types/bencher";
 import PerfPanel from "../../../components/console/perf/PerfPanel";
 import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
+import * as Sentry from "@sentry/astro";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -33,6 +34,7 @@ if (params.project && params.project !== "undefined") {
 		}
 	} catch (e) {
 		console.error(`Failed to fetch project data: ${e}`);
+    Sentry.captureException(e);
 	}
 }
 

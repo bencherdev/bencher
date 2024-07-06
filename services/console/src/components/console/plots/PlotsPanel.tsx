@@ -7,7 +7,6 @@ import {
 	createEffect,
 	createMemo,
 	createResource,
-	createSignal,
 	type Accessor,
 } from "solid-js";
 import { setPageTitle } from "../../../util/resource";
@@ -16,7 +15,6 @@ import {
 	isAllowedProjectCreate,
 	isAllowedProjectDelete,
 	isAllowedProjectEdit,
-	isAllowedProjectManage,
 } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
@@ -26,6 +24,7 @@ import { useSearchParams } from "../../../util/url";
 import PlotsHeader from "./PlotsHeader";
 import { debounce } from "@solid-primitives/scheduled";
 import FallbackPlots from "./FallbackPlots";
+import * as Sentry from "@sentry/astro";
 
 const SEARCH_PARAM = "search";
 const MAX_PLOTS = 64;
@@ -90,6 +89,7 @@ const PlotsPanel = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return EMPTY_OBJECT;
 			});
 	};
@@ -141,6 +141,7 @@ const PlotsPanel = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
+				Sentry.captureException(error);
 				return EMPTY_ARRAY;
 			});
 	};
