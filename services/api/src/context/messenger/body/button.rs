@@ -123,14 +123,24 @@ impl FmtBody for ButtonBody {
         );
 
         slog::debug!(log, "Inlining CSS into HTML");
-        match css_inline::inline(&html) {
-            Ok(html) => html,
+        if let Ok(inlined_html) = std::panic::catch_unwind(|| match css_inline::inline(&html) {
+            Ok(html) => Some(html),
             Err(err) => {
                 slog::error!(log, "Failed to inline CSS: {err}");
                 #[cfg(feature = "sentry")]
                 sentry::capture_error(&err);
-                html
+                None
             },
+        }) {
+            inlined_html.unwrap_or(html)
+        } else {
+            // This fails when run locally on macOS,
+            // but works when run in a Debian container.
+            let msg = "Panicked trying to inline CSS";
+            slog::error!(log, "{msg}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_message(msg, sentry::Level::Error);
+            html
         }
     }
 }
