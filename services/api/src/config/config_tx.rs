@@ -23,13 +23,13 @@ use tokio::sync::mpsc::Sender;
 #[cfg(feature = "plus")]
 use crate::model::server::QueryServer;
 use crate::{
-    context::{ApiContext, Database, DbConnection, Email, Messenger},
+    context::{ApiContext, Database, DbConnection},
     endpoints::Api,
 };
 
 #[cfg(feature = "plus")]
 use super::plus::Plus;
-use super::{Config, DEFAULT_SMTP_PORT};
+use super::Config;
 
 const DATABASE_URL: &str = "DATABASE_URL";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
@@ -207,7 +207,7 @@ fn into_context(
         console_url,
         token_key,
         rbac: init_rbac().map_err(ConfigTxError::Polar)?.into(),
-        messenger: into_messenger(smtp),
+        messenger: smtp.into(),
         database: Database {
             path: json_database.file,
             connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
@@ -301,31 +301,6 @@ fn run_litestream(database: &mut DbConnection) -> Result<(), ConfigTxError> {
         .map_err(ConfigTxError::Pragma)?;
 
     Ok(())
-}
-
-fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
-    smtp.map_or(
-        Messenger::StdOut,
-        |JsonSmtp {
-             hostname,
-             port,
-             starttls,
-             username,
-             secret,
-             from_name,
-             from_email,
-         }| {
-            Messenger::Email(Email {
-                hostname: hostname.into(),
-                port: port.unwrap_or(DEFAULT_SMTP_PORT),
-                starttls: starttls.unwrap_or(true),
-                username: username.into(),
-                secret,
-                from_name: Some(from_name.into()),
-                from_email: from_email.into(),
-            })
-        },
-    )
 }
 
 #[allow(clippy::needless_pass_by_value)]

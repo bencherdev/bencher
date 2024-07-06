@@ -1,9 +1,11 @@
+use bencher_json::system::config::JsonSmtp;
 use bencher_json::Secret;
 use mail_send::{mail_builder::MessageBuilder, SmtpClientBuilder};
 use slog::{error, trace, Logger};
 
 use super::body::FmtBody;
 use super::Message;
+use crate::config::DEFAULT_SMTP_PORT;
 
 #[derive(Debug, Clone)]
 pub struct Email {
@@ -14,6 +16,29 @@ pub struct Email {
     pub secret: Secret,
     pub from_name: Option<String>,
     pub from_email: String,
+}
+
+impl From<JsonSmtp> for Email {
+    fn from(smtp: JsonSmtp) -> Self {
+        let JsonSmtp {
+            hostname,
+            port,
+            starttls,
+            username,
+            secret,
+            from_name,
+            from_email,
+        } = smtp;
+        Self {
+            hostname: hostname.into(),
+            port: port.unwrap_or(DEFAULT_SMTP_PORT),
+            starttls: starttls.unwrap_or(true),
+            username: username.into(),
+            secret,
+            from_name: Some(from_name.into()),
+            from_email: from_email.into(),
+        }
+    }
 }
 
 impl Email {

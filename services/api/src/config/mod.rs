@@ -35,7 +35,7 @@ const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 #[cfg(not(debug_assertions))]
 const DEFAULT_DB_PATH: &str = "/var/lib/bencher/data/bencher.db";
-const DEFAULT_SMTP_PORT: u16 = 587;
+pub const DEFAULT_SMTP_PORT: u16 = 587;
 
 #[cfg(debug_assertions)]
 const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Debug;
