@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 // https://litestream.io/reference/config/#replica-settings
 pub struct JsonLitestream {
+    /// The database busy timeout in milliseconds
+    pub busy_timeout: Option<u32>,
+    /// Disaster recovery replicas
     pub replicas: Vec<JsonReplica>,
 }
 
@@ -423,6 +426,7 @@ mod db {
     #[test]
     fn test_into_yaml() {
         let json_litestream = JsonLitestream {
+            busy_timeout: None,
             replicas: vec![JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
                 path: Some("/path/to/backup".to_owned()),

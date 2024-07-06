@@ -42,6 +42,9 @@ const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Debug;
 #[cfg(not(debug_assertions))]
 const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Info;
 
+#[cfg(feature = "plus")]
+const DEFAULT_BUSY_TIMEOUT: u32 = 5_000;
+
 const DEFAULT_CONSOLE_URL_STR: &str = "http://localhost:3000";
 #[allow(clippy::panic)]
 static DEFAULT_CONSOLE_URL: Lazy<Url> = Lazy::new(|| {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 #[cfg(feature = "plus")]
-use bencher_json::system::config::JsonPlus;
+use bencher_json::system::config::{JsonLitestream, JsonPlus};
 use bencher_json::{
     system::config::{
         IfExists, JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, JsonSmtp,
@@ -27,9 +27,9 @@ use crate::{
     endpoints::Api,
 };
 
-#[cfg(feature = "plus")]
-use super::plus::Plus;
 use super::Config;
+#[cfg(feature = "plus")]
+use super::{plus::Plus, DEFAULT_BUSY_TIMEOUT};
 
 const DATABASE_URL: &str = "DATABASE_URL";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
@@ -169,9 +169,9 @@ fn into_context(
         .map_err(|e| ConfigTxError::DatabaseConnection(database_path.to_string(), e))?;
 
     #[cfg(feature = "plus")]
-    if plus.as_ref().is_some_and(|plus| plus.litestream.is_some()) {
+    if let Some(litestream) = plus.as_ref().and_then(|plus| plus.litestream.as_ref()) {
         info!(&log, "Configuring Litestream");
-        run_litestream(&mut database_connection)?;
+        run_litestream(&mut database_connection, litestream)?;
     }
 
     info!(&log, "Running database migrations");
@@ -263,18 +263,15 @@ fn run_migrations(database: &mut DbConnection) -> Result<(), ConfigTxError> {
     database
         .batch_execute("PRAGMA foreign_keys = ON")
         .map_err(ConfigTxError::Pragma)?;
-    // Enable busy timeout
-    // https://litestream.io/tips/#busy-timeout
-    // https://www.sqlite.org/pragma.html#pragma_busy_timeout
-    database
-        .batch_execute("PRAGMA busy_timeout = 5000")
-        .map_err(ConfigTxError::Pragma)?;
 
     Ok(())
 }
 
 #[cfg(feature = "plus")]
-fn run_litestream(database: &mut DbConnection) -> Result<(), ConfigTxError> {
+fn run_litestream(
+    database: &mut DbConnection,
+    litestream: &JsonLitestream,
+) -> Result<(), ConfigTxError> {
     // Enable WAL mode
     // https://litestream.io/tips/#wal-journal-mode
     // https://sqlite.org/wal.html
@@ -290,8 +287,12 @@ fn run_litestream(database: &mut DbConnection) -> Result<(), ConfigTxError> {
     // Enable busy timeout
     // https://litestream.io/tips/#busy-timeout
     // https://www.sqlite.org/pragma.html#pragma_busy_timeout
+    let busy_timeout = format!(
+        "PRAGMA busy_timeout = {}",
+        litestream.busy_timeout.unwrap_or(DEFAULT_BUSY_TIMEOUT)
+    );
     database
-        .batch_execute("PRAGMA busy_timeout = 5000")
+        .batch_execute(&busy_timeout)
         .map_err(ConfigTxError::Pragma)?;
     // Relax synchronous mode because we are using WAL mode
     // https://litestream.io/tips/#synchronous-pragma

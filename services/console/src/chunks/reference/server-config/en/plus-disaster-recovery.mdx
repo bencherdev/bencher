@@ -41,6 +41,7 @@ All five replica `scheme`s have the following additional options:
 
 |           Name           |  Example  | Default | Required |                                     Description                                     |
 | :----------------------: | :-------: | :-----: | :------: | :---------------------------------------------------------------------------------: |
+|       busy_timeout       |   5000    |  5000   |    No    |            Specifies the busy timeout for the database in milliseconds.             |
 |         replicas         |  [ ... ]  |   ---   |   Yes    |                           Specifies an array of replicas.                           |
 |    replicas[replica]     | \{ ... \} |   ---   |   Yes    |                             Specifies a replica object.                             |
 | replicas[replica].scheme |   "s3"    |   ---   |   Yes    | Specifies the replication scheme. For all other `replica` keys, see the list above. |

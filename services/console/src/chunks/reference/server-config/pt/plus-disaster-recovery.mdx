@@ -39,9 +39,10 @@ Todos os quatro `scheme`s de replicação têm as seguintes opções adicionais:
 - `validation_interval`: (Opcional) Quando especificado, o Bencher restaurará automaticamente e validará que os dados na réplica correspondem à cópia local. Desativado por padrão. Habilitar isso pode aumentar significativamente o custo de execução do Bencher, já que a maioria dos serviços em nuvem cobra pelos downloads.
 - `sync_interval`: (Opcional) Frequência com que os frames são enviados para a réplica. O padrão é `1s`. Aumentar a frequência pode aumentar significativamente os custos de armazenamento em nuvem.
 
-|           Nome           |  Exemplo  | Padrão  | Obrigatório |                                     Descrição                                      |
-| :----------------------: | :-------: | :-----: | :---------: | :---------------------------------------------------------------------------------: |
-|         replicas         |  [ ... ]  |   ---   |     Sim     |                            Especifica um array de réplicas.                        |
-|    replicas[replica]     | \{ ... \} |   ---   |     Sim     |                           Especifica um objeto de réplica.                          |
-| replicas[replica].scheme |   "s3"    |   ---   |     Sim     | Especifica o esquema de replicação. Para todas as outras chaves de `replica`, consulte a lista acima. |
+|           Nome           |  Exemplo  | Padrão | Obrigatório |                                               Descrição                                               |
+| :----------------------: | :-------: | :----: | :---------: | :---------------------------------------------------------------------------------------------------: |
+|       busy_timeout       |   5000    |  5000  |     Não     |             Especifica o tempo limite de ocupação para o banco de dados em milissegundos.             |
+|         replicas         |  [ ... ]  |  ---   |     Sim     |                                   Especifica um array de réplicas.                                    |
+|    replicas[replica]     | \{ ... \} |  ---   |     Sim     |                                   Especifica um objeto de réplica.                                    |
+| replicas[replica].scheme |   "s3"    |  ---   |     Sim     | Especifica o esquema de replicação. Para todas as outras chaves de `replica`, consulte a lista acima. |
 
