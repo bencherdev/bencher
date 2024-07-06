@@ -28,6 +28,7 @@
 		"@astrojs/sitemap": "^3.1.2",
 		"@astrojs/solid-js": "^4.1.0",
 		"@observablehq/plot": "^0.6.13",
+		"@sentry/astro": "^8.15.0",
 		"@solid-primitives/resize-observer": "^2.0.25",
 		"@solid-primitives/scheduled": "^1.4.3",
 		"astro": "^4.6.0",

@@ -2,6 +2,7 @@ import mdx from "@astrojs/mdx";
 import partytown from "@astrojs/partytown";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
+import sentry from "@sentry/astro";
 import expressiveCode from "astro-expressive-code";
 import { defineConfig } from "astro/config";
 import { fromHtmlIsomorphic } from "hast-util-from-html-isomorphic";
@@ -96,6 +97,14 @@ export default defineConfig({
 		}),
 		// https://docs.astro.build/en/guides/integrations-guide/solid-js/
 		solidJs(),
+		// https://docs.sentry.io/platforms/javascript/guides/astro/
+		sentry({
+			dsn: process.env.PUBLIC_SENTRY_DSN,
+			sourceMapsUploadOptions: {
+				project: "bencher-console",
+				authToken: process.env.SENTRY_AUTH_TOKEN,
+			},
+		}),
 	],
 	vite: {
 		assetsInclude: ["**/*.sh", "**/*.ps1"],
