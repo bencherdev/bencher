@@ -6,7 +6,10 @@ use bencher_json::{
     JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ResourceId, ThresholdUuid,
 };
 use bencher_rbac::project::Permission;
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -182,6 +185,22 @@ fn get_ls_query<'q>(
     if let Some(measure) = query_params.measure.as_ref() {
         filter_measure_name_id!(query, measure);
     }
+
+    if let Some(true) = query_params.archived {
+        query = query.filter(
+            schema::branch::archived
+                .is_not_null()
+                .or(schema::testbed::archived.is_not_null())
+                .or(schema::measure::archived.is_not_null()),
+        );
+    } else {
+        query = query.filter(
+            schema::branch::archived
+                .is_null()
+                .and(schema::testbed::archived.is_null())
+                .and(schema::measure::archived.is_null()),
+        );
+    };
 
     Ok(match pagination_params.order() {
         ProjThresholdsSort::Created => match pagination_params.direction {

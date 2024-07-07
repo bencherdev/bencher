@@ -37,7 +37,8 @@ SELECT id,
     modified,
     (
         SELECT strftime('%s', datetime('now', 'utc'))
-        WHERE name LIKE '%@%/hash/%'
+        WHERE name LIKE '%@detached%'
+            OR name LIKE '%@%/hash/%'
             OR name LIKE '%@%/version/%'
     )
 FROM branch;

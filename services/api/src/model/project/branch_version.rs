@@ -106,6 +106,7 @@ impl QueryBranchVersion {
             start_point,
             created,
             modified,
+            archived,
         } = branch.into_json_for_project(conn_lock!(context), project)?;
         // Make sure that the version is in the same project as the branch
         assert_parentage(
@@ -124,6 +125,7 @@ impl QueryBranchVersion {
             start_point,
             created,
             modified,
+            archived,
         })
     }
 }

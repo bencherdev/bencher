@@ -66,6 +66,8 @@ pub struct JsonThresholdQueryParams {
     pub testbed: Option<String>,
     /// Filter by measure name, exact match.
     pub measure: Option<String>,
+    /// Only return thresholds with an archived branch, testbed, or measure.
+    pub archived: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +75,7 @@ pub struct JsonThresholdQuery {
     pub branch: Option<NameId>,
     pub testbed: Option<NameId>,
     pub measure: Option<NameId>,
+    pub archived: Option<bool>,
 }
 
 impl TryFrom<JsonThresholdQueryParams> for JsonThresholdQuery {
@@ -83,6 +86,7 @@ impl TryFrom<JsonThresholdQueryParams> for JsonThresholdQuery {
             branch,
             testbed,
             measure,
+            archived,
         } = query_params;
 
         let branch = if let Some(branch) = branch {
@@ -105,6 +109,7 @@ impl TryFrom<JsonThresholdQueryParams> for JsonThresholdQuery {
             branch,
             testbed,
             measure,
+            archived,
         })
     }
 }

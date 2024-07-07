@@ -44,6 +44,7 @@ pub struct QueryMeasure {
     pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl QueryMeasure {
@@ -124,6 +125,7 @@ impl QueryMeasure {
             units,
             created,
             modified,
+            archived,
             ..
         } = self;
         assert_parentage(
@@ -140,6 +142,7 @@ impl QueryMeasure {
             units,
             created,
             modified,
+            archived,
         }
     }
 }
@@ -154,6 +157,7 @@ pub struct InsertMeasure {
     pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl InsertMeasure {
@@ -173,6 +177,7 @@ impl InsertMeasure {
             units,
             created: timestamp,
             modified: timestamp,
+            archived: None,
         })
     }
 
@@ -226,16 +231,25 @@ pub struct UpdateMeasure {
     pub slug: Option<Slug>,
     pub units: Option<ResourceName>,
     pub modified: DateTime,
+    pub archived: Option<Option<DateTime>>,
 }
 
 impl From<JsonUpdateMeasure> for UpdateMeasure {
     fn from(update: JsonUpdateMeasure) -> Self {
-        let JsonUpdateMeasure { name, slug, units } = update;
+        let JsonUpdateMeasure {
+            name,
+            slug,
+            units,
+            archived,
+        } = update;
+        let modified = DateTime::now();
+        let archived = archived.map(|archived| archived.then_some(modified));
         Self {
             name,
             slug,
             units,
-            modified: DateTime::now(),
+            modified,
+            archived,
         }
     }
 }

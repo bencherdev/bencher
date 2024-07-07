@@ -9,8 +9,8 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use diesel::{
-    dsl::count, BelongingToDsl, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
-    SelectableHelper,
+    dsl::count, BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
+    RunQueryDsl, SelectableHelper,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use http::StatusCode;
@@ -189,6 +189,20 @@ fn get_ls_query<'q>(
     if let Some(end_time) = query_params.end_time {
         query = query.filter(schema::report::end_time.le(end_time));
     }
+
+    if let Some(true) = query_params.archived {
+        query = query.filter(
+            schema::branch::archived
+                .is_not_null()
+                .or(schema::testbed::archived.is_not_null()),
+        );
+    } else {
+        query = query.filter(
+            schema::branch::archived
+                .is_null()
+                .and(schema::testbed::archived.is_null()),
+        );
+    };
 
     Ok(match pagination_params.order() {
         ProjReportsSort::DateTime => match pagination_params.direction {

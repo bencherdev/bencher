@@ -33,6 +33,7 @@ pub struct QueryBenchmark {
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl QueryBenchmark {
@@ -87,6 +88,7 @@ impl QueryBenchmark {
             slug,
             created,
             modified,
+            archived,
             ..
         } = self;
         assert_parentage(
@@ -102,6 +104,7 @@ impl QueryBenchmark {
             slug,
             created,
             modified,
+            archived,
         }
     }
 
@@ -118,6 +121,7 @@ impl QueryBenchmark {
             slug,
             created,
             modified,
+            archived,
         } = self.into_json_for_project(project);
         let metric = query_metric.into_json();
         let boundary = query_boundary.map(QueryBoundary::into_json);
@@ -130,6 +134,7 @@ impl QueryBenchmark {
             boundary,
             created,
             modified,
+            archived,
         }
     }
 }
@@ -143,6 +148,7 @@ pub struct InsertBenchmark {
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl InsertBenchmark {
@@ -161,6 +167,7 @@ impl InsertBenchmark {
             slug,
             created: timestamp,
             modified: timestamp,
+            archived: None,
         })
     }
 }
@@ -171,15 +178,23 @@ pub struct UpdateBenchmark {
     pub name: Option<BenchmarkName>,
     pub slug: Option<Slug>,
     pub modified: DateTime,
+    pub archived: Option<Option<DateTime>>,
 }
 
 impl From<JsonUpdateBenchmark> for UpdateBenchmark {
     fn from(update: JsonUpdateBenchmark) -> Self {
-        let JsonUpdateBenchmark { name, slug } = update;
+        let JsonUpdateBenchmark {
+            name,
+            slug,
+            archived,
+        } = update;
+        let modified = DateTime::now();
+        let archived = archived.map(|archived| archived.then_some(modified));
         Self {
             name,
             slug,
-            modified: DateTime::now(),
+            modified,
+            archived,
         }
     }
 }

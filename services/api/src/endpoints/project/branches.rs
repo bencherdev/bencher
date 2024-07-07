@@ -25,7 +25,6 @@ use crate::{
     model::{
         project::{
             branch::{QueryBranch, UpdateBranch},
-            version::QueryVersion,
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -56,6 +55,8 @@ pub struct ProjBranchesQuery {
     pub name: Option<BranchName>,
     /// Search by branch name, slug, or UUID.
     pub search: Option<Search>,
+    /// Only return archived branches.
+    pub archived: Option<bool>,
 }
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
@@ -173,6 +174,12 @@ fn get_ls_query<'q>(
                 .or(schema::branch::uuid.like(search)),
         );
     }
+
+    if let Some(true) = query_params.archived {
+        query = query.filter(schema::branch::archived.is_not_null());
+    } else {
+        query = query.filter(schema::branch::archived.is_null());
+    };
 
     match pagination_params.order() {
         ProjBranchesSort::Name => match pagination_params.direction {
@@ -344,23 +351,6 @@ async fn patch_inner(
 
     let query_branch =
         QueryBranch::from_resource_id(conn_lock!(context), query_project.id, &path_params.branch)?;
-
-    // If there is a hash then try to see if there is already a code version for
-    // this branch with that particular hash.
-    // Otherwise, create a new code version for this branch with the hash.
-    if let Some(hash) = &json_branch.hash {
-        QueryVersion::get_or_increment(
-            conn_lock!(context),
-            query_project.id,
-            query_branch.id,
-            Some(hash),
-        )?;
-
-        // Don't mark the branch as updated if only the hash is being updated.
-        if json_branch.is_hash_only() {
-            return query_branch.into_json_for_project(conn_lock!(context), &query_project);
-        }
-    }
 
     let update_branch = UpdateBranch::from(json_branch.clone());
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))

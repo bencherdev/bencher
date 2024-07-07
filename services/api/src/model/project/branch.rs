@@ -46,6 +46,7 @@ pub struct QueryBranch {
     pub start_point_id: Option<BranchVersionId>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl QueryBranch {
@@ -317,7 +318,8 @@ impl QueryBranch {
         let json_update_branch = JsonUpdateBranch {
             name: Some(branch_name),
             slug: Some(branch_slug),
-            hash: None,
+            // Auto-archive the current branch
+            archived: Some(true),
         };
         let update_branch = UpdateBranch::from(json_update_branch);
         diesel::update(schema::branch::table.filter(schema::branch::id.eq(self.id)))
@@ -367,6 +369,7 @@ impl QueryBranch {
             start_point_id,
             created,
             modified,
+            archived,
             ..
         } = self;
         assert_parentage(
@@ -388,6 +391,7 @@ impl QueryBranch {
             start_point,
             created,
             modified,
+            archived,
         })
     }
 }
@@ -402,6 +406,7 @@ pub struct InsertBranch {
     pub start_point_id: Option<BranchVersionId>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl InsertBranch {
@@ -443,6 +448,7 @@ impl InsertBranch {
             start_point_id,
             created: timestamp,
             modified: timestamp,
+            archived: None,
         })
     }
 
@@ -597,15 +603,23 @@ pub struct UpdateBranch {
     pub name: Option<BranchName>,
     pub slug: Option<Slug>,
     pub modified: DateTime,
+    pub archived: Option<Option<DateTime>>,
 }
 
 impl From<JsonUpdateBranch> for UpdateBranch {
     fn from(update: JsonUpdateBranch) -> Self {
-        let JsonUpdateBranch { name, slug, .. } = update;
+        let JsonUpdateBranch {
+            name,
+            slug,
+            archived,
+        } = update;
+        let modified = DateTime::now();
+        let archived = archived.map(|archived| archived.then_some(modified));
         Self {
             name,
             slug,
-            modified: DateTime::now(),
+            modified,
+            archived,
         }
     }
 }

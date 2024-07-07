@@ -13,6 +13,19 @@ crate::typed_uuid::typed_uuid!(BenchmarkUuid);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonNewBenchmark {
+    /// The name of the benchmark.
+    /// Maximum length is 1,024 characters.
+    pub name: BenchmarkName,
+    /// The preferred slug for the benchmark.
+    /// If not provided, the slug will be generated from the name.
+    /// If the provided or generated slug is already in use, a unique slug will be generated.
+    /// Maximum length is 64 characters.
+    pub slug: Option<Slug>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmarks(pub Vec<JsonBenchmark>);
 
 crate::from_vec!(JsonBenchmarks[JsonBenchmark]);
@@ -27,6 +40,7 @@ pub struct JsonBenchmark {
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl fmt::Display for JsonBenchmark {
@@ -47,19 +61,7 @@ pub struct JsonBenchmarkMetric {
     pub boundary: Option<JsonBoundary>,
     pub created: DateTime,
     pub modified: DateTime,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewBenchmark {
-    /// The name of the benchmark.
-    /// Maximum length is 1,024 characters.
-    pub name: BenchmarkName,
-    /// The preferred slug for the benchmark.
-    /// If not provided, the slug will be generated from the name.
-    /// If the provided or generated slug is already in use, a unique slug will be generated.
-    /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub archived: Option<DateTime>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,4 +73,6 @@ pub struct JsonUpdateBenchmark {
     /// The preferred new slug for the benchmark.
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
+    /// Set whether the benchmark is archived.
+    pub archived: Option<bool>,
 }
