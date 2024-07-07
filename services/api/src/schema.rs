@@ -20,6 +20,7 @@ diesel::table! {
         slug -> Text,
         created -> BigInt,
         modified -> BigInt,
+        archived -> Nullable<BigInt>,
     }
 }
 
@@ -46,6 +47,7 @@ diesel::table! {
         start_point_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
+        archived -> Nullable<BigInt>,
     }
 }
 
@@ -67,6 +69,7 @@ diesel::table! {
         units -> Text,
         created -> BigInt,
         modified -> BigInt,
+        archived -> Nullable<BigInt>,
     }
 }
 
@@ -251,6 +254,7 @@ diesel::table! {
         slug -> Text,
         created -> BigInt,
         modified -> BigInt,
+        archived -> Nullable<BigInt>,
     }
 }
 
