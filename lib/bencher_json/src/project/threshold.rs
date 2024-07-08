@@ -66,7 +66,8 @@ pub struct JsonThresholdQueryParams {
     pub testbed: Option<String>,
     /// Filter by measure name, exact match.
     pub measure: Option<String>,
-    /// Only return thresholds with an archived branch, testbed, or measure.
+    /// If set to `true`, only return thresholds with an archived branch, testbed, or measure.
+    /// If not set or set to `false`, only returns thresholds with non-archived branches, testbeds, and measures.
     pub archived: Option<bool>,
 }
 

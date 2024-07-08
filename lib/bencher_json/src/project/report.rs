@@ -364,7 +364,8 @@ pub struct JsonReportQueryParams {
     pub start_time: Option<DateTimeMillis>,
     /// Filter for reports before the given date time in milliseconds.
     pub end_time: Option<DateTimeMillis>,
-    /// Only return reports with an archived branch or testbed.
+    /// If set to `true`, only return reports with an archived branch or testbed.
+    /// If not set or set to `false`, only returns reports with non-archived branches and testbeds.
     pub archived: Option<bool>,
 }
 

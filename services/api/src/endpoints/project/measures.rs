@@ -54,7 +54,8 @@ pub struct ProjMeasuresQuery {
     pub name: Option<ResourceName>,
     /// Search by measure name, slug, or UUID.
     pub search: Option<Search>,
-    /// Only return archived measures.
+    /// If set to `true`, only returns archived measures if set to `true`.
+    /// If not set or set to `false`, only returns non-archived measures.
     pub archived: Option<bool>,
 }
 

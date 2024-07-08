@@ -55,7 +55,8 @@ pub struct ProjBranchesQuery {
     pub name: Option<BranchName>,
     /// Search by branch name, slug, or UUID.
     pub search: Option<Search>,
-    /// Only return archived branches.
+    /// If set to `true`, only returns archived branches, if set to `true`.
+    /// If not set or set to `false`, only returns non-archived branches.
     pub archived: Option<bool>,
 }
 

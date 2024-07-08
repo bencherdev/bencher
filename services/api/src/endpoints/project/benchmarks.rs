@@ -54,7 +54,8 @@ pub struct ProjBenchmarksQuery {
     pub name: Option<BenchmarkName>,
     /// Search by benchmark name, slug, or UUID.
     pub search: Option<Search>,
-    /// Only return archived testbeds.
+    /// If set to `true`, only returns archived benchmarks.
+    /// If not set or set to `false`, only returns non-archived benchmarks.
     pub archived: Option<bool>,
 }
 

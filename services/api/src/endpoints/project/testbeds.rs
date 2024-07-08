@@ -54,7 +54,8 @@ pub struct ProjTestbedsQuery {
     pub name: Option<ResourceName>,
     /// Search by testbed name, slug, or UUID.
     pub search: Option<Search>,
-    /// Only return archived testbeds.
+    /// If set to `true`, only returns archived testbeds.
+    /// If not set or set to `false`, only returns non-archived testbeds.
     pub archived: Option<bool>,
 }
 
