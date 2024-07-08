@@ -3,7 +3,7 @@ use bencher_json::{
     AlertUuid, JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -45,6 +45,14 @@ pub enum ProjAlertsSort {
     Modified,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ProjAlertsQuery {
+    /// Only return active alerts.
+    pub active: Option<bool>,
+    /// Only return archived alerts.
+    pub archived: Option<bool>,
+}
+
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -55,6 +63,7 @@ pub async fn proj_alerts_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjAlertsParams>,
     _pagination_params: Query<ProjAlertsPagination>,
+    _query_params: Query<ProjAlertsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into()]))
 }
@@ -73,16 +82,17 @@ pub async fn proj_alerts_options(
 }]
 pub async fn proj_alerts_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
     path_params: Path<ProjAlertsParams>,
     pagination_params: Query<ProjAlertsPagination>,
+    query_params: Query<ProjAlertsQuery>,
 ) -> Result<ResponseOk<JsonAlerts>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::new_pub(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
+        query_params.into_inner(),
     )
     .await?;
     Ok(Get::response_ok_with_total_count(
@@ -97,6 +107,7 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     path_params: ProjAlertsParams,
     pagination_params: ProjAlertsPagination,
+    query_params: ProjAlertsQuery,
 ) -> Result<(JsonAlerts, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
@@ -105,13 +116,13 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let alerts = get_ls_query(&query_project, &pagination_params)
+    let alerts = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Alert,
-            (&query_project, &pagination_params)
+            (&query_project, &pagination_params, &query_params)
         ))?;
 
     // Separate out these queries to prevent a deadlock when getting the conn_lock
@@ -127,12 +138,12 @@ async fn get_ls_inner(
         }
     }
 
-    let total_count = get_ls_query(&query_project, &pagination_params)
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
         .get_result::<i64>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Alert,
-            (&query_project, &pagination_params)
+            (&query_project, &pagination_params, &query_params)
         ))?
         .try_into()?;
 
@@ -142,19 +153,47 @@ async fn get_ls_inner(
 fn get_ls_query<'q>(
     query_project: &'q QueryProject,
     pagination_params: &ProjAlertsPagination,
+    query_params: &'q ProjAlertsQuery,
 ) -> BoxedQuery<'q> {
-    let query = schema::alert::table
+    let mut query = schema::alert::table
         .inner_join(
-            schema::boundary::table.inner_join(
-                schema::metric::table.inner_join(
-                    schema::report_benchmark::table
-                        .inner_join(schema::report::table)
-                        .inner_join(schema::benchmark::table),
+            schema::boundary::table
+                .inner_join(
+                    schema::threshold::table
+                        .inner_join(schema::branch::table)
+                        .inner_join(schema::testbed::table)
+                        .inner_join(schema::measure::table),
+                )
+                .inner_join(
+                    schema::metric::table.inner_join(
+                        schema::report_benchmark::table
+                            .inner_join(schema::report::table)
+                            .inner_join(schema::benchmark::table),
+                    ),
                 ),
-            ),
         )
         .filter(schema::benchmark::project_id.eq(query_project.id))
         .into_boxed();
+
+    if let Some(true) = query_params.active {
+        query = query.filter(schema::alert::status.eq(AlertStatus::Active));
+    }
+
+    if let Some(true) = query_params.archived {
+        query = query.filter(
+            schema::branch::archived
+                .is_not_null()
+                .or(schema::testbed::archived.is_not_null())
+                .or(schema::measure::archived.is_not_null()),
+        );
+    } else {
+        query = query.filter(
+            schema::branch::archived
+                .is_null()
+                .and(schema::testbed::archived.is_null())
+                .and(schema::measure::archived.is_null()),
+        );
+    };
 
     match pagination_params.order() {
         ProjAlertsSort::Created => match pagination_params.direction {
@@ -199,7 +238,23 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
             diesel::internal::table_macro::SelectStatement<
                 diesel::internal::table_macro::FromClause<
                     diesel::helper_types::InnerJoinQuerySource<
-                        schema::boundary::table,
+                        diesel::helper_types::InnerJoinQuerySource<
+                            schema::boundary::table,
+                            diesel::internal::table_macro::SelectStatement<
+                                diesel::internal::table_macro::FromClause<
+                                    diesel::helper_types::InnerJoinQuerySource<
+                                        diesel::helper_types::InnerJoinQuerySource<
+                                            diesel::helper_types::InnerJoinQuerySource<
+                                                schema::threshold::table,
+                                                schema::branch::table,
+                                            >,
+                                            schema::testbed::table,
+                                        >,
+                                        schema::measure::table,
+                                    >,
+                                >,
+                            >,
+                        >,
                         diesel::internal::table_macro::SelectStatement<
                             diesel::internal::table_macro::FromClause<
                                 diesel::helper_types::InnerJoinQuerySource<
