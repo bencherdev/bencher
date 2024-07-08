@@ -1,9 +1,8 @@
 import type { Params } from "astro";
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { createMemo, createResource } from "solid-js";
-import type { JsonAlertStats } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
-import { httpGet } from "../../../util/http";
+import { httpGet, X_TOTAL_COUNT } from "../../../util/http";
 import { validJwt } from "../../../util/valid";
 import ProjectMenuInner from "./ProjectMenuInner";
 import * as Sentry from "@sentry/astro";
@@ -32,28 +31,25 @@ const ProjectMenu = (props: Props) => {
 		bencher_valid: InitOutput;
 		project_slug: string;
 		token: string;
-	}): Promise<JsonAlertStats> => {
-		const DEFAULT_ALERT_STATS = {
-			active: 0,
-		};
+	}): Promise<number> => {
+		const DEFAULT_ALERT_COUNT = 0;
 		if (
 			!fetcher.bencher_valid ||
 			!fetcher.project_slug ||
 			!validJwt(fetcher.token)
 		) {
-			return DEFAULT_ALERT_STATS;
+			return DEFAULT_ALERT_COUNT;
 		}
-		const pathname = `/v0/projects/${fetcher.project_slug}/stats/alerts`;
+		const pathname = `/v0/projects/${fetcher.project_slug}/alerts?per_page=0&active=true`;
 		return await httpGet(props.apiUrl, pathname, authUser()?.token)
-			.then((resp) => resp.data)
+			.then((resp) => resp?.headers?.[X_TOTAL_COUNT] ?? 0)
 			.catch((error) => {
 				console.error(error);
 				Sentry.captureException(error);
-				return DEFAULT_ALERT_STATS;
+				return DEFAULT_ALERT_COUNT;
 			});
 	};
-	const [alert_stats] = createResource<JsonAlertStats>(fetcher, getAlerts);
-	const active_alerts = createMemo(() => alert_stats()?.active);
+	const [active_alerts] = createResource<number>(fetcher, getAlerts);
 
 	return <ProjectMenuInner project={project} active_alerts={active_alerts} />;
 };

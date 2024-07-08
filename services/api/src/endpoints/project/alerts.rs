@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::alert::{AlertStatus, JsonAlertStats, JsonUpdateAlert},
+    project::alert::{AlertStatus, JsonUpdateAlert},
     AlertUuid, JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
@@ -398,74 +398,4 @@ async fn patch_inner(
 
     // Separate out this query to prevent a deadlock when getting the conn_lock
     alert.into_json(context).await
-}
-
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
-#[endpoint {
-    method = OPTIONS,
-    path =  "/v0/projects/{project}/stats/alerts",
-    tags = ["projects", "alerts"]
-}]
-pub async fn proj_alert_stats_options(
-    _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<ProjAlertsParams>,
-    _pagination_params: Query<ProjAlertsPagination>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into()]))
-}
-
-/// View the total number of active alerts for a project
-///
-/// View the total number of active alerts for a project.
-/// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
-/// Use this endpoint to monitor the number of active alerts for a project.
-#[endpoint {
-    method = GET,
-    path =  "/v0/projects/{project}/stats/alerts",
-    tags = ["projects", "alerts"]
-}]
-pub async fn proj_alert_stats_get(
-    rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
-    path_params: Path<ProjAlertsParams>,
-) -> Result<ResponseOk<JsonAlertStats>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
-    let json = get_stats_inner(
-        rqctx.context(),
-        auth_user.as_ref(),
-        path_params.into_inner(),
-    )
-    .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
-}
-
-async fn get_stats_inner(
-    context: &ApiContext,
-    auth_user: Option<&AuthUser>,
-    path_params: ProjAlertsParams,
-) -> Result<JsonAlertStats, HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
-        &context.rbac,
-        &path_params.project,
-        auth_user,
-    )?;
-
-    let active =
-        schema::alert::table
-            .filter(schema::alert::status.eq(AlertStatus::Active))
-            .inner_join(schema::boundary::table.inner_join(
-                schema::metric::table.inner_join(
-                    schema::report_benchmark::table.inner_join(schema::benchmark::table),
-                ),
-            ))
-            .filter(schema::benchmark::project_id.eq(query_project.id))
-            .count()
-            .get_result::<i64>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Alert, query_project))?;
-
-    Ok(JsonAlertStats {
-        active: u64::try_from(active).unwrap_or_default().into(),
-    })
 }
