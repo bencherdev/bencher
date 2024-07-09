@@ -1,6 +1,11 @@
 # Docs
 - How to set up disaster recovery
-- Explanation: How It Works
+- Explanation:
+  - How It Works
+  - `bencher up`
+    - `bencher down`
+    - `bencher logs`
+  - Passwordless Auth
 
 # Learn
 
