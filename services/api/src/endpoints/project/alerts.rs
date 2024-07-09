@@ -47,10 +47,9 @@ pub enum ProjAlertsSort {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ProjAlertsQuery {
-    /// If set to `true`, only returns active alerts.
-    /// If set to `false`, only returns non-active alerts.
+    /// Filter alerts by their status.
     /// If not set, returns all alerts.
-    pub active: Option<bool>,
+    pub status: Option<AlertStatus>,
     /// If set to `true`, only returns archived alerts.
     /// If not set or set to `false`, only returns alerts with non-archived branches, testbeds, or measures.
     pub archived: Option<bool>,
@@ -178,10 +177,8 @@ fn get_ls_query<'q>(
         .filter(schema::benchmark::project_id.eq(query_project.id))
         .into_boxed();
 
-    if let Some(true) = query_params.active {
-        query = query.filter(schema::alert::status.eq(AlertStatus::Active));
-    } else if let Some(false) = query_params.active {
-        query = query.filter(schema::alert::status.ne(AlertStatus::Active));
+    if let Some(status) = query_params.status {
+        query = query.filter(schema::alert::status.eq(status));
     }
 
     if let Some(true) = query_params.archived {

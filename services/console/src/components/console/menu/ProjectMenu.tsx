@@ -40,7 +40,7 @@ const ProjectMenu = (props: Props) => {
 		) {
 			return DEFAULT_ALERT_COUNT;
 		}
-		const pathname = `/v0/projects/${fetcher.project_slug}/alerts?per_page=0&active=true`;
+		const pathname = `/v0/projects/${fetcher.project_slug}/alerts?per_page=0&status=active`;
 		return await httpGet(props.apiUrl, pathname, authUser()?.token)
 			.then((resp) => resp?.headers?.[X_TOTAL_COUNT] ?? 0)
 			.catch((error) => {

@@ -153,7 +153,9 @@ export enum BoundaryLimit {
 }
 
 export enum AlertStatus {
+	/** The alert is active. */
 	Active = "active",
+	/** The alert has been dismissed. */
 	Dismissed = "dismissed",
 }
 

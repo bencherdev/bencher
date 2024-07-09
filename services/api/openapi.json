@@ -2499,8 +2499,8 @@
           },
           {
             "in": "query",
-            "name": "active",
-            "description": "If set to `true`, only returns active alerts. If set to `false`, only returns non-active alerts. If not set, returns all alerts.",
+            "name": "archived",
+            "description": "If set to `true`, only returns archived alerts. If not set or set to `false`, only returns alerts with non-archived branches, testbeds, or measures.",
             "schema": {
               "nullable": true,
               "type": "boolean"
@@ -2508,11 +2508,10 @@
           },
           {
             "in": "query",
-            "name": "archived",
-            "description": "If set to `true`, only returns archived alerts. If not set or set to `false`, only returns alerts with non-archived branches, testbeds, or measures.",
+            "name": "status",
+            "description": "Filter alerts by their status. If not set, returns all alerts.",
             "schema": {
-              "nullable": true,
-              "type": "boolean"
+              "$ref": "#/components/schemas/AlertStatus"
             }
           }
         ],
@@ -7860,10 +7859,21 @@
         ]
       },
       "AlertStatus": {
-        "type": "string",
-        "enum": [
-          "active",
-          "dismissed"
+        "oneOf": [
+          {
+            "description": "The alert is active.",
+            "type": "string",
+            "enum": [
+              "active"
+            ]
+          },
+          {
+            "description": "The alert has been dismissed.",
+            "type": "string",
+            "enum": [
+              "dismissed"
+            ]
+          }
         ]
       },
       "AlertUuid": {

@@ -43,7 +43,9 @@ const DISMISSED_INT: i32 = 1;
 #[repr(i32)]
 pub enum AlertStatus {
     #[default]
+    /// The alert is active.
     Active = ACTIVE_INT,
+    /// The alert has been dismissed.
     Dismissed = DISMISSED_INT,
 }
 
