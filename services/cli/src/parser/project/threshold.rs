@@ -42,6 +42,10 @@ pub struct CliThresholdList {
     #[clap(flatten)]
     pub pagination: CliPagination<CliThresholdsSort>,
 
+    /// Filter for thresholds with an archived branch, testbed, or measure
+    #[clap(long)]
+    pub archived: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

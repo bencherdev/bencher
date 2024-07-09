@@ -13,6 +13,7 @@ pub struct Update {
     pub benchmark: ResourceId,
     pub name: Option<BenchmarkName>,
     pub slug: Option<Slug>,
+    pub archived: Option<bool>,
     pub backend: AuthBackend,
 }
 
@@ -25,6 +26,7 @@ impl TryFrom<CliBenchmarkUpdate> for Update {
             benchmark,
             name,
             slug,
+            archived,
             backend,
         } = create;
         Ok(Self {
@@ -32,6 +34,7 @@ impl TryFrom<CliBenchmarkUpdate> for Update {
             benchmark,
             name,
             slug,
+            archived: archived.into(),
             backend: backend.try_into()?,
         })
     }
@@ -39,10 +42,16 @@ impl TryFrom<CliBenchmarkUpdate> for Update {
 
 impl From<Update> for JsonUpdateBenchmark {
     fn from(update: Update) -> Self {
-        let Update { name, slug, .. } = update;
+        let Update {
+            name,
+            slug,
+            archived,
+            ..
+        } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
+            archived,
         }
     }
 }

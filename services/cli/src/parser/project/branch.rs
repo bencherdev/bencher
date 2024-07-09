@@ -1,7 +1,7 @@
 use bencher_json::{BranchName, GitHash, NameId, ResourceId, Slug};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliBackend, CliPagination};
+use crate::parser::{CliArchived, CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliBranch {
@@ -37,6 +37,10 @@ pub struct CliBranchList {
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliBranchesSort>,
+
+    /// Filter for archived branches
+    #[clap(long)]
+    pub archived: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -114,9 +118,8 @@ pub struct CliBranchUpdate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
-    /// Next version of the branch `git` hash
-    #[clap(long)]
-    pub hash: Option<GitHash>,
+    #[clap(flatten)]
+    pub archived: CliArchived,
 
     #[clap(flatten)]
     pub backend: CliBackend,

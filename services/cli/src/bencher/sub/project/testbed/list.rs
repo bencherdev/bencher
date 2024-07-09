@@ -16,6 +16,7 @@ pub struct List {
     pub name: Option<ResourceName>,
     pub search: Option<String>,
     pub pagination: Pagination,
+    pub archived: bool,
     pub backend: PubBackend,
 }
 
@@ -36,12 +37,14 @@ impl TryFrom<CliTestbedList> for List {
             name,
             search,
             pagination,
+            archived,
             backend,
         } = list;
         Ok(Self {
             project,
             name,
             search,
+            archived,
             pagination: pagination.into(),
             backend: backend.try_into()?,
         })
@@ -90,6 +93,9 @@ impl SubCmd for List {
                 }
                 if let Some(page) = self.pagination.page {
                     client = client.page(page);
+                }
+                if self.archived {
+                    client = client.archived(self.archived);
                 }
                 client.send().await
             })

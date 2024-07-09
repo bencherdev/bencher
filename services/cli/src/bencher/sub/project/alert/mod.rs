@@ -1,4 +1,10 @@
-use crate::{bencher::sub::SubCmd, parser::project::alert::CliAlert, CliError};
+use bencher_client::types::AlertStatus;
+
+use crate::{
+    bencher::sub::SubCmd,
+    parser::project::alert::{CliAlert, CliAlertStatus},
+    CliError,
+};
 
 mod list;
 mod update;
@@ -29,6 +35,15 @@ impl SubCmd for Alert {
             Self::List(list) => list.exec().await,
             Self::View(view) => view.exec().await,
             Self::Update(update) => update.exec().await,
+        }
+    }
+}
+
+impl From<CliAlertStatus> for AlertStatus {
+    fn from(status: CliAlertStatus) -> Self {
+        match status {
+            CliAlertStatus::Active => Self::Active,
+            CliAlertStatus::Dismissed => Self::Dismissed,
         }
     }
 }
