@@ -51,7 +51,8 @@ mod test_rust {
 
     #[test]
     fn test_adapter_rust_iai_callgrind() {
-        let results = convert_file_path::<AdapterRust>("./tool_output/rust/iai_callgrind/two.txt");
-        test_rust_iai_callgrind::validate_adapter_rust_iai_callgrind(&results);
+        let results =
+            convert_file_path::<AdapterRust>("./tool_output/rust/iai_callgrind/single-tool.txt");
+        test_rust_iai_callgrind::validate_adapter_rust_iai_callgrind(&results, true, false);
     }
 }

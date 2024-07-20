@@ -2,54 +2,15 @@ use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::{
     project::{
-        measure::{
-            ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_SLUG_STR,
-            L2_ACCESSES_SLUG_STR, LATENCY_SLUG_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_SLUG_STR,
-            TOTAL_ACCESSES_SLUG_STR,
-        },
+        measure::defs::{self, MeasureDefinition},
         metric::Mean,
     },
-    BenchmarkName, JsonNewMetric, NameId,
+    BenchmarkName, JsonNewMetric,
 };
 use literally::hmap;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use super::{adapter_metrics::AdapterMetrics, CombinedKind};
-
-const MEASURE_SLUG_ERROR: &str = "Failed to parse measure slug.";
-
-#[allow(clippy::expect_used)]
-pub static LATENCY_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| LATENCY_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
-
-#[allow(clippy::expect_used)]
-pub static THROUGHPUT_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| THROUGHPUT_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
-
-#[allow(clippy::expect_used)]
-pub static INSTRUCTIONS_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| INSTRUCTIONS_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
-
-#[allow(clippy::expect_used)]
-pub static L1_ACCESSES_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| L1_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
-
-#[allow(clippy::expect_used)]
-pub static L2_ACCESSES_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| L2_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
-
-#[allow(clippy::expect_used)]
-pub static RAM_ACCESSES_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| RAM_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
-
-#[allow(clippy::expect_used)]
-pub static TOTAL_ACCESSES_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| TOTAL_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
-
-#[allow(clippy::expect_used)]
-pub static ESTIMATED_CYCLES_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| ESTIMATED_CYCLES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdapterResults {
@@ -82,12 +43,27 @@ pub enum IaiMeasure {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IaiCallgrindMeasure {
+    /*
+     * Callgrind tool:
+     */
     Instructions(JsonNewMetric),
-    L1Accesses(JsonNewMetric),
-    L2Accesses(JsonNewMetric),
-    RamAccesses(JsonNewMetric),
+    L1Hits(JsonNewMetric),
+    L2Hits(JsonNewMetric),
+    RamHits(JsonNewMetric),
     TotalReadWrite(JsonNewMetric),
     EstimatedCycles(JsonNewMetric),
+
+    /*
+     * DHAT tool:
+     */
+    TotalBytes(JsonNewMetric),
+    TotalBlocks(JsonNewMetric),
+    AtTGmaxBytes(JsonNewMetric),
+    AtTGmaxBlocks(JsonNewMetric),
+    AtTEndBytes(JsonNewMetric),
+    AtTEndBlocks(JsonNewMetric),
+    ReadsBytes(JsonNewMetric),
+    WritesBytes(JsonNewMetric),
 }
 
 impl AdapterResults {
@@ -102,12 +78,12 @@ impl AdapterResults {
                 inner: match measure {
                     AdapterMeasure::Latency(json_metric) => {
                         hmap! {
-                            LATENCY_NAME_ID.clone() => json_metric
+                            defs::generic::Latency::name_id() => json_metric
                         }
                     },
                     AdapterMeasure::Throughput(json_metric) => {
                         hmap! {
-                            THROUGHPUT_NAME_ID.clone() => json_metric
+                            defs::generic::Throughput::name_id() => json_metric
                         }
                     },
                 },
@@ -153,19 +129,19 @@ impl AdapterResults {
             for metric in metrics {
                 let (resource_id, metric) = match metric {
                     IaiMeasure::Instructions(json_metric) => {
-                        (INSTRUCTIONS_NAME_ID.clone(), json_metric)
+                        (defs::iai::Instructions::name_id(), json_metric)
                     },
                     IaiMeasure::L1Accesses(json_metric) => {
-                        (L1_ACCESSES_NAME_ID.clone(), json_metric)
+                        (defs::iai::L1Accesses::name_id(), json_metric)
                     },
                     IaiMeasure::L2Accesses(json_metric) => {
-                        (L2_ACCESSES_NAME_ID.clone(), json_metric)
+                        (defs::iai::L2Accesses::name_id(), json_metric)
                     },
                     IaiMeasure::RamAccesses(json_metric) => {
-                        (RAM_ACCESSES_NAME_ID.clone(), json_metric)
+                        (defs::iai::RamAccesses::name_id(), json_metric)
                     },
                     IaiMeasure::EstimatedCycles(json_metric) => {
-                        (ESTIMATED_CYCLES_NAME_ID.clone(), json_metric)
+                        (defs::iai::EstimatedCycles::name_id(), json_metric)
                     },
                 };
                 metrics_value.inner.insert(resource_id, metric);
@@ -189,24 +165,69 @@ impl AdapterResults {
                 .or_insert_with(AdapterMetrics::default);
             for metric in metrics {
                 let (resource_id, metric) = match metric {
-                    IaiCallgrindMeasure::Instructions(json_metric) => {
-                        (INSTRUCTIONS_NAME_ID.clone(), json_metric)
-                    },
-                    IaiCallgrindMeasure::L1Accesses(json_metric) => {
-                        (L1_ACCESSES_NAME_ID.clone(), json_metric)
-                    },
-                    IaiCallgrindMeasure::L2Accesses(json_metric) => {
-                        (L2_ACCESSES_NAME_ID.clone(), json_metric)
-                    },
-                    IaiCallgrindMeasure::RamAccesses(json_metric) => {
-                        (RAM_ACCESSES_NAME_ID.clone(), json_metric)
-                    },
-                    IaiCallgrindMeasure::TotalReadWrite(json_metric) => {
-                        (TOTAL_ACCESSES_NAME_ID.clone(), json_metric)
-                    },
-                    IaiCallgrindMeasure::EstimatedCycles(json_metric) => {
-                        (ESTIMATED_CYCLES_NAME_ID.clone(), json_metric)
-                    },
+                    /*
+                     * Callgrind tool:
+                     */
+                    IaiCallgrindMeasure::Instructions(json_metric) => (
+                        defs::iai_callgrind::callgrind_tool::Instructions::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::L1Hits(json_metric) => (
+                        defs::iai_callgrind::callgrind_tool::L1Hits::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::L2Hits(json_metric) => (
+                        defs::iai_callgrind::callgrind_tool::L2Hits::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::RamHits(json_metric) => (
+                        defs::iai_callgrind::callgrind_tool::RamHits::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::TotalReadWrite(json_metric) => (
+                        defs::iai_callgrind::callgrind_tool::TotalReadWrite::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::EstimatedCycles(json_metric) => (
+                        defs::iai_callgrind::callgrind_tool::EstimatedCycles::name_id(),
+                        json_metric,
+                    ),
+
+                    /*
+                     * DHAT tool:
+                     */
+                    IaiCallgrindMeasure::TotalBytes(json_metric) => (
+                        defs::iai_callgrind::dhat_tool::TotalBytes::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::TotalBlocks(json_metric) => (
+                        defs::iai_callgrind::dhat_tool::TotalBlocks::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::AtTGmaxBytes(json_metric) => (
+                        defs::iai_callgrind::dhat_tool::AtTGmaxBytes::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::AtTGmaxBlocks(json_metric) => (
+                        defs::iai_callgrind::dhat_tool::AtTGmaxBlocks::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::AtTEndBytes(json_metric) => (
+                        defs::iai_callgrind::dhat_tool::AtTEndBytes::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::AtTEndBlocks(json_metric) => (
+                        defs::iai_callgrind::dhat_tool::AtTEndBlocks::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::ReadsBytes(json_metric) => (
+                        defs::iai_callgrind::dhat_tool::ReadsBytes::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::WritesBytes(json_metric) => (
+                        defs::iai_callgrind::dhat_tool::WritesBytes::name_id(),
+                        json_metric,
+                    ),
                 };
                 metrics_value.inner.insert(resource_id, metric);
             }

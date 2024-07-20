@@ -1,16 +1,20 @@
 use bencher_json::{
     project::{
-        measure::{ESTIMATED_CYCLES_NAME_STR, INSTRUCTIONS_NAME_STR},
+        measure::defs::{
+            iai_callgrind::{callgrind_tool, dhat_tool},
+            MeasureDefinition,
+        },
         report::JsonAverage,
     },
     BenchmarkName, JsonNewMetric,
 };
 use nom::{
     branch::alt,
-    bytes::complete::tag,
+    bytes::complete::{is_a, is_not, tag},
     character::complete::{space0, space1},
-    combinator::{eof, map},
-    sequence::{delimited, tuple},
+    combinator::{map, opt, recognize},
+    multi::{many0, many1},
+    sequence::{delimited, preceded, terminated, tuple},
     IResult,
 };
 
@@ -22,313 +26,337 @@ use crate::{
 
 pub struct AdapterRustIaiCallgrind;
 
-const IAI_CALLGRIND_METRICS_LINE_COUNT: usize = 7;
-const L1_HITS_NAME_STR: &str = "L1 Hits";
-const L2_HITS_NAME_STR: &str = "L2 Hits";
-const RAM_HITS_NAME_STR: &str = "RAM Hits";
-const TOTAL_READ_WRITE_NAME_STR: &str = "Total read+write";
-
 impl Adaptable for AdapterRustIaiCallgrind {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             None => {},
-            Some(JsonAverage::Mean | JsonAverage::Median) => return None,
-        }
-        // Clean up the input by removing ANSI escape codes.
+            Some(JsonAverage::Mean | JsonAverage::Median) => {
+                return None; // 'iai_callgrind' results are for a single run only.
+            },
+        };
+
+        // Clean up the input by removing ANSI escape codes:
         let input = strip_ansi_escapes::strip_str(input);
 
-        let mut benchmark_metrics = Vec::new();
-        let lines = input.lines().collect::<Vec<_>>();
-        for lines in lines.windows(IAI_CALLGRIND_METRICS_LINE_COUNT) {
-            let Ok(lines) = lines.try_into() else {
-                debug_assert!(
-                    false,
-                    "Windows struct should always be convertible to array of the same size."
-                );
-                continue;
-            };
-            if let Some((benchmark_name, metrics)) = parse_iai_lines(lines) {
-                benchmark_metrics.push((benchmark_name, metrics));
-            }
-        }
+        let benchmarks = match multiple_benchmarks()(&input) {
+            Err(error) => {
+                debug_assert!(false, "Error parsing input:\n{error:#?}");
+                return None;
+            },
+            Ok((remainder, benchmarks)) => {
+                debug_assert_eq!(remainder.len(), 0, "Unparsed trailing input:\n{remainder}");
+                benchmarks
+            },
+        };
 
-        AdapterResults::new_iai_callgrind(benchmark_metrics)
+        AdapterResults::new_iai_callgrind(benchmarks)
     }
 }
 
-fn parse_iai_lines(
-    lines: [&str; IAI_CALLGRIND_METRICS_LINE_COUNT],
-) -> Option<(BenchmarkName, Vec<IaiCallgrindMeasure>)> {
-    let [benchmark_name_line, instructions_line, l1_accesses_line, l2_accesses_line, ram_accesses_line, total_read_write_line, estimated_cycles_line] =
-        lines;
-
-    let name = benchmark_name_line.parse().ok()?;
-    #[allow(trivial_casts)]
-    let metrics = [
-        (
-            INSTRUCTIONS_NAME_STR,
-            instructions_line,
-            IaiCallgrindMeasure::Instructions as fn(JsonNewMetric) -> IaiCallgrindMeasure,
-        ),
-        (
-            L1_HITS_NAME_STR,
-            l1_accesses_line,
-            IaiCallgrindMeasure::L1Accesses,
-        ),
-        (
-            L2_HITS_NAME_STR,
-            l2_accesses_line,
-            IaiCallgrindMeasure::L2Accesses,
-        ),
-        (
-            RAM_HITS_NAME_STR,
-            ram_accesses_line,
-            IaiCallgrindMeasure::RamAccesses,
-        ),
-        (
-            TOTAL_READ_WRITE_NAME_STR,
-            total_read_write_line,
-            IaiCallgrindMeasure::TotalReadWrite,
-        ),
-        (
-            ESTIMATED_CYCLES_NAME_STR,
-            estimated_cycles_line,
-            IaiCallgrindMeasure::EstimatedCycles,
-        ),
-    ]
-    .into_iter()
-    .map(|(measure, input, into_variant)| {
-        parse_iai_callgrind_metric(input, measure)
-            .map(|(_remainder, json_metric)| into_variant(json_metric))
-    })
-    .collect::<Result<Vec<_>, _>>()
-    .ok()?;
-
-    Some((name, metrics))
+fn multiple_benchmarks<'a>(
+) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
+    map(
+        many0(alt((
+            // Try to parse a single benchmark:
+            single_benchmark(),
+            // Otherwise, parse/ignore unrelated lines:
+            map(terminated(not_line_ending(), opt(line_ending())), |_| None),
+            // Otherwise, parse/ignore empty lines:
+            map(line_ending(), |_| None),
+        ))),
+        // Skip 'None' resulting from empty/unrelated lines:
+        |benchmarks| benchmarks.into_iter().flatten().collect(),
+    )
 }
 
-#[allow(clippy::cast_precision_loss)]
-fn parse_iai_callgrind_metric<'a>(
-    input: &'a str,
-    measure: &'static str,
-) -> IResult<&'a str, JsonNewMetric> {
+fn single_benchmark<'a>(
+) -> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
+    map(
+        tuple((
+            terminated(recognize(not_line_ending()), line_ending()),
+            // Callgrind tool is always enabled:
+            callgrind_tool_measures(),
+            // Add DHAT tool measures if it was enabled:
+            opt(dhat_tool_measures()),
+        )),
+        |(benchmark_name, callgrind_measures, dhat_measures)| {
+            let benchmark_name = benchmark_name.parse().ok()?;
+
+            let mut measures = vec![];
+            measures.extend(callgrind_measures);
+            measures.extend(dhat_measures.into_iter().flatten());
+
+            Some((benchmark_name, measures))
+        },
+    )
+}
+
+fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
+{
+    map(
+        preceded(
+            opt(tool_name_line("CALLGRIND")),
+            tuple((
+                metric_line(callgrind_tool::Instructions::NAME_STR),
+                metric_line(callgrind_tool::L1Hits::NAME_STR),
+                metric_line(callgrind_tool::L2Hits::NAME_STR),
+                metric_line(callgrind_tool::RamHits::NAME_STR),
+                metric_line(callgrind_tool::TotalReadWrite::NAME_STR),
+                metric_line(callgrind_tool::EstimatedCycles::NAME_STR),
+            )),
+        ),
+        |(instructions, l1_hits, l2_hits, ram_hits, total_read_write, estimated_cycles)| {
+            vec![
+                IaiCallgrindMeasure::Instructions(instructions),
+                IaiCallgrindMeasure::L1Hits(l1_hits),
+                IaiCallgrindMeasure::L2Hits(l2_hits),
+                IaiCallgrindMeasure::RamHits(ram_hits),
+                IaiCallgrindMeasure::TotalReadWrite(total_read_write),
+                IaiCallgrindMeasure::EstimatedCycles(estimated_cycles),
+            ]
+        },
+    )
+}
+
+fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
+    map(
+        preceded(
+            opt(tool_name_line("DHAT")),
+            tuple((
+                metric_line(dhat_tool::TotalBytes::NAME_STR),
+                metric_line(dhat_tool::TotalBlocks::NAME_STR),
+                metric_line(dhat_tool::AtTGmaxBytes::NAME_STR),
+                metric_line(dhat_tool::AtTGmaxBlocks::NAME_STR),
+                metric_line(dhat_tool::AtTEndBytes::NAME_STR),
+                metric_line(dhat_tool::AtTEndBlocks::NAME_STR),
+                metric_line(dhat_tool::ReadsBytes::NAME_STR),
+                metric_line(dhat_tool::WritesBytes::NAME_STR),
+            )),
+        ),
+        |(
+            total_bytes,
+            total_blocks,
+            at_t_gmax_bytes,
+            at_t_gmax_blocks,
+            at_t_end_bytes,
+            at_t_end_blocks,
+            reads_bytes,
+            writes_bytes,
+        )| {
+            vec![
+                IaiCallgrindMeasure::TotalBytes(total_bytes),
+                IaiCallgrindMeasure::TotalBlocks(total_blocks),
+                IaiCallgrindMeasure::AtTGmaxBytes(at_t_gmax_bytes),
+                IaiCallgrindMeasure::AtTGmaxBlocks(at_t_gmax_blocks),
+                IaiCallgrindMeasure::AtTEndBytes(at_t_end_bytes),
+                IaiCallgrindMeasure::AtTEndBlocks(at_t_end_blocks),
+                IaiCallgrindMeasure::ReadsBytes(reads_bytes),
+                IaiCallgrindMeasure::WritesBytes(writes_bytes),
+            ]
+        },
+    )
+}
+
+fn tool_name_line<'a>(tool_name: &'static str) -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+    delimited(
+        tuple((space0, many1(tag("=")), tag(" "))),
+        tag(tool_name),
+        tuple((tag(" "), many1(tag("=")), line_ending())),
+    )
+}
+
+fn metric_line<'a>(
+    measure_name: &'static str,
+) -> impl FnMut(&'a str) -> IResult<&'a str, JsonNewMetric> {
     map(
         tuple((
             space0,
-            tag(measure),
+            tag(measure_name),
             tag(":"),
             space1,
+            // the current run value:
             parse_u64,
             tag("|"),
             alt((
-                // No previous run
-                map(tuple((tag("N/A"), space1, tag("(*********)"))), |_| ()),
-                // Comparison to previous run
-                map(
-                    tuple((
-                        parse_u64,
-                        space0,
-                        alt((
-                            map(tag("(No change)"), |_| ()),
-                            map(
-                                tuple((
-                                    delimited(
-                                        tag("("),
-                                        tuple((alt((tag("+"), tag("-"))), parse_f64, tag("%"))),
-                                        tag(")"),
-                                    ),
-                                    space1,
-                                    delimited(
-                                        tag("["),
-                                        tuple((alt((tag("+"), tag("-"))), parse_f64, tag("x"))),
-                                        tag("]"),
-                                    ),
-                                )),
-                                |_| (),
+                // No previous run:
+                recognize(tuple((tag("N/A"), space1, tag("(*********)")))),
+                // Comparison to previous run:
+                recognize(tuple((
+                    parse_u64,
+                    space0,
+                    alt((
+                        recognize(tag("(No change)")),
+                        recognize(tuple((
+                            delimited(
+                                tag("("),
+                                tuple((alt((tag("+"), tag("-"))), parse_f64, tag("%"))),
+                                tag(")"),
                             ),
-                        )),
+                            space1,
+                            delimited(
+                                tag("["),
+                                tuple((alt((tag("+"), tag("-"))), parse_f64, tag("x"))),
+                                tag("]"),
+                            ),
+                        ))),
                     )),
-                    |_| (),
-                ),
+                ))),
             )),
-            eof,
+            line_ending(),
         )),
-        |(_, _, _, _, metric, _, (), _)| JsonNewMetric {
-            value: (metric as f64).into(),
+        |(_, _, _, _, current_value, _, _, _)| JsonNewMetric {
+            #[allow(clippy::cast_precision_loss)]
+            value: (current_value as f64).into(),
             lower_value: None,
             upper_value: None,
         },
-    )(input)
+    )
+}
+
+fn line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+    is_a("\r\n")
+}
+
+fn not_line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+    // Note: `not(line_ending)` doesn't work here, as it won't consume the matched characters
+    is_not("\r\n")
 }
 
 #[cfg(test)]
 pub(crate) mod test_rust_iai_callgrind {
-
-    use crate::{
-        adapters::test_util::convert_file_path, results::adapter_metrics::AdapterMetrics,
-        Adaptable, AdapterResults,
-    };
-    use bencher_json::{
-        project::measure::{
-            ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR,
-            L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, RAM_ACCESSES_SLUG_STR,
-            TOTAL_ACCESSES_SLUG_STR,
-        },
-        JsonNewMetric,
+    use crate::{adapters::test_util::convert_file_path, AdapterResults};
+    use bencher_json::project::measure::defs::{
+        iai_callgrind::{callgrind_tool, dhat_tool},
+        MeasureDefinition,
     };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
     use super::AdapterRustIaiCallgrind;
+    use std::collections::HashMap;
 
-    fn convert_rust_iai_callgrind(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/iai_callgrind/{suffix}.txt");
-        convert_file_path::<AdapterRustIaiCallgrind>(&file_path)
+    #[test]
+    fn test_iai_adapter_single_tool() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/single-tool.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(&results, true, false);
     }
 
-    pub fn validate_iai_callgrind(metrics: &AdapterMetrics, results: [(&str, f64); 6]) {
-        assert_eq!(metrics.inner.len(), 6);
-        for (key, value) in results {
-            let metric = metrics.get(key).unwrap();
-            assert_eq!(metric.value, OrderedFloat::from(value));
-            assert_eq!(metric.lower_value, None);
-            assert_eq!(metric.upper_value, None);
+    #[test]
+    fn test_iai_adapter_multiple_tools() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/multiple-tools.txt",
+        );
+        validate_adapter_rust_iai_callgrind(&results, true, true);
+    }
+
+    #[test]
+    fn test_iai_adapter_delta() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/delta.txt",
+        );
+        validate_adapter_rust_iai_callgrind(&results, true, false);
+    }
+
+    #[test]
+    fn test_iai_adapter_ansi_escapes() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/ansi-escapes.txt",
+        );
+        validate_adapter_rust_iai_callgrind(&results, true, false);
+    }
+
+    pub fn validate_adapter_rust_iai_callgrind(
+        results: &AdapterResults,
+        callgrind_tool: bool,
+        dhat_tool: bool,
+    ) {
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let mut expected = HashMap::new();
+
+            if callgrind_tool {
+                expected.extend([
+                    (callgrind_tool::Instructions::SLUG_STR, 1_734.0),
+                    (callgrind_tool::L1Hits::SLUG_STR, 2_359.0),
+                    (callgrind_tool::L2Hits::SLUG_STR, 0.0),
+                    (callgrind_tool::RamHits::SLUG_STR, 3.0),
+                    (callgrind_tool::TotalReadWrite::SLUG_STR, 2_362.0),
+                    (callgrind_tool::EstimatedCycles::SLUG_STR, 2_464.0),
+                ]);
+            }
+
+            if dhat_tool {
+                expected.extend([
+                    (dhat_tool::TotalBytes::SLUG_STR, 29_499.0),
+                    (dhat_tool::TotalBlocks::SLUG_STR, 2_806.0),
+                    (dhat_tool::AtTGmaxBytes::SLUG_STR, 378.0),
+                    (dhat_tool::AtTGmaxBlocks::SLUG_STR, 34.0),
+                    (dhat_tool::AtTEndBytes::SLUG_STR, 0.0),
+                    (dhat_tool::AtTEndBlocks::SLUG_STR, 0.0),
+                    (dhat_tool::ReadsBytes::SLUG_STR, 57_725.0),
+                    (dhat_tool::WritesBytes::SLUG_STR, 73_810.0),
+                ]);
+            }
+
+            compare_benchmark(
+                &expected,
+                results,
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10",
+            );
+        }
+
+        {
+            let mut expected = HashMap::new();
+
+            if callgrind_tool {
+                expected.extend([
+                    (callgrind_tool::Instructions::SLUG_STR, 26_214_734.0),
+                    (callgrind_tool::L1Hits::SLUG_STR, 35_638_619.0),
+                    (callgrind_tool::L2Hits::SLUG_STR, 0.0),
+                    (callgrind_tool::RamHits::SLUG_STR, 3.0),
+                    (callgrind_tool::TotalReadWrite::SLUG_STR, 35_638_622.0),
+                    (callgrind_tool::EstimatedCycles::SLUG_STR, 35_638_724.0),
+                ]);
+            }
+
+            if dhat_tool {
+                expected.extend([
+                    (dhat_tool::TotalBytes::SLUG_STR, 26_294_939.0),
+                    (dhat_tool::TotalBlocks::SLUG_STR, 2_328_086.0),
+                    (dhat_tool::AtTGmaxBytes::SLUG_STR, 933_718.0),
+                    (dhat_tool::AtTGmaxBlocks::SLUG_STR, 18_344.0),
+                    (dhat_tool::AtTEndBytes::SLUG_STR, 0.0),
+                    (dhat_tool::AtTEndBlocks::SLUG_STR, 0.0),
+                    (dhat_tool::ReadsBytes::SLUG_STR, 47_577_425.0),
+                    (dhat_tool::WritesBytes::SLUG_STR, 37_733_810.0),
+                ]);
+            }
+
+            compare_benchmark(
+                &expected,
+                results,
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30",
+            );
         }
     }
 
-    #[test]
-    fn test_adapter_rust_iai_callgrind_parse_line() {
-        assert_eq!(
-            super::parse_iai_callgrind_metric(
-                "  Instructions:                1234|N/A             (*********)",
-                INSTRUCTIONS_NAME_STR
-            ),
-            Ok((
-                "",
-                JsonNewMetric {
-                    value: 1234.0.into(),
-                    upper_value: None,
-                    lower_value: None
-                }
-            ))
-        );
+    fn compare_benchmark(
+        expected: &HashMap<&str, f64>,
+        results: &AdapterResults,
+        benchmark_name: &str,
+    ) {
+        let actual = results.get(benchmark_name).unwrap();
+        assert_eq!(actual.inner.len(), expected.len());
 
-        assert_eq!(
-            super::parse_iai_callgrind_metric(
-                "  Instructions:                1234|1234            (No change)",
-                INSTRUCTIONS_NAME_STR
-            ),
-            Ok((
-                "",
-                JsonNewMetric {
-                    value: 1234.0.into(),
-                    upper_value: None,
-                    lower_value: None
-                }
-            ))
-        );
-
-        assert_eq!(
-            super::parse_iai_callgrind_metric(
-                "  Instructions:                1234|1000            (+23.4000%) [+1.23400x]",
-                INSTRUCTIONS_NAME_STR
-            ),
-            Ok((
-                "",
-                JsonNewMetric {
-                    value: 1234.0.into(),
-                    upper_value: None,
-                    lower_value: None
-                }
-            ))
-        );
-    }
-
-    #[test]
-    fn test_adapter_rust_iai_callgrind_parse_multiple_lines() {
-        let input = "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10
-  Instructions:                1734|N/A             (*********)
-  L1 Hits:                     2359|N/A             (*********)
-  L2 Hits:                        0|N/A             (*********)
-  RAM Hits:                       3|N/A             (*********)
-  Total read+write:            2362|N/A             (*********)
-  Estimated Cycles:            2464|N/A             (*********)";
-        let output = AdapterRustIaiCallgrind::parse(input, crate::Settings::default());
-        assert!(output.is_some());
-    }
-
-    #[test]
-    fn test_adapter_rust_iai_callgrind() {
-        let results = convert_rust_iai_callgrind("two");
-        validate_adapter_rust_iai_callgrind(&results);
-    }
-
-    pub fn validate_adapter_rust_iai_callgrind(results: &AdapterResults) {
-        assert_eq!(results.inner.len(), 2);
-
-        let metrics = results
-            .get("rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10")
-            .unwrap();
-        validate_iai_callgrind(
-            metrics,
-            [
-                (INSTRUCTIONS_SLUG_STR, 1734.0),
-                (L1_ACCESSES_SLUG_STR, 2359.0),
-                (L2_ACCESSES_SLUG_STR, 0.0),
-                (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_ACCESSES_SLUG_STR, 2362.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 2464.0),
-            ],
-        );
-        let metrics = results
-            .get("rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30")
-            .unwrap();
-        validate_iai_callgrind(
-            metrics,
-            [
-                (INSTRUCTIONS_SLUG_STR, 26_214_734.0),
-                (L1_ACCESSES_SLUG_STR, 35_638_619.0),
-                (L2_ACCESSES_SLUG_STR, 0.0),
-                (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_ACCESSES_SLUG_STR, 35_638_622.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 35_638_724.0),
-            ],
-        );
-    }
-
-    #[test]
-    fn test_adapter_rust_iai_callgrind_issue_345() {
-        let contents = "running 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\u{001b}[32mrust_iai_callgrind::bench_fibonacci_group::bench_fibonacci\u{001b}[0m \u{001b}[36mshort\u{001b}[0m\u{001b}[36m:\u{001b}[0m\u{001b}[1;34m10\u{001b}[0m\n  Instructions:     \u{001b}[1m           1684\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  L1 Hits:          \u{001b}[1m           2309\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  L2 Hits:          \u{001b}[1m              0\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  RAM Hits:         \u{001b}[1m              3\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  Total read+write: \u{001b}[1m           2312\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  Estimated Cycles: \u{001b}[1m           2414\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n\u{001b}[32mrust_iai_callgrind::bench_fibonacci_group::bench_fibonacci\u{001b}[0m \u{001b}[36mlong\u{001b}[0m\u{001b}[36m:\u{001b}[0m\u{001b}[1;34m30\u{001b}[0m\n  Instructions:     \u{001b}[1m       25457719\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  L1 Hits:          \u{001b}[1m       34881604\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  L2 Hits:          \u{001b}[1m              0\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  RAM Hits:         \u{001b}[1m              3\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  Total read+write: \u{001b}[1m       34881607\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  Estimated Cycles: \u{001b}[1m       34881709\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)";
-        let results = AdapterRustIaiCallgrind::parse(contents, crate::Settings::default()).unwrap();
-        assert_eq!(results.inner.len(), 2);
-
-        let metrics = results
-            .get("rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10")
-            .unwrap();
-        validate_iai_callgrind(
-            metrics,
-            [
-                (INSTRUCTIONS_SLUG_STR, 1684.0),
-                (L1_ACCESSES_SLUG_STR, 2309.0),
-                (L2_ACCESSES_SLUG_STR, 0.0),
-                (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_ACCESSES_SLUG_STR, 2312.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 2414.0),
-            ],
-        );
-        let metrics = results
-            .get("rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30")
-            .unwrap();
-        validate_iai_callgrind(
-            metrics,
-            [
-                (INSTRUCTIONS_SLUG_STR, 25_457_719.0),
-                (L1_ACCESSES_SLUG_STR, 34_881_604.0),
-                (L2_ACCESSES_SLUG_STR, 0.0),
-                (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_ACCESSES_SLUG_STR, 34_881_607.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 34_881_709.0),
-            ],
-        );
+        for (key, value) in expected {
+            let metric = actual.get(key).unwrap();
+            assert_eq!(metric.value, OrderedFloat::from(*value));
+            assert_eq!(metric.lower_value, None);
+            assert_eq!(metric.upper_value, None);
+        }
     }
 }

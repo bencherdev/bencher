@@ -1,6 +1,9 @@
 use std::fmt;
 
-use bencher_json::{project::measure::FILE_SIZE_SLUG, JsonNewMetric};
+use bencher_json::{
+    project::measure::defs::{self, MeasureDefinition},
+    JsonNewMetric,
+};
 use camino::Utf8PathBuf;
 
 use crate::RunError;
@@ -35,7 +38,6 @@ impl FileSize {
                 .unwrap_or(file_path.as_str())
                 .parse()
                 .map_err(RunError::OutputFileName)?;
-            let file_size_slug = FILE_SIZE_SLUG.clone().into();
             #[allow(clippy::cast_precision_loss)]
             let value = (std::fs::metadata(file_path)
                 .map(|m| m.len())
@@ -44,7 +46,7 @@ impl FileSize {
             results.push((
                 file_name,
                 vec![(
-                    file_size_slug,
+                    defs::file_size::FileSize::name_id(),
                     JsonNewMetric {
                         value,
                         ..Default::default()

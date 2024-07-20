@@ -1,0 +1,18 @@
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[32mrust_iai_callgrind::bench_fibonacci_group::bench_fibonacci[0m [36mshort[0m[36m:[0m[1;34m10[0m
+  Instructions:     [1m           1734[0m|N/A             ([90m*********[0m)
+  L1 Hits:          [1m           2359[0m|N/A             ([90m*********[0m)
+  L2 Hits:          [1m              0[0m|N/A             ([90m*********[0m)
+  RAM Hits:         [1m              3[0m|N/A             ([90m*********[0m)
+  Total read+write: [1m           2362[0m|N/A             ([90m*********[0m)
+  Estimated Cycles: [1m           2464[0m|N/A             ([90m*********[0m)
+[32mrust_iai_callgrind::bench_fibonacci_group::bench_fibonacci[0m [36mlong[0m[36m:[0m[1;34m30[0m
+  Instructions:     [1m       26214734[0m|N/A             ([90m*********[0m)
+  L1 Hits:          [1m       35638619[0m|N/A             ([90m*********[0m)
+  L2 Hits:          [1m              0[0m|N/A             ([90m*********[0m)
+  RAM Hits:         [1m              3[0m|N/A             ([90m*********[0m)
+  Total read+write: [1m       35638622[0m|N/A             ([90m*********[0m)
+  Estimated Cycles: [1m       35638724[0m|N/A             ([90m*********[0m)

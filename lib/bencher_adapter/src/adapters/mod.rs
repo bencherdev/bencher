@@ -25,7 +25,10 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 #[allow(clippy::panic, clippy::unwrap_used)]
 pub(crate) mod test_util {
     use bencher_json::project::{
-        measure::{LATENCY_SLUG_STR, THROUGHPUT_SLUG_STR},
+        measure::defs::{
+            generic::{Latency, Throughput},
+            MeasureDefinition,
+        },
         report::JsonAverage,
     };
     use ordered_float::OrderedFloat;
@@ -70,7 +73,7 @@ pub(crate) mod test_util {
         lower_value: Option<f64>,
         upper_value: Option<f64>,
     ) {
-        validate_metric(metrics, LATENCY_SLUG_STR, value, lower_value, upper_value);
+        validate_metric(metrics, Latency::SLUG_STR, value, lower_value, upper_value);
     }
 
     pub fn validate_throughput(
@@ -81,7 +84,7 @@ pub(crate) mod test_util {
     ) {
         validate_metric(
             metrics,
-            THROUGHPUT_SLUG_STR,
+            Throughput::SLUG_STR,
             value,
             lower_value,
             upper_value,

@@ -1,6 +1,10 @@
 use bencher_json::{
-    project::ProjectRole, DateTime, JsonDirection, JsonNewProject, JsonPagination, JsonProject,
-    JsonProjects, ResourceId, ResourceName,
+    project::{
+        measure::defs::generic::{Latency, Throughput},
+        ProjectRole,
+    },
+    DateTime, JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, ResourceId,
+    ResourceName,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{
@@ -284,7 +288,8 @@ async fn post_inner(
     slog::debug!(log, "Added project testbed: {insert_testbed:?}");
 
     // Add a `latency` measure to the project
-    let insert_measure = InsertMeasure::latency(conn_lock!(context), query_project.id)?;
+    let insert_measure =
+        InsertMeasure::from_measure::<Latency>(conn_lock!(context), query_project.id)?;
     diesel::insert_into(schema::measure::table)
         .values(&insert_measure)
         .execute(conn_lock!(context))
@@ -302,7 +307,8 @@ async fn post_inner(
     slog::debug!(log, "Added project threshold: {threshold_id}");
 
     // Add a `throughput` measure to the project
-    let insert_measure = InsertMeasure::throughput(conn_lock!(context), query_project.id)?;
+    let insert_measure =
+        InsertMeasure::from_measure::<Throughput>(conn_lock!(context), query_project.id)?;
     diesel::insert_into(schema::measure::table)
         .values(&insert_measure)
         .execute(conn_lock!(context))

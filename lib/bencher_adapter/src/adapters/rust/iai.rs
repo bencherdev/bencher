@@ -1,8 +1,8 @@
 use bencher_json::{
     project::{
-        measure::{
-            ESTIMATED_CYCLES_NAME_STR, INSTRUCTIONS_NAME_STR, L1_ACCESSES_NAME_STR,
-            L2_ACCESSES_NAME_STR, RAM_ACCESSES_NAME_STR,
+        measure::defs::{
+            iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
+            MeasureDefinition,
         },
         report::JsonAverage,
     },
@@ -63,27 +63,27 @@ fn parse_iai_lines(
     #[allow(trivial_casts)]
     let metrics = [
         (
-            INSTRUCTIONS_NAME_STR,
+            Instructions::NAME_STR,
             instructions_line,
             IaiMeasure::Instructions as fn(JsonNewMetric) -> IaiMeasure,
         ),
         (
-            L1_ACCESSES_NAME_STR,
+            L1Accesses::NAME_STR,
             l1_accesses_line,
             IaiMeasure::L1Accesses,
         ),
         (
-            L2_ACCESSES_NAME_STR,
+            L2Accesses::NAME_STR,
             l2_accesses_line,
             IaiMeasure::L2Accesses,
         ),
         (
-            RAM_ACCESSES_NAME_STR,
+            RamAccesses::NAME_STR,
             ram_accesses_line,
             IaiMeasure::RamAccesses,
         ),
         (
-            ESTIMATED_CYCLES_NAME_STR,
+            EstimatedCycles::NAME_STR,
             estimated_cycles_line,
             IaiMeasure::EstimatedCycles,
         ),
@@ -145,9 +145,9 @@ pub(crate) mod test_rust_iai {
         Adaptable, AdapterResults,
     };
     use bencher_json::{
-        project::measure::{
-            ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR,
-            L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, RAM_ACCESSES_SLUG_STR,
+        project::measure::defs::{
+            iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
+            MeasureDefinition,
         },
         JsonNewMetric,
     };
@@ -174,7 +174,7 @@ pub(crate) mod test_rust_iai {
     #[test]
     fn test_adapter_rust_iai_parse_line() {
         assert_eq!(
-            super::parse_iai_metric("  Instructions:  1234", INSTRUCTIONS_NAME_STR),
+            super::parse_iai_metric("  Instructions:  1234", Instructions::NAME_STR),
             Ok((
                 "",
                 JsonNewMetric {
@@ -186,7 +186,7 @@ pub(crate) mod test_rust_iai {
         );
 
         assert_eq!(
-            super::parse_iai_metric("  Instructions:  1234 (No change)", INSTRUCTIONS_NAME_STR),
+            super::parse_iai_metric("  Instructions:  1234 (No change)", Instructions::NAME_STR),
             Ok((
                 "",
                 JsonNewMetric {
@@ -198,7 +198,7 @@ pub(crate) mod test_rust_iai {
         );
 
         assert_eq!(
-            super::parse_iai_metric("  Instructions:  1234 (+3.14%)", INSTRUCTIONS_NAME_STR),
+            super::parse_iai_metric("  Instructions:  1234 (+3.14%)", Instructions::NAME_STR),
             Ok((
                 "",
                 JsonNewMetric {
@@ -235,22 +235,22 @@ pub(crate) mod test_rust_iai {
         validate_iai(
             metrics,
             [
-                (INSTRUCTIONS_SLUG_STR, 1735.0),
-                (L1_ACCESSES_SLUG_STR, 2364.0),
-                (L2_ACCESSES_SLUG_STR, 1.0),
-                (RAM_ACCESSES_SLUG_STR, 1.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 2404.0),
+                (Instructions::SLUG_STR, 1735.0),
+                (L1Accesses::SLUG_STR, 2364.0),
+                (L2Accesses::SLUG_STR, 1.0),
+                (RamAccesses::SLUG_STR, 1.0),
+                (EstimatedCycles::SLUG_STR, 2404.0),
             ],
         );
         let metrics = results.get("bench_fibonacci_long").unwrap();
         validate_iai(
             metrics,
             [
-                (INSTRUCTIONS_SLUG_STR, 26_214_735.0),
-                (L1_ACCESSES_SLUG_STR, 35_638_623.0),
-                (L2_ACCESSES_SLUG_STR, 2.0),
-                (RAM_ACCESSES_SLUG_STR, 1.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 35_638_668.0),
+                (Instructions::SLUG_STR, 26_214_735.0),
+                (L1Accesses::SLUG_STR, 35_638_623.0),
+                (L2Accesses::SLUG_STR, 2.0),
+                (RamAccesses::SLUG_STR, 1.0),
+                (EstimatedCycles::SLUG_STR, 35_638_668.0),
             ],
         );
     }
@@ -264,22 +264,22 @@ pub(crate) mod test_rust_iai {
         validate_iai(
             metrics,
             [
-                (INSTRUCTIONS_SLUG_STR, 1243.0),
-                (L1_ACCESSES_SLUG_STR, 1580.0),
-                (L2_ACCESSES_SLUG_STR, 1.0),
-                (RAM_ACCESSES_SLUG_STR, 2.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 1655.0),
+                (Instructions::SLUG_STR, 1243.0),
+                (L1Accesses::SLUG_STR, 1580.0),
+                (L2Accesses::SLUG_STR, 1.0),
+                (RamAccesses::SLUG_STR, 2.0),
+                (EstimatedCycles::SLUG_STR, 1655.0),
             ],
         );
         let metrics = results.get("iai_benchmark_long").unwrap();
         validate_iai(
             metrics,
             [
-                (INSTRUCTIONS_SLUG_STR, 18_454_953.0),
-                (L1_ACCESSES_SLUG_STR, 23_447_195.0),
-                (L2_ACCESSES_SLUG_STR, 6.0),
-                (RAM_ACCESSES_SLUG_STR, 2.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 23_447_295.0),
+                (Instructions::SLUG_STR, 18_454_953.0),
+                (L1Accesses::SLUG_STR, 23_447_195.0),
+                (L2Accesses::SLUG_STR, 6.0),
+                (RamAccesses::SLUG_STR, 2.0),
+                (EstimatedCycles::SLUG_STR, 23_447_295.0),
             ],
         );
     }

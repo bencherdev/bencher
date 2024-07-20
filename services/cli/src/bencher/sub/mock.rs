@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use bencher_adapter::{
-    results::{adapter_metrics::AdapterMetrics, adapter_results::LATENCY_NAME_ID},
-    AdapterResults,
+use bencher_adapter::{results::adapter_metrics::AdapterMetrics, AdapterResults};
+use bencher_json::{
+    project::measure::defs::{generic::Latency, MeasureDefinition},
+    JsonNewMetric,
 };
-use bencher_json::JsonNewMetric;
 use literally::hmap;
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 
@@ -93,7 +93,7 @@ impl Mock {
                     .map_err(MockError::ParseBenchmarkName)?,
                 AdapterMetrics {
                     inner: hmap! {
-                        LATENCY_NAME_ID.clone() => JsonNewMetric {
+                        Latency::name_id() => JsonNewMetric {
                              value: value.into(),
                              lower_value: Some((value - variance).into()),
                              upper_value: Some((value + variance).into()),
