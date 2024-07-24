@@ -19,6 +19,7 @@ export interface Props {
 
 export interface DeckConfig {
 	url: (params: Params, search?: Params) => string;
+	top_buttons?: DeckButtonConfig[];
 	cards: CardConfig[];
 	buttons?: DeckButtonConfig[];
 }
@@ -26,6 +27,20 @@ export interface DeckConfig {
 const Deck = (props: Props) => {
 	return (
 		<>
+			<Show when={props.isConsole !== false && props.config?.top_buttons}>
+				<For each={props.config?.top_buttons}>
+					{(button) => (
+						<DeckButton
+							apiUrl={props.apiUrl}
+							params={props.params}
+							user={props.user}
+							config={button}
+							path={props.path}
+							data={props.data}
+						/>
+					)}
+				</For>
+			</Show>
 			<For each={props.config?.cards}>
 				{(card) => (
 					<DeckCard

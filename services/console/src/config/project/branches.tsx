@@ -115,6 +115,15 @@ const branchesConfig = {
 		deck: {
 			url: (params: Params) =>
 				`/v0/projects/${params?.project}/branches/${params?.branch}`,
+			top_buttons: [
+				{
+					kind: ActionButton.ARCHIVE,
+					subtitle:
+						"⚠️ All Reports and Thresholds that use this Branch must be deleted first! ⚠️",
+					path: parentPath,
+					is_allowed: isAllowedProjectEdit,
+				},
+			],
 			cards: [
 				{
 					kind: Card.FIELD,
