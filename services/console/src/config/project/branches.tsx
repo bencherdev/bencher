@@ -118,8 +118,7 @@ const branchesConfig = {
 			top_buttons: [
 				{
 					kind: ActionButton.ARCHIVE,
-					subtitle:
-						"⚠️ All Reports and Thresholds that use this Branch must be deleted first! ⚠️",
+					subtitle: "Branch",
 					path: parentPath,
 					is_allowed: isAllowedProjectEdit,
 				},

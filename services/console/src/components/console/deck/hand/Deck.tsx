@@ -37,6 +37,7 @@ const Deck = (props: Props) => {
 							config={button}
 							path={props.path}
 							data={props.data}
+							handleRefresh={props.handleRefresh}
 						/>
 					)}
 				</For>
@@ -66,6 +67,7 @@ const Deck = (props: Props) => {
 							config={button}
 							path={props.path}
 							data={props.data}
+							handleRefresh={props.handleRefresh}
 						/>
 					)}
 				</For>

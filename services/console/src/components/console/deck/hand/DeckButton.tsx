@@ -19,6 +19,7 @@ export interface Props {
 	config: DeckButtonConfig;
 	path: Accessor<string>;
 	data: Resource<object>;
+	handleRefresh: () => void;
 }
 
 export interface DeckButtonConfig {
@@ -67,6 +68,7 @@ const DeckButton = (props: Props) => {
 										subtitle={props.config.subtitle}
 										redirect={props.config.path}
 										effect={props.config.effect}
+										handleRefresh={props.handleRefresh}
 									/>
 								</p>
 							</div>

@@ -109,6 +109,14 @@ const benchmarksConfig = {
 		deck: {
 			url: (params: Params) =>
 				`/v0/projects/${params?.project}/benchmarks/${params?.benchmark}`,
+			top_buttons: [
+				{
+					kind: ActionButton.ARCHIVE,
+					subtitle: "Benchmark",
+					path: parentPath,
+					is_allowed: isAllowedProjectEdit,
+				},
+			],
 			cards: [
 				{
 					kind: Card.FIELD,

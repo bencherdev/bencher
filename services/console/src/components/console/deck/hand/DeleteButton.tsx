@@ -36,11 +36,13 @@ const DeleteButton = (props: Props) => {
 		const data = props.data();
 		// This guarantees that the wasm has been loaded
 		if (!data) {
+			setDeleting(false);
 			return;
 		}
 
 		const token = props.user?.token;
 		if (!validJwt(token)) {
+			setDeleting(false);
 			return;
 		}
 

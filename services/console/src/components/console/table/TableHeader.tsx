@@ -199,7 +199,11 @@ const TableHeaderButton = (props: {
 					<button
 						class={`button${props.archived() === "true" ? " is-primary" : ""}`}
 						type="button"
-						title={`Toggle archived ${props.title}`}
+						title={
+							props.archived() === "true"
+								? `View active ${props.title}`
+								: `View archived ${props.title}`
+						}
 						onMouseDown={(e) => {
 							e.preventDefault();
 							props.handleArchived();
