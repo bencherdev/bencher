@@ -1,8 +1,8 @@
 use bencher_json::{
     project::{
-        measure::defs::{
+        measure::built_in::{
             iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
-            MeasureDefinition,
+            BuiltInMeasure,
         },
         report::JsonAverage,
     },
@@ -145,9 +145,9 @@ pub(crate) mod test_rust_iai {
         Adaptable, AdapterResults,
     };
     use bencher_json::{
-        project::measure::defs::{
+        project::measure::built_in::{
             iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
-            MeasureDefinition,
+            BuiltInMeasure,
         },
         JsonNewMetric,
     };

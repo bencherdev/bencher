@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bencher_adapter::{results::adapter_metrics::AdapterMetrics, AdapterResults};
 use bencher_json::{
-    project::measure::defs::{generic::Latency, MeasureDefinition},
+    project::measure::built_in::{generic::Latency, BuiltInMeasure},
     JsonNewMetric,
 };
 use literally::hmap;

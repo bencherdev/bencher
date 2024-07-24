@@ -1,8 +1,8 @@
 use bencher_json::{
     project::{
-        measure::defs::{
+        measure::built_in::{
             iai_callgrind::{callgrind_tool, dhat_tool},
-            MeasureDefinition,
+            BuiltInMeasure,
         },
         report::JsonAverage,
     },
@@ -225,9 +225,9 @@ fn not_line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
 #[cfg(test)]
 pub(crate) mod test_rust_iai_callgrind {
     use crate::{adapters::test_util::convert_file_path, AdapterResults};
-    use bencher_json::project::measure::defs::{
+    use bencher_json::project::measure::built_in::{
         iai_callgrind::{callgrind_tool, dhat_tool},
-        MeasureDefinition,
+        BuiltInMeasure,
     };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
@@ -261,7 +261,7 @@ pub(crate) mod test_rust_iai_callgrind {
     }
 
     #[test]
-    fn test_iai_adapter_ansi_escapes() {
+    fn test_iai_adapter_ansi_escapes_issue_345() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/ansi-escapes.txt",
         );

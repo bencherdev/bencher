@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::{
     project::{
-        measure::defs::{self, MeasureDefinition},
+        measure::built_in::{self, BuiltInMeasure},
         metric::Mean,
     },
     BenchmarkName, JsonNewMetric,
@@ -78,12 +78,12 @@ impl AdapterResults {
                 inner: match measure {
                     AdapterMeasure::Latency(json_metric) => {
                         hmap! {
-                            defs::generic::Latency::name_id() => json_metric
+                            built_in::generic::Latency::name_id() => json_metric
                         }
                     },
                     AdapterMeasure::Throughput(json_metric) => {
                         hmap! {
-                            defs::generic::Throughput::name_id() => json_metric
+                            built_in::generic::Throughput::name_id() => json_metric
                         }
                     },
                 },
@@ -129,19 +129,19 @@ impl AdapterResults {
             for metric in metrics {
                 let (resource_id, metric) = match metric {
                     IaiMeasure::Instructions(json_metric) => {
-                        (defs::iai::Instructions::name_id(), json_metric)
+                        (built_in::iai::Instructions::name_id(), json_metric)
                     },
                     IaiMeasure::L1Accesses(json_metric) => {
-                        (defs::iai::L1Accesses::name_id(), json_metric)
+                        (built_in::iai::L1Accesses::name_id(), json_metric)
                     },
                     IaiMeasure::L2Accesses(json_metric) => {
-                        (defs::iai::L2Accesses::name_id(), json_metric)
+                        (built_in::iai::L2Accesses::name_id(), json_metric)
                     },
                     IaiMeasure::RamAccesses(json_metric) => {
-                        (defs::iai::RamAccesses::name_id(), json_metric)
+                        (built_in::iai::RamAccesses::name_id(), json_metric)
                     },
                     IaiMeasure::EstimatedCycles(json_metric) => {
-                        (defs::iai::EstimatedCycles::name_id(), json_metric)
+                        (built_in::iai::EstimatedCycles::name_id(), json_metric)
                     },
                 };
                 metrics_value.inner.insert(resource_id, metric);
@@ -169,27 +169,27 @@ impl AdapterResults {
                      * Callgrind tool:
                      */
                     IaiCallgrindMeasure::Instructions(json_metric) => (
-                        defs::iai_callgrind::callgrind_tool::Instructions::name_id(),
+                        built_in::iai_callgrind::callgrind_tool::Instructions::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::L1Hits(json_metric) => (
-                        defs::iai_callgrind::callgrind_tool::L1Hits::name_id(),
+                        built_in::iai_callgrind::callgrind_tool::L1Hits::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::L2Hits(json_metric) => (
-                        defs::iai_callgrind::callgrind_tool::L2Hits::name_id(),
+                        built_in::iai_callgrind::callgrind_tool::L2Hits::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::RamHits(json_metric) => (
-                        defs::iai_callgrind::callgrind_tool::RamHits::name_id(),
+                        built_in::iai_callgrind::callgrind_tool::RamHits::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::TotalReadWrite(json_metric) => (
-                        defs::iai_callgrind::callgrind_tool::TotalReadWrite::name_id(),
+                        built_in::iai_callgrind::callgrind_tool::TotalReadWrite::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::EstimatedCycles(json_metric) => (
-                        defs::iai_callgrind::callgrind_tool::EstimatedCycles::name_id(),
+                        built_in::iai_callgrind::callgrind_tool::EstimatedCycles::name_id(),
                         json_metric,
                     ),
 
@@ -197,35 +197,35 @@ impl AdapterResults {
                      * DHAT tool:
                      */
                     IaiCallgrindMeasure::TotalBytes(json_metric) => (
-                        defs::iai_callgrind::dhat_tool::TotalBytes::name_id(),
+                        built_in::iai_callgrind::dhat_tool::TotalBytes::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::TotalBlocks(json_metric) => (
-                        defs::iai_callgrind::dhat_tool::TotalBlocks::name_id(),
+                        built_in::iai_callgrind::dhat_tool::TotalBlocks::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::AtTGmaxBytes(json_metric) => (
-                        defs::iai_callgrind::dhat_tool::AtTGmaxBytes::name_id(),
+                        built_in::iai_callgrind::dhat_tool::AtTGmaxBytes::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::AtTGmaxBlocks(json_metric) => (
-                        defs::iai_callgrind::dhat_tool::AtTGmaxBlocks::name_id(),
+                        built_in::iai_callgrind::dhat_tool::AtTGmaxBlocks::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::AtTEndBytes(json_metric) => (
-                        defs::iai_callgrind::dhat_tool::AtTEndBytes::name_id(),
+                        built_in::iai_callgrind::dhat_tool::AtTEndBytes::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::AtTEndBlocks(json_metric) => (
-                        defs::iai_callgrind::dhat_tool::AtTEndBlocks::name_id(),
+                        built_in::iai_callgrind::dhat_tool::AtTEndBlocks::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::ReadsBytes(json_metric) => (
-                        defs::iai_callgrind::dhat_tool::ReadsBytes::name_id(),
+                        built_in::iai_callgrind::dhat_tool::ReadsBytes::name_id(),
                         json_metric,
                     ),
                     IaiCallgrindMeasure::WritesBytes(json_metric) => (
-                        defs::iai_callgrind::dhat_tool::WritesBytes::name_id(),
+                        built_in::iai_callgrind::dhat_tool::WritesBytes::name_id(),
                         json_metric,
                     ),
                 };

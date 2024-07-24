@@ -1,6 +1,6 @@
 use bencher_json::{
     project::{
-        measure::defs::generic::{Latency, Throughput},
+        measure::built_in::generic::{Latency, Throughput},
         ProjectRole,
     },
     DateTime, JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, ResourceId,

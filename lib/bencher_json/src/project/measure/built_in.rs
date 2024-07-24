@@ -1,7 +1,7 @@
 use crate::JsonNewMeasure;
 use bencher_valid::NameId;
 
-pub trait MeasureDefinition {
+pub trait BuiltInMeasure {
     const NAME_STR: &'static str;
     const SLUG_STR: &'static str;
     const UNITS_STR: &'static str;
@@ -12,7 +12,11 @@ pub trait MeasureDefinition {
             .expect("Failed to parse measure slug.")
     }
 
-    fn json_new() -> JsonNewMeasure {
+    fn from_name_id(measure_str: &str) -> Option<JsonNewMeasure> {
+        (measure_str == Self::NAME_STR || measure_str == Self::SLUG_STR).then(Self::new_json)
+    }
+
+    fn new_json() -> JsonNewMeasure {
         JsonNewMeasure {
             name: Self::NAME_STR
                 .parse()
@@ -33,7 +37,7 @@ macro_rules! create_measure {
     ($id:ident, $name:literal, $slug:literal, $units:literal) => {
         pub struct $id;
 
-        impl crate::project::measure::defs::MeasureDefinition for $id {
+        impl crate::project::measure::built_in::BuiltInMeasure for $id {
             const NAME_STR: &'static str = $name;
             const SLUG_STR: &'static str = $slug;
             const UNITS_STR: &'static str = $units;

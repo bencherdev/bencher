@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ProjectUuid;
 
-pub mod defs;
+pub mod built_in;
 
 crate::typed_uuid::typed_uuid!(MeasureUuid);
 

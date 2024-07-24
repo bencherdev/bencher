@@ -1,7 +1,7 @@
 use std::fmt;
 
 use bencher_json::{
-    project::measure::defs::{self, MeasureDefinition},
+    project::measure::built_in::{self, BuiltInMeasure},
     JsonNewMetric,
 };
 use camino::Utf8PathBuf;
@@ -46,7 +46,7 @@ impl FileSize {
             results.push((
                 file_name,
                 vec![(
-                    defs::file_size::FileSize::name_id(),
+                    built_in::file_size::FileSize::name_id(),
                     JsonNewMetric {
                         value,
                         ..Default::default()

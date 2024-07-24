@@ -25,9 +25,9 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 #[allow(clippy::panic, clippy::unwrap_used)]
 pub(crate) mod test_util {
     use bencher_json::project::{
-        measure::defs::{
+        measure::built_in::{
             generic::{Latency, Throughput},
-            MeasureDefinition,
+            BuiltInMeasure,
         },
         report::JsonAverage,
     };

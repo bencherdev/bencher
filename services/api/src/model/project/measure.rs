@@ -1,6 +1,6 @@
 use bencher_json::{
     project::measure::{
-        defs::{self, MeasureDefinition},
+        built_in::{self, BuiltInMeasure},
         JsonUpdateMeasure, MeasureUuid,
     },
     DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, NameIdKind, ResourceName, Slug,
@@ -58,10 +58,6 @@ impl QueryMeasure {
         project_id: ProjectId,
         measure: &MeasureNameId,
     ) -> Result<MeasureId, HttpError> {
-        fn test<T: MeasureDefinition>(measure_str: &str) -> Option<JsonNewMeasure> {
-            (measure_str == T::NAME_STR || measure_str == T::SLUG_STR).then(T::json_new)
-        }
-
         let query_measure = Self::from_name_id(conn, project_id, measure);
 
         let http_error = match query_measure {
@@ -73,28 +69,36 @@ impl QueryMeasure {
         // Or recreate default measures if they were previously deleted
         let measure_str = measure.as_ref();
 
-        let measure = if let Some(measure) = test::<defs::generic::Latency>(measure_str)
-            .or_else(|| test::<defs::generic::Throughput>(measure_str))
-            .or_else(|| test::<defs::iai::Instructions>(measure_str))
-            .or_else(|| test::<defs::iai::L1Accesses>(measure_str))
-            .or_else(|| test::<defs::iai::L2Accesses>(measure_str))
-            .or_else(|| test::<defs::iai::RamAccesses>(measure_str))
-            .or_else(|| test::<defs::iai::EstimatedCycles>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::callgrind_tool::Instructions>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::callgrind_tool::L1Hits>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::callgrind_tool::L2Hits>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::callgrind_tool::RamHits>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::callgrind_tool::TotalReadWrite>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::callgrind_tool::EstimatedCycles>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::dhat_tool::TotalBytes>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::dhat_tool::TotalBlocks>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::dhat_tool::AtTGmaxBytes>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::dhat_tool::AtTGmaxBlocks>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::dhat_tool::AtTEndBytes>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::dhat_tool::AtTEndBlocks>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::dhat_tool::ReadsBytes>(measure_str))
-            .or_else(|| test::<defs::iai_callgrind::dhat_tool::WritesBytes>(measure_str))
-            .or_else(|| test::<defs::file_size::FileSize>(measure_str))
+        let measure = if let Some(measure) = built_in::generic::Latency::from_name_id(measure_str)
+            .or_else(|| built_in::generic::Throughput::from_name_id(measure_str))
+            .or_else(|| built_in::iai::Instructions::from_name_id(measure_str))
+            .or_else(|| built_in::iai::L1Accesses::from_name_id(measure_str))
+            .or_else(|| built_in::iai::L2Accesses::from_name_id(measure_str))
+            .or_else(|| built_in::iai::RamAccesses::from_name_id(measure_str))
+            .or_else(|| built_in::iai::EstimatedCycles::from_name_id(measure_str))
+            .or_else(|| {
+                built_in::iai_callgrind::callgrind_tool::Instructions::from_name_id(measure_str)
+            })
+            .or_else(|| built_in::iai_callgrind::callgrind_tool::L1Hits::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::callgrind_tool::L2Hits::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::callgrind_tool::RamHits::from_name_id(measure_str))
+            .or_else(|| {
+                built_in::iai_callgrind::callgrind_tool::TotalReadWrite::from_name_id(measure_str)
+            })
+            .or_else(|| {
+                built_in::iai_callgrind::callgrind_tool::EstimatedCycles::from_name_id(measure_str)
+            })
+            .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBytes::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBlocks::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTGmaxBytes::from_name_id(measure_str))
+            .or_else(|| {
+                built_in::iai_callgrind::dhat_tool::AtTGmaxBlocks::from_name_id(measure_str)
+            })
+            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBytes::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBlocks::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::ReadsBytes::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::WritesBytes::from_name_id(measure_str))
+            .or_else(|| built_in::file_size::FileSize::from_name_id(measure_str))
         {
             measure
         } else {
@@ -167,11 +171,11 @@ pub struct InsertMeasure {
 }
 
 impl InsertMeasure {
-    pub fn from_measure<T: MeasureDefinition>(
+    pub fn from_measure<T: BuiltInMeasure>(
         conn: &mut DbConnection,
         project_id: ProjectId,
     ) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, T::json_new())
+        Self::from_json(conn, project_id, T::new_json())
     }
 
     pub fn from_json(
