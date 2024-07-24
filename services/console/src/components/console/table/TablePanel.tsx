@@ -23,6 +23,7 @@ import TableHeader, { type TableHeaderConfig } from "./TableHeader";
 import { debounce } from "@solid-primitives/scheduled";
 import {
 	dateToTime,
+	isBoolParam,
 	timeToDate,
 	timeToDateOnlyIso,
 } from "../../../util/convert";
@@ -33,6 +34,7 @@ const PAGE_PARAM = "page";
 const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
 const SEARCH_PARAM = "search";
+const ARCHIVED_PARAM = "archived";
 
 const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
@@ -59,7 +61,11 @@ const TablePanel = (props: Props) => {
 		() => consoleConfig[props.resource]?.[Operation.LIST],
 	);
 
+	const [init, setInit] = createSignal(false);
 	createEffect(() => {
+		if (init()) {
+			return;
+		}
 		const initParams: Record<string, null | number | boolean> = {};
 		if (!validU32(searchParams[PER_PAGE_PARAM])) {
 			initParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
@@ -77,7 +83,17 @@ const TablePanel = (props: Props) => {
 			initParams[SEARCH_PARAM] = null;
 		}
 
+		if (!isBoolParam(searchParams[ARCHIVED_PARAM])) {
+			initParams[ARCHIVED_PARAM] = null;
+		}
+
 		if (Object.keys(initParams).length !== 0) {
+			setSearchParams(initParams, { replace: true });
+		}
+
+		if (Object.keys(initParams).length === 0) {
+			setInit(true);
+		} else {
 			setSearchParams(initParams, { replace: true });
 		}
 	});
@@ -96,6 +112,8 @@ const TablePanel = (props: Props) => {
 
 	const search = createMemo(() => searchParams[SEARCH_PARAM]);
 
+	const archived = createMemo(() => searchParams[ARCHIVED_PARAM]);
+
 	const searchQuery = createMemo(() => {
 		return {
 			per_page: per_page(),
@@ -103,6 +121,7 @@ const TablePanel = (props: Props) => {
 			start_time: start_time(),
 			end_time: end_time(),
 			search: search(),
+			archived: archived(),
 		};
 	});
 
@@ -124,6 +143,7 @@ const TablePanel = (props: Props) => {
 			start_time: undefined | string;
 			end_time: undefined | string;
 			search: undefined | string;
+			archived: undefined | boolean;
 		};
 		token: string;
 	}) => {
@@ -195,6 +215,16 @@ const TablePanel = (props: Props) => {
 		DEBOUNCE_DELAY,
 	);
 
+	const handleArchived = () => {
+		setSearchParams(
+			{
+				[PAGE_PARAM]: DEFAULT_PAGE,
+				[ARCHIVED_PARAM]: !archived(),
+			},
+			{ scroll: true },
+		);
+	};
+
 	return (
 		<>
 			<TableHeader
@@ -204,10 +234,12 @@ const TablePanel = (props: Props) => {
 				start_date={start_date}
 				end_date={end_date}
 				search={search}
+				archived={archived}
 				handleRefresh={refetch}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}
 				handleSearch={handleSearch}
+				handleArchived={handleArchived}
 			/>
 			<Table
 				config={config()?.table}

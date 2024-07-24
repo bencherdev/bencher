@@ -20,10 +20,12 @@ export interface Props {
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
+	archived: Accessor<undefined | string>;
 	handleRefresh: () => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 	handleSearch: (search: string) => void;
+	handleArchived: () => void;
 }
 
 export interface TableHeaderConfig {
@@ -51,12 +53,14 @@ const TableHeader = (props: Props) => {
 							start_date={props.start_date}
 							end_date={props.end_date}
 							search={props.search}
+							archived={props.archived}
 							title={title}
 							button={button}
 							handleRefresh={props.handleRefresh}
 							handleStartTime={props.handleStartTime}
 							handleEndTime={props.handleEndTime}
 							handleSearch={props.handleSearch}
+							handleArchived={props.handleArchived}
 						/>
 					)}
 				</For>
@@ -78,12 +82,14 @@ const TableHeaderButton = (props: {
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
+	archived: Accessor<undefined | string>;
 	title: string;
 	button: TableButton;
 	handleRefresh: () => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 	handleSearch: (search: string) => void;
+	handleArchived: () => void;
 }) => {
 	const [isAllowed] = createResource(props.params, (params) =>
 		props.button.is_allowed?.(props.apiUrl, params),
@@ -188,6 +194,42 @@ const TableHeaderButton = (props: {
 						</span>
 						<span>Refresh</span>
 					</button>
+				</Match>
+				<Match when={props.button.kind === Button.ARCHIVED}>
+					<Show
+						when={props.archived()}
+						fallback={
+							<button
+								class="button"
+								type="button"
+								title={`Toggle archived ${props.title}`}
+								onMouseDown={(e) => {
+									e.preventDefault();
+									props.handleArchived();
+								}}
+							>
+								<span class="icon">
+									<i class="fas fa-archive" />
+								</span>
+								<span>Archived</span>
+							</button>
+						}
+					>
+						<button
+							class="button"
+							type="button"
+							title={`Toggle archived ${props.title}`}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								props.handleArchived();
+							}}
+						>
+							<span class="icon">
+								<i class="fas fa-archive" />
+							</span>
+							<span>Unarchive</span>
+						</button>
+					</Show>
 				</Match>
 			</Switch>
 		</p>
