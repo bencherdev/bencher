@@ -36,6 +36,7 @@ const branchesConfig = {
 			title: "Branches",
 			buttons: [
 				{ kind: Button.SEARCH },
+				{ kind: Button.ARCHIVED },
 				{
 					kind: Button.ADD,
 					title: "Branch",

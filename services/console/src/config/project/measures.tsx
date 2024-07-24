@@ -43,6 +43,7 @@ const measuresConfig = {
 			title: "Measures",
 			buttons: [
 				{ kind: Button.SEARCH },
+				{ kind: Button.ARCHIVED },
 				{
 					kind: Button.ADD,
 					title: "Measure",

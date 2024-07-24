@@ -36,6 +36,7 @@ const benchmarksConfig = {
 			title: "Benchmarks",
 			buttons: [
 				{ kind: Button.SEARCH },
+				{ kind: Button.ARCHIVED },
 				{
 					kind: Button.ADD,
 					title: "Benchmark",

@@ -196,40 +196,20 @@ const TableHeaderButton = (props: {
 					</button>
 				</Match>
 				<Match when={props.button.kind === Button.ARCHIVED}>
-					<Show
-						when={props.archived()}
-						fallback={
-							<button
-								class="button"
-								type="button"
-								title={`Toggle archived ${props.title}`}
-								onMouseDown={(e) => {
-									e.preventDefault();
-									props.handleArchived();
-								}}
-							>
-								<span class="icon">
-									<i class="fas fa-archive" />
-								</span>
-								<span>Archived</span>
-							</button>
-						}
+					<button
+						class={`button${props.archived() === "true" ? " is-primary" : ""}`}
+						type="button"
+						title={`Toggle archived ${props.title}`}
+						onMouseDown={(e) => {
+							e.preventDefault();
+							props.handleArchived();
+						}}
 					>
-						<button
-							class="button"
-							type="button"
-							title={`Toggle archived ${props.title}`}
-							onMouseDown={(e) => {
-								e.preventDefault();
-								props.handleArchived();
-							}}
-						>
-							<span class="icon">
-								<i class="fas fa-archive" />
-							</span>
-							<span>Unarchive</span>
-						</button>
-					</Show>
+						<span class="icon">
+							<i class="fas fa-archive" />
+						</span>
+						<span>Archived</span>
+					</button>
 				</Match>
 			</Switch>
 		</p>

@@ -8,7 +8,7 @@ const alertsConfig = {
 		operation: Operation.LIST,
 		header: {
 			title: "Alerts",
-			buttons: [{ kind: Button.REFRESH }],
+			buttons: [{ kind: Button.ARCHIVED }, { kind: Button.REFRESH }],
 		},
 		table: {
 			url: (params: Params) => `/v0/projects/${params?.project}/alerts`,

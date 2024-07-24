@@ -219,7 +219,7 @@ const TablePanel = (props: Props) => {
 		setSearchParams(
 			{
 				[PAGE_PARAM]: DEFAULT_PAGE,
-				[ARCHIVED_PARAM]: !archived(),
+				[ARCHIVED_PARAM]: !(archived() === "true"),
 			},
 			{ scroll: true },
 		);

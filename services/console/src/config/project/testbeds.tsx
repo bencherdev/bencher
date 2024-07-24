@@ -36,6 +36,7 @@ const testbedsConfig = {
 			title: "Testbeds",
 			buttons: [
 				{ kind: Button.SEARCH },
+				{ kind: Button.ARCHIVED },
 				{
 					kind: Button.ADD,
 					title: "Testbed",
