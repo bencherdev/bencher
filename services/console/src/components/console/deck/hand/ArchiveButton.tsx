@@ -36,9 +36,7 @@ const ArchiveButton = (props: Props) => {
 			return;
 		}
 
-		const archived = props.data()?.archived ? false : true;
-
-		httpPatch(props.apiUrl, props.path(), token, { archived: archived })
+		httpPatch(props.apiUrl, props.path(), token, { archived: !data.archived })
 			.then((_resp) => {
 				setArchiving(false);
 				props.handleRefresh();
