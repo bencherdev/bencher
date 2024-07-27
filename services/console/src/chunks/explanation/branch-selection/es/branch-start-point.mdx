@@ -13,6 +13,10 @@ El caso de uso principal para `--branch-start-point` es [Benchmarking Continuo E
 - Si `branch` ya existe y el Punto de Inicio es diferente,
   la versión antigua de `branch` será renombrada
   y se creará una nueva `branch` usando este Punto de Inicio actualizado.
+- Si `branch` no existe y el Punto de Inicio no existe,
+  entonces el `branch` se creará sin ningún dato histórico.
+- Si `branch` existe y el Punto de Inicio no existe,
+  entonces esta opción se ignora.
 
 Si se crea una nueva `branch` con un Punto de Inicio,
 entonces todos los datos y Umbrales del Punto de Inicio especificado se copian.

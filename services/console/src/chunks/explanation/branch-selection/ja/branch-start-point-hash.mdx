@@ -11,6 +11,10 @@
 - `branch`が既に存在し、`branch-start-point`または指定されたハッシュが異なる場合、
   古いバージョンの`branch`はリネームされ、
   指定されたハッシュで`branch-start-point`から新しい`branch`が作成されます。
+- `branch`が存在せず、`branch-start-point`が指定されたハッシュに存在しない場合、
+  `branch`は履歴データなしで作成されます。
+- `branch`が存在し、`branch-start-point`が指定されたハッシュに存在しない場合、
+  このオプションは無視されます。
 
 新しい`branch`がスタートポイントで作成される場合、
 指定されたハッシュでの`branch-start-point`からすべてのデータとしきい値がコピーされます。

@@ -11,6 +11,10 @@ Cette option nécessite que l'option [`--branch-start-point`][branch start point
 - Si `branch` existe déjà et que soit `branch-start-point`, soit le hash spécifié sont différents,
   l'ancienne version de `branch` sera renommée
   et une nouvelle `branch` sera créée à partir de `branch-start-point` au hash spécifié.
+- Si `branch` n'existe pas et que `branch-start-point` n'existe pas au hash spécifié,
+  alors le `branch` sera créé sans aucune donnée historique.
+- Si `branch` existe et que `branch-start-point` n'existe pas au hash spécifié,
+  alors cette option est ignorée.
 
 Si une nouvelle `branch` est créée avec un Point de Départ,
 alors toutes les données et les Seuils du `branch-start-point` au hash spécifié sont copiés.

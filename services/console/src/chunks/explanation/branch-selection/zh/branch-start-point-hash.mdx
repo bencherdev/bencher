@@ -11,6 +11,10 @@
 - 如果 `branch` 已存在且 `branch-start-point` 或指定的哈希值不同，
   旧版本的 `branch` 将被重命名，
   并从 `branch-start-point` 处的指定哈希值创建新的 `branch`。
+- 如果 `branch` 不存在且 `branch-start-point` 在指定的哈希值处不存在，
+  那么 `branch` 将在没有任何历史数据的情况下被创建。
+- 如果 `branch` 存在且 `branch-start-point` 在指定的哈希值处不存在，
+  那么此选项将被忽略。
 
 如果使用起点创建了一个新的 `branch`，
 那么从指定哈希值处的 `branch-start-point` 将复制所有数据和阈值。

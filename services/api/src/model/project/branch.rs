@@ -146,12 +146,15 @@ impl QueryBranch {
             ..
         }) = report_start_point
         {
-            Some(
+            // If updating the start point, it is okay if it does not exist.
+            if let Ok(branch_version) =
                 QueryBranchVersion::get_start_point(context, project_id, branch, hash.as_ref())
-                    .await?
-                    .to_start_point(context)
-                    .await?,
-            )
+                    .await
+            {
+                Some(branch_version.to_start_point(context).await?)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -431,11 +434,12 @@ impl InsertBranch {
         let timestamp = DateTime::now();
 
         let start_point_id = if let Some(JsonNewStartPoint { branch, hash, .. }) = start_point {
-            Some(
-                QueryBranchVersion::get_start_point(context, project_id, &branch, hash.as_ref())
-                    .await?
-                    .id,
-            )
+            // When creating a new branch, it is okay if the start point does not yet exist.
+            // https://github.com/bencherdev/bencher/issues/450
+            QueryBranchVersion::get_start_point(context, project_id, &branch, hash.as_ref())
+                .await
+                .map(|start_point| start_point.id)
+                .ok()
         } else {
             None
         };

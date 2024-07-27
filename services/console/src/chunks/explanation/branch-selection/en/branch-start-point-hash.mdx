@@ -12,6 +12,10 @@ This option requires the [`--branch-start-point`][branch start point] option to 
 - If `branch` already exists and either the `branch-start-point` or the specified hash are different,
   the old version of `branch` will be renamed
   and a new `branch` will be created from `branch-start-point` at the specified hash.
+- If `branch` does not exist and the `branch-start-point` does not exist at the specified hash,
+  then the `branch` will be created without any historical data.
+- If `branch` does exist and the `branch-start-point` does not exist at the specified hash,
+  then this option is ignored.
 
 If a new `branch` is created with a Start Point,
 then all the data and Thresholds from the `branch-start-point` at the specified hash are copied over.

@@ -11,6 +11,10 @@
 - `branch`가 이미 존재하고 `branch-start-point`나 지정된 해쉬 중 하나라도 다른 경우,
   이전 버전의 `branch`는 이름이 변경되고
   지정된 해쉬에서 `branch-start-point`를 기반으로 새로운 `branch`가 생성됩니다.
+- `branch`가 존재하지 않고 지정된 해시에서 `branch-start-point`가 존재하지 않으면,
+  `branch`는 역사 데이터 없이 생성됩니다.
+- `branch`가 존재하고 지정된 해시에서 `branch-start-point`가 존재하지 않으면,
+  이 옵션은 무시됩니다.
 
 새로운 `branch`가 시작점으로 생성된 경우,
 지정된 해쉬에서 `branch-start-point`의 모든 데이터와 임계값이 복사됩니다.

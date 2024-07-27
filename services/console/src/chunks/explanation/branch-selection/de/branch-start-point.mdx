@@ -13,6 +13,10 @@ Der primäre Anwendungsfall für `--branch-start-point` ist das [Statistische ko
 - Existiert `branch` bereits und der Startpunkt ist unterschiedlich,
   wird die alte Version von `branch` umbenannt
   und ein neuer `branch` wird unter Verwendung dieses aktualisierten Startpunkts erstellt.
+- Wenn `branch` nicht existiert und der Startpunkt nicht existiert,
+  dann wird die `branch` ohne historische Daten erstellt.
+- Wenn `branch` existiert und der Startpunkt nicht existiert,
+  dann wird diese Option ignoriert.
 
 Wenn ein neuer `branch` mit einem Startpunkt erstellt wird,
 werden alle Daten und Schwellenwerte vom angegebenen Startpunkt übernommen.

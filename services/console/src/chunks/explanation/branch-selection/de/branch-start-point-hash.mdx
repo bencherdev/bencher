@@ -11,6 +11,10 @@ Diese Option erfordert, dass die [`--branch-start-point`][branch start point] Op
 - Existiert `branch` bereits und entweder `branch-start-point` oder der angegebene Hash sind unterschiedlich,
   wird die alte Version von `branch` umbenannt
   und ein neuer `branch` wird vom `branch-start-point` am angegebenen Hash erstellt.
+- Wenn `branch` nicht existiert und der `branch-start-point` nicht am angegebenen Hash existiert,
+  wird der `branch` ohne historische Daten erstellt.
+- Wenn `branch` existiert und der `branch-start-point` nicht am angegebenen Hash existiert,
+  wird diese Option ignoriert.
 
 Wenn ein neuer `branch` mit einem Startpunkt erstellt wird,
 dann werden alle Daten und Schwellenwerte vom `branch-start-point` am angegebenen Hash kopiert.

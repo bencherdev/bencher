@@ -13,6 +13,10 @@ Le principal cas d'utilisation de `--branch-start-point` est le [Benchmarking Co
 - Si `branch` existe déjà et que le Point de Départ est différent,
   l'ancienne version de `branch` sera renommée
   et une nouvelle `branch` sera créée en utilisant ce Point de Départ mis à jour.
+- Si `branch` n'existe pas et que le Point de Départ n'existe pas,
+  alors la `branch` sera créée sans aucune donnée historique.
+- Si `branch` existe et que le Point de Départ n'existe pas,
+  alors cette option est ignorée.
 
 Si une nouvelle `branch` est créée avec un Point de Départ,
 alors toutes les données et les Seuils du Point de Départ spécifié sont copiés.

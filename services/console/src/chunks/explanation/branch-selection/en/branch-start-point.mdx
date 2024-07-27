@@ -13,6 +13,10 @@ The primary use case for `--branch-start-point` is [Statistical Continuous Bench
 - If `branch` does exist and the Start Point is different,
   the old version of `branch` will be renamed
   and a new `branch` will be created using this updated Start Point.
+- If `branch` does not exist and the Start Point does not exist,
+  then the `branch` will be created without any historical data.
+- If `branch` does exist and the Start Point does not exist,
+  then this option is ignored.
 
 If a new `branch` is created with a Start Point,
 then all the data and Thresholds from the specified Start Point are copied over.
