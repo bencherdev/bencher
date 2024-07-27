@@ -2,7 +2,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{BigInt, DateTime, JsonThreshold};
+use crate::{DateTime, JsonThreshold};
 
 use super::{
     benchmark::JsonBenchmarkMetric, boundary::BoundaryLimit, report::Iteration, report::ReportUuid,
@@ -43,7 +43,9 @@ const DISMISSED_INT: i32 = 1;
 #[repr(i32)]
 pub enum AlertStatus {
     #[default]
+    /// The alert is active.
     Active = ACTIVE_INT,
+    /// The alert has been dismissed.
     Dismissed = DISMISSED_INT,
 }
 
@@ -86,13 +88,6 @@ mod alert_status {
             }
         }
     }
-}
-
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAlertStats {
-    pub active: BigInt,
 }
 
 #[typeshare::typeshare]

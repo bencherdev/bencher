@@ -36,6 +36,7 @@ const testbedsConfig = {
 			title: "Testbeds",
 			buttons: [
 				{ kind: Button.SEARCH },
+				{ kind: Button.ARCHIVED },
 				{
 					kind: Button.ADD,
 					title: "Testbed",
@@ -116,6 +117,14 @@ const testbedsConfig = {
 		deck: {
 			url: (params: Params) =>
 				`/v0/projects/${params?.project}/testbeds/${params?.testbed}`,
+			top_buttons: [
+				{
+					kind: ActionButton.ARCHIVE,
+					subtitle: "Testbed",
+					path: parentPath,
+					is_allowed: isAllowedProjectEdit,
+				},
+			],
 			cards: [
 				{
 					kind: Card.FIELD,

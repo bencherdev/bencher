@@ -44,6 +44,10 @@ pub struct CliReportList {
     #[clap(flatten)]
     pub pagination: CliPagination<CliReportsSort>,
 
+    /// Filter for reports with an archived branch or testbed
+    #[clap(long)]
+    pub archived: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

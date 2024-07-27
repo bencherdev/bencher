@@ -56,6 +56,7 @@ const thresholdsConfig = {
 		header: {
 			title: "Thresholds",
 			buttons: [
+				{ kind: Button.ARCHIVED },
 				{
 					kind: Button.ADD,
 					title: "Threshold",

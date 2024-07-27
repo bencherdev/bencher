@@ -1,7 +1,7 @@
 use bencher_json::{BenchmarkName, ResourceId, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliBackend, CliPagination};
+use crate::parser::{CliArchived, CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliBenchmark {
@@ -37,6 +37,10 @@ pub struct CliBenchmarkList {
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliBenchmarksSort>,
+
+    /// Filter for archived benchmarks
+    #[clap(long)]
+    pub archived: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -93,6 +97,9 @@ pub struct CliBenchmarkUpdate {
     /// Benchmark slug
     #[clap(long)]
     pub slug: Option<Slug>,
+
+    #[clap(flatten)]
+    pub archived: CliArchived,
 
     #[clap(flatten)]
     pub backend: CliBackend,

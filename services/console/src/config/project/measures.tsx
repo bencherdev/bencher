@@ -43,6 +43,7 @@ const measuresConfig = {
 			title: "Measures",
 			buttons: [
 				{ kind: Button.SEARCH },
+				{ kind: Button.ARCHIVED },
 				{
 					kind: Button.ADD,
 					title: "Measure",
@@ -133,6 +134,14 @@ const measuresConfig = {
 		deck: {
 			url: (params: Params) =>
 				`/v0/projects/${params?.project}/measures/${params?.measure}`,
+			top_buttons: [
+				{
+					kind: ActionButton.ARCHIVE,
+					subtitle: "Measure",
+					path: parentPath,
+					is_allowed: isAllowedProjectEdit,
+				},
+			],
 			cards: [
 				{
 					kind: Card.FIELD,

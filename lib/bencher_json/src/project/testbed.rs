@@ -64,6 +64,7 @@ pub struct JsonTestbed {
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl fmt::Display for JsonTestbed {
@@ -81,4 +82,6 @@ pub struct JsonUpdateTestbed {
     /// The preferred new slug for the testbed.
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
+    /// Set whether the testbed is archived.
+    pub archived: Option<bool>,
 }

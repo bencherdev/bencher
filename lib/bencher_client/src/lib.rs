@@ -129,7 +129,6 @@ try_from_client!(
     JsonThreshold,
     JsonModel,
     JsonAlerts,
-    JsonAlertStats,
     JsonAlert,
     JsonUsers,
     JsonUser,

@@ -670,32 +670,6 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(alerts.0.len(), 0);
 
-        // cargo run -- alert stats --host http://localhost:61016 the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["alert", "stats", HOST_ARG, host, PROJECT_SLUG])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let alert_stats: bencher_json::JsonAlertStats =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(alert_stats.active.0, 0);
-
-        // cargo run -- alert stats --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "alert",
-            "stats",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let alert_stats: bencher_json::JsonAlertStats =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(alert_stats.active.0, 0);
-
         for i in 0..30i32 {
             let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
             let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
@@ -741,20 +715,11 @@ impl SeedTest {
                 serde_json::from_slice(&assert.get_output().stdout).unwrap();
         }
 
-        // cargo run -- alert stats --host http://localhost:61016 the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["alert", "stats", HOST_ARG, host, PROJECT_SLUG])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let alert_stats: bencher_json::JsonAlertStats =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(alert_stats.active.0, 0);
-
-        // cargo run -- alert stats --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- alert ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "alert",
-            "stats",
+            "ls",
             HOST_ARG,
             host,
             TOKEN_ARG,
@@ -763,9 +728,9 @@ impl SeedTest {
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
-        let alert_stats: bencher_json::JsonAlertStats =
+        let alerts: bencher_json::JsonAlerts =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(alert_stats.active.0, 0);
+        assert_eq!(alerts.0.len(), 0);
 
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch master --testbed base --quiet bencher mock --pow 10
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -819,32 +784,6 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(alerts.0.len(), 5);
 
-        // cargo run -- alert stats --host http://localhost:61016 the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["alert", "stats", HOST_ARG, host, PROJECT_SLUG])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let alert_stats: bencher_json::JsonAlertStats =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(alert_stats.active.0, 5);
-
-        // cargo run -- alert stats --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "alert",
-            "stats",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let alert_stats: bencher_json::JsonAlertStats =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(alert_stats.active.0, 5);
-
         // cargo run -- alert get --host http://localhost:61016 the-computer [alert.uuid]
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
@@ -878,6 +817,165 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let _alert: bencher_json::JsonAlert =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-version --branch-start-point master --testbed base --quiet bencher mock
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            BRANCH_ARG,
+            "feature-version",
+            "--branch-start-point",
+            BRANCH_SLUG,
+            TESTBED_ARG,
+            TESTBED_SLUG,
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // cargo run -- alert ls --host http://localhost:61016 the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["alert", "ls", HOST_ARG, host, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 5);
+
+        // cargo run -- alert ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "alert",
+            "ls",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 5);
+
+        // TODO reenable once semantics have been changed
+        // https://github.com/bencherdev/bencher/issues/450
+        // // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash df13bc928cc205cb8737e63b97712ba8d7d51b8b --testbed base --quiet bencher mock
+        // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        // let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        // cmd.args([
+        //     "run",
+        //     HOST_ARG,
+        //     host,
+        //     TOKEN_ARG,
+        //     token,
+        //     PROJECT_ARG,
+        //     PROJECT_SLUG,
+        //     BRANCH_ARG,
+        //     "feature-hash",
+        //     "--branch-start-point",
+        //     BRANCH_SLUG,
+        //     "--branch-start-point-hash",
+        //     "df13bc928cc205cb8737e63b97712ba8d7d51b8b",
+        //     TESTBED_ARG,
+        //     TESTBED_SLUG,
+        //     "--quiet",
+        //     &bencher_cmd,
+        //     "mock",
+        // ])
+        // .current_dir(CLI_DIR);
+        // let assert = cmd.assert().success();
+        // let _json: bencher_json::JsonReport =
+        //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // // cargo run -- alert ls --host http://localhost:61016 the-computer
+        // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        // cmd.args(["alert", "ls", HOST_ARG, host, PROJECT_SLUG])
+        //     .current_dir(CLI_DIR);
+        // let assert = cmd.assert().success();
+        // let alerts: bencher_json::JsonAlerts =
+        //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        // assert_eq!(alerts.0.len(), 5);
+
+        // // cargo run -- alert ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
+        // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        // cmd.args([
+        //     "alert",
+        //     "ls",
+        //     HOST_ARG,
+        //     host,
+        //     TOKEN_ARG,
+        //     token,
+        //     PROJECT_SLUG,
+        // ])
+        // .current_dir(CLI_DIR);
+        // let assert = cmd.assert().success();
+        // let alerts: bencher_json::JsonAlerts =
+        //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        // assert_eq!(alerts.0.len(), 5);
+
+        // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            BRANCH_ARG,
+            BRANCH_SLUG,
+            "--branch-reset",
+            TESTBED_ARG,
+            TESTBED_SLUG,
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // cargo run -- alert ls --host http://localhost:61016 the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["alert", "ls", HOST_ARG, host, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 0);
+
+        // cargo run -- alert ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "alert",
+            "ls",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 0);
 
         Ok(())
     }

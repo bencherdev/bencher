@@ -1,4 +1,5 @@
 import FieldKind from "../../components/field/kind";
+import { getUserRaw } from "../../util/auth";
 import type { Params } from "../../util/url";
 import { validResourceName, validU32 } from "../../util/valid";
 import { Button, Card, Display, Operation } from "../types";
@@ -32,6 +33,14 @@ const tokensConfig = {
 					kind: Button.ADD,
 					title: "API Token",
 					path: addPath,
+					is_allowed: async (_apiUrl: string, params: Params) => {
+						const user = getUserRaw();
+						return (
+							user.user.uuid === params?.user ||
+							user.user.slug === params?.user ||
+							user.user.admin
+						);
+					},
 				},
 				{ kind: Button.REFRESH },
 			],

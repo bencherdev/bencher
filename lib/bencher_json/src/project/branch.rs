@@ -86,6 +86,7 @@ pub struct JsonBranch {
     pub start_point: Option<JsonStartPoint>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl fmt::Display for JsonBranch {
@@ -113,6 +114,7 @@ pub struct JsonBranchVersion {
     pub start_point: Option<JsonStartPoint>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 #[typeshare::typeshare]
@@ -132,17 +134,8 @@ pub struct JsonUpdateBranch {
     /// The preferred new slug for the branch.
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
-    /// The full `git` commit hash for the next version of the branch.
-    /// This is useful in cases where there may be a race condition
-    /// when a start point branch has been updated but its benchmarks have not yet finished.
-    pub hash: Option<GitHash>,
-}
-
-impl JsonUpdateBranch {
-    // Check whether only the `git` hash is being updated.
-    pub fn is_hash_only(&self) -> bool {
-        self.name.is_none() && self.slug.is_none() && self.hash.is_some()
-    }
+    /// Set whether the branch is archived.
+    pub archived: Option<bool>,
 }
 
 #[typeshare::typeshare]

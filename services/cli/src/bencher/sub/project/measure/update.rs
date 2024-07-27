@@ -14,6 +14,7 @@ pub struct Update {
     pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub units: Option<ResourceName>,
+    pub archived: Option<bool>,
     pub backend: AuthBackend,
 }
 
@@ -27,6 +28,7 @@ impl TryFrom<CliMeasureUpdate> for Update {
             name,
             slug,
             units,
+            archived,
             backend,
         } = create;
         Ok(Self {
@@ -35,6 +37,7 @@ impl TryFrom<CliMeasureUpdate> for Update {
             name,
             slug,
             units,
+            archived: archived.into(),
             backend: backend.try_into()?,
         })
     }
@@ -43,12 +46,17 @@ impl TryFrom<CliMeasureUpdate> for Update {
 impl From<Update> for JsonUpdateMeasure {
     fn from(update: Update) -> Self {
         let Update {
-            name, slug, units, ..
+            name,
+            slug,
+            units,
+            archived,
+            ..
         } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
             units: units.map(Into::into),
+            archived,
         }
     }
 }

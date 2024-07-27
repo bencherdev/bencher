@@ -17,6 +17,7 @@ pub struct List {
     pub testbed: Option<NameId>,
     pub measure: Option<NameId>,
     pub pagination: Pagination,
+    pub archived: bool,
     pub backend: PubBackend,
 }
 
@@ -38,6 +39,7 @@ impl TryFrom<CliThresholdList> for List {
             testbed,
             measure,
             pagination,
+            archived,
             backend,
         } = list;
         Ok(Self {
@@ -46,6 +48,7 @@ impl TryFrom<CliThresholdList> for List {
             testbed,
             measure,
             pagination: pagination.into(),
+            archived,
             backend: backend.try_into()?,
         })
     }
@@ -77,12 +80,14 @@ impl From<List> for JsonThresholdQuery {
             branch,
             testbed,
             measure,
+            archived,
             ..
         } = list;
         Self {
             branch,
             testbed,
             measure,
+            archived: archived.then_some(archived),
         }
     }
 }
@@ -103,6 +108,10 @@ impl SubCmd for List {
                 }
                 if let Some(measure) = json_threshold_query.measure() {
                     client = client.measure(measure);
+                }
+
+                if let Some(archived) = json_threshold_query.archived {
+                    client = client.archived(archived);
                 }
 
                 if let Some(sort) = self.pagination.sort {

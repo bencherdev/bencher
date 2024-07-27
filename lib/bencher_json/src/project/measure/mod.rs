@@ -54,6 +54,7 @@ pub struct JsonMeasure {
     pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl fmt::Display for JsonMeasure {
@@ -74,4 +75,6 @@ pub struct JsonUpdateMeasure {
     /// The new units of measure.
     /// Maximum length is 64 characters.
     pub units: Option<ResourceName>,
+    /// Set whether the measure is archived.
+    pub archived: Option<bool>,
 }

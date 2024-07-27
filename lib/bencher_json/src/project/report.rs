@@ -364,6 +364,9 @@ pub struct JsonReportQueryParams {
     pub start_time: Option<DateTimeMillis>,
     /// Filter for reports before the given date time in milliseconds.
     pub end_time: Option<DateTimeMillis>,
+    /// If set to `true`, only return reports with an archived branch or testbed.
+    /// If not set or set to `false`, only returns reports with non-archived branches and testbeds.
+    pub archived: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -372,6 +375,7 @@ pub struct JsonReportQuery {
     pub testbed: Option<NameId>,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
+    pub archived: Option<bool>,
 }
 
 impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
@@ -383,6 +387,7 @@ impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
             testbed,
             start_time,
             end_time,
+            archived,
         } = query_params;
 
         let branch = if let Some(branch) = branch {
@@ -401,6 +406,7 @@ impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
             testbed,
             start_time: start_time.map(Into::into),
             end_time: end_time.map(Into::into),
+            archived,
         })
     }
 }

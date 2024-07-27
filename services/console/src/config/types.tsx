@@ -107,10 +107,12 @@ export enum Button {
 	BACK = "back",
 	SEARCH = "search",
 	DATE_TIME = "date_time",
+	ARCHIVED = "archived",
 }
 
 export enum ActionButton {
 	DELETE = "delete",
+	ARCHIVE = "archive",
 }
 
 export enum Row {

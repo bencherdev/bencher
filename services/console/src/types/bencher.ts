@@ -36,6 +36,7 @@ export interface JsonMeasure {
 	units: ResourceName;
 	created: string;
 	modified: string;
+	archived?: string;
 }
 
 export enum ModelTest {
@@ -97,6 +98,7 @@ export interface JsonBenchmarkMetric {
 	boundary?: JsonBoundary;
 	created: string;
 	modified: string;
+	archived?: string;
 }
 
 export interface JsonReportResult {
@@ -120,6 +122,7 @@ export interface JsonBranch {
 	start_point?: JsonStartPoint;
 	created: string;
 	modified: string;
+	archived?: string;
 }
 
 export interface JsonTestbed {
@@ -129,6 +132,7 @@ export interface JsonTestbed {
 	slug: Slug;
 	created: string;
 	modified: string;
+	archived?: string;
 }
 
 export interface JsonThreshold {
@@ -149,7 +153,9 @@ export enum BoundaryLimit {
 }
 
 export enum AlertStatus {
+	/** The alert is active. */
 	Active = "active",
+	/** The alert has been dismissed. */
 	Dismissed = "dismissed",
 }
 
@@ -335,10 +341,6 @@ export interface JsonUsage {
 	usage?: number;
 }
 
-export interface JsonAlertStats {
-	active: number;
-}
-
 export interface JsonUpdateAlert {
 	/** The new status of the alert. */
 	status?: AlertStatus;
@@ -358,6 +360,7 @@ export interface JsonBenchmark {
 	slug: Slug;
 	created: string;
 	modified: string;
+	archived?: string;
 }
 
 export interface JsonVersion {
@@ -374,6 +377,7 @@ export interface JsonBranchVersion {
 	start_point?: JsonStartPoint;
 	created: string;
 	modified: string;
+	archived?: string;
 }
 
 export interface JsonOneMetric {

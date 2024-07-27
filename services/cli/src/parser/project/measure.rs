@@ -1,7 +1,7 @@
 use bencher_json::{ResourceId, ResourceName, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliBackend, CliPagination};
+use crate::parser::{CliArchived, CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliMeasure {
@@ -37,6 +37,10 @@ pub struct CliMeasureList {
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliMeasuresSort>,
+
+    /// Filter for archived measures
+    #[clap(long)]
+    pub archived: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -101,6 +105,9 @@ pub struct CliMeasureUpdate {
     /// Units of measure
     #[clap(long)]
     pub units: Option<ResourceName>,
+
+    #[clap(flatten)]
+    pub archived: CliArchived,
 
     #[clap(flatten)]
     pub backend: CliBackend,

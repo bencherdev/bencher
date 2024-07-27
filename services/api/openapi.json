@@ -2496,6 +2496,23 @@
             "schema": {
               "$ref": "#/components/schemas/ProjAlertsSort"
             }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only returns archived alerts. If not set or set to `false`, only returns alerts with non-archived branches, testbeds, or measures.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "description": "Filter alerts by their status. If not set, returns all alerts.",
+            "schema": {
+              "$ref": "#/components/schemas/AlertStatus"
+            }
           }
         ],
         "responses": {
@@ -2874,6 +2891,15 @@
             "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjBenchmarksSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only returns archived benchmarks. If not set or set to `false`, only returns non-archived benchmarks.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
             }
           },
           {
@@ -3351,6 +3377,15 @@
           },
           {
             "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only returns archived branches, if set to `true`. If not set or set to `false`, only returns non-archived branches.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "name",
             "description": "Filter by branch name, exact match.",
             "schema": {
@@ -3820,6 +3855,15 @@
             "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjMeasuresSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only returns archived measures if set to `true`. If not set or set to `false`, only returns non-archived measures.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
             }
           },
           {
@@ -5078,6 +5122,15 @@
           },
           {
             "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only return reports with an archived branch or testbed. If not set or set to `false`, only returns reports with non-archived branches and testbeds.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "branch",
             "description": "Filter by branch UUID, slug, or name exact match.",
             "schema": {
@@ -5416,83 +5469,6 @@
         }
       }
     },
-    "/v0/projects/{project}/stats/alerts": {
-      "get": {
-        "tags": [
-          "projects",
-          "alerts"
-        ],
-        "summary": "View the total number of active alerts for a project",
-        "description": "View the total number of active alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. Use this endpoint to monitor the number of active alerts for a project.",
-        "operationId": "proj_alert_stats_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "description": "The slug or UUID for a project.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonAlertStats"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/projects/{project}/testbeds": {
       "get": {
         "tags": [
@@ -5548,6 +5524,15 @@
             "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjTestbedsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only returns archived testbeds. If not set or set to `false`, only returns non-archived testbeds.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
             }
           },
           {
@@ -6021,6 +6006,15 @@
             "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjThresholdsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only return thresholds with an archived branch, testbed, or measure. If not set or set to `false`, only returns thresholds with non-archived branches, testbeds, and measures.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
             }
           },
           {
@@ -7865,10 +7859,21 @@
         ]
       },
       "AlertStatus": {
-        "type": "string",
-        "enum": [
-          "active",
-          "dismissed"
+        "oneOf": [
+          {
+            "description": "The alert is active.",
+            "type": "string",
+            "enum": [
+              "active"
+            ]
+          },
+          {
+            "description": "The alert has been dismissed.",
+            "type": "string",
+            "enum": [
+              "dismissed"
+            ]
+          }
         ]
       },
       "AlertUuid": {
@@ -8062,17 +8067,6 @@
           "uuid"
         ]
       },
-      "JsonAlertStats": {
-        "type": "object",
-        "properties": {
-          "active": {
-            "$ref": "#/components/schemas/BigInt"
-          }
-        },
-        "required": [
-          "active"
-        ]
-      },
       "JsonAlerts": {
         "type": "array",
         "items": {
@@ -8177,6 +8171,14 @@
       "JsonBenchmark": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -8208,6 +8210,14 @@
       "JsonBenchmarkMetric": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "boundary": {
             "nullable": true,
             "allOf": [
@@ -8311,6 +8321,14 @@
       "JsonBranch": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -8350,6 +8368,14 @@
       "JsonBranchVersion": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -8797,6 +8823,14 @@
       "JsonMeasure": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -11052,6 +11086,14 @@
       "JsonTestbed": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -11336,6 +11378,11 @@
       "JsonUpdateBenchmark": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "description": "Set whether the benchmark is archived.",
+            "type": "boolean"
+          },
           "name": {
             "nullable": true,
             "description": "The new name of the benchmark. Maximum length is 1,024 characters.",
@@ -11359,14 +11406,10 @@
       "JsonUpdateBranch": {
         "type": "object",
         "properties": {
-          "hash": {
+          "archived": {
             "nullable": true,
-            "description": "The full `git` commit hash for the next version of the branch. This is useful in cases where there may be a race condition when a start point branch has been updated but its benchmarks have not yet finished.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/GitHash"
-              }
-            ]
+            "description": "Set whether the branch is archived.",
+            "type": "boolean"
           },
           "name": {
             "nullable": true,
@@ -11408,6 +11451,11 @@
       "JsonUpdateMeasure": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "description": "Set whether the measure is archived.",
+            "type": "boolean"
+          },
           "name": {
             "nullable": true,
             "description": "The new name of the measure. Maximum length is 64 characters.",
@@ -11484,6 +11532,11 @@
       "JsonUpdateTestbed": {
         "type": "object",
         "properties": {
+          "archived": {
+            "nullable": true,
+            "description": "Set whether the testbed is archived.",
+            "type": "boolean"
+          },
           "name": {
             "nullable": true,
             "description": "The new name of the testbed. Maximum length is 64 characters.",

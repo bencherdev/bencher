@@ -36,6 +36,7 @@ const branchesConfig = {
 			title: "Branches",
 			buttons: [
 				{ kind: Button.SEARCH },
+				{ kind: Button.ARCHIVED },
 				{
 					kind: Button.ADD,
 					title: "Branch",
@@ -114,6 +115,14 @@ const branchesConfig = {
 		deck: {
 			url: (params: Params) =>
 				`/v0/projects/${params?.project}/branches/${params?.branch}`,
+			top_buttons: [
+				{
+					kind: ActionButton.ARCHIVE,
+					subtitle: "Branch",
+					path: parentPath,
+					is_allowed: isAllowedProjectEdit,
+				},
+			],
 			cards: [
 				{
 					kind: Card.FIELD,

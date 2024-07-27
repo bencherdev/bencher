@@ -10,6 +10,7 @@ import type { JsonAuthUser } from "../../../../types/bencher";
 import { ActionButton } from "../../../../config/types";
 import DeleteButton from "./DeleteButton";
 import type { Params } from "astro";
+import ArchiveButton from "./ArchiveButton";
 
 export interface Props {
 	apiUrl: string;
@@ -18,6 +19,7 @@ export interface Props {
 	config: DeckButtonConfig;
 	path: Accessor<string>;
 	data: Resource<object>;
+	handleRefresh: () => void;
 }
 
 export interface DeckButtonConfig {
@@ -48,6 +50,32 @@ const DeckButton = (props: Props) => {
 
 	return (
 		<Switch>
+			<Match when={props.config?.kind === ActionButton.ARCHIVE && isAllowed()}>
+				<div class="columns">
+					<div class="column">
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+							}}
+						>
+							<div class="field">
+								<p class="control">
+									<ArchiveButton
+										apiUrl={props.apiUrl}
+										user={props.user}
+										path={props.path}
+										data={props.data}
+										subtitle={props.config.subtitle}
+										redirect={props.config.path}
+										effect={props.config.effect}
+										handleRefresh={props.handleRefresh}
+									/>
+								</p>
+							</div>
+						</form>
+					</div>
+				</div>
+			</Match>
 			<Match when={props.config?.kind === ActionButton.DELETE && isAllowed()}>
 				<div class="columns">
 					<div class="column">

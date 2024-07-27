@@ -1,4 +1,4 @@
-use bencher_client::types::{JsonDirection, ProjAlertsSort};
+use bencher_client::types::{AlertStatus, JsonDirection, ProjAlertsSort};
 use bencher_json::ResourceId;
 
 use crate::{
@@ -14,6 +14,8 @@ use crate::{
 pub struct List {
     pub project: ResourceId,
     pub pagination: Pagination,
+    pub status: Option<AlertStatus>,
+    pub archived: bool,
     pub backend: PubBackend,
 }
 
@@ -32,11 +34,15 @@ impl TryFrom<CliAlertList> for List {
         let CliAlertList {
             project,
             pagination,
+            status,
+            archived,
             backend,
         } = list;
         Ok(Self {
             project,
             pagination: pagination.into(),
+            status: status.map(Into::into),
+            archived,
             backend: backend.try_into()?,
         })
     }
@@ -79,6 +85,12 @@ impl SubCmd for List {
                 }
                 if let Some(page) = self.pagination.page {
                     client = client.page(page);
+                }
+                if let Some(status) = self.status {
+                    client = client.status(status);
+                }
+                if self.archived {
+                    client = client.archived(self.archived);
                 }
                 client.send().await
             })

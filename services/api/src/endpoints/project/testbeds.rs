@@ -54,6 +54,9 @@ pub struct ProjTestbedsQuery {
     pub name: Option<ResourceName>,
     /// Search by testbed name, slug, or UUID.
     pub search: Option<Search>,
+    /// If set to `true`, only returns archived testbeds.
+    /// If not set or set to `false`, only returns non-archived testbeds.
+    pub archived: Option<bool>,
 }
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
@@ -164,6 +167,12 @@ fn get_ls_query<'q>(
                 .or(schema::testbed::uuid.like(search)),
         );
     }
+
+    if let Some(true) = query_params.archived {
+        query = query.filter(schema::testbed::archived.is_not_null());
+    } else {
+        query = query.filter(schema::testbed::archived.is_null());
+    };
 
     match pagination_params.order() {
         ProjTestbedsSort::Name => match pagination_params.direction {

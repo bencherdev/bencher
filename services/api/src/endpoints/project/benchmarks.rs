@@ -54,6 +54,9 @@ pub struct ProjBenchmarksQuery {
     pub name: Option<BenchmarkName>,
     /// Search by benchmark name, slug, or UUID.
     pub search: Option<Search>,
+    /// If set to `true`, only returns archived benchmarks.
+    /// If not set or set to `false`, only returns non-archived benchmarks.
+    pub archived: Option<bool>,
 }
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
@@ -164,6 +167,12 @@ fn get_ls_query<'q>(
                 .or(schema::benchmark::uuid.like(search)),
         );
     }
+
+    if let Some(true) = query_params.archived {
+        query = query.filter(schema::benchmark::archived.is_not_null());
+    } else {
+        query = query.filter(schema::benchmark::archived.is_null());
+    };
 
     match pagination_params.order() {
         ProjBenchmarksSort::Name => match pagination_params.direction {

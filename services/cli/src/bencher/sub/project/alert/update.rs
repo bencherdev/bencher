@@ -3,7 +3,7 @@ use bencher_json::{AlertUuid, ResourceId};
 
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::alert::{CliAlertStatus, CliAlertUpdate},
+    parser::project::alert::CliAlertUpdate,
     CliError,
 };
 
@@ -31,15 +31,6 @@ impl TryFrom<CliAlertUpdate> for Update {
             status: status.map(Into::into),
             backend: backend.try_into()?,
         })
-    }
-}
-
-impl From<CliAlertStatus> for AlertStatus {
-    fn from(status: CliAlertStatus) -> Self {
-        match status {
-            CliAlertStatus::Active => Self::Active,
-            CliAlertStatus::Dismissed => Self::Dismissed,
-        }
     }
 }
 

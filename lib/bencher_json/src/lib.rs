@@ -33,7 +33,7 @@ pub use organization::{
 };
 pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
-    alert::{AlertUuid, JsonAlert, JsonAlertStats, JsonAlerts},
+    alert::{AlertUuid, JsonAlert, JsonAlerts},
     benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
     branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonStartPoint, VersionUuid},

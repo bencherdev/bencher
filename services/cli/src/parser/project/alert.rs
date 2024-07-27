@@ -14,8 +14,6 @@ pub enum CliAlert {
     // Update an alert
     #[clap(alias = "edit")]
     Update(CliAlertUpdate),
-    /// View alert stats
-    Stats(CliAlertStats),
 }
 
 #[derive(Parser, Debug)]
@@ -25,6 +23,14 @@ pub struct CliAlertList {
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliAlertsSort>,
+
+    /// Filter by alert status
+    #[clap(long)]
+    pub status: Option<CliAlertStatus>,
+
+    /// Filter for alerts with an archived branch, testbed, or measure
+    #[clap(long)]
+    pub archived: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -75,13 +81,4 @@ pub enum CliAlertStatus {
     Active,
     /// Dismissed
     Dismissed,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliAlertStats {
-    /// Project slug or UUID
-    pub project: ResourceId,
-
-    #[clap(flatten)]
-    pub backend: CliBackend,
 }

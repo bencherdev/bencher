@@ -34,6 +34,7 @@ pub struct QueryTestbed {
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl QueryTestbed {
@@ -88,6 +89,7 @@ impl QueryTestbed {
             slug,
             created,
             modified,
+            archived,
             ..
         } = self;
         assert_parentage(
@@ -103,6 +105,7 @@ impl QueryTestbed {
             slug,
             created,
             modified,
+            archived,
         }
     }
 }
@@ -116,6 +119,7 @@ pub struct InsertTestbed {
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl InsertTestbed {
@@ -134,6 +138,7 @@ impl InsertTestbed {
             slug,
             created: timestamp,
             modified: timestamp,
+            archived: None,
         })
     }
 
@@ -148,15 +153,23 @@ pub struct UpdateTestbed {
     pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub modified: DateTime,
+    pub archived: Option<Option<DateTime>>,
 }
 
 impl From<JsonUpdateTestbed> for UpdateTestbed {
     fn from(update: JsonUpdateTestbed) -> Self {
-        let JsonUpdateTestbed { name, slug } = update;
+        let JsonUpdateTestbed {
+            name,
+            slug,
+            archived,
+        } = update;
+        let modified = DateTime::now();
+        let archived = archived.map(|archived| archived.then_some(modified));
         Self {
             name,
             slug,
-            modified: DateTime::now(),
+            modified,
+            archived,
         }
     }
 }

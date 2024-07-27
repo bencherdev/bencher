@@ -1,5 +1,5 @@
 use bencher_json::{Jwt, Url};
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 pub mod docker;
 pub mod mock;
@@ -166,6 +166,34 @@ impl From<CliDirection> for bencher_client::types::JsonDirection {
         match direction {
             CliDirection::Asc => Self::Asc,
             CliDirection::Desc => Self::Desc,
+        }
+    }
+}
+
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("archived")
+        .multiple(false)
+        .args(&["archive", "unarchive"]),
+))]
+pub struct CliArchived {
+    /// Set as archived
+    #[clap(long)]
+    pub archive: bool,
+
+    /// Set as unarchived
+    #[clap(long)]
+    pub unarchive: bool,
+}
+
+impl From<CliArchived> for Option<bool> {
+    fn from(archived: CliArchived) -> Option<bool> {
+        match (archived.archive, archived.unarchive) {
+            (false, false) => None,
+            (false, true) => Some(false),
+            (true, false) => Some(true),
+            #[allow(clippy::unreachable)]
+            (true, true) => unreachable!("Cannot set both `archive` and `unarchive`"),
         }
     }
 }

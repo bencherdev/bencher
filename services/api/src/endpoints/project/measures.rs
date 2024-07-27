@@ -54,6 +54,9 @@ pub struct ProjMeasuresQuery {
     pub name: Option<ResourceName>,
     /// Search by measure name, slug, or UUID.
     pub search: Option<Search>,
+    /// If set to `true`, only returns archived measures if set to `true`.
+    /// If not set or set to `false`, only returns non-archived measures.
+    pub archived: Option<bool>,
 }
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
@@ -164,6 +167,12 @@ fn get_ls_query<'q>(
                 .or(schema::measure::uuid.like(search)),
         );
     }
+
+    if let Some(true) = query_params.archived {
+        query = query.filter(schema::measure::archived.is_not_null());
+    } else {
+        query = query.filter(schema::measure::archived.is_null());
+    };
 
     match pagination_params.order() {
         ProjMeasuresSort::Name => match pagination_params.direction {

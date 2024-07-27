@@ -18,6 +18,7 @@ pub struct List {
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
     pub pagination: Pagination,
+    pub archived: bool,
     pub backend: PubBackend,
 }
 
@@ -40,6 +41,7 @@ impl TryFrom<CliReportList> for List {
             start_time,
             end_time,
             pagination,
+            archived,
             backend,
         } = list;
         Ok(Self {
@@ -49,6 +51,7 @@ impl TryFrom<CliReportList> for List {
             start_time,
             end_time,
             pagination: pagination.into(),
+            archived,
             backend: backend.try_into()?,
         })
     }
@@ -80,6 +83,7 @@ impl From<List> for JsonReportQuery {
             testbed,
             start_time,
             end_time,
+            archived,
             ..
         } = list;
         Self {
@@ -87,6 +91,7 @@ impl From<List> for JsonReportQuery {
             testbed,
             start_time,
             end_time,
+            archived: archived.then_some(archived),
         }
     }
 }
@@ -111,6 +116,10 @@ impl SubCmd for List {
                 }
                 if let Some(end_time) = json_report_query.end_time() {
                     client = client.end_time(end_time);
+                }
+
+                if let Some(archived) = json_report_query.archived {
+                    client = client.archived(archived);
                 }
 
                 if let Some(sort) = self.pagination.sort {
