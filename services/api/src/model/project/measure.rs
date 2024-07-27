@@ -70,36 +70,34 @@ impl QueryMeasure {
         // Or recreate default measures if they were previously deleted
         let measure_str = measure.as_ref();
 
-        let measure = if let Some(measure) = built_in::generic::Latency::from_name_id(measure_str)
-            .or_else(|| built_in::generic::Throughput::from_name_id(measure_str))
-            .or_else(|| built_in::iai::Instructions::from_name_id(measure_str))
-            .or_else(|| built_in::iai::L1Accesses::from_name_id(measure_str))
-            .or_else(|| built_in::iai::L2Accesses::from_name_id(measure_str))
-            .or_else(|| built_in::iai::RamAccesses::from_name_id(measure_str))
-            .or_else(|| built_in::iai::EstimatedCycles::from_name_id(measure_str))
+        let measure = if let Some(measure) = built_in::generic::Latency::from_str(measure_str)
+            .or_else(|| built_in::generic::Throughput::from_str(measure_str))
+            .or_else(|| built_in::iai::Instructions::from_str(measure_str))
+            .or_else(|| built_in::iai::L1Accesses::from_str(measure_str))
+            .or_else(|| built_in::iai::L2Accesses::from_str(measure_str))
+            .or_else(|| built_in::iai::RamAccesses::from_str(measure_str))
+            .or_else(|| built_in::iai::EstimatedCycles::from_str(measure_str))
             .or_else(|| {
-                built_in::iai_callgrind::callgrind_tool::Instructions::from_name_id(measure_str)
+                built_in::iai_callgrind::callgrind_tool::Instructions::from_str(measure_str)
             })
-            .or_else(|| built_in::iai_callgrind::callgrind_tool::L1Hits::from_name_id(measure_str))
-            .or_else(|| built_in::iai_callgrind::callgrind_tool::L2Hits::from_name_id(measure_str))
-            .or_else(|| built_in::iai_callgrind::callgrind_tool::RamHits::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::callgrind_tool::L1Hits::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::callgrind_tool::L2Hits::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::callgrind_tool::RamHits::from_str(measure_str))
             .or_else(|| {
-                built_in::iai_callgrind::callgrind_tool::TotalReadWrite::from_name_id(measure_str)
+                built_in::iai_callgrind::callgrind_tool::TotalReadWrite::from_str(measure_str)
             })
             .or_else(|| {
-                built_in::iai_callgrind::callgrind_tool::EstimatedCycles::from_name_id(measure_str)
+                built_in::iai_callgrind::callgrind_tool::EstimatedCycles::from_str(measure_str)
             })
-            .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBytes::from_name_id(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBlocks::from_name_id(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTGmaxBytes::from_name_id(measure_str))
-            .or_else(|| {
-                built_in::iai_callgrind::dhat_tool::AtTGmaxBlocks::from_name_id(measure_str)
-            })
-            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBytes::from_name_id(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBlocks::from_name_id(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::ReadsBytes::from_name_id(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::WritesBytes::from_name_id(measure_str))
-            .or_else(|| built_in::file_size::FileSize::from_name_id(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBytes::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBlocks::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTGmaxBytes::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTGmaxBlocks::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBytes::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBlocks::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::ReadsBytes::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::dhat_tool::WritesBytes::from_str(measure_str))
+            .or_else(|| built_in::file_size::FileSize::from_str(measure_str))
         {
             measure
         } else {

@@ -12,7 +12,7 @@ pub trait BuiltInMeasure {
             .expect("Failed to parse measure slug.")
     }
 
-    fn from_name_id(measure_str: &str) -> Option<JsonNewMeasure> {
+    fn from_str(measure_str: &str) -> Option<JsonNewMeasure> {
         (measure_str == Self::NAME_STR || measure_str == Self::SLUG_STR).then(Self::new_json)
     }
 
