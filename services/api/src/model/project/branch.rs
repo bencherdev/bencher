@@ -97,14 +97,34 @@ impl QueryBranch {
         branch: &NameId,
         report_start_point: Option<&JsonReportStartPoint>,
     ) -> Result<BranchId, HttpError> {
+        let query_branch =
+            Self::get_or_create_inner(log, context, project_id, branch, report_start_point).await?;
+
+        if query_branch.archived.is_some() {
+            let update_branch = UpdateBranch::unarchive();
+            diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
+                .set(&update_branch)
+                .execute(conn_lock!(context))
+                .map_err(resource_conflict_err!(Branch, &query_branch))?;
+        }
+
+        Ok(query_branch.id)
+    }
+
+    async fn get_or_create_inner(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch: &NameId,
+        report_start_point: Option<&JsonReportStartPoint>,
+    ) -> Result<Self, HttpError> {
         let query_branch = Self::from_name_id(conn_lock!(context), project_id, branch);
 
         let http_error = match query_branch {
             Ok(branch) => {
                 return branch
                     .with_start_point(log, context, project_id, report_start_point)
-                    .await
-                    .map(|branch| branch.id);
+                    .await;
             },
             Err(e) => e,
         };
@@ -125,9 +145,7 @@ impl QueryBranch {
                 start_point: report_start_point.and_then(JsonReportStartPoint::to_new_start_point),
             },
         };
-        Self::create_from_json(log, context, project_id, branch)
-            .await
-            .map(|branch| branch.id)
+        Self::create_from_json(log, context, project_id, branch).await
     }
 
     async fn with_start_point(
@@ -625,5 +643,16 @@ impl From<JsonUpdateBranch> for UpdateBranch {
             modified,
             archived,
         }
+    }
+}
+
+impl UpdateBranch {
+    fn unarchive() -> Self {
+        JsonUpdateBranch {
+            name: None,
+            slug: None,
+            archived: Some(false),
+        }
+        .into()
     }
 }
