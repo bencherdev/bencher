@@ -7,10 +7,10 @@ use dropshot::HttpError;
 
 use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, ProjectId, QueryProject};
 use crate::{
-    context::DbConnection,
+    conn_lock,
+    context::{ApiContext, DbConnection},
     error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
-    schema,
-    schema::benchmark as benchmark_table,
+    schema::{self, benchmark as benchmark_table},
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
@@ -45,39 +45,59 @@ impl QueryBenchmark {
     fn_get_uuid!(benchmark, BenchmarkId, BenchmarkUuid);
     fn_from_uuid!(benchmark, BenchmarkUuid, Benchmark);
 
-    pub fn get_id_from_name(
+    pub fn get_from_name(
         conn: &mut DbConnection,
         project_id: ProjectId,
         name: &BenchmarkName,
-    ) -> Result<BenchmarkId, HttpError> {
+    ) -> Result<Self, HttpError> {
         schema::benchmark::table
             .filter(schema::benchmark::project_id.eq(project_id))
             .filter(schema::benchmark::name.eq(name))
-            .select(schema::benchmark::id)
             .first(conn)
             .map_err(resource_not_found_err!(Benchmark, (project_id, name)))
     }
 
-    pub fn get_or_create(
-        conn: &mut DbConnection,
+    pub async fn get_or_create(
+        context: &ApiContext,
         project_id: ProjectId,
         name: BenchmarkName,
     ) -> Result<BenchmarkId, HttpError> {
+        let query_benchmark = Self::get_or_create_inner(context, project_id, name).await?;
+
+        if query_benchmark.archived.is_some() {
+            let update_benchmark = UpdateBenchmark::unarchive();
+            diesel::update(
+                schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)),
+            )
+            .set(&update_benchmark)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Benchmark, &query_benchmark))?;
+        }
+
+        Ok(query_benchmark.id)
+    }
+
+    async fn get_or_create_inner(
+        context: &ApiContext,
+        project_id: ProjectId,
+        name: BenchmarkName,
+    ) -> Result<Self, HttpError> {
         // For historical reasons, we will only every be able to match on name and not name ID here.
         // The benchmark slugs were always created with a random suffix for a while.
         // Therefore, a name that happens to be a valid slug will fail to be found, when treated as a slug.
-        if let Ok(id) = Self::get_id_from_name(conn, project_id, &name) {
-            return Ok(id);
+        if let Ok(benchmark) = Self::get_from_name(conn_lock!(context), project_id, &name) {
+            return Ok(benchmark);
         }
 
         let benchmark = JsonNewBenchmark { name, slug: None };
-        let insert_benchmark = InsertBenchmark::from_json(conn, project_id, benchmark)?;
+        let insert_benchmark =
+            InsertBenchmark::from_json(conn_lock!(context), project_id, benchmark)?;
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Benchmark, insert_benchmark))?;
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Benchmark, &insert_benchmark))?;
 
-        Self::get_id(conn, insert_benchmark.uuid)
+        Self::from_uuid(conn_lock!(context), project_id, insert_benchmark.uuid)
     }
 
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonBenchmark {
@@ -196,5 +216,16 @@ impl From<JsonUpdateBenchmark> for UpdateBenchmark {
             modified,
             archived,
         }
+    }
+}
+
+impl UpdateBenchmark {
+    fn unarchive() -> Self {
+        JsonUpdateBenchmark {
+            name: None,
+            slug: None,
+            archived: Some(false),
+        }
+        .into()
     }
 }

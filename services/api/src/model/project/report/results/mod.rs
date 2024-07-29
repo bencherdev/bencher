@@ -203,11 +203,9 @@ impl ReportResults {
             if let Some(id) = self.benchmark_cache.get(&benchmark_name) {
                 *id
             } else {
-                let benchmark_id = QueryBenchmark::get_or_create(
-                    conn_lock!(context),
-                    self.project_id,
-                    benchmark_name.clone(),
-                )?;
+                let benchmark_id =
+                    QueryBenchmark::get_or_create(context, self.project_id, benchmark_name.clone())
+                        .await?;
                 self.benchmark_cache.insert(benchmark_name, benchmark_id);
                 benchmark_id
             },
