@@ -221,7 +221,7 @@ impl ReportResults {
             *id
         } else {
             let measure_id =
-                QueryMeasure::get_or_create(conn_lock!(context), self.project_id, &measure)?;
+                QueryMeasure::get_or_create(context, self.project_id, &measure).await?;
             self.measure_cache.insert(measure, measure_id);
             measure_id
         })

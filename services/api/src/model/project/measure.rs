@@ -9,13 +9,13 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use crate::{
-    context::DbConnection,
+    conn_lock,
+    context::{ApiContext, DbConnection},
     error::{assert_parentage, resource_conflict_err, BencherResource},
     model::project::QueryProject,
-    schema,
-    schema::measure as measure_table,
+    schema::{self, measure as measure_table},
     util::{
-        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         name_id::{fn_eq_name_id, fn_from_name_id},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
@@ -53,16 +53,35 @@ impl QueryMeasure {
     fn_get!(measure, MeasureId);
     fn_get_id!(measure, MeasureId, MeasureUuid);
     fn_get_uuid!(measure, MeasureId, MeasureUuid);
+    fn_from_uuid!(measure, MeasureUuid, Measure);
 
-    pub fn get_or_create(
-        conn: &mut DbConnection,
+    pub async fn get_or_create(
+        context: &ApiContext,
         project_id: ProjectId,
         measure: &MeasureNameId,
     ) -> Result<MeasureId, HttpError> {
-        let query_measure = Self::from_name_id(conn, project_id, measure);
+        let query_measure = Self::get_or_create_inner(context, project_id, measure).await?;
+
+        if query_measure.archived.is_some() {
+            let update_measure = UpdateMeasure::unarchive();
+            diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
+                .set(&update_measure)
+                .execute(conn_lock!(context))
+                .map_err(resource_conflict_err!(Benchmark, &query_measure))?;
+        }
+
+        Ok(query_measure.id)
+    }
+
+    async fn get_or_create_inner(
+        context: &ApiContext,
+        project_id: ProjectId,
+        measure: &MeasureNameId,
+    ) -> Result<Self, HttpError> {
+        let query_measure = Self::from_name_id(conn_lock!(context), project_id, measure);
 
         let http_error = match query_measure {
-            Ok(measure) => return Ok(measure.id),
+            Ok(measure) => return Ok(measure),
             Err(e) => e,
         };
 
@@ -119,13 +138,13 @@ impl QueryMeasure {
             }
         };
 
-        let insert_measure = InsertMeasure::from_json(conn, project_id, measure)?;
+        let insert_measure = InsertMeasure::from_json(conn_lock!(context), project_id, measure)?;
         diesel::insert_into(schema::measure::table)
             .values(&insert_measure)
-            .execute(conn)
+            .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
-        Self::get_id(conn, insert_measure.uuid)
+        Self::from_uuid(conn_lock!(context), project_id, insert_measure.uuid)
     }
 
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonMeasure {
@@ -228,5 +247,17 @@ impl From<JsonUpdateMeasure> for UpdateMeasure {
             modified,
             archived,
         }
+    }
+}
+
+impl UpdateMeasure {
+    fn unarchive() -> Self {
+        JsonUpdateMeasure {
+            name: None,
+            slug: None,
+            units: None,
+            archived: Some(false),
+        }
+        .into()
     }
 }
