@@ -54,10 +54,28 @@ impl QueryTestbed {
         project_id: ProjectId,
         testbed: &NameId,
     ) -> Result<TestbedId, HttpError> {
+        let query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
+
+        if query_testbed.archived.is_some() {
+            let update_testbed = UpdateTestbed::unarchive();
+            diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
+                .set(&update_testbed)
+                .execute(conn_lock!(context))
+                .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
+        }
+
+        Ok(query_testbed.id)
+    }
+
+    async fn get_or_create_inner(
+        context: &ApiContext,
+        project_id: ProjectId,
+        testbed: &NameId,
+    ) -> Result<Self, HttpError> {
         let query_testbed = Self::from_name_id(conn_lock!(context), project_id, testbed);
 
         let http_error = match query_testbed {
-            Ok(testbed) => return Ok(testbed.id),
+            Ok(testbed) => return Ok(testbed),
             Err(e) => e,
         };
 
@@ -78,7 +96,7 @@ impl QueryTestbed {
             .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
 
-        Self::get_id(conn_lock!(context), insert_testbed.uuid)
+        Self::from_uuid(conn_lock!(context), project_id, insert_testbed.uuid)
     }
 
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonTestbed {
@@ -171,5 +189,16 @@ impl From<JsonUpdateTestbed> for UpdateTestbed {
             modified,
             archived,
         }
+    }
+}
+
+impl UpdateTestbed {
+    fn unarchive() -> Self {
+        JsonUpdateTestbed {
+            name: None,
+            slug: None,
+            archived: Some(false),
+        }
+        .into()
     }
 }
