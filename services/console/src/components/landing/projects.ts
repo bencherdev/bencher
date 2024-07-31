@@ -98,13 +98,13 @@ export const PROJECTS: Project[][] = [
 				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=503f3fbc-3266-4389-b87e-8c6a7f7f6240&branches=f7830a8b-198d-4ac5-b5f2-23b8026b0a4f&testbeds=d9eea46c-dd6c-4d0e-a830-30581a4e4446&benchmarks=29feeefd-7ac2-4aca-9b7b-ac95826f2a41&measures=8ad04853-f0fd-410e-b075-104ae5162c82&start_time=1707828269000&end_time=1710420305000&clear=true&tab=benchmarks",
 		},
 		{
-			name: "Stratum",
+			name: "Wire",
 			about:
-				"A next-generation bitcoin mining protocol designed to enhance the efficiency, security, flexibility and decentralization",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg",
-			slug: "stratum-v2-sri",
+				"The most secure platform for messaging, audio, and video calls, based on edge computing and zero knowledge architecture",
+			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/wire.svg",
+			slug: "core-crypto-mmbtki3h",
 			query:
-				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=3&branches_page=1&testbeds_page=1&benchmarks_page=1&branches=9c79faed-80db-4d0e-8100-b7dba4091898&testbeds=6e5299a9-5f8e-48db-b3e9-d0be3f592002&benchmarks=942edfe5-f73e-4744-978b-9e017ec1d25d%2Cc9249d55-f75f-41ec-891e-01c95941073e%2C9452e053-59a2-4f0d-b6d5-5301c9940445&measures=c73d96c0-22eb-4fb3-a2c9-bb9daf4b00e7&start_time=1707839782000&end_time=1710431782000&clear=true&tab=benchmarks",
+				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=cd6b82fc-bbfb-4680-afa6-ab88ca62a1ef&testbeds=7f837718-cf29-423f-bd13-2b516ec88cda&measures=c1f87d1c-d949-4bf4-8b76-eb782e882d0e&start_time=1719668529000&end_time=1722261285000&clear=true&tab=benchmarks&benchmarks_search=6010&benchmarks=a4cefec8-6548-4e20-a7c1-75456b7ea925%2C0c73af64-460b-4082-a73b-77e3a980606d",
 		},
 	],
 ];
