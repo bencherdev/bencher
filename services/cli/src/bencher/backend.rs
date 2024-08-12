@@ -1,6 +1,6 @@
 use std::{fmt, ops::Deref, str::FromStr};
 
-use bencher_json::{JsonApiVersion, Jwt, Url, BENCHER_API_URL};
+use bencher_json::{JsonApiVersion, JsonConsole, Jwt, Url, BENCHER_API_URL, BENCHER_URL};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{cli_eprintln_quietable, parser::CliBackend, CLI_VERSION};
@@ -40,6 +40,8 @@ pub enum BackendError {
     },
     #[error("{0}")]
     Client(#[from] bencher_client::ClientError),
+    #[error("Invalid console URL: {0}")]
+    BadConsoleUrl(bencher_json::ValidError),
 }
 
 impl TryFrom<CliBackend> for PubBackend {
@@ -203,6 +205,20 @@ impl Backend {
             cli_eprintln_quietable!(self.client.log, "Warning: {mismatch}",);
         }
         Ok(mismatch)
+    }
+
+    pub async fn get_console_url(&self) -> Result<url::Url, BackendError> {
+        if self.client.host == *BENCHER_API_URL {
+            return Ok(BENCHER_URL.clone());
+        }
+
+        let json_console: JsonConsole = self
+            .send_with(|client| async move { client.server_config_console_get().send().await })
+            .await?;
+        json_console
+            .url
+            .try_into()
+            .map_err(BackendError::BadConsoleUrl)
     }
 }
 

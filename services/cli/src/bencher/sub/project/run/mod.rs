@@ -3,13 +3,14 @@ use std::{future::Future, pin::Pin};
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
 use bencher_json::{DateTime, JsonConsole, JsonReport, ResourceId};
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::ValueEnum;
 use url::Url;
 
 use crate::{
     bencher::backend::AuthBackend,
     cli_eprintln_quietable, cli_println, cli_println_quietable,
-    parser::project::run::{CliRun, CliRunAdapter},
+    parser::project::run::{CliRun, CliRunAdapter, CliRunFmt},
     CliError,
 };
 
@@ -49,7 +50,8 @@ pub struct Run {
     backdate: Option<DateTime>,
     allow_failure: bool,
     err: bool,
-    html: bool,
+    json: Option<Utf8PathBuf>,
+    html: Option<Utf8PathBuf>,
     log: bool,
     ci: Option<Ci>,
     runner: Runner,
@@ -73,7 +75,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            fmt,
+            fmt: CliRunFmt { json, html, quiet },
             ci,
             cmd,
             dry_run,
@@ -90,8 +92,9 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            html: fmt.html,
-            log: !fmt.quiet,
+            json,
+            html,
+            log: !quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
             runner: cmd.try_into()?,
             dry_run,
@@ -243,12 +246,11 @@ impl Run {
     }
 
     async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {
-        let json_console: JsonConsole = self
+        let console_url = self
             .backend
-            .send_with(|client| async move { client.server_config_console_get().send().await })
+            .get_console_url()
             .await
-            .map_err(RunError::GetEndpoint)?;
-        let console_url: Url = json_console.url.try_into().map_err(RunError::BadEndpoint)?;
+            .map_err(RunError::ConsoleUrl)?;
         let report_comment = ReportComment::new(console_url, json_report);
 
         if self.html {

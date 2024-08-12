@@ -70,9 +70,7 @@ pub enum RunError {
     #[error("Failed to create new report: {0}")]
     SendReport(crate::bencher::BackendError),
     #[error("Failed to get console URL: {0}")]
-    GetEndpoint(crate::bencher::BackendError),
-    #[error("Invalid console URL: {0}")]
-    BadEndpoint(bencher_json::ValidError),
+    ConsoleUrl(crate::bencher::BackendError),
     #[error("Alerts detected ({0})")]
     Alerts(usize),
 
