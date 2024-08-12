@@ -237,16 +237,14 @@ pub enum CliRunFold {
 }
 
 #[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("run_fmt")
-        .multiple(false)
-        .args(&["html", "quiet"]),
-))]
 pub struct CliRunFmt {
-    /// Output results as HTML
+    /// Output results to a file as JSON (default: results.json)
     #[clap(long)]
-    pub html: bool,
-    /// Quite mode, only output the final Report JSON
+    pub json: Option<Utf8PathBuf>,
+    /// Output results to a file as HTML (default: results.html)
+    #[clap(long)]
+    pub html: Option<Utf8PathBuf>,
+    /// Quite mode, only output the final Report JSON to standard out
     #[clap(short, long)]
     pub quiet: bool,
 }
