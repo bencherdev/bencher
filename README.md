@@ -233,7 +233,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           />
         </a>
       </p>
-      <p align="center">Stratum</p>
+      <p align="center">Wire</p>
     </td>
   </tr>
 </table>
