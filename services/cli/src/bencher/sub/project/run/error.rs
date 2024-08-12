@@ -71,6 +71,8 @@ pub enum RunError {
     SendReport(crate::bencher::BackendError),
     #[error("Failed to get console URL: {0}")]
     ConsoleUrl(crate::bencher::BackendError),
+    #[error("Failed to write results file: ({0})")]
+    WriteResults(tokio::io::Error),
     #[error("Alerts detected ({0})")]
     Alerts(usize),
 

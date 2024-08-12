@@ -2,14 +2,13 @@ use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, JsonConsole, JsonReport, ResourceId};
-use camino::{Utf8Path, Utf8PathBuf};
+use bencher_json::{DateTime, JsonReport, ResourceId};
+use camino::Utf8PathBuf;
 use clap::ValueEnum;
-use url::Url;
 
 use crate::{
     bencher::backend::AuthBackend,
-    cli_eprintln_quietable, cli_println, cli_println_quietable,
+    cli_eprintln, cli_eprintln_quietable, cli_println, cli_println_quietable,
     parser::project::run::{CliRun, CliRunAdapter, CliRunFmt},
     CliError,
 };
@@ -50,8 +49,8 @@ pub struct Run {
     backdate: Option<DateTime>,
     allow_failure: bool,
     err: bool,
-    json: Option<Utf8PathBuf>,
-    html: Option<Utf8PathBuf>,
+    json_file: Option<Utf8PathBuf>,
+    html_file: Option<Utf8PathBuf>,
     log: bool,
     ci: Option<Ci>,
     runner: Runner,
@@ -75,7 +74,12 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            fmt: CliRunFmt { json, html, quiet },
+            fmt:
+                CliRunFmt {
+                    json_file,
+                    html_file,
+                    quiet,
+                },
             ci,
             cmd,
             dry_run,
@@ -92,8 +96,8 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            json,
-            html,
+            json_file,
+            html_file,
             log: !quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
             runner: cmd.try_into()?,
@@ -165,27 +169,11 @@ impl Run {
         }
 
         let sender = report_sender(self.project.clone(), json_new_report);
-        // If we are not doing complex output logging then we don't need to a strict deserialization.
-        if !self.log {
-            let json_report = self
-                .backend
-                .send(sender)
-                .await
-                .map_err(RunError::SendReport)?;
-            return serde_json::to_string_pretty(&json_report)
-                .map(|json| cli_println!("{json}"))
-                .map_err(RunError::SerializeReport);
-        }
-
-        cli_println!("\nBencher Report:");
         let json_report: JsonReport = self
             .backend
             .send_with(sender)
             .await
             .map_err(RunError::SendReport)?;
-        if let Ok(json) = serde_json::to_string_pretty(&json_report) {
-            cli_println!("{json}");
-        }
 
         let alerts_count = json_report.alerts.len();
         self.display_results(json_report).await?;
@@ -246,6 +234,22 @@ impl Run {
     }
 
     async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {
+        match serde_json::to_string_pretty(&json_report) {
+            Ok(json) => {
+                cli_println_quietable!(self.log, "\nBencher Report:");
+                cli_println!("{json}");
+                if let Some(path) = &self.json_file {
+                    tokio::fs::write(path, json)
+                        .await
+                        .map_err(RunError::WriteResults)?;
+                    cli_println_quietable!(self.log, "JSON report written to: {path}");
+                }
+            },
+            Err(err) => {
+                cli_eprintln!("Failed to serialize report JSON: {err}");
+            },
+        }
+
         let console_url = self
             .backend
             .get_console_url()
@@ -253,12 +257,16 @@ impl Run {
             .map_err(RunError::ConsoleUrl)?;
         let report_comment = ReportComment::new(console_url, json_report);
 
-        if self.html {
+        if let Some(path) = &self.html_file {
             let require_threshold = false;
-            cli_println!("{}", report_comment.html(require_threshold, None));
-        } else {
-            cli_println!("{}", report_comment.text());
+            let html = report_comment.html(require_threshold, None);
+            tokio::fs::write(path, html)
+                .await
+                .map_err(RunError::WriteResults)?;
+            cli_println_quietable!(self.log, "HTML report written to: {path}");
         }
+
+        cli_println_quietable!(self.log, "\n{}", report_comment.text());
 
         if let Some(ci) = &self.ci {
             ci.run(&report_comment, self.log).await?;
