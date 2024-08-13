@@ -71,7 +71,7 @@ pub struct CliRun {
 pub struct CliRunBranch {
     /// Branch name, slug, or UUID (or set `BENCHER_BRANCH`) (default main).
     /// If `branch` does not already exist, it will be created if a name or slug is provided.
-    #[clap(long, alias = "if-branch")]
+    #[clap(long, env = "BENCHER_BRANCH", alias = "if-branch")]
     pub branch: Option<NameId>,
 
     #[clap(flatten)]
@@ -96,7 +96,7 @@ pub struct CliRunBranch {
     pub branch_reset: bool,
 
     /// Deprecated: Do not use. This will soon be removed.
-    #[clap(long, alias = "else-branch", alias = "endif-branch")]
+    #[clap(long, hide = true, alias = "else-branch", alias = "endif-branch")]
     pub deprecated: bool,
 }
 

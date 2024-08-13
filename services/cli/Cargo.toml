@@ -16,7 +16,7 @@ bencher_comment.workspace = true
 bencher_json = { workspace = true, features = ["lite", "table"] }
 camino.workspace = true
 chrono = { workspace = true, features = ["clock"] }
-clap.workspace = true
+clap = { workspace = true, features = ["env"] }
 literally.workspace = true
 octocrab.workspace = true
 progenitor-client.workspace = true

@@ -32,10 +32,11 @@ use testbed::Testbed;
 use crate::bencher::SubCmd;
 
 pub const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
-const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
 const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 const BENCHER_ADAPTER: &str = "BENCHER_ADAPTER";
 const BENCHER_CMD: &str = "BENCHER_CMD";
+
+const DEFAULT_ITER: usize = 1;
 
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -86,7 +87,7 @@ impl TryFrom<CliRun> for Run {
             testbed: testbed.try_into().map_err(RunError::Testbed)?,
             adapter: map_adapter(adapter),
             average: average.map(Into::into),
-            iter: iter.unwrap_or(1),
+            iter: iter.unwrap_or(DEFAULT_ITER),
             fold: fold.map(Into::into),
             backdate,
             allow_failure,

@@ -2,8 +2,6 @@ use bencher_json::{project::branch::BRANCH_MAIN_STR, GitHash, NameId};
 
 use crate::parser::project::run::{CliRunBranch, CliRunHash};
 
-use super::BENCHER_BRANCH;
-
 #[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone)]
 pub struct Branch {
@@ -52,11 +50,6 @@ impl TryFrom<CliRunBranch> for Branch {
 fn try_branch(branch: Option<NameId>) -> Result<NameId, BranchError> {
     if let Some(branch) = branch {
         Ok(branch)
-    } else if let Ok(env_branch) = std::env::var(BENCHER_BRANCH) {
-        env_branch
-            .as_str()
-            .parse()
-            .map_err(BranchError::ParseBranch)
     } else if let Some(branch) = find_branch() {
         Ok(branch)
     } else {
