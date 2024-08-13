@@ -3,13 +3,12 @@ use std::{future::Future, pin::Pin};
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
 use bencher_json::{DateTime, JsonReport, ResourceId};
-use camino::Utf8PathBuf;
 use clap::ValueEnum;
 
 use crate::{
     bencher::backend::AuthBackend,
-    cli_eprintln, cli_eprintln_quietable, cli_println, cli_println_quietable,
-    parser::project::run::{CliRun, CliRunAdapter, CliRunFmt},
+    cli_eprintln_quietable, cli_println, cli_println_quietable,
+    parser::project::run::{CliRun, CliRunAdapter, CliRunOutput},
     CliError,
 };
 
@@ -19,12 +18,14 @@ mod branch;
 mod ci;
 mod error;
 mod fold;
+mod format;
 pub mod runner;
 mod testbed;
 
 use branch::Branch;
 use ci::Ci;
 pub use error::RunError;
+use format::Format;
 use runner::Runner;
 use testbed::Testbed;
 
@@ -49,8 +50,7 @@ pub struct Run {
     backdate: Option<DateTime>,
     allow_failure: bool,
     err: bool,
-    json_file: Option<Utf8PathBuf>,
-    html_file: Option<Utf8PathBuf>,
+    format: Option<Format>,
     log: bool,
     ci: Option<Ci>,
     runner: Runner,
@@ -74,12 +74,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            fmt:
-                CliRunFmt {
-                    json_file,
-                    html_file,
-                    quiet,
-                },
+            output: CliRunOutput { format, quiet },
             ci,
             cmd,
             dry_run,
@@ -96,8 +91,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            json_file,
-            html_file,
+            format: format.map(Into::into),
             log: !quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
             runner: cmd.try_into()?,
@@ -234,22 +228,6 @@ impl Run {
     }
 
     async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {
-        match serde_json::to_string_pretty(&json_report) {
-            Ok(json) => {
-                cli_println_quietable!(self.log, "\nBencher Report:");
-                cli_println!("{json}");
-                if let Some(path) = &self.json_file {
-                    tokio::fs::write(path, json)
-                        .await
-                        .map_err(RunError::WriteResults)?;
-                    cli_println_quietable!(self.log, "JSON report written to: {path}");
-                }
-            },
-            Err(err) => {
-                cli_eprintln!("Failed to serialize report JSON: {err}");
-            },
-        }
-
         let console_url = self
             .backend
             .get_console_url()
@@ -257,16 +235,13 @@ impl Run {
             .map_err(RunError::ConsoleUrl)?;
         let report_comment = ReportComment::new(console_url, json_report);
 
-        if let Some(path) = &self.html_file {
-            let require_threshold = false;
-            let html = report_comment.html(require_threshold, None);
-            tokio::fs::write(path, html)
-                .await
-                .map_err(RunError::WriteResults)?;
-            cli_println_quietable!(self.log, "HTML report written to: {path}");
-        }
-
-        cli_println_quietable!(self.log, "\n{}", report_comment.text());
+        let report_str = match self.format.unwrap_or_default() {
+            Format::Text => report_comment.text(),
+            Format::Json => report_comment.json().map_err(RunError::SerializeReport)?,
+            Format::Html => report_comment.html(false, None),
+        };
+        let newline_prefix = if self.log { "\n" } else { "" };
+        cli_println!("{newline_prefix}{report_str}");
 
         if let Some(ci) = &self.ci {
             ci.run(&report_comment, self.log).await?;

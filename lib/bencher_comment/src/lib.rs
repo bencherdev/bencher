@@ -59,6 +59,10 @@ impl ReportComment {
         comment
     }
 
+    pub fn json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(&self.json_report)
+    }
+
     pub fn html(&self, require_threshold: bool, id: Option<&str>) -> String {
         let mut html = String::new();
         let html_mut = &mut html;

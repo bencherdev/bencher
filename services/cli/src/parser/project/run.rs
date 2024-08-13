@@ -14,12 +14,12 @@ pub struct CliRun {
     #[clap(flatten)]
     pub branch: CliRunBranch,
 
-    /// Testbed name, slug, or UUID (or set `BENCHER_TESTBED`) (default is "localhost").
+    /// Testbed name, slug, or UUID (or set `BENCHER_TESTBED`) (default localhost).
     /// If a name or slug is provided, the testbed will be created if it does not exist
     #[clap(long)]
     pub testbed: Option<NameId>,
 
-    /// Benchmark harness adapter (or set `BENCHER_ADAPTER`) (default is "magic")
+    /// Benchmark harness adapter (or set `BENCHER_ADAPTER`) (default magic)
     #[clap(value_enum, long)]
     pub adapter: Option<CliRunAdapter>,
 
@@ -27,7 +27,7 @@ pub struct CliRun {
     #[clap(value_enum, long)]
     pub average: Option<CliRunAverage>,
 
-    /// Number of run iterations (default is 1)
+    /// Number of run iterations (default 1)
     #[clap(long)]
     pub iter: Option<usize>,
 
@@ -49,7 +49,7 @@ pub struct CliRun {
     pub err: bool,
 
     #[clap(flatten)]
-    pub fmt: CliRunFmt,
+    pub output: CliRunOutput,
 
     /// CI integrations
     #[clap(flatten)]
@@ -69,7 +69,7 @@ pub struct CliRun {
 #[derive(Args, Debug)]
 #[allow(clippy::option_option)]
 pub struct CliRunBranch {
-    /// Branch name, slug, or UUID (or set `BENCHER_BRANCH`) (default is "main").
+    /// Branch name, slug, or UUID (or set `BENCHER_BRANCH`) (default main).
     /// If `branch` does not already exist, it will be created if a name or slug is provided.
     #[clap(long, alias = "if-branch")]
     pub branch: Option<NameId>,
@@ -107,7 +107,7 @@ pub struct CliRunBranch {
         .args(&["hash", "no_hash"]),
 ))]
 pub struct CliRunHash {
-    /// `git` commit hash (defaults to HEAD)
+    /// `git` commit hash (default HEAD)
     #[clap(long)]
     pub hash: Option<GitHash>,
 
@@ -237,16 +237,25 @@ pub enum CliRunFold {
 }
 
 #[derive(Args, Debug)]
-pub struct CliRunFmt {
-    /// Output the final Report JSON at the given file path
+pub struct CliRunOutput {
+    /// Format for the final Report (default text)
     #[clap(long)]
-    pub json_file: Option<Utf8PathBuf>,
-    /// Output the final Report as HTML at the given file path
-    #[clap(long)]
-    pub html_file: Option<Utf8PathBuf>,
-    /// Quite mode, only output the final Report JSON to standard out
+    pub format: Option<CliRunFormat>,
+    /// Quite mode, only output the final Report to standard out
     #[clap(short, long)]
     pub quiet: bool,
+}
+
+/// Supported Report Formats
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliRunFormat {
+    /// Text (default)
+    Text,
+    /// JSON
+    Json,
+    /// HTML
+    Html,
 }
 
 #[allow(clippy::struct_excessive_bools)]
