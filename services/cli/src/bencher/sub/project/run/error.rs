@@ -13,8 +13,6 @@ pub enum RunError {
 
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),
-    #[error("{0}")]
-    Testbed(#[from] super::testbed::TestbedError),
 
     #[error("No default shell command path for target family. Try setting a custom shell with the `--shell` argument.")]
     Shell,

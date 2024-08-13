@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, JsonReport, ResourceId};
+use bencher_json::{DateTime, JsonReport, NameId, ResourceId};
 use clap::ValueEnum;
 
 use crate::{
@@ -20,19 +20,16 @@ mod error;
 mod fold;
 mod format;
 pub mod runner;
-mod testbed;
 
 use branch::Branch;
 use ci::Ci;
 pub use error::RunError;
 use format::Format;
 use runner::Runner;
-use testbed::Testbed;
 
 use crate::bencher::SubCmd;
 
 pub const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
-const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 const BENCHER_ADAPTER: &str = "BENCHER_ADAPTER";
 const BENCHER_CMD: &str = "BENCHER_CMD";
 
@@ -43,7 +40,7 @@ const DEFAULT_ITER: usize = 1;
 pub struct Run {
     project: ResourceId,
     branch: Branch,
-    testbed: Testbed,
+    testbed: NameId,
     adapter: Option<Adapter>,
     average: Option<JsonAverage>,
     iter: usize,
@@ -84,7 +81,7 @@ impl TryFrom<CliRun> for Run {
         Ok(Self {
             project: unwrap_project(project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
-            testbed: testbed.try_into().map_err(RunError::Testbed)?,
+            testbed,
             adapter: map_adapter(adapter),
             average: average.map(Into::into),
             iter: iter.unwrap_or(DEFAULT_ITER),

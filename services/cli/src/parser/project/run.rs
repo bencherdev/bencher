@@ -1,4 +1,6 @@
-use bencher_json::{DateTime, GitHash, NameId, ResourceId};
+use bencher_json::{
+    project::testbed::TESTBED_LOCALHOST_STR, DateTime, GitHash, NameId, ResourceId,
+};
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
@@ -16,8 +18,8 @@ pub struct CliRun {
 
     /// Testbed name, slug, or UUID (or set `BENCHER_TESTBED`) (default localhost).
     /// If a name or slug is provided, the testbed will be created if it does not exist
-    #[clap(long)]
-    pub testbed: Option<NameId>,
+    #[clap(long, env = "BENCHER_TESTBED", default_value = TESTBED_LOCALHOST_STR)]
+    pub testbed: NameId,
 
     /// Benchmark harness adapter (or set `BENCHER_ADAPTER`) (default magic)
     #[clap(value_enum, long)]
