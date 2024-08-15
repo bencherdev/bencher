@@ -22,16 +22,16 @@ pub struct CliRun {
     pub testbed: NameId,
 
     /// Benchmark harness adapter (or set `BENCHER_ADAPTER`) (default magic)
-    #[clap(value_enum, long)]
-    pub adapter: Option<CliRunAdapter>,
+    #[clap(value_enum, long, env = "BENCHER_ADAPTER", default_value = "magic")]
+    pub adapter: CliRunAdapter,
 
     /// Benchmark harness suggested central tendency (ie average)
     #[clap(value_enum, long)]
     pub average: Option<CliRunAverage>,
 
     /// Number of run iterations (default 1)
-    #[clap(long)]
-    pub iter: Option<usize>,
+    #[clap(long, default_value = "1")]
+    pub iter: usize,
 
     /// Fold multiple results into a single result
     #[clap(value_enum, long, requires = "iter")]
@@ -164,41 +164,49 @@ pub enum CliRunAdapter {
     Magic,
     /// {...} JSON
     Json,
-    /// #️⃣ C#
+    // TODO remove in due time
+    #[clap(hide = true)]
     CSharp,
     /// #️⃣ C# `DotNet`
     CSharpDotNet,
-    /// ➕ C++
+    // TODO remove in due time
+    #[clap(hide = true)]
     Cpp,
     /// ➕ C++ Catch2
     CppCatch2,
     /// ➕ C++ Google
     CppGoogle,
-    /// 🕳 Go
+    // TODO remove in due time
+    #[clap(hide = true)]
     Go,
     /// 🕳 Go Bench
     GoBench,
-    /// ☕️ Java
+    // TODO remove in due time
+    #[clap(hide = true)]
     Java,
     /// ☕️ Java JMH
     JavaJmh,
-    /// 🕸 JavaScript
+    // TODO remove in due time
+    #[clap(hide = true)]
     Js,
     /// 🕸 JavaScript Benchmark
     JsBenchmark,
     /// 🕸 JavaScript Time
     JsTime,
-    /// 🐍 Python
+    // TODO remove in due time
+    #[clap(hide = true)]
     Python,
     /// 🐍 Python ASV
     PythonAsv,
     /// 🐍 Python Pytest
     PythonPytest,
-    /// ♦️ Ruby
+    // TODO remove in due time
+    #[clap(hide = true)]
     Ruby,
     /// ♦️ Ruby Benchmark
     RubyBenchmark,
-    /// 🦀 Rust
+    // TODO remove in due time
+    #[clap(hide = true)]
     Rust,
     /// 🦀 Rust Bench
     RustBench,
@@ -208,7 +216,8 @@ pub enum CliRunAdapter {
     RustIai,
     /// 🦀 Rust Iai-Callgrind
     RustIaiCallgrind,
-    /// ❯_ Shell
+    // TODO remove in due time
+    #[clap(hide = true)]
     Shell,
     /// ❯_ Shell Hyperfine
     ShellHyperfine,
@@ -287,9 +296,10 @@ pub struct CliRunCi {
     #[clap(long, requires = "ci_cd")]
     pub ci_number: Option<u64>,
     /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
-    #[clap(long, requires = "ci_cd")]
+    #[clap(long, requires = "ci_cd", hide = true)]
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
     /// Deprecated: Do not use. This will soon be removed.
-    #[clap(long, alias = "ci-no-metrics")]
+    // TODO remove in due time
+    #[clap(long, alias = "ci-no-metrics", hide = true)]
     pub ci_deprecated: bool,
 }

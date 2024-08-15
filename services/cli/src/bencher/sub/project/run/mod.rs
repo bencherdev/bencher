@@ -3,12 +3,11 @@ use std::{future::Future, pin::Pin};
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
 use bencher_json::{DateTime, JsonReport, NameId, ResourceId};
-use clap::ValueEnum;
 
 use crate::{
     bencher::backend::AuthBackend,
     cli_eprintln_quietable, cli_println, cli_println_quietable,
-    parser::project::run::{CliRun, CliRunAdapter, CliRunOutput},
+    parser::project::run::{CliRun, CliRunOutput},
     CliError,
 };
 
@@ -30,10 +29,7 @@ use runner::Runner;
 use crate::bencher::SubCmd;
 
 pub const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
-const BENCHER_ADAPTER: &str = "BENCHER_ADAPTER";
 const BENCHER_CMD: &str = "BENCHER_CMD";
-
-const DEFAULT_ITER: usize = 1;
 
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -41,7 +37,7 @@ pub struct Run {
     project: ResourceId,
     branch: Branch,
     testbed: NameId,
-    adapter: Option<Adapter>,
+    adapter: Adapter,
     average: Option<JsonAverage>,
     iter: usize,
     fold: Option<JsonFold>,
@@ -82,9 +78,9 @@ impl TryFrom<CliRun> for Run {
             project: unwrap_project(project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
-            adapter: map_adapter(adapter),
+            adapter: adapter.into(),
             average: average.map(Into::into),
-            iter: iter.unwrap_or(DEFAULT_ITER),
+            iter,
             fold: fold.map(Into::into),
             backdate,
             allow_failure,
@@ -107,20 +103,6 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
     } else {
         return Err(RunError::NoProject);
     })
-}
-
-fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<Adapter> {
-    if let Some(adapter) = adapter {
-        Some(adapter.into())
-    } else if let Ok(env_adapter) = std::env::var(BENCHER_ADAPTER) {
-        if let Ok(cli_adapter) = CliRunAdapter::from_str(&env_adapter, false) {
-            Some(cli_adapter.into())
-        } else {
-            None
-        }
-    } else {
-        None
-    }
 }
 
 impl SubCmd for Run {
@@ -218,7 +200,7 @@ impl Run {
             end_time: end_time.into(),
             results,
             settings: Some(JsonReportSettings {
-                adapter: self.adapter,
+                adapter: Some(self.adapter),
                 average: self.average,
                 fold: self.fold,
             }),
