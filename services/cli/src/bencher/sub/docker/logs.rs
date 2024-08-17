@@ -21,9 +21,7 @@ pub struct Logs {
 impl From<CliLogs> for Logs {
     fn from(logs: CliLogs) -> Self {
         let CliLogs { service } = logs;
-        Self {
-            service: service.unwrap_or_default(),
-        }
+        Self { service }
     }
 }
 

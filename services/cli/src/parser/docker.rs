@@ -1,10 +1,13 @@
 use clap::{Parser, ValueEnum};
 
+use crate::CLI_VERSION;
+
 #[derive(Parser, Debug)]
 pub struct CliUp {
-    /// Select the container to run (default: all).
+    /// Select the container to run.
     /// Similar to the `service` argument for `docker-compose up`.
-    pub service: Option<CliService>,
+    #[clap(default_value = "all")]
+    pub service: CliService,
 
     /// Detached mode: Run containers in the background.
     /// Similar to the `--detach` option for `docker compose up`.
@@ -13,12 +16,12 @@ pub struct CliUp {
 
     /// Pull image before running.
     /// Similar to the `--pull` option for `docker compose up`.
-    #[clap(long)]
-    pub pull: Option<CliUpPull>,
+    #[clap(long, default_value = "always")]
+    pub pull: CliUpPull,
 
-    /// Specify the image tag. (default: same version as the CLI)
-    #[clap(long)]
-    pub tag: Option<String>,
+    /// Specify the image tag.
+    #[clap(long, default_value = CLI_VERSION)]
+    pub tag: String,
 
     /// Pass an environment variable to the API container.
     /// Similar to the `--env` option for `docker run`.
@@ -41,19 +44,17 @@ pub struct CliUp {
     pub console_volume: Option<Vec<String>>,
 }
 
-#[derive(ValueEnum, Debug, Clone, Copy, Default)]
+#[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliService {
-    #[default]
     All,
     Api,
     Console,
 }
 
-#[derive(ValueEnum, Debug, Clone, Copy, Default)]
+#[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliUpPull {
-    #[default]
     Always,
     Missing,
     Never,
@@ -61,16 +62,18 @@ pub enum CliUpPull {
 
 #[derive(Parser, Debug)]
 pub struct CliLogs {
-    /// Select the container to view logs for (default: all).
+    /// Select the container to view logs for.
     /// Similar to the `service` argument for `docker-compose logs`.
-    pub service: Option<CliService>,
+    #[clap(default_value = "all")]
+    pub service: CliService,
 }
 
 #[derive(Parser, Debug)]
 pub struct CliDown {
-    /// Select the container to stop (default: all).
+    /// Select the container to stop.
     /// Similar to the `service` argument for `docker-compose down`.
-    pub service: Option<CliService>,
+    #[clap(default_value = "all")]
+    pub service: CliService,
 }
 
 fn check_env(arg: &str) -> Result<String, String> {

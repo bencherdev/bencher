@@ -20,9 +20,7 @@ pub struct Down {
 impl From<CliDown> for Down {
     fn from(down: CliDown) -> Self {
         let CliDown { service } = down;
-        Self {
-            service: service.unwrap_or_default(),
-        }
+        Self { service }
     }
 }
 

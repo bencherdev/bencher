@@ -2,12 +2,9 @@ use crate::parser::project::run::CliRunFormat;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum Format {
-    /// Text (default)
     #[default]
     Text,
-    /// JSON
     Json,
-    /// HTML
     Html,
 }
 

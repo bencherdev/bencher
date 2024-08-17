@@ -23,7 +23,7 @@ pub struct Up {
     service: CliService,
     detach: bool,
     pull: CliUpPull,
-    tag: Option<String>,
+    tag: String,
     api_env: Option<Vec<String>>,
     console_env: Option<Vec<String>>,
     api_volume: Option<Vec<String>>,
@@ -43,9 +43,9 @@ impl From<CliUp> for Up {
             console_volume,
         } = up;
         Self {
-            service: service.unwrap_or_default(),
+            service,
             detach,
-            pull: pull.unwrap_or_default(),
+            pull,
             tag,
             api_env,
             console_env,
@@ -90,10 +90,10 @@ impl SubCmd for Up {
 impl Up {
     async fn pull_images(&self, docker: &Docker) -> Result<(), DockerError> {
         if let CliService::All | CliService::Console = self.service {
-            pull_image(docker, Container::Console, self.pull, self.tag.as_deref()).await?;
+            pull_image(docker, Container::Console, self.pull, &self.tag).await?;
         }
         if let CliService::All | CliService::Api = self.service {
-            pull_image(docker, Container::Api, self.pull, self.tag.as_deref()).await?;
+            pull_image(docker, Container::Api, self.pull, &self.tag).await?;
         }
         Ok(())
     }
@@ -103,7 +103,7 @@ impl Up {
             start_container(
                 docker,
                 Container::Api,
-                self.tag.as_deref(),
+                &self.tag,
                 self.api_env.clone(),
                 self.api_volume.clone(),
             )
@@ -113,7 +113,7 @@ impl Up {
             start_container(
                 docker,
                 Container::Console,
-                self.tag.as_deref(),
+                &self.tag,
                 self.console_env.clone(),
                 self.console_volume.clone(),
             )
@@ -127,7 +127,7 @@ async fn pull_image(
     docker: &Docker,
     container: Container,
     pull: CliUpPull,
-    tag: Option<&str>,
+    tag: &str,
 ) -> Result<(), DockerError> {
     let image = container.image(tag);
     match pull {
@@ -166,7 +166,7 @@ async fn pull_image(
 async fn start_container(
     docker: &Docker,
     container: Container,
-    tag: Option<&str>,
+    tag: &str,
     env: Option<Vec<String>>,
     volume: Option<Vec<String>>,
 ) -> Result<(), DockerError> {

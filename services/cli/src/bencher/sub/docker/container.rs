@@ -5,8 +5,6 @@ use bencher_json::{
     LOCALHOST_BENCHER_URL_STR,
 };
 
-use crate::CLI_VERSION;
-
 const BENCHER_API_IMAGE: &str = "ghcr.io/bencherdev/bencher-api";
 const BENCHER_API_CONTAINER: &str = "bencher_api";
 
@@ -35,23 +33,12 @@ impl fmt::Display for Container {
 }
 
 impl Container {
-    pub fn image(self, tag: Option<&str>) -> String {
-        match self {
-            Self::Api => {
-                if let Some(tag) = tag {
-                    format!("{BENCHER_API_IMAGE}:{tag}")
-                } else {
-                    format!("{BENCHER_API_IMAGE}:v{CLI_VERSION}")
-                }
-            },
-            Self::Console => {
-                if let Some(tag) = tag {
-                    format!("{BENCHER_CONSOLE_IMAGE}:{tag}")
-                } else {
-                    format!("{BENCHER_CONSOLE_IMAGE}:v{CLI_VERSION}")
-                }
-            },
-        }
+    pub fn image(self, tag: &str) -> String {
+        let image = match self {
+            Self::Api => BENCHER_API_IMAGE,
+            Self::Console => BENCHER_CONSOLE_IMAGE,
+        };
+        format!("{image}:{tag}")
     }
 
     pub fn port(self) -> u16 {
