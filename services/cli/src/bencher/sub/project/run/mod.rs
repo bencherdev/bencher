@@ -43,7 +43,7 @@ pub struct Run {
     backdate: Option<DateTime>,
     allow_failure: bool,
     err: bool,
-    format: Option<Format>,
+    format: Format,
     log: bool,
     ci: Option<Ci>,
     runner: Runner,
@@ -84,7 +84,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            format: format.map(Into::into),
+            format: format.into(),
             log: !quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
             runner: cmd.try_into()?,
@@ -204,7 +204,7 @@ impl Run {
             .map_err(RunError::ConsoleUrl)?;
         let report_comment = ReportComment::new(console_url, json_report);
 
-        let report_str = match self.format.unwrap_or_default() {
+        let report_str = match self.format {
             Format::Text => report_comment.text(),
             Format::Json => report_comment.json().map_err(RunError::SerializeReport)?,
             Format::Html => report_comment.html(false, None),
