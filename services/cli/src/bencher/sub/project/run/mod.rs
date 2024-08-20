@@ -75,7 +75,7 @@ impl TryFrom<CliRun> for Run {
             backend,
         } = run;
         Ok(Self {
-            project: unwrap_project(project)?,
+            project,
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
             adapter: adapter.into(),
@@ -93,16 +93,6 @@ impl TryFrom<CliRun> for Run {
             backend: AuthBackend::try_from(backend)?.log(false),
         })
     }
-}
-
-fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
-    Ok(if let Some(project) = project {
-        project
-    } else if let Ok(env_project) = std::env::var(BENCHER_PROJECT) {
-        env_project.parse().map_err(RunError::ParseProject)?
-    } else {
-        return Err(RunError::NoProject);
-    })
 }
 
 impl SubCmd for Run {
