@@ -28,8 +28,6 @@ use runner::Runner;
 
 use crate::bencher::SubCmd;
 
-const BENCHER_CMD: &str = "BENCHER_CMD";
-
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Run {

@@ -141,7 +141,11 @@ pub struct CliRunCommand {
     pub exec: bool,
 
     /// Benchmark command
-    #[clap(trailing_var_arg = true, allow_hyphen_values = true)]
+    #[clap(
+        env = "BENCHER_CMD",
+        trailing_var_arg = true,
+        allow_hyphen_values = true
+    )]
     pub command: Option<Vec<String>>,
 }
 

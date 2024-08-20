@@ -16,7 +16,7 @@ use file_size::FileSize;
 use output::Output;
 use pipe::Pipe;
 
-use super::{RunError, BENCHER_CMD};
+use super::RunError;
 
 #[derive(Debug, Clone)]
 pub enum Runner {
@@ -47,15 +47,6 @@ impl TryFrom<CliRunCommand> for Runner {
                 }
                 Command::new_exec(program, arguments)
             };
-            Ok(if let Some(file_path) = cmd.file {
-                Self::CommandToFile(command, FilePath::new(file_path))
-            } else if let Some(file_paths) = cmd.file_size {
-                Self::CommandToFileSize(command, FileSize::new(file_paths))
-            } else {
-                Self::Command(command)
-            })
-        } else if let Ok(command) = std::env::var(BENCHER_CMD) {
-            let command = Command::new_shell(cmd.sh_c, command)?;
             Ok(if let Some(file_path) = cmd.file {
                 Self::CommandToFile(command, FilePath::new(file_path))
             } else if let Some(file_paths) = cmd.file_size {
