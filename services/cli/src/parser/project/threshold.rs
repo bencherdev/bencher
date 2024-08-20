@@ -86,14 +86,17 @@ pub struct CliThresholdCreate {
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("threshold_create_project")
+        .required(true)
         .multiple(false)
         .args(&["threshold_project", "project"]),
 ))]
 pub struct CliThresholdCreateProject {
-    /// Project slug or UUID (or set `BENCHER_PROJECT`)
+    /// Project slug or UUID
     pub threshold_project: Option<ResourceId>,
-    /// Project slug or UUID (or set `BENCHER_PROJECT`)
-    #[clap(long)]
+    /// Project slug or UUID.
+    /// Deprecated: Set the project as the first argument instead.
+    // TODO remove in due time
+    #[clap(long, env = "BENCHER_PROJECT")]
     pub project: Option<ResourceId>,
 }
 

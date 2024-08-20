@@ -3,10 +3,7 @@ use bencher_json::{NameId, ResourceId};
 
 use super::model::Model;
 use crate::{
-    bencher::{
-        backend::AuthBackend,
-        sub::{project::run::BENCHER_PROJECT, SubCmd},
-    },
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::threshold::{CliThresholdCreate, CliThresholdCreateProject},
     CliError,
 };
@@ -57,8 +54,6 @@ fn unwrap_project(project: CliThresholdCreateProject) -> Result<ResourceId, Thre
         project
     } else if let Some(project) = project.threshold_project {
         project
-    } else if let Ok(env_project) = std::env::var(BENCHER_PROJECT) {
-        env_project.parse().map_err(ThresholdError::ParseProject)?
     } else {
         return Err(ThresholdError::NoProject);
     })

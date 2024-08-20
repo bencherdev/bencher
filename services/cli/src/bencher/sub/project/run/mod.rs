@@ -28,7 +28,6 @@ use runner::Runner;
 
 use crate::bencher::SubCmd;
 
-pub const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
 const BENCHER_CMD: &str = "BENCHER_CMD";
 
 #[derive(Debug)]
