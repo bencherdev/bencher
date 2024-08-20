@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Restart {
-    pub delay: Option<u64>,
+    pub delay: u64,
     pub backend: AuthBackend,
 }
 
@@ -27,7 +27,7 @@ impl TryFrom<CliRestart> for Restart {
 impl From<Restart> for JsonRestart {
     fn from(restart: Restart) -> Self {
         let Restart { delay, .. } = restart;
-        Self { delay }
+        Self { delay: Some(delay) }
     }
 }
 

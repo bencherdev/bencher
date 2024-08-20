@@ -34,9 +34,9 @@ pub struct CliSpec {
 
 #[derive(Parser, Debug)]
 pub struct CliRestart {
-    /// Server restart delay seconds (default: 3)
-    #[clap(long)]
-    pub delay: Option<u64>,
+    /// Server restart delay seconds
+    #[clap(long, default_value = "3")]
+    pub delay: u64,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -64,9 +64,9 @@ pub struct CliConfigUpdate {
     #[clap(long)]
     pub config: String,
 
-    /// Server restart delay seconds (default: 3)
-    #[clap(long)]
-    pub delay: Option<u64>,
+    /// Server restart delay seconds
+    #[clap(long, default_value = "3")]
+    pub delay: u64,
 
     #[clap(flatten)]
     pub backend: CliBackend,

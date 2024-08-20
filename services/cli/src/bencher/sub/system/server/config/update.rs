@@ -9,7 +9,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Update {
     pub config: Box<JsonConfig>,
-    pub delay: Option<u64>,
+    pub delay: u64,
     pub backend: AuthBackend,
 }
 
@@ -35,7 +35,7 @@ impl From<Update> for JsonUpdateConfig {
         let Update { config, delay, .. } = update;
         Self {
             config: *config,
-            delay,
+            delay: Some(delay),
         }
     }
 }
