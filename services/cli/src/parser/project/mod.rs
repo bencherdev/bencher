@@ -81,9 +81,9 @@ pub struct CliProjectCreate {
     #[clap(long)]
     pub url: Option<Url>,
 
-    /// Project visibility (default public)
-    #[clap(long)]
-    pub visibility: Option<CliProjectVisibility>,
+    /// Project visibility
+    #[clap(long, default_value = "public")]
+    pub visibility: CliProjectVisibility,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -92,10 +92,8 @@ pub struct CliProjectCreate {
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
 pub enum CliProjectVisibility {
-    /// Public Project
     Public,
     #[cfg(feature = "plus")]
-    /// Private Project
     Private,
 }
 
@@ -127,7 +125,7 @@ pub struct CliProjectUpdate {
     #[clap(long)]
     pub url: Option<Option<Url>>,
 
-    /// Project visibility (default public)
+    /// Project visibility
     #[clap(long)]
     pub visibility: Option<CliProjectVisibility>,
 

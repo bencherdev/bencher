@@ -13,7 +13,7 @@ pub struct Create {
     pub name: ResourceName,
     pub slug: Option<Slug>,
     pub url: Option<Url>,
-    pub visibility: Option<Visibility>,
+    pub visibility: Visibility,
     pub backend: AuthBackend,
 }
 
@@ -34,7 +34,7 @@ impl TryFrom<CliProjectCreate> for Create {
             name,
             slug,
             url,
-            visibility: visibility.map(Into::into),
+            visibility: visibility.into(),
             backend: backend.try_into()?,
         })
     }
@@ -63,7 +63,7 @@ impl From<Create> for JsonNewProject {
             name: name.into(),
             slug: slug.map(Into::into),
             url: url.map(Into::into),
-            visibility,
+            visibility: Some(visibility),
         }
     }
 }
