@@ -91,7 +91,7 @@ pub struct CliReportCreate {
     #[clap(long)]
     pub results: Vec<String>,
 
-    /// Benchmark harness adapter (or set `BENCHER_ADAPTER`) (default is "magic")
+    /// Benchmark harness adapter
     #[clap(value_enum, long)]
     pub adapter: Option<CliRunAdapter>,
 
