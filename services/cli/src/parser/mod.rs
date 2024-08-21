@@ -1,4 +1,4 @@
-use bencher_json::{Jwt, Url};
+use bencher_json::{Jwt, Url, BENCHER_API_URL_STR};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 pub mod docker;
@@ -108,23 +108,23 @@ pub enum CliSub {
 #[allow(clippy::doc_markdown)]
 #[derive(Args, Debug)]
 pub struct CliBackend {
-    /// Backend host URL (default https://api.bencher.dev)
-    #[clap(long)]
-    pub host: Option<Url>,
+    /// Backend host URL
+    #[clap(long, env = "BENCHER_HOST", default_value = BENCHER_API_URL_STR)]
+    pub host: Url,
 
     /// User API token
     #[clap(long)]
     pub token: Option<Jwt>,
 
-    /// Request attempt(s) (default 10)
-    #[clap(long)]
-    pub attempts: Option<usize>,
+    /// Request attempt(s)
+    #[clap(long, default_value = "10")]
+    pub attempts: usize,
 
-    /// Initial seconds to wait between attempts (exponential backoff) (default 1)
-    #[clap(long)]
-    pub retry_after: Option<u64>,
+    /// Initial seconds to wait between attempts (exponential backoff)
+    #[clap(long, default_value = "1")]
+    pub retry_after: u64,
 
-    /// Strictly parse JSON responses (default false)
+    /// Strictly parse JSON responses
     #[clap(long)]
     pub strict: bool,
 }

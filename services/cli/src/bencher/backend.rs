@@ -1,11 +1,10 @@
-use std::{fmt, ops::Deref, str::FromStr};
+use std::{fmt, ops::Deref};
 
-use bencher_json::{JsonApiVersion, JsonConsole, Jwt, Url, BENCHER_API_URL, BENCHER_URL};
+use bencher_json::{JsonApiVersion, JsonConsole, Jwt, BENCHER_API_URL, BENCHER_URL};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{cli_eprintln_quietable, parser::CliBackend, CLI_VERSION};
 
-pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 
 #[derive(Debug, Clone)]
@@ -26,7 +25,7 @@ pub struct Backend {
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
     #[error("Failed to parse host URL: {0}")]
-    ParseHost(url::ParseError),
+    ParseHost(bencher_json::ValidError),
     #[error("Failed to parse API token: {0}")]
     ParseToken(bencher_json::ValidError),
     #[error("Failed to find Bencher API token, and this API endpoint requires authorization. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable.")]
@@ -71,27 +70,18 @@ impl TryFrom<(CliBackend, bool)> for Backend {
             retry_after,
             strict,
         } = backend;
-        let host = map_host(host)?;
+        let host = host.try_into().map_err(BackendError::ParseHost)?;
         let token = map_token(token, is_public)?;
         let client = bencher_client::BencherClient::new(
-            host,
+            Some(host),
             token,
-            attempts,
-            retry_after,
+            Some(attempts),
+            Some(retry_after),
             Some(strict),
             Some(true),
         );
         Ok(Self { client })
     }
-}
-
-fn map_host(host: Option<Url>) -> Result<Option<url::Url>, BackendError> {
-    host.map(Into::into)
-        .or_else(|| std::env::var(BENCHER_HOST).ok())
-        .as_deref()
-        .map(FromStr::from_str)
-        .transpose()
-        .map_err(BackendError::ParseHost)
 }
 
 fn map_token(token: Option<Jwt>, is_public: bool) -> Result<Option<Jwt>, BackendError> {
