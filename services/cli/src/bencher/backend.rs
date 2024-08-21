@@ -5,8 +5,6 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{cli_eprintln_quietable, parser::CliBackend, CLI_VERSION};
 
-pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
-
 #[derive(Debug, Clone)]
 pub struct PubBackend {
     inner: Backend,
@@ -87,8 +85,6 @@ impl TryFrom<(CliBackend, bool)> for Backend {
 fn map_token(token: Option<Jwt>, is_public: bool) -> Result<Option<Jwt>, BackendError> {
     if let Some(token) = token {
         Ok(Some(token))
-    } else if let Ok(env_token) = std::env::var(BENCHER_API_TOKEN) {
-        Ok(Some(env_token.parse().map_err(BackendError::ParseToken)?))
     } else if is_public {
         Ok(None)
     } else {

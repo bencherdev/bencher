@@ -113,7 +113,7 @@ pub struct CliBackend {
     pub host: Url,
 
     /// User API token
-    #[clap(long)]
+    #[clap(long, env = "BENCHER_API_TOKEN")]
     pub token: Option<Jwt>,
 
     /// Request attempt(s)
