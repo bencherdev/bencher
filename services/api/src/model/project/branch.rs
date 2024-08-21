@@ -178,6 +178,22 @@ impl QueryBranch {
         };
         let clone_thresholds = report_start_point.and_then(|rsp| rsp.thresholds);
 
+        // If reset is set then the branch needs to be reset.
+        if let Some(JsonReportStartPoint {
+            reset: Some(true), ..
+        }) = report_start_point
+        {
+            return self
+                .rename_and_create(
+                    log,
+                    context,
+                    current_start_point.as_ref(),
+                    new_start_point.as_ref(),
+                    clone_thresholds,
+                )
+                .await;
+        }
+
         // Compare the current start point against the new start point.
         match (&current_start_point, &new_start_point) {
             // If there is both a current and new start point, then they need to be compared.
@@ -247,28 +263,10 @@ impl QueryBranch {
                 )
                 .await
             },
-            // If a start point is not specified, check to see if reset is.
-            (_, None) => {
-                // If reset is set then the branch needs to be reset.
-                if let Some(JsonReportStartPoint {
-                    reset: Some(true), ..
-                }) = report_start_point
-                {
-                    self.rename_and_create(
-                        log,
-                        context,
-                        current_start_point.as_ref(),
-                        new_start_point.as_ref(),
-                        clone_thresholds,
-                    )
-                    .await
-                } else {
-                    // If a start point is not specified and reset is not set, then there is nothing to check.
-                    // Even if the current branch has a start point, it does not need to always be specified.
-                    // That is, setting the start point is not required on every run.
-                    Ok(self)
-                }
-            },
+            // If a start point is not specified, then there is nothing to check.
+            // Even if the current branch has a start point, it does not need to always be specified.
+            // That is, setting the start point is not required on every run.
+            (_, None) => Ok(self),
         }
     }
 

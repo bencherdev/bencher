@@ -65,7 +65,7 @@ pub struct JsonReportStartPoint {
     pub thresholds: Option<bool>,
     /// Reset the branch to an empty state.
     /// If the branch already exists, a new empty branch will be created.
-    /// Will not take effect if the `branch` field is set.
+    /// If a start point is provided, the new branch will begin at that start point.
     pub reset: Option<bool>,
 }
 

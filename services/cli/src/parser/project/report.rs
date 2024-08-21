@@ -124,9 +124,10 @@ pub struct CliReportStartPoint {
     #[clap(long, requires = "start_point_branch")]
     pub start_point_thresholds: bool,
 
-    /// Reset `branch` to an empty state (conflicts with: `--start-point-branch`).
+    /// Reset `branch` to an empty state.
     /// If `branch` already exists, a new empty branch will be created.
-    #[clap(long, conflicts_with = "start_point_branch")]
+    /// If a start point is provided, the new branch will begin at that start point.
+    #[clap(long)]
     pub start_point_reset: bool,
 }
 

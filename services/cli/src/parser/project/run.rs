@@ -92,9 +92,10 @@ pub struct CliRunBranch {
     #[clap(long, requires = "branch_start_point")]
     pub branch_start_point_hash: Option<GitHash>,
 
-    /// Reset `branch` to an empty state (conflicts with: `--branch-start-point`).
+    /// Reset `branch` to an empty state.
     /// If `branch` already exists, a new empty branch will be created.
-    #[clap(long, conflicts_with = "branch_start_point")]
+    /// If a start point is provided, the new branch will begin at that start point.
+    #[clap(long)]
     pub branch_reset: bool,
 
     /// Deprecated: Do not use. This will soon be removed.
