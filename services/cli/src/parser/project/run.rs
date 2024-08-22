@@ -255,7 +255,7 @@ pub enum CliRunFold {
 #[derive(Args, Debug)]
 pub struct CliRunOutput {
     /// Format for the final Report
-    #[clap(long, default_value = "text")]
+    #[clap(long, default_value = "human")]
     pub format: CliRunFormat,
     /// Quite mode, only output the final Report to standard out
     #[clap(short, long)]
@@ -266,8 +266,8 @@ pub struct CliRunOutput {
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
 pub enum CliRunFormat {
-    /// Text
-    Text,
+    /// Human
+    Human,
     /// JSON
     Json,
     /// HTML

@@ -203,7 +203,7 @@ impl Run {
         let report_comment = ReportComment::new(console_url, json_report);
 
         let report_str = match self.format {
-            Format::Text => report_comment.text(),
+            Format::Human => report_comment.human(),
             Format::Json => report_comment.json().map_err(RunError::SerializeReport)?,
             Format::Html => report_comment.html(false, None),
         };

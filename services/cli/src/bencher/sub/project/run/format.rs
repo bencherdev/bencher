@@ -1,9 +1,8 @@
 use crate::parser::project::run::CliRunFormat;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub enum Format {
-    #[default]
-    Text,
+    Human,
     Json,
     Html,
 }
@@ -11,7 +10,7 @@ pub enum Format {
 impl From<CliRunFormat> for Format {
     fn from(fmt: CliRunFormat) -> Self {
         match fmt {
-            CliRunFormat::Text => Self::Text,
+            CliRunFormat::Human => Self::Human,
             CliRunFormat::Json => Self::Json,
             CliRunFormat::Html => Self::Html,
         }

@@ -29,7 +29,7 @@ impl ReportComment {
         }
     }
 
-    pub fn text(&self) -> String {
+    pub fn human(&self) -> String {
         let mut comment = String::new();
 
         comment.push_str("View results:");
