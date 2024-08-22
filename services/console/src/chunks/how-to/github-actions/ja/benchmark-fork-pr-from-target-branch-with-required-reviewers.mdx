@@ -1,100 +1,124 @@
 import PullRequestsForkReviewerCode from "../pull-requests-fork-reviewer-code.mdx";
 
-### ターゲットブランチからのフォークPRをベンチマークし、必要なレビュワーを設定する
+### ターゲットブランチからフォークしたPRのベンチマークと必要なレビュアー
 
-フォークされたプルリクエストのコードが安全であることを保証するために、このGitHubアクションはフォークが別のリポジトリからかどうかをチェックします。
-フォークが別のリポジトリからの場合、レビューが必要になるでしょう。
+フォークプルリクエストのコードが安全であることを保証するために、このGitHub Actionはフォークが他のリポジトリからのものであるかどうかを確認します。他のリポジトリからのフォークであれば、レビューが必要です。
 
-> ⚠️ フォークPRを承認する前に、非常に**重要**ですが、すべてを入念にレビューすることが重要です！
-> そうしないと、pwnリクエストの結果になる可能性があります！
+> ⚠️ 各フォークPRを承認前に完全にレビューすることが**非常**に**重要**です！
+> そうしないと、攻撃リクエストになる可能性があります！
 >
-> それを頭の上にぶら下げたくない場合は、上記の[Benchmark Fork PR and Upload from Default Branch][benchmark fork pr and upload from default branch]を見てください。
+> これを避けたい場合は、[デフォルトブランチからのフォークPRのベンチマークとアップロード][benchmark fork pr and upload from default branch] を参照してください。
 
-このワークフローを設定するためには、二つの[GitHub Actions Environments][github actions environments]を作成する必要があります。
+このワークフローを設定するには、2つの[GitHub Actions 環境][github actions environments]を作成する必要があります。
 `Your Repo -> Settings -> Environments -> New environment`に移動します。
-`internal`と`external`の二つの新しい環境を作成します。
-`internal`環境には`Deployment protection rules`を設定しません。
-しかし、`external`環境には、ベンチマーク前にフォークPRをレビューするために信頼できるレビュワーを`Required reviewers`として設定します。
-完全な概要については、[このブログ投稿][iterative.ai blog]をご覧ください。
+`internal` と `external` の2つの新しい環境を作成します。
+`internal` 環境には `Deployment protection rules` が設定されていない必要があります。
+一方、`external` 環境にはフォークPRをベンチマーク前にレビューする信頼できるレビュアーが`Required reviewers`として設定されている必要があります。
+詳細は[このブログ投稿][iterative.ai blog] を参照してください。
 
-この設定は、`pull_request_target`がプルリクエストのターゲットブランチのコンテキストで実行されるために機能します。そのため、`BENCHER_API_TOKEN`や`GITHUB_TOKEN`のような秘密が利用可能です。
-したがって、このワークフローは、_ターゲット_ ブランチに存在する場合にのみ実行されます。
-`GITHUB_TOKEN`や`BENCHER_API_TOKEN`のような秘密を環境変数として設定しないでください。
-代わりに、秘密を`bencher run`に明示的に渡してください。
+この設定は、`pull_request_target` がプルリクエストのターゲットブランチのコンテキストで実行されるため機能します。
+そのため、`BENCHER_API_TOKEN` や `GITHUB_TOKEN` のようなシークレットが利用可能です。
+したがって、このワークフローはターゲットブランチに存在する場合のみ実行されます。
+シークレットを環境変数として設定することは避け、代わりに明示的に `bencher run` にシークレットを渡してください。
 
 <PullRequestsForkReviewerCode />
 
-1. GitHub Actionsの`workflow`ファイルを作成します。
+1. GitHub Actions の `workflow` ファイルを作成します。
    (例: `.github/workflows/pr_target_benchmarks.yml`)
-2. `pull_request`イベントで実行されるようにします：
-    - `opened` - プルリクエストが作成されました。
-    - `reopened` - 以前に閉じられたプルリクエストが再開されました。
-    - `edited` - プルリクエストのタイトルや本文が編集されたり、プルリクエストの基本ブランチが変更されました。
-    - `synchronize` - プルリクエストのヘッドブランチが更新されました。
-      例えば、ヘッドブランチがベースブランチから更新されたり、ヘッドブランチに新しいコミットがプッシュされました。
+2. `pull_request` イベントで実行します：
+    - `opened` - プルリクエストが作成された。
+    - `reopened` - 閉じられていたプルリクエストが再開された。
+    - `edited` - プルリクエストのタイトルや本文が編集された、またはベースブランチが変更された。
+    - `synchronize` - プルリクエストのヘッドブランチが更新された。
+      例えば、ベースブランチからの更新や新しいコミットがヘッドブランチにプッシュされた場合です。
 
-   [GitHub Actions `on`のドキュメント][github actions on]と
-   [GitHub Actions `pull_request`のドキュメント][github action pull_request]を参照して、完全な概要をご覧ください。
+   完全な概要については、[GitHub Actions `on` ドキュメント][github actions on] および [GitHub Actions `pull_request` ドキュメント][github action pull_request] を参照してください。
    (例: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. ワークフローがレビューを必要とするかどうかを確認する最初のGitHub Actionsの`job`を作成します。
+3. ワークフローがレビューを必要とするかどうかを確認する最初の GitHub Actions `job` を作成します。
    (例: `jobs: fork_pr_requires_review`)
-4. プルリクエストが同じリポジトリからの場合にのみ`internal`に`environment`を設定します。
-   それ以外の場合は、レビュワーの承認が必要になる`external`に`environment`を設定します。
+4. プルリクエストが同じリポジトリから来ている場合にのみ `environment` を `internal` に設定します。
+   それ以外の場合は、`environment` を `external` に設定し、レビュー担当者の承認が必要となります。
    ⚠️ この行を削除しないでください！
    (例: `environment: ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}`)
-5. ベンチマークを実行するための2番目のGitHub Actionsの`job`を作成します。
+5. ベンチマークを実行するための2つ目の GitHub Actions `job` を作成します。
    (例: `benchmark_fork_pr_branch`)
-6. `benchmark_fork_pr_branch`ジョブが実行されるには、`fork_pr_requires_review`ジョブが必要です。
+6. `benchmark_fork_pr_branch` ジョブが `fork_pr_requires_review` ジョブを必要とするように指定します。
    ⚠️ この行を削除しないでください！
-   [GitHub Actions `needs`のドキュメント][github actions needs]を参照して、完全な概要をご覧ください。
+   完全な概要については、[GitHub Actions `needs` ドキュメント][github actions needs] を参照してください。
    (例: `needs: fork_pr_requires_review`)
-7. ジョブを実行するマシンのタイプを設定します。
-   [GitHub Actions `runs-on`のドキュメント][github actions runs-on]を参照して、完全な概要をご覧ください。
+7. ジョブが実行されるマシンのタイプを設定します。
+   完全な概要については、[GitHub Actions `runs-on` ドキュメント][github actions runs-on] を参照してください。
    (例: `runs-on: ubuntu-latest`)
 8. フォークPRのソースコードをチェックアウトします。
-   `pull_request_target`はプルリクエストのターゲットブランチのコンテキストで実行されるため、
-   プルリクエストブランチをチェックアウトする必要があります。
+   `pull_request_target`がプルリクエストのターゲットブランチのコンテキストで実行されるため、プルリクエストブランチをチェックアウトする必要があります。
    (例: `uses: actions/checkout@v4`)
-    - フォークPRリポジトリを指定します (例: `repository: ${{ github.event.pull_request.head.repo.full_name }}`)
-    - フォークPRのハッシュを指定します (例: `ref: ${{ github.event.pull_request.head.sha }}`)
-    - `git`認証情報を保持しないでください (例: `persist-credentials: false`)
-9. [GitHub Actionを使用して][bencher cli github action] Bencher CLIをインストールします。
+    - フォークPRのリポジトリを指定 (例: `repository: ${{ github.event.pull_request.head.repo.full_name }}`)
+    - フォークPRのハッシュを指定 (例: `ref: ${{ github.event.pull_request.head.sha }}`)
+    - `git`クレデンシャルを保持しない (例: `persist-credentials: false`)
+9. [GitHub Action を使用して][bencher cli github action] Bencher CLI をインストールします。
    (例: `uses: bencherdev/bencher@main`)
-10. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIのサブコマンドを使って、
-    フォークプルブランチのベンチマークを実行します。
-    [the `bencher run` CLI subcommand][bencher run]を参照して、完全な概要をご覧ください。
+10. フォークプルブランチのベンチマークを実行するには<よく"/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用します。
+    完全な概要については[ `bencher run` CLI サブコマンド][bencher run] を参照してください。
     (例: `bencher run`)
-11. `--project`オプションをプロジェクトのスラグに設定します。
-    [the `--project` docs][project option]を参照して、詳細をご確認ください。
+11. `--project` オプションをプロジェクトスラッグに設定します。
+    詳細は [ `--project` ドキュメント][project option] を参照してください。
     (例: `--project save-walter-white-1234abcd`)
-12. `BENCHER_API_TOKEN` **リポジトリ** シークレットを`--token`オプションに設定します。
-    [the `--token` docs][token option]を参照して、詳細をご確認ください。
+12. `--token` オプションを**リポジトリ** シークレット `BENCHER_API_TOKEN` に設定します。
+    詳細は [ `--token` ドキュメント][token option] を参照してください。
     (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-13. [GitHub Actions `pull_request`イベント][github action pull_request]を使用して、
-    フォークPR番号をフォーマットした`--branch`オプションを設定します。
-    [branch selection][branch selection branch]を参照して、完全な概要をご覧ください。
+13. `--branch` オプションをフォークPRの番号をフォーマットして設定します
+    [ GitHub Actions `pull_request` イベント][github action pull_request] を使用します。
+    完全な概要については[ブランチセレクション][branch selection branch] を参照してください。
     (例: `--branch '${{ github.event.number }}/merge'`)
-14. [GitHub Actions `github`コンテキスト][github actions context]を使用して、
-    フォークPR基本ブランチのスタートポイントを`--branch-start-point`オプションに設定します。
-    [branch selection][branch selection start point]を参照して、完全な概要をご覧ください。
+14. `--branch-start-point` オプションをフォークPRのベースブランチの開始ポイントに設定します
+    [ GitHub Actions `github` コンテキスト][github actions context]を使用します。
+    完全な概要については[ブランチセレクション][branch selection start point] を参照してください。
     (例: `--branch-start-point '${{ github.base_ref }}'`)
-15. [GitHub Actions `pull_request`イベント][github action pull_request]を使用して、
-    フォークPR基本ブランチのスタートポイントハッシュを`--branch-start-point-hash`オプションに設定します。
-    [branch selection][branch selection start point hash]を参照して、完全な概要をご覧ください。
+15. `--branch-start-point-hash` オプションをフォークPRのベースブランチの開始ポイントハッシュに設定します
+    [ GitHub Actions `pull_request` イベント][github action pull_request] を使用します。
+    完全な概要については[ブランチセレクション][branch selection start point hash] を参照してください。
     (例: `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
-16. `--testbed`オプションをテストベッド名に設定します。
-    これは、`runs-on`で選択されたマシンと一致すべきです。
-    [the `--tested` docs][testbed option]を参照して、詳細をご覧ください。
+16. `--branch-reset` フラグを設定して常にブランチを開始ポイントにリセットします。
+    これにより、ベンチマークデータのドリフトを防止できます。
+    完全な概要については[ブランチセレクション][branch selection branch reset] を参照してください。
+    (例: `--branch-reset`)
+17. `--testbed` オプションをテストベッド名に設定します。
+    これは選択したマシンと一致する必要があります。
+    詳細は [ `--tested` ドキュメント][testbed option] を参照してください。
     (例: `--testbed ubuntu-latest`)
-17. ベンチマークハーネスアダプターとして望ましいものを`--adapter`オプションに設定します。
-    [benchmark harness adapters][adapters]を参照して、完全な概要をご覧ください。
+18. `--adapter` オプションを希望するベンチマークハーネスアダプタに設定します。
+    完全な概要については [ベンチマークハーネスアダプタ][adapters] を参照してください。
     (例: `--adapter json`)
-18. アラートが生成された場合にコマンドを失敗させるために`--err`フラグを設定します。
-    [Threshold & Alerts][alerts]を参照して、完全な概要をご覧ください。
+19. `--err` フラグを設定して、アラートが生成された場合にコマンドを失敗させるようにします。
+    完全な概要については [しきい値とアラート][alerts] を参照してください。
     (例: `--err`)
-19. [GitHub Actions `GITHUB_TOKEN`環境変数][github token]を使用して、プルリクエストにコメントとして結果を投稿するためのGitHub API認証トークンを`--github-actions`オプションに設定します。
-    [the `--github-actions` docs][github actions option]を参照して、詳細をご覧ください。
+20. `--github-actions` オプションを GitHub API 認証トークンに設定して、結果をプルリクエストのコメントとして投稿します。
+    [GitHub Actions `GITHUB_TOKEN` 環境変数][github token] を使用します。
+    完全な概要については [ `--github-actions` ドキュメント][github actions option] を参照してください。
     (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-20. ベンチマークコマンド引数を指定します。
-    [benchmark command][command argument]を参照して、完全な概要をご覧ください。
+21. ベンチマークコマンドの引数を指定します。
+    完全な概要については [ベンチマークコマンド][command argument] を参照してください。
     (例: `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+[github actions environments]: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment
+[iterative.ai blog]: https://iterative.ai/blog/testing-external-contributions-using-github-actions-secrets
+[github actions needs]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idneeds
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+
+[bencher run]: /ja/docs/explanation/bencher-run/
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ja/docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /ja/docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /ja/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /ja/docs/explanation/branch-selection/#--branch-reset
+[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ja/docs/explanation/adapters/
+[alerts]: /ja/docs/explanation/thresholds/#alerts
+[github actions option]: /ja/docs/explanation/bencher-run/#--github-actions-github_token
+[command argument]: /ja/docs/explanation/bencher-run/#benchmark-command

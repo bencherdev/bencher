@@ -2,32 +2,33 @@
 
 <br />
 
-Используйте указанный полный хеш Git как [Начальную точку][начальная точка] для опции `branch`.
-Для этой опции необходимо установить опцию [`--branch-start-point`][branch start point].
+Используйте указанный полный Git хеш в качестве [Начальной Точки][start point] для опции `branch`.
+Эта опция требует установки опции [`--branch-start-point`][branch start point].
 
-- Если `branch` не существует, он будет создан из `branch-start-point` с указанным хешом.
-- Если `branch` уже существует и `branch-start-point` и указанный хеш совпадают,
-  тогда данная опция игнорируется.
-- Если `branch` уже существует и либо `branch-start-point`, либо указанный хеш отличаются,
-  старая версия `branch` будет переименована,
-  и новый `branch` будет создан из `branch-start-point` с указанным хешом.
-- Если `branch` не существует и `branch-start-point` не существует на указанном хэше,
-  то `branch` будет создан без какой-либо исторической информации.
-- Если `branch` существует и `branch-start-point` не существует на указанном хэше,
+- Если `branch` не существует, он будет создан из `branch-start-point` на указанном хеше.
+- Если `branch` существует, и как `branch-start-point`, так и указанный хеш совпадают,
+  то эта опция игнорируется.
+- Если `branch` уже существует и либо `branch-start-point`, либо указанный хеш различаются,
+  старая версия `branch` будет переименована и заархивирована,
+  и новый `branch` будет создан из `branch-start-point` на указанном хеше.
+- Если `branch` не существует и `branch-start-point` не существует на указанном хеше,
+  то `branch` будет создан без каких-либо исторических данных.
+- Если `branch` существует и `branch-start-point` не существует на указанном хеше,
   то эта опция игнорируется.
 
-Если новая `branch` создается с Начальной точкой,
-то все данные и Пороги из `branch-start-point` с указанным хешом копируются.
+Если новый `branch` создается с Начальной Точкой,
+то все данные и Пороги из `branch-start-point` на указанном хеше копируются.
 
-Например, если `feature_branch` существует с его Начальной точкой, являющейся веткой `main`
-с хешем `32aea434d751648726097ed3ac760b57107edd8b`,
-тогда использование `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`:
+Например, если существует `feature_branch` с Начальной Точкой на Ветке `main`
+на хеше `32aea434d751648726097ed3ac760b57107edd8b`,
+то использование `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
+выполнит следующие действия:
 
-1. Переименует старый `feature_branch` в `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`
-2. Создаст новую ветку с именем `feature_branch`
-3. Копирует все данные и Пороги из `main` с хешем `68b12758509ca5e2b1e3983525625e532eb5f562` в новый `feature_branch`
-4. `bencher run` будет произведен с использованием нового `feature_branch`
+1. Переименует старый `feature_branch` в `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b` и заархивирует его
+2. Создаст новую Ветку с именем `feature_branch`
+3. Скопирует все данные и Пороги из `main` на хеше `68b12758509ca5e2b1e3983525625e532eb5f562` в новый `feature_branch`
+4. `bencher run` будет выполняться с использованием нового `feature_branch`
 
-[начальная точка]: /ru/docs/explanation/benchmarking/#start-point
+[start point]: /ru/docs/explanation/benchmarking/#start-point
 
 [branch start point]: #--branch-start-point-branch

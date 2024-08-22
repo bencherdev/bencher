@@ -2,32 +2,24 @@
 
 <br />
 
-使用指定的完整 Git 哈希值作为 `branch` 选项的[起点][start point]。
-这个选项需要设置 [`--branch-start-point`][branch start point] 选项。
+使用指定的完整 Git 哈希作为 `branch` 选项的[起点][start point]。
+此选项要求设置[`--branch-start-point`][branch start point]选项。
 
-- 如果 `branch` 不存在，将会从指定的哈希值处的 `branch-start-point` 创建。
-- 如果 `branch` 已存在且 `branch-start-point` 与指定的哈希值相同，
-  则此选项将被忽略。
-- 如果 `branch` 已存在且 `branch-start-point` 或指定的哈希值不同，
-  旧版本的 `branch` 将被重命名，
-  并从 `branch-start-point` 处的指定哈希值创建新的 `branch`。
-- 如果 `branch` 不存在且 `branch-start-point` 在指定的哈希值处不存在，
-  那么 `branch` 将在没有任何历史数据的情况下被创建。
-- 如果 `branch` 存在且 `branch-start-point` 在指定的哈希值处不存在，
-  那么此选项将被忽略。
+- 如果`branch`不存在，它将从指定的哈希的`branch-start-point`创建。
+- 如果`branch`存在并且`branch-start-point`和指定的哈希相同，那么此选项将被忽略。
+- 如果`branch`已存在并且`branch-start-point`或指定的哈希不同，旧版本的`branch`将被重命名和存档，新`branch`将从指定的哈希的`branch-start-point`创建。
+- 如果`branch`不存在并且`branch-start-point`在指定的哈希不存在，那么`branch`将在没有任何历史数据的情况下创建。
+- 如果`branch`存在并且`branch-start-point`在指定的哈希不存在，那么此选项将被忽略。
 
-如果使用起点创建了一个新的 `branch`，
-那么从指定哈希值处的 `branch-start-point` 将复制所有数据和阈值。
+如果用起点创建新的`branch`，那么在指定哈希的`branch-start-point`的所有数据和阈值都将被复制。
 
-例如，如果 `feature_branch` 存在，其起点是 `main` 分支
-在哈希 `32aea434d751648726097ed3ac760b57107edd8b`
-那么使用 `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
-将会：
+例如，如果`feature_branch`的起点是哈希`32aea434d751648726097ed3ac760b57107edd8b`的`main`分支，
+那么使用`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`将会：
 
-1. 将旧的 `feature_branch` 重命名为 `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`
-2. 创建一个名为 `feature_branch` 的新分支
-3. 将所有数据和阈值从 `main` 的哈希 `68b12758509ca5e2b1e3983525625e532eb5f562` 复制到新的 `feature_branch`
-4. 使用新的 `feature_branch` 进行 `bencher run`
+1. 将旧的`feature_branch`重命名为`feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`并存档
+2. 创建一个名为`feature_branch`的新分支
+3. 将哈希`68b12758509ca5e2b1e3983525625e532eb5f562`的`main`分支的所有数据和阈值复制到新的`feature_branch`
+4. 使用新的`feature_branch`运行`bencher run`
 
 [start point]: /zh/docs/explanation/benchmarking/#start-point
 

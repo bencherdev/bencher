@@ -2,23 +2,35 @@
 
 <br />
 
-指定された `branch` をリセットします。
-`--branch-reset` の主な使用例は[相対的継続ベンチマーキング][relative continuous benchmarking]です。
-このフラグは [`--branch-start-point`][branch start point] オプションと競合します。
+指定した `branch` をリセットします。
+[`--branch-start-point`][branch start point] オプションが設定されている場合、
+`branch` は指定された開始地点にリセットされます。
+これは、[統計的連続ベンチマーク][statistical continuous benchmarking] データのドリフトを防ぐのに便利です。
+開始地点を指定しない `--branch-reset` の主な使用用途は
+[相対連続ベンチマーク][relative continuous benchmarking] です。
 
-- `branch` が存在しない場合、作成されます。
-- `branch` が存在する場合、旧バージョンの `branch` がリネームされ、
-  新しい `branch` が作成されます。
+- `branch` が存在せず、開始地点も指定されていない場合、`branch` は履歴データなしで作成されます。
+- `branch` が存在し、開始地点が指定されていない場合、
+  古い `branch` は名前が変更されてアーカイブされ、
+  新しい `branch` が履歴データなしで作成されます。
+- `branch` が存在せず、開始地点が指定されている場合、
+  指定された開始地点を使用して `branch` が作成されます。
+- `branch` が存在し、開始地点が指定されている場合、
+  古い `branch` は名前が変更されてアーカイブされ、
+  指定された開始地点を使用して新しい `branch` が作成されます。
 
-新しい `branch` が作成されると、過去のデータやしきい値は含まれません。
+開始地点を指定して新しい `branch` が作成された場合、
+指定された開始地点のすべてのデータとしきい値がコピーされます。
+それ以外の場合、`branch` は履歴データなしで作成されます。
 
-例えば、スタートポイントのない `feature_branch` が存在する場合、
-`--branch feature_branch --branch-reset` を使用すると次のようになります。
+例えば、`feature_branch` が開始地点なしで存在している場合、
+`--branch feature_branch --branch-reset` を使用すると：
 
-1. 古い `feature_branch` を `feature_branch@detached` にリネーム
-2. `feature_branch` という名前の新しいブランチを作成
-3. `bencher run` は新しい `feature_branch` を使用して進行します
+1. 古い `feature_branch` を `feature_branch@detached` にリネームし、アーカイブする
+2. 新しい `feature_branch` という名前のブランチを作成する
+3. `bencher run` は新しい `feature_branch` を使用して進行する
 
-[相対的継続ベンチマーキング]: /ja/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
 
 [branch start point]: #--branch-start-point-branch

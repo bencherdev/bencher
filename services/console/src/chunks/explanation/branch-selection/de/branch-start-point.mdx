@@ -2,30 +2,30 @@
 
 <br />
 
-Verwenden Sie den angegebenen Branch-Namen, Slug oder die UUID als [Startpunkt][start point] für die [`branch`](#--branch-branch)-Option.
-Für GitHub ist dies normalerweise [der `base` Branch für einen Pull Request][github base],
-und für GitLab ist dies normalerweise [der `target` Branch für einen Merge Request][gitlab target].
-Der primäre Anwendungsfall für `--branch-start-point` ist das [Statistische kontinuierliche Benchmarking](/de/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
+Verwenden Sie den angegebenen Branch-Namen, Slug oder UUID als [Startpunkt][start point] für die [`branch`](#--branch-branch) Option.
+Für GitHub ist dies normalerweise [der `base` Branch für eine Pull Request][github base],
+und für GitLab ist dies normalerweise [der `target` Branch für eine Merge Request][gitlab target].
+Der Hauptanwendungsfall für `--branch-start-point` ist [Statistische Kontinuierliche Benchmarking](/de/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
 
-- Wenn der angegebene Startpunkt ein leerer String ist, wird diese Option ignoriert.
-- Existiert `branch` nicht, wird er unter Verwendung dieses Startpunkts erstellt.
-- Existiert `branch` bereits und der Startpunkt ist derselbe, wird diese Option ignoriert.
-- Existiert `branch` bereits und der Startpunkt ist unterschiedlich,
-  wird die alte Version von `branch` umbenannt
-  und ein neuer `branch` wird unter Verwendung dieses aktualisierten Startpunkts erstellt.
+- Wenn der angegebene Startpunkt eine leere Zeichenkette ist, wird diese Option ignoriert.
+- Wenn `branch` nicht existiert, wird er mit diesem Startpunkt erstellt.
+- Wenn `branch` existiert und der Startpunkt derselbe ist, wird diese Option ignoriert.
+- Wenn `branch` existiert und der Startpunkt unterschiedlich ist,
+  wird die alte Version von `branch` sowohl umbenannt als auch archiviert
+  und ein neuer `branch` wird mit diesem aktualisierten Startpunkt erstellt.
 - Wenn `branch` nicht existiert und der Startpunkt nicht existiert,
-  dann wird die `branch` ohne historische Daten erstellt.
+  wird der `branch` ohne historische Daten erstellt.
 - Wenn `branch` existiert und der Startpunkt nicht existiert,
-  dann wird diese Option ignoriert.
+  wird diese Option ignoriert.
 
 Wenn ein neuer `branch` mit einem Startpunkt erstellt wird,
 werden alle Daten und Schwellenwerte vom angegebenen Startpunkt übernommen.
 
 Zum Beispiel, wenn `feature_branch` noch nicht existiert, aber `main` existiert und historische Daten hat.
-Dann würde die Verwendung von `--branch feature_branch --branch-start-point main`:
-1. Einen neuen Branch mit dem Namen `feature_branch` erstellen
-2. Alle Daten und Schwellenwerte von `main` zu `feature_branch` kopieren
-3. `bencher run` würde unter Verwendung von `feature_branch` fortgesetzt
+Dann würde die Verwendung von `--branch feature_branch --branch-start-point main` folgendes tun:
+1. Einen neuen Branch namens `feature_branch` erstellen
+2. Alle Daten und Schwellenwerte von `main` in `feature_branch` kopieren
+3. `bencher run` würde mit `feature_branch` fortfahren
 
 [github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
 [gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
@@ -34,5 +34,5 @@ Dann würde die Verwendung von `--branch feature_branch --branch-start-point mai
 
 <br />
 
-> 🐰 Hinweis: Wenn Umgebungsvariablen verwendet werden, sollten sie in doppelte Anführungszeichen gesetzt werden (also `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
-> falls Sie möchten, dass `bencher run` keinen Fehler ausgibt, wenn `MY_BRANCH_ENV_VAR` nicht definiert ist.
+> 🐰 Hinweis: Wann immer Umgebungsvariablen verwendet werden, sollten sie in doppelte Anführungszeichen gesetzt werden (z.B. `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
+> falls Sie möchten, dass `bencher run` keinen Fehler ausgibt, wenn `MY_BRANCH_ENV_VAR` undefiniert ist.

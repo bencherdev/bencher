@@ -1,121 +1,125 @@
 import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
 import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 
-### Бенчмарк форкнутых PR и загрузка из базовой ветки
+### Сравнительный анализ Fork PR и Загрузка с Основной Ветки
 
-Это безопасный и рекомендуемый способ добавления [Непрерывного бенчмаркинга][continuous benchmarking] к форкнутым pull request'ам.
-Требуется два отдельных потока работы (workflow).
-Первый поток работы запускается и кэширует результаты бенчмарка в контексте `pull_request`.
-Здесь недоступны секреты, такие как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`.
-Затем второй поток работы загружает кэшированные результаты бенчмарка в контексте `workflow_run` и загружает их в Bencher.
-Это работает, потому что `workflow_run` выполняется в контексте базовой ветки репозитория,
-где доступны секреты, такие как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`.
-Номер pull request'а, ветка исходной точки и базовая ветка, использованные в исходном потоке работы `pull_request`,
-также должны быть явно переданы в поток работы `workflow_run`, поскольку они там недоступны.
-Эти потоки работы будут выполняться только если они существуют в _базовой_ ветке.
-Смотрите [использование данных из инициирующего потока работы][github actions trigger workflow] для полного обзора.
+Это безопасный и рекомендуемый способ добавить [непрерывный сравнительный анализ][continuous benchmarking] в форки pull request-ов.
+Это требует двух отдельных рабочих процессов.
+Первый рабочий процесс выполняет и кеширует результаты сравнительного анализа в контексте `pull_request`.
+Там недоступны такие секреты, как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`.
+Затем второй рабочий процесс загружает кешированные результаты сравнительного анализа в контексте `workflow_run` и отправляет их в Bencher.
+Это работает, потому что `workflow_run` запускается в контексте основной ветки репозитория,
+где доступны такие секреты, как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`.
+Номер pull request, рабочая ветка и базовая ветка, использованные в изначальном рабочем процессе `pull_request`,
+также должны быть явно переданы в рабочий процесс `workflow_run`, так как они там недоступны.
+Эти рабочие процессы будут запускаться только если они существуют на основной ветке.
+См. [использование данных из вызывающего workflow][github actions trigger workflow] для полного обзора.
 
 <PullRequestsForkRunCode />
 
-1. Создайте первый файл потока работы GitHub Actions.
-   (например: `.github/workflows/run_fork_pr_benchmarks.yml`)
-2. Назовите этот поток работы, чтобы его можно было ссылать из второго потока.
-   (например: `name: Run and Cache Benchmarks`)
-3. Запускайте на событиях `pull_request`:
-    - `opened` - Был создан pull request.
-    - `reopened` - Ранее закрытый pull request был вновь открыт.
-    - `edited` - Были отредактированы заголовок или тело pull request'а, или была изменена базовая ветка pull request'а.
-    - `synchronize` - Была обновлена ветка исходной точки pull request'а.
-      Например, ветка исходной точки была обновлена из базовой ветки или в ветку исходной точки были отправлены новые коммиты.
+1. Создайте первый файл `workflow` для GitHub Actions.
+   (например, `.github/workflows/run_fork_pr_benchmarks.yml`)
+2. Назовите этот рабочий процесс, чтобы его можно было использовать во втором рабочем процессе.
+   (например, `name: Запуск и кеширование сравнительного анализа`)
+3. Запускайте на `pull_request` событиях:
+    - `opened` - Pull request был создан.
+    - `reopened` - ранее закрытый pull request был снова открыт.
+    - `edited` - Заголовок или содержимое pull request было отредактировано, либо базовая ветка pull request была изменена.
+    - `synchronize` - Рабочая ветка pull request была обновлена.
+      Например, рабочая ветка была обновлена от базовой ветки или в рабочую ветку были добавлены новые коммиты.
 
-   Смотрите [документацию GitHub Actions `on`][github actions on]
+   См. [документацию GitHub Actions `on`][github actions on]
    и [документацию GitHub Actions `pull_request`][github action pull_request] для полного обзора.
-   (например: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-4. Создайте задание (job) GitHub Actions.
-   (например: `jobs: benchmark_fork_pr_branch`)
-5. Укажите тип машины, на которой будет выполняться задание.
-   Смотрите [документацию GitHub Actions `runs-on`][github actions runs-on]
+   (например, `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. Создайте задачу для GitHub Actions.
+   (например, `jobs: benchmark_fork_pr_branch`)
+5. Установите тип машины, на которой будет выполняться задача.
+   См. [документацию GitHub Actions `runs-on`][github actions runs-on]
    для полного обзора.
-   (например: `runs-on: ubuntu-latest`)
-6. Выполните checkout исходного кода ветки PR форка.
-   (например: `uses: actions/checkout@v4`)
-7. Запустите ваши бенчмарки и сохраните результаты в файл.
-   (например: `/bin/echo '{ ... }' > benchmark_results.json`)
-8. Загрузите файл результатов бенчмарков как артефакт.
-   (например: `uses: actions/upload-artifact@v4`)
+   (например, `runs-on: ubuntu-latest`)
+6. Выполните checkout исходного кода ветки fork PR.
+   (например, `uses: actions/checkout@v4`)
+7. Запустите ваши сравнительные тесты и сохраните результаты в файл.
+   (например, `/bin/echo '{ ... }' > benchmark_results.json`)
+8. Загрузите файл с результатами сравнительного анализа как артефакт.
+   (например, `uses: actions/upload-artifact@v4`)
 9. Загрузите объект события `pull_request` как артефакт.
-  (например: `uses: actions/upload-artifact@v4`)
+  (например, `uses: actions/upload-artifact@v4`)
 
 <PullRequestsForkTrackCode />
 
-1. Создайте второй файл потока работы GitHub Actions.
-   (например: `.github/workflows/track_fork_pr_benchmarks.yml`)
-2. Назовите этот поток вторым потоком работы.
-   (например: `name: Track Benchmarks with Bencher`)
-3. Свяжите два потока работы событием
-   [the `workflow_run` event][github actions workflow_run].
-   (например: `on: workflow_run: ...`)
-4. Создайте задание (job) GitHub Actions.
-   (например: `jobs: track_fork_pr_branch`)
-5. Запустите это задание только если предыдущий поток работы завершился успешно, используя
+1. Создайте второй файл `workflow` для GitHub Actions.
+   (например, `.github/workflows/track_fork_pr_benchmarks.yml`)
+2. Назовите этот второй рабочий процесс.
+   (например, `name: Отслеживание сравнительных анализов с помощью Bencher`)
+3. Свяжите два рабочих процесса с помощью
+   [события `workflow_run`][github actions workflow_run].
+   (например, `on: workflow_run: ...`)
+4. Создайте задачу для GitHub Actions.
+   (например, `jobs: track_fork_pr_branch`)
+5. Запускайте эту задачу только если выполнение предыдущего рабочего процесса было успешным, используя
    [событие GitHub Actions `workflow_run`][github actions workflow_run].
-   (например: `if: github.event.workflow_run.conclusion == 'success'`)
-6. Укажите тип машины, на которой будет выполняться задание.
-   Смотрите [документацию GitHub Actions `runs-on`][github actions runs-on]
+   (например, `if: github.event.workflow_run.conclusion == 'success'`)
+6. Установите тип машины, на которой будет выполняться задача.
+   См. [документацию GitHub Actions `runs-on`][github actions runs-on]
    для полного обзора.
-   (например: `runs-on: ubuntu-latest`)
-7. Установите имена файлов результатов бенчмарков и объекта события `pull_request` в качестве переменных окружения.
-   (например: `env: ...`)
-8. Загрузите кэшированные результаты бенчмарков и `pull_request` событие.
-   (например: `uses: actions/github-script@v6`)
-9. Извлеките кэшированные результаты бенчмарков и событие `pull_request`.
-   (например: `unzip ...`)
-10. Экспортируйте необходимые данные из события `pull_request` в качестве переменных окружения.
-    (например: `core.exportVariable(...)`)
-11. Установите CLI Bencher, используя [GitHub Action][bencher cli github action].
-   (например: `uses: bencherdev/bencher@main`)
-12. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
-    для отслеживания бенчмарков веток с форком pull request.
-    Смотрите [подкоманда CLI `bencher run`][bencher run] для полного обзора.
-    (например: `bencher run`)
-13. Установите параметр `--project` для идентификатора проекта.
-    Смотрите [документацию `--project`][project option] для дополнительных сведений.
-    (например: `--project save-walter-white-1234abcd`)
-14. Установите параметр `--token` для **секрета репозитория** `BENCHER_API_TOKEN`.
-    Смотрите документацию `--token`][token option] для дополнительных сведений.
-    (например: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-15. Установите параметр `--branch` для форматированного номера PR форка, используя
+   (например, `runs-on: ubuntu-latest`)
+7. Установите имена файлов с результатами сравнительного анализа и объектом события `pull_request` как переменные окружения.
+   (например, `env: ...`)
+8. Загрузите кешированные результаты сравнительного анализа и событие `pull_request`.
+   (например, `uses: actions/github-script@v6`)
+9. Распакуйте кешированные результаты сравнительного анализа и событие `pull_request`.
+   (например, `unzip ...`)
+10. Экспортируйте необходимые данные из события `pull_request` как переменные окружения.
+    (например, `core.exportVariable(...)`)
+11. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
+   (например, `uses: bencherdev/bencher@main`)
+12. Используйте подкоманду <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> CLI
+    для отслеживания ваших бенчмарков из ветки fork pull request.
+    См. [подкоманду `bencher run` CLI][bencher run] для полного обзора.
+    (например, `bencher run`)
+13. Установите опцию `--project` на slug проекта.
+    См. [документацию по опции `--project`][project option] для более подробной информации.
+    (например, `--project save-walter-white-1234abcd`)
+14. Установите опцию `--token` на секрет **Repository** `BENCHER_API_TOKEN`.
+    См. [документацию по опции `--token`][token option] для более подробной информации.
+    (например, `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. Установите опцию `--branch` на отформатированный номер fork PR, используя
     [событие GitHub Actions `pull_request`][github action pull_request].
-    Смотрите [выбор ветки][branch selection branch] для полного обзора.
-    (например: `--branch '${{ env.PR_HEAD }}'`)
-16. Установите параметр `--branch-start-point` для точки начала базовой ветки форка PR, используя
+    См. [выбор ветки][branch selection branch] для полного обзора.
+    (например, `--branch '${{ env.PR_HEAD }}'`)
+16. Установите опцию `--branch-start-point` на начальную точку базовой ветки fork PR, используя
     [событие GitHub Actions `pull_request`][github action pull_request].
-    Смотрите [выбор ветки][branch selection start point] для полного обзора.
-    (например: `--branch-start-point '${{ env.PR_BASE }}'`)
-17. Установите параметр `--branch-start-point-hash` для хэша точки начала базовой ветки форка PR, используя
+    См. [выбор ветки][branch selection start point] для полного обзора.
+    (например, `--branch-start-point '${{ env.PR_BASE }}'`)
+17. Установите опцию `--branch-start-point-hash` на хэш начальной точки базовой ветки fork PR, используя
     [событие GitHub Actions `pull_request`][github action pull_request].
-    Смотрите [выбор ветки][branch selection start point hash] для полного обзора.
-    (например: `--branch-start-point-hash '${{ env.PR_BASE_SHA }}'`)
-18. Установите параметр `--testbed` для названия тестовой среды.
-    Это, вероятно, должно совпадать с машиной, выбранной в `runs-on`.
-    Смотрите [документацию `--testbed`][testbed option] для дополнительных сведений.
-    (например: `--testbed ubuntu-latest`)
-19. Установите параметр `--adapter` для желаемого адаптера бенчмаркинга.
-    Смотрите [адаптеры бенчмаркинга][adapters] для полного обзора.
-    (например: `--adapter json`)
-20. Установите флаг `--err`, чтобы команда завершилась с ошибкой, если сгенерировано предупреждение.
-    Смотрите [Пороги и предупреждения][alerts] для полного обзора.
-    (например: `--err`)
-21. Установите параметр `--github-actions` для аутентификационного токена API GitHub для публикации результатов в качестве комментария к Pull Request, используя
-    [переменную окружения GitHub Actions `GITHUB_TOKEN`][github token].
-    Смотрите [документацию `--github-actions`][github actions option] для дополнительных сведений.
-    (например: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-22. Установите параметр `--ci-number` для номера pull request'а.
-    Смотрите [документацию `--ci-id`][ci number option] для дополнительных сведений.
-    (например: `--ci-number '${{ env.PR_NUMBER }}'`)
-23. Установите параметр `--file` для пути к файлу с результатами бенчмарков.
-    Смотрите [команду benchmark][command argument] для полного обзора.
-    (например: `--file "$BENCHMARK_RESULTS"`)
+    См. [выбор ветки][branch selection start point hash] для полного обзора.
+    (например, `--branch-start-point-hash '${{ env.PR_BASE_SHA }}'`)
+18. Установите флаг `--branch-reset`, чтобы всегда сбрасывать ветку до начальной точки.
+    Это предотвратит дрейф данных бенчмарков.
+    См. [выбор ветки][branch selection branch reset] для полного обзора.
+    (например, `--branch-reset`)
+19. Установите опцию `--testbed` на имя тестовой машины.
+    Это должно соответствовать выбранной машине в `runs-on`.
+    См. [документацию по опции `--tested`][testbed option] для более подробной информации.
+    (например, `--testbed ubuntu-latest`)
+20. Установите опцию `--adapter` на нужный адаптер сравнительного анализа.
+    См. [адаптеры сравнительного анализа][adapters] для полного обзора.
+    (например, `--adapter json`)
+21. Установите флаг `--err`, чтобы команда завершалась неудачей, если сгенерировано предупреждение.
+    См. [Пороги и Предупреждения][alerts] для полного обзора.
+    (например, `--err`)
+22. Установите опцию `--github-actions` на токен аутентификации GitHub API, чтобы опубликовать результаты в виде комментария к pull request, используя
+    [переменную окружения `GITHUB_TOKEN` GitHub Actions][github token].
+    См. [документацию по опции `--github-actions`][github actions option] для более подробной информации.
+    (например, `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+23. Установите опцию `--ci-number` на номер pull request.
+    См. [документацию по опции `--ci-number`][ci number option] для более подробной информации.
+    (например, `--ci-number '${{ env.PR_NUMBER }}'`)
+24. Установите опцию `--file` на путь к файлу с результатами сравнительного анализа.
+    См. [команду сравнения][command argument] для полного обзора.
+    (например, `--file "$BENCHMARK_RESULTS"`)
 
 
 [github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
@@ -133,6 +137,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [branch selection branch]: /ru/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /ru/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /ru/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /ru/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /ru/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /ru/docs/explanation/adapters/
 [alerts]: /ru/docs/explanation/thresholds/#alerts

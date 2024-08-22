@@ -2,18 +2,18 @@
 
 <br />
 
-Utilisez le nom de la branche spécifiée, le slug ou l'UUID comme [Point de Départ][point de départ] pour l'option [`branch`](#--branch-branch).
-Pour GitHub, il s'agit généralement [de la branche `base` pour une Pull Request][base github],
-et pour GitLab, il s'agit généralement [de la branche `cible` pour une Merge Request][cible gitlab].
-Le principal cas d'utilisation de `--branch-start-point` est le [Benchmarking Continu Statistique](/fr/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
+Utilisez le nom de branche, le slug ou l'UUID spécifié comme [Point de Départ][start point] pour l'option [`branch`](#--branch-branch).
+Pour GitHub, il s'agit généralement de [la branche de `base` pour une Pull Request][github base],
+et pour GitLab, il s'agit généralement de [la branche `cible` pour une Merge Request][gitlab target].
+Le cas d'utilisation principal pour `--branch-start-point` est [Benchmarking Continu Statistique](/fr/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
 
 - Si le Point de Départ spécifié est une chaîne vide, alors cette option est ignorée.
-- Si `branch` n'existe pas, elle sera créée en utilisant ce Point de Départ.
-- Si `branch` existe déjà et que le Point de Départ est le même, alors cette option est ignorée.
-- Si `branch` existe déjà et que le Point de Départ est différent,
-  l'ancienne version de `branch` sera renommée
+- Si `branch` n'existe pas, il sera créé en utilisant ce Point de Départ.
+- Si `branch` existe et que le Point de Départ est le même, alors cette option est ignorée.
+- Si `branch` existe et que le Point de Départ est différent,
+  l'ancienne version de `branch` sera à la fois renommée et archivée,
   et une nouvelle `branch` sera créée en utilisant ce Point de Départ mis à jour.
-- Si `branch` n'existe pas et que le Point de Départ n'existe pas,
+- Si `branch` n'existe pas et si le Point de Départ n'existe pas non plus,
   alors la `branch` sera créée sans aucune donnée historique.
 - Si `branch` existe et que le Point de Départ n'existe pas,
   alors cette option est ignorée.
@@ -21,18 +21,18 @@ Le principal cas d'utilisation de `--branch-start-point` est le [Benchmarking Co
 Si une nouvelle `branch` est créée avec un Point de Départ,
 alors toutes les données et les Seuils du Point de Départ spécifié sont copiés.
 
-Par exemple, si `feature_branch` n'existe pas encore, mais `main` existe et possède des données historiques.
-Alors utiliser `--branch feature_branch --branch-start-point main` :
-1. Créera une nouvelle Branche nommée `feature_branch`
-2. Copiera toutes les données et les Seuils de `main` à `feature_branch`
-3. `bencher run` se poursuivra en utilisant `feature_branch`
+Par exemple, si `feature_branch` n'existe pas encore, mais que `main` existe et possède des données historiques.
+Alors utiliser `--branch feature_branch --branch-start-point main` ferait :
+1. Créer une nouvelle branche nommée `feature_branch`
+2. Copier toutes les données et les Seuils de `main` vers `feature_branch`
+3. `bencher run` se poursuivrait en utilisant `feature_branch`
 
-[base github]: https://docs.github.com/fr/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
-[cible gitlab]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
 
-[point de départ]: /fr/docs/explanation/benchmarking/#start-point
+[start point]: /fr/docs/explanation/benchmarking/#start-point
 
 <br />
 
-> 🐰 Note : Lorsque vous utilisez des variables d'environnement, elles doivent être entourées de guillemets doubles (par exemple `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
+> 🐰 Note : Lors de l'utilisation de variables d'environnement, elles doivent être entourées de guillemets doubles (c'est-à-dire `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
 > si vous souhaitez que `bencher run` ne génère pas d'erreur lorsque `MY_BRANCH_ENV_VAR` n'est pas défini.

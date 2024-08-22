@@ -2,30 +2,24 @@
 
 <br />
 
-`branch` 옵션을 위한 시작점으로 지정된 전체 Git 해쉬를 사용하십시오.
-이 옵션은 [`--branch-start-point`][branch start point] 옵션이 설정되어야 합니다.
+지정된 전체 Git 해시를 `branch` 옵션의 [시작 지점][start point]으로 사용합니다.
+이 옵션을 사용하려면 [`--branch-start-point`][branch start point] 옵션을 설정해야 합니다.
 
-- `branch`가 존재하지 않는 경우, 지정된 해쉬에서 `branch-start-point`를 기반으로 생성됩니다.
-- `branch`가 이미 존재하고 `branch-start-point`와 지정된 해쉬가 동일한 경우,
-  이 옵션은 무시됩니다.
-- `branch`가 이미 존재하고 `branch-start-point`나 지정된 해쉬 중 하나라도 다른 경우,
-  이전 버전의 `branch`는 이름이 변경되고
-  지정된 해쉬에서 `branch-start-point`를 기반으로 새로운 `branch`가 생성됩니다.
-- `branch`가 존재하지 않고 지정된 해시에서 `branch-start-point`가 존재하지 않으면,
-  `branch`는 역사 데이터 없이 생성됩니다.
-- `branch`가 존재하고 지정된 해시에서 `branch-start-point`가 존재하지 않으면,
-  이 옵션은 무시됩니다.
+- `branch`가 존재하지 않으면 지정된 해시에서 `branch-start-point`로부터 생성됩니다.
+- `branch`가 존재하고 `branch-start-point`와 지정된 해시가 모두 동일하면, 이 옵션은 무시됩니다.
+- `branch`가 이미 존재하고 `branch-start-point` 또는 지정된 해시가 다르면, 기존 `branch`는 이름이 변경되고 보관되며, 새 `branch`가 지정된 해시에서 `branch-start-point`로부터 생성됩니다.
+- `branch`가 존재하지 않고 지정된 해시에서 `branch-start-point`가 존재하지 않으면, `branch`는 역사 데이터 없이 생성됩니다.
+- `branch`가 존재하고 지정된 해시에서 `branch-start-point`가 존재하지 않으면, 이 옵션은 무시됩니다.
 
-새로운 `branch`가 시작점으로 생성된 경우,
-지정된 해쉬에서 `branch-start-point`의 모든 데이터와 임계값이 복사됩니다.
+새 `branch`가 시작 지점으로 생성된 경우, 지정된 해시의 `branch-start-point`로부터 모든 데이터와 임계값이 복사됩니다.
 
-예를 들어, `feature_branch`가 `main` Branch의 시작점이 되는 해쉬 `32aea434d751648726097ed3ac760b57107edd8b`와 함께 존재한다면
-`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`을 사용하면:
+예를 들어, `feature_branch`가 존재하고 그 시작 지점이 해시 `32aea434d751648726097ed3ac760b57107edd8b`에 있는 `main` Branch라면
+`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562` 옵션을 사용하면 다음과 같은 일이 발생합니다:
 
-1. 이전 `feature_branch`의 이름을 `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`로 변경합니다.
-2. `feature_branch`라는 새 Branch를 생성합니다.
-3. 해쉬 `68b12758509ca5e2b1e3983525625e532eb5f562`에서 `main`의 모든 데이터와 임계값을 새 `feature_branch`로 복사합니다.
-4. `bencher 실행`은 새로운 `feature_branch`를 사용하여 진행됩니다.
+1. 기존 `feature_branch`를 `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`로 이름을 바꾸고 보관합니다.
+2. `feature_branch`라는 새로운 브랜치를 생성합니다.
+3. `main`의 해시 `68b12758509ca5e2b1e3983525625e532eb5f562`에 있는 모든 데이터와 임계값을 새로운 `feature_branch`에 복사합니다.
+4. `bencher run`이 새 `feature_branch`를 사용하여 진행됩니다.
 
 [start point]: /ko/docs/explanation/benchmarking/#start-point
 

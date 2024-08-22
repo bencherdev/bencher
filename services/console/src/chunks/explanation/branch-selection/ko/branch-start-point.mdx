@@ -2,30 +2,29 @@
 
 <br />
 
-지정된 브랜치 이름, 슬러그, 또는 UUID를 [`branch`](#--branch-branch) 옵션의 [시작 지점][start point]으로 사용하십시오.
-GitHub의 경우, 주로 [풀 리퀘스트를 위한 `base` 브랜치][github base]가 되며,
-GitLab의 경우는 주로 [머지 리퀘스트를 위한 `target` 브랜치][gitlab target]가 됩니다.
+지정된 브랜치 이름, 슬러그 또는 UUID를 [`branch`](#--branch-branch) 옵션의 [시작 지점][start point]으로 사용하세요.
+GitHub의 경우, 이는 주로 [Pull Request의 `기본` 브랜치][github base]이며,
+GitLab의 경우, 이는 주로 [Merge Request의 `대상` 브랜치][gitlab target]입니다.
 `--branch-start-point`의 주요 사용 사례는 [통계적 지속 벤치마킹](/ko/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking)입니다.
 
-- 지정된 시작 지점이 빈 문자열인 경우 이 옵션은 무시됩니다.
+- 지정된 시작 지점이 빈 문자열인 경우, 이 옵션은 무시됩니다.
 - `branch`가 존재하지 않는 경우, 이 시작 지점을 사용하여 생성됩니다.
-- `branch`가 존재하고 시작 지점이 같은 경우, 이 옵션은 무시됩니다.
+- `branch`가 존재하고 시작 지점이 동일한 경우, 이 옵션은 무시됩니다.
 - `branch`가 존재하고 시작 지점이 다른 경우,
-  기존의 `branch`는 이름이 변경되고
-  이 새로운 시작 지점을 사용하여 새로운 `branch`가 생성됩니다.
-- `branch`가 존재하지 않고 시작 지점이 존재하지 않으면,
-  `branch`는 어떤 히스토리 데이터 없이 생성됩니다.
-- `branch`가 존재하고 시작 지점이 존재하지 않으면,
+  기존 `branch`는 이름이 변경되고 아카이브되며, 업데이트된 시작 지점을 사용하여 새로운 `branch`가 생성됩니다.
+- `branch`가 존재하지 않고 시작 지점이 존재하지 않는 경우,
+  `branch`는 어떠한 히스토리 데이터도 없이 생성됩니다.
+- `branch`가 존재하고 시작 지점이 존재하지 않는 경우,
   이 옵션은 무시됩니다.
 
-시작 지점을 가진 새로운 `branch`가 생성되면,
-지정된 시작 지점에서 모든 데이터와 임계값이 복사됩니다.
+새로운 `branch`가 시작 지점을 사용하여 생성된 경우,
+지정된 시작 지점의 모든 데이터와 임계값이 복사됩니다.
 
-예를 들어, `feature_branch`가 아직 존재하지 않지만 `main`은 존재하고 이력 데이터가 있는 경우,
+예를 들어, `feature_branch`가 아직 존재하지 않지만 `main`이 존재하고 히스토리 데이터를 가지고 있는 경우.
 `--branch feature_branch --branch-start-point main`을 사용하면:
-1. `feature_branch`라는 새 브랜치를 생성합니다
-2. `main`에서 모든 데이터와 임계값을 `feature_branch`로 복사합니다
-3. `bencher run`은 `feature_branch`를 사용하여 진행됩니다
+1. `feature_branch`라는 새 브랜치가 생성됩니다.
+2. `main`의 모든 데이터와 임계값이 `feature_branch`로 복사됩니다.
+3. `bencher run`이 `feature_branch`를 사용하여 진행됩니다.
 
 [github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
 [gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
@@ -34,5 +33,5 @@ GitLab의 경우는 주로 [머지 리퀘스트를 위한 `target` 브랜치][gi
 
 <br />
 
-> 🐰 참고: 환경 변수를 사용할 때는 반드시 이중 인용 부호로 감싸주어야 합니다(예: `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
-> 만약 `MY_BRANCH_ENV_VAR`이 정의되어 있지 않을 때 `bencher run`이 오류를 내지 않기를 원한다면.
+> 🐰 참고: 환경 변수를 사용할 때는 항상 큰따옴표로 감싸야 합니다 (예: `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
+> `MY_BRANCH_ENV_VAR`가 정의되지 않은 경우에도 `bencher run`이 오류를 발생하지 않도록 하려면 큰따옴표를 사용하세요.

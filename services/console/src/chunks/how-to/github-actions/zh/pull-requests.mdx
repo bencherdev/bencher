@@ -2,87 +2,82 @@ import PullRequestsCode from "../pull-requests-code.mdx";
 
 ## 拉取请求
 
-为了在拉取请求中捕获性能回归，您需要在 PR 上运行您的基准测试。
-如果您只期望从**同一个**仓库的分支中收到 PR，
-那么您只需创建另一个工作流来`on`来自同一个仓库的 `pull_request` 事件即可。
+为了在拉取请求中捕获性能回归，您需要在拉取请求上运行基准测试。
+如果您只期望有来自**同一**存储库的分支的拉取请求，
+那么您可以简单地创建另一个工作流程来处理来自同一存储库的 `pull_request` 事件。
 
-> ⚠️ 此方案仅适用于所有 PR 都来自**同一个**仓库的情况！
-> 参见下文的[来自 Fork 的拉取请求][pull requests from forks]。
+> ⚠️ 此解决方案仅适用于所有拉取请求都来自**同一**存储库的情况！
+> 请参阅下面的 [从派生库的拉取请求][pull requests from forks]。
 
 <PullRequestsCode />
 
-1. 创建一个 GitHub Actions `workflow` 文件。
-   （例如：`.github/workflows/pr_benchmarks.yml`）
-2. 针对 `pull_request` 事件运行：
+1. 创建一个 GitHub Actions `workflow` 文件 (例如 `.github/workflows/pr_benchmarks.yml`)。
+2. 在 `pull_request` 事件上运行：
     - `opened` - 创建了一个拉取请求。
-    - `reopened` - 重新打开了之前关闭的拉取请求。
-    - `edited` - 编辑了拉取请求的标题或正文，或者更改了拉取请求的基础分支。
+    - `reopened` - 重新打开了一个之前关闭的拉取请求。
+    - `edited` - 编辑了拉取请求的标题或正文，或修改了拉取请求的基线分支。
     - `synchronize` - 更新了拉取请求的头分支。
-      例如，从基础分支更新了头分支，或者向头分支推送了新的提交。
+      例如，头分支从基线分支更新或向头分支推送了新的提交。
 
-   参见 [GitHub Actions 的 `on` 文档][github actions on]
-   和 [GitHub Actions 的 `pull_request` 文档][github action pull_request] 以获得完整概述。
-   （例如：`on: pull_request: types: [opened, reopened, edited, synchronize]`）
-3. 创建一个 GitHub Actions `job`。
-   （例如：`jobs: benchmark_pr_branch`）
-4. 仅当拉取请求来自同一个仓库时在 `pull_request` 事件上运行。
+   请参阅 [GitHub Actions `on` 文档][github actions on]
+   和 [GitHub Actions `pull_request` 文档][github action pull_request] 以了解完整概述。
+   (例如 `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+3. 创建一个 GitHub Actions `job`。(例如 `jobs: benchmark_pr_branch`)
+4. 仅在拉取请求来自同一存储库的情况下触发 `pull_request` 事件。
    ⚠️ 不要删除此行！
-   对于处理 Fork 中的 PR，请参见下文的[来自 Fork 的拉取请求][pull requests from forks]。
-   （例如：`if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`）
-5. 将 `GITHUB_TOKEN` 的[权限设置][github token permissions]
-   为对 `pull-requests` 的 `write`。
-   根据您的 GitHub 设置，这可能不是必需的。
-   但是对于所有组织和
-   [2023年2月2日之后创建的个人库][github token read only]，
+   关于处理派生库拉取请求，请参阅下面的 [从派生库的拉取请求][pull requests from forks]。
+   (例如 `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. 将 [`GITHUB_TOKEN` 的权限][github token permissions] 设置为 `write` 以处理 `pull-requests`。
+   根据您的 GitHub 设置，这可能不是必须的。
+   但对于 2023 年 2 月 2 日之后创建的所有组织和个人仓库，
    这是默认行为。
-   参见 [GitHub 文档][github token permissions security] 以获得完整概述。
-   （例如：`permissions: pull-requests: write`）
-6. 设置任务将在哪种类型的机器上运行。
-   参见 [GitHub Actions 的 `runs-on` 文档][github actions runs-on] 以获得完整概述。
-   （例如：`runs-on: ubuntu-latest`）
-7. 检出 PR 分支的源代码。
-   （例如：`uses: actions/checkout@v4`）
+   请参阅 [GitHub 文档][github token permissions security] 以了解完整概述。
+   (例如 `permissions: pull-requests: write`)
+6. 设置工作将运行的机器类型。
+   请参阅 [GitHub Actions `runs-on` 文档][github actions runs-on] 以了解完整概述。
+   (例如 `runs-on: ubuntu-latest`)
+7. 签出拉取请求分支的源代码。
+   (例如 `uses: actions/checkout@v4`)
 8. 使用 [GitHub Action][bencher cli github action] 安装 Bencher CLI。
-   （例如：`uses: bencherdev/bencher@main`）
-9. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令
-   运行您的拉取请求分支基准测试。
-   参见 [`bencher run` CLI 子命令][bencher run] 以获得完整概述。
-   （例如：`bencher run`）
-10. 将 `--project` 选项设置为项目的别名。
-    参见 [`--project` 文档][project option] 获取更多细节。
-    （例如：`--project save-walter-white-1234abcd`）
-11. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **仓库**密钥。
-    参见 [`--token` 文档][token option] 获取更多细节。
-    （例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`）
-12. 使用
-    [GitHub Actions `github` 上下文][github actions context] 将 `--branch` 选项设置为 PR 分支名称。
-    参见 [分支选择][branch selection branch] 获取完整概述。
-    （例如：`--branch '${{ github.head_ref }}'`）
-13. 使用
-    [GitHub Actions `github` 上下文][github actions context] 将 `--branch-start-point` 选项设置为 PR 基础分支开始点。
-    参见 [分支选择][branch selection start point] 获取完整概述。
-    （例如：`--branch-start-point '${{ github.base_ref }}'`）
-14. 使用
-    [GitHub Actions `pull_request` 事件][github action pull_request] 将 `--branch-start-point-hash` 选项设置为 PR 基础分支开始点的哈希值。
-    参见 [分支选择][branch selection start point hash] 获取完整概述。
-    （例如：`--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`）
-15. 将 `--testbed` 选项设置为测试床名称。
+   (例如 `uses: bencherdev/bencher@main`)
+9. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令运行您的拉取请求分支基准测试。
+   请参阅 [`bencher run` CLI 子命令][bencher run] 以了解完整概述。
+   (例如 `bencher run`)
+10. 将 `--project` 选项设置为项目 slug。
+    有关详细信息，请参阅 [`--project` 文档][project option]。
+    (例如 `--project save-walter-white-1234abcd`)
+11. 将 `--token` 选项设置为 **Repository** 秘密的 `BENCHER_API_TOKEN`。
+    有关详细信息，请参阅 [`--token` 文档][token option]。
+    (例如 `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+12. 使用 [GitHub Actions `github` 上下文][github actions context] 将 `--branch` 选项设置为拉取请求分支名称。
+    请参阅 [分支选择][branch selection branch] 以了解完整概述。
+    (例如 `--branch '${{ github.head_ref }}'`)
+13. 使用 [GitHub Actions `github` 上下文][github actions context] 将 `--branch-start-point` 选项设置为拉取请求基线分支起点。
+    请参阅 [分支选择][branch selection start point] 以了解完整概述。
+    (例如 `--branch-start-point '${{ github.base_ref }}'`)
+14. 使用 [GitHub Actions `pull_request` 事件][github action pull_request] 将 `--branch-start-point-hash` 选项设置为拉取请求基线分支起点哈希值。
+    请参阅 [分支选择][branch selection start point hash] 以了解完整概述。
+    (例如 `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
+15. 设置 `--branch-reset` 标志以始终将分支重置为起点。
+    这将防止基准数据漂移。
+    请参阅 [分支选择][branch selection branch reset] 以了解完整概述。
+    (例如 `--branch-reset`)
+16. 将 `--testbed` 选项设置为 Testbed 名称。
     这应该与 `runs-on` 中选择的机器相匹配。
-    参见 [`--tested` 文档][testbed option] 获取更多细节。
-    （例如：`--testbed ubuntu-latest`）
-16. 将 `--adapter` 选项设置为所需的基准测试适配器。
-    参见 [基准测试适配器][adapters] 获取完整概述。
-    （例如：`--adapter json`）
-17. 如果生成了警报，则设置 `--err` 标志以使命令失败。
-    参见 [阈值与警报][alerts] 获取完整概述。
-    （例如：`--err`）
-18. 将 `--github-actions` 选项设置为 GitHub API 认证令牌，使用
-    [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 在拉取请求上发布结果作为评论。
-    参见 [`--github-actions` 文档][github actions option] 获取更多细节。
-    （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
-19. 指定基准测试命令参数。
-    参见 [基准测试命令][command argument] 获取完整概述。
-    （例如：`bencher mock`）
+    有关详细信息，请参阅 [`--testbed` 文档][testbed option]。
+    (例如 `--testbed ubuntu-latest`)
+17. 将 `--adapter` 选项设置为所需的基准测试适配器。
+    有关详细信息，请参阅 [基准测试适配器][adapters]。
+    (例如 `--adapter json`)
+18. 设置 `--err` 标志，当生成警报时命令失败。
+    有关详细信息，请参阅 [阈值与警报][alerts]。
+    (例如 `--err`)
+19. 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 作为评论将结果发布到拉取请求。
+    请参阅 [`--github-actions` 文档][github actions option] 以了解完整概述。
+    (例如 `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+20. 指定基准测试命令参数。
+    有关详细信息，请参阅 [基准测试命令][command argument] 。
+    (例如 `bencher mock`)
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
@@ -100,6 +95,7 @@ import PullRequestsCode from "../pull-requests-code.mdx";
 [branch selection branch]: /zh/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /zh/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /zh/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /zh/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /zh/docs/explanation/adapters/
 [alerts]: /zh/docs/explanation/thresholds/#alerts

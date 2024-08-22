@@ -2,23 +2,22 @@
 
 <br />
 
-重置指定的`branch`。
-`--branch-reset`的主要用例是[相对持续基准测试][相对持续基准测试]。
-此标志与[`--branch-start-point`][分支起点]选项相冲突。
+重置指定的 `branch`。当设置了 [`--branch-start-point`][branch start point] 选项时，`branch` 将被重置到指定的起点。这对于防止 [Statistical Continuous Benchmarking][statistical continuous benchmarking] 数据漂移非常有用。未指定起点时使用 `--branch-reset` 的主要用例是 [Relative Continuous Benchmarking][relative continuous benchmarking]。
 
-- 如果`branch`不存在，将被创建。
-- 如果`branch`已存在，原有版本的`branch`将被重命名，
-  并且将创建新的`branch`。
+- 如果 `branch` 不存在且未指定起点，将创建无任何历史数据的 `branch`。
+- 如果 `branch` 存在且未指定起点，旧版本的 `branch` 将被重命名和归档，并创建一个无任何历史数据的新 `branch`。
+- 如果 `branch` 不存在且指定了起点，将使用起点创建 `branch`。
+- 如果 `branch` 存在且指定了起点，旧版本的 `branch` 将被重命名和归档，并使用起点创建新的 `branch`。
 
-当新的`branch`被创建时，它不会有历史数据或阈值。
+若使用起点创建了新的 `branch`，则会复制指定起点的所有数据和阈值。否则，将创建无任何历史数据的 `branch`。
 
-例如，如果`feature_branch`存在而没有起点，
-那么使用`--branch feature_branch --branch-reset`将会：
+例如，如果 `feature_branch` 存在且无指定起点，则使用 `--branch feature_branch --branch-reset` 会：
 
-1. 将旧的`feature_branch`重命名为`feature_branch@detached`
-2. 创建一个名为`feature_branch`的新分支
-3. `bencher run`将使用新的`feature_branch`继续进行
+1. 将旧的 `feature_branch` 重命名为 `feature_branch@detached` 并归档
+2. 创建一个名为 `feature_branch` 的新分支
+3. `bencher run` 将使用新的 `feature_branch` 继续进行
 
-[相对持续基准测试]: /zh/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[statistical continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
 
-[分支起点]: #--branch-start-point-branch
+[branch start point]: #--branch-start-point-branch

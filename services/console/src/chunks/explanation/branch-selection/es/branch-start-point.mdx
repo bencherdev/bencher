@@ -2,37 +2,37 @@
 
 <br />
 
-Utilice el nombre de la Rama, slug o UUID especificado como el [Punto de Inicio][punto de inicio] para la opción [`branch`](#--branch-branch).
-Para GitHub, esto suele ser [la `base` branch para una Pull Request][github base],
-y para GitLab, esto suele ser [la `branch` objetivo para una Merge Request][gitlab target].
+Utilice el nombre de Branch especificado, slug o UUID como el [Punto de Inicio][start point] para la opción [`branch`](#--branch-branch).
+Para GitHub, esto es usualmente [la `base` branch para un Pull Request][github base],
+y para GitLab, esto es usualmente [la `target` branch para un Merge Request][gitlab target].
 El caso de uso principal para `--branch-start-point` es [Benchmarking Continuo Estadístico](/es/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
 
 - Si el Punto de Inicio especificado es una cadena vacía, entonces esta opción se ignora.
 - Si `branch` no existe, se creará usando este Punto de Inicio.
-- Si `branch` ya existe y el Punto de Inicio es el mismo, entonces esta opción se ignora.
-- Si `branch` ya existe y el Punto de Inicio es diferente,
-  la versión antigua de `branch` será renombrada
-  y se creará una nueva `branch` usando este Punto de Inicio actualizado.
+- Si `branch` existe y el Punto de Inicio es el mismo, entonces esta opción se ignora.
+- Si `branch` existe y el Punto de Inicio es diferente,
+  la versión antigua de `branch` será renombrada y archivada,
+  y una nueva `branch` será creada usando este Punto de Inicio actualizado.
 - Si `branch` no existe y el Punto de Inicio no existe,
-  entonces el `branch` se creará sin ningún dato histórico.
+  entonces la `branch` será creada sin ningún dato histórico.
 - Si `branch` existe y el Punto de Inicio no existe,
   entonces esta opción se ignora.
 
 Si se crea una nueva `branch` con un Punto de Inicio,
 entonces todos los datos y Umbrales del Punto de Inicio especificado se copian.
 
-Por ejemplo, si `feature_branch` aún no existe, pero `main` existe y tiene datos históricos.
-Entonces, usando `--branch feature_branch --branch-start-point main` se:
-1. Crearía una nueva Rama llamada `feature_branch`
-2. Copiaría todos los datos y Umbrales de `main` a `feature_branch`
+Por ejemplo, si `feature_branch` no existe aún, pero `main` sí existe y tiene datos históricos.
+Entonces, usar `--branch feature_branch --branch-start-point main` haría:
+1. Crear una nueva Branch llamada `feature_branch`
+2. Copiar todos los datos y Umbrales de `main` a `feature_branch`
 3. `bencher run` procedería usando `feature_branch`
 
 [github base]: https://docs.github.com/es/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
 [gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
 
-[punto de inicio]: /es/docs/explanation/benchmarking/#start-point
+[start point]: /es/docs/explanation/benchmarking/#start-point
 
 <br />
 
-> 🐰 Nota: Siempre que se utilicen variables de entorno, se deben envolver entre comillas dobles (es decir, `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
-> si desea que `bencher run` no falle cuando `MY_BRANCH_ENV_VAR` esté indefinido.
+> 🐰 Nota: Siempre que use variables de entorno, deben estar entre comillas dobles (es decir, `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
+> si desea que `bencher run` no arroje un error cuando `MY_BRANCH_ENV_VAR` no esté definida.

@@ -1,17 +1,18 @@
-Una Rama es la referencia `git` (es decir, nombre de la rama o etiqueta).
-Al usar el subcomando de la interfaz de línea de comandos <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
-selecciona una Rama con la opción `--branch` o la variable de entorno `BENCHER_BRANCH`.
-Por defecto, todos los proyectos comienzan con una Rama `main`, y
-`main` se utiliza por defecto si no se especifica ninguna.
+A Branch es la referencia de `git` (es decir, el nombre de la rama o la etiqueta).
+Al usar el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
+selecciona una Branch con la opción `--branch` o la variable de entorno `BENCHER_BRANCH`.
+De forma predeterminada, todos los proyectos comienzan con una Branch `main`, y
+`main` se usa por defecto si no se especifica ninguna.
 
-Cuando se realiza [Benchmarking Continuo][continuous benchmarking], es decir, benchmarking en CI,
-a menudo querrás crear o rebase una `branch` en una Rama ya existente.
-Esto se llama un Punto de Inicio de Rama [Start Point][start point].
-Un Punto de Inicio es otra Rama en una versión específica (y hash `git`, si está disponible).
-Al usar el subcomando de la interfaz de línea de comandos <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
+Cuando [Benchmarking Continuo][continuous benchmarking], es decir, benchmarking en CI,
+a menudo querrás crear o rebasar una `branch` en una Branch ya existente.
+Esto se llama un Punto de Inicio de Branch [Start Point][start point].
+Un Start Point es otra Branch en una versión específica (y `git` hash, si está disponible).
+Al usar el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
 selecciona un Punto de Inicio con la opción `--branch-start-point`.
-Adicionalmente, utiliza la opción `--branch-start-point-hash` para especificar un hash `git` específico para el Punto de Inicio.
-Todos los datos y [Umbrales][thresholds] se copian desde el Punto de Inicio.
+Además, usa la opción `--branch-start-point-hash` para especificar un `git` hash específico para el Punto de Inicio.
+Todos los datos y [Umbrales][thresholds] se copian del Punto de Inicio.
+Para evitar la deriva, usa la bandera `--branch-reset` para siempre reiniciar la Branch al Punto de Inicio.
 
 [continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
 [start point]: /es/docs/explanation/benchmarking/#start-point

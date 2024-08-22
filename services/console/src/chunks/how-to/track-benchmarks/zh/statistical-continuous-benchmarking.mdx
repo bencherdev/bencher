@@ -3,122 +3,128 @@ import ThresholdCreateStatistical from "../threshold-create-statistical.mdx";
 import RunMainStatistical from "../run-main-statistical.mdx";
 import RunFeatureStatistical from "../run-feature-statistical.mdx";
 
-## 统计持续基准测试
+## 统计连续基准测试
 
-接着[快速开始][quick start]和[Docker 自托管][docker self-hosted]教程，
-让我们为我们的 `Save Walter White` 项目添加统计[持续基准测试][continuous benchmarking]功能。
+接着我们在[快速开始][quick start]和[Docker自托管][docker self-hosted]教程中留下的内容，
+让我们将统计[连续基准测试][continuous benchmarking]添加到我们的`Save Walter White`项目中。
 
-> 🐰 确保你已经
-> [创建了一个 API 令牌并将其设置为 `BENCHER_API_TOKEN` 环境变量][create an api token]
-> 再继续前行！
+> 🐰 请确保您已
+> [创建了API令牌并将其设置为`BENCHER_API_TOKEN`环境变量][create an api token]
+> 然后再继续！
 
-首先，我们需要创建一个新的 Testbed 来代表我们的 CI 运行器，适当命名为 `ci-runner`。
+首先，我们需要创建一个新的测试台来表示我们的CI运行器，恰当地命名为`ci-runner`。
 
 <TestbedCreate />
 
-1. 使用 `bencher testbed create` CLI 子命令。
-   更多详情参见 [the `testbed create` docs][testbed create]。
-   (例如: `bencher testbed create`)
-2. 将 `--name` 选项设置为所需的 Testbed 名称。
-   (例如: `--name ci-runner`)
-3. 将项目参数指定为 `Save Walter White` 项目的 slug。
-   (例如: `save-walter-white-1234abcd`)
+1. 使用`bencher testbed create` CLI子命令。
+   详见[`testbed create`文档][testbed create]。
+   (例如：`bencher testbed create`)
+2. 设置`--name`选项为所需的测试台名称。
+   (例如： `--name ci-runner`)
+3. 指定项目参数为`Save Walter White`项目的slug。
+   (例如： `save-walter-white-1234abcd`)
 
-接下来，我们需要为 `ci-runner` Testbed 创建一个新的[阈值][thresholds]：
+接下来，我们需要为我们的`ci-runner`测试台创建一个新的[阈值][thresholds]：
 
 <ThresholdCreateStatistical />
 
-1. 使用 `bencher threshold create` CLI 子命令。
-   更多详情参见 [the `threshold create` docs][threshold create]。
-   (例如: `bencher threshold create`)
-2. 将 `--branch` 选项设置为默认的 `main` 分支。
-   (例如: `--branch main`)
-3. 将 `--branch` 选项设置为新的 `ci-runner` Testbed。
-   (例如: `--testbed ci-runner`)
-4. 将 `--measure` 选项设置为 `bencher mock` 生成的内置 `Latency` 测量值。
-   更多详情参见 [the definition of Measure][measure]。
-   (例如: `--measure Latency`)
-5. 将 `--test` 选项设置为 `t-test` 阈值。
-   更多详情参见 [Thresholds & Alerts][t-test]。
-   (例如: `--test t-test`)
-6. 将 `--upper-boundary` 选项设置为上限值 `0.95`。
-   更多详情参见 [Thresholds & Alerts][t-test upper boundary]。
-   (例如: `--upper-boundary 0.95`)
-7. 将项目参数指定为 `Save Walter White` 项目的 slug。
-   (例如: `save-walter-white-1234abcd`)
+1. 使用`bencher threshold create` CLI子命令。
+   详见[`threshold create`文档][threshold create]。
+   (例如：`bencher threshold create`)
+2. 设置`--branch`选项为默认的`main`分支。
+   (例如：`--branch main`)
+3. 设置`--branch`选项为新的`ci-runner`测试台。
+   (例如：`--testbed ci-runner`)
+4. 设置`--measure`选项为由`bencher mock`生成的内置`Latency`度量。
+   详见[度量的定义][measure]。
+   (例如：`--measure Latency`)
+5. 设置`--test`选项为`t-test`阈值。
+   详见[阈值与警报][t-test]。
+   (例如：`--test t-test`)
+6. 设置`--upper-boundary`选项为`0.95`的上边界。
+   详见[阈值与警报][t-test upper boundary]。
+   (例如：`--upper-boundary 0.95`)
+7. 指定项目参数为`Save Walter White`项目的slug。
+   (例如：`save-walter-white-1234abcd`)
 
-现在我们已经准备好在 CI 中运行我们的基准测试了。
-因为每个 CI 环境都有一点不同，
-下面的示例更多的是说明性的，而不是实用性的。
-更具体的示例，请参见 [GitHub Actions 中的持续基准测试][github actions]
-和 [GitLab CI/CD 中的持续基准测试][gitlab ci/cd]。
+现在我们准备在CI中运行我们的基准测试了。
+由于每个CI环境都有些不同，
+以下示例更具有说明性而非实用性。
+有关更具体的示例，详见[GitHub Actions中的连续基准测试][github actions]
+和[GitLab CI/CD中的连续基准测试][gitlab ci/cd]。
 
-我们需要通过在 CI 中针对每次更改进行基准测试来为我们的 `main` 分支创建并维护历史基准：
+我们需要通过在CI中基准测试每个更改来为我们的`main`分支创建和维护一个历史基线：
 
 <RunMainStatistical />
 
-1. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令
-   运行您的 `feature-branch` 分支基准测试。
-   更多详情参见 [the `bencher run` CLI subcommand][bencher run]。
-   (例如: `bencher run`)
-2. 将 `--project` 选项设置为项目 slug。
-   更多详情参见 [the `--project` docs][project option]。
-   (例如: `--project save-walter-white-1234abcd`)
-3. 将 `--branch` 选项设置为默认的分支名称。
-   更多详情参见 [branch selection][branch selection branch]。
-   (例如: `--branch main`)
-4. 将 `--testbed` 选项设置为 Testbed 名称。
-   更多详情参见 [the `--tested` docs][testbed option]。
-   (例如: `--testbed ci-runner`)
-5. 将 `--adapter` 选项设置为所需的基准测试适配器适配器。
-   更多详情参见 [benchmark harness adapters][adapters]。
-   (例如: `--adapter json`)
-6. 将 `--err` 标志设置为在生成警报时失败命令。
-   更多详情参见 [Threshold & Alerts][alerts]。
-   (例如: `--err`)
-7. 指定基准命令参数。
-   更多详情参见 [benchmark command][command argument]。
-   (例如: `bencher mock`)
+1. 使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令
+   来运行您的`feature-branch`分支基准测试。
+   详见[`bencher run` CLI子命令][bencher run]。
+   (例如：`bencher run`)
+2. 设置`--project`选项为项目slug。
+   详见[`--project`文档][project option]。
+   (例如：`--project save-walter-white-1234abcd`)
+3. 设置`--branch`选项为默认的分支名称。
+   详见[分支选择][branch selection branch]。
+   (例如：`--branch main`)
+4. 设置`--testbed`选项为测试台名称。
+   详见[`--testbed`文档][testbed option]。
+   (例如：`--testbed ci-runner`)
+5. 设置`--adapter`选项为所需的基准测试驱动适配器。
+   详见[基准测试驱动适配器][adapters]。
+   (例如：`--adapter json`)
+6. 设置`--err`标志以在生成警报时使命令失败。
+   详见[阈值与警报][alerts]。
+   (例如：`--err`)
+7. 指定基准测试命令参数。
+   详见[基准测试命令][command argument]。
+   (例如：`bencher mock`)
 
-最后，我们准备好在 CI 中捕获性能回归了。
-这是我们如何在 CI 中跟踪一个名为 `feature-branch` 的新功能分支的性能：
+最后，我们准备在CI中捕捉性能回归。
+这是我们在CI中跟踪一个名为`feature-branch`的新功能分支性能的方式：
 
 <RunFeatureStatistical />
 
-1. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令
-   运行您的 `feature-branch` 分支基准测试。
-   更多详情参见 [the `bencher run` CLI subcommand][bencher run]。
-   (例如: `bencher run`)
-2. 将 `--project` 选项设置为项目 slug。
-   更多详情参见 [the `--project` docs][project option]。
-   (例如: `--project save-walter-white-1234abcd`)
-3. 将 `--branch` 选项设置为功能分支名称。
-   更多详情参见 [branch selection][branch selection branch]。
-   (例如: `--branch feature-branch`)
-4. 将 `--branch-start-point` 选项设置为功能分支的起点。
-   更多详情参见 [branch selection][branch selection start point]。
-   (例如: `--branch-start-point main`)
-5. 将 `--branch-start-point-hash` 选项设置为功能分支起点的 `git` 哈希值。
-   更多详情参见 [branch selection][branch selection start point hash]。
-   (例如: `--branch-start-point-hash 32ae...dd8b`)
-6. 将 `--testbed` 选项设置为 Testbed 名称。
-   更多详情参见 [the `--tested` docs][testbed option]。
-   (例如: `--testbed ci-runner`)
-7. 将 `--adapter` 选项设置为所需的基准测试适配器适配器。
-   更多详情参见 [benchmark harness adapters][adapters]。
-   (例如: `--adapter json`)
-8. 将 `--err` 标志设置为在生成警报时失败命令。
-   更多详情参见 [Threshold & Alerts][alerts]。
-   (例如: `--err`)
-9. 指定基凘命令参数。
-   更多详情参见 [benchmark command][command argument]。
-   (例如: `bencher mock`)
+1. 使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令
+   来运行您的`feature-branch`分支基准测试。
+   详见[`bencher run` CLI子命令][bencher run]。
+   (例如：`bencher run`)
+2. 设置`--project`选项为项目slug。
+   详见[`--project`文档][project option]。
+   (例如：`--project save-walter-white-1234abcd`)
+3. 设置`--branch`选项为功能分支名称。
+   详见[分支选择][branch selection branch]。
+   (例如：`--branch feature-branch`)
+4. 设置`--branch-start-point`选项为功能分支的起点。
+   详见[分支选择][branch selection start point]。
+   (例如：`--branch-start-point main`)
+5. 设置`--branch-start-point-hash`选项为功能分支起点的`git`哈希。
+   详见[分支选择][branch selection start point hash]。
+   (例如：`--branch-start-point-hash 32ae...dd8b`)
+6. 设置`--branch-reset`标志以始终将分支重置为起点。
+   这将防止基准测试数据漂移。
+   详见[分支选择][branch selection branch reset]。
+   (例如：`--branch-reset`)
+7. 设置`--testbed`选项为测试台名称。
+   详见[`--testbed`文档][testbed option]。
+   (例如：`--testbed ci-runner`)
+8. 设置`--adapter`选项为所需的基准测试驱动适配器。
+   详见[基准测试驱动适配器][adapters]。
+   (例如：`--adapter json`)
+9. 设置`--err`标志以在生成警报时使命令失败。
+   详见[阈值与警报][alerts]。
+   (例如：`--err`)
+10. 指定基准测试命令参数。
+    详见[基准测试命令][command argument]。
+    (例如：`bencher mock`)
 
-在 CI 中首次运行此命令时，
-它会创建 `feature-branch` 分支，因为它之前不存在。
-新的 `feature-branch` 将使用哈希值为 `32aea434d751648726097ed3ac760b57107edd8b` 的 `main` 分支作为其起点。
-这意味着 `feature-branch` 将拥有 `main` 分支所有的数据和[阈值][thresholds]来对 `bencher mock` 的结果进行对比，
-无论是第一次还是后续运行。
+第一次在CI中运行此命令时，
+它将创建`feature-branch`分支，因为它尚不存在。
+新的`feature-branch`将使用`main`分支
+在哈希值`32aea434d751648726097ed3ac760b57107edd8b`作为其起点。
+这意味着`feature-branch`将拥有所有数据和[阈值][thresholds]的副本
+从`main`分支开始进行比较`bencher mock`的结果，
+对于第一次和所有后续运行。
 
 [quick start]: /zh/docs/tutorial/quick-start/
 [docker self-hosted]: /zh/docs/tutorial/docker/
@@ -141,3 +147,4 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [command argument]: /zh/docs/explanation/bencher-run/#benchmark-command
 [branch selection start point]: /zh/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /zh/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /zh/docs/explanation/branch-selection/#--branch-reset

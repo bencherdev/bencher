@@ -2,36 +2,37 @@
 
 <br />
 
-特定のブランチ名、スラッグ、またはUUIDを[開始点][start point]として使用し、[`branch`](#--branch-branch)オプション用のスタートポイントとします。
-GitHubでは通常、プルリクエストの[基本ブランチ (`base` ブランチ)][github base]がこれにあたり、GitLabではマージリクエストの[目標ブランチ (`target` ブランチ)][gitlab target]がこれにあたります。
-`--branch-start-point`の主な使用ケースは[統計的継続的ベンチマーキング](/ja/docs/how-to/track-benchmarks/#統計的継続的ベンチマーキング)です。
+指定されたブランチ名、スラッグ、またはUUIDを[`branch`](#--branch-branch)オプションの[開始点][start point]として使用します。
+GitHubの場合、通常これは[プルリクエストの`base`ブランチ][github base]であり、
+GitLabの場合、通常これは[マージリクエストの`target`ブランチ][gitlab target]です。
+`--branch-start-point`の主な使い方は[統計的継続的ベンチマーク](/ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking)です。
 
-- 指定された開始点が空文字列の場合、このオプションは無視されます。
-- `branch`が存在しない場合は、この開始点を使用して作成されます。
+- 指定された開始点が空の文字列の場合、このオプションは無視されます。
+- `branch`が存在しない場合、この開始点を使用して作成されます。
 - `branch`が存在し、開始点が同じ場合、このオプションは無視されます。
 - `branch`が存在し、開始点が異なる場合、
-  既存の`branch`の名前が変更され、
-  この更新された開始点を使用して新しい`branch`が作成されます。
-- `branch` が存在せず、開始ポイントも存在しない場合、
-  `branch` は履歴データなしで作成されます。
-- `branch` が存在し、開始ポイントが存在しない場合、
+  古いバージョンの`branch`はリネームされてアーカイブされ、
+  更新された開始点を使用して新しい`branch`が作成されます。
+- `branch`が存在せず、開始点も存在しない場合、
+  `branch`は履歴データなしで作成されます。
+- `branch`が存在し、開始点が存在しない場合、
   このオプションは無視されます。
 
-開始点を持つ新しい`branch`が作成されると、
+新しい`branch`が開始点を使用して作成された場合、
 指定された開始点からすべてのデータとしきい値がコピーされます。
 
-例えば、`feature_branch`がまだ存在せず、`main`が存在して履歴データを持っている場合、
+例えば、`feature_branch`がまだ存在しないが、`main`は存在し、履歴データを持っている場合。
 `--branch feature_branch --branch-start-point main`を使用すると:
-1. `feature_branch`という名前の新しいブランチが作成される
-2. `main`から`feature_branch`に全てのデータとしきい値がコピーされる
-3. `bencher run`は`feature_branch`を使用して進行します
+1. `feature_branch`という名前の新しいブランチが作成されます
+2. `main`から`feature_branch`へすべてのデータとしきい値がコピーされます
+3. `bencher run`は`feature_branch`を使用して実行されます
 
-[github base]: https://docs.github.com/ja/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
 [gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
 
-[start point]: /ja/docs/explanation/benchmarking/#開始点
+[start point]: /ja/docs/explanation/benchmarking/#start-point
 
 <br />
 
-> 🐰 注意: 環境変数を使用する場合は、二重引用符で囲むべきです（例 `--branch-start-point "$MY_BRANCH_ENV_VAR"`）、
-> `MY_BRANCH_ENV_VAR`が未定義の場合に`bencher run`がエラーにならないようにする場合。
+> 🐰 注意: 環境変数を使用する場合、環境変数はダブルクォートで囲む必要があります（例: `--branch-start-point "$MY_BRANCH_ENV_VAR"`）。
+> これは、`MY_BRANCH_ENV_VAR`が未定義の場合に`bencher run`がエラーを出さないようにするためです。

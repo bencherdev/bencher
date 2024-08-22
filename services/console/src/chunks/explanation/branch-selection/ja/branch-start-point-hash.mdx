@@ -2,30 +2,23 @@
 
 <br />
 
-`branch`オプションの[スタートポイント][start point]として指定された完全なGitハッシュを使用します。
-このオプションは、[`--branch-start-point`][branch start point]オプションが設定されている場合にのみ必要です。
+指定された完全なGitハッシュを[開始ポイント][start point]として`branch`オプションに使用します。
+このオプションは[`--branch-start-point`][branch start point]オプションの設定が必要です。
 
-- `branch`が存在しない場合、指定されたハッシュで`branch-start-point`から作成されます。
-- `branch`が存在し、`branch-start-point`と指定されたハッシュが同じ場合、
-  このオプションは無視されます。
-- `branch`が既に存在し、`branch-start-point`または指定されたハッシュが異なる場合、
-  古いバージョンの`branch`はリネームされ、
-  指定されたハッシュで`branch-start-point`から新しい`branch`が作成されます。
-- `branch`が存在せず、`branch-start-point`が指定されたハッシュに存在しない場合、
-  `branch`は履歴データなしで作成されます。
-- `branch`が存在し、`branch-start-point`が指定されたハッシュに存在しない場合、
-  このオプションは無視されます。
+- `branch`が存在しない場合、指定されたハッシュの`branch-start-point`から作成されます。
+- `branch`が存在し、かつ`branch-start-point`と指定されたハッシュが同じである場合、このオプションは無視されます。
+- `branch`が既に存在し、`branch-start-point`または指定されたハッシュのいずれかが異なる場合、古いバージョンの`branch`はリネームされてアーカイブされ、新しい`branch`が指定されたハッシュの`branch-start-point`から作成されます。
+- `branch`が存在せず、`branch-start-point`が指定されたハッシュで存在しない場合、`branch`は履歴データなしで作成されます。
+- `branch`が存在し、`branch-start-point`が指定されたハッシュで存在しない場合は、このオプションは無視されます。
 
-新しい`branch`がスタートポイントで作成される場合、
-指定されたハッシュでの`branch-start-point`からすべてのデータとしきい値がコピーされます。
+新しい`branch`が開始ポイントで作成される場合、指定されたハッシュの`branch-start-point`からすべてのデータと閾値がコピーされます。
 
-例えば、`feature_branch`がそのスタートポイントが`main`ブランチでハッシュ`32aea434d751648726097ed3ac760b57107edd8b`で存在する場合、
-`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`を使用すると：
+例えば、`feature_branch`が`main`ブランチのハッシュ`32aea434d751648726097ed3ac760b57107edd8b`を開始ポイントとして存在する場合、`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`を使用すると：
 
-1. 古い`feature_branch`を`feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`にリネームします。
-2. `feature_branch`という新しいブランチを作成します。
-3. `main`のハッシュ`68b12758509ca5e2b1e3983525625e532eb5f562`からすべてのデータとしきい値を新しい`feature_branch`にコピーします。
-4. `bencher run`は新しい`feature_branch`を使用して実行されます。
+1. 古い`feature_branch`を`feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`にリネームし、アーカイブします。
+2. 新しいブランチ名`feature_branch`を作成します。
+3. ハッシュ`68b12758509ca5e2b1e3983525625e532eb5f562`の時点での`main`からすべてのデータと閾値を新しい`feature_branch`にコピーします。
+4. `bencher run`は新しい`feature_branch`を使用して進行します。
 
 [start point]: /ja/docs/explanation/benchmarking/#start-point
 

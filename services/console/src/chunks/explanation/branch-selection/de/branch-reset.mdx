@@ -3,22 +3,34 @@
 <br />
 
 Setzt den angegebenen `branch` zurück.
-Der primäre Anwendungsfall für `--branch-reset` ist [Relatives Kontinuierliches Benchmarking][relatives kontinuierliches Benchmarking].
-Dieses Flag steht in Konflikt mit der Option [`--branch-start-point`][branch-start-punkt].
+Wenn die Option [`--branch-start-point`][branch start point] gesetzt ist,
+wird der `branch` auf den angegebenen Startpunkt zurückgesetzt.
+Dies ist nützlich, um Abweichungen in den Daten der [Statistischen kontinuierlichen Benchmarking][statistical continuous benchmarking] zu verhindern.
+Der Hauptanwendungsfall für `--branch-reset` ohne Angabe eines Startpunkts
+ist das [Relative kontinuierliche Benchmarking][relative continuous benchmarking].
 
-- Wenn `branch` nicht existiert, wird er erstellt.
-- Wenn `branch` existiert, wird die alte Version von `branch` umbenannt
-  und ein neuer `branch` wird erstellt.
+- Wenn `branch` nicht existiert und kein Startpunkt angegeben ist, wird der `branch` ohne historische Daten erstellt.
+- Wenn `branch` existiert und kein Startpunkt angegeben ist,
+  wird die alte Version von `branch` sowohl umbenannt als auch archiviert
+  und ein neuer `branch` ohne historische Daten erstellt.
+- Wenn `branch` nicht existiert und ein Startpunkt angegeben ist,
+  wird der `branch` unter Verwendung des Startpunkts erstellt.
+- Wenn `branch` existiert und ein Startpunkt angegeben ist,
+  wird die alte Version von `branch` sowohl umbenannt als auch archiviert
+  und ein neuer `branch` unter Verwendung des Startpunkts erstellt.
 
-Wenn ein neuer `branch` erstellt wird, wird er keine historischen Daten oder Schwellenwerte haben.
+Wenn ein neuer `branch` mit einem Startpunkt erstellt wird,
+werden alle Daten und Schwellenwerte vom angegebenen Startpunkt kopiert.
+Andernfalls wird der `branch` ohne historische Daten erstellt.
 
-Zum Beispiel, wenn `feature_branch` existiert ohne einen Startpunkt,
-dann würde die Nutzung von `--branch feature_branch --branch-reset`:
+Zum Beispiel, wenn `feature_branch` ohne einen Startpunkt existiert,
+würde die Verwendung von `--branch feature_branch --branch-reset` folgendes bewirken:
 
-1. Den alten `feature_branch` in `feature_branch@detached` umbenennen
-2. Einen neuen Branch namens `feature_branch` erstellen
-3. `bencher run` würde mit dem neuen `feature_branch` fortfahren
+1. Die alte `feature_branch` wird in `feature_branch@detached` umbenannt und archiviert
+2. Ein neuer Branch namens `feature_branch` wird erstellt
+3. `bencher run` würde unter Verwendung des neuen `feature_branch` fortgesetzt
 
-[relatives kontinuierliches Benchmarking]: /de/docs/how-to/track-benchmarks/#relatives-kontinuierliches-benchmarking
+[statistical continuous benchmarking]: /de/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /de/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
 
-[branch-start-punkt]: #--branch-start-point-branch
+[branch start point]: #--branch-start-point-branch

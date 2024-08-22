@@ -2,31 +2,30 @@
 
 <br />
 
-Verwenden Sie den angegebenen vollen Git Hash als [Startpunkt][start point] für die `branch` Option.
-Diese Option erfordert, dass die [`--branch-start-point`][branch start point] Option gesetzt ist.
+Verwenden Sie den angegebenen vollständigen Git-Hash als [Startpunkt][start point] für die Option `branch`. Diese Option erfordert, dass die Option [`--branch-start-point`][branch start point] gesetzt ist.
 
-- Wenn `branch` nicht existiert, wird es vom `branch-start-point` am angegebenen Hash erstellt.
-- Existiert `branch` bereits und sowohl `branch-start-point` als auch der angegebene Hash sind gleich,
+- Wenn `branch` nicht existiert, wird es aus `branch-start-point` an dem angegebenen Hash erstellt.
+- Wenn `branch` existiert und sowohl `branch-start-point` als auch der angegebene Hash gleich sind,
   wird diese Option ignoriert.
-- Existiert `branch` bereits und entweder `branch-start-point` oder der angegebene Hash sind unterschiedlich,
-  wird die alte Version von `branch` umbenannt
-  und ein neuer `branch` wird vom `branch-start-point` am angegebenen Hash erstellt.
-- Wenn `branch` nicht existiert und der `branch-start-point` nicht am angegebenen Hash existiert,
-  wird der `branch` ohne historische Daten erstellt.
-- Wenn `branch` existiert und der `branch-start-point` nicht am angegebenen Hash existiert,
+- Wenn `branch` bereits existiert und entweder `branch-start-point` oder der angegebene Hash unterschiedlich sind,
+  wird die alte Version von `branch` umbenannt und archiviert,
+  und ein neues `branch` wird aus `branch-start-point` an dem angegebenen Hash erstellt.
+- Wenn `branch` nicht existiert und der `branch-start-point` an dem angegebenen Hash nicht existiert,
+  wird `branch` ohne historische Daten erstellt.
+- Wenn `branch` existiert und der `branch-start-point` an dem angegebenen Hash nicht existiert,
   wird diese Option ignoriert.
 
-Wenn ein neuer `branch` mit einem Startpunkt erstellt wird,
-dann werden alle Daten und Schwellenwerte vom `branch-start-point` am angegebenen Hash kopiert.
+Wenn ein neues `branch` mit einem Startpunkt erstellt wird,
+werden alle Daten und Schwellenwerte von `branch-start-point` an dem angegebenen Hash kopiert.
 
-Zum Beispiel, wenn `feature_branch` existiert mit seinem Startpunkt als `main` Zweig
-am Hash `32aea434d751648726097ed3ac760b57107edd8b`,
-dann würde die Verwendung von `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`:
+Zum Beispiel, wenn `feature_branch` existiert und der Startpunkt der `main`-Branch
+bei Hash `32aea434d751648726097ed3ac760b57107edd8b` ist,
+würde die Verwendung von `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562` folgendes bewirken:
 
-1. Den alten `feature_branch` umbenennen in `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`
-2. Einen neuen Zweig namens `feature_branch` erstellen
-3. Kopie aller Daten und Schwellenwerte von `main` am Hash `68b12758509ca5e2b1e3983525625e532eb5f562` zum neuen `feature_branch`
-4. `bencher run` würde mit dem neuen `feature_branch` fortfahren
+1. Die alte `feature_branch` würde in `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b` umbenannt und archiviert
+2. Eine neue Branch mit dem Namen `feature_branch` würde erstellt
+3. Alle Daten und Schwellenwerte von `main` bei Hash `68b12758509ca5e2b1e3983525625e532eb5f562` würden in die neue `feature_branch` kopiert
+4. `bencher run` würde mit der neuen `feature_branch` fortfahren
 
 [start point]: /de/docs/explanation/benchmarking/#start-point
 

@@ -3,125 +3,130 @@ import ThresholdCreateStatistical from "../threshold-create-statistical.mdx";
 import RunMainStatistical from "../run-main-statistical.mdx";
 import RunFeatureStatistical from "../run-feature-statistical.mdx";
 
-## Benchmarking Continu Statistique
+## Benchmarking Continu en Mode Statistique
 
-En reprenant là où nous nous étions arrêtés dans les tutoriels 
-[Démarrage Rapide][quick start] et [Auto-hébergement avec Docker][docker self-hosted],
-ajoutons le Benchmarking [Continu Statistique][continuous benchmarking] à notre projet `Save Walter White`.
+Continuons là où nous nous étions arrêtés dans les tutoriels
+[Quick Start][quick start] et [Docker Self-Hosted][docker self-hosted],
+ajoutons le Benchmarking Continu en Mode Statistique [Continuous Benchmarking][continuous benchmarking]
+à notre projet `Save Walter White`.
 
 > 🐰 Assurez-vous d'avoir
 > [créé un jeton API et de l'avoir défini comme variable d'environnement `BENCHER_API_TOKEN`][create an api token]
 > avant de continuer !
 
-Premièrement, nous devons créer une nouvelle Plateforme de Test pour représenter nos exécuteurs CI, judicieusement nommée `ci-runner`.
+Tout d'abord, nous devons créer un nouveau Testbed pour représenter nos runners CI, nommé à juste titre `ci-runner`.
 
 <TestbedCreate />
 
 1. Utilisez la sous-commande CLI `bencher testbed create`.
-   Voir [la documentation de `testbed create`][testbed create] pour plus de détails.
-   (ex : `bencher testbed create`)
-2. Définissez l'option `--name` sur le nom souhaité pour la Plateforme de Test.
-   (ex : `--name ci-runner`)
+   Voir la documentation de [`testbed create`][testbed create] pour plus de détails.
+   (ex: `bencher testbed create`)
+2. Définissez l'option `--name` sur le nom de Testbed souhaité.
+   (ex: `--name ci-runner`)
 3. Spécifiez l'argument du projet comme le slug du projet `Save Walter White`.
-   (ex : `save-walter-white-1234abcd`)
+   (ex: `save-walter-white-1234abcd`)
 
-Ensuite, nous devons créer un nouveau [Seuil][thresholds] pour notre Plateforme de Test `ci-runner` :
+Ensuite, nous devons créer un nouveau [Threshold][thresholds] pour notre Testbed `ci-runner` :
 
 <ThresholdCreateStatistical />
 
 1. Utilisez la sous-commande CLI `bencher threshold create`.
-   Voir [la documentation de `threshold create`][threshold create] pour plus de détails.
-   (ex : `bencher threshold create`)
-2. Définissez l'option `--branch` sur la branche principale `main`.
-   (ex : `--branch main`)
-3. Définissez l'option `--branch` pour la nouvelle Plateforme de Test `ci-runner`.
-   (ex : `--testbed ci-runner`)
+   Voir la documentation de [`threshold create`][threshold create] pour plus de détails.
+   (ex: `bencher threshold create`)
+2. Définissez l'option `--branch` sur la branche par défaut `main`.
+   (ex: `--branch main`)
+3. Définissez l'option `--testbed` sur le nouveau Testbed `ci-runner`.
+   (ex: `--testbed ci-runner`)
 4. Définissez l'option `--measure` sur la mesure intégrée `Latency` générée par `bencher mock`.
-   Voir [la définition de Mesure][measure] pour les détails.
+   Voir la définition de la [Mesure][measure] pour plus de détails.
    (ex: `--measure Latency`)
-5. Définissez l'option `--test` pour un Seuil de `t-test`.
-   Voir [Seuils & Alertes][t-test] pour un aperçu complet.
-   (ex : `--test t-test`)
-6. Définissez l'option `--upper-boundary` sur une Limite Supérieure de `0.95`.
-   Voir [Seuils & Alertes][t-test upper boundary] pour un aperçu complet.
-   (ex : `--upper-boundary 0.95`)
+5. Définissez l'option `--test` sur un seuil de `t-test`.
+   Voir les [Seuils & Alertes][t-test] pour une vue d'ensemble complète.
+   (ex: `--test t-test`)
+6. Définissez l'option `--upper-boundary` sur une limite supérieure de `0.95`.
+   Voir les [Seuils & Alertes][t-test upper boundary] pour une vue d'ensemble complète.
+   (ex: `--upper-boundary 0.95`)
 7. Spécifiez l'argument du projet comme le slug du projet `Save Walter White`.
-   (ex : `save-walter-white-1234abcd`)
+   (ex: `save-walter-white-1234abcd`)
 
-Nous sommes maintenant prêts à exécuter nos benchmarks dans CI.
-Comme chaque environnement CI est un peu différent, 
-l'exemple suivant est destiné à être plus illustratif que pratique.
-Pour des exemples plus spécifiques, voir [Benchmarking Continu dans GitHub Actions][github actions]
-et [Benchmarking Continu dans GitLab CI/CD][gitlab ci/cd].
+Nous sommes maintenant prêts à exécuter nos benchmarks en CI.
+Puisque chaque environnement CI est un peu différent,
+l'exemple suivant est censé être plus illustratif que pratique.
+Pour des exemples plus spécifiques, consultez [Benchmarking Continu avec GitHub Actions][github actions]
+et [Benchmarking Continu avec GitLab CI/CD][gitlab ci/cd].
 
-Nous devons créer et maintenir une base de référence historique pour notre branche `main` en benchmarkant chaque changement dans CI :
+Nous devons créer et maintenir un point de référence historique pour notre branche `main` en benchmarkant chaque changement en CI :
 
 <RunMainStatistical />
 
 1. Utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
    pour exécuter les benchmarks de votre branche `feature-branch`.
-   Voir [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
-   (ex : `bencher run`)
-2. Définissez l'option `--project` sur le slug du Projet.
-   Voir [la documentation de `--project`][project option] pour plus de détails.
-   (ex : `--project save-walter-white-1234abcd`)
-3. Définissez l'option `--branch` sur le nom de la branche principale.
-   Voir [sélection de branche][branch selection branch] pour un aperçu complet.
-   (ex : `--branch main`)
-4. Définissez l'option `--testbed` sur le nom de la Plateforme de Test.
-   Voir [la documentation de `--tested`][testbed option] pour plus de détails.
-   (ex : `--testbed ci-runner`)
-5. Définissez l'option `--adapter` sur l'adaptateur de harnais de benchmark souhaité.
-   Voir [adaptateurs de harnais de benchmark][adapters] pour un aperçu complet.
-   (ex : `--adapter json`)
-6. Définissez le drapeau `--err` pour échouer la commande si une Alerte est générée.
-   Voir [Seuil & Alertes][alerts] pour un aperçu complet.
-   (ex : `--err`)
+   Voir la sous-commande CLI [`bencher run`][bencher run] pour une vue d'ensemble complète.
+   (ex: `bencher run`)
+2. Définissez l'option `--project` sur le slug du projet.
+   Voir la documentation de [`--project`][project option] pour plus de détails.
+   (ex: `--project save-walter-white-1234abcd`)
+3. Définissez l'option `--branch` sur le nom de la branche par défaut.
+   Voir la [sélection de la branche][branch selection branch] pour une vue d'ensemble complète.
+   (ex: `--branch main`)
+4. Définissez l'option `--testbed` sur le nom du Testbed.
+   Voir la documentation de [`--tested`][testbed option] pour plus de détails.
+   (ex: `--testbed ci-runner`)
+5. Définissez l'option `--adapter` sur l'adaptateur de banc d'essai souhaité.
+   Voir les [adaptateurs de banc d'essai][adapters] pour une vue d'ensemble complète.
+   (ex: `--adapter json`)
+6. Définissez le drapeau `--err` pour échouer à la commande si une alerte est générée.
+   Voir les [Seuils & Alertes][alerts] pour une vue d'ensemble complète.
+   (ex: `--err`)
 7. Spécifiez les arguments de la commande de benchmark.
-   Voir [commande de benchmark][command argument] pour un aperçu complet.
-   (ex : `bencher mock`)
+   Voir la [commande de benchmark][command argument] pour une vue d'ensemble complète.
+   (ex: `bencher mock`)
 
-Enfin, nous sommes prêts à détecter les régressions de performance dans CI.
-Voici comment nous suivrions la performance d'une nouvelle branche de fonctionnalités, nommée `feature-branch`, dans CI :
+Enfin, nous sommes prêts à détecter les régressions de performance en CI.
+Voici comment nous suivrions la performance d'une nouvelle branche de fonctionnalités, nommée `feature-branch`, en CI :
 
 <RunFeatureStatistical />
 
 1. Utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
    pour exécuter les benchmarks de votre branche `feature-branch`.
-   Voir [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
-   (ex : `bencher run`)
-2. Définissez l'option `--project` sur le slug du Projet.
-   Voir [la documentation de `--project`][project option] pour plus de détails.
-   (ex : `--project save-walter-white-1234abcd`)
-3. Définissez l'option `--branch` sur le nom de la branche de la fonctionnalité.
-   Voir [sélection de branche][branch selection branch] pour un aperçu complet.
-   (ex : `--branch feature-branch`)
-4. Définissez l'option `--branch-start-point` sur le point de départ de la branche de la fonctionnalité.
-   Voir [sélection de branche][branch selection start point] pour un aperçu complet.
-   (ex : `--branch-start-point main`)
-5. Définissez l'option `--branch-start-point-hash` sur le `hash` `git` du point de départ de la branche de la fonctionnalité.
-   Voir [sélection de branche][branch selection start point hash] pour un aperçu complet.
-   (ex : `--branch-start-point-hash 32ae...dd8b`)
-6. Définissez l'option `--testbed` sur le nom de la Plateforme de Test.
-   Voir [la documentation de `--tested`][testbed option] pour plus de détails.
-   (ex : `--testbed ci-runner`)
-7. Définissez l'option `--adapter` sur l'adaptateur de harnais de benchmark souhaité.
-   Voir [adaptateurs de harnais de benchmark][adapters] pour un aperçu complet.
-   (ex : `--adapter json`)
-8. Définissez le drapeau `--err` pour échouer la commande si une Alerte est générée.
-   Voir [Seuil & Alertes][alerts] pour un aperçu complet.
-   (ex : `--err`)
-9. Spécifiez les arguments de la commande de benchmark.
-   Voir [commande de benchmark][command argument] pour un aperçu complet.
-   (ex : `bencher mock`)
+   Voir la sous-commande CLI [`bencher run`][bencher run] pour une vue d'ensemble complète.
+   (ex: `bencher run`)
+2. Définissez l'option `--project` sur le slug du projet.
+   Voir la documentation de [`--project`][project option] pour plus de détails.
+   (ex: `--project save-walter-white-1234abcd`)
+3. Définissez l'option `--branch` sur le nom de la branche de fonctionnalité.
+   Voir la [sélection de la branche][branch selection branch] pour une vue d'ensemble complète.
+   (ex: `--branch feature-branch`)
+4. Définissez l'option `--branch-start-point` sur le point de départ de la branche de fonctionnalité.
+   Voir la [sélection de la branche][branch selection start point] pour une vue d'ensemble complète.
+   (ex: `--branch-start-point main`)
+5. Définissez l'option `--branch-start-point-hash` sur le hash `git` du point de départ de la branche de fonctionnalité.
+   Voir la [sélection de la branche][branch selection start point hash] pour une vue d'ensemble complète.
+   (ex: `--branch-start-point-hash 32ae...dd8b`)
+6. Définissez le drapeau `--branch-reset` pour toujours réinitialiser la branche au point de départ.
+   Cela empêchera la dérive des données de benchmark.
+   Voir la [sélection de la branche][branch selection branch reset] pour une vue d'ensemble complète.
+   (ex: `--branch-reset`)
+7. Définissez l'option `--testbed` sur le nom du Testbed.
+   Voir la documentation de [`--tested`][testbed option] pour plus de détails.
+   (ex: `--testbed ci-runner`)
+8. Définissez l'option `--adapter` sur l'adaptateur de banc d'essai souhaité.
+   Voir les [adaptateurs de banc d'essai][adapters] pour une vue d'ensemble complète.
+   (ex: `--adapter json`)
+9. Définissez le drapeau `--err` pour échouer à la commande si une alerte est générée.
+   Voir les [Seuils & Alertes][alerts] pour une vue d'ensemble complète.
+   (ex: `--err`)
+10. Spécifiez les arguments de la commande de benchmark.
+   Voir la [commande de benchmark][command argument] pour une vue d'ensemble complète.
+   (ex: `bencher mock`)
 
-La première fois que cette commande est exécutée dans CI,
-elle créera la branche `feature-branch` puisqu'elle n'existe pas encore.
+La première fois que cette commande est exécutée en CI,
+elle créera la branche `feature-branch` car elle n'existe pas encore.
 La nouvelle branche `feature-branch` utilisera la branche `main`
 au hash `32aea434d751648726097ed3ac760b57107edd8b` comme point de départ.
-Cela signifie que la branche `feature-branch` aura une copie de toutes les données et [Seuils][thresholds]
+Cela signifie que `feature-branch` aura une copie de toutes les données et [Seuils][thresholds]
 de la branche `main` pour comparer les résultats de `bencher mock` contre,
-pour la première exécution et toutes les suivantes.
+pour la première et toutes les exécutions suivantes.
 
 [quick start]: /fr/docs/tutorial/quick-start/
 [docker self-hosted]: /fr/docs/tutorial/docker/
@@ -144,3 +149,4 @@ pour la première exécution et toutes les suivantes.
 [command argument]: /fr/docs/explanation/bencher-run/#benchmark-command
 [branch selection start point]: /fr/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /fr/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /fr/docs/explanation/branch-selection/#--branch-reset

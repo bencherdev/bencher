@@ -3,22 +3,33 @@
 <br />
 
 지정된 `branch`를 리셋합니다.
-`--branch-reset`의 주요 사용 사례는 [상대 연속 벤치마킹][relative continuous benchmarking]입니다.
-이 플래그는 [`--branch-start-point`][branch start point] 옵션과 충돌합니다.
+[`--branch-start-point`][branch start point] 옵션이 설정되면,
+`branch`는 지정된 시작 지점으로 리셋됩니다.
+이는 [통계적 지속적 벤치마킹][statistical continuous benchmarking] 데이터의 드리프트를 방지하는 데 유용합니다.
+시작 지점을 지정하지 않고 `--branch-reset`을 사용하는 주요 사례는 [상대적 지속적 벤치마킹][relative continuous benchmarking]입니다.
 
-- `branch`가 존재하지 않는 경우 생성됩니다.
-- `branch`가 이미 존재하는 경우, 기존의 `branch`는 이름이 변경되고
-  새로운 `branch`가 생성됩니다.
+- `branch`가 존재하지 않고 시작 지점이 지정되지 않은 경우, `branch`는 아무런 이력 데이터 없이 생성됩니다.
+- `branch`가 존재하고 시작 지점이 지정되지 않은 경우,
+  기존 `branch`는 이름이 변경되고 아카이브되며,
+  새로운 `branch`가 아무런 이력 데이터 없이 생성됩니다.
+- `branch`가 존재하지 않고 시작 지점이 지정된 경우,
+  `branch`는 시작 지점을 사용하여 생성됩니다.
+- `branch`가 존재하고 시작 지점이 지정된 경우,
+  기존 `branch`는 이름이 변경되고 아카이브되며,
+  새로운 `branch`가 시작 지점을 사용하여 생성됩니다.
 
-새로운 `branch`가 생성되면 이전 데이터나 임계값이 없을 것입니다.
+새로운 `branch`가 시작 지점을 사용하여 생성되는 경우,
+지정된 시작 지점의 모든 데이터와 임계값이 복사됩니다.
+그렇지 않은 경우, `branch`는 아무런 이력 데이터 없이 생성됩니다.
 
-예를 들어, 시작점 없이 `feature_branch`가 존재하는 경우
+예를 들어, `feature_branch`가 시작 지점 없이 존재하는 경우
 `--branch feature_branch --branch-reset`을 사용하면:
 
-1. 기존의 `feature_branch`는 `feature_branch@detached`로 이름이 바뀝니다
-2. `feature_branch`라는 이름의 새로운 Branch가 생성됩니다
-3. `bencher run`은 새로운 `feature_branch`를 사용하여 진행됩니다
+1. 기존 `feature_branch`의 이름을 `feature_branch@detached`로 변경하고 이를 아카이브합니다.
+2. `feature_branch`라는 이름의 새로운 브랜치를 생성합니다.
+3. `bencher run`은 새로운 `feature_branch`를 사용하여 진행됩니다.
 
-[상대 연속 벤치마킹]: /ko/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[statistical continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
 
 [branch start point]: #--branch-start-point-branch

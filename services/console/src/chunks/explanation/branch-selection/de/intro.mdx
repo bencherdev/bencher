@@ -1,17 +1,18 @@
-Ein Branch ist der `git` Ref (d.h. Branch-Name oder Tag).
-Bei Verwendung des CLI-Unterbefehls <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>,
-wählen Sie einen Branch mit der Option `--branch` oder der Umgebungsvariablen `BENCHER_BRANCH`.
-Standardmäßig starten alle Projekte mit einem `main` Branch, und
-`main` wird standardmäßig verwendet, wenn keines von beiden angegeben ist.
+Eine Branch ist die `git` Ref (d.h. Branch-Name oder Tag).
+Beim Verwenden des <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehls,
+wähle eine Branch mit der Option `--branch` oder der Umgebungsvariable `BENCHER_BRANCH`.
+Standardmäßig starten alle Projekte mit einer `main` Branch, und
+`main` wird standardmäßig verwendet, falls weder noch angegeben sind.
 
-Beim [kontinuierlichen Benchmarking][continuous benchmarking], das heißt Benchmarking in CI,
-möchte man oft einen `branch` auf einem bereits bestehenden Branch erstellen oder rebase durchführen.
-Dies wird als Branch [Startpunkt][start point] bezeichnet.
-Ein Startpunkt ist ein anderer Branch in einer spezifischen Version (und `git` Hash, wenn verfügbar).
-Bei Verwendung des CLI-Unterbefehls <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>,
-wählen Sie einen Startpunkt mit der Option `--branch-start-point`.
-Zusätzlich verwenden Sie die Option `--branch-start-point-hash`, um einen spezifischen `git` Hash für den Startpunkt anzugeben.
+Beim [Kontinuierlichen Benchmarking][continuous benchmarking], also Benchmarking in CI,
+will man oft eine `branch` auf eine bereits existierende Branch erstellen oder rebasen.
+Dies wird ein Branch [Startpunkt][start point] genannt.
+Ein Startpunkt ist eine andere Branch zu einer bestimmten Version (und `git` Hash, falls verfügbar).
+Beim Verwenden des <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehls,
+wähle einen Startpunkt mit der Option `--branch-start-point`.
+Zusätzlich kann die Option `--branch-start-point-hash` verwendet werden, um einen bestimmten `git` Hash für den Startpunkt anzugeben.
 Alle Daten und [Schwellenwerte][thresholds] werden vom Startpunkt kopiert.
+Um Drift zu verhindern, benutze die Option `--branch-reset`, um die Branch immer auf den Startpunkt zurückzusetzen.
 
 [continuous benchmarking]: /de/docs/explanation/continuous-benchmarking/
 [start point]: /de/docs/explanation/benchmarking/#start-point

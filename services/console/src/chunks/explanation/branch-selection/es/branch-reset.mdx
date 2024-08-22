@@ -2,24 +2,36 @@
 
 <br />
 
-Restablece la `branch` especificada.
-El principal caso de uso para `--branch-reset` es el [Benchmarking Continuo Relativo][benchmarking continuo relativo].
-Esta bandera es incompatible con la opción [`--branch-start-point`][punto de inicio de branch].
+Restablecer la `branch` especificada.
+Cuando la opción [`--branch-start-point`][branch start point] está configurada,
+la `branch` se restablecerá al Punto de Inicio especificado.
+Esto es útil para prevenir desviaciones en los datos de [Benchmarking Continuo Estadístico][statistical continuous benchmarking].
+El caso principal de uso para `--branch-reset` sin especificar un Punto de Inicio
+es [Benchmarking Continuo Relativo][relative continuous benchmarking].
 
-- Si `branch` no existe, será creada.
-- Si `branch` ya existe, la versión antigua de `branch` será renombrada
-  y se creará una nueva `branch`.
+- Si la `branch` no existe y no se especifica un Punto de Inicio, la `branch` será creada sin ningún dato histórico.
+- Si la `branch` existe y no se especifica un Punto de Inicio,
+  la versión antigua de `branch` será renombrada y archivada
+  y una nueva `branch` será creada sin ningún dato histórico.
+- Si la `branch` no existe y se especifica un Punto de Inicio,
+  la `branch` será creada usando el Punto de Inicio.
+- Si la `branch` existe y se especifica un Punto de Inicio,
+  la versión antigua de `branch` será renombrada y archivada
+  y una nueva `branch` será creada usando el Punto de Inicio.
 
-Cuando se crea una nueva `branch`, esta no tendrá datos históricos ni Umbrales.
+Si una nueva `branch` es creada con un Punto de Inicio,
+entonces todos los datos y Umbrales del Punto de Inicio especificado se copiarán.
+De lo contrario, la `branch` será creada sin ningún dato histórico.
 
-Por ejemplo, si `feature_branch` existe sin un Punto Inicial
+Por ejemplo, si `feature_branch` existe sin un Punto de Inicio
 entonces usar `--branch feature_branch --branch-reset`
 haría:
 
-1. Renombrar la antigua `feature_branch` a `feature_branch@detached`
-2. Crear una nueva Branch llamada `feature_branch`
-3. `bencher run` procedería usando la nueva `feature_branch`
+1. Renombrar la antigua `feature_branch` a `feature_branch@detached` y archivarla
+2. Crear una nueva Rama llamada `feature_branch`
+3. `bencher run` procederá usando la nueva `feature_branch`
 
-[benchmarking continuo relativo]: /es/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[statistical continuous benchmarking]: /es/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /es/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
 
-[punto de inicio de branch]: #--branch-start-point-branch
+[branch start point]: #--branch-start-point-branch

@@ -2,29 +2,29 @@
 
 <br />
 
-Use o nome da Branch, slug ou UUID especificado como [Ponto de Início][start point] para a opção [`branch`](#--branch-branch).
-Para o GitHub, isso é geralmente [a `base` branch para um Pull Request][github base],
-e para o GitLab, isso é geralmente [a `target` branch para um Merge Request][gitlab target].
-O principal caso de uso para `--branch-start-point` é [Benchmarks Estatísticos Contínuos](/pt/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
+Use o nome do Branch especificado, slug ou UUID como o [Ponto de Início][start point] para a opção [`branch`](#--branch-branch).
+Para o GitHub, isso geralmente é [o branch `base` para um Pull Request][github base],
+e para o GitLab isso geralmente é [o branch `alvo` para um Merge Request][gitlab target].
+O principal caso de uso para `--branch-start-point` é [Benchmarking Contínuo Estatístico](/pt/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
 
-- Se o Ponto de Início especificado for uma string vazia, então essa opção será ignorada.
-- Se `branch` não existir, ela será criada usando esse Ponto de Início.
-- Se `branch` já existir e o Ponto de Início for o mesmo, então essa opção será ignorada.
-- Se `branch` já existir e o Ponto de Início for diferente,
-  a versão antiga de `branch` será renomeada
-  e uma nova `branch` será criada usando esse Ponto de Início atualizado.
+- Se o Ponto de Início especificado for uma string vazia, então esta opção será ignorada.
+- Se `branch` não existir, ele será criado usando este Ponto de Início.
+- Se `branch` existir e o Ponto de Início for o mesmo, então esta opção será ignorada.
+- Se `branch` existir e o Ponto de Início for diferente,
+  a antiga versão de `branch` será renomeada e arquivada
+  e um novo `branch` será criado usando este Ponto de Início atualizado.
 - Se `branch` não existir e o Ponto de Início não existir,
-  então `branch` será criado sem nenhum dado histórico.
+  então o `branch` será criado sem nenhum dado histórico.
 - Se `branch` existir e o Ponto de Início não existir,
   então esta opção será ignorada.
 
-Se uma nova `branch` for criada com um Ponto de Início,
-então todos os dados e Limiares do Ponto de Início especificado serão copiados.
+Se um novo `branch` for criado com um Ponto de Início,
+todos os dados e Limites do Ponto de Início especificado serão copiados.
 
 Por exemplo, se `feature_branch` ainda não existir, mas `main` existir e tiver dados históricos.
 Então, usar `--branch feature_branch --branch-start-point main` faria:
-1. Criar uma nova Branch chamada `feature_branch`
-2. Copiar todos os dados e Limiares de `main` para `feature_branch`
+1. Criar um novo Branch chamado `feature_branch`
+2. Copiar todos os dados e Limites de `main` para `feature_branch`
 3. `bencher run` prosseguiria usando `feature_branch`
 
 [github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
@@ -34,5 +34,5 @@ Então, usar `--branch feature_branch --branch-start-point main` faria:
 
 <br />
 
-> 🐰 Nota: Sempre que utilizar variáveis de ambiente, elas devem ser envolvidas em aspas duplas (ou seja, `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
-> caso você queira que `bencher run` não apresente erro quando `MY_BRANCH_ENV_VAR` estiver indefinido.
+> 🐰 Nota: Sempre que usar variáveis de ambiente, elas devem estar entre aspas duplas (ou seja, `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
+> se você quiser que `bencher run` não apresente erro quando `MY_BRANCH_ENV_VAR` não estiver definido.

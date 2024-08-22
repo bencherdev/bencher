@@ -1,107 +1,111 @@
 import PullRequestsForkReviewerCode from "../pull-requests-fork-reviewer-code.mdx";
 
-### Benchmark de PRs de Fork em Relação à Branch Alvo com Revisores Obrigatórios
+### Benchmark Fork PR from Target Branch with Required Reviewers
 
-Para garantir que o código de um pull request de um fork é seguro,
+Para garantir que o código de uma pull request de fork é seguro,
 esta GitHub Action verifica se o fork é de outro repositório.
-Se o fork for de outro repositório, então precisará ser revisado.
+Se o fork for de outro repositório, então ele precisará ser revisado.
 
-> ⚠️ É **muito**, **muito** importante revisar cuidadosamente cada PR de fork antes de aprovar!
-> Não fazer isso pode resultar em um pedido de comprometimento!
+> ⚠️ É **muito**, **muito** importante revisar minuciosamente cada PR de fork antes de aprovar!
+> Não fazer isso pode resultar em uma pwn request!
 >
-> Se preferir não ter isso na sua consciência, veja [Benchmark de PR de Fork e Upload a partir da Branch Padrão][benchmark fork pr and upload from default branch] acima.
+> Se você preferir não ter essa responsabilidade, veja [Benchmark Fork PR e Upload do Branch Padrão][benchmark fork pr and upload from default branch] acima.
 
 Para configurar este fluxo de trabalho, você precisa criar dois
-[Ambientes de Ações do GitHub][github actions environments].
-Navegue até `Seu Repositório -> Configurações -> Ambientes -> Novo ambiente`.
-Crie dois novos ambientes, `interno` e `externo`.
-O ambiente `interno` não deve ter `Regras de proteção de implantação`.
-No entanto, o ambiente `externo` deve ter `Revisores obrigatórios` definidos para aqueles confiáveis para revisar PRs de fork antes de fazer o benchmark.
-Veja [este post do blog][iterative.ai blog] para uma visão geral completa.
+[Ambientes de GitHub Actions][github actions environments].
+Navegue para `Seu Repositório -> Configurações -> Ambientes -> Novo ambiente`.
+Crie dois novos ambientes, `internal` e `external`.
+O ambiente `internal` não deve ter `Regras de proteção de implementação`.
+No entanto, o ambiente `external` deve ter `Revisores obrigatórios` definidos para aqueles que são confiáveis para revisar PRs de fork antes da avaliação de desempenho.
+Veja [esta postagem no blog][iterative.ai blog] para uma visão geral completa.
 
-Esta configuração funciona porque `pull_request_target` é executado no contexto da branch alvo do pull request,
-onde segredos como seu `BENCHER_API_TOKEN` e o `GITHUB_TOKEN` estão disponíveis.
-Portanto, este fluxo de trabalho só será executado se existir na _branch alvo_.
+Esta configuração funciona porque `pull_request_target` é executado no contexto do branch de destino do pull request,
+onde segredos, como seu `BENCHER_API_TOKEN` e o `GITHUB_TOKEN`, estão disponíveis.
+Portanto, este fluxo de trabalho só será executado se existir no _branch de destino_.
 Evite definir quaisquer segredos como variáveis de ambiente, como `GITHUB_TOKEN` e `BENCHER_API_TOKEN`.
 Em vez disso, passe explicitamente seus segredos para `bencher run`.
 
 <PullRequestsForkReviewerCode />
 
-1. Crie um arquivo de `workflow` de Ações do GitHub.
+1. Crie um arquivo `workflow` de GitHub Actions.
    (ex: `.github/workflows/pr_target_benchmarks.yml`)
-2. Execute em eventos de `pull_request`:
-    - `opened` - Um pull request foi criado.
-    - `reopened` - Um pull request fechado anteriormente foi reaberto.
-    - `edited` - O título ou corpo de um pull request foi editado, ou a branch base de um pull request foi alterada.
-    - `synchronize` - A branch de cabeçalho de um pull request foi atualizada.
-      Por exemplo, a branch de cabeçalho foi atualizada a partir da branch base ou novos commits foram enviados para a branch de cabeçalho.
+2. Execute eventos `pull_request`:
+    - `opened` - Uma pull request foi criada.
+    - `reopened` - Uma pull request anteriormente fechada foi reaberta.
+    - `edited` - O título ou corpo de uma pull request foi editado, ou o branch base de uma pull request foi alterado.
+    - `synchronize` - O branch de origem de uma pull request foi atualizado.
+      Por exemplo, o branch de origem foi atualizado a partir do branch base ou novos commits foram enviados para o branch de origem.
 
-   Veja a [documentação `on` das Ações do GitHub][github actions on]
-   e a [documentação `pull_request` das Ações do GitHub][github action pull_request] para uma visão geral completa.
+   Veja a [documentação sobre `on` do GitHub Actions][github actions on]
+   e a [documentação sobre `pull_request` do GitHub Actions][github action pull_request] para uma visão geral completa.
    (ex: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. Crie o primeiro `job` das Ações do GitHub para verificar se o fluxo de trabalho requer revisão.
+3. Crie um primeiro `job` de GitHub Actions para verificar se o fluxo de trabalho necessita de revisão.
    (ex: `jobs: fork_pr_requires_review`)
-4. Defina o `ambiente` para `interno` se e somente se o pull request for do mesmo repositório.
-   Caso contrário, defina o `ambiente` para `externo`, o que exigirá a aprovação de um revisor para continuar.
+4. Defina o `environment` para `internal` se e somente se a pull request for do mesmo repositório.
+   Caso contrário, defina o `environment` para `external`, que exigirá uma aprovação de um revisor para continuar.
    ⚠️ NÃO REMOVA ESTA LINHA!
-   (ex: `environment: ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'interno') || 'externo' }}`)
-5. Crie um segundo `job` das Ações do GitHub para executar seus benchmarks.
+   (ex: `environment: ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}`)
+5. Crie um segundo `job` de GitHub Actions para executar suas benchmarks.
    (ex: `benchmark_fork_pr_branch`)
-6. Faça com que o job `benchmark_fork_pr_branch` precise do job `fork_pr_requires_review` para ser executado.
+6. Faça o `job` `benchmark_fork_pr_branch` depender do `job` `fork_pr_requires_review` para ser executado.
    ⚠️ NÃO REMOVA ESTA LINHA!
-   Veja a [documentação `needs` das Ações do GitHub][github actions needs]
+   Veja a [documentação sobre `needs` do GitHub Actions][github actions needs]
    para uma visão geral completa.
    (ex: `needs: fork_pr_requires_review`)
 7. Defina o tipo de máquina em que o job será executado.
-   Veja a [documentação `runs-on` das Ações do GitHub][github actions runs-on]
+   Veja a [documentação sobre `runs-on` do GitHub Actions][github actions runs-on]
    para uma visão geral completa.
    (ex: `runs-on: ubuntu-latest`)
 8. Faça checkout do código fonte do PR de fork.
-   Como `pull_request_target` é executado no contexto da branch alvo do pull request,
-   você ainda precisa fazer checkout da branch do pull request.
+   Como `pull_request_target` é executado no contexto do branch de destino do pull request,
+   você ainda precisa fazer checkout do branch do pull request.
    (ex: `uses: actions/checkout@v4`)
     - Especifique o repositório do PR de fork (ex: `repository: ${{ github.event.pull_request.head.repo.full_name }}`)
     - Especifique o hash do PR de fork (ex: `ref: ${{ github.event.pull_request.head.sha }}`)
-    - Não persista suas credenciais de `git` (ex: `persist-credentials: false`)
-9. Instale o CLI do Bencher usando [a Ação do GitHub][bencher cli github action].
+    - Não persista sua credencial `git` (ex: `persist-credentials: false`)
+9. Instale o Bencher CLI usando [a GitHub Action][bencher cli github action].
    (ex: `uses: bencherdev/bencher@main`)
-10. Use o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-    para executar os benchmarks da branch do pull request de fork.
-    Veja [o subcomando CLI `bencher run`][bencher run] para uma visão geral completa.
+10. Use o subcomando do CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+    para executar seus benchmarks no branch do PR de fork.
+    Veja [o subcomando `bencher run` CLI][bencher run] para uma visão geral completa.
     (ex: `bencher run`)
 11. Defina a opção `--project` para o slug do Projeto.
-    Veja [os docs da opção `--project`][project option] para mais detalhes.
+    Veja [a documentação da opção `--project`][project option] para mais detalhes.
     (ex: `--project save-walter-white-1234abcd`)
-12. Defina a opção `--token` para o segredo **Repositório** `BENCHER_API_TOKEN`.
-    Veja [os docs da opção `--token`][token option] para mais detalhes.
+12. Defina a opção `--token` para o segredo do **Repositório** `BENCHER_API_TOKEN`.
+    Veja [a documentação da opção `--token`][token option] para mais detalhes.
     (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-13. Defina a opção `--branch` para o número formatado do PR de fork usando
-    [o evento `pull_request` das Ações do GitHub][github action pull_request].
-    Veja [seleção de branch][branch selection branch] para uma visão geral completa.
+13. Defina a opção `--branch` para o número do PR de fork formatado usando
+    [o evento `pull_request` do GitHub Actions][github action pull_request].
+    Veja [a seleção de branch][branch selection branch] para uma visão geral completa.
     (ex: `--branch '${{ github.event.number }}/merge'`)
-14. Defina a opção `--branch-start-point` para o ponto inicial da branch base do PR de fork usando
-    [o contexto `github` das Ações do GitHub][github actions context].
-    Veja [seleção de branch][branch selection start point] para uma visão geral completa.
+14. Defina a opção `--branch-start-point` para o ponto de início do branch base do PR de fork usando
+    [o contexto `github` do GitHub Actions][github actions context].
+    Veja [a seleção de branch][branch selection start point] para uma visão geral completa.
     (ex: `--branch-start-point '${{ github.base_ref }}'`)
-15. Defina a opção `--branch-start-point-hash` para o hash do ponto inicial da branch base do PR de fork usando
-    [o evento `pull_request` das Ações do GitHub][github action pull_request].
-    Veja [seleção de branch][branch selection start point hash] para uma visão geral completa.
+15. Defina a opção `--branch-start-point-hash` para o hash do ponto de início do branch base do PR de fork usando
+    [o evento `pull_request` do GitHub Actions][github action pull_request].
+    Veja [a seleção de branch][branch selection start point hash] para uma visão geral completa.
     (ex: `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
-16. Defina a opção `--testbed` para o nome do Testbed.
-    Isso provavelmente deve corresponder à máquina selecionada em `runs-on`.
-    Veja [os docs da opção `--testbed`][testbed option] para mais detalhes.
+16. Defina a flag `--branch-reset` para sempre redefinir o branch para o ponto de início.
+    Isso evitará a deriva dos dados de benchmark.
+    Veja [a seleção de branch][branch selection branch reset] para uma visão geral completa.
+    (ex: `--branch-reset`)
+17. Defina a opção `--testbed` para o nome do Testbed.
+    Isso deve provavelmente corresponder à máquina selecionada em `runs-on`.
+    Veja [a documentação da opção `--testbed`][testbed option] para mais detalhes.
     (ex: `--testbed ubuntu-latest`)
-17. Defina a opção `--adapter` para o adaptador de harness desejado.
-    Veja [adaptadores de harness][adapters] para uma visão geral completa.
+18. Defina a opção `--adapter` para o adaptador de harness de benchmark desejado.
+    Veja [os adaptadores de harness de benchmark][adapters] para uma visão geral completa.
     (ex: `--adapter json`)
-18. Defina a flag `--err` para falhar o comando se um Alerta for gerado.
-    Veja [Limiares & Alertas][alerts] para uma visão geral completa.
+19. Defina a flag `--err` para falhar o comando se um Alerta for gerado.
+    Veja [Limites e Alertas][alerts] para uma visão geral completa.
     (ex: `--err`)
-19. Defina a opção `--github-actions` para o token de autenticação da API do GitHub para postar resultados como um comentário no Pull Request usando
-    [a variável de ambiente `GITHUB_TOKEN` das Ações do GitHub][github token].
-    Veja [os docs da opção `--github-actions`][github actions option] para mais detalhes.
+20. Defina a opção `--github-actions` para o token de autenticação da API do GitHub para postar resultados como um comentário na Pull Request usando
+    [a variável de ambiente `GITHUB_TOKEN` do GitHub Actions][github token].
+    Veja [a documentação da opção `--github-actions`][github actions option] para mais detalhes.
     (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-20. Especifique os argumentos do comando de benchmark.
+21. Especifique os argumentos do comando de benchmark.
     Veja [comando de benchmark][command argument] para uma visão geral completa.
     (ex: `bencher mock`)
 
@@ -121,6 +125,7 @@ Em vez disso, passe explicitamente seus segredos para `bencher run`.
 [branch selection branch]: /pt/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /pt/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /pt/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /pt/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /pt/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /pt/docs/explanation/adapters/
 [alerts]: /pt/docs/explanation/thresholds/#alerts

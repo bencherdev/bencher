@@ -1,18 +1,19 @@
-Une Branche est le référentiel `git` (c'est-à-dire le nom de la branche ou le tag).
+Une Branch est la référence `git` (c'est-à-dire le nom de la branche ou le tag).
 Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
-sélectionnez une Branche avec l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH`.
-Par défaut, tous les projets commencent avec une Branche `main`, et
-`main` est utilisée par défaut si aucune des deux n'est spécifiée.
+sélectionnez une Branch avec l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH`.
+Par défaut, tous les projets commencent avec une Branch `main`, et
+`main` est utilisée par défaut si elles ne sont pas spécifiées.
 
-Lors de [l'Évaluation Continue][évaluation continue], c'est-à-dire l'évaluation dans l'IC (Intégration Continue),
-vous voudrez souvent créer ou rebase une `branche` sur une Branche déjà existante.
-Ceci est appelé un Point de Départ de Branche [Point de Départ][point de départ].
-Un Point de Départ est une autre Branche à une version spécifique (et `git` hash, si disponible).
+Lors du [Benchmarking Continu][continuous benchmarking], c'est-à-dire du benchmarking en CI,
+vous souhaiterez souvent créer ou rebaser une `branche` sur une Branch déjà existante.
+Ceci est appelé un Point de Départ de Branch [Start Point][start point].
+Un Point de Départ est une autre Branch à une version spécifique (et un hash `git`, si disponible).
 Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
 sélectionnez un Point de Départ avec l'option `--branch-start-point`.
 De plus, utilisez l'option `--branch-start-point-hash` pour spécifier un hash `git` spécifique pour le Point de Départ.
-Toutes les données et [Seuils][seuils] sont copiés à partir du Point de Départ.
+Toutes les données et les [Seuils][thresholds] sont copiés à partir du Point de Départ.
+Pour éviter la dérive, utilisez le drapeau `--branch-reset` pour toujours réinitialiser la Branch au Point de Départ.
 
-[évaluation continue]: /fr/docs/explanation/continuous-benchmarking/
-[point de départ]: /fr/docs/explanation/benchmarking/#start-point
-[seuils]: /fr/docs/explanation/thresholds/
+[continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
+[start point]: /fr/docs/explanation/benchmarking/#start-point
+[thresholds]: /fr/docs/explanation/thresholds/

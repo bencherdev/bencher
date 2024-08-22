@@ -1,90 +1,93 @@
 import PullRequestsCode from "../pull-requests-code.mdx";
 
-## Pull-Anfragen
+## Pull Requests
 
-Um Leistungsregressionen in Pull-Anfragen zu erfassen, müssen Sie Ihre Benchmarks auf PRs laufen lassen.
-Wenn Sie nur erwarten, PRs von Branches innerhalb **desselben** Repositories zu erhalten,
-dann können Sie einfach einen weiteren Workflow erstellen, um `on` `pull_request` Ereignisse vom selben Repository auszuführen.
+Um Leistungsrückgänge bei Pull Requests zu erfassen, müssen Sie Ihre Benchmarks auf PRs ausführen.
+Wenn Sie nur PRs von Branches innerhalb desselben Repositories erwarten,
+können Sie einfach ein weiteres Workflow erstellen, um `on` `pull_request`-Ereignisse aus demselben Repository laufen zu lassen.
 
-> ⚠️ Diese Lösung funktioniert nur, wenn alle PRs vom **selben** Repository kommen!
-> Siehe [Pull-Anfragen von Forks][pull requests from forks] unten.
+> ⚠️ Diese Lösung funktioniert nur, wenn alle PRs aus demselben **Repository** stammen!
+> Siehe [Pull Requests von Forks][pull requests from forks] unten.
 
 <PullRequestsCode />
 
-1. Erstellen Sie eine GitHub Actions `workflow`-Datei.
-   (Bsp.: `.github/workflows/pr_benchmarks.yml`)
-2. Ausführen bei `pull_request` Ereignissen:
-    - `opened` - Eine Pull-Anfrage wurde erstellt.
-    - `reopened` - Eine zuvor geschlossene Pull-Anfrage wurde wieder geöffnet.
-    - `edited` - Der Titel oder Körper einer Pull-Anfrage wurde bearbeitet, oder der Basiszweig einer Pull-Anfrage wurde geändert.
-    - `synchronize` - Der Head-Zweig einer Pull-Anfrage wurde aktualisiert.
-      Zum Beispiel wurde der Head-Zweig vom Basiszweig aktualisiert oder neue Commits wurden zum Head-Zweig gepushed.
+1. Erstellen Sie eine GitHub Actions `workflow` Datei.
+   (z.B.: `.github/workflows/pr_benchmarks.yml`)
+2. Laufen bei `pull_request` Ereignissen:
+    - `opened` - Ein Pull Request wurde erstellt.
+    - `reopened` - Ein zuvor geschlossener Pull Request wurde wieder geöffnet.
+    - `edited` - Der Titel oder Inhalt eines Pull Requests wurde bearbeitet, oder der Basis-Branch eines Pull Requests wurde geändert.
+    - `synchronize` - Der Head-Branch eines Pull Requests wurde aktualisiert.
+      Zum Beispiel wurde der Head-Branch vom Basis-Branch aktualisiert oder neue Commits wurden in den Head-Branch gepusht.
 
    Siehe die [GitHub Actions `on` Dokumentation][github actions on]
    und [GitHub Actions `pull_request` Dokumentation][github action pull_request] für einen vollständigen Überblick.
-   (Bsp.: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+   (z.B.: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
 3. Erstellen Sie einen GitHub Actions `job`.
-   (Bsp.: `jobs: benchmark_pr_branch`)
-4. Führen Sie bei `pull_request` Ereignissen nur aus, wenn die Pull-Anfrage vom selben Repository stammt.
+   (z.B.: `jobs: benchmark_pr_branch`)
+4. Laufen bei `pull_request`-Ereignissen nur dann, wenn der Pull Request aus demselben Repository stammt.
    ⚠️ ENTFERNEN SIE DIESE ZEILE NICHT!
-   Für die Bearbeitung von Fork PRs siehe [Pull-Anfragen von Forks][pull requests from forks] unten.
-   (Bsp.: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+   Informationen zur Handhabung von Fork PRs finden Sie unten unter [Pull Requests von Forks][pull requests from forks].
+   (z.B.: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
 5. Setzen Sie [die Berechtigungen für das `GITHUB_TOKEN`][github token permissions]
    auf `write` für `pull-requests`.
-   Abhängig von Ihren GitHub-Einstellungen ist dies möglicherweise nicht erforderlich.
+   Abhängig von Ihren GitHub-Einstellungen kann dies nicht erforderlich sein.
    Aber für alle Organisationen und persönlichen Repos,
-   die [nach dem 02. Feb. 2023 erstellt wurden][github token read only],
+   [erstellt nach dem 02. Februar 2023][github token read only],
    ist dies das Standardverhalten.
-   Siehe [die GitHub-Dokumentation][github token permissions security]
+   Siehe [die GitHub Dokumentation][github token permissions security]
    für einen vollständigen Überblick.
-   (Bsp.: `permissions: pull-requests: write`)
-6. Legen Sie den Typ der Maschine fest, auf der der Job ausgeführt wird.
+   (z.B.: `permissions: pull-requests: write`)
+6. Legen Sie den Maschinentyp fest, auf dem der Job laufen soll.
    Siehe die [GitHub Actions `runs-on` Dokumentation][github actions runs-on]
    für einen vollständigen Überblick.
-   (Bsp.: `runs-on: ubuntu-latest`)
-7. Checken Sie den Quellcode des PR-Branches aus.
-   (Bsp.: `uses: actions/checkout@v4`)
-8. Installieren Sie das Bencher CLI mit [der GitHub Action][bencher cli github action].
-   (Bsp.: `uses: bencherdev/bencher@main`)
-9. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl,
-   um die Benchmarks Ihres Pull-Anfrage-Branches zu laufen.
-   Siehe [den `bencher run` CLI-Unterbefehl][bencher run] für einen vollständigen Überblick.
-   (Bsp.: `bencher run`)
-10. Setzen Sie die `--project` Option auf den Projekt-Slug.
-    Siehe [die `--project` Docs][project option] für weitere Details.
-    (Bsp.: `--project save-walter-white-1234abcd`)
+   (z.B.: `runs-on: ubuntu-latest`)
+7. Checken Sie den Quellcode des PR-Branch aus.
+   (z.B.: `uses: actions/checkout@v4`)
+8. Installieren Sie die Bencher CLI mittels [der GitHub Action][bencher cli github action].
+   (z.B.: `uses: bencherdev/bencher@main`)
+9. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Subbefehl, um Ihre Pull Request Branch Benchmarks auszuführen.
+   Siehe [den `bencher run` CLI-Subbefehl][bencher run] für einen vollständigen Überblick.
+   (z.B.: `bencher run`)
+10. Setzen Sie die `--project` Option auf den Projektslug.
+    Siehe [die `--project` Dokumentation][project option] für weitere Details.
+    (z.B.: `--project save-walter-white-1234abcd`)
 11. Setzen Sie die `--token` Option auf das `BENCHER_API_TOKEN` **Repository** Secret.
-    Siehe [die `--token` Docs][token option] für weitere Details.
-    (Bsp.: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-12. Setzen Sie die `--branch`-Option auf den Namen des PR-Branches mit
-    [dem GitHub Actions `github` Kontext][github actions context].
-    Siehe [Branch-Auswahl][branch selection branch] für einen vollständigen Überblick.
-    (Bsp.: `--branch '${{ github.head_ref }}'`)
-13. Setzen Sie die `--branch-start-point`-Option auf den PR-Basis-Branch-Startpunkt mit
-    [dem GitHub Actions `github` Kontext][github actions context].
-    Siehe [Branch-Auswahl][branch selection start point] für einen vollständigen Überblick.
-    (Bsp.: `--branch-start-point '${{ github.base_ref }}'`)
-14. Setzen Sie die `--branch-start-point-hash`-Option auf den PR-Basis-Branch-Startpunkthash mit
-    [dem GitHub Actions `pull_request` Ereignis][github action pull_request].
-    Siehe [Branch-Auswahl][branch selection start point hash] für einen vollständigen Überblick.
-    (Bsp.: `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
-15. Setzen Sie die `--testbed`-Option auf den Namen des Testbeds.
-    Dies sollte wahrscheinlich mit der in `runs-on` ausgewählten Maschine übereinstimmen.
-    Siehe [die `--tested` Docs][testbed option] für weitere Details.
-    (Bsp.: `--testbed ubuntu-latest`)
-16. Setzen Sie die `--adapter`-Option auf den gewünschten Benchmark-Harness-Adapter.
+    Siehe [die `--token` Dokumentation][token option] für weitere Details.
+    (z.B.: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+12. Setzen Sie die `--branch` Option auf den PR-Branch-Namen mittels
+    [des GitHub Actions `github` Kontext][github actions context].
+    Siehe [Branch Auswahl][branch selection branch] für einen vollständigen Überblick.
+    (z.B.: `--branch '${{ github.head_ref }}'`)
+13. Setzen Sie die `--branch-start-point` Option auf den Startpunkt des Basis-Branch des PR mittels
+    [des GitHub Actions `github` Kontext][github actions context].
+    Siehe [Branch Auswahl][branch selection start point] für einen vollständigen Überblick.
+    (z.B.: `--branch-start-point '${{ github.base_ref }}'`)
+14. Setzen Sie die `--branch-start-point-hash` Option auf den Hash des Startpunkts des Basis-Branch des PR mittels
+    [des GitHub Actions `pull_request` Ereignis][github action pull_request].
+    Siehe [Branch Auswahl][branch selection start point hash] für einen vollständigen Überblick.
+    (z.B.: `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
+15. Setzen Sie das `--branch-reset` Flag, um den Branch immer auf den Startpunkt zurückzusetzen.
+    Dies verhindert ein Driften der Benchmark-Daten.
+    Siehe [Branch Auswahl][branch selection branch reset] für einen vollständigen Überblick.
+    (z.B.: `--branch-reset`)
+16. Setzen Sie die `--testbed` Option auf den Testbed-Namen.
+    Dieser sollte wahrscheinlich mit der in `runs-on` ausgewählten Maschine übereinstimmen.
+    Siehe [die `--tested` Dokumentation][testbed option] für weitere Details.
+    (z.B.: `--testbed ubuntu-latest`)
+17. Setzen Sie die `--adapter` Option auf den gewünschten Benchmark-Harness-Adapter.
     Siehe [Benchmark-Harness-Adapter][adapters] für einen vollständigen Überblick.
-    (Bsp.: `--adapter json`)
-17. Setzen Sie das `--err`-Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alert generiert wird.
-    Siehe [Schwellenwerte & Alerts][alerts] für einen vollständigen Überblick.
-    (Bsp.: `--err`)
-18. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um Ergebnisse als Kommentar auf die Pull-Anfrage zu posten, mit
-    [der GitHub Actions `GITHUB_TOKEN` Umgebungsvariablen][github token].
-    Siehe [die `--github-actions` Docs][github actions option] für weitere Details.
-    (Bsp.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-19. Geben Sie die Benchmark-Kommandoargumente an.
-    Siehe [Benchmark-Kommando][command argument] für einen vollständigen Überblick.
-    (Bsp.: `bencher mock`)
+    (z.B.: `--adapter json`)
+18. Setzen Sie das `--err` Flag, um den Befehl bei Generierung eines Alerts fehlschlagen zu lassen.
+    Siehe [Schwellenwert & Alerts][alerts] für einen vollständigen Überblick.
+    (z.B.: `--err`)
+19. Setzen Sie die `--github-actions` Option auf das GitHub API-Authentifizierungs-Token, um Ergebnisse als Kommentar im Pull Request zu posten, mittels
+    [der GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
+    Siehe [die `--github-actions` Dokumentation][github actions option] für weitere Details.
+    (z.B.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+20. Geben Sie die Argumente für den Benchmark-Befehl an.
+    Siehe [Benchmark-Befehl][command argument] für einen vollständigen Überblick.
+    (z.B.: `bencher mock`)
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
@@ -102,6 +105,7 @@ dann können Sie einfach einen weiteren Workflow erstellen, um `on` `pull_reques
 [branch selection branch]: /de/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /de/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /de/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /de/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /de/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /de/docs/explanation/adapters/
 [alerts]: /de/docs/explanation/thresholds/#alerts
