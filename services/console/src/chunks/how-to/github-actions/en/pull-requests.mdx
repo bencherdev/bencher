@@ -68,21 +68,25 @@ then you can simply create another workflow to run `on` `pull_request` events fr
     [the GitHub Actions `pull_request` event][github action pull_request].
     See [branch selection][branch selection start point hash] for a full overview.
     (ex: `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
-15. Set the `--testbed` option to the Testbed name.
+15. Set the `--branch-reset` flag to always reset the Branch to the start point.
+    This will prevent benchmark data drift.
+    See [branch selection][branch selection branch reset] for a full overview.
+    (ex: `--branch-reset`)
+16. Set the `--testbed` option to the Testbed name.
     This should likely match the machine selected in `runs-on`.
     See [the `--tested` docs][testbed option] for more details.
     (ex: `--testbed ubuntu-latest`)
-16. Set the `--adapter` option to the desired benchmark harness adapter.
+17. Set the `--adapter` option to the desired benchmark harness adapter.
     See [benchmark harness adapters][adapters] for a full overview.
     (ex: `--adapter json`)
-17. Set the `--err` flag to fail the command if an Alert is generated.
+18. Set the `--err` flag to fail the command if an Alert is generated.
     See [Threshold & Alerts][alerts] for a full overview.
     (ex: `--err`)
-18. Set the `--github-actions` option to the GitHub API authentication token to post results as a comment on the Pull Request using
+19. Set the `--github-actions` option to the GitHub API authentication token to post results as a comment on the Pull Request using
     [the GitHub Actions `GITHUB_TOKEN` environment variable][github token].
     See [the `--github-actions` docs][github actions option] for more details.
     (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-19. Specify the benchmark command arguments.
+20. Specify the benchmark command arguments.
     See [benchmark command][command argument] for a full overview.
     (ex: `bencher mock`)
 
@@ -102,6 +106,7 @@ then you can simply create another workflow to run `on` `pull_request` events fr
 [branch selection branch]: /docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /docs/explanation/adapters/
 [alerts]: /docs/explanation/thresholds/#alerts

@@ -64,6 +64,7 @@ jobs:
           --branch '${{ env.PR_HEAD }}' \
           --branch-start-point '${{ env.PR_BASE }}' \
           --branch-start-point-hash '${{ env.PR_BASE_SHA }}' \
+          --branch-reset \
           --testbed ubuntu-latest \
           --adapter json \
           --err \

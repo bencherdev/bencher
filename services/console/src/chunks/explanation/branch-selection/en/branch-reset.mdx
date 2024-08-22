@@ -4,23 +4,35 @@
 <br />
 
 Reset the specified `branch`.
-The primary use case for `--branch-reset` is [Relative Continuous Benchmarking][relative continuous benchmarking].
-This flag conflicts with the [`--branch-start-point`][branch start point] option.
+When the [`--branch-start-point`][branch start point] option is set,
+the `branch` will be reset to the specified Start Point.
+This is useful to prevent drift in [Statistical Continuous Benchmarking][statistical continuous benchmarking] data.
+The primary use case for `--branch-reset` without specifying a Start Point
+is [Relative Continuous Benchmarking][relative continuous benchmarking].
 
-- If `branch` does not exit, it will be created.
-- If `branch` does exist, the old version of `branch` will be renamed
-  and a new `branch` will be created.
+- If `branch` does not exit and no Start Point is specified, the `branch` will be created without any historical data.
+- If `branch` does exist and no Start Point is specified,
+  the old version of `branch` will be both renamed and archived
+  and a new `branch` will be created without any historical data.
+- If `branch` does not exist and a Start Point is specified,
+  the `branch` will be created using the Start Point.
+- If `branch` does exist and a Start Point is specified,
+  the old version of `branch` will be both renamed and archived
+  and a new `branch` will be created using the Start Point.
 
-When a new `branch` is created it will have no historical data or Thresholds.
+If a new `branch` is created with a Start Point,
+then all the data and Thresholds from the specified Start Point are copied over.
+Otherwise, the `branch` will be created without any historical data.
 
 For example, if `feature_branch` exists without a Start Point
 then using `--branch feature_branch --branch-reset`
 would:
 
-1. Rename the old `feature_branch` to `feature_branch@detached`
+1. Rename the old `feature_branch` to `feature_branch@detached` and archive it
 2. Create a new Branch named `feature_branch`
 3. `bencher run` would proceed using the new `feature_branch`
 
+[statistical continuous benchmarking]: /docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [relative continuous benchmarking]: /docs/how-to/track-benchmarks/#relative-continuous-benchmarking
 
 [branch start point]: #--branch-start-point-branch

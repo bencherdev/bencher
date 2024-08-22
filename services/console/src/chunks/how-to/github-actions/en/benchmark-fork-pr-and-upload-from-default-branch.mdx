@@ -96,24 +96,28 @@ See [using data from the triggering workflow][github actions trigger workflow] f
     [the GitHub Actions `pull_request` event][github action pull_request].
     See [branch selection][branch selection start point hash] for a full overview.
     (ex: `--branch-start-point-hash '${{ env.PR_BASE_SHA }}'`)
-18. Set the `--testbed` option to the Testbed name.
+18. Set the `--branch-reset` flag to always reset the Branch to the start point.
+    This will prevent benchmark data drift.
+    See [branch selection][branch selection branch reset] for a full overview.
+    (ex: `--branch-reset`)
+19. Set the `--testbed` option to the Testbed name.
     This should likely match the machine selected in `runs-on`.
     See [the `--tested` docs][testbed option] for more details.
     (ex: `--testbed ubuntu-latest`)
-19. Set the `--adapter` option to the desired benchmark harness adapter.
+20. Set the `--adapter` option to the desired benchmark harness adapter.
     See [benchmark harness adapters][adapters] for a full overview.
     (ex: `--adapter json`)
-20. Set the `--err` flag to fail the command if an Alert is generated.
+21. Set the `--err` flag to fail the command if an Alert is generated.
     See [Threshold & Alerts][alerts] for a full overview.
     (ex: `--err`)
-21. Set the `--github-actions` option to the GitHub API authentication token to post results as a comment on the Pull Request using
+22. Set the `--github-actions` option to the GitHub API authentication token to post results as a comment on the Pull Request using
     [the GitHub Actions `GITHUB_TOKEN` environment variable][github token].
     See [the `--github-actions` docs][github actions option] for more details.
     (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-22. Set the `--ci-number` option to the pull request number.
+23. Set the `--ci-number` option to the pull request number.
     See [the `--ci-number` docs][ci number option] for more details.
     (ex: `--ci-number '${{ env.PR_NUMBER }}'`)
-23. Set the `--file` option to the benchmark results file path.
+24. Set the `--file` option to the benchmark results file path.
     See [benchmark command][command argument] for a full overview.
     (ex: `--file "$BENCHMARK_RESULTS"`)
 
@@ -133,6 +137,7 @@ See [using data from the triggering workflow][github actions trigger workflow] f
 [branch selection branch]: /docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /docs/explanation/adapters/
 [alerts]: /docs/explanation/thresholds/#alerts

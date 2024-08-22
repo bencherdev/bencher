@@ -102,16 +102,20 @@ This is how we would track the performance of a new feature branch, named `featu
 5. Set the `--branch-start-point-hash` option to the feature Branch start point `git` hash.
    See [branch selection][branch selection start point hash] for a full overview.
    (ex: `--branch-start-point-hash 32ae...dd8b`)
-6. Set the `--testbed` option to the Testbed name.
+6. Set the `--branch-reset` flag to always reset the Branch to the start point.
+   This will prevent benchmark data drift.
+   See [branch selection][branch selection branch reset] for a full overview.
+   (ex: `--branch-reset`)
+7. Set the `--testbed` option to the Testbed name.
    See [the `--tested` docs][testbed option] for more details.
    (ex: `--testbed ci-runner`)
-7. Set the `--adapter` option to the desired benchmark harness adapter.
+8. Set the `--adapter` option to the desired benchmark harness adapter.
    See [benchmark harness adapters][adapters] for a full overview.
    (ex: `--adapter json`)
-8. Set the `--err` flag to fail the command if an Alert is generated.
+9. Set the `--err` flag to fail the command if an Alert is generated.
    See [Threshold & Alerts][alerts] for a full overview.
    (ex: `--err`)
-9. Specify the benchmark command arguments.
+10. Specify the benchmark command arguments.
    See [benchmark command][command argument] for a full overview.
    (ex: `bencher mock`)
 
@@ -144,3 +148,4 @@ for the first and all subsequent runs.
 [command argument]: /docs/explanation/bencher-run/#benchmark-command
 [branch selection start point]: /docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /docs/explanation/branch-selection/#--branch-reset

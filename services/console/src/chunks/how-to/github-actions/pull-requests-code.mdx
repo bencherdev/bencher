@@ -22,6 +22,7 @@ jobs:
           --branch '${{ github.head_ref }}' \
           --branch-start-point '${{ github.base_ref }}' \
           --branch-start-point-hash '${{ github.event.pull_request.base.sha }}' \
+          --branch-reset \
           --testbed ubuntu-latest \
           --adapter json \
           --err \
