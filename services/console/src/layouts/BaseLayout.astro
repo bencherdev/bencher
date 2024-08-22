@@ -174,7 +174,7 @@ const article = () => {
       async
       src={`https://www.googletagmanager.com/gtag/js?id=${PUBLIC_GOOGLE_ANALYTICS_ID}`}
     ></script>
-    <script define:vars={{ PUBLIC_GOOGLE_ANALYTICS_ID }} type="text/partytown">
+    <script define:vars={{ PUBLIC_GOOGLE_ANALYTICS_ID }}>
       window.dataLayer = window.dataLayer || [];
       function gtag() {
         dataLayer.push(arguments);
