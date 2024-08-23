@@ -1,6 +1,6 @@
 [package]
 name = "benchers"
-version = "0.1.0"
+version = "0.1.1"
 description = "Bencher for Rust"
 homepage = "https://bencher.dev"
 repository = "https://github.com/bencherdev/bencher"
