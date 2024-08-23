@@ -1,0 +1,10 @@
+[package]
+name = "benchers"
+version = "0.1.0"
+description = "Bencher for Rust"
+homepage = "https://bencher.dev"
+repository = "https://github.com/bencherdev/bencher"
+readme = "README.md"
+license-file = "LICENSE.md"
+
+[dependencies]
