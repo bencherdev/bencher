@@ -22,7 +22,7 @@ Zum Beispiel, wenn `feature_branch` existiert und der Startpunkt der `main`-Bran
 bei Hash `32aea434d751648726097ed3ac760b57107edd8b` ist,
 würde die Verwendung von `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562` folgendes bewirken:
 
-1. Die alte `feature_branch` würde in `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b` umbenannt und archiviert
+1. Die alte `feature_branch` würde in `feature_branch@archive-suffix` umbenannt und archiviert
 2. Eine neue Branch mit dem Namen `feature_branch` würde erstellt
 3. Alle Daten und Schwellenwerte von `main` bei Hash `68b12758509ca5e2b1e3983525625e532eb5f562` würden in die neue `feature_branch` kopiert
 4. `bencher run` würde mit der neuen `feature_branch` fortfahren

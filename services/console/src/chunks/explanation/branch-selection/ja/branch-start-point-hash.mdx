@@ -15,7 +15,7 @@
 
 例えば、`feature_branch`が`main`ブランチのハッシュ`32aea434d751648726097ed3ac760b57107edd8b`を開始ポイントとして存在する場合、`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`を使用すると：
 
-1. 古い`feature_branch`を`feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`にリネームし、アーカイブします。
+1. 古い`feature_branch`を`feature_branch@archive-suffix`にリネームし、アーカイブします。
 2. 新しいブランチ名`feature_branch`を作成します。
 3. ハッシュ`68b12758509ca5e2b1e3983525625e532eb5f562`の時点での`main`からすべてのデータと閾値を新しい`feature_branch`にコピーします。
 4. `bencher run`は新しい`feature_branch`を使用して進行します。

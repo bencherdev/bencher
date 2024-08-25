@@ -32,8 +32,6 @@ use crate::{
 
 crate::util::typed_id::typed_id!(BranchId);
 
-const BRANCH_HEAD: &str = "HEAD";
-
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
@@ -186,13 +184,7 @@ impl QueryBranch {
         }) = report_start_point
         {
             return self
-                .rename_and_create(
-                    log,
-                    context,
-                    current_start_point.as_ref(),
-                    new_start_point.as_ref(),
-                    clone_thresholds,
-                )
+                .rename_and_create(log, context, new_start_point.as_ref(), clone_thresholds)
                 .await;
         }
 
@@ -213,7 +205,6 @@ impl QueryBranch {
                                 self.rename_and_create(
                                     log,
                                     context,
-                                    current_start_point.as_ref(),
                                     new_start_point.as_ref(),
                                     clone_thresholds,
                                 )
@@ -226,7 +217,6 @@ impl QueryBranch {
                             self.rename_and_create(
                                 log,
                                 context,
-                                current_start_point.as_ref(),
                                 new_start_point.as_ref(),
                                 clone_thresholds,
                             )
@@ -242,28 +232,16 @@ impl QueryBranch {
                 } else {
                     // If the current start point branch does not match the new start point branch,
                     // then the branch needs to be recreated from that new start point.
-                    self.rename_and_create(
-                        log,
-                        context,
-                        current_start_point.as_ref(),
-                        new_start_point.as_ref(),
-                        clone_thresholds,
-                    )
-                    .await
+                    self.rename_and_create(log, context, new_start_point.as_ref(), clone_thresholds)
+                        .await
                 }
             },
             // If the current branch does not have a start point and one is specified,
             // then the branch needs to be recreated from that start point.
             // The naming convention for this will be a detached branch name and slug is okay: `branch_name@detached`
             (None, Some(_)) => {
-                self.rename_and_create(
-                    log,
-                    context,
-                    current_start_point.as_ref(),
-                    new_start_point.as_ref(),
-                    clone_thresholds,
-                )
-                .await
+                self.rename_and_create(log, context, new_start_point.as_ref(), clone_thresholds)
+                    .await
             },
             // If a start point is not specified, then there is nothing to check.
             // Even if the current branch has a start point, it does not need to always be specified.
@@ -285,13 +263,11 @@ impl QueryBranch {
         self,
         log: &Logger,
         context: &ApiContext,
-        current_start_point: Option<&StartPoint>,
         new_start_point: Option<&StartPoint>,
         clone_thresholds: Option<bool>,
     ) -> Result<Self, HttpError> {
         // Update the current branch name and slug
-        self.rename(context, current_start_point, new_start_point)
-            .await?;
+        self.rename(context).await?;
 
         // Create new branch with the same name and slug as the current branch
         let branch = JsonNewBranch {
@@ -311,21 +287,13 @@ impl QueryBranch {
         Ok(new_branch)
     }
 
-    pub async fn rename(
-        &self,
-        context: &ApiContext,
-        current_start_point: Option<&StartPoint>,
-        new_start_point: Option<&StartPoint>,
-    ) -> Result<(), HttpError> {
-        let suffix = self.rename_branch_suffix(current_start_point, new_start_point);
-        let branch_name = format!("{name}@{suffix}", name = &self.name);
-
+    pub async fn rename(&self, context: &ApiContext) -> Result<(), HttpError> {
+        let branch_name = format!("{name}@{uuid}", name = &self.name, uuid = &self.uuid);
         let count = schema::branch::table
             .filter(schema::branch::name.like(&format!("{branch_name}%")))
             .count()
             .get_result::<i64>(conn_lock!(context))
             .map_err(resource_not_found_err!(Branch, (&self, &branch_name)))?;
-
         let branch_name = if count > 0 {
             format!("{branch_name}/{count}")
         } else {
@@ -335,12 +303,14 @@ impl QueryBranch {
             .parse()
             .map_err(resource_conflict_err!(Branch, (&self, &branch_name)))?;
 
-        let branch_slug = Slug::new(&branch_name);
-        let branch_slug = if count > 0 {
-            branch_slug.with_rand_suffix()
-        } else {
-            branch_slug
-        };
+        let branch_slug = conn_lock!(context, |conn| ok_slug!(
+            conn,
+            self.project_id,
+            &branch_name,
+            None,
+            branch,
+            QueryBranch
+        )?);
 
         let json_update_branch = JsonUpdateBranch {
             name: Some(branch_name),
@@ -355,39 +325,6 @@ impl QueryBranch {
             .map_err(resource_conflict_err!(Branch, (&self, &update_branch)))?;
 
         Ok(())
-    }
-
-    fn rename_branch_suffix(
-        &self,
-        current_start_point: Option<&StartPoint>,
-        new_start_point: Option<&StartPoint>,
-    ) -> String {
-        // If there is no current start point, then the branch will be detached.
-        // While `HEAD` isn't the most accurate name, it is a reserved name in git,
-        // so it should not be used by any other branches.
-        let Some(current_start_point) = current_start_point else {
-            return BRANCH_HEAD.to_owned();
-        };
-
-        // If the start point is self-referential, then simply name it `HEAD` to avoid confusing recursive names.
-        // If the current start point is archived, then don't use the branch name,
-        // as it will already have this renamed format. Instead just use its UUID.
-        // Otherwise, use the name of the current start point branch.
-        let branch = if new_start_point.is_some_and(|new| self.uuid == new.branch.uuid) {
-            BRANCH_HEAD.to_owned()
-        } else if current_start_point.branch.archived.is_some() {
-            current_start_point.branch.uuid.to_string()
-        } else {
-            current_start_point.branch.name.to_string()
-        };
-
-        let version_suffix = if let Some(hash) = &current_start_point.version.hash {
-            format!("hash/{hash}")
-        } else {
-            format!("version/{}", current_start_point.version.number)
-        };
-
-        format!("{branch}/{version_suffix}")
     }
 
     pub fn into_json_for_project(

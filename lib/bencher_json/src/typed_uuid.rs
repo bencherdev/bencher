@@ -62,6 +62,13 @@ macro_rules! typed_uuid {
             }
         }
 
+        #[allow(unused_qualifications)]
+        impl AsRef<uuid::Uuid> for $name {
+            fn as_ref(&self) -> &uuid::Uuid {
+                &self.0
+            }
+        }
+
         impl $name {
             #[allow(unused_qualifications)]
             pub fn new() -> Self {

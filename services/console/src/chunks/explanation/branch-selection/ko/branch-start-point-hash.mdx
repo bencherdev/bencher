@@ -16,7 +16,7 @@
 예를 들어, `feature_branch`가 존재하고 그 시작 지점이 해시 `32aea434d751648726097ed3ac760b57107edd8b`에 있는 `main` Branch라면
 `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562` 옵션을 사용하면 다음과 같은 일이 발생합니다:
 
-1. 기존 `feature_branch`를 `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`로 이름을 바꾸고 보관합니다.
+1. 기존 `feature_branch`를 `feature_branch@archive-suffix`로 이름을 바꾸고 보관합니다.
 2. `feature_branch`라는 새로운 브랜치를 생성합니다.
 3. `main`의 해시 `68b12758509ca5e2b1e3983525625e532eb5f562`에 있는 모든 데이터와 임계값을 새로운 `feature_branch`에 복사합니다.
 4. `bencher run`이 새 `feature_branch`를 사용하여 진행됩니다.

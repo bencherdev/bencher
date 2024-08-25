@@ -24,7 +24,7 @@
 то использование `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
 выполнит следующие действия:
 
-1. Переименует старый `feature_branch` в `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b` и заархивирует его
+1. Переименует старый `feature_branch` в `feature_branch@archive-suffix` и заархивирует его
 2. Создаст новую Ветку с именем `feature_branch`
 3. Скопирует все данные и Пороги из `main` на хеше `68b12758509ca5e2b1e3983525625e532eb5f562` в новый `feature_branch`
 4. `bencher run` будет выполняться с использованием нового `feature_branch`

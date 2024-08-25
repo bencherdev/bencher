@@ -28,7 +28,7 @@ For example, if `feature_branch` exists without a Start Point
 then using `--branch feature_branch --branch-reset`
 would:
 
-1. Rename the old `feature_branch` to `feature_branch@HEAD` and archive it
+1. Rename the old `feature_branch` to `feature_branch@archive-suffix` and archive it
 2. Create a new Branch named `feature_branch`
 3. `bencher run` would proceed using the new `feature_branch`
 

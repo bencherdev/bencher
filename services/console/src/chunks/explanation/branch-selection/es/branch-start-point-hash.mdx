@@ -24,7 +24,7 @@ en el hash `32aea434d751648726097ed3ac760b57107edd8b`
 entonces usar `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
 haría lo siguiente:
 
-1. Renombrar el viejo `feature_branch` a `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b` y archivarlo
+1. Renombrar el viejo `feature_branch` a `feature_branch@archive-suffix` y archivarlo
 2. Crear una nueva Rama llamada `feature_branch`
 3. Copiar todos los datos y Umbrales de `main` en el hash `68b12758509ca5e2b1e3983525625e532eb5f562` a la nueva `feature_branch`
 4. `bencher run` procederá usando la nueva `feature_branch`

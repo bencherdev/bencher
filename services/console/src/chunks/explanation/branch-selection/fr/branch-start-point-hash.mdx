@@ -22,7 +22,7 @@ Par exemple, si `feature_branch` existe avec son point de départ étant la bran
 au hachage `32aea434d751648726097ed3ac760b57107edd8b`
 alors utiliser `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562` ferait :
 
-1. Renommer l'ancien `feature_branch` en `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b` et l'archiver
+1. Renommer l'ancien `feature_branch` en `feature_branch@archive-suffix` et l'archiver
 2. Créer une nouvelle branche nommée `feature_branch`
 3. Copier toutes les données et seuils de `main` au hachage `68b12758509ca5e2b1e3983525625e532eb5f562` vers la nouvelle `feature_branch`
 4. `bencher run` se poursuivrait en utilisant le nouveau `feature_branch`

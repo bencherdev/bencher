@@ -16,7 +16,7 @@
 例如，如果`feature_branch`的起点是哈希`32aea434d751648726097ed3ac760b57107edd8b`的`main`分支，
 那么使用`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`将会：
 
-1. 将旧的`feature_branch`重命名为`feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`并存档
+1. 将旧的`feature_branch`重命名为`feature_branch@archive-suffix`并存档
 2. 创建一个名为`feature_branch`的新分支
 3. 将哈希`68b12758509ca5e2b1e3983525625e532eb5f562`的`main`分支的所有数据和阈值复制到新的`feature_branch`
 4. 使用新的`feature_branch`运行`bencher run`

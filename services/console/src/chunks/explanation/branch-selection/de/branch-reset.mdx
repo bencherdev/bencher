@@ -26,7 +26,7 @@ Andernfalls wird der `branch` ohne historische Daten erstellt.
 Zum Beispiel, wenn `feature_branch` ohne einen Startpunkt existiert,
 würde die Verwendung von `--branch feature_branch --branch-reset` folgendes bewirken:
 
-1. Die alte `feature_branch` wird in `feature_branch@HEAD` umbenannt und archiviert
+1. Die alte `feature_branch` wird in `feature_branch@archive-suffix` umbenannt und archiviert
 2. Ein neuer Branch namens `feature_branch` wird erstellt
 3. `bencher run` würde unter Verwendung des neuen `feature_branch` fortgesetzt
 
