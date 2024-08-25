@@ -29,9 +29,9 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt", "signal"] }
 url.workspace = true
 # Crate
-bollard = "0.16"
+bollard = "0.17"
 futures-util = "0.3"
-gix = { version = "0.63", default-features = false, features = ["revision"] }
+gix = { version = "0.66", default-features = false, features = ["revision"] }
 
 [lints]
 workspace = true
