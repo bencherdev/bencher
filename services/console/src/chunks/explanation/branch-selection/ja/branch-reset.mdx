@@ -26,7 +26,7 @@
 例えば、`feature_branch` が開始地点なしで存在している場合、
 `--branch feature_branch --branch-reset` を使用すると：
 
-1. 古い `feature_branch` を `feature_branch@detached` にリネームし、アーカイブする
+1. 古い `feature_branch` を `feature_branch@HEAD` にリネームし、アーカイブする
 2. 新しい `feature_branch` という名前のブランチを作成する
 3. `bencher run` は新しい `feature_branch` を使用して進行する
 

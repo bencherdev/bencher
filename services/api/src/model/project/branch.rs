@@ -32,6 +32,8 @@ use crate::{
 
 crate::util::typed_id::typed_id!(BranchId);
 
+const BRANCH_HEAD: &str = "HEAD";
+
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
@@ -316,7 +318,7 @@ impl QueryBranch {
         new_start_point: Option<&StartPoint>,
     ) -> Result<(), HttpError> {
         let suffix = self.rename_branch_suffix(current_start_point, new_start_point);
-        let branch_name = format!("{branch_name}@{suffix}", branch_name = &self.name);
+        let branch_name = format!("{name}@{suffix}", name = &self.name);
 
         let count = schema::branch::table
             .filter(schema::branch::name.like(&format!("{branch_name}%")))
@@ -332,7 +334,13 @@ impl QueryBranch {
         let branch_name = branch_name
             .parse()
             .map_err(resource_conflict_err!(Branch, (&self, &branch_name)))?;
+
         let branch_slug = Slug::new(&branch_name);
+        let branch_slug = if count > 0 {
+            branch_slug.with_rand_suffix()
+        } else {
+            branch_slug
+        };
 
         let json_update_branch = JsonUpdateBranch {
             name: Some(branch_name),
@@ -355,24 +363,31 @@ impl QueryBranch {
         new_start_point: Option<&StartPoint>,
     ) -> String {
         // If there is no current start point, then the branch will be detached.
+        // While `HEAD` isn't the most accurate name, it is a reserved name in git,
+        // so it should not be used by any other branches.
         let Some(current_start_point) = current_start_point else {
-            return "detached".to_owned();
+            return BRANCH_HEAD.to_owned();
         };
 
         // If the start point is self-referential, then simply name it `HEAD` to avoid confusing recursive names.
-        // While `HEAD` isn't the most accurate name, it is a reserved name in git so it should not be used by any other branches.
-        // Otherwise, just use the name of the current start point branch.
-        let branch_name = if new_start_point.is_some_and(|new| self.uuid == new.branch.uuid) {
-            "HEAD"
+        // If the current start point is archived, then don't use the branch name,
+        // as it will already have this renamed format. Instead just use its UUID.
+        // Otherwise, use the name of the current start point branch.
+        let branch = if new_start_point.is_some_and(|new| self.uuid == new.branch.uuid) {
+            BRANCH_HEAD.to_owned()
+        } else if current_start_point.branch.archived.is_some() {
+            current_start_point.branch.uuid.to_string()
         } else {
-            current_start_point.branch.name.as_ref()
+            current_start_point.branch.name.to_string()
         };
+
         let version_suffix = if let Some(hash) = &current_start_point.version.hash {
             format!("hash/{hash}")
         } else {
             format!("version/{}", current_start_point.version.number)
         };
-        format!("{branch_name}/{version_suffix}")
+
+        format!("{branch}/{version_suffix}")
     }
 
     pub fn into_json_for_project(

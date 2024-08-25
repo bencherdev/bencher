@@ -13,7 +13,7 @@
 
 例如，如果 `feature_branch` 存在且无指定起点，则使用 `--branch feature_branch --branch-reset` 会：
 
-1. 将旧的 `feature_branch` 重命名为 `feature_branch@detached` 并归档
+1. 将旧的 `feature_branch` 重命名为 `feature_branch@HEAD` 并归档
 2. 创建一个名为 `feature_branch` 的新分支
 3. `bencher run` 将使用新的 `feature_branch` 继续进行
 

@@ -25,7 +25,7 @@
 예를 들어, `feature_branch`가 시작 지점 없이 존재하는 경우
 `--branch feature_branch --branch-reset`을 사용하면:
 
-1. 기존 `feature_branch`의 이름을 `feature_branch@detached`로 변경하고 이를 아카이브합니다.
+1. 기존 `feature_branch`의 이름을 `feature_branch@HEAD`로 변경하고 이를 아카이브합니다.
 2. `feature_branch`라는 이름의 새로운 브랜치를 생성합니다.
 3. `bencher run`은 새로운 `feature_branch`를 사용하여 진행됩니다.
 
