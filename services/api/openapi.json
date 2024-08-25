@@ -10789,7 +10789,7 @@
           },
           "reset": {
             "nullable": true,
-            "description": "Reset the branch to an empty state. If the branch already exists, a new empty branch will be created. Will not take effect if the `branch` field is set.",
+            "description": "Reset the branch to an empty state. If the branch already exists, a new empty branch will be created. If a start point is provided, the new branch will begin at that start point.",
             "type": "boolean"
           },
           "thresholds": {
