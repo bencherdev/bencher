@@ -86,9 +86,9 @@ impl From<NameId> for String {
     }
 }
 
-impl<T> fmt::Display for NameIdKind<T>
+impl<T> Display for NameIdKind<T>
 where
-    T: fmt::Display,
+    T: Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

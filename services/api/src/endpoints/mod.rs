@@ -1,6 +1,6 @@
 #![allow(clippy::str_to_string)]
 
-use dropshot::ApiDescription;
+use dropshot::{ApiDescription, ApiDescriptionRegisterError};
 
 pub mod endpoint;
 pub mod organization;
@@ -20,7 +20,7 @@ impl Api {
         api: &mut ApiDescription<ApiContext>,
         http_options: bool,
         #[cfg(feature = "plus")] is_bencher_cloud: bool,
-    ) -> Result<(), String> {
+    ) -> Result<(), ApiDescriptionRegisterError> {
         // Root
         if http_options {
             api.register(system::root::server_root_options)?;

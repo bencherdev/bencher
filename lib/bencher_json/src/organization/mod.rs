@@ -200,22 +200,22 @@ impl JsonUpdateOrganization {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum OrganizationPermission {
-    #[display(fmt = "view")]
+    #[display("view")]
     View,
-    #[display(fmt = "create")]
+    #[display("create")]
     Create,
-    #[display(fmt = "edit")]
+    #[display("edit")]
     Edit,
-    #[display(fmt = "delete")]
+    #[display("delete")]
     Delete,
-    #[display(fmt = "manage")]
+    #[display("manage")]
     Manage,
-    #[display(fmt = "view_role")]
+    #[display("view_role")]
     ViewRole,
-    #[display(fmt = "create_role")]
+    #[display("create_role")]
     CreateRole,
-    #[display(fmt = "edit_role")]
+    #[display("edit_role")]
     EditRole,
-    #[display(fmt = "delete_role")]
+    #[display("delete_role")]
     DeleteRole,
 }

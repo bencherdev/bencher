@@ -56,7 +56,7 @@ pub enum ConfigTxError {
     #[error("Failed to parse data store: {0}")]
     DataStore(crate::context::DataStoreError),
     #[error("Failed to register endpoint: {0}")]
-    Register(String),
+    Register(dropshot::ApiDescriptionRegisterError),
     #[error("Failed to create server: {0}")]
     CreateServer(Box<dyn std::error::Error + Send + Sync>),
 
@@ -315,6 +315,7 @@ fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
         bind_address,
         request_body_max_bytes,
         default_handler_task_mode: dropshot::HandlerTaskMode::Detached,
+        log_headers: Vec::new(),
     }
 }
 

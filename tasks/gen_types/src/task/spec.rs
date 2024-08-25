@@ -39,8 +39,8 @@ impl Spec {
 
         api_description.tag_config(TagConfig {
             allow_other_tags: false,
-            endpoint_tag_policy: EndpointTagPolicy::AtLeastOne,
-            tag_definitions: literally::hmap!{
+            policy: EndpointTagPolicy::AtLeastOne,
+            tags: literally::hmap!{
                 "auth" => TagDetails { description: Some("Auth".into()), external_docs: None},
                 "organizations" => TagDetails { description: Some("Organizations".into()), external_docs: None},
                 "projects" => TagDetails { description: Some("Projects".into()), external_docs: None},
