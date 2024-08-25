@@ -2,60 +2,64 @@ import MergeRequestsCode from "../merge-requests-code.mdx";
 
 ## Запросы на слияние
 
-Чтобы отслеживать регрессию производительности в запросах на слияние, вам необходимо будет запускать свои бенчмарки на MR.
-Ниже приведенный пример должен использоваться только для веток в **том же** репозитории.
+Чтобы обнаружить регрессию производительности в запросах на слияние, вам нужно запустить ваши тесты производительности на запросах на слияние.
+Ниже приведенный пример должен использоваться только для веток внутри **одного и того же** репозитория.
 
 <MergeRequestsCode />
 
 1. Создайте или обновите файл GitLab CI/CD.
-   (например: `.gitlab-ci.yml`)
-2. Создайте задание GitLab CI/CD.
-   (например: `benchmark_mr_branch`)
-3. Запустите `if` пайплайн был инициирован событием `merge_request_event`.
-   Смотрите [документацию `rules` GitLab CI/CD][gitlab ci cd rules]
-   и [документацию по предопределенным переменным GitLab CI/CD][gitlab ci cd redefined variables] для полного обзора.
-   (например: `rules: - if: ...`)
-4. Установите `image`, в котором будет выполняться задание.
-   Смотрите [документацию `image` GitLab CI/CD][gitlab ci cd image]
+   (напр.: `.gitlab-ci.yml`)
+2. Создайте задачу GitLab CI/CD.
+   (напр.: `benchmark_mr_branch`)
+3. Запустите `if`, если конвейер был вызван `merge_request_event`.
+   См. [документацию по правилам GitLab CI/CD][gitlab ci cd rules]
+   и [документацию по предопределённым переменным GitLab CI/CD][gitlab ci cd redefined variables] для полного обзора.
+   (напр.: `rules: - if: ...`)
+4. Установите `image`, в котором будет выполняться задача.
+   См. [документацию по image в GitLab CI/CD][gitlab ci cd image]
    для полного обзора.
-   (например: `image: debian:bullseye`)
-5. Установите CLI Bencher с помощью [удобного скрипта][install bencher cli].
-   (например: `before_script: ...`)
-6. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
-   для запуска ваших бенчмарков ветки запроса на слияние.
-   Смотрите [подкоманду CLI `bencher run`][bencher run] для полного обзора.
-   (например: `bencher run`)
-7. Установите параметр `--project` для слага проекта.
-   Смотрите [документацию `--project`][project option] для подробностей.
-   (например: `--project save-walter-white-1234abcd`)
-8. Установите параметр `--token` для маскированной переменной окружения `BENCHER_API_TOKEN`.
-   Смотрите [документацию `--token`][token option] для подробностей.
-   (например: `--token "$BENCHER_API_TOKEN"`)
-9. Установите параметр `--branch` для имени ветки MR с использованием
-   [предопределенной переменной GitLab CI/CD][branch selection branch].
-   Смотрите [выбор ветки](/ru/docs/explanation/branch-selection/#--branch-branch) для полного обзора.
-   (например: `--branch "$CI_COMMIT_REF_NAME"`)
-10. Установите параметр `--branch-start-point` для точки начала целевой ветки MR с использованием
-    [предопределенной переменной GitLab CI/CD][gitlab ci cd redefined variables].
-    Смотрите [выбор ветки][branch selection start point] для полного обзора.
-    (например: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-11. Установите параметр `--branch-start-point-hash` для хеша точки начала целевой ветки MR с использованием
-    [предопределенной переменной GitLab CI/CD][gitlab ci cd redefined variables].
-    Смотрите [выбор ветки][branch selection start point hash] для полного обзора.
-    (например: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
-12. Установите параметр `--testbed` для имени тестовой среды.
-    Это, вероятно, должно соответствовать машине, выбранной в `image`.
-    Смотрите [документацию `--tested`][testbed option] для подробностей.
-    (например: `--testbed debian:bullseye`)
-13. Установите параметр `--adapter` для выбора адаптера системы тестирования производительности.
-    Смотрите [адаптеры системы тестирования производительности][adapters] для полного обзора.
-    (например: `--adapter json`)
-14. Установите флаг `--err` для провала команды, если сгенерировано предупреждение.
-    Смотрите [Пороги и предупреждения][alerts] для полного обзора.
-    (например: `--err`)
-15. Укажите аргументы команды бенчмарка.
-    Смотрите [аргумент команды][command argument] для полного обзора.
-    (например: `bencher mock`)
+   (напр.: `image: debian:bullseye`)
+5. Установите Bencher CLI, используя [удобный скрипт][install bencher cli].
+   (напр.: `before_script: ...`)
+6. Используйте субкоманду <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+   для выполнения тестов производительности вашей ветки запроса на слияние.
+   См. [субкоманду `bencher run` CLI][bencher run] для полного обзора.
+   (напр.: `bencher run`)
+7. Установите опцию `--project` в идентификатор проекта.
+   Подробности см. в [документации по опции `--project`][project option].
+   (напр.: `--project save-walter-white-1234abcd`)
+8. Установите опцию `--token` в маскированную переменную окружения `BENCHER_API_TOKEN`.
+   Подробности см. в [документации по опции `--token`][token option].
+   (напр.: `--token "$BENCHER_API_TOKEN"`)
+9. Установите опцию `--branch` в имя ветки MR с использованием
+   [предопределённой переменной GitLab CI/CD][branch selection branch].
+   См. [выбор ветки](/ru/docs/explanation/branch-selection/#--branch-branch) для полного обзора.
+   (напр.: `--branch "$CI_COMMIT_REF_NAME"`)
+10. Установите опцию `--branch-start-point` в начальную точку целевой ветки MR с использованием
+    [предопределённой переменной GitLab CI/CD][gitlab ci cd redefined variables].
+    См. [выбор начальной точки ветки][branch selection start point] для полного обзора.
+    (напр.: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+11. Установите опцию `--branch-start-point-hash` в хэш начальной точки целевой ветки MR с использованием
+    [предопределённой переменной GitLab CI/CD][gitlab ci cd redefined variables].
+    См. [выбор хэша начальной точки ветки][branch selection start point hash] для полного обзора.
+    (напр.: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
+12. Установите флаг `--branch-reset`, чтобы всегда сбрасывать ветку до начальной точки.
+    Это предотвратит дрейф данных тестов производительности.
+    См. [сброс ветки][branch selection branch reset] для полного обзора.
+    (напр.: `--branch-reset`)
+13. Установите опцию `--testbed` в имя тестовика.
+    Это, вероятно, должно совпадать с выбранной машиной в `image`.
+    Подробности см. в [документации по опции `--testbed`][testbed option].
+    (напр.: `--testbed debian:bullseye`)
+14. Установите опцию `--adapter` в желаемый адаптер тестов производительности.
+    См. [адаптеры тестов производительности][adapters] для полного обзора.
+    (напр.: `--adapter json`)
+15. Установите флаг `--err`, чтобы команда завершилась с ошибкой при генерации оповещения.
+    См. [пороги и оповещения][alerts] для полного обзора.
+    (напр.: `--err`)
+16. Укажите аргументы команды тестов производительности.
+    См. [команду тестов производительности][command argument] для полного обзора.
+    (напр.: `bencher mock`)
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -68,6 +72,7 @@ import MergeRequestsCode from "../merge-requests-code.mdx";
 [branch selection branch]: /ru/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /ru/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /ru/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /ru/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /ru/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /ru/docs/explanation/adapters/
 [alerts]: /ru/docs/explanation/thresholds/#alerts

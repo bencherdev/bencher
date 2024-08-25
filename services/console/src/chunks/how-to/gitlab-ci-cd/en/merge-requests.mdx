@@ -43,17 +43,21 @@ The below example should only be used for branches within the **same** repositor
     [a GitLab CI/CD predefined variable][gitlab ci cd redefined variables].
     See [branch selection][branch selection start point hash] for a full overview.
     (ex: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
-12. Set the `--testbed` option to the Testbed name.
+12. Set the `--branch-reset` flag to always reset the Branch to the start point.
+    This will prevent benchmark data drift.
+    See [branch selection][branch selection branch reset] for a full overview.
+    (ex: `--branch-reset`)
+13. Set the `--testbed` option to the Testbed name.
     This should likely match the machine selected in `image`.
     See [the `--tested` docs][testbed option] for more details.
     (ex: `--testbed debian:bullseye`)
-13. Set the `--adapter` option to the desired benchmark harness adapter.
+14. Set the `--adapter` option to the desired benchmark harness adapter.
     See [benchmark harness adapters][adapters] for a full overview.
     (ex: `--adapter json`)
-14. Set the `--err` flag to fail the command if an Alert is generated.
+15. Set the `--err` flag to fail the command if an Alert is generated.
     See [Threshold & Alerts][alerts] for a full overview.
     (ex: `--err`)
-15. Specify the benchmark command arguments.
+16. Specify the benchmark command arguments.
     See [benchmark command][command argument] for a full overview.
     (ex: `bencher mock`)
 
@@ -68,6 +72,7 @@ The below example should only be used for branches within the **same** repositor
 [branch selection branch]: /docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /docs/explanation/adapters/
 [alerts]: /docs/explanation/thresholds/#alerts

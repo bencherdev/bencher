@@ -1,60 +1,64 @@
 import MergeRequestsCode from "../merge-requests-code.mdx";
 
-## Solicitudes de Fusión
+## Solicitudes de merge (Merge Requests)
 
-Para detectar la regresión de rendimiento en las Solicitudes de Fusión, necesitarás ejecutar tus pruebas de referencia en las MRs.
-El siguiente ejemplo solo debe usarse para ramas dentro del **mismo** repositorio.
+Para detectar regresiones de rendimiento en las Solicitudes de Merge, necesitarás ejecutar tus benchmarks en las MR.
+El siguiente ejemplo solo debe ser usado para ramas dentro del **mismo** repositorio.
 
 <MergeRequestsCode />
 
-1. Crear o actualizar un archivo de CI/CD de GitLab.
+1. Crea o actualiza un archivo de GitLab CI/CD.
    (ej: `.gitlab-ci.yml`)
-2. Crear un trabajo de CI/CD de GitLab.
+2. Crea un trabajo de GitLab CI/CD.
    (ej: `benchmark_mr_branch`)
-3. Ejecutar `if` el pipeline fue disparado por un `merge_request_event`.
-   Consulta la [documentación de `rules` de CI/CD de GitLab][gitlab ci cd rules]
-   y la [documentación de variables predefinidas de CI/CD de GitLab][gitlab ci cd redefined variables] para una visión completa.
+3. Ejecuta el trabajo `si` el pipeline fue activado por un `merge_request_event`.
+   Consulta la [documentación de `rules` de GitLab CI/CD][gitlab ci cd rules]
+   y la [documentación de variables predefinidas de GitLab CI/CD][gitlab ci cd redefined variables] para un panorama completo.
    (ej: `rules: - if: ...`)
-4. Establecer la `image` en la que el trabajo se ejecutará.
-   Consulta la [documentación de `image` de CI/CD de GitLab][gitlab ci cd image]
-   para una visión completa.
+4. Define la `imagen` en la que se ejecutará el trabajo.
+   Consulta la [documentación de `image` de GitLab CI/CD][gitlab ci cd image]
+   para un panorama completo.
    (ej: `image: debian:bullseye`)
-5. Instala el CLI de Bencher usando [el script de conveniencia][install bencher cli].
+5. Instala la CLI de Bencher usando [el script de conveniencia][install bencher cli].
    (ej: `before_script: ...`)
-6. Usa el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
-   para ejecutar tus pruebas de rendimiento de la rama de la solicitud de fusión.
-   Consulta [el subcomando CLI `bencher run`][bencher run] para una visión completa.
+6. Usa el subcomando de la CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   para ejecutar tus benchmarks en la rama de la solicitud de merge.
+   Consulta [el subcomando de la CLI `bencher run`][bencher run] para un panorama completo.
    (ej: `bencher run`)
-7. Establece la opción `--project` al slug del Proyecto.
-   Consulta [los docs de `--project`][project option] para más detalles.
+7. Define la opción `--project` con el slug del Proyecto.
+   Consulta [la documentación de `--project`][project option] para más detalles.
    (ej: `--project save-walter-white-1234abcd`)
-8. Establece la opción `--token` a la variable de entorno `BENCHER_API_TOKEN` enmascarada.
-   Consulta [los docs de `--token`][token option] para más detalles.
+8. Define la opción `--token` con la variable de entorno enmascarada `BENCHER_API_TOKEN`.
+   Consulta [la documentación de `--token`][token option] para más detalles.
    (ej: `--token "$BENCHER_API_TOKEN"`)
-9. Establece la opción `--branch` al nombre de la rama MR usando
-   [una variable predefinida de CI/CD de GitLab][branch selection branch].
-   Consulta [selección de rama](/es/docs/explanation/branch-selection/#--branch-branch) para una visión completa.
+9. Define la opción `--branch` con el nombre de la rama de la MR usando
+   [una variable predefinida de GitLab CI/CD][branch selection branch].
+   Consulta [selección de ramas](/es/docs/explanation/branch-selection/#--branch-branch) para un panorama completo.
    (ej: `--branch "$CI_COMMIT_REF_NAME"`)
-10. Establece la opción `--branch-start-point` al punto de inicio de la Rama objetivo de MR usando
-    [una variable predefinida de CI/CD de GitLab][gitlab ci cd redefined variables].
-    Consulta [selección de rama][branch selection start point] para una visión completa.
+10. Define la opción `--branch-start-point` con el punto de inicio de la rama objetivo de la MR usando
+    [una variable predefinida de GitLab CI/CD][gitlab ci cd redefined variables].
+    Consulta [selección de ramas][branch selection start point] para un panorama completo.
     (ej: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-11. Establece la opción `--branch-start-point-hash` al hash del punto de inicio de la Rama objetivo de MR usando
-    [una variable predefinida de CI/CD de GitLab][gitlab ci cd redefined variables].
-    Consulta [selección de rama][branch selection start point hash] para una visión completa.
+11. Define la opción `--branch-start-point-hash` con el hash del punto de inicio de la rama objetivo de la MR usando
+    [una variable predefinida de GitLab CI/CD][gitlab ci cd redefined variables].
+    Consulta [selección de ramas][branch selection start point hash] para un panorama completo.
     (ej: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
-12. Establece la opción `--testbed` al nombre del Entorno de Pruebas.
-    Esto probablemente debería coincidir con la máquina seleccionada en `image`.
-    Consulta los [docs de `--tested`][testbed option] para más detalles.
+12. Define la bandera `--branch-reset` para siempre resetear la rama al punto de inicio.
+    Esto prevendrá la deriva en los datos del benchmark.
+    Consulta [selección de ramas][branch selection branch reset] para un panorama completo.
+    (ej: `--branch-reset`)
+13. Define la opción `--testbed` con el nombre del banco de pruebas.
+    Esto probablemente deberá coincidir con la máquina seleccionada en `image`.
+    Consulta [la documentación de `--testbed`][testbed option] para más detalles.
     (ej: `--testbed debian:bullseye`)
-13. Establece la opción `--adapter` al adaptador deseado del banco de pruebas.
-    Consulta [adaptadores de banco de pruebas][adapters] para una visión completa.
+14. Define la opción `--adapter` con el adaptador de harness de benchmark deseado.
+    Consulta [adaptadores de harness de benchmark][adapters] para un panorama completo.
     (ej: `--adapter json`)
-14. Establece la bandera `--err` para fallar el comando si se genera una Alerta.
-    Consulta [Umbrales & Alertas][alerts] para una visión completa.
+15. Define la bandera `--err` para que el comando falle si se genera una Alerta.
+    Consulta [Umbrales y Alertas][alerts] para un panorama completo.
     (ej: `--err`)
-15. Especificar los argumentos del comando de benchmark.
-    Consulta [comando de benchmark][command argument] para una visión completa.
+16. Especifica los argumentos del comando del benchmark.
+    Consulta [comando del benchmark][command argument] para un panorama completo.
     (ej: `bencher mock`)
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
@@ -68,6 +72,7 @@ El siguiente ejemplo solo debe usarse para ramas dentro del **mismo** repositori
 [branch selection branch]: /es/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /es/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /es/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /es/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /es/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /es/docs/explanation/adapters/
 [alerts]: /es/docs/explanation/thresholds/#alerts

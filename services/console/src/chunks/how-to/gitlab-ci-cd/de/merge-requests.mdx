@@ -1,61 +1,64 @@
 import MergeRequestsCode from "../merge-requests-code.mdx";
 
-## Merge Requests
+## Merge-Anfragen
 
-Um Leistungsregressionen in Merge Requests zu erkennen, müssen Sie Ihre Benchmarks auf MRs ausführen.
-Das untenstehende Beispiel sollte nur für Branches innerhalb des **gleichen** Repositorys verwendet werden.
+Um Leistungsregressionen in Merge Requests zu erfassen, müssen Sie Ihre Benchmarks auf MRs ausführen.
+Das folgende Beispiel sollte nur für Branches im **gleichen** Repository verwendet werden.
 
 <MergeRequestsCode />
 
 1. Erstellen oder aktualisieren Sie eine GitLab CI/CD-Datei.
-   (Bsp.: `.gitlab-ci.yml`)
+   (z.B.: `.gitlab-ci.yml`)
 2. Erstellen Sie einen GitLab CI/CD-Job.
-   (Bsp.: `benchmark_mr_branch`)
-3. Führen Sie es aus `if` die Pipeline durch ein `merge_request_event` ausgelöst wurde.
-   Siehe die [GitLab CI/CD `rules` Dokumentation][gitlab ci cd rules]
-   und [GitLab CI/CD vordefinierte Variablen Dokumentation][gitlab ci cd redefined variables] für einen vollständigen Überblick.
-   (Bsp.: `rules: - if: ...`)
+   (z.B.: `benchmark_mr_branch`)
+3. Führen Sie den Job nur aus, wenn die Pipeline durch ein `merge_request_event` ausgelöst wurde.
+   Sehen Sie sich die [GitLab CI/CD `rules` Dokumentation][gitlab ci cd rules]
+   und die [GitLab CI/CD vordefinierte Variablen Dokumentation][gitlab ci cd redefined variables] für einen vollständigen Überblick an.
+   (z.B.: `rules: - if: ...`)
 4. Legen Sie das `image` fest, in dem der Job ausgeführt wird.
-   Siehe die [GitLab CI/CD `image` Dokumentation][gitlab ci cd image]
-   für einen vollständigen Überblick.
-   (Bsp.: `image: debian:bullseye`)
-5. Installieren Sie die Bencher CLI mit [dem Convenience-Script][install bencher cli].
-   (Bsp.: `before_script: ...`)
-6. Verwenden Sie das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl,
-   um Ihre Merge-Anforderungsbranch-Benchmarks auszuführen.
-   Siehe [den `bencher run` CLI-Unterbefehl][bencher run] für einen vollständigen Überblick.
-   (Bsp.: `bencher run`)
-7. Legen Sie die Option `--project` auf den Projektslug fest.
-   Siehe [die `--project` Dokumentation][project option] für weitere Details.
-   (Bsp.: `--project save-walter-white-1234abcd`)
-8. Legen Sie die Option `--token` auf die maskierte `BENCHER_API_TOKEN` Umgebungsvariable fest.
-   Siehe [die `--token` Dokumentation][token option] für weitere Details.
-   (Bsp.: `--token "$BENCHER_API_TOKEN"`)
-9. Legen Sie die Option `--branch` auf den Namen des MR-Branches fest mit
-   [einer GitLab CI/CD vordefinierten Variable][branch selection branch].
-   Siehe [Branch-Auswahl](/de/docs/explanation/branch-selection/#--branch-branch) für einen vollständigen Überblick.
-   (Bsp.: `--branch "$CI_COMMIT_REF_NAME"`)
-10. Legen Sie die Option `--branch-start-point` auf den Startpunkt des MR-Zielbranches fest mit
-    [einer GitLab CI/CD vordefinierten Variable][gitlab ci cd redefined variables].
-    Siehe [Branch-Auswahl][branch selection start point] für einen vollständigen Überblick.
-    (Bsp.: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-11. Legen Sie die Option `--branch-start-point-hash` auf den Startpunkthash des MR-Zielbranches fest mit
-    [einer GitLab CI/CD vordefinierten Variable][gitlab ci cd redefined variables].
-    Siehe [Branch-Auswahl][branch selection start point hash] für einen vollständigen Überblick.
-    (Bsp.: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
-12. Legen Sie die Option `--testbed` auf den Namen des Testbetts fest.
-    Dies sollte wahrscheinlich der Maschine entsprechen, die in `image` ausgewählt wurde.
-    Siehe [die `--testbed` Dokumentation][testbed option] für weitere Details.
-    (Bsp.: `--testbed debian:bullseye`)
-13. Legen Sie die Option `--adapter` auf den gewünschten Benchmark-Harness-Adapter fest.
-    Siehe [Benchmark-Harness-Adapter][adapters] für einen vollständigen Überblick.
-    (Bsp.: `--adapter json`)
-14. Setzen Sie das `--err` Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alarm ausgelöst wird.
-    Siehe [Schwellenwerte & Alarme][alerts] für einen vollständigen Überblick.
-    (Bsp.: `--err`)
-15. Geben Sie die Benchmark-Befehlsargumente an.
-    Siehe [Benchmark-Befehl][command argument] für einen vollständigen Überblick.
-    (Bsp.: `bencher mock`)
+   Sehen Sie sich die [GitLab CI/CD `image` Dokumentation][gitlab ci cd image] für einen vollständigen Überblick an.
+   (z.B.: `image: debian:bullseye`)
+5. Installieren Sie die Bencher CLI mithilfe des [Convenience-Skripts][install bencher cli].
+   (z.B.: `before_script: ...`)
+6. Verwenden Sie das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando,
+   um Ihre Merge-Request-Branch-Benchmarks auszuführen.
+   Sehen Sie sich das [ `bencher run` CLI-Unterkommando][bencher run] für einen vollständigen Überblick an.
+   (z.B.: `bencher run`)
+7. Setzen Sie die `--project` Option auf den Project Slug.
+   Sehen Sie sich die [ `--project` Dokumentation][project option] für weitere Details an.
+   (z.B.: `--project save-walter-white-1234abcd`)
+8. Setzen Sie die `--token` Option auf die maskierte `BENCHER_API_TOKEN` Umgebungsvariable.
+   Sehen Sie sich die [ `--token` Dokumentation][token option] für weitere Details an.
+   (z.B.: `--token "$BENCHER_API_TOKEN"`)
+9. Setzen Sie die `--branch` Option auf den MR-Branch-Namen unter Verwendung
+   [einer vordefinierten GitLab CI/CD-Variable][branch selection branch].
+   Sehen Sie sich die [Branch-Auswahl](/de/docs/explanation/branch-selection/#--branch-branch) für einen vollständigen Überblick an.
+   (z.B.: `--branch "$CI_COMMIT_REF_NAME"`)
+10. Setzen Sie die `--branch-start-point` Option auf den Startpunkt des Ziel-Branchs des MRs unter Verwendung
+    [einer vordefinierten GitLab CI/CD-Variable][gitlab ci cd redefined variables].
+    Sehen Sie sich die [Branch-Auswahl][branch selection start point] für einen vollständigen Überblick an.
+    (z.B.: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+11. Setzen Sie die `--branch-start-point-hash` Option auf den Hash des Startpunktes des Ziel-Branchs des MRs unter Verwendung
+    [einer vordefinierten GitLab CI/CD-Variable][gitlab ci cd redefined variables].
+    Sehen Sie sich die [Branch-Auswahl][branch selection start point hash] für einen vollständigen Überblick an.
+    (z.B.: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
+12. Setzen Sie die `--branch-reset` Flag, um den Branch immer auf den Startpunkt zurückzusetzen.
+    Dies verhindert ein Abdriften von Benchmark-Daten.
+    Sehen Sie sich die [Branch-Auswahl][branch selection branch reset] für einen vollständigen Überblick an.
+    (z.B.: `--branch-reset`)
+13. Setzen Sie die `--testbed` Option auf den Namen des Testbeds.
+    Dies sollte wahrscheinlich mit der in `image` ausgewählten Maschine übereinstimmen.
+    Sehen Sie sich die [ `--testbed` Dokumentation][testbed option] für weitere Details an.
+    (z.B.: `--testbed debian:bullseye`)
+14. Setzen Sie die `--adapter` Option auf den gewünschten Benchmark-Harness-Adapter.
+    Sehen Sie sich die [Benchmark-Harness-Adapter][adapters] für einen vollständigen Überblick an.
+    (z.B.: `--adapter json`)
+15. Setzen Sie die `--err` Flag, um den Befehl fehlschlagen zu lassen, wenn eine Warnung generiert wird.
+    Sehen Sie sich die [Thresholds & Alerts][alerts] für einen vollständigen Überblick an.
+    (z.B.: `--err`)
+16. Geben Sie die Argumente des Benchmark-Befehls an.
+    Sehen Sie sich den [Benchmark-Befehl][command argument] für einen vollständigen Überblick an.
+    (z.B.: `bencher mock`)
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -68,6 +71,7 @@ Das untenstehende Beispiel sollte nur für Branches innerhalb des **gleichen** R
 [branch selection branch]: /de/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /de/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /de/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /de/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /de/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /de/docs/explanation/adapters/
 [alerts]: /de/docs/explanation/thresholds/#alerts

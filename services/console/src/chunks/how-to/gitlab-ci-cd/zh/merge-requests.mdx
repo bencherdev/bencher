@@ -2,56 +2,58 @@ import MergeRequestsCode from "../merge-requests-code.mdx";
 
 ## 合并请求
 
-为了在合并请求中捕捉性能回归，你需要在MRs上运行基准测试。
-以下示例仅适用于**相同**存储库中的分支。
+为了在合并请求中捕捉性能回归，您需要在合并请求上运行基准测试。
+下面的示例应仅用于**同一**存储库内的分支。
 
 <MergeRequestsCode />
 
-1. 创建或更新一个GitLab CI/CD文件。
+1. 创建或更新一个 GitLab CI/CD 文件。
    (例如：`.gitlab-ci.yml`)
-2. 创建一个GitLab CI/CD任务。
+2. 创建一个 GitLab CI/CD 任务。
    (例如：`benchmark_mr_branch`)
-3. 如果管道由`merge_request_event`触发，则运行`if`。
-   查看[GitLab CI/CD `rules` 文档][gitlab ci cd rules]
-   和[GitLab CI/CD 预定义变量文档][gitlab ci cd redefined variables]以获得完整概述。
+3. 当流水线由`merge_request_event`触发时运行。
+   请参阅 [GitLab CI/CD `rules` 文档][gitlab ci cd rules]
+   和 [GitLab CI/CD 预定义变量文档][gitlab ci cd redefined variables] 了解全面概述。
    (例如：`rules: - if: ...`)
-4. 设置任务将在其中运行的`image`。
-   查看[GitLab CI/CD `image` 文档][gitlab ci cd image]
-   以获取完整概述。
+4. 设置任务将运行的`image`。
+   请参阅 [GitLab CI/CD `image`文档][gitlab ci cd image] 了解全面概述。
    (例如：`image: debian:bullseye`)
-5. 使用[便捷脚本][install bencher cli]安装Bencher CLI。
+5. 使用[便捷脚本][install bencher cli]安装 Bencher CLI。
    (例如：`before_script: ...`)
-6. 使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>CLI子命令
-   运行你的合并请求分支的基准测试。
-   查看[`bencher run` CLI子命令][bencher run]以获得完整概述。
+6. 使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令运行您的合并请求分支基准测试。
+   请参阅 [ `bencher run` CLI 子命令][bencher run] 了解全面概述。
    (例如：`bencher run`)
-7. 将`--project`选项设置为项目slug。
-   查看[`--project` 文档][project option]了解更多详情。
+7. 设置`--project`选项为项目的 slug。
+   请参阅[ `--project` 文档][project option] 了解更多详情。
    (例如：`--project save-walter-white-1234abcd`)
-8. 将`--token`选项设置为掩码的`BENCHER_API_TOKEN`环境变量。
-   查看[`--token` 文档][token option]了解更多详情。
+8. 设置`--token`选项为屏蔽的`BENCHER_API_TOKEN`环境变量。
+   请参阅[ `--token` 文档][token option] 了解更多详情。
    (例如：`--token "$BENCHER_API_TOKEN"`)
-9. 使用[GitLab CI/CD 预定义变量][branch selection branch]将`--branch`选项设置为MR分支名称。
-   查看[分支选择](/zh/docs/explanation/branch-selection/#--branch-branch)以获取完整概述。
+9. 使用[GitLab CI/CD 预定义变量][branch selection branch] 设置`--branch`选项为合并请求分支名称。
+   请参阅[分支选择](/zh/docs/explanation/branch-selection/#--branch-branch) 了解全面概述。
    (例如：`--branch "$CI_COMMIT_REF_NAME"`)
-10. 使用[GitLab CI/CD 预定义变量][gitlab ci cd redefined variables]将`--branch-start-point`选项设置为MR目标分支起点。
-    查看[分支选择][branch selection start point]以获取完整概述。
+10. 使用[GitLab CI/CD 预定义变量][gitlab ci cd redefined variables] 设置`--branch-start-point`选项为合并请求目标分支的起点。
+    请参阅[分支选择][branch selection start point] 了解全面概述。
     (例如：`--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-11. 使用[GitLab CI/CD 预定义变量][gitlab ci cd redefined variables]将`--branch-start-point-hash`选项设置为MR目标分支起点哈希。
-    查看[分支选择][branch selection start point hash]以获得完整概述。
+11. 使用[GitLab CI/CD 预定义变量][gitlab ci cd redefined variables] 设置`--branch-start-point-hash`选项为合并请求目标分支的起点哈希值。
+    请参阅[分支选择][branch selection start point hash] 了解全面概述。
     (例如：`--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
-12. 将`--testbed`选项设置为Testbed名称。
-    这应该与在`image`中选择的机器匹配。
-    查看[`--tested` 文档][testbed option]了解更多详情。
+12. 设置`--branch-reset`标志以始终将分支重置为起点。
+    这将防止基准数据漂移。
+    请参阅[分支选择][branch selection branch reset] 了解全面概述。
+    (例如：`--branch-reset`)
+13. 设置`--testbed`选项为测试床名称。
+    这可能应该与在`image`中选择的机器匹配。
+    请参阅[ `--tested` 文档][testbed option] 了解更多详情。
     (例如：`--testbed debian:bullseye`)
-13. 将`--adapter`选项设置为所需的基准测试适配器。
-    查看[基准测试适配器][adapters]以获得完整概述。
+14. 设置`--adapter`选项为所需的基准测试适配器。
+    请参阅[基准测试适配器][adapters] 了解全面概述。
     (例如：`--adapter json`)
-14. 如果生成报警，则设置`--err`标志以使命令失败。
-    查看[阈值与报警][alerts]以获得完整概述。
+15. 设置`--err`标志以在生成警报时使命令失败。
+    请参阅[阈值与警报][alerts] 了解全面概述。
     (例如：`--err`)
-15. 指定基准测试命令参数。
-    查看[基准测试命令][command argument]以获得完整概述。
+16. 指定基准测试命令参数。
+    请参阅[基准测试命令][command argument] 了解全面概述。
     (例如：`bencher mock`)
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
@@ -65,6 +67,7 @@ import MergeRequestsCode from "../merge-requests-code.mdx";
 [branch selection branch]: /zh/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /zh/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /zh/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /zh/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /zh/docs/explanation/adapters/
 [alerts]: /zh/docs/explanation/thresholds/#alerts

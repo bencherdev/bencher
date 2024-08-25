@@ -2,57 +2,58 @@ import MergeRequestsCode from "../merge-requests-code.mdx";
 
 ## マージリクエスト
 
-マージリクエストでパフォーマンス回帰を検出するためには、MR上でベンチマークを実行する必要があります。
-以下の例は、**同じ**リポジトリ内のブランチにのみ使用してください。
+マージリクエストでパフォーマンス回帰をキャッチするためには、MRでベンチマークを実行する必要があります。
+以下の例は**同じ**リポジトリ内のブランチにのみ使用してください。
 
 <MergeRequestsCode />
 
-1. GitLab CI/CDファイルを作成または更新します。
-   (例: `.gitlab-ci.yml`)
-2. GitLab CI/CDジョブを作成します。
-   (例: `benchmark_mr_branch`)
-3. パイプラインが`merge_request_event`によってトリガーされた場合に`if`を実行します。
-   [GitLab CI/CD `rules`ドキュメント][gitlab ci cd rules]および
-   [GitLab CI/CD事前定義変数ドキュメント][gitlab ci cd redefined variables]を参照してください。
-   (例: `rules: - if: ...`)
-4. ジョブが実行される`image`を設定します。
-   [GitLab CI/CD `image`ドキュメント][gitlab ci cd image]を参照してください。
-   (例: `image: debian:bullseye`)
-5. [便利なスクリプト][install bencher cli]を使用してBencher CLIをインストールします。
-   (例: `before_script: ...`)
-6. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用してマージリクエストブランチのベンチマークを実行します。
-   [`bencher run` CLIサブコマンド][bencher run]に関する完全な概要を参照してください。
-   (例: `bencher run`)
-7. `--project`オプションをプロジェクトスラッグに設定します。
-   [`--project`ドキュメント][project option]を詳しく見てください。
-   (例: `--project save-walter-white-1234abcd`)
-8. `--token`オプションをマスクされた`BENCHER_API_TOKEN`環境変数に設定します。
-   [`--token`ドキュメント][token option]を詳しく見てください。
-   (例: `--token "$BENCHER_API_TOKEN"`)
-9. `--branch`オプションを[GitLab CI/CD事前定義変数][branch selection branch]を使用してMRブランチ名に設定します。
-   [ブランチ選択](/ja/docs/explanation/branch-selection/#--branch-branch)の詳細を参照してください。
-   (例: `--branch "$CI_COMMIT_REF_NAME"`)
-10. [GitLab CI/CD事前定義変数][gitlab ci cd redefined variables]を使用して
-    MRターゲットブランチの開始地点に`--branch-start-point`オプションを設定します。
-    [ブランチ選択][branch selection start point]の詳細を参照してください。
-    (例: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-11. [GitLab CI/CD事前定義変数][gitlab ci cd redefined variables]を使用して
-    MRターゲットブランチの開始地点ハッシュに`--branch-start-point-hash`オプションを設定します。
-    [ブランチ選択][branch selection start point hash]の詳細を参照してください。
-    (例: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
-12. `--testbed`オプションをテストベッド名に設定します。
-    これは`image`で選択されたマシンと一致する必要があります。
-    [`--tested`ドキュメント][testbed option]を詳しく見てください。
-    (例: `--testbed debian:bullseye`)
-13. `--adapter`オプションを望ましいベンチマークハーネスアダプタに設定します。
-    [ベンチマークハーネスアダプター][adapters]の完全な概要を参照してください。
-    (例: `--adapter json`)
-14. 警告が生成された場合にコマンドの失敗を意味する`--err`フラグを設定します。
-    [しきい値とアラート][alerts]の完全な概要を参照してください。
-    (例: `--err`)
-15. ベンチマークコマンド引数を指定します。
-    [ベンチマークコマンド][command argument]の完全な概要を参照してください。
-    (例: `bencher mock`)
+1. GitLab CI/CDファイルを作成または更新する。
+   （例: `.gitlab-ci.yml`）
+2. GitLab CI/CDジョブを作成する。
+   （例: `benchmark_mr_branch`）
+3. パイプラインが`merge_request_event`によってトリガーされた場合に`if`を実行する。
+   完全な概要については、[GitLab CI/CD `rules` ドキュメント][gitlab ci cd rules]と[GitLab CI/CD事前定義変数のドキュメント][gitlab ci cd redefined variables]を参照してください。
+   （例: `rules: - if: ...`）
+4. ジョブが実行される`image`を設定する。
+   完全な概要については、[GitLab CI/CD `image` ドキュメント][gitlab ci cd image]を参照してください。
+   （例: `image: debian:bullseye`）
+5. [便利なスクリプト][install bencher cli]を使用してBencher CLIをインストールする。
+   （例: `before_script: ...`）
+6. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して、マージリクエストブランチのベンチマークを実行する。
+   完全な概要については、[`bencher run` CLIサブコマンド][bencher run]を参照してください。
+   （例: `bencher run`）
+7. `--project` オプションをプロジェクトスラッグに設定する。
+   詳細は[`--project` ドキュメント][project option]を参照してください。
+   （例: `--project save-walter-white-1234abcd`）
+8. `--token` オプションをマスクされた`BENCHER_API_TOKEN`環境変数に設定する。
+   詳細は[`--token` ドキュメント][token option]を参照してください。
+   （例: `--token "$BENCHER_API_TOKEN"`）
+9. `--branch` オプションをGitLab CI/CDの事前定義変数を使用してMRブランチ名に設定する。
+   完全な概要については、[`--branch` 分岐選択][branch selection branch]を参照してください。
+   （例: `--branch "$CI_COMMIT_REF_NAME"`）
+10. `--branch-start-point` オプションをGitLab CI/CDの事前定義変数を使用してMRターゲットブランチのスタートポイントに設定する。
+    完全な概要については、[`--branch-start-point` 分岐選択][branch selection start point]を参照してください。
+    （例: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`）
+11. `--branch-start-point-hash` オプションをGitLab CI/CDの事前定義変数を使用してMRターゲットブランチのスタートポイントハッシュに設定する。
+    完全な概要については、[`--branch-start-point-hash` 分岐選択][branch selection start point hash]を参照してください。
+    （例: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`）
+12. `--branch-reset` フラグを設定して、常にブランチをスタートポイントにリセットする。
+    これにより、ベンチマークデータのドリフトが防止されます。
+    完全な概要については、[`--branch-reset` 分岐選択][branch selection branch reset]を参照してください。
+    （例: `--branch-reset`）
+13. `--testbed` オプションをテストベッド名に設定する。
+    これは、おそらく`image`で選択されたマシンと一致する必要があります。
+    詳細は[`--testbed` ドキュメント][testbed option]を参照してください。
+    （例: `--testbed debian:bullseye`）
+14. `--adapter` オプションを希望するベンチマークハーネスアダプタに設定する。
+    完全な概要については、[ベンチマークハーネスアダプタ][adapters]を参照してください。
+    （例: `--adapter json`）
+15. `--err` フラグを設定して、アラートが生成された場合にコマンドを失敗させる。
+    完全な概要については、[しきい値とアラート][alerts]を参照してください。
+    （例: `--err`）
+16. ベンチマークコマンドの引数を指定する。
+    完全な概要については、[ベンチマークコマンド][command argument]を参照してください。
+    （例: `bencher mock`）
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -65,6 +66,7 @@ import MergeRequestsCode from "../merge-requests-code.mdx";
 [branch selection branch]: /ja/docs/explanation/branch-selection/#--branch-branch
 [branch selection start point]: /ja/docs/explanation/branch-selection/#--branch-start-point-branch
 [branch selection start point hash]: /ja/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[branch selection branch reset]: /ja/docs/explanation/branch-selection/#--branch-reset
 [testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
 [adapters]: /ja/docs/explanation/adapters/
 [alerts]: /ja/docs/explanation/thresholds/#alerts
