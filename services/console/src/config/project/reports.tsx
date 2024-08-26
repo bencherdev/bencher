@@ -89,6 +89,18 @@ const reportsConfig = {
 					display: Display.RAW,
 				},
 				{
+					kind: Card.NESTED_FIELD,
+					label: "Branch",
+					keys: ["branch", "name"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Testbed",
+					keys: ["testbed", "name"],
+					display: Display.RAW,
+				},
+				{
 					kind: Card.FIELD,
 					label: "Results Adapter",
 					key: "adapter",
