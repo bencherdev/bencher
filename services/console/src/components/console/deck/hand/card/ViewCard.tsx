@@ -4,7 +4,7 @@ import { Display } from "../../../../../config/types";
 import type CardConfig from "./CardConfig";
 import { authUser } from "../../../../../util/auth";
 import { httpGet } from "../../../../../util/http";
-import type { JsonProject } from "../../../../../types/bencher";
+import type { JsonBranch, JsonProject } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import * as Sentry from "@sentry/astro";
 
@@ -91,19 +91,7 @@ const ViewCard = (props: Props) => {
 										})()}
 									</Match>
 									<Match when={props.card?.display === Display.START_POINT}>
-										<a
-											href={`/console/projects/${
-												props.params?.project
-											}/branches/${
-												props.value?.branch
-											}?${BACK_PARAM}=${encodePath()}`}
-										>
-											Version Number: {props.value?.version?.number}
-											<br />
-											{props.value?.version?.hash && (
-												<>Version Hash: {props.value?.version?.hash}</>
-											)}
-										</a>
+										<StartPointCard {...props} />
 									</Match>
 									<Match when={props.card?.display === Display.GIT_HASH}>
 										<GitHashCard {...props} />
@@ -131,6 +119,59 @@ const ViewCard = (props: Props) => {
 				</div>
 			</div>
 		</form>
+	);
+};
+
+const StartPointCard = (props: Props) => {
+	const user = authUser();
+	const branchFetcher = createMemo(() => {
+		return {
+			project_slug: props.params.project,
+			branch: props.value?.branch,
+			token: user?.token,
+		};
+	});
+	const getBranch = async (fetcher: {
+		project_slug: string;
+		branch: string;
+		refresh: number;
+		token: string;
+	}) => {
+		const EMPTY_OBJECT = {};
+		if (
+			!fetcher.project_slug ||
+			fetcher.project_slug === "undefined" ||
+			!fetcher.branch
+		) {
+			return EMPTY_OBJECT;
+		}
+		const path = `/v0/projects/${fetcher.project_slug}/branches/${fetcher.branch}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
+			.then((resp) => {
+				return resp?.data as JsonBranch;
+			})
+			.catch((error) => {
+				console.error(error);
+				Sentry.captureException(error);
+				return EMPTY_OBJECT;
+			});
+	};
+	const [branch] = createResource<JsonBranch>(branchFetcher, getBranch);
+
+	return (
+		<a
+			href={`/console/projects/${props.params?.project}/branches/${
+				branch()?.slug ?? props.value?.branch
+			}?${BACK_PARAM}=${encodePath()}`}
+		>
+			Branch: {branch()?.name}
+			<br />
+			Version Number: {props.value?.version?.number}
+			<br />
+			{props.value?.version?.hash && (
+				<>Version Hash: {props.value?.version?.hash}</>
+			)}
+		</a>
 	);
 };
 
