@@ -24,7 +24,7 @@ const metricsConfig = {
 					kind: Card.FIELD,
 					label: "Report Start Time",
 					key: "start_time",
-					display: Display.RAW,
+					display: Display.DATE_TIME,
 				},
 				{
 					kind: Card.FIELD,

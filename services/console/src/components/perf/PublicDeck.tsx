@@ -14,25 +14,41 @@ import DeckHeaderButton from "../console/deck/header/DeckHeaderButton";
 import { httpGet } from "../../util/http";
 import { BACK_PARAM, decodePath, useSearchParams } from "../../util/url";
 import * as Sentry from "@sentry/astro";
-import type { DeckPanelConfig } from "../console/deck/DeckPanel";
 import { fmtDateTime } from "../../config/util";
 import { Display, type Button } from "../../config/types";
 import { fmtValues } from "../../util/resource";
+import type CardConfig from "../console/deck/hand/card/CardConfig";
 
 export interface Props {
 	apiUrl: string;
 	params: Params;
-	config: DeckPanelConfig;
-	buttons: PublicDeckButtons;
+	config: PubDeckPanelConfig;
 	data: undefined | object;
 }
 
-export type PublicDeckButtons = PublicDeckButton[];
+export interface PubDeckPanelConfig {
+	header: PubDeckHeaderConfig;
+	deck: PubDeckConfig;
+}
 
-export interface PublicDeckButton {
+export interface PubDeckHeaderConfig {
+	key: string;
+	keys?: string[][];
+	display?: Display;
+	buttons: PublDeckButtons;
+}
+
+export type PublDeckButtons = PubDeckButton[];
+
+export interface PubDeckButton {
 	kind: Button;
 	resource: string;
 	param: string;
+}
+
+export interface PubDeckConfig {
+	url: (params: Params, search?: Params) => string;
+	cards: CardConfig[];
 }
 
 const PublicDeck = (props: Props) => {
@@ -119,7 +135,7 @@ const PublicDeck = (props: Props) => {
 					<div class="column is-narrow">
 						<nav class="level">
 							<div class="level-right">
-								<For each={props.buttons}>
+								<For each={props.config?.header?.buttons}>
 									{(button) => (
 										<div class="level-item">
 											<DeckHeaderButton

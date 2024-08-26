@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import PerfResource from "../../../../layouts/perf/PerfResource.astro";
-import metricsConfig from "../../../../config/project/metrics";
+import metricsPubConfig from "../../../../config/project/metrics_pub";
 import { Button, Operation } from "../../../../config/types";
 ---
 
@@ -14,12 +14,5 @@ import { Button, Operation } from "../../../../config/types";
   modified={(json) => json ? json.end_time : ""}
   url={(params) => `/v0/projects/${params.project}/metrics/${params.metric}`}
   param="metric"
-  config={metricsConfig[Operation.VIEW]}
-  buttons={[
-    {
-      kind: Button.CONSOLE,
-      resource: "metrics",
-      param: "metric",
-    },
-  ]}
+  config={metricsPubConfig}
 />
