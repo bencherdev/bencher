@@ -6,6 +6,7 @@ import type CardConfig from "./CardConfig";
 import type { Params } from "astro";
 
 export interface Props {
+	isConsole?: boolean;
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
@@ -28,6 +29,7 @@ const FieldCard = (props: Props) => {
 			when={update()}
 			fallback={
 				<ViewCard
+					isConsole={props.isConsole}
 					apiUrl={props.apiUrl}
 					params={props.params}
 					card={props.card}

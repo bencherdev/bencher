@@ -131,6 +131,7 @@ const PublicAlert = (props: Props) => {
 				<div class="columns is-mobile">
 					<div class="column">
 						<Deck
+							isConsole={false}
 							apiUrl={props.apiUrl}
 							params={props.params}
 							user={user}

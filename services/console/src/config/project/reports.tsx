@@ -89,10 +89,10 @@ const reportsConfig = {
 					display: Display.RAW,
 				},
 				{
-					kind: Card.NESTED_FIELD,
+					kind: Card.FIELD,
 					label: "Branch",
-					keys: ["branch", "name"],
-					display: Display.RAW,
+					key: "branch",
+					display: Display.BRANCH,
 				},
 				{
 					kind: Card.NESTED_FIELD,

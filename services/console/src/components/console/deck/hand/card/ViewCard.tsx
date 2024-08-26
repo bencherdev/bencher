@@ -10,12 +10,16 @@ import * as Sentry from "@sentry/astro";
 import { fmtDateTime } from "../../../../../config/util";
 
 export interface Props {
+	isConsole?: boolean;
 	apiUrl: string;
 	params: Params;
 	card: CardConfig;
 	value: boolean | string | object;
 	toggleUpdate: () => void;
 }
+
+const linkPath = (isConsole: undefined | boolean) =>
+	isConsole !== false ? "/console/projects" : "/perf";
 
 const ViewCard = (props: Props) => {
 	const [is_allowed] = createResource(props.params, (params) =>
@@ -58,6 +62,17 @@ const ViewCard = (props: Props) => {
 											value={props.value}
 											readonly
 										/>
+									</Match>
+									<Match when={props.card?.display === Display.BRANCH}>
+										<a
+											href={`${linkPath(props.isConsole)}/${
+												props.params?.project
+											}/branches/${
+												props.value?.slug
+											}?${BACK_PARAM}=${encodePath()}`}
+										>
+											{props.value?.name}
+										</a>
 									</Match>
 									<Match when={props.card?.display === Display.DATE_TIME}>
 										<input
@@ -170,7 +185,7 @@ const StartPointCard = (props: Props) => {
 
 	return (
 		<a
-			href={`/console/projects/${props.params?.project}/branches/${
+			href={`${linkPath(props.isConsole)}/${props.params?.project}/branches/${
 				branch()?.slug ?? props.value?.branch
 			}?${BACK_PARAM}=${encodePath()}`}
 		>

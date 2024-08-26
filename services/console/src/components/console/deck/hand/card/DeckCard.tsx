@@ -7,6 +7,7 @@ import type CardConfig from "./CardConfig";
 import type { Params } from "astro";
 
 export interface Props {
+	isConsole?: boolean;
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
@@ -23,6 +24,7 @@ const DeckCard = (props: Props) => {
 			<Switch>
 				<Match when={props.card?.kind === Card.FIELD}>
 					<FieldCard
+						isConsole={props.isConsole}
 						apiUrl={props.apiUrl}
 						params={props.params}
 						user={props.user}
@@ -38,6 +40,7 @@ const DeckCard = (props: Props) => {
 				</Match>
 				<Match when={props.card?.kind === Card.NESTED_FIELD}>
 					<FieldCard
+						isConsole={props.isConsole}
 						apiUrl={props.apiUrl}
 						params={props.params}
 						user={props.user}
