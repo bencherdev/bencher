@@ -61,6 +61,7 @@ const reportsConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "start_time",
+			display: Display.DATE_TIME,
 			path: parentPath,
 			path_to: "Reports",
 			buttons: [{ kind: Button.REFRESH }],
@@ -73,13 +74,13 @@ const reportsConfig = {
 					kind: Card.FIELD,
 					label: "Report Start Time",
 					key: "start_time",
-					display: Display.RAW,
+					display: Display.DATE_TIME,
 				},
 				{
 					kind: Card.FIELD,
 					label: "Report End Time",
 					key: "end_time",
-					display: Display.RAW,
+					display: Display.DATE_TIME,
 				},
 				{
 					kind: Card.FIELD,

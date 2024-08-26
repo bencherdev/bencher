@@ -12,6 +12,8 @@ import { decodePath, pathname } from "../../../../util/url";
 import DeckHeaderButton, {
 	type DeckHeaderButtonConfig,
 } from "./DeckHeaderButton";
+import { Display } from "../../../../config/types";
+import { fmtDateTime } from "../../../../config/util";
 
 export interface Props {
 	apiUrl: string;
@@ -26,15 +28,26 @@ export interface Props {
 export interface DeckHeaderConfig {
 	key: string;
 	keys?: string[][];
+	display?: Display;
 	path: (pathname: string) => string;
 	path_to: string;
 	buttons: DeckHeaderButtonConfig[];
 }
 
 const DeckHeader = (props: Props) => {
-	const title = createMemo(() =>
-		fmtValues(props.data(), props.config?.key, props.config?.keys, " | "),
-	);
+	const title = createMemo(() => {
+		switch (props.config?.display) {
+			case Display.DATE_TIME:
+				return fmtDateTime(props.data?.()?.[props.config?.key] ?? "");
+			default:
+				return fmtValues(
+					props.data(),
+					props.config?.key,
+					props.config?.keys,
+					" | ",
+				);
+		}
+	});
 
 	createEffect(() => {
 		setPageTitle(title()?.toString());

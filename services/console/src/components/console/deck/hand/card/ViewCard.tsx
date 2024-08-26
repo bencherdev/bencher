@@ -7,6 +7,7 @@ import { httpGet } from "../../../../../util/http";
 import type { JsonBranch, JsonProject } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import * as Sentry from "@sentry/astro";
+import { fmtDateTime } from "../../../../../config/util";
 
 export interface Props {
 	apiUrl: string;
@@ -28,6 +29,7 @@ const ViewCard = (props: Props) => {
 					class={`field-label${(() => {
 						switch (props.card?.display) {
 							case Display.RAW:
+							case Display.DATE_TIME:
 							case Display.SWITCH:
 							case Display.SELECT:
 								return " is-normal";
@@ -54,6 +56,14 @@ const ViewCard = (props: Props) => {
 											type="text"
 											placeholder={props.value}
 											value={props.value}
+											readonly
+										/>
+									</Match>
+									<Match when={props.card?.display === Display.DATE_TIME}>
+										<input
+											class="input is-static"
+											type="text"
+											value={fmtDateTime(props.value)}
 											readonly
 										/>
 									</Match>

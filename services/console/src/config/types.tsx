@@ -131,6 +131,7 @@ export enum Card {
 
 export enum Display {
 	RAW = "raw",
+	DATE_TIME = "date_time",
 	SWITCH = "switch",
 	SELECT = "select",
 	START_POINT = "start_point",
