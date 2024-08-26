@@ -1,6 +1,4 @@
 ---
-export const prerender = false;
-
 import PerfLayout from "./PerfLayout.astro";
 import Tetris from "../../components/site/Tetris.astro";
 import { fetchSSR } from "../../components/perf/util";
@@ -15,6 +13,7 @@ const params = Astro.params;
 
 interface Props {
   title: (json?: undefined | object) => string;
+  titleFmt?: (title: string) => string;
   description: (json?: undefined | object) => string;
   created: (json?: undefined | object) => string;
   modified: (json?: undefined | object) => string;
@@ -50,7 +49,7 @@ if (params.project && params.project !== "undefined") {
 
 <PerfLayout
   title={title}
-  titleFmt={(title) => `🚨 ${title}`}
+  titleFmt={Astro.props.titleFmt}
   description={description}
   published={Astro.props.created(json)}
   modified={Astro.props.modified(json)}
