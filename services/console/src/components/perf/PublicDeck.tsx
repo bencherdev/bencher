@@ -23,8 +23,16 @@ export interface Props {
 	apiUrl: string;
 	params: Params;
 	config: DeckPanelConfig;
-	buttons: { kind: Button; resource: string; param: string }[];
+	buttons: PublicDeckButtons;
 	data: undefined | object;
+}
+
+export type PublicDeckButtons = PublicDeckButton[];
+
+export interface PublicDeckButton {
+	kind: Button;
+	resource: string;
+	param: string;
 }
 
 const PublicDeck = (props: Props) => {

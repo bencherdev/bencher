@@ -1,0 +1,86 @@
+---
+export const prerender = false;
+
+import PerfLayout from "./PerfLayout.astro";
+import Tetris from "../../components/site/Tetris.astro";
+import { fetchSSR } from "../../components/perf/util";
+import * as Sentry from "@sentry/astro";
+import PublicDeck, { type PublicDeckButtons } from "../../components/perf/PublicDeck";
+import type { DeckPanelConfig } from "../../components/console/deck/DeckPanel";
+
+// Using `meta.env` requires `prerender = false`
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
+const params = Astro.params;
+
+interface Props {
+  title: (json?: undefined | object) => string;
+  description: (json?: undefined | object) => string;
+  created: (json?: undefined | object) => string;
+  modified: (json?: undefined | object) => string;
+  url: (params: object) => string;
+  param: string;
+  config: DeckPanelConfig;
+  buttons: PublicDeckButtons;
+}
+
+let title = Astro.props.title();
+let description = Astro.props.description();
+let notFound = false;
+let json;
+if (params.project && params.project !== "undefined") {
+	try {
+    const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}${Astro.props.url(params)}`;
+		const resp = await fetchSSR(url);
+		json = await resp.json();
+		if (json?.uuid) {
+			title = Astro.props.title(json);
+			description = Astro.props.description(json);
+		} else {
+			title = "Not Found";
+			description = "Resource not found";
+			notFound = true;
+		}
+	} catch (e) {
+		console.error(`Failed to fetch resource data: ${e}`);
+		Sentry.captureException(e);
+	}
+}
+---
+
+<PerfLayout
+  title={title}
+  titleFmt={(title) => `🚨 ${title}`}
+  description={description}
+  published={Astro.props.created(json)}
+  modified={Astro.props.modified(json)}
+>
+  { notFound ?
+  <section class="section">
+    <div class="container">
+      <div class="columns is-mobile">
+        <div class="column">
+          <h1 class="title is-1">Not Found</h1>
+          <hr />
+          <p>Could not find resource <code>{params[Astro.props.param]}</code> for Project <code>{params.project}</code></p>
+          <p>The Project may be private or the resource may not exist.</p>
+          <br />
+          <a class="button" href={`/perf/${params.project}`}>Go to Project</a>
+        </div>
+        <div class="column">
+          <Tetris />
+        </div>
+      </div>
+    </div>
+  </section>
+  :
+  <PublicDeck
+    client:only="solid-js"
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    config={Astro.props.config}
+    buttons={Astro.props.buttons}
+    data={json}
+  />
+  }
+</PerfLayout>
