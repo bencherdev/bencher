@@ -3,10 +3,12 @@ export const prerender = false;
 
 import PerfLayout from "../../../../layouts/perf/PerfLayout.astro";
 import type { JsonOneMetric } from "../../../../types/bencher";
-import PublicMetric from "../../../../components/perf/PublicMetric";
+import PublicDeck from "../../../../components/perf/PublicDeck";
 import Tetris from "../../../../components/site/Tetris.astro";
 import { fetchSSR } from "../../../../components/perf/util";
 import * as Sentry from "@sentry/astro";
+import metricsConfig from "../../../../config/project/metrics";
+import { Button, Operation } from "../../../../config/types";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -66,6 +68,19 @@ if (params.project && params.project !== "undefined") {
     </div>
   </section>
   :
-  <PublicMetric client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} data={jsonMetric} />
+  <PublicDeck
+    client:only="solid-js"
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    config={metricsConfig[Operation.VIEW]}
+    buttons={[
+      {
+        kind: Button.CONSOLE,
+        resource: "metrics",
+        param: "metric",
+      },
+    ]}
+    data={jsonMetric}
+  />
   }
 </PerfLayout>

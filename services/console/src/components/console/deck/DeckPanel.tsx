@@ -26,8 +26,7 @@ interface Props {
 	params: Params;
 	resource: BencherResource;
 }
-
-interface DeckPanelConfig {
+export interface DeckPanelConfig {
 	operation: Operation;
 	header: DeckHeaderConfig;
 	deck: DeckConfig;
