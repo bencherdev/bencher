@@ -1,86 +1,16 @@
 ---
 export const prerender = false;
 
-import PerfLayout from "../../../../layouts/perf/PerfLayout.astro";
-import type { JsonOneMetric } from "../../../../types/bencher";
-import PublicDeck from "../../../../components/perf/PublicDeck";
-import Tetris from "../../../../components/site/Tetris.astro";
-import { fetchSSR } from "../../../../components/perf/util";
-import * as Sentry from "@sentry/astro";
-import metricsConfig from "../../../../config/project/metrics";
-import { Button, Operation } from "../../../../config/types";
-
-// Using `meta.env` requires `prerender = false`
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
-const params = Astro.params;
-
-const getMetricUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
-	params.project
-}/metrics/${params.metric}`;
-
-let jsonMetric: undefined | JsonOneMetric;
-let title = "Public Metric";
-let description = "View a continuous benchmarking metric";
-let notFound = false;
-if (params.project && params.project !== "undefined") {
-	try {
-		const metricResponse = await fetchSSR(getMetricUrl);
-		jsonMetric = await metricResponse.json();
-		if (jsonMetric?.uuid) {
-			title = `${jsonMetric?.branch?.name} | ${jsonMetric?.testbed?.name} | ${jsonMetric?.benchmark?.name} | ${jsonMetric?.measure?.name}`;
-			description = `View a continuous benchmarking metric for the ${jsonMetric?.benchmark?.name} benchmark on Bencher`;
-		} else {
-			title = "Not Found";
-			description = "Public Project Metric not found";
-			notFound = true;
-		}
-	} catch (e) {
-		console.error(`Failed to fetch metric data: ${e}`);
-		Sentry.captureException(e);
-	}
-}
+import PerfResource from "../../../../layouts/perf/PerfResource.astro";
+import branchesPubConfig from "../../../../config/project/branches_pub";
 ---
 
-<PerfLayout
-  title={title}
-  titleFmt={(title) => `🚨 ${title}`}
-  description={description}
-  published={jsonMetric?.end_time}
-  modified={jsonMetric?.end_time}
->
-  { notFound ?
-  <section class="section">
-    <div class="container">
-      <div class="columns is-mobile">
-        <div class="column">
-          <h1 class="title is-1">Metric Not Found</h1>
-          <hr />
-          <p>Could not find Metric <code>{params.metric}</code> for Project <code>{params.project}</code></p>
-          <p>The Project may be private or the Metric may not exist.</p>
-          <br />
-          <a class="button" href={`/perf/${params.project}`}>Go to Project</a>
-        </div>
-        <div class="column">
-          <Tetris />
-        </div>
-      </div>
-    </div>
-  </section>
-  :
-  <PublicDeck
-    client:only="solid-js"
-    apiUrl={BENCHER_API_URL}
-    params={params}
-    config={metricsConfig[Operation.VIEW]}
-    buttons={[
-      {
-        kind: Button.CONSOLE,
-        resource: "metrics",
-        param: "metric",
-      },
-    ]}
-    data={jsonMetric}
-  />
-  }
-</PerfLayout>
+<PerfResource
+  title={(json) => json ? `${json?.name}` : "Public Branch"}
+  description={(json) => json ? `View a continuous benchmarking branch ${json?.name} Bencher` : "View a continuous benchmarking branch"}
+  created={(json) => json ? json.created : ""}
+  modified={(json) => json ? json.modified : ""}
+  url={(params) => `/v0/projects/${params.project}/branches/${params.branch}`}
+  param="branch"
+  config={branchesPubConfig}
+/>
