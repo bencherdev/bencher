@@ -16,12 +16,14 @@ import { BACK_PARAM, decodePath, useSearchParams } from "../../util/url";
 import * as Sentry from "@sentry/astro";
 import { fmtDateTime } from "../../config/util";
 import { Display, type Button } from "../../config/types";
-import { fmtValues } from "../../util/resource";
+import { type PubResource, fmtValues } from "../../util/resource";
 import type CardConfig from "../console/deck/hand/card/CardConfig";
+import { fmtDate } from "../../util/convert";
 
 export interface Props {
 	apiUrl: string;
 	params: Params;
+	resource: PubResource;
 	config: PubDeckPanelConfig;
 	data: undefined | object;
 }
@@ -156,6 +158,20 @@ const PublicDeck = (props: Props) => {
 						</nav>
 					</div>
 				</div>
+
+				<Show when={data()?.archived}>
+					<div class="columns">
+						<div class="column">
+							<div class="notification is-warning">
+								<p>
+									This {props.resource} was archived on{" "}
+									{fmtDate(data()?.archived)}
+								</p>
+							</div>
+						</div>
+					</div>
+				</Show>
+
 				<div class="columns is-mobile">
 					<div class="column">
 						<Deck

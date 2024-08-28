@@ -4,6 +4,7 @@ export const prerender = false;
 import PerfResource from "../../../../layouts/perf/PerfResource.astro";
 import alertsPubConfig from "../../../../config/project/alerts_pub";
 import { AlertStatus } from "../../../../types/bencher";
+import { PubResource } from "../../../../util/resource";
 ---
 
 <PerfResource
@@ -15,6 +16,6 @@ import { AlertStatus } from "../../../../types/bencher";
   created={(json) => json ? json.created : ""}
   modified={(json) => json ? json.modified : ""}
   url={(params) => `/v0/projects/${params.project}/alerts/${params.alert}`}
-  param="alert"
+  resource={PubResource.Alert}
   config={alertsPubConfig}
 />

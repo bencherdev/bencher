@@ -3,6 +3,7 @@ export const prerender = false;
 
 import PerfResource from "../../../../layouts/perf/PerfResource.astro";
 import branchesPubConfig from "../../../../config/project/branches_pub";
+import { PubResource } from "../../../../util/resource";
 ---
 
 <PerfResource
@@ -11,6 +12,6 @@ import branchesPubConfig from "../../../../config/project/branches_pub";
   created={(json) => json ? json.created : ""}
   modified={(json) => json ? json.modified : ""}
   url={(params) => `/v0/projects/${params.project}/branches/${params.branch}`}
-  param="branch"
+  resource={PubResource.Branch}
   config={branchesPubConfig}
 />
