@@ -1,14 +1,17 @@
 import type { Params } from "astro";
-import { Button, Card, Display, Operation } from "../types";
-import { parentPath } from "../util";
+import { Button, Card, Display } from "../types";
 
 const branchesPubConfig = {
-	operation: Operation.VIEW,
 	header: {
 		key: "name",
-		path: parentPath,
-		path_to: "Branches",
-		buttons: [{ kind: Button.REFRESH }],
+		buttons: [
+			{
+				kind: Button.CONSOLE,
+				resource: "branches",
+				param: "branch",
+			},
+			{ kind: Button.REFRESH },
+		],
 	},
 	deck: {
 		url: (params: Params) =>

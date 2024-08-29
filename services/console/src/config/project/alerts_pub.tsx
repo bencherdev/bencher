@@ -11,6 +11,7 @@ const alertsPubConfig = {
 				param: "alert",
 			},
 			{ kind: Button.PERF },
+			{ kind: Button.REFRESH },
 		],
 	},
 	deck: {

@@ -10,13 +10,12 @@ const metricsPubConfig = {
 			["measure", "name"],
 		],
 		buttons: [
-			[
-				{
-					kind: Button.CONSOLE,
-					resource: "metrics",
-					param: "metric",
-				},
-			],
+			{
+				kind: Button.CONSOLE,
+				resource: "metrics",
+				param: "metric",
+			},
+			{ kind: Button.REFRESH },
 		],
 	},
 	deck: {
