@@ -3,7 +3,6 @@ export const prerender = false;
 
 import PerfResource from "../../../../layouts/perf/PerfResource.astro";
 import metricsPubConfig from "../../../../config/project/metrics_pub";
-import { PubResource } from "../../../../util/resource";
 ---
 
 <PerfResource
@@ -13,6 +12,5 @@ import { PubResource } from "../../../../util/resource";
   created={(json) => json ? json.end_time : ""}
   modified={(json) => json ? json.end_time : ""}
   url={(params) => `/v0/projects/${params.project}/metrics/${params.metric}`}
-  resource={PubResource.Metric}
   config={metricsPubConfig}
 />

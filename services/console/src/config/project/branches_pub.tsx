@@ -1,7 +1,9 @@
 import type { Params } from "astro";
 import { Button, Card, Display } from "../types";
+import { PubResourceKind } from "../../components/perf/util";
 
 const branchesPubConfig = {
+	resource: PubResourceKind.Branch,
 	header: {
 		key: "name",
 		buttons: [

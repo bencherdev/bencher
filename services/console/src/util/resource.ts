@@ -1,14 +1,3 @@
-export enum PubResource {
-	Project = "project",
-	Branch = "branch",
-	Testbed = "testbed",
-	Benchmark = "benchmark",
-	Measure = "measure",
-	Metric = "metric",
-	Threshold = "threshold",
-	Alert = "alert",
-}
-
 export const fmtValues = (
 	data: undefined | Record<string, number | string>,
 	key: undefined | string,

@@ -1,5 +1,61 @@
 import { PerfQueryKey } from "../../types/bencher";
 
+export enum PubResourceKind {
+	Project = "project",
+	Branch = "branch",
+	Testbed = "testbed",
+	Benchmark = "benchmark",
+	Measure = "measure",
+	Metric = "metric",
+	Threshold = "threshold",
+	Alert = "alert",
+}
+
+// biome-ignore lint/complexity/noStaticOnlyClass: enum methods
+export class PubResource {
+	public static resource(resource: PubResourceKind) {
+		switch (resource) {
+			case PubResourceKind.Project:
+				return "projects";
+			case PubResourceKind.Branch:
+				return "branches";
+			case PubResourceKind.Testbed:
+				return "testbeds";
+			case PubResourceKind.Benchmark:
+				return "benchmarks";
+			case PubResourceKind.Measure:
+				return "measures";
+			case PubResourceKind.Metric:
+				return "metrics";
+			case PubResourceKind.Threshold:
+				return "thresholds";
+			case PubResourceKind.Alert:
+				return "alerts";
+		}
+	}
+
+	public static param(resource: PubResourceKind) {
+		switch (resource) {
+			case PubResourceKind.Project:
+				return "project";
+			case PubResourceKind.Branch:
+				return "branch";
+			case PubResourceKind.Testbed:
+				return "testbed";
+			case PubResourceKind.Benchmark:
+				return "benchmark";
+			case PubResourceKind.Measure:
+				return "measure";
+			case PubResourceKind.Metric:
+				return "metric";
+			case PubResourceKind.Threshold:
+				return "threshold";
+			case PubResourceKind.Alert:
+				return "alert";
+		}
+	}
+}
+
 export const fetchSSR = async (url: string, timeout = 1_000) =>
 	await fetch(url, { signal: AbortSignal.timeout(timeout) });
 

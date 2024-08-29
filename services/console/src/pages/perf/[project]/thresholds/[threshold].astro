@@ -3,7 +3,6 @@ export const prerender = false;
 
 import PerfResource from "../../../../layouts/perf/PerfResource.astro";
 import thresholdsPubConfig from "../../../../config/project/thresholds_pub";
-import { PubResource } from "../../../../util/resource";
 ---
 
 <PerfResource
@@ -11,6 +10,5 @@ import { PubResource } from "../../../../util/resource";
   description={(json) => json ? "View a continuous benchmarking threshold on Bencher" : "View a continuous benchmarking threshold"}
   created={(json) => json ? json.created : ""}
   modified={(json) => json ? json.modified : ""}
-  resource={PubResource.Threshold}
   config={thresholdsPubConfig}
 />

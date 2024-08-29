@@ -1,10 +1,9 @@
 ---
 import PerfLayout from "./PerfLayout.astro";
 import Tetris from "../../components/site/Tetris.astro";
-import { fetchSSR } from "../../components/perf/util";
+import { fetchSSR, PubResource } from "../../components/perf/util";
 import * as Sentry from "@sentry/astro";
 import PublicDeck, { type PubDeckPanelConfig } from "../../components/perf/PublicDeck";
-import type { PubResource } from "../../util/resource";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -16,7 +15,6 @@ interface Props {
   description: (json?: undefined | object) => string;
   created: (json?: undefined | object) => string;
   modified: (json?: undefined | object) => string;
-  resource: PubResource;
   config: PubDeckPanelConfig;
 }
 
@@ -63,7 +61,7 @@ if (params.project && params.project !== "undefined") {
         <div class="column">
           <h1 class="title is-1">Not Found</h1>
           <hr />
-          <p>Could not find resource <code>{params[Astro.props.resource]}</code> for Project <code>{params.project}</code></p>
+          <p>Could not find resource <code>{params[PubResource.param(config?.resource)]}</code> for Project <code>{params.project}</code></p>
           <p>The Project may be private or the resource may not exist.</p>
           <br />
           <a class="button" href={`/perf/${params.project}`}>Go to Project</a>
@@ -79,7 +77,6 @@ if (params.project && params.project !== "undefined") {
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
-    resource={Astro.props.resource}
     config={config}
     data={json}
   />
