@@ -14,8 +14,7 @@ const metricsPubConfig = {
 		buttons: [
 			{
 				kind: Button.CONSOLE,
-				resource: "metrics",
-				param: "metric",
+				resource: PubResourceKind.Metric,
 			},
 			{ kind: Button.REFRESH },
 		],

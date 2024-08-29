@@ -9,8 +9,7 @@ const branchesPubConfig = {
 		buttons: [
 			{
 				kind: Button.CONSOLE,
-				resource: "branches",
-				param: "branch",
+				resource: PubResourceKind.Branch,
 			},
 			{ kind: Button.REFRESH },
 		],

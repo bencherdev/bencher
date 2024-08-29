@@ -1,3 +1,4 @@
+import type { Params } from "astro";
 import { PerfQueryKey } from "../../types/bencher";
 
 export enum PubResourceKind {
@@ -52,6 +53,21 @@ export class PubResource {
 				return "threshold";
 			case PubResourceKind.Alert:
 				return "alert";
+		}
+	}
+
+	public static search(resource: PubResourceKind, search: Params) {
+		switch (resource) {
+			case PubResourceKind.Project:
+			case PubResourceKind.Branch:
+			case PubResourceKind.Testbed:
+			case PubResourceKind.Benchmark:
+			case PubResourceKind.Measure:
+			case PubResourceKind.Metric:
+			case PubResourceKind.Alert:
+				return {};
+			case PubResourceKind.Threshold:
+				return { model: search?.model };
 		}
 	}
 }

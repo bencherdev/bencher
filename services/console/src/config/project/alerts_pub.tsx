@@ -9,8 +9,7 @@ const alertsPubConfig = {
 		buttons: [
 			{
 				kind: Button.CONSOLE,
-				resource: "alerts",
-				param: "alert",
+				resource: PubResourceKind.Alert,
 			},
 			{ kind: Button.PERF },
 			{ kind: Button.REFRESH },

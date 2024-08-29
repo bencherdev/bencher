@@ -13,8 +13,8 @@ import { BACK_PARAM, encodePath, pathname } from "../../../../util/url";
 import ConsoleButton from "./ConsoleButton";
 import PerfButton from "./PerfButton";
 import StatusButton from "./StatusButton";
-import { authUser } from "../../../../util/auth";
 import RefreshButton from "../../../site/RefreshButton";
+import type { PubResourceKind } from "../../../perf/util";
 
 export interface Props {
 	isConsole: boolean;
@@ -32,6 +32,7 @@ export interface DeckHeaderButtonConfig {
 	kind: Button;
 	path?: (pathname: string) => string;
 	is_allowed?: (apiUrl: string, params: Params) => boolean;
+	resource?: PubResourceKind;
 }
 
 const DeckHeaderButton = (props: Props) => {
@@ -82,11 +83,7 @@ const DeckHeaderButton = (props: Props) => {
 				/>
 			</Match>
 			<Match when={props.button.kind === Button.CONSOLE && props.user?.token}>
-				<ConsoleButton
-					params={props.params}
-					resource={props.button.resource}
-					param={props.button.param}
-				/>
+				<ConsoleButton params={props.params} resource={props.button.resource} />
 			</Match>
 			<Match when={props.button.kind === Button.PERF}>
 				<PerfButton
