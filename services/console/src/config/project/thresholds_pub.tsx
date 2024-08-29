@@ -11,7 +11,7 @@ const thresholdsPubConfig = {
 		buttons: [
 			{
 				kind: Button.CONSOLE,
-				resource: "Thresholds",
+				resource: "thresholds",
 				param: "threshold",
 			},
 			{ kind: Button.REFRESH },

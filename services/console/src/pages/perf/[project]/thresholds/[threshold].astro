@@ -1,71 +1,16 @@
 ---
 export const prerender = false;
 
-import PerfLayout from "../../../../layouts/perf/PerfLayout.astro";
-import type { JsonThreshold } from "../../../../types/bencher";
-import PublicThreshold from "../../../../components/perf/PublicThreshold";
-import Tetris from "../../../../components/site/Tetris.astro";
-import { fetchSSR } from "../../../../components/perf/util";
-import * as Sentry from "@sentry/astro";
-
-// Using `meta.env` requires `prerender = false`
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
-const params = Astro.params;
-
-const getThresholdUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
-	params.project
-}/thresholds/${params.threshold}`;
-
-let jsonThreshold: undefined | JsonThreshold;
-let title = "Public Threshold";
-let description = "View a continuous benchmarking threshold";
-let notFound = false;
-if (params.project && params.project !== "undefined") {
-	try {
-		const thresholdResponse = await fetchSSR(getThresholdUrl);
-		jsonThreshold = await thresholdResponse.json();
-		if (jsonThreshold?.uuid) {
-			title = `${jsonThreshold?.branch?.name} | ${jsonThreshold?.testbed?.name} | ${jsonThreshold?.measure?.name}`;
-			description = "View a continuous benchmarking threshold on Bencher";
-		} else {
-			title = "Not Found";
-			description = "Public Project Threshold not found";
-			notFound = true;
-		}
-	} catch (e) {
-		console.error(`Failed to fetch threshold data: ${e}`);
-		Sentry.captureException(e);
-	}
-}
+import PerfResource from "../../../../layouts/perf/PerfResource.astro";
+import thresholdsPubConfig from "../../../../config/project/thresholds_pub";
+import { PubResource } from "../../../../util/resource";
 ---
 
-<PerfLayout
-  title={title}
-  titleFmt={(title) => `🚨 ${title}`}
-  description={description}
-  published={jsonThreshold?.created}
-  modified={jsonThreshold?.modified}
->
-  { notFound ?
-  <section class="section">
-    <div class="container">
-      <div class="columns is-mobile">
-        <div class="column">
-          <h1 class="title is-1">Threshold Not Found</h1>
-          <hr />
-          <p>Could not find Threshold <code>{params.threshold}</code> for Project <code>{params.project}</code></p>
-          <p>The Project may be private or the Threshold may not exist.</p>
-          <br />
-          <a class="button" href={`/perf/${params.project}`}>Go to Project</a>
-        </div>
-        <div class="column">
-          <Tetris />
-        </div>
-      </div>
-    </div>
-  </section>
-  :
-  <PublicThreshold client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} data={jsonThreshold} />
-  }
-</PerfLayout>
+<PerfResource
+  title={(json) => json ? `${json?.branch?.name} | ${json?.testbed?.name} | ${json?.measure?.name}` : "Public Threshold"}
+  description={(json) => json ? "View a continuous benchmarking threshold on Bencher" : "View a continuous benchmarking threshold"}
+  created={(json) => json ? json.created : ""}
+  modified={(json) => json ? json.modified : ""}
+  resource={PubResource.Threshold}
+  config={thresholdsPubConfig}
+/>
