@@ -1,5 +1,5 @@
 import mdx from "@astrojs/mdx";
-import partytown from "@astrojs/partytown";
+// import partytown from "@astrojs/partytown";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
 import sentry from "@sentry/astro";
@@ -88,13 +88,13 @@ export default defineConfig({
 		// https://docs.astro.build/en/guides/integrations-guide/mdx
 		mdx(),
 		// https://docs.astro.build/en/guides/integrations-guide/partytown
-		partytown({
-			config: {
-				// https://www.kevinzunigacuellar.com/blog/google-analytics-in-astro/
-				// https://partytown.builder.io/google-tag-manager#forward-events
-				forward: ["dataLayer.push"],
-			},
-		}),
+		// partytown({
+		// 	config: {
+		// 		// https://www.kevinzunigacuellar.com/blog/google-analytics-in-astro/
+		// 		// https://partytown.builder.io/google-tag-manager#forward-events
+		// 		forward: ["dataLayer.push"],
+		// 	},
+		// }),
 		// https://docs.astro.build/en/guides/integrations-guide/solid-js/
 		solidJs(),
 		// https://docs.sentry.io/platforms/javascript/guides/astro/
