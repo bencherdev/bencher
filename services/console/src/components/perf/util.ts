@@ -2,7 +2,7 @@ import type { Params } from "astro";
 import { PerfQueryKey } from "../../types/bencher";
 
 export enum PubResourceKind {
-	Project = "project",
+	Report = "report",
 	Branch = "branch",
 	Testbed = "testbed",
 	Benchmark = "benchmark",
@@ -16,8 +16,8 @@ export enum PubResourceKind {
 export class PubResource {
 	public static resource(resource: PubResourceKind) {
 		switch (resource) {
-			case PubResourceKind.Project:
-				return "projects";
+			case PubResourceKind.Report:
+				return "reports";
 			case PubResourceKind.Branch:
 				return "branches";
 			case PubResourceKind.Testbed:
@@ -37,8 +37,8 @@ export class PubResource {
 
 	public static param(resource: PubResourceKind) {
 		switch (resource) {
-			case PubResourceKind.Project:
-				return "project";
+			case PubResourceKind.Report:
+				return "report";
 			case PubResourceKind.Branch:
 				return "branch";
 			case PubResourceKind.Testbed:
@@ -58,7 +58,7 @@ export class PubResource {
 
 	public static search(resource: PubResourceKind, search: Params) {
 		switch (resource) {
-			case PubResourceKind.Project:
+			case PubResourceKind.Report:
 			case PubResourceKind.Branch:
 			case PubResourceKind.Testbed:
 			case PubResourceKind.Benchmark:

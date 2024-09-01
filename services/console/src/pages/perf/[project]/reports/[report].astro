@@ -1,0 +1,15 @@
+---
+export const prerender = false;
+
+import PerfResource from "../../../../layouts/perf/PerfResource.astro";
+import reportsPubConfig from "../../../../config/project/reports_pub";
+import { fmtDateTime } from "../../../../config/util";
+---
+
+<PerfResource
+  title={(json) => json?.start_time ? `${fmtDateTime(json?.start_time)}`: "Public Report"}
+  description={(_json) => "View a continuous benchmarking report on Bencher"}
+  created={(json) => json?.created ?? ""}
+  modified={(json) => json?.created ?? ""}
+  config={reportsPubConfig}
+/>
