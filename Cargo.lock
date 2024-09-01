@@ -431,9 +431,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe"
-version = "0.37.3"
+version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2f14b5943a52cf051bbbbb68538e93a69d1e291934174121e769f4b181113f5"
+checksum = "db4d3b65604c86584a39f7d70043ad8caf5e29e14fffc571df1a880c5a15d054"
 dependencies = [
  "chrono",
  "futures-util",
