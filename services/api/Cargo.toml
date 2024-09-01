@@ -59,16 +59,18 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
 async-compression = { version = "0.4", features = ["tokio", "gzip"] }
 aws-credential-types = "1.2"
-aws-sdk-s3 = { version = "1.46", features = ["behavior-version-latest"] }
+aws-sdk-s3 = { version = "1.47", features = ["behavior-version-latest"] }
 css-inline = "0.14"
 diesel_migrations = "2.2"
-mail-send = "0.4"
+# https://github.com/rustls/rustls/issues/1913
+mail-send = "=0.4.8"
 paste = "1.0"
 sentry = { version = "0.34", optional = true, default-features = false, features = [
     "reqwest",
     "rustls",
 ] }
-tokio-rustls = "0.26"
+# https://github.com/rustls/rustls/issues/1913
+tokio-rustls = "0.25"
 
 # https://github.com/diesel-rs/diesel/blob/ba2f567b038179d16cea939c0bcaaecc216ea947/diesel/Cargo.toml#L19
 # https://github.com/tauri-apps/tauri/discussions/6183
