@@ -57,14 +57,14 @@ const ReportsTab = (props: {
 											</div>
 										</div>
 									</a>
-									<Show when={props.isConsole}>
-										<div class="level-right">
-											<div class="level-item">
-												{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
-												<a class="button">Manage</a>
-											</div>
+									<div class="level-right">
+										<div class="level-item">
+											{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
+											<a class="button">
+												{props.isConsole ? "Manage" : "View"}
+											</a>
 										</div>
-									</Show>
+									</div>
 								</div>
 							</div>
 						)}
@@ -126,17 +126,16 @@ const ReportRow = (props: {
 								</div>
 							</div>
 						</div>
-						<Show when={props.isConsole}>
-							<div class="level-right">
-								<div class="level-item">
-									<ViewReportButton
-										project_slug={props.project_slug}
-										tab={props.tab}
-										report={resource}
-									/>
-								</div>
+						<div class="level-right">
+							<div class="level-item">
+								<ViewReportButton
+									project_slug={props.project_slug}
+									isConsole={props.isConsole}
+									tab={props.tab}
+									report={resource}
+								/>
 							</div>
-						</Show>
+						</div>
 					</div>
 				</div>
 			}
@@ -185,17 +184,16 @@ const ReportRow = (props: {
 									</div>
 								</div>
 							</a>
-							<Show when={props.isConsole}>
-								<div class="level-right">
-									<div class="level-item">
-										<ViewReportButton
-											project_slug={props.project_slug}
-											tab={props.tab}
-											report={resource}
-										/>
-									</div>
+							<div class="level-right">
+								<div class="level-item">
+									<ViewReportButton
+										project_slug={props.project_slug}
+										isConsole={props.isConsole}
+										tab={props.tab}
+										report={resource}
+									/>
 								</div>
-							</Show>
+							</div>
 						</div>
 					</div>
 				)}
@@ -206,18 +204,23 @@ const ReportRow = (props: {
 
 const ViewReportButton = (props: {
 	project_slug: Accessor<undefined | string>;
+	isConsole: boolean;
 	tab: Accessor<PerfTab>;
 	report: JsonReport;
 }) => {
 	return (
 		<a
 			class="button"
-			title={`Manage Report from ${fmtDateTime(props.report?.start_time)}`}
-			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
+			title={`${props.isConsole ? "Manage" : "View"} Report from ${fmtDateTime(
+				props.report?.start_time,
+			)}`}
+			href={`${
+				props.isConsole ? "/console/projects" : "/perf"
+			}/${props.project_slug()}/${props.tab()}/${
 				props.report?.uuid
 			}?${BACK_PARAM}=${encodePath()}`}
 		>
-			Manage
+			{props.isConsole ? "Manage" : "View"}
 		</a>
 	);
 };

@@ -156,13 +156,9 @@ const FullPlotHeader = (props: Props) => {
 									}`}
 									href={`
 										${
-											props.isConsole
-												? `/console/projects/${props.project_slug()}/measures/${
-														measure()?.slug
-													}`
-												: `/perf/${props.project_slug()}/measures/${
-														measure()?.slug
-													}`
+											props.isConsole ? "/console/projects" : "/perf"
+										}/${props.project_slug()}/measures/${
+											measure()?.slug
 										}?${BACK_PARAM}=${encodePath()}`}
 								>
 									<small>{props.isConsole ? "Manage" : "View"}</small>

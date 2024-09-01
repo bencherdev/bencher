@@ -77,14 +77,14 @@ const DimensionsTab = (props: {
 											</div>
 										</div>
 									</div>
-									<Show when={props.isConsole}>
-										<div class="level-right">
-											<div class="level-item">
-												{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
-												<a class="button">Manage</a>
-											</div>
+									<div class="level-right">
+										<div class="level-item">
+											{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
+											<a class="button">
+												{props.isConsole ? "Manage" : "View"}
+											</a>
 										</div>
-									</Show>
+									</div>
 								</div>
 							</div>
 						)}
@@ -146,17 +146,16 @@ const DimensionRow = (props: {
 						</div>
 					</div>
 				</a>
-				<Show when={props.isConsole}>
-					<div class="level-right">
-						<div class="level-item">
-							<ViewDimensionButton
-								project_slug={props.project_slug}
-								tab={props.tab}
-								dimension={resource}
-							/>
-						</div>
+				<div class="level-right">
+					<div class="level-item">
+						<ViewDimensionButton
+							project_slug={props.project_slug}
+							isConsole={props.isConsole}
+							tab={props.tab}
+							dimension={resource}
+						/>
 					</div>
-				</Show>
+				</div>
 			</div>
 		</div>
 	);
@@ -164,18 +163,20 @@ const DimensionRow = (props: {
 
 const ViewDimensionButton = (props: {
 	project_slug: Accessor<undefined | string>;
+	isConsole: boolean;
 	tab: Accessor<PerfTab>;
 	dimension: JsonBranch | JsonTestbed | JsonBenchmark | JsonMeasure;
 }) => {
 	return (
 		<a
 			class="button"
-			title={`Manage ${props.dimension?.name}`}
-			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
+			title={`${props.isConsole ? "Manage" : "View"} ${props.dimension?.name}`}
+			href={`${props.isConsole ? "/console/projects" : "/perf"}/
+			${props.project_slug()}/${props.tab()}/${
 				props.dimension?.slug
 			}?${BACK_PARAM}=${encodePath()}`}
 		>
-			Manage
+			{props.isConsole ? "Manage" : "View"}
 		</a>
 	);
 };
