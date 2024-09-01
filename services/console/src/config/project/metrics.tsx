@@ -45,16 +45,16 @@ const metricsConfig = {
 					display: Display.TESTBED,
 				},
 				{
-					kind: Card.NESTED_FIELD,
+					kind: Card.FIELD,
 					label: "Benchmark",
-					keys: ["benchmark", "name"],
-					display: Display.RAW,
+					key: "benchmark",
+					display: Display.BENCHMARK,
 				},
 				{
-					kind: Card.NESTED_FIELD,
+					kind: Card.FIELD,
 					label: "Measure",
-					keys: ["measure", "name"],
-					display: Display.RAW,
+					key: "measure",
+					display: Display.MEASURE,
 				},
 				{
 					kind: Card.NESTED_FIELD,

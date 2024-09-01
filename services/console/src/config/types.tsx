@@ -134,6 +134,8 @@ export enum Display {
 	DATE_TIME = "date_time",
 	BRANCH = "branch",
 	TESTBED = "testbed",
+	BENCHMARK = "benchmark",
+	MEASURE = "measure",
 	SWITCH = "switch",
 	SELECT = "select",
 	START_POINT = "start_point",

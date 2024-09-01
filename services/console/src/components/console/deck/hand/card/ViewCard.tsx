@@ -63,24 +63,31 @@ const ViewCard = (props: Props) => {
 											readonly
 										/>
 									</Match>
-									<Match when={props.card?.display === Display.BRANCH}>
+									<Match
+										when={
+											props.card?.display === Display.BRANCH ||
+											props.card?.display === Display.TESTBED ||
+											props.card?.display === Display.BENCHMARK ||
+											props.card?.display === Display.MEASURE
+										}
+									>
 										<a
 											href={`${linkPath(props.isConsole)}/${
 												props.params?.project
-											}/branches/${
-												props.value?.slug
-											}?${BACK_PARAM}=${encodePath()}`}
-										>
-											{props.value?.name}
-										</a>
-									</Match>
-									<Match when={props.card?.display === Display.TESTBED}>
-										<a
-											href={`${linkPath(props.isConsole)}/${
-												props.params?.project
-											}/testbeds/${
-												props.value?.slug
-											}?${BACK_PARAM}=${encodePath()}`}
+											}/${(() => {
+												switch (props.card?.display) {
+													case Display.BRANCH:
+														return "branches";
+													case Display.TESTBED:
+														return "testbeds";
+													case Display.BENCHMARK:
+														return "benchmarks";
+													case Display.MEASURE:
+														return "measures";
+													default:
+														return "";
+												}
+											})()}/${props.value?.slug}?${BACK_PARAM}=${encodePath()}`}
 										>
 											{props.value?.name}
 										</a>
