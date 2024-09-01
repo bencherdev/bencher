@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import PerfResource from "../../../../layouts/perf/PerfResource.astro";
+import measuresPubConfig from "../../../../config/project/measures_pub";
+---
+
+<PerfResource
+  title={(json) => json?.name ?? "Public Measure"}
+  description={(json) => `View a continuous benchmarking measure ${json?.name ? `${json?.name} ` : ""}on Bencher`}
+  created={(json) => json?.created ?? ""}
+  modified={(json) => json?.modified ?? ""}
+  config={measuresPubConfig}
+/>
