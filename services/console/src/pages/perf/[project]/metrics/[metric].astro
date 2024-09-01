@@ -8,8 +8,8 @@ import metricsPubConfig from "../../../../config/project/metrics_pub";
 <PerfResource
   title={(json) => json ? `${json.branch.name} | ${json.testbed.name} | ${json.benchmark.name} | ${json.measure.name}` : "Public Metric"}
   titleFmt={(title) => `🚨 ${title}`}
-  description={(json) => json ? `View a continuous benchmarking metric for the ${json.benchmark.name} benchmark on Bencher` : "View a continuous benchmarking metric"}
-  created={(json) => json ? json.end_time : ""}
-  modified={(json) => json ? json.end_time : ""}
+  description={(_json) => "View a continuous benchmarking metric on Bencher"}
+  created={(json) => json?.end_time ?? ""}
+  modified={(json) => json?.end_time ?? ""}
   config={metricsPubConfig}
 />

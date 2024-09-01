@@ -6,9 +6,9 @@ import branchesPubConfig from "../../../../config/project/branches_pub";
 ---
 
 <PerfResource
-  title={(json) => json ? `${json?.name}` : "Public Branch"}
-  description={(json) => json ? `View a continuous benchmarking branch ${json?.name} Bencher` : "View a continuous benchmarking branch"}
-  created={(json) => json ? json.created : ""}
-  modified={(json) => json ? json.modified : ""}
+  title={(json) => json?.name ?? "Public Branch"}
+  description={(json) => `View a continuous benchmarking branch ${json?.name ? `${json?.name} ` : ""}on Bencher`}
+  created={(json) => json?.created ?? ""}
+  modified={(json) => json?.modified ?? ""}
   config={branchesPubConfig}
 />

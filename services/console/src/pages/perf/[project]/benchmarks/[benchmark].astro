@@ -2,13 +2,13 @@
 export const prerender = false;
 
 import PerfResource from "../../../../layouts/perf/PerfResource.astro";
-import testbedsPubConfig from "../../../../config/project/testbeds_pub";
+import benchmarksPubConfig from "../../../../config/project/benchmarks_pub";
 ---
 
 <PerfResource
-  title={(json) => json?.name ?? "Public Testbed"}
+  title={(json) => json?.name ?? "Public Benchmark"}
   description={(json) => `View a continuous benchmarking testbed ${json?.name ? `${json?.name} ` : ""}on Bencher`}
   created={(json) => json?.created ?? ""}
   modified={(json) => json?.modified ?? ""}
-  config={testbedsPubConfig}
+  config={benchmarksPubConfig}
 />

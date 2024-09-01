@@ -11,8 +11,8 @@ import { AlertStatus } from "../../../../types/bencher";
 				json?.status === AlertStatus.Active ? "🔔" : "🔕"
 			})` : "Public Alert"}
   titleFmt={(title) => `🚨 ${title}`}
-  description={(json) => json ? `View a continuous benchmarking alert for the ${json?.benchmark?.name} benchmark on Bencher` : "View a continuous benchmarking alert"}
-  created={(json) => json ? json.created : ""}
-  modified={(json) => json ? json.modified : ""}
+  description={(_json) => "View a continuous benchmarking alert on Bencher"}
+  created={(json) => json?.created ?? ""}
+  modified={(json) => json?.modified ?? ""}
   config={alertsPubConfig}
 />

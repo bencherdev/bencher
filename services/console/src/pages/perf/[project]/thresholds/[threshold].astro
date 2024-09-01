@@ -7,8 +7,8 @@ import thresholdsPubConfig from "../../../../config/project/thresholds_pub";
 
 <PerfResource
   title={(json) => json ? `${json?.branch?.name} | ${json?.testbed?.name} | ${json?.measure?.name}` : "Public Threshold"}
-  description={(json) => json ? "View a continuous benchmarking threshold on Bencher" : "View a continuous benchmarking threshold"}
-  created={(json) => json ? json.created : ""}
-  modified={(json) => json ? json.modified : ""}
+  description={(_json) => "View a continuous benchmarking threshold on Bencher"}
+  created={(json) => json?.created ?? ""}
+  modified={(json) => json?.modified ?? ""}
   config={thresholdsPubConfig}
 />
