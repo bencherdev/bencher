@@ -3,19 +3,21 @@ import PerfLayout from "./PerfLayout.astro";
 import Tetris from "../../components/site/Tetris.astro";
 import { fetchSSR, PubResource } from "../../components/perf/util";
 import * as Sentry from "@sentry/astro";
-import PublicDeck, { type PubDeckPanelConfig } from "../../components/perf/PublicDeck";
+import PublicDeck, {
+	type PubDeckPanelConfig,
+} from "../../components/perf/PublicDeck";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
 
 interface Props {
-  title: (json?: undefined | object) => string;
-  titleFmt?: (title: string) => string;
-  description: (json?: undefined | object) => string;
-  created: (json?: undefined | object) => string;
-  modified: (json?: undefined | object) => string;
-  config: PubDeckPanelConfig;
+	title: (json?: undefined | object) => string;
+	titleFmt?: (title: string) => string;
+	description: (json?: undefined | object) => string;
+	created: (json?: undefined | object) => string;
+	modified: (json?: undefined | object) => string;
+	config: PubDeckPanelConfig;
 }
 
 const params = Astro.params;
@@ -27,9 +29,12 @@ let notFound = false;
 let json;
 if (params.project && params.project !== "undefined") {
 	try {
-    console.log(Astro.url.searchParams);
-    const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}${config?.deck?.url(params, search)}`;
-    console.log(url);
+		console.log(Astro.url.searchParams);
+		const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}${config?.deck?.url(
+			params,
+			search,
+		)}`;
+		console.log(url);
 		const resp = await fetchSSR(url);
 		json = await resp.json();
 		if (json?.uuid) {
