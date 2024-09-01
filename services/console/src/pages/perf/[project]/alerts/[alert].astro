@@ -14,6 +14,5 @@ import { AlertStatus } from "../../../../types/bencher";
   description={(json) => json ? `View a continuous benchmarking alert for the ${json?.benchmark?.name} benchmark on Bencher` : "View a continuous benchmarking alert"}
   created={(json) => json ? json.created : ""}
   modified={(json) => json ? json.modified : ""}
-  url={(params) => `/v0/projects/${params.project}/alerts/${params.alert}`}
   config={alertsPubConfig}
 />

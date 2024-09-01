@@ -11,6 +11,5 @@ import metricsPubConfig from "../../../../config/project/metrics_pub";
   description={(json) => json ? `View a continuous benchmarking metric for the ${json.benchmark.name} benchmark on Bencher` : "View a continuous benchmarking metric"}
   created={(json) => json ? json.end_time : ""}
   modified={(json) => json ? json.end_time : ""}
-  url={(params) => `/v0/projects/${params.project}/metrics/${params.metric}`}
   config={metricsPubConfig}
 />

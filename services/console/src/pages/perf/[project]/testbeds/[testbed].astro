@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import PerfResource from "../../../../layouts/perf/PerfResource.astro";
+import testbedsPubConfig from "../../../../config/project/testbeds_pub";
+---
+
+<PerfResource
+  title={(json) => json ? `${json?.name}` : "Public Testbed"}
+  description={(json) => json ? `View a continuous benchmarking testbed ${json?.name} Bencher` : "View a continuous benchmarking testbed"}
+  created={(json) => json ? json.created : ""}
+  modified={(json) => json ? json.modified : ""}
+  config={testbedsPubConfig}
+/>

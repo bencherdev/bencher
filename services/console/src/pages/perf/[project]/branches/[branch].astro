@@ -10,6 +10,5 @@ import branchesPubConfig from "../../../../config/project/branches_pub";
   description={(json) => json ? `View a continuous benchmarking branch ${json?.name} Bencher` : "View a continuous benchmarking branch"}
   created={(json) => json ? json.created : ""}
   modified={(json) => json ? json.modified : ""}
-  url={(params) => `/v0/projects/${params.project}/branches/${params.branch}`}
   config={branchesPubConfig}
 />
