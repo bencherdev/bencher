@@ -74,6 +74,17 @@ const ViewCard = (props: Props) => {
 											{props.value?.name}
 										</a>
 									</Match>
+									<Match when={props.card?.display === Display.TESTBED}>
+										<a
+											href={`${linkPath(props.isConsole)}/${
+												props.params?.project
+											}/testbeds/${
+												props.value?.slug
+											}?${BACK_PARAM}=${encodePath()}`}
+										>
+											{props.value?.name}
+										</a>
+									</Match>
 									<Match when={props.card?.display === Display.DATE_TIME}>
 										<input
 											class="input is-static"

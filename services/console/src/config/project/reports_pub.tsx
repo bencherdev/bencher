@@ -44,10 +44,10 @@ const reportsPubConfig = {
 				display: Display.BRANCH,
 			},
 			{
-				kind: Card.NESTED_FIELD,
+				kind: Card.FIELD,
 				label: "Testbed",
-				keys: ["testbed", "name"],
-				display: Display.RAW,
+				key: "testbed",
+				display: Display.TESTBED,
 			},
 			{
 				kind: Card.FIELD,

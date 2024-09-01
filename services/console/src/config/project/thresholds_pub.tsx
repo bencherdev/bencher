@@ -33,14 +33,14 @@ const thresholdsPubConfig = {
 			{
 				kind: Card.NESTED_FIELD,
 				label: "Branch",
-				keys: ["branch", "name"],
-				display: Display.RAW,
+				key: "branch",
+				display: Display.BRANCH,
 			},
 			{
-				kind: Card.NESTED_FIELD,
+				kind: Card.FIELD,
 				label: "Testbed",
-				keys: ["testbed", "name"],
-				display: Display.RAW,
+				key: "testbed",
+				display: Display.TESTBED,
 			},
 			{
 				kind: Card.NESTED_FIELD,
