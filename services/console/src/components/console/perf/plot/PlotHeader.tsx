@@ -147,22 +147,25 @@ const FullPlotHeader = (props: Props) => {
 							<p id={BENCHER_MEASURE_ID} class="level-item">
 								Measure
 							</p>
-							<Show
-								when={
-									props.isConsole &&
-									measure() &&
-									measure()?.uuid !== BENCHER_MEASURE
-								}
-							>
+							<Show when={measure() && measure()?.uuid !== BENCHER_MEASURE}>
 								<a
 									class="level-item button is-small is-rounded"
 									style="margin-left: 1rem;"
-									title={`Manage ${measure()?.name}`}
-									href={`/console/projects/${props.project_slug()}/measures/${
-										measure()?.slug
-									}?${BACK_PARAM}=${encodePath()}`}
+									title={`${props.isConsole ? "Manage" : "View"} ${
+										measure()?.name
+									}`}
+									href={`
+										${
+											props.isConsole
+												? `/console/projects/${props.project_slug()}/measures/${
+														measure()?.slug
+													}`
+												: `/perf/${props.project_slug()}/measures/${
+														measure()?.slug
+													}`
+										}?${BACK_PARAM}=${encodePath()}`}
 								>
-									<small>Manage</small>
+									<small>{props.isConsole ? "Manage" : "View"}</small>
 								</a>
 							</Show>
 						</div>
