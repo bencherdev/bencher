@@ -26,15 +26,13 @@ const config = Astro.props.config;
 let title = Astro.props.title();
 let description = Astro.props.description();
 let notFound = false;
-let json;
+let json: object;
 if (params.project && params.project !== "undefined") {
 	try {
-		console.log(Astro.url.searchParams);
 		const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}${config?.deck?.url(
 			params,
 			search,
 		)}`;
-		console.log(url);
 		const resp = await fetchSSR(url);
 		json = await resp.json();
 		if (json?.uuid) {
