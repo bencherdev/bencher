@@ -141,6 +141,7 @@ export enum Display {
 	START_POINT = "start_point",
 	GIT_HASH = "git_hash",
 	ADAPTER = "adapter",
+	MODEL_TEST = "model_test",
 }
 
 export enum PerfTab {

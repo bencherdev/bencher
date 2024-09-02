@@ -6,12 +6,14 @@ import { authUser } from "../../../../../util/auth";
 import { httpGet } from "../../../../../util/http";
 import {
 	Adapter,
+	ModelTest,
 	type JsonBranch,
 	type JsonProject,
 } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import * as Sentry from "@sentry/astro";
 import { fmtDateTime, resourcePath } from "../../../../../config/util";
+import { testFragment } from "../../../../field/kinds/Model";
 
 export interface Props {
 	isConsole?: boolean;
@@ -142,6 +144,9 @@ const ViewCard = (props: Props) => {
 									</Match>
 									<Match when={props.card?.display === Display.ADAPTER}>
 										<AdapterCard {...props} />
+									</Match>
+									<Match when={props.card?.display === Display.MODEL_TEST}>
+										<ModelTestCard {...props} />
 									</Match>
 								</Switch>
 							</Show>
@@ -355,6 +360,45 @@ const AdapterCard = (props: Props) => {
 							return "Rust Iai-Callgrind";
 						case Adapter.ShellHyperfine:
 							return "Shell Hyperfine";
+						default:
+							return `${props.value}`;
+					}
+				})()}
+			</span>
+			<span class="icon">
+				<i class="fas fa-book-open" />
+			</span>
+		</a>
+	);
+};
+
+const ModelTestCard = (props: Props) => {
+	return (
+		<a
+			href={`https://bencher.dev/docs/explanation/thresholds/#${testFragment(
+				props.value as ModelTest,
+			)}`}
+			// biome-ignore lint/a11y/noBlankTarget: docs link
+			target="_blank"
+			class="icon-text has-text-link"
+		>
+			<span>
+				{(() => {
+					switch (props.value) {
+						case ModelTest.Static:
+							return "Static";
+						case ModelTest.Percentage:
+							return "Percentage";
+						case ModelTest.ZScore:
+							return "z-score";
+						case ModelTest.TTest:
+							return "t-test";
+						case ModelTest.LogNormal:
+							return "Log Normal";
+						case ModelTest.Iqr:
+							return "Interquartile Range (IQR)";
+						case ModelTest.DeltaIqr:
+							return "Delta Interquartile Range (ΔIQR)";
 						default:
 							return `${props.value}`;
 					}

@@ -214,7 +214,7 @@ const thresholdsConfig = {
 					kind: Card.NESTED_FIELD,
 					label: "Threshold Model Test",
 					keys: ["model", "test"],
-					display: Display.RAW,
+					display: Display.MODEL_TEST,
 				},
 				{
 					kind: Card.NESTED_FIELD,
