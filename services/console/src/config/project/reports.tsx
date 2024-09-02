@@ -102,9 +102,9 @@ const reportsConfig = {
 				},
 				{
 					kind: Card.FIELD,
-					label: "Results Adapter",
+					label: "Adapter",
 					key: "adapter",
-					display: Display.RAW,
+					display: Display.ADAPTER,
 				},
 			],
 			buttons: [

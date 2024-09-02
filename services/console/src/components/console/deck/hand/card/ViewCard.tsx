@@ -4,7 +4,11 @@ import { Display } from "../../../../../config/types";
 import type CardConfig from "./CardConfig";
 import { authUser } from "../../../../../util/auth";
 import { httpGet } from "../../../../../util/http";
-import type { JsonBranch, JsonProject } from "../../../../../types/bencher";
+import {
+	Adapter,
+	type JsonBranch,
+	type JsonProject,
+} from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import * as Sentry from "@sentry/astro";
 import { fmtDateTime, resourcePath } from "../../../../../config/util";
@@ -136,6 +140,9 @@ const ViewCard = (props: Props) => {
 									<Match when={props.card?.display === Display.GIT_HASH}>
 										<GitHashCard {...props} />
 									</Match>
+									<Match when={props.card?.display === Display.ADAPTER}>
+										<AdapterCard {...props} />
+									</Match>
 								</Switch>
 							</Show>
 						</div>
@@ -262,6 +269,94 @@ const GitHashCard = (props: Props) => {
 	}
 
 	return <>{hash()}</>;
+};
+
+const AdapterCard = (props: Props) => {
+	return (
+		<a
+			href={`https://bencher.dev/docs/explanation/adapters/#${(() => {
+				switch (props.value) {
+					case Adapter.Magic:
+						return "-magic-default";
+					case Adapter.Json:
+						return "-json";
+					case Adapter.CSharpDotNet:
+						return "%EF%B8%8F⃣-c-dotnet";
+					case Adapter.CppCatch2:
+						return "-c-catch2";
+					case Adapter.CppGoogle:
+						return "-c-google";
+					case Adapter.GoBench:
+						return "-go-bench";
+					case Adapter.JavaJmh:
+						return "%EF%B8%8F-java-jmh";
+					case Adapter.JsBenchmark:
+						return "-javascript-benchmark";
+					case Adapter.JsTime:
+						return "-javascript-time";
+					case Adapter.PythonAsv:
+						return "-python-asv";
+					case Adapter.PythonPytest:
+						return "-python-pytest";
+					case Adapter.RubyBenchmark:
+						return "%EF%B8%8F-ruby-benchmark";
+					case Adapter.RustBench:
+						return "-rust-bench";
+					case Adapter.RustCriterion:
+						return "-rust-criterion";
+					case Adapter.RustIai:
+						return "-rust-iai";
+					case Adapter.RustIaiCallgrind:
+						return "-rust-iai-callgrind";
+					case Adapter.ShellHyperfine:
+						return "_%EF%B8%8F-shell-hyperfine";
+					default:
+						return "";
+				}
+			})()}`}
+		>
+			{(() => {
+				switch (props.value) {
+					case Adapter.Magic:
+						return "Magic";
+					case Adapter.Json:
+						return "JSON";
+					case Adapter.CSharpDotNet:
+						return "C# BenchmarkDotNet";
+					case Adapter.CppCatch2:
+						return "C++ Catch2";
+					case Adapter.CppGoogle:
+						return "C++ Google Benchmark";
+					case Adapter.GoBench:
+						return "Go test -bench";
+					case Adapter.JavaJmh:
+						return "Java Microbenchmark Harness (JMH)";
+					case Adapter.JsBenchmark:
+						return "JavaScript Benchmark.js";
+					case Adapter.JsTime:
+						return "JavaScript console.time/console.timeEnd";
+					case Adapter.PythonAsv:
+						return "Python airspeed velocity (asv)";
+					case Adapter.PythonPytest:
+						return "Python pytest-benchmark";
+					case Adapter.RubyBenchmark:
+						return "Ruby Benchmark";
+					case Adapter.RustBench:
+						return "Rust libtest bench";
+					case Adapter.RustCriterion:
+						return "Rust Criterion";
+					case Adapter.RustIai:
+						return "Rust Iai";
+					case Adapter.RustIaiCallgrind:
+						return "Rust Iai-Callgrind";
+					case Adapter.ShellHyperfine:
+						return "Shell Hyperfine";
+					default:
+						return `${props.value}`;
+				}
+			})()}
+		</a>
+	);
 };
 
 export default ViewCard;
