@@ -46,7 +46,7 @@ clap = { version = "4.5", features = ["derive"] }
 derive_more = { version = "1.0", features = ["display"] }
 diesel = "2.2"
 http = "0.2"
-hyper = "0.14"
+hyper = "1.4"
 jsonwebtoken = "9.3"
 literally = "0.1"
 octocrab = "0.39"
