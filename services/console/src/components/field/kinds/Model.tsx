@@ -163,7 +163,7 @@ const testSelectConfig = (modelTest: ModelTest) => {
 						href={`https://bencher.dev/docs/explanation/thresholds/#${testFragment(
 							modelTest,
 						)}`}
-						// biome-ignore lint/a11y/noBlankTarget: <explanation>
+						// biome-ignore lint/a11y/noBlankTarget: docs link
 						target="_blank"
 						title="Open documentation in new tab"
 					>
@@ -181,7 +181,7 @@ const testSelectConfig = (modelTest: ModelTest) => {
 	};
 };
 
-const testFragment = (modelTest: ModelTest) => {
+export const testFragment = (modelTest: ModelTest) => {
 	switch (modelTest) {
 		case ModelTest.Static:
 			return "static-thresholds";

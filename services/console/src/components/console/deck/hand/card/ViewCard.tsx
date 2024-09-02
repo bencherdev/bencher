@@ -314,47 +314,55 @@ const AdapterCard = (props: Props) => {
 						return "";
 				}
 			})()}`}
+			// biome-ignore lint/a11y/noBlankTarget: docs link
+			target="_blank"
+			class="icon-text has-text-link"
 		>
-			{(() => {
-				switch (props.value) {
-					case Adapter.Magic:
-						return "Magic";
-					case Adapter.Json:
-						return "JSON";
-					case Adapter.CSharpDotNet:
-						return "C# BenchmarkDotNet";
-					case Adapter.CppCatch2:
-						return "C++ Catch2";
-					case Adapter.CppGoogle:
-						return "C++ Google Benchmark";
-					case Adapter.GoBench:
-						return "Go test -bench";
-					case Adapter.JavaJmh:
-						return "Java Microbenchmark Harness (JMH)";
-					case Adapter.JsBenchmark:
-						return "JavaScript Benchmark.js";
-					case Adapter.JsTime:
-						return "JavaScript console.time/console.timeEnd";
-					case Adapter.PythonAsv:
-						return "Python airspeed velocity (asv)";
-					case Adapter.PythonPytest:
-						return "Python pytest-benchmark";
-					case Adapter.RubyBenchmark:
-						return "Ruby Benchmark";
-					case Adapter.RustBench:
-						return "Rust libtest bench";
-					case Adapter.RustCriterion:
-						return "Rust Criterion";
-					case Adapter.RustIai:
-						return "Rust Iai";
-					case Adapter.RustIaiCallgrind:
-						return "Rust Iai-Callgrind";
-					case Adapter.ShellHyperfine:
-						return "Shell Hyperfine";
-					default:
-						return `${props.value}`;
-				}
-			})()}
+			<span>
+				{(() => {
+					switch (props.value) {
+						case Adapter.Magic:
+							return "Magic";
+						case Adapter.Json:
+							return "JSON";
+						case Adapter.CSharpDotNet:
+							return "C# BenchmarkDotNet";
+						case Adapter.CppCatch2:
+							return "C++ Catch2";
+						case Adapter.CppGoogle:
+							return "C++ Google Benchmark";
+						case Adapter.GoBench:
+							return "Go test -bench";
+						case Adapter.JavaJmh:
+							return "Java Microbenchmark Harness (JMH)";
+						case Adapter.JsBenchmark:
+							return "JavaScript Benchmark.js";
+						case Adapter.JsTime:
+							return "JavaScript console.time/console.timeEnd";
+						case Adapter.PythonAsv:
+							return "Python airspeed velocity (asv)";
+						case Adapter.PythonPytest:
+							return "Python pytest-benchmark";
+						case Adapter.RubyBenchmark:
+							return "Ruby Benchmark";
+						case Adapter.RustBench:
+							return "Rust libtest bench";
+						case Adapter.RustCriterion:
+							return "Rust Criterion";
+						case Adapter.RustIai:
+							return "Rust Iai";
+						case Adapter.RustIaiCallgrind:
+							return "Rust Iai-Callgrind";
+						case Adapter.ShellHyperfine:
+							return "Shell Hyperfine";
+						default:
+							return `${props.value}`;
+					}
+				})()}
+			</span>
+			<span class="icon">
+				<i class="fas fa-book-open" />
+			</span>
 		</a>
 	);
 };
