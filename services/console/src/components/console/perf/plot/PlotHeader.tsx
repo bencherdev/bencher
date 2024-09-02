@@ -19,6 +19,7 @@ import { BENCHER_MEASURE_ID } from "./util";
 import { BACK_PARAM, encodePath } from "../../../../util/url";
 import { type Theme, themeWordmark } from "../../../navbar/theme/theme";
 import * as Sentry from "@sentry/astro";
+import { resourcePath } from "../../../../config/util";
 
 const BENCHER_MEASURE = "--bencher-measure--";
 
@@ -155,9 +156,9 @@ const FullPlotHeader = (props: Props) => {
 										measure()?.name
 									}`}
 									href={`
-										${
-											props.isConsole ? "/console/projects" : "/perf"
-										}/${props.project_slug()}/measures/${
+										${resourcePath(
+											props.isConsole,
+										)}/${props.project_slug()}/measures/${
 											measure()?.slug
 										}?${BACK_PARAM}=${encodePath()}`}
 								>

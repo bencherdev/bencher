@@ -1,6 +1,6 @@
 import { type Accessor, For, Show, Switch, Match } from "solid-js";
 import type { PerfTab } from "../../../../../config/types";
-import { fmtDateTime } from "../../../../../config/util";
+import { fmtDateTime, resourcePath } from "../../../../../config/util";
 import type { JsonReport } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { BRANCH_ICON } from "../../../../../config/project/branches";
@@ -214,9 +214,9 @@ const ViewReportButton = (props: {
 			title={`${props.isConsole ? "Manage" : "View"} Report from ${fmtDateTime(
 				props.report?.start_time,
 			)}`}
-			href={`${
-				props.isConsole ? "/console/projects" : "/perf"
-			}/${props.project_slug()}/${props.tab()}/${
+			href={`${resourcePath(
+				props.isConsole,
+			)}/${props.project_slug()}/${props.tab()}/${
 				props.report?.uuid
 			}?${BACK_PARAM}=${encodePath()}`}
 		>

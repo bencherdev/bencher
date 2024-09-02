@@ -28,6 +28,9 @@ export const viewUuidPath = (pathname: string, datum: { uuid: string }) => {
 	return `${pathname}/${datum?.uuid}`;
 };
 
+export const resourcePath = (isConsole: undefined | boolean) =>
+	isConsole !== false ? "/console/projects" : "/perf";
+
 export const toCapitalized = (text: string) =>
 	text.charAt(0).toUpperCase() + text.slice(1);
 

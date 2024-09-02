@@ -11,7 +11,7 @@ import type { TabElement, TabList } from "./PlotTab";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
 import { themeText, type Theme } from "../../../../navbar/theme/theme";
-import { toCapitalized } from "../../../../../config/util";
+import { resourcePath, toCapitalized } from "../../../../../config/util";
 
 const DimensionsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -171,7 +171,7 @@ const ViewDimensionButton = (props: {
 		<a
 			class="button"
 			title={`${props.isConsole ? "Manage" : "View"} ${props.dimension?.name}`}
-			href={`${props.isConsole ? "/console/projects" : "/perf"}/
+			href={`${resourcePath(props.isConsole)}/
 			${props.project_slug()}/${props.tab()}/${
 				props.dimension?.slug
 			}?${BACK_PARAM}=${encodePath()}`}

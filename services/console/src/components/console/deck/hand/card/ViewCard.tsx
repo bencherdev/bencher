@@ -7,7 +7,7 @@ import { httpGet } from "../../../../../util/http";
 import type { JsonBranch, JsonProject } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import * as Sentry from "@sentry/astro";
-import { fmtDateTime } from "../../../../../config/util";
+import { fmtDateTime, resourcePath } from "../../../../../config/util";
 
 export interface Props {
 	isConsole?: boolean;
@@ -17,9 +17,6 @@ export interface Props {
 	value: boolean | string | object;
 	toggleUpdate: () => void;
 }
-
-const linkPath = (isConsole: undefined | boolean) =>
-	isConsole !== false ? "/console/projects" : "/perf";
 
 const ViewCard = (props: Props) => {
 	const [is_allowed] = createResource(props.params, (params) =>
@@ -72,7 +69,7 @@ const ViewCard = (props: Props) => {
 										}
 									>
 										<a
-											href={`${linkPath(props.isConsole)}/${
+											href={`${resourcePath(props.isConsole)}/${
 												props.params?.project
 											}/${(() => {
 												switch (props.card?.display) {
