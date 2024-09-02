@@ -212,7 +212,9 @@ const StartPointCard = (props: Props) => {
 
 	return (
 		<a
-			href={`${linkPath(props.isConsole)}/${props.params?.project}/branches/${
+			href={`${resourcePath(props.isConsole)}/${
+				props.params?.project
+			}/branches/${
 				branch()?.slug ?? props.value?.branch
 			}?${BACK_PARAM}=${encodePath()}`}
 		>
