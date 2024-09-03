@@ -108,6 +108,9 @@ impl QueryMeasure {
             .or_else(|| {
                 built_in::iai_callgrind::callgrind_tool::EstimatedCycles::from_str(measure_str)
             })
+            .or_else(|| {
+                built_in::iai_callgrind::callgrind_tool::GlobalBusEvents::from_str(measure_str)
+            })
             .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBytes::from_str(measure_str))
             .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBlocks::from_str(measure_str))
             .or_else(|| built_in::iai_callgrind::dhat_tool::AtTGmaxBytes::from_str(measure_str))
