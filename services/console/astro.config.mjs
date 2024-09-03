@@ -1,3 +1,5 @@
+// import node from "@astrojs/node";
+// import netlify from "@astrojs/netlify";
 import mdx from "@astrojs/mdx";
 // import partytown from "@astrojs/partytown";
 import sitemap from "@astrojs/sitemap";
@@ -16,6 +18,7 @@ export default defineConfig({
 	site: "https://bencher.dev",
 	output: "hybrid",
 	// This is needed for WASM
+	// https://docs.astro.build/en/reference/configuration-reference/#buildassets
 	// https://github.com/withastro/astro/issues/5745
 	// https://github.com/nshen/vite-plugin-wasm-pack/blob/5e626b9d387b9e9df87712479df2eb5110af02f7/src/index.ts#L186
 	build: {

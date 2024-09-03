@@ -11,14 +11,20 @@ const path = "./astro.config.mjs";
 let file = fs.readFileSync(path, "utf8");
 switch (adapter) {
 	case "node":
-		file = `import node from "@astrojs/node";\n${file}`;
+		file = file.replace(
+			'// import node from "@astrojs/node";',
+			'import node from "@astrojs/node";',
+		);
 		file = file.replace(
 			"adapter: undefined,",
 			`adapter: node({ mode: "standalone" }),`,
 		);
 		break;
 	case "netlify":
-		file = `import netlify from "@astrojs/netlify";\n${file}`;
+		file = file.replace(
+			'// import netlify from "@astrojs/netlify";',
+			'import netlify from "@astrojs/netlify";',
+		);
 		file = file.replace("adapter: undefined,", "adapter: netlify(),");
 		break;
 }
