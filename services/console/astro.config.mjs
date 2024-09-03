@@ -15,6 +15,12 @@ export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
 	site: "https://bencher.dev",
 	output: "hybrid",
+	// This is needed for WASM
+	// https://github.com/withastro/astro/issues/5745
+	// https://github.com/nshen/vite-plugin-wasm-pack/blob/5e626b9d387b9e9df87712479df2eb5110af02f7/src/index.ts#L186
+	build: {
+		assets: "assets",
+	},
 	// DO NOT REMOVE OR MODIFY: This line is used by adapter.js
 	adapter: undefined,
 	// Do not use any trailing slashes in the paths below
