@@ -3,7 +3,7 @@ import CargoRustIaiCallgrind from "../cargo-rust-iai-callgrind.mdx";
 ## 🦀 Rust Iai-Callgrind
 
 Rust Iai 어댑터(`rust_iai_callgrind`)는 [Iai-Callgrind](https://github.com/iai-callgrind/iai-callgrind) 출력을 기대합니다.
-`instructions`, `l1_access`, `l2_access`, `ram_access`, `total_accesses`, 그리고 `estimated_cycles` 측정값이 수집됩니다.
+`instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write`, 그리고 `estimated-cycles` 측정값이 수집됩니다.
 이러한 측정값들(즉 `value`)만이 사용 가능합니다. `lower_value`와 `upper_value` 측정값은 없습니다.
 이 어댑터에 대한 측정값들은 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
 그러나 이 어댑터를 사용할 때, 이러한 측정값들은 자동으로 귀하의 프로젝트에 생성될 것입니다.
