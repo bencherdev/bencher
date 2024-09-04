@@ -5,6 +5,7 @@ import { Card } from "../../../../../config/types";
 import { fmtNestedValue } from "../../../../../util/resource";
 import type CardConfig from "./CardConfig";
 import type { Params } from "astro";
+import TableCard from "./TableCard";
 
 export interface Props {
 	isConsole?: boolean;
@@ -35,9 +36,6 @@ const DeckCard = (props: Props) => {
 						handleLoopback={props.handleLoopback}
 					/>
 				</Match>
-				<Match when={props.card?.kind === Card.TABLE}>
-					<div>Table Card</div>
-				</Match>
 				<Match when={props.card?.kind === Card.NESTED_FIELD}>
 					<FieldCard
 						isConsole={props.isConsole}
@@ -49,6 +47,14 @@ const DeckCard = (props: Props) => {
 						value={fmtNestedValue(props.data(), props.card?.keys)}
 						handleRefresh={props.handleRefresh}
 						handleLoopback={props.handleLoopback}
+					/>
+				</Match>
+				<Match when={props.card?.kind === Card.TABLE}>
+					<TableCard
+						isConsole={props.isConsole}
+						apiUrl={props.apiUrl}
+						params={props.params}
+						value={props.data()}
 					/>
 				</Match>
 			</Switch>

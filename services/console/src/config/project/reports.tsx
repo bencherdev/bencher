@@ -106,6 +106,9 @@ const reportsConfig = {
 					key: "adapter",
 					display: Display.ADAPTER,
 				},
+				{
+					kind: Card.TABLE,
+				},
 			],
 			buttons: [
 				{

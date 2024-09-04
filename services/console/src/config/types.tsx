@@ -125,8 +125,8 @@ export enum Row {
 
 export enum Card {
 	FIELD = "field",
-	TABLE = "table",
 	NESTED_FIELD = "nested_field",
+	TABLE = "table",
 }
 
 export enum Display {
