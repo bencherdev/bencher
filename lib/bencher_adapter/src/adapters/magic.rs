@@ -133,8 +133,10 @@ mod test_magic {
 
     #[test]
     fn test_adapter_magic_rust_iai_callgrind() {
-        let results =
-            convert_file_path::<AdapterMagic>("./tool_output/rust/iai_callgrind/single-tool.txt");
+        let results = convert_file_path::<AdapterMagic>(
+            "./tool_output/rust/iai_callgrind/without-optional-metrics.txt",
+        );
+
         test_rust_iai_callgrind::validate_adapter_rust_iai_callgrind(
             &results,
             &test_rust_iai_callgrind::OptionalMetrics::default(),

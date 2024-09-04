@@ -249,19 +249,20 @@ pub(crate) mod test_rust_iai_callgrind {
     use std::collections::HashMap;
 
     #[test]
-    fn test_iai_adapter_single_tool() {
+    fn test_without_optional_metrics() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/single-tool.txt",
+            "./tool_output/rust/iai_callgrind/without-optional-metrics.txt",
         );
 
         validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
     }
 
     #[test]
-    fn test_iai_adapter_multiple_tools() {
+    fn test_with_dhat() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/multiple-tools.txt",
+            "./tool_output/rust/iai_callgrind/with-dhat.txt",
         );
+
         validate_adapter_rust_iai_callgrind(
             &results,
             &OptionalMetrics {
@@ -272,25 +273,42 @@ pub(crate) mod test_rust_iai_callgrind {
     }
 
     #[test]
-    fn test_iai_adapter_delta() {
+    fn test_with_dhat_and_global_bus_events() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/with-dhat-and-global-bus-events.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(
+            &results,
+            &OptionalMetrics {
+                dhat: true,
+                global_bus_events: true,
+            },
+        );
+    }
+
+    #[test]
+    fn test_delta() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/delta.txt",
         );
+
         validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
     }
 
     #[test]
-    fn test_iai_adapter_ansi_escapes_issue_345() {
+    fn test_ansi_escapes_issue_345() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/ansi-escapes.txt",
         );
+
         validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
     }
 
     #[test]
-    fn test_iai_adapter_global_bus_events() {
+    fn test_with_ge() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/global-bus-events.txt",
+            "./tool_output/rust/iai_callgrind/with-ge.txt",
         );
 
         validate_adapter_rust_iai_callgrind(
