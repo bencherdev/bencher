@@ -52,6 +52,7 @@ pub enum IaiCallgrindMeasure {
     RamHits(JsonNewMetric),
     TotalReadWrite(JsonNewMetric),
     EstimatedCycles(JsonNewMetric),
+    GlobalBusEvents(JsonNewMetric),
 
     /*
      * DHAT tool:
@@ -190,6 +191,10 @@ impl AdapterResults {
                     ),
                     IaiCallgrindMeasure::EstimatedCycles(json_metric) => (
                         built_in::iai_callgrind::callgrind_tool::EstimatedCycles::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::GlobalBusEvents(json_metric) => (
+                        built_in::iai_callgrind::callgrind_tool::GlobalBusEvents::name_id(),
                         json_metric,
                     ),
 

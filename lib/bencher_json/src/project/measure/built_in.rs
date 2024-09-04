@@ -96,6 +96,8 @@ pub mod iai_callgrind {
             "estimated-cycles",
             "cycles"
         );
+
+        create_measure!(GlobalBusEvents, "Ge", "global-bus-events", "events");
     }
 
     pub mod dhat_tool {

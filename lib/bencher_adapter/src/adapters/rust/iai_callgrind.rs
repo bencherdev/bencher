@@ -103,17 +103,30 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
                 metric_line(callgrind_tool::RamHits::NAME_STR),
                 metric_line(callgrind_tool::TotalReadWrite::NAME_STR),
                 metric_line(callgrind_tool::EstimatedCycles::NAME_STR),
+                opt(metric_line(callgrind_tool::GlobalBusEvents::NAME_STR)),
             )),
         ),
-        |(instructions, l1_hits, l2_hits, ram_hits, total_read_write, estimated_cycles)| {
-            vec![
-                IaiCallgrindMeasure::Instructions(instructions),
-                IaiCallgrindMeasure::L1Hits(l1_hits),
-                IaiCallgrindMeasure::L2Hits(l2_hits),
-                IaiCallgrindMeasure::RamHits(ram_hits),
-                IaiCallgrindMeasure::TotalReadWrite(total_read_write),
-                IaiCallgrindMeasure::EstimatedCycles(estimated_cycles),
+        |(
+            instructions,
+            l1_hits,
+            l2_hits,
+            ram_hits,
+            total_read_write,
+            estimated_cycles,
+            global_bus_events,
+        )| {
+            [
+                Some(IaiCallgrindMeasure::Instructions(instructions)),
+                Some(IaiCallgrindMeasure::L1Hits(l1_hits)),
+                Some(IaiCallgrindMeasure::L2Hits(l2_hits)),
+                Some(IaiCallgrindMeasure::RamHits(ram_hits)),
+                Some(IaiCallgrindMeasure::TotalReadWrite(total_read_write)),
+                Some(IaiCallgrindMeasure::EstimatedCycles(estimated_cycles)),
+                global_bus_events.map(IaiCallgrindMeasure::GlobalBusEvents),
             ]
+            .into_iter()
+            .flatten()
+            .collect()
         },
     )
 }
@@ -236,60 +249,106 @@ pub(crate) mod test_rust_iai_callgrind {
     use std::collections::HashMap;
 
     #[test]
-    fn test_iai_adapter_single_tool() {
+    fn test_without_optional_metrics() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/single-tool.txt",
+            "./tool_output/rust/iai_callgrind/without-optional-metrics.txt",
         );
 
-        validate_adapter_rust_iai_callgrind(&results, true, false);
+        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
     }
 
     #[test]
-    fn test_iai_adapter_multiple_tools() {
+    fn test_with_dhat() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/multiple-tools.txt",
+            "./tool_output/rust/iai_callgrind/with-dhat.txt",
         );
-        validate_adapter_rust_iai_callgrind(&results, true, true);
+
+        validate_adapter_rust_iai_callgrind(
+            &results,
+            &OptionalMetrics {
+                dhat: true,
+                ..Default::default()
+            },
+        );
     }
 
     #[test]
-    fn test_iai_adapter_delta() {
+    fn test_with_dhat_and_global_bus_events() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/with-dhat-and-global-bus-events.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(
+            &results,
+            &OptionalMetrics {
+                dhat: true,
+                global_bus_events: true,
+            },
+        );
+    }
+
+    #[test]
+    fn test_delta() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/delta.txt",
         );
-        validate_adapter_rust_iai_callgrind(&results, true, false);
+
+        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
     }
 
     #[test]
-    fn test_iai_adapter_ansi_escapes_issue_345() {
+    fn test_ansi_escapes_issue_345() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/ansi-escapes.txt",
         );
-        validate_adapter_rust_iai_callgrind(&results, true, false);
+
+        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+    }
+
+    #[test]
+    fn test_with_ge() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/with-ge.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(
+            &results,
+            &OptionalMetrics {
+                global_bus_events: true,
+                ..Default::default()
+            },
+        );
+    }
+
+    #[derive(Default)]
+    pub struct OptionalMetrics {
+        pub global_bus_events: bool,
+        pub dhat: bool,
     }
 
     pub fn validate_adapter_rust_iai_callgrind(
         results: &AdapterResults,
-        callgrind_tool: bool,
-        dhat_tool: bool,
+        optional_metrics: &OptionalMetrics,
     ) {
         assert_eq!(results.inner.len(), 2);
 
         {
             let mut expected = HashMap::new();
 
-            if callgrind_tool {
-                expected.extend([
-                    (callgrind_tool::Instructions::SLUG_STR, 1_734.0),
-                    (callgrind_tool::L1Hits::SLUG_STR, 2_359.0),
-                    (callgrind_tool::L2Hits::SLUG_STR, 0.0),
-                    (callgrind_tool::RamHits::SLUG_STR, 3.0),
-                    (callgrind_tool::TotalReadWrite::SLUG_STR, 2_362.0),
-                    (callgrind_tool::EstimatedCycles::SLUG_STR, 2_464.0),
-                ]);
+            expected.extend([
+                (callgrind_tool::Instructions::SLUG_STR, 1_734.0),
+                (callgrind_tool::L1Hits::SLUG_STR, 2_359.0),
+                (callgrind_tool::L2Hits::SLUG_STR, 0.0),
+                (callgrind_tool::RamHits::SLUG_STR, 3.0),
+                (callgrind_tool::TotalReadWrite::SLUG_STR, 2_362.0),
+                (callgrind_tool::EstimatedCycles::SLUG_STR, 2_464.0),
+            ]);
+
+            if optional_metrics.global_bus_events {
+                expected.insert(callgrind_tool::GlobalBusEvents::SLUG_STR, 2.0);
             }
 
-            if dhat_tool {
+            if optional_metrics.dhat {
                 expected.extend([
                     (dhat_tool::TotalBytes::SLUG_STR, 29_499.0),
                     (dhat_tool::TotalBlocks::SLUG_STR, 2_806.0),
@@ -312,18 +371,20 @@ pub(crate) mod test_rust_iai_callgrind {
         {
             let mut expected = HashMap::new();
 
-            if callgrind_tool {
-                expected.extend([
-                    (callgrind_tool::Instructions::SLUG_STR, 26_214_734.0),
-                    (callgrind_tool::L1Hits::SLUG_STR, 35_638_619.0),
-                    (callgrind_tool::L2Hits::SLUG_STR, 0.0),
-                    (callgrind_tool::RamHits::SLUG_STR, 3.0),
-                    (callgrind_tool::TotalReadWrite::SLUG_STR, 35_638_622.0),
-                    (callgrind_tool::EstimatedCycles::SLUG_STR, 35_638_724.0),
-                ]);
+            expected.extend([
+                (callgrind_tool::Instructions::SLUG_STR, 26_214_734.0),
+                (callgrind_tool::L1Hits::SLUG_STR, 35_638_619.0),
+                (callgrind_tool::L2Hits::SLUG_STR, 0.0),
+                (callgrind_tool::RamHits::SLUG_STR, 3.0),
+                (callgrind_tool::TotalReadWrite::SLUG_STR, 35_638_622.0),
+                (callgrind_tool::EstimatedCycles::SLUG_STR, 35_638_724.0),
+            ]);
+
+            if optional_metrics.global_bus_events {
+                expected.insert(callgrind_tool::GlobalBusEvents::SLUG_STR, 10.0);
             }
 
-            if dhat_tool {
+            if optional_metrics.dhat {
                 expected.extend([
                     (dhat_tool::TotalBytes::SLUG_STR, 26_294_939.0),
                     (dhat_tool::TotalBlocks::SLUG_STR, 2_328_086.0),
