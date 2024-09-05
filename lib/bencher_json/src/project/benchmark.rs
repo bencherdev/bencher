@@ -5,9 +5,7 @@ use bencher_valid::{BenchmarkName, DateTime, Slug};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{JsonMetric, ProjectUuid};
-
-use super::boundary::JsonBoundary;
+use crate::ProjectUuid;
 
 crate::typed_uuid::typed_uuid!(BenchmarkUuid);
 
@@ -47,21 +45,6 @@ impl fmt::Display for JsonBenchmark {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
-}
-
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonBenchmarkMetric {
-    pub uuid: BenchmarkUuid,
-    pub project: ProjectUuid,
-    pub name: BenchmarkName,
-    pub slug: Slug,
-    pub metric: JsonMetric,
-    pub boundary: Option<JsonBoundary>,
-    pub created: DateTime,
-    pub modified: DateTime,
-    pub archived: Option<DateTime>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

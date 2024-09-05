@@ -12,7 +12,6 @@ use crate::{
 };
 
 use super::{
-    benchmark::JsonBenchmarkMetric,
     branch::{JsonBranchVersion, JsonNewStartPoint},
     threshold::JsonThresholdModel,
 };

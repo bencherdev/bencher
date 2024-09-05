@@ -2,11 +2,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{DateTime, JsonThreshold};
+use crate::{DateTime, JsonBenchmark, JsonBoundary, JsonMetric, JsonThreshold};
 
-use super::{
-    benchmark::JsonBenchmarkMetric, boundary::BoundaryLimit, report::Iteration, report::ReportUuid,
-};
+use super::{boundary::BoundaryLimit, report::Iteration, report::ReportUuid};
 
 crate::typed_uuid::typed_uuid!(AlertUuid);
 
@@ -23,8 +21,10 @@ pub struct JsonAlert {
     pub uuid: AlertUuid,
     pub report: ReportUuid,
     pub iteration: Iteration,
+    pub benchmark: JsonBenchmark,
+    pub metric: JsonMetric,
     pub threshold: JsonThreshold,
-    pub benchmark: JsonBenchmarkMetric,
+    pub boundary: JsonBoundary,
     pub limit: BoundaryLimit,
     pub status: AlertStatus,
     pub created: DateTime,
