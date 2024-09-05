@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
-    JsonAlert, JsonMeasure, JsonProject, JsonTestbed, JsonUser, NameId,
+    JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonMetric, JsonProject, JsonTestbed,
+    JsonUser, NameId,
 };
 
 use super::{
@@ -344,10 +345,18 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
     pub iteration: Iteration,
+    pub benchmark: JsonBenchmark,
+    pub measures: Vec<JsonReportMeasure>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportMeasure {
     pub measure: JsonMeasure,
-    // The threshold model should be the same for all the benchmark results
+    pub metric: JsonMetric,
     pub threshold: Option<JsonThresholdModel>,
-    pub benchmarks: Vec<JsonBenchmarkMetric>,
+    pub boundary: Option<JsonBoundary>,
 }
 
 #[typeshare::typeshare]
