@@ -201,7 +201,8 @@ impl ReportComment {
 
     fn html_alerts_table(&self, html: &mut String, public_links: bool) {
         html.push_str("<table>");
-        html.push_str("<tr><th>Benchmark</th><th>Measure (units)</th><th>View</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr>");
+        html.push_str("<thead><tr><th>Benchmark</th><th>Measure (units)</th><th>View</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>");
+        html.push_str("<tbody>");
         for ((benchmark, measure), alert) in &self.alert_urls.0 {
             let Some(data) = self
                 .benchmark_urls
@@ -259,6 +260,7 @@ impl ReportComment {
             );
             html.push_str("</tr>");
         }
+        html.push_str("</tbody>");
         html.push_str("</table>");
     }
 
@@ -282,7 +284,7 @@ impl ReportComment {
         require_threshold: bool,
         public_links: bool,
     ) {
-        html.push_str("<tr>");
+        html.push_str("<thead><tr>");
         html.push_str("<th>Benchmark</th>");
         for (measure, MeasureData { boundary, .. }) in measures {
             if require_threshold && boundary.is_none() {
@@ -302,7 +304,7 @@ impl ReportComment {
             }
             Self::html_metric_boundary_header(html, measure, *boundary);
         }
-        html.push_str("</tr>");
+        html.push_str("</tr></thead>");
     }
 
     fn html_metric_boundary_header(
@@ -336,6 +338,7 @@ impl ReportComment {
         require_threshold: bool,
         public_links: bool,
     ) {
+        html.push_str("<tbody>");
         for (benchmark, measures) in &self.benchmark_urls.0 {
             html.push_str("<tr>");
             if public_links {
@@ -404,6 +407,7 @@ impl ReportComment {
             }
             html.push_str("</tr>");
         }
+        html.push_str("</tbody>");
     }
 
     fn html_metric_boundary_cells(

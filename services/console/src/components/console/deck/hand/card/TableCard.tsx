@@ -1,13 +1,19 @@
 import type { Params } from "astro";
+import type { JsonReport } from "../../../../../types/bencher";
+import { createMemo, type Resource } from "solid-js";
 
 export interface Props {
 	isConsole?: boolean;
 	apiUrl: string;
 	params: Params;
-	value: boolean | string | object;
+	value: Resource<JsonReport>;
 }
 
 const TableCard = (props: Props) => {
+	const benchmarkUrls = createMemo(() =>
+		BenchmarkUrls.new(props.isConsole, props.value() as JsonReport),
+	);
+
 	return (
 		<div class="columns is-centered" style="margin-top: 2rem">
 			<div class="column is-two-thirds">
@@ -101,5 +107,82 @@ const TableCard = (props: Props) => {
 		</div>
 	);
 };
+
+interface Benchmark {
+	name: string;
+	slug: string;
+}
+
+interface Measure {
+	name: string;
+	slug: string;
+	units: string;
+}
+
+interface MeasureData {
+	url: string;
+	value: number;
+	boundary?: Boundary;
+}
+
+interface Boundary {
+	baseline?: number;
+	lower_limit?: number;
+	upper_limit?: number;
+}
+
+class BenchmarkUrls {
+	urls: Map<Benchmark, Map<Measure, MeasureData>>;
+
+	constructor(urls: Map<Benchmark, Map<Measure, MeasureData>>) {
+		this.urls = urls;
+	}
+
+	static new(
+		isConsole: undefined | boolean,
+		jsonReport: JsonReport,
+	): BenchmarkUrls {
+		const urls = new Map<Benchmark, Map<Measure, MeasureData>>();
+		const iteration = jsonReport?.results?.[0];
+		if (!iteration) {
+			return new BenchmarkUrls(urls);
+		}
+
+		if (iteration) {
+			for (const result of iteration) {
+				const measure = {
+					name: result.measure.name,
+					slug: result.measure.slug,
+					units: result.measure.units,
+				};
+
+				for (const benchmarkMetric of result.benchmarks) {
+					const benchmark: Benchmark = {
+						name: benchmarkMetric.name,
+						slug: benchmarkMetric.slug,
+					};
+
+					if (!urls.has(benchmark)) {
+						urls.set(benchmark, new Map<Measure, MeasureData>());
+					}
+
+					// biome-ignore lint/style/noNonNullAssertion: just checked for existence
+					const benchmarkUrls = urls.get(benchmark)!;
+					const boundary = benchmarkMetric.boundary;
+
+					const data: MeasureData = {
+						url: isConsole ? "/console" : "/perf",
+						value: benchmarkMetric.metric.value,
+						boundary,
+					};
+
+					benchmarkUrls.set(measure, data);
+				}
+			}
+		}
+
+		return new BenchmarkUrls(urls);
+	}
+}
 
 export default TableCard;

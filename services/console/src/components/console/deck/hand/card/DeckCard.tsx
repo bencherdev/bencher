@@ -54,7 +54,7 @@ const DeckCard = (props: Props) => {
 						isConsole={props.isConsole}
 						apiUrl={props.apiUrl}
 						params={props.params}
-						value={props.data()}
+						value={props.data}
 					/>
 				</Match>
 			</Switch>
