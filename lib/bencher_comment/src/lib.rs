@@ -15,6 +15,7 @@ pub struct ReportComment {
     console_url: Url,
     project_slug: Slug,
     json_report: JsonReport,
+    public_links: bool,
     benchmark_urls: BenchmarkUrls,
     alert_urls: AlertUrls,
 }
@@ -25,6 +26,7 @@ impl ReportComment {
             alert_urls: AlertUrls::new(&console_url, &json_report),
             benchmark_urls: BenchmarkUrls::new(console_url.clone(), &json_report),
             project_slug: json_report.project.slug.clone(),
+            public_links: json_report.project.visibility.is_public(),
             json_report,
             console_url,
         }
@@ -76,10 +78,9 @@ impl ReportComment {
     pub fn html(&self, require_threshold: bool, id: Option<&str>) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
-        let public_links = self.json_report.project.visibility.is_public();
         self.html_header(html_mut);
-        self.html_report_table(html_mut, public_links);
-        self.html_benchmarks(html_mut, require_threshold, public_links);
+        self.html_report_table(html_mut);
+        self.html_benchmarks(html_mut, require_threshold);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         self.html_bencher_tag(html_mut, id);
@@ -87,13 +88,26 @@ impl ReportComment {
     }
 
     fn html_header(&self, html: &mut String) {
+        let url = self.console_url.clone();
+        let path = if self.public_links {
+            format!(
+                "/perf/{}/reports/{}",
+                self.project_slug, self.json_report.uuid
+            )
+        } else {
+            format!(
+                "/console/projects/{}/reports/{}",
+                self.project_slug, self.json_report.uuid
+            )
+        };
+        let report_url = url.join(&path).unwrap_or(url);
         html.push_str(&format!(
-            r#"<h1><a href="{console_url}"><img src="https://bencher.dev/favicon.svg" width="32" height="32" alt="🐰" /></a>Bencher</h1>"#,
-            console_url = self.console_url,
+            r#"<h1><a href="{report_url}&utm_medium=referral&utm_source=github&utm_content=comment&utm_campaign=pr+comments&utm_term={project}"><img src="https://bencher.dev/favicon.svg" width="32" height="32" alt="🐰" />Bencher Report</a></h1>"#,
+            project = self.project_slug,
         ));
     }
 
-    fn html_report_table(&self, html: &mut String, public_links: bool) {
+    fn html_report_table(&self, html: &mut String) {
         html.push_str("<table>");
         for (row, name, path) in [
             (
@@ -103,7 +117,7 @@ impl ReportComment {
                     .into_inner()
                     .format("%a, %B %e, %Y at %X %Z")
                     .to_string(),
-                (!public_links).then_some(format!(
+                (!self.public_links).then_some(format!(
                     "/console/projects/{}/reports/{}",
                     self.project_slug, self.json_report.uuid
                 )),
@@ -111,7 +125,7 @@ impl ReportComment {
             (
                 "Project",
                 self.json_report.project.name.to_string(),
-                if public_links {
+                if self.public_links {
                     Some(format!("/perf/{}", self.project_slug))
                 } else {
                     Some(format!("/console/projects/{}", self.project_slug))
@@ -120,7 +134,7 @@ impl ReportComment {
             (
                 "Branch",
                 self.json_report.branch.name.to_string(),
-                (!public_links).then_some(format!(
+                (!self.public_links).then_some(format!(
                     "/console/projects/{}/branches/{}",
                     self.project_slug, self.json_report.branch.slug
                 )),
@@ -128,7 +142,7 @@ impl ReportComment {
             (
                 "Testbed",
                 self.json_report.testbed.name.to_string(),
-                (!public_links).then_some(format!(
+                (!self.public_links).then_some(format!(
                     "/console/projects/{}/testbeds/{}",
                     self.project_slug, self.json_report.testbed.slug
                 )),
@@ -147,7 +161,7 @@ impl ReportComment {
         html.push_str("</table>");
     }
 
-    fn html_benchmarks(&self, html: &mut String, require_threshold: bool, public_links: bool) {
+    fn html_benchmarks(&self, html: &mut String, require_threshold: bool) {
         let Some((_benchmark, measures)) = self.benchmark_urls.0.first_key_value() else {
             html.push_str("<blockquote><b>⚠️ WARNING:</b> No benchmarks found!</blockquote>");
             return;
@@ -165,12 +179,12 @@ impl ReportComment {
             html.push_str(&format!(
                 "<blockquote><b>🚨 {alerts_len} ALERT{capital}:</b> Threshold Boundary Limit{lower} exceeded!</blockquote>",
             ));
-            self.html_alerts_table(html, public_links);
+            self.html_alerts_table(html, self.public_links);
             html.push_str("<br />");
         }
 
         html.push_str("<details><summary>Click to view all benchmark results</summary>");
-        self.html_benchmarks_table(html, measures, require_threshold, public_links);
+        self.html_benchmarks_table(html, measures, require_threshold, self.public_links);
         html.push_str("</details>");
     }
 
