@@ -34,13 +34,22 @@ impl ReportComment {
         let mut comment = String::new();
 
         comment.push_str("View results:");
-        for (benchmark, measures) in &self.benchmark_urls.0 {
-            for (measure, MeasureData { console_url, .. }) in measures {
-                comment.push_str(&format!(
-                    "\n- {benchmark_name} ({measure_name}): {console_url}",
-                    benchmark_name = benchmark.name,
-                    measure_name = measure.name
-                ));
+        let multiple_iterations = self.json_report.results.len() > 1;
+        for (iter, benchmark_map) in self.benchmark_urls.0.iter().enumerate() {
+            if multiple_iterations {
+                comment.push_str(&format!("\nIteration {iter}"));
+            }
+            for (benchmark, measure_map) in benchmark_map {
+                for (measure, MeasureData { console_url, .. }) in measure_map {
+                    comment.push_str(&format!(
+                        "\n- {benchmark_name} ({measure_name}): {console_url}",
+                        benchmark_name = benchmark.name,
+                        measure_name = measure.name
+                    ));
+                }
+            }
+            if multiple_iterations {
+                comment.push_str("\n");
             }
         }
 
