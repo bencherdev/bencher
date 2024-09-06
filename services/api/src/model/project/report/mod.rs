@@ -1,5 +1,8 @@
 use bencher_json::{
-    project::report::{Adapter, Iteration, JsonReportAlerts, JsonReportResult, JsonReportResults},
+    project::report::{
+        Adapter, Iteration, JsonReportAlerts, JsonReportMeasure, JsonReportResult,
+        JsonReportResults,
+    },
     DateTime, JsonNewReport, JsonReport, ReportUuid,
 };
 use diesel::{
@@ -200,39 +203,41 @@ fn into_report_results_json(
         }
         prev_iteration = Some(iteration);
 
-        // If there is a current report result, make sure that the measure is the same.
+        // If there is a current report result, make sure that the benchmark is the same.
         // Otherwise, add it to the report iteration list.
         if let Some(result) = report_result.take() {
-            if query_measure.uuid == result.measure.uuid {
+            if query_benchmark.uuid == result.benchmark.uuid {
                 report_result = Some(result);
             } else {
                 slog::trace!(
                     log,
-                    "Measure {} => {}",
-                    result.measure.uuid,
-                    query_measure.uuid,
+                    "Benchmark {} => {}",
+                    result.benchmark.uuid,
+                    query_benchmark.uuid,
                 );
                 report_iteration.push(result);
             }
         }
 
         let (query_metric, query_boundary) = query_metric_boundary.split();
-        // Create a benchmark metric out of the benchmark, metric, and boundary
-        let benchmark_metric =
-            query_benchmark.into_benchmark_metric_json(project, query_metric, query_boundary);
+        let report_measure = JsonReportMeasure {
+            measure: query_measure.into_json_for_project(project),
+            metric: query_metric.into_json(),
+            threshold: threshold_model.map(|(threshold, model)| {
+                threshold.into_threshold_model_json_for_project(project, model)
+            }),
+            boundary: query_boundary.map(QueryBoundary::into_json),
+        };
 
-        // If there is a current report result, add the benchmark metric to it.
-        // Otherwise, create a new report result and add the benchmark to it.
+        // If there is a current report result, add the report measure to it.
+        // Otherwise, create a new report result and add the report measure to it.
         if let Some(result) = report_result.as_mut() {
-            result.benchmarks.push(benchmark_metric);
+            result.measures.push(report_measure);
         } else {
             report_result = Some(JsonReportResult {
                 iteration,
-                measure: query_measure.into_json_for_project(project),
-                threshold: threshold_model.map(|(threshold, model)| {
-                    threshold.into_threshold_model_json_for_project(project, model)
-                }),
-                benchmarks: vec![benchmark_metric],
+                benchmark: query_benchmark.into_json_for_project(project),
+                measures: vec![report_measure],
             });
         }
     }
