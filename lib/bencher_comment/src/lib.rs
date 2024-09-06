@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashSet},
     time::Duration,
 };
 
@@ -170,7 +170,7 @@ impl ReportComment {
             html.push_str("<blockquote><b>⚠️ WARNING:</b> No benchmarks found!</blockquote>");
             return;
         }
-        self.html_no_threshold_warning(html, measures);
+        self.html_no_threshold_warning(html);
 
         let alerts_len = self.alert_urls.0.len();
         if alerts_len > 0 {
@@ -194,7 +194,7 @@ impl ReportComment {
 
     // Check to see if any measure has a threshold set
     fn html_no_threshold_warning(&self, html: &mut String) {
-        let mut no_threshold = HashSet::new();
+        let mut no_threshold = BTreeSet::new();
         for benchmark_map in &self.benchmark_urls.0 {
             for measure_map in benchmark_map.values() {
                 for (measure, MeasureData { boundary, .. }) in measure_map {
@@ -216,16 +216,26 @@ impl ReportComment {
         html.push_str(&format!("<blockquote><p><b>⚠️ WARNING:</b> The following {plural_measure} not have a Threshold. Without a Threshold, no Alerts will ever be generated!</p>"));
         html.push_str("<ul>");
         for measure in no_threshold {
+            let url = self.console_url.clone();
+            let path = if self.public_links {
+                format!("/perf/{}/measures/{}", self.project_slug, measure.slug)
+            } else {
+                format!(
+                    "/console/projects/{}/measures/{}",
+                    self.project_slug, measure.slug
+                )
+            };
+            let url = url.join(&path).unwrap_or(url);
             html.push_str(&format!(
-                "<li>{name} ({slug})</li>",
+                "<li><a href=\"{url}?{utm}\">{name}</a></li>",
+                utm = self.utm_query(),
                 name = measure.name,
-                slug = measure.slug
             ));
         }
         html.push_str("</ul>");
-        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug));
-        html.push_str("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/\">the Threshold documentation</a>.<br />");
-        html.push_str("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds\">the <code lang=\"rust\">--ci-only-thresholds</code> CLI flag</a>.</p>");
+        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add?{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
+        html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/?{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
+        html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds?{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> CLI flag</a>.</p>", utm = self.utm_query()));
         html.push_str("</blockquote>");
     }
 
