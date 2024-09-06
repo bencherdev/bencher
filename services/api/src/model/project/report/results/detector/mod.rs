@@ -56,6 +56,7 @@ impl Detector {
         context: &ApiContext,
         benchmark_id: BenchmarkId,
         query_metric: &QueryMetric,
+        ignore_benchmark: bool,
     ) -> Result<(), HttpError> {
         // Query the historical population/sample data for the benchmark
         let metrics_data = metrics_data(
@@ -97,7 +98,10 @@ impl Detector {
             .map_err(resource_conflict_err!(Boundary, insert_boundary))?;
 
         // If the boundary check detects an outlier then create an alert for it on the given side.
-        if let Some(boundary_limit) = boundary.outlier {
+        // As long as the benchmark is not being ignored.
+        if ignore_benchmark {
+            Ok(())
+        } else if let Some(boundary_limit) = boundary.outlier {
             InsertAlert::from_boundary(conn_lock!(context), boundary_uuid, boundary_limit)
         } else {
             Ok(())

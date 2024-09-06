@@ -1,4 +1,7 @@
-use std::{collections::BTreeMap, time::Duration};
+use std::{
+    collections::{BTreeMap, HashSet},
+    time::Duration,
+};
 
 use bencher_json::{
     project::{
@@ -162,10 +165,11 @@ impl ReportComment {
     }
 
     fn html_benchmarks(&self, html: &mut String, require_threshold: bool) {
-        let Some((_benchmark, measures)) = self.benchmark_urls.0.first_key_value() else {
+        let no_benchmarks = self.benchmark_urls.0.iter().all(BTreeMap::is_empty);
+        if no_benchmarks {
             html.push_str("<blockquote><b>⚠️ WARNING:</b> No benchmarks found!</blockquote>");
             return;
-        };
+        }
         self.html_no_threshold_warning(html, measures);
 
         let alerts_len = self.alert_urls.0.len();
@@ -189,16 +193,18 @@ impl ReportComment {
     }
 
     // Check to see if any measure has a threshold set
-    fn html_no_threshold_warning(&self, html: &mut String, measures: &MeasuresMap) {
-        let no_threshold = measures.iter().fold(
-            Vec::new(),
-            |mut nt, (measure, MeasureData { boundary, .. })| {
-                if boundary.is_none() {
-                    nt.push(measure);
+    fn html_no_threshold_warning(&self, html: &mut String) {
+        let mut no_threshold = HashSet::new();
+        for benchmark_map in &self.benchmark_urls.0 {
+            for measure_map in benchmark_map.values() {
+                for (measure, MeasureData { boundary, .. }) in measure_map {
+                    if boundary.is_none() {
+                        no_threshold.insert(measure);
+                    }
                 }
-                nt
-            },
-        );
+            }
+        }
+
         if no_threshold.is_empty() {
             return;
         }

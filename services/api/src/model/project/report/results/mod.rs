@@ -172,12 +172,10 @@ impl ReportResults {
                 *usage += 1;
             }
 
-            // Ignored benchmarks do not get checked against the threshold even if one exists
-            if !ignore_benchmark {
-                let Some(detector) = self.detector(context, measure_id).await else {
-                    continue;
-                };
-                let query_metric = QueryMetric::from_uuid(conn_lock!(context), insert_metric.uuid).map_err(|e| {
+            let Some(detector) = self.detector(context, measure_id).await else {
+                continue;
+            };
+            let query_metric = QueryMetric::from_uuid(conn_lock!(context), insert_metric.uuid).map_err(|e| {
                     issue_error(
                         StatusCode::NOT_FOUND,
                         "Failed to find metric",
@@ -185,10 +183,9 @@ impl ReportResults {
                         e,
                     )
                 })?;
-                detector
-                    .detect(log, context, benchmark_id, &query_metric)
-                    .await?;
-            }
+            detector
+                .detect(log, context, benchmark_id, &query_metric, ignore_benchmark)
+                .await?;
         }
 
         Ok(())
