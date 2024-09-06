@@ -121,16 +121,19 @@ impl QueryAlert {
             modified,
             ..
         } = self;
-        let threshold_id = query_boundary.threshold_id;
-        let model_id = query_boundary.model_id;
-        let benchmark =
-            query_benchmark.into_benchmark_metric_json(project, query_metric, Some(query_boundary));
+        let threshold = QueryThreshold::get_json(
+            conn_lock!(context),
+            query_boundary.threshold_id,
+            query_boundary.model_id,
+        )?;
         Ok(JsonAlert {
             uuid,
             report: report_uuid,
             iteration,
-            threshold: QueryThreshold::get_json(conn_lock!(context), threshold_id, model_id)?,
-            benchmark,
+            benchmark: query_benchmark.into_json_for_project(project),
+            metric: query_metric.into_json(),
+            threshold,
+            boundary: query_boundary.into_json(),
             limit: boundary_limit,
             status,
             created,

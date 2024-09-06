@@ -1,11 +1,11 @@
 use bencher_json::{
-    project::benchmark::{JsonBenchmarkMetric, JsonNewBenchmark, JsonUpdateBenchmark},
+    project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
     BenchmarkName, BenchmarkUuid, DateTime, JsonBenchmark, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
-use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, ProjectId, QueryProject};
+use super::{ProjectId, QueryProject};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
@@ -122,36 +122,6 @@ impl QueryBenchmark {
             project: project.uuid,
             name,
             slug,
-            created,
-            modified,
-            archived,
-        }
-    }
-
-    pub fn into_benchmark_metric_json(
-        self,
-        project: &QueryProject,
-        query_metric: QueryMetric,
-        query_boundary: Option<QueryBoundary>,
-    ) -> JsonBenchmarkMetric {
-        let JsonBenchmark {
-            uuid,
-            project,
-            name,
-            slug,
-            created,
-            modified,
-            archived,
-        } = self.into_json_for_project(project);
-        let metric = query_metric.into_json();
-        let boundary = query_boundary.map(QueryBoundary::into_json);
-        JsonBenchmarkMetric {
-            uuid,
-            project,
-            name,
-            slug,
-            metric,
-            boundary,
             created,
             modified,
             archived,
