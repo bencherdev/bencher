@@ -18,10 +18,11 @@ pub struct ReportComment {
     public_links: bool,
     benchmark_urls: BenchmarkUrls,
     alert_urls: AlertUrls,
+    source: String,
 }
 
 impl ReportComment {
-    pub fn new(console_url: Url, json_report: JsonReport) -> Self {
+    pub fn new(console_url: Url, json_report: JsonReport, source: String) -> Self {
         Self {
             alert_urls: AlertUrls::new(&console_url, &json_report),
             benchmark_urls: BenchmarkUrls::new(console_url.clone(), &json_report),
@@ -29,6 +30,7 @@ impl ReportComment {
             public_links: json_report.project.visibility.is_public(),
             json_report,
             console_url,
+            source,
         }
     }
 
@@ -87,6 +89,14 @@ impl ReportComment {
         html
     }
 
+    fn utm_query(&self) -> String {
+        format!(
+            "utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
+            source = self.source,
+            project = self.project_slug,
+        )
+    }
+
     fn html_header(&self, html: &mut String) {
         let url = self.console_url.clone();
         let path = if self.public_links {
@@ -102,8 +112,8 @@ impl ReportComment {
         };
         let report_url = url.join(&path).unwrap_or(url);
         html.push_str(&format!(
-            r#"<h1><a href="{report_url}&utm_medium=referral&utm_source=github&utm_content=comment&utm_campaign=pr+comments&utm_term={project}"><img src="https://bencher.dev/favicon.svg" width="32" height="32" alt="🐰" />Bencher Report</a></h1>"#,
-            project = self.project_slug,
+            r#"<h1><a href="{report_url}?{utm}"><img src="https://bencher.dev/favicon.svg" width="32" height="32" alt="🐰" />Bencher Report</a></h1>"#,
+            utm = self.utm_query(),
         ));
     }
 
@@ -111,52 +121,42 @@ impl ReportComment {
         html.push_str("<table>");
         for (row, name, path) in [
             (
-                "Report",
-                self.json_report
-                    .start_time
-                    .into_inner()
-                    .format("%a, %B %e, %Y at %X %Z")
-                    .to_string(),
-                (!self.public_links).then_some(format!(
-                    "/console/projects/{}/reports/{}",
-                    self.project_slug, self.json_report.uuid
-                )),
-            ),
-            (
-                "Project",
-                self.json_report.project.name.to_string(),
-                if self.public_links {
-                    Some(format!("/perf/{}", self.project_slug))
-                } else {
-                    Some(format!("/console/projects/{}", self.project_slug))
-                },
-            ),
-            (
                 "Branch",
                 self.json_report.branch.name.to_string(),
-                (!self.public_links).then_some(format!(
-                    "/console/projects/{}/branches/{}",
-                    self.project_slug, self.json_report.branch.slug
-                )),
+                if self.public_links {
+                    format!(
+                        "/perf/{}/branches/{}",
+                        self.project_slug, self.json_report.branch.slug
+                    )
+                } else {
+                    format!(
+                        "/console/projects/{}/branches/{}",
+                        self.project_slug, self.json_report.branch.slug
+                    )
+                },
             ),
             (
                 "Testbed",
                 self.json_report.testbed.name.to_string(),
-                (!self.public_links).then_some(format!(
-                    "/console/projects/{}/testbeds/{}",
-                    self.project_slug, self.json_report.testbed.slug
-                )),
+                if self.public_links {
+                    format!(
+                        "/perf/{}/testbeds/{}",
+                        self.project_slug, self.json_report.testbed.slug
+                    )
+                } else {
+                    format!(
+                        "/console/projects/{}/testbeds/{}",
+                        self.project_slug, self.json_report.testbed.slug
+                    )
+                },
             ),
         ] {
-            if let Some(path) = path {
-                let url = self.console_url.clone();
-                let url = url.join(&path).unwrap_or(url);
-                html.push_str(&format!(
-                    r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#
-                ));
-            } else {
-                html.push_str(&format!(r#"<tr><td>{row}</td><td>{name}</td></tr>"#));
-            }
+            let url = self.console_url.clone();
+            let url = url.join(&path).unwrap_or(url);
+            html.push_str(&format!(
+                r#"<tr><td>{row}</td><td><a href="{url}?{utm}">{name}</a></td></tr>"#,
+                utm = self.utm_query()
+            ));
         }
         html.push_str("</table>");
     }
