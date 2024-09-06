@@ -4,6 +4,7 @@ use bencher_json::{
     project::{
         boundary::BoundaryLimit,
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
+        report::JsonReportMeasure,
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
     JsonReport, MeasureUuid, ResourceName, Slug, TestbedUuid,
@@ -526,8 +527,9 @@ impl ReportComment {
     }
 }
 
-pub struct BenchmarkUrls(BTreeMap<Benchmark, MeasuresMap>);
-pub type MeasuresMap = BTreeMap<Measure, MeasureData>;
+pub struct BenchmarkUrls(Vec<BenchmarkMap>);
+pub type BenchmarkMap = BTreeMap<Benchmark, MeasureMap>;
+pub type MeasureMap = BTreeMap<Measure, MeasureData>;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct Benchmark {
@@ -561,49 +563,54 @@ impl BenchmarkUrls {
             json_report.end_time,
         );
 
-        let mut urls = BTreeMap::new();
-        if let Some(iteration) = json_report.results.first() {
+        let mut benchmark_urls = Vec::with_capacity(json_report.results.len());
+
+        for iteration in &json_report.results {
+            let mut benchmark_map = BTreeMap::new();
             for result in iteration {
-                let measure = Measure {
-                    name: result.measure.name.clone(),
-                    slug: result.measure.slug.clone(),
-                    units: result.measure.units.clone(),
+                let benchmark = Benchmark {
+                    name: result.benchmark.name.clone(),
+                    slug: result.benchmark.slug.clone(),
                 };
-                for benchmark_metric in &result.benchmarks {
-                    let benchmark = Benchmark {
-                        name: benchmark_metric.name.clone(),
-                        slug: benchmark_metric.slug.clone(),
+
+                let mut measure_map = BTreeMap::new();
+                for report_measure in &result.measures {
+                    let measure = Measure {
+                        name: report_measure.measure.name.clone(),
+                        slug: report_measure.measure.slug.clone(),
+                        units: report_measure.measure.units.clone(),
                     };
-                    let benchmark_urls = urls.entry(benchmark).or_insert_with(BTreeMap::new);
-                    let boundary = benchmark_metric.boundary.map(Into::into);
+                    let boundary = report_measure.boundary.map(Into::into);
 
                     let data = MeasureData {
                         public_url: benchmark_url.to_public_url(
-                            benchmark_metric.uuid,
-                            result.measure.uuid,
+                            result.benchmark.uuid,
+                            report_measure.measure.uuid,
                             boundary,
                         ),
                         console_url: benchmark_url.to_console_url(
-                            benchmark_metric.uuid,
-                            result.measure.uuid,
+                            result.benchmark.uuid,
+                            report_measure.measure.uuid,
                             boundary,
                         ),
-                        value: benchmark_metric.metric.value.into(),
+                        value: report_measure.metric.value.into(),
                         boundary,
                     };
-                    benchmark_urls.insert(measure.clone(), data);
+                    measure_map.insert(measure, data);
                 }
+                benchmark_map.insert(benchmark, measure_map);
             }
+            benchmark_urls.push(benchmark_map);
         }
 
-        Self(urls)
+        Self(benchmark_urls)
     }
 
     fn has_threshold(&self) -> bool {
         self.0.values().any(Self::benchmark_has_threshold)
     }
 
-    fn benchmark_has_threshold(measures: &MeasuresMap) -> bool {
+    fn benchmark_has_threshold(measures: &MeasureMap) -> bool {
         measures
             .values()
             .any(|MeasureData { boundary, .. }| boundary.is_some())
