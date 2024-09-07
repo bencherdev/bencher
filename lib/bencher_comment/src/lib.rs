@@ -55,7 +55,7 @@ impl ReportComment {
                 }
             }
             if multiple_iterations {
-                comment.push_str("\n");
+                comment.push('\n');
             }
         }
 
@@ -72,7 +72,7 @@ impl ReportComment {
                 iter = if multiple_iterations {
                     format!(" (Iteration {iteration})")
                 } else {
-                    "".to_owned()
+                    String::new()
                 }
             ));
         }
@@ -391,7 +391,7 @@ impl ReportComment {
                 utm = self.utm_query(),
                 measure = &measure.name,
             ));
-            Self::html_metric_boundary_header(html, measure, boundary_limits);
+            Self::html_metric_boundary_header(html, &measure, boundary_limits);
         }
 
         html.push_str("</tr></thead>");
@@ -399,7 +399,7 @@ impl ReportComment {
 
     fn html_metric_boundary_header(
         html: &mut String,
-        measure: Measure,
+        measure: &Measure,
         boundary_limits: BoundaryLimits,
     ) {
         let name = &measure.name;
@@ -637,10 +637,6 @@ impl ReportComment {
         )
     }
 
-    pub fn has_threshold(&self) -> bool {
-        self.benchmark_urls.has_threshold()
-    }
-
     pub fn has_alert(&self) -> bool {
         !self.json_report.alerts.is_empty()
     }
@@ -651,7 +647,7 @@ pub type BenchmarkMap = BTreeMap<Benchmark, MeasureMap>;
 pub type MeasureMap = BTreeMap<Measure, MeasureData>;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-struct Benchmark {
+pub struct Benchmark {
     name: BenchmarkName,
     slug: Slug,
 }
@@ -723,16 +719,6 @@ impl BenchmarkUrls {
         }
 
         Self(benchmark_urls)
-    }
-
-    fn has_threshold(&self) -> bool {
-        self.0.values().any(Self::benchmark_has_threshold)
-    }
-
-    fn benchmark_has_threshold(measures: &MeasureMap) -> bool {
-        measures
-            .values()
-            .any(|MeasureData { boundary, .. }| boundary.is_some())
     }
 }
 
