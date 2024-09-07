@@ -1,5 +1,6 @@
 use std::{
     collections::{BTreeMap, BTreeSet, HashSet},
+    ops::{Add, BitAnd},
     time::Duration,
 };
 
@@ -177,11 +178,7 @@ impl ReportComment {
         }
         self.html_no_threshold_warning(html);
         self.html_alerts(html);
-        self.html_benchmark_details(html);
-
-        html.push_str("<details><summary>Click to view all benchmark results</summary>");
-        self.html_benchmarks_table(html, measures, require_threshold, self.public_links);
-        html.push_str("</details>");
+        self.html_benchmark_details(html, require_threshold);
     }
 
     // Check to see if any measure has a threshold set
@@ -364,72 +361,67 @@ impl ReportComment {
         require_threshold: bool,
     ) {
         html.push_str("<table>");
-        self.html_benchmarks_table_header(html, measures, require_threshold, public_links);
-        self.html_benchmarks_table_body(html, require_threshold, public_links);
+        self.html_benchmarks_table_header(html, benchmark_map, require_threshold);
+        self.html_benchmarks_table_body(html, require_threshold);
         html.push_str("</table>");
     }
 
     fn html_benchmarks_table_header(
         &self,
         html: &mut String,
-        measures: &MeasuresMap,
+        benchmark_map: &BenchmarkMap,
         require_threshold: bool,
-        public_links: bool,
     ) {
         html.push_str("<thead><tr>");
         html.push_str("<th>Benchmark</th>");
-        for (measure, MeasureData { boundary, .. }) in measures {
-            if require_threshold && boundary.is_none() {
-                continue;
-            }
-            let measure_name = &measure.name;
-            if public_links {
-                html.push_str(&format!("<th>{measure_name}</th>"));
+
+        let mbl = measure_boundary_limits(benchmark_map, require_threshold);
+        for (measure, boundary_limits) in mbl {
+            let url = self.console_url.clone();
+            let path = if self.public_links {
+                format!("/perf/{}/measures/{}", self.project_slug, measure.slug)
             } else {
-                let measure_path = format!(
+                format!(
                     "/console/projects/{}/measures/{}",
                     self.project_slug, measure.slug
-                );
-                let url = self.console_url.clone();
-                let url = url.join(&measure_path).unwrap_or(url);
-                html.push_str(&format!(r#"<th><a href="{url}">{measure_name}</a></th>"#));
-            }
-            Self::html_metric_boundary_header(html, measure, *boundary);
+                )
+            };
+            let url = url.join(&path).unwrap_or(url);
+            html.push_str(&format!(
+                r#"<th><a href="{url}?{utm}">{measure}</a></th>"#,
+                utm = self.utm_query(),
+                measure = &measure.name,
+            ));
+            Self::html_metric_boundary_header(html, measure, boundary_limits);
         }
+
         html.push_str("</tr></thead>");
     }
 
     fn html_metric_boundary_header(
         html: &mut String,
-        measure: &Measure,
-        boundary: Option<Boundary>,
+        measure: Measure,
+        boundary_limits: BoundaryLimits,
     ) {
         let name = &measure.name;
         let units = &measure.units;
-        // If there is a boundary then we will show the percentage difference
-        if boundary.is_some() {
+
+        // If there is a boundary limit then we will show the percentage difference
+        if boundary_limits.lower || boundary_limits.upper {
             html.push_str(&format!("<th>{name} Results<br/>{units} | (Δ%)</th>",));
         } else {
             html.push_str(&format!("<th>{name} Results<br/>{units}</th>",));
         }
 
-        let Some(boundary) = boundary else {
-            return;
-        };
-        if boundary.lower_limit.is_some() {
+        if boundary_limits.lower {
             html.push_str(&format!("<th>{name} Lower Boundary<br/>{units} | (%)</th>"));
         }
-        if boundary.upper_limit.is_some() {
+        if boundary_limits.upper {
             html.push_str(&format!("<th>{name} Upper Boundary<br/>{units} | (%)</th>"));
         }
     }
 
-    fn html_benchmarks_table_body(
-        &self,
-        html: &mut String,
-        require_threshold: bool,
-        public_links: bool,
-    ) {
+    fn html_benchmarks_table_body(&self, html: &mut String, require_threshold: bool) {
         html.push_str("<tbody>");
         for (benchmark, measures) in &self.benchmark_urls.0 {
             html.push_str("<tr>");
@@ -721,6 +713,28 @@ impl BenchmarkUrls {
     }
 }
 
+fn measure_boundary_limits(
+    benchmark_map: &BenchmarkMap,
+    require_threshold: bool,
+) -> BTreeMap<Measure, BoundaryLimits> {
+    let mut measures = BTreeMap::new();
+    for measure_map in benchmark_map.values() {
+        for (measure, MeasureData { boundary, .. }) in measure_map {
+            if require_threshold && boundary.is_none() {
+                continue;
+            }
+            let boundary_limits = boundary.map(BoundaryLimits::from).unwrap_or_default();
+            measures
+                .entry(measure.clone())
+                .and_modify(|bl: &mut BoundaryLimits| {
+                    *bl = bl.union(boundary_limits);
+                })
+                .or_insert(boundary_limits);
+        }
+    }
+    measures
+}
+
 struct BenchmarkUrl {
     console_url: Url,
     project_slug: Slug,
@@ -834,6 +848,30 @@ impl Boundary {
 
     pub fn is_empty(self) -> bool {
         self.lower_limit.is_none() && self.upper_limit.is_none()
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+pub struct BoundaryLimits {
+    lower: bool,
+    upper: bool,
+}
+
+impl From<Boundary> for BoundaryLimits {
+    fn from(boundary: Boundary) -> Self {
+        Self {
+            lower: boundary.lower_limit.is_some(),
+            upper: boundary.upper_limit.is_some(),
+        }
+    }
+}
+
+impl BoundaryLimits {
+    fn union(self, rhs: Self) -> Self {
+        Self {
+            lower: self.lower || rhs.lower,
+            upper: self.upper || rhs.upper,
+        }
     }
 }
 
