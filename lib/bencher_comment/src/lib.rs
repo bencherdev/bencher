@@ -1,6 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet, HashSet},
-    ops::{Add, BitAnd},
+    collections::{BTreeMap, BTreeSet},
     time::Duration,
 };
 
@@ -8,7 +7,6 @@ use bencher_json::{
     project::{
         boundary::BoundaryLimit,
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
-        report::JsonReportMeasure,
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
     JsonReport, MeasureUuid, ResourceName, Slug, TestbedUuid,
@@ -260,7 +258,7 @@ impl ReportComment {
             let Some(measure_data) =
                 self.benchmark_urls
                     .0
-                    .get(*iteration as usize)
+                    .get(*iteration)
                     .and_then(|benchmark_map| {
                         benchmark_map
                             .get(benchmark)
@@ -348,8 +346,8 @@ impl ReportComment {
 
     fn html_benchmark_details(&self, html: &mut String, require_threshold: bool) {
         html.push_str("<details><summary>Click to view all benchmark results</summary>");
-        for benchmark_map in &self.benchmark_urls.0 {
-            self.html_benchmarks_table(html, benchmark_map, require_threshold);
+        for (iteration, benchmark_map) in self.benchmark_urls.0.iter().enumerate() {
+            self.html_benchmarks_table(html, iteration, benchmark_map, require_threshold);
         }
         html.push_str("</details>");
     }
@@ -357,12 +355,13 @@ impl ReportComment {
     fn html_benchmarks_table(
         &self,
         html: &mut String,
+        iteration: usize,
         benchmark_map: &BenchmarkMap,
         require_threshold: bool,
     ) {
         html.push_str("<table>");
         self.html_benchmarks_table_header(html, benchmark_map, require_threshold);
-        self.html_benchmarks_table_body(html, require_threshold);
+        self.html_benchmarks_table_body(html, iteration, benchmark_map, require_threshold);
         html.push_str("</table>");
     }
 
@@ -421,24 +420,34 @@ impl ReportComment {
         }
     }
 
-    fn html_benchmarks_table_body(&self, html: &mut String, require_threshold: bool) {
+    fn html_benchmarks_table_body(
+        &self,
+        html: &mut String,
+        iteration: usize,
+        benchmark_map: &BenchmarkMap,
+        require_threshold: bool,
+    ) {
         html.push_str("<tbody>");
-        for (benchmark, measures) in &self.benchmark_urls.0 {
+        for (benchmark, measure_map) in benchmark_map {
             html.push_str("<tr>");
-            if public_links {
-                html.push_str(&format!("<td>{name}</td>", name = benchmark.name,));
+
+            // Benchmark
+            let url = self.console_url.clone();
+            let path = if self.public_links {
+                format!("/perf/{}/benchmarks/{}", self.project_slug, benchmark.slug)
             } else {
-                let benchmark_path = format!(
+                format!(
                     "/console/projects/{}/benchmarks/{}",
                     self.project_slug, benchmark.slug
-                );
-                let url = self.console_url.clone();
-                let url = url.join(&benchmark_path).unwrap_or(url);
-                html.push_str(&format!(
-                    r#"<td><a href="{url}">{name}</a></td>"#,
-                    name = benchmark.name,
-                ));
-            }
+                )
+            };
+            let url = url.join(&path).unwrap_or(url);
+            html.push_str(&format!(
+                r#"<td><a href="{url}?{utm}">{name}</a></td>"#,
+                utm = self.utm_query(),
+                name = benchmark.name,
+            ));
+
             for (
                 measure,
                 MeasureData {
@@ -447,43 +456,57 @@ impl ReportComment {
                     value,
                     boundary,
                 },
-            ) in measures
+            ) in measure_map
             {
                 if require_threshold && boundary.is_none() {
                     continue;
                 }
-                let plot_url = if public_links {
+
+                // Plot
+                let plot_url = if self.public_links {
                     public_url
                 } else {
                     console_url
-                };
+                }
+                .clone();
+                let plot_url = plot_url
+                    .join(&format!("?{}", self.utm_query()))
+                    .unwrap_or(plot_url);
+
+                // Alert
                 let (alert_url, limit) = if let Some(alert) =
-                    self.alert_urls.0.get(&(benchmark.clone(), measure.clone()))
+                    self.alert_urls
+                        .0
+                        .get(&(iteration, benchmark.clone(), measure.clone()))
                 {
                     let AlertData {
+                        iteration: _,
                         public_url,
                         console_url,
                         limit,
                     } = alert;
-                    (
-                        Some(if public_links {
-                            public_url
-                        } else {
-                            console_url
-                        }),
-                        Some(*limit),
-                    )
+                    let alert_url = if self.public_links {
+                        public_url
+                    } else {
+                        console_url
+                    }
+                    .clone();
+                    let alert_url = alert_url
+                        .join(&format!("?{}", self.utm_query()))
+                        .unwrap_or(alert_url);
+                    (Some(alert_url), Some(*limit))
                 } else {
                     (None, None)
                 };
+
                 let row = if let Some(alert_url) = alert_url {
                     format!(
-                        r#"🚨 (<a href="{plot_url}">view plot</a> | <a href="{alert_url}">view alert</a>)"#,
+                        r#"❌ <a href="{plot_url}">view plot</a><br />🚨 <a href="{alert_url}">view alert</a>"#,
                     )
                 } else if boundary.is_some() {
-                    format!(r#"✅ (<a href="{plot_url}">view plot</a>)"#)
+                    format!(r#"✅ <a href="{plot_url}">view plot</a>"#)
                 } else {
-                    format!(r#"➖ (<a href="{plot_url}">view plot</a>)"#)
+                    format!(r#"➖ <a href="{plot_url}">view plot</a>"#)
                 };
                 html.push_str(&format!(r#"<td>{row}</td>"#));
 
@@ -875,11 +898,11 @@ impl BoundaryLimits {
     }
 }
 
-pub struct AlertUrls(BTreeMap<(u32, Benchmark, Measure), AlertData>);
+pub struct AlertUrls(BTreeMap<(usize, Benchmark, Measure), AlertData>);
 
 #[derive(Clone)]
 pub struct AlertData {
-    pub iteration: u32,
+    pub iteration: usize,
     pub public_url: Url,
     pub console_url: Url,
     pub limit: BoundaryLimit,
@@ -890,7 +913,7 @@ impl AlertUrls {
         let mut urls = BTreeMap::new();
 
         for alert in &json_report.alerts {
-            let iteration = alert.iteration.into();
+            let iteration = u32::from(alert.iteration) as usize;
             let benchmark = Benchmark {
                 name: alert.benchmark.name.clone(),
                 slug: alert.benchmark.slug.clone(),
