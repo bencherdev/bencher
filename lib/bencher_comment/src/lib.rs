@@ -119,7 +119,7 @@ impl ReportComment {
         };
         let report_url = url.join(&path).unwrap_or(url);
         html.push_str(&format!(
-            r#"<h1><a href="{report_url}?{utm}"><img src="https://bencher.dev/favicon.svg" width="32" height="32" alt="🐰" />Bencher Report</a></h1>"#,
+            r#"<h2><a href="{report_url}?{utm}"><img src="https://bencher.dev/favicon.svg" width="24" height="24" alt="🐰" /> Bencher Report</a></h2>"#,
             utm = self.utm_query(),
         ));
     }
@@ -220,8 +220,8 @@ impl ReportComment {
             ));
         }
         html.push_str("</ul>");
-        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add?{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
-        html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/?{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
+        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add?{utm}\">Click here to create a new Threshold</a><br/>", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
+        html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/?{utm}\">the Threshold documentation</a>.<br/>", utm = self.utm_query()));
         html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds?{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> CLI flag</a>.</p>", utm = self.utm_query()));
         html.push_str("</blockquote>");
     }
@@ -229,7 +229,7 @@ impl ReportComment {
     fn html_alerts(&self, html: &mut String) {
         let alerts_len = self.alert_urls.0.len();
         if alerts_len > 0 {
-            html.push_str("<br />");
+            html.push_str("<br/>");
             let (alert, limit) = if alerts_len == 1 {
                 ("ALERT", "Limit")
             } else {
@@ -239,7 +239,7 @@ impl ReportComment {
                 "<blockquote><b>🚨 {alerts_len} {alert}:</b> Threshold Boundary {limit} exceeded!</blockquote>",
             ));
             self.html_alerts_table(html);
-            html.push_str("<br />");
+            html.push_str("<br/>");
         }
     }
 
@@ -346,6 +346,7 @@ impl ReportComment {
 
     fn html_benchmark_details(&self, html: &mut String, require_threshold: bool) {
         html.push_str("<details><summary>Click to view all benchmark results</summary>");
+        html.push_str("<br/>");
         for (iteration, benchmark_map) in self.benchmark_urls.0.iter().enumerate() {
             self.html_benchmarks_table(html, iteration, benchmark_map, require_threshold);
         }
@@ -496,7 +497,7 @@ impl ReportComment {
 
                 let row = if let Some(alert_url) = alert_url {
                     format!(
-                        r#"❌ <a href="{plot_url}">view plot</a><br />🚨 <a href="{alert_url}">view alert</a>"#,
+                        r#"❌ <a href="{plot_url}">view plot</a><br/>🚨 <a href="{alert_url}">view alert</a>"#,
                     )
                 } else if boundary.is_some() {
                     format!(r#"✅ <a href="{plot_url}">view plot</a>"#)
@@ -589,15 +590,22 @@ impl ReportComment {
     }
 
     fn html_footer(&self, html: &mut String) {
-        html.push_str(&format!(r#"<br/><small><a href="https://bencher.dev">Bencher - Continuous Benchmarking</a></small>{}<br/><small><a href="https://bencher.dev/docs/">Docs</a> | <a href="https://bencher.dev/repo/">Repo</a> | <a href="https://bencher.dev/chat/">Chat</a> | <a href="https://bencher.dev/help/">Help</a></small>"#,
-        if self.json_report.project.visibility.is_public() {
-            let path = format!("/perf/{}", self.project_slug);
-            let url = self.console_url.clone();
-            let url = url.join(&path).unwrap_or(url);
-            format!(r#"<br/><small><a href="{url}">View Public Perf Page</a></small>"#)
+        let url = self.console_url.clone();
+        let path = if self.public_links {
+            format!(
+                "/perf/{}/reports/{}",
+                self.project_slug, self.json_report.uuid
+            )
         } else {
-            String::new()
-        }
+            format!(
+                "/console/projects/{}/reports/{}",
+                self.project_slug, self.json_report.uuid
+            )
+        };
+        let url = url.join(&path).unwrap_or(url);
+        html.push_str(&format!(
+            r#"<a href="{url}?{utm}">🐰 View full continuous benchmarking report in Bencher</a>"#,
+            utm = self.utm_query()
         ));
     }
 
