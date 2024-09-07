@@ -446,6 +446,12 @@ impl JsonReportQuery {
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 pub struct Iteration(pub u32);
 
+impl From<Iteration> for u32 {
+    fn from(value: Iteration) -> Self {
+        value.0
+    }
+}
+
 #[cfg(feature = "db")]
 mod iteration {
     use super::Iteration;

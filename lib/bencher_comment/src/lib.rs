@@ -65,11 +65,16 @@ impl ReportComment {
         }
 
         comment.push_str("\nView alerts:");
-        for ((benchmark, measure), AlertData { console_url, .. }) in &self.alert_urls.0 {
+        for ((iteration, benchmark, measure), AlertData { console_url, .. }) in &self.alert_urls.0 {
             comment.push_str(&format!(
-                "\n- {benchmark_name} ({measure_name}): {console_url}",
+                "\n- {benchmark_name} ({measure_name}){iter}: {console_url}",
                 benchmark_name = benchmark.name,
                 measure_name = measure.name,
+                iter = if multiple_iterations {
+                    format!(" (Iteration {iteration})")
+                } else {
+                    "".to_owned()
+                }
             ));
         }
 
@@ -171,21 +176,8 @@ impl ReportComment {
             return;
         }
         self.html_no_threshold_warning(html);
-
-        let alerts_len = self.alert_urls.0.len();
-        if alerts_len > 0 {
-            html.push_str("<br />");
-            let (capital, lower) = if alerts_len == 1 {
-                ("", "")
-            } else {
-                ("S", "s")
-            };
-            html.push_str(&format!(
-                "<blockquote><b>🚨 {alerts_len} ALERT{capital}:</b> Threshold Boundary Limit{lower} exceeded!</blockquote>",
-            ));
-            self.html_alerts_table(html, self.public_links);
-            html.push_str("<br />");
-        }
+        self.html_alerts(html);
+        self.html_benchmark_details(html);
 
         html.push_str("<details><summary>Click to view all benchmark results</summary>");
         self.html_benchmarks_table(html, measures, require_threshold, self.public_links);
@@ -239,62 +231,115 @@ impl ReportComment {
         html.push_str("</blockquote>");
     }
 
-    fn html_alerts_table(&self, html: &mut String, public_links: bool) {
+    fn html_alerts(&self, html: &mut String) {
+        let alerts_len = self.alert_urls.0.len();
+        if alerts_len > 0 {
+            html.push_str("<br />");
+            let (alert, limit) = if alerts_len == 1 {
+                ("ALERT", "Limit")
+            } else {
+                ("ALERTS", "Limits")
+            };
+            html.push_str(&format!(
+                "<blockquote><b>🚨 {alerts_len} {alert}:</b> Threshold Boundary {limit} exceeded!</blockquote>",
+            ));
+            self.html_alerts_table(html);
+            html.push_str("<br />");
+        }
+    }
+
+    fn html_alerts_table(&self, html: &mut String) {
         html.push_str("<table>");
-        html.push_str("<thead><tr><th>Benchmark</th><th>Measure (units)</th><th>View</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>");
+
+        let multiple_iterations = self.json_report.results.len() > 1;
+        html.push_str(&format!("<thead><tr><th>Benchmark</th><th>Measure (units)</th>{iteration}<th>Plot</th><th>🚨 Alert</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>", iteration = if multiple_iterations {
+            "<th>Iteration</th>"
+        } else {
+            ""
+        }));
+
         html.push_str("<tbody>");
-        for ((benchmark, measure), alert) in &self.alert_urls.0 {
-            let Some(data) = self
-                .benchmark_urls
-                .0
-                .get(benchmark)
-                .and_then(|m| m.get(measure))
+        for ((iteration, benchmark, measure), alert) in &self.alert_urls.0 {
+            let Some(measure_data) =
+                self.benchmark_urls
+                    .0
+                    .get(*iteration as usize)
+                    .and_then(|benchmark_map| {
+                        benchmark_map
+                            .get(benchmark)
+                            .and_then(|measure_map| measure_map.get(measure))
+                    })
             else {
                 continue;
             };
 
             html.push_str("<tr>");
-            if public_links {
-                html.push_str(&format!("<td>{name}</td>", name = benchmark.name));
-                html.push_str(&format!(
-                    "<td>{name} ({units})</td>",
-                    name = measure.name,
-                    units = measure.units
-                ));
-                html.push_str(&format!(
-                    r#"<td>🚨 (<a href="{}">view plot</a> | <a href="{}">view alert</a>)</td>"#,
-                    data.public_url, alert.public_url,
-                ));
+
+            // Benchmark
+            let url = self.console_url.clone();
+            let path = if self.public_links {
+                format!("/perf/{}/benchmarks/{}", self.project_slug, benchmark.slug)
             } else {
-                let benchmark_path = format!(
+                format!(
                     "/console/projects/{}/benchmarks/{}",
                     self.project_slug, benchmark.slug
-                );
-                let url = self.console_url.clone();
-                let url = url.join(&benchmark_path).unwrap_or(url);
-                html.push_str(&format!(
-                    r#"<td><a href="{url}">{name}</a></td>"#,
-                    name = benchmark.name,
-                ));
-                let measure_path = format!(
+                )
+            };
+            let url = url.join(&path).unwrap_or(url);
+            html.push_str(&format!(
+                r#"<td><a href="{url}?{utm}">{name}</a></td>"#,
+                utm = self.utm_query(),
+                name = benchmark.name,
+            ));
+
+            // Measure
+            let url = self.console_url.clone();
+            let path = if self.public_links {
+                format!("/perf/{}/measures/{}", self.project_slug, measure.slug)
+            } else {
+                format!(
                     "/console/projects/{}/measure/{}",
                     self.project_slug, measure.slug
-                );
-                let url = self.console_url.clone();
-                let url = url.join(&measure_path).unwrap_or(url);
-                html.push_str(&format!(
-                    r#"<td><a href="{url}">{name}</a></td>"#,
-                    name = measure.name,
-                ));
-                html.push_str(&format!(
-                    r#"<td>🚨 (<a href="{}">view plot</a> | <a href="{}">view alert</a>)</td>"#,
-                    data.console_url, alert.console_url,
-                ));
+                )
+            };
+            let url = url.join(&path).unwrap_or(url);
+            html.push_str(&format!(
+                r#"<td><a href="{url}?{utm}">{name} ({units})</a></td>"#,
+                utm = self.utm_query(),
+                name = measure.name,
+                units = measure.units,
+            ));
+
+            if multiple_iterations {
+                html.push_str(&format!("<td>{iteration}</td>"));
             }
+
+            // Plot
+            html.push_str(&format!(
+                r#"<td><a href="{plot}?{utm}">view plot</a></td>"#,
+                plot = if self.public_links {
+                    &measure_data.public_url
+                } else {
+                    &measure_data.console_url
+                },
+                utm = self.utm_query(),
+            ));
+
+            // Alert
+            html.push_str(&format!(
+                r#"<td><a href="{alert}?{utm}">view alert</a></td>"#,
+                alert = if self.public_links {
+                    &alert.public_url
+                } else {
+                    &alert.console_url
+                },
+                utm = self.utm_query(),
+            ));
+
             Self::html_metric_boundary_cells(
                 html,
-                data.value,
-                data.boundary,
+                measure_data.value,
+                measure_data.boundary,
                 Some(alert.limit),
                 true,
             );
@@ -304,12 +349,19 @@ impl ReportComment {
         html.push_str("</table>");
     }
 
+    fn html_benchmark_details(&self, html: &mut String, require_threshold: bool) {
+        html.push_str("<details><summary>Click to view all benchmark results</summary>");
+        for benchmark_map in &self.benchmark_urls.0 {
+            self.html_benchmarks_table(html, benchmark_map, require_threshold);
+        }
+        html.push_str("</details>");
+    }
+
     fn html_benchmarks_table(
         &self,
         html: &mut String,
-        measures: &MeasuresMap,
+        benchmark_map: &BenchmarkMap,
         require_threshold: bool,
-        public_links: bool,
     ) {
         html.push_str("<table>");
         self.html_benchmarks_table_header(html, measures, require_threshold, public_links);
@@ -473,7 +525,11 @@ impl ReportComment {
             let bold = limit.is_some();
             html.push_str(&format!(
                 "<td>{}{} ({value_plus}{}%){}</td>",
-                if bold { "<b>" } else { "" },
+                if bold {
+                    "<b style=\"color: red;\">"
+                } else {
+                    ""
+                },
                 format_number(value),
                 format_number(value_percent),
                 if bold { "</b>" } else { "" },
@@ -494,7 +550,11 @@ impl ReportComment {
             let bold = matches!(limit, Some(BoundaryLimit::Lower));
             html.push_str(&format!(
                 "<td>{}{} ({}%){}</td>",
-                if bold { "<b>" } else { "" },
+                if bold {
+                    "<b style=\"color: red;\">"
+                } else {
+                    ""
+                },
                 format_number(lower_limit),
                 format_number(limit_percent),
                 if bold { "</b>" } else { "" },
@@ -502,6 +562,7 @@ impl ReportComment {
         } else if pad {
             html.push_str("<td></td>");
         }
+
         if let Some(upper_limit) = boundary.upper_limit {
             let limit_percent = if value.is_normal() && upper_limit.is_normal() {
                 (value / upper_limit) * 100.0
@@ -511,7 +572,11 @@ impl ReportComment {
             let bold = matches!(limit, Some(BoundaryLimit::Upper));
             html.push_str(&format!(
                 "<td>{}{} ({}%){}</td>",
-                if bold { "<b>" } else { "" },
+                if bold {
+                    "<b style=\"color: red;\">"
+                } else {
+                    ""
+                },
                 format_number(upper_limit),
                 format_number(limit_percent),
                 if bold { "</b>" } else { "" },
@@ -772,10 +837,11 @@ impl Boundary {
     }
 }
 
-pub struct AlertUrls(BTreeMap<(Benchmark, Measure), AlertData>);
+pub struct AlertUrls(BTreeMap<(u32, Benchmark, Measure), AlertData>);
 
 #[derive(Clone)]
 pub struct AlertData {
+    pub iteration: u32,
     pub public_url: Url,
     pub console_url: Url,
     pub limit: BoundaryLimit,
@@ -786,6 +852,7 @@ impl AlertUrls {
         let mut urls = BTreeMap::new();
 
         for alert in &json_report.alerts {
+            let iteration = alert.iteration.into();
             let benchmark = Benchmark {
                 name: alert.benchmark.name.clone(),
                 slug: alert.benchmark.slug.clone(),
@@ -800,11 +867,12 @@ impl AlertUrls {
             let console_url =
                 Self::to_console_url(console_url.clone(), &json_report.project.slug, alert.uuid);
             let data = AlertData {
+                iteration,
                 public_url,
                 console_url,
                 limit: alert.limit,
             };
-            urls.insert((benchmark, measure), data);
+            urls.insert((iteration, benchmark, measure), data);
         }
 
         Self(urls)
