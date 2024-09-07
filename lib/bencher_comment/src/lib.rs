@@ -247,7 +247,7 @@ impl ReportComment {
         html.push_str("<table>");
 
         let multiple_iterations = self.json_report.results.len() > 1;
-        html.push_str(&format!("<thead><tr><th>Benchmark</th><th>Measure (units)</th>{iteration}<th>Plot</th><th>🚨 Alert</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>", iteration = if multiple_iterations {
+        html.push_str(&format!("<thead><tr><th>Benchmark</th><th>Measure (units)</th>{iteration}<th>Plot</th><th>Alert</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>", iteration = if multiple_iterations {
             "<th>Iteration</th>"
         } else {
             ""
@@ -535,11 +535,7 @@ impl ReportComment {
             let bold = limit.is_some();
             html.push_str(&format!(
                 "<td>{}{} ({value_plus}{}%){}</td>",
-                if bold {
-                    "<b style=\"color: red;\">"
-                } else {
-                    ""
-                },
+                if bold { "<b>" } else { "" },
                 format_number(value),
                 format_number(value_percent),
                 if bold { "</b>" } else { "" },
@@ -560,11 +556,7 @@ impl ReportComment {
             let bold = matches!(limit, Some(BoundaryLimit::Lower));
             html.push_str(&format!(
                 "<td>{}{} ({}%){}</td>",
-                if bold {
-                    "<b style=\"color: red;\">"
-                } else {
-                    ""
-                },
+                if bold { "<b>" } else { "" },
                 format_number(lower_limit),
                 format_number(limit_percent),
                 if bold { "</b>" } else { "" },
