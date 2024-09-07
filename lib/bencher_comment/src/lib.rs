@@ -467,11 +467,7 @@ impl ReportComment {
                     public_url
                 } else {
                     console_url
-                }
-                .clone();
-                let plot_url = plot_url
-                    .join(&format!("?{}", self.utm_query()))
-                    .unwrap_or(plot_url);
+                };
 
                 // Alert
                 let (alert_url, limit) = if let Some(alert) =
@@ -485,16 +481,15 @@ impl ReportComment {
                         console_url,
                         limit,
                     } = alert;
-                    let alert_url = if self.public_links {
-                        public_url
-                    } else {
-                        console_url
-                    }
-                    .clone();
-                    let alert_url = alert_url
-                        .join(&format!("?{}", self.utm_query()))
-                        .unwrap_or(alert_url);
-                    (Some(alert_url), Some(*limit))
+
+                    (
+                        Some(if self.public_links {
+                            public_url
+                        } else {
+                            console_url
+                        }),
+                        Some(*limit),
+                    )
                 } else {
                     (None, None)
                 };

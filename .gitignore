@@ -21,6 +21,7 @@ deb/
 
 out*.txt
 out*.json
+out*.html
 netlify.json
 lychee.md
 out/
