@@ -62,4 +62,10 @@ impl Ci {
                 .map_err(Into::into),
         }
     }
+
+    pub fn source(&self) -> String {
+        match self {
+            Self::GitHubActions(_) => "github".to_owned(),
+        }
+    }
 }

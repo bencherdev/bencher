@@ -374,7 +374,7 @@ impl ReportComment {
         html.push_str("<thead><tr>");
         html.push_str("<th>Benchmark</th>");
 
-        let mbl = measure_boundary_limits(benchmark_map, require_threshold);
+        let mbl = BoundaryLimits::for_iteration(benchmark_map, require_threshold);
         for (measure, boundary_limits) in mbl {
             let url = self.console_url.clone();
             let path = if self.public_links {
@@ -637,6 +637,19 @@ impl ReportComment {
         )
     }
 
+    pub fn has_threshold(&self) -> bool {
+        for benchmark_map in &self.benchmark_urls.0 {
+            for measure_map in benchmark_map.values() {
+                for MeasureData { boundary, .. } in measure_map.values() {
+                    if boundary.is_some() {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
     pub fn has_alert(&self) -> bool {
         !self.json_report.alerts.is_empty()
     }
@@ -720,28 +733,6 @@ impl BenchmarkUrls {
 
         Self(benchmark_urls)
     }
-}
-
-fn measure_boundary_limits(
-    benchmark_map: &BenchmarkMap,
-    require_threshold: bool,
-) -> BTreeMap<Measure, BoundaryLimits> {
-    let mut measures = BTreeMap::new();
-    for measure_map in benchmark_map.values() {
-        for (measure, MeasureData { boundary, .. }) in measure_map {
-            if require_threshold && boundary.is_none() {
-                continue;
-            }
-            let boundary_limits = boundary.map(BoundaryLimits::from).unwrap_or_default();
-            measures
-                .entry(measure.clone())
-                .and_modify(|bl: &mut BoundaryLimits| {
-                    *bl = bl.union(boundary_limits);
-                })
-                .or_insert(boundary_limits);
-        }
-    }
-    measures
 }
 
 struct BenchmarkUrl {
@@ -876,6 +867,28 @@ impl From<Boundary> for BoundaryLimits {
 }
 
 impl BoundaryLimits {
+    fn for_iteration(
+        benchmark_map: &BenchmarkMap,
+        require_threshold: bool,
+    ) -> BTreeMap<Measure, BoundaryLimits> {
+        let mut measures = BTreeMap::new();
+        for measure_map in benchmark_map.values() {
+            for (measure, MeasureData { boundary, .. }) in measure_map {
+                if require_threshold && boundary.is_none() {
+                    continue;
+                }
+                let boundary_limits = boundary.map(BoundaryLimits::from).unwrap_or_default();
+                measures
+                    .entry(measure.clone())
+                    .and_modify(|bl: &mut BoundaryLimits| {
+                        *bl = bl.union(boundary_limits);
+                    })
+                    .or_insert(boundary_limits);
+            }
+        }
+        measures
+    }
+
     fn union(self, rhs: Self) -> Self {
         Self {
             lower: self.lower || rhs.lower,

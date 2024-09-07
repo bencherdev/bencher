@@ -200,7 +200,13 @@ impl Run {
             .get_console_url()
             .await
             .map_err(RunError::ConsoleUrl)?;
-        let report_comment = ReportComment::new(console_url, json_report);
+        let report_comment = ReportComment::new(
+            console_url,
+            json_report,
+            self.ci
+                .as_ref()
+                .map_or_else(|| "cli".to_owned(), Ci::source),
+        );
 
         let report_str = match self.format {
             Format::Human => report_comment.human(),
