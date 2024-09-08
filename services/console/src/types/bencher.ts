@@ -22,11 +22,21 @@ export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
 export type Iteration = number;
 
-export type ResourceName = string;
-
 export type Slug = string;
 
 export type DateTime = string;
+
+export interface JsonBenchmark {
+	uuid: Uuid;
+	project: Uuid;
+	name: BenchmarkName;
+	slug: Slug;
+	created: string;
+	modified: string;
+	archived?: string;
+}
+
+export type ResourceName = string;
 
 export interface JsonMeasure {
 	uuid: Uuid;
@@ -37,6 +47,13 @@ export interface JsonMeasure {
 	created: string;
 	modified: string;
 	archived?: string;
+}
+
+export interface JsonMetric {
+	uuid: Uuid;
+	value: number;
+	lower_value?: number;
+	upper_value?: number;
 }
 
 export enum ModelTest {
@@ -76,36 +93,23 @@ export interface JsonThresholdModel {
 	created: string;
 }
 
-export interface JsonMetric {
-	uuid: Uuid;
-	value: number;
-	lower_value?: number;
-	upper_value?: number;
-}
-
 export interface JsonBoundary {
 	baseline?: number;
 	lower_limit?: number;
 	upper_limit?: number;
 }
 
-export interface JsonBenchmarkMetric {
-	uuid: Uuid;
-	project: Uuid;
-	name: BenchmarkName;
-	slug: Slug;
+export interface JsonReportMeasure {
+	measure: JsonMeasure;
 	metric: JsonMetric;
+	threshold?: JsonThresholdModel;
 	boundary?: JsonBoundary;
-	created: string;
-	modified: string;
-	archived?: string;
 }
 
 export interface JsonReportResult {
 	iteration: Iteration;
-	measure: JsonMeasure;
-	threshold?: JsonThresholdModel;
-	benchmarks: JsonBenchmarkMetric[];
+	benchmark: JsonBenchmark;
+	measures: JsonReportMeasure[];
 }
 
 export type JsonReportIteration = JsonReportResult[];
@@ -163,8 +167,10 @@ export interface JsonAlert {
 	uuid: Uuid;
 	report: Uuid;
 	iteration: Iteration;
+	benchmark: JsonBenchmark;
+	metric: JsonMetric;
 	threshold: JsonThreshold;
-	benchmark: JsonBenchmarkMetric;
+	boundary: JsonBoundary;
 	limit: BoundaryLimit;
 	status: AlertStatus;
 	created: string;
@@ -351,16 +357,6 @@ export interface JsonPerfAlert {
 	limit: BoundaryLimit;
 	status: AlertStatus;
 	modified: string;
-}
-
-export interface JsonBenchmark {
-	uuid: Uuid;
-	project: Uuid;
-	name: BenchmarkName;
-	slug: Slug;
-	created: string;
-	modified: string;
-	archived?: string;
 }
 
 export interface JsonVersion {

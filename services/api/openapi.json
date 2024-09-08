@@ -8028,7 +8028,10 @@
         "type": "object",
         "properties": {
           "benchmark": {
-            "$ref": "#/components/schemas/JsonBenchmarkMetric"
+            "$ref": "#/components/schemas/JsonBenchmark"
+          },
+          "boundary": {
+            "$ref": "#/components/schemas/JsonBoundary"
           },
           "created": {
             "$ref": "#/components/schemas/DateTime"
@@ -8038,6 +8041,9 @@
           },
           "limit": {
             "$ref": "#/components/schemas/BoundaryLimit"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/JsonMetric"
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
@@ -8057,9 +8063,11 @@
         },
         "required": [
           "benchmark",
+          "boundary",
           "created",
           "iteration",
           "limit",
+          "metric",
           "modified",
           "report",
           "status",
@@ -8200,57 +8208,6 @@
         },
         "required": [
           "created",
-          "modified",
-          "name",
-          "project",
-          "slug",
-          "uuid"
-        ]
-      },
-      "JsonBenchmarkMetric": {
-        "type": "object",
-        "properties": {
-          "archived": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
-          },
-          "boundary": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonBoundary"
-              }
-            ]
-          },
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "metric": {
-            "$ref": "#/components/schemas/JsonMetric"
-          },
-          "modified": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "name": {
-            "$ref": "#/components/schemas/BenchmarkName"
-          },
-          "project": {
-            "$ref": "#/components/schemas/ProjectUuid"
-          },
-          "slug": {
-            "$ref": "#/components/schemas/Slug"
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/BenchmarkUuid"
-          }
-        },
-        "required": [
-          "created",
-          "metric",
           "modified",
           "name",
           "project",
@@ -10704,20 +10661,22 @@
           "uuid"
         ]
       },
-      "JsonReportResult": {
+      "JsonReportMeasure": {
         "type": "object",
         "properties": {
-          "benchmarks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/JsonBenchmarkMetric"
-            }
-          },
-          "iteration": {
-            "$ref": "#/components/schemas/Iteration"
+          "boundary": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonBoundary"
+              }
+            ]
           },
           "measure": {
             "$ref": "#/components/schemas/JsonMeasure"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/JsonMetric"
           },
           "threshold": {
             "nullable": true,
@@ -10729,9 +10688,30 @@
           }
         },
         "required": [
-          "benchmarks",
+          "measure",
+          "metric"
+        ]
+      },
+      "JsonReportResult": {
+        "type": "object",
+        "properties": {
+          "benchmark": {
+            "$ref": "#/components/schemas/JsonBenchmark"
+          },
+          "iteration": {
+            "$ref": "#/components/schemas/Iteration"
+          },
+          "measures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReportMeasure"
+            }
+          }
+        },
+        "required": [
+          "benchmark",
           "iteration",
-          "measure"
+          "measures"
         ]
       },
       "JsonReportSettings": {
