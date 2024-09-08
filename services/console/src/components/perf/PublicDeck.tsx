@@ -12,7 +12,13 @@ import { authUser } from "../../util/auth";
 import Deck from "../console/deck/hand/Deck";
 import DeckHeaderButton from "../console/deck/header/DeckHeaderButton";
 import { httpGet } from "../../util/http";
-import { BACK_PARAM, decodePath, useSearchParams } from "../../util/url";
+import {
+	BACK_PARAM,
+	decodePath,
+	encodePath,
+	pathname,
+	useSearchParams,
+} from "../../util/url";
 import * as Sentry from "@sentry/astro";
 import { fmtDateTime } from "../../config/util";
 import { Display, type Button } from "../../config/types";
@@ -168,6 +174,35 @@ const PublicDeck = (props: Props) => {
 									This {props.config?.resource} was archived on{" "}
 									{fmtDate(data()?.archived)}
 								</p>
+							</div>
+						</div>
+					</div>
+				</Show>
+
+				<Show when={data()?.model?.replaced}>
+					<div class="columns">
+						<div class="column">
+							<div class="notification is-warning">
+								<div class="columns is-vcentered">
+									<div class="column">
+										<p>
+											This {props.config?.resource} model was replaced on{" "}
+											{fmtDate(data()?.model?.replaced)}
+										</p>
+									</div>
+									<div class="column is-narrow">
+										<a
+											class="button is-small"
+											href={`${pathname()}?${BACK_PARAM}=${encodePath()}`}
+										>
+											<span class="fa-stack fa-2x" style="font-size: 1.0em;">
+												<i class="fas fa-walking fa-stack-1x" />
+												<i class="fas fa-ban fa-stack-2x" />
+											</span>
+											<span> View current Threshold</span>
+										</a>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
