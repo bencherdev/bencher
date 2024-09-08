@@ -9,7 +9,7 @@ use bencher_json::{
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
-    JsonReport, MeasureUuid, ResourceName, Slug, TestbedUuid, ThresholdUuid,
+    JsonReport, MeasureUuid, ModelUuid, ResourceName, Slug, TestbedUuid, ThresholdUuid,
 };
 use url::Url;
 
@@ -334,7 +334,7 @@ impl ReportComment {
             html.push_str("<br/>");
             // Threshold
             html.push_str(&format!(
-                r#"🚷 <a href="{threshold}?{utm}">threshold</a>"#,
+                r#"🚷 <a href="{threshold}&{utm}">threshold</a>"#,
                 threshold = if self.public_links {
                     &alert.public_threshold_url
                 } else {
@@ -513,7 +513,7 @@ impl ReportComment {
                 let utm = self.utm_query();
                 let row = if let Some((alert_url, threshold_url)) = alert_url {
                     format!(
-                        r#"📈 <a href="{plot_url}&{utm}">view plot</a><br/>🚨 <a href="{alert_url}?{utm}">view alert</a><br/>🚷 <a href="{threshold_url}?{utm}">view threshold</a>"#,
+                        r#"📈 <a href="{plot_url}&{utm}">view plot</a><br/>🚨 <a href="{alert_url}?{utm}">view alert</a><br/>🚷 <a href="{threshold_url}&{utm}">view threshold</a>"#,
                     )
                 } else if boundary.is_some() {
                     format!(r#"✅ <a href="{plot_url}&{utm}">view plot</a>"#)
@@ -921,7 +921,7 @@ pub struct AlertData {
 }
 
 impl AlertUrls {
-    pub fn new(console_url: &Url, json_report: &JsonReport) -> Self {
+    pub fn new(url: &Url, json_report: &JsonReport) -> Self {
         let mut urls = BTreeMap::new();
 
         for alert in &json_report.alerts {
@@ -935,20 +935,22 @@ impl AlertUrls {
                 slug: alert.threshold.measure.slug.clone(),
                 units: alert.threshold.measure.units.clone(),
             };
+            let public_url =
+                Self::to_public_url(url.clone(), &json_report.project.slug, alert.uuid);
+            let console_url =
+                Self::to_console_url(url.clone(), &json_report.project.slug, alert.uuid);
             let public_threshold_url = Self::to_public_threshold_url(
-                console_url.clone(),
+                url.clone(),
                 &json_report.project.slug,
                 alert.threshold.uuid,
+                alert.threshold.model.uuid,
             );
             let console_threshold_url = Self::to_console_threshold_url(
-                console_url.clone(),
+                url.clone(),
                 &json_report.project.slug,
                 alert.threshold.uuid,
+                alert.threshold.model.uuid,
             );
-            let public_url =
-                Self::to_public_url(console_url.clone(), &json_report.project.slug, alert.uuid);
-            let console_url =
-                Self::to_console_url(console_url.clone(), &json_report.project.slug, alert.uuid);
             let data = AlertData {
                 iteration,
                 public_url,
@@ -963,34 +965,38 @@ impl AlertUrls {
         Self(urls)
     }
 
-    fn to_public_url(mut console_url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
-        console_url.set_path(&format!("/perf/{project_slug}/alerts/{alert}"));
-        console_url
+    fn to_public_url(mut url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
+        url.set_path(&format!("/perf/{project_slug}/alerts/{alert}"));
+        url
     }
 
-    fn to_console_url(mut console_url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
-        console_url.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
-        console_url
+    fn to_console_url(mut url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
+        url.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
+        url
     }
 
     fn to_public_threshold_url(
-        mut console_url: Url,
+        mut url: Url,
         project_slug: &Slug,
         threshold: ThresholdUuid,
+        model: ModelUuid,
     ) -> Url {
-        console_url.set_path(&format!("/perf/{project_slug}/thresholds/{threshold}"));
-        console_url
+        url.set_path(&format!("/perf/{project_slug}/thresholds/{threshold}"));
+        url.set_query(Some(&format!("model={model}")));
+        url
     }
 
     fn to_console_threshold_url(
-        mut console_url: Url,
+        mut url: Url,
         project_slug: &Slug,
         threshold: ThresholdUuid,
+        model: ModelUuid,
     ) -> Url {
-        console_url.set_path(&format!(
+        url.set_path(&format!(
             "/console/projects/{project_slug}/thresholds/{threshold}"
         ));
-        console_url
+        url.set_query(Some(&format!("model={model}")));
+        url
     }
 }
 
