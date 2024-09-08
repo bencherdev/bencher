@@ -16,7 +16,7 @@ const ReplacedButton = (props: Props) => {
 						<div class="columns is-vcentered">
 							<div class="column">
 								<p>
-									This Threshold model was replaced on{" "}
+									This threshold model was replaced on{" "}
 									{fmtDate(props?.data()?.model?.replaced)}
 								</p>
 							</div>
@@ -32,7 +32,7 @@ const ReplacedButton = (props: Props) => {
 										<i class="fas fa-walking fa-stack-1x" />
 										<i class="fas fa-ban fa-stack-2x" />
 									</span>
-									<span> View current Threshold</span>
+									<span> View Current Threshold</span>
 								</a>
 							</div>
 						</div>
