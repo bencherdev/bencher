@@ -80,6 +80,12 @@ const alertsPubConfig = {
 				display: Display.RAW,
 			},
 			{
+				kind: Card.FIELD,
+				label: "Threshold",
+				key: "threshold",
+				display: Display.THRESHOLD,
+			},
+			{
 				kind: Card.NESTED_FIELD,
 				label: "Threshold Model Test",
 				keys: ["threshold", "model", "test"],

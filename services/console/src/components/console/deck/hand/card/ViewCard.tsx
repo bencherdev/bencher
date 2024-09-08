@@ -95,6 +95,17 @@ const ViewCard = (props: Props) => {
 											{props.value?.name}
 										</a>
 									</Match>
+									<Match when={props.card?.display === Display.THRESHOLD}>
+										<a
+											href={`${resourcePath(props.isConsole)}/${
+												props.params?.project
+											}/thresholds/${
+												props.value?.uuid
+											}?${BACK_PARAM}=${encodePath()}`}
+										>
+											View Threshold
+										</a>
+									</Match>
 									<Match when={props.card?.display === Display.DATE_TIME}>
 										<input
 											class="input is-static"

@@ -9,7 +9,7 @@ use bencher_json::{
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
-    JsonReport, MeasureUuid, ResourceName, Slug, TestbedUuid,
+    JsonReport, MeasureUuid, ResourceName, Slug, TestbedUuid, ThresholdUuid,
 };
 use url::Url;
 
@@ -245,7 +245,7 @@ impl ReportComment {
         html.push_str("<table>");
 
         let multiple_iterations = self.json_report.results.len() > 1;
-        html.push_str(&format!("<thead><tr><th>Benchmark</th><th>Measure (units)</th>{iteration}<th>Plot</th><th>Alert</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>", iteration = if multiple_iterations {
+        html.push_str(&format!("<thead><tr><th>Benchmark</th><th>Measure (units)</th>{iteration}<th>View</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>", iteration = if multiple_iterations {
             "<th>Iteration</th>"
         } else {
             ""
@@ -307,9 +307,10 @@ impl ReportComment {
                 html.push_str(&format!("<td>{iteration}</td>"));
             }
 
+            html.push_str("<td>");
             // Plot
             html.push_str(&format!(
-                r#"<td><a href="{plot}?{utm}">view plot</a></td>"#,
+                r#"📈 <a href="{plot}&{utm}">plot</a>"#,
                 plot = if self.public_links {
                     &measure_data.public_url
                 } else {
@@ -318,9 +319,10 @@ impl ReportComment {
                 utm = self.utm_query(),
             ));
 
+            html.push_str("<br/>");
             // Alert
             html.push_str(&format!(
-                r#"<td><a href="{alert}?{utm}">view alert</a></td>"#,
+                r#"🚨 <a href="{alert}?{utm}">alert</a>"#,
                 alert = if self.public_links {
                     &alert.public_url
                 } else {
@@ -328,6 +330,19 @@ impl ReportComment {
                 },
                 utm = self.utm_query(),
             ));
+
+            html.push_str("<br/>");
+            // Threshold
+            html.push_str(&format!(
+                r#"🚷 <a href="{threshold}?{utm}">threshold</a>"#,
+                threshold = if self.public_links {
+                    &alert.public_threshold_url
+                } else {
+                    &alert.console_threshold_url
+                },
+                utm = self.utm_query(),
+            ));
+            html.push_str("</td>");
 
             Self::html_metric_boundary_cells(
                 html,
@@ -478,14 +493,16 @@ impl ReportComment {
                         iteration: _,
                         public_url,
                         console_url,
+                        public_threshold_url,
+                        console_threshold_url,
                         limit,
                     } = alert;
 
                     (
                         Some(if self.public_links {
-                            public_url
+                            (public_url, public_threshold_url)
                         } else {
-                            console_url
+                            (console_url, console_threshold_url)
                         }),
                         Some(*limit),
                     )
@@ -493,14 +510,15 @@ impl ReportComment {
                     (None, None)
                 };
 
-                let row = if let Some(alert_url) = alert_url {
+                let utm = self.utm_query();
+                let row = if let Some((alert_url, threshold_url)) = alert_url {
                     format!(
-                        r#"❌ <a href="{plot_url}">view plot</a><br/>🚨 <a href="{alert_url}">view alert</a>"#,
+                        r#"📈 <a href="{plot_url}&{utm}">view plot</a><br/>🚨 <a href="{alert_url}?{utm}">view alert</a><br/>🚷 <a href="{threshold_url}?{utm}">view threshold</a>"#,
                     )
                 } else if boundary.is_some() {
-                    format!(r#"✅ <a href="{plot_url}">view plot</a>"#)
+                    format!(r#"✅ <a href="{plot_url}&{utm}">view plot</a>"#)
                 } else {
-                    format!(r#"➖ <a href="{plot_url}">view plot</a>"#)
+                    format!(r#"➖ <a href="{plot_url}&{utm}">view plot</a>"#)
                 };
                 html.push_str(&format!(r#"<td>{row}</td>"#));
 
@@ -897,6 +915,8 @@ pub struct AlertData {
     pub iteration: usize,
     pub public_url: Url,
     pub console_url: Url,
+    pub public_threshold_url: Url,
+    pub console_threshold_url: Url,
     pub limit: BoundaryLimit,
 }
 
@@ -915,6 +935,16 @@ impl AlertUrls {
                 slug: alert.threshold.measure.slug.clone(),
                 units: alert.threshold.measure.units.clone(),
             };
+            let public_threshold_url = Self::to_public_threshold_url(
+                console_url.clone(),
+                &json_report.project.slug,
+                alert.threshold.uuid,
+            );
+            let console_threshold_url = Self::to_console_threshold_url(
+                console_url.clone(),
+                &json_report.project.slug,
+                alert.threshold.uuid,
+            );
             let public_url =
                 Self::to_public_url(console_url.clone(), &json_report.project.slug, alert.uuid);
             let console_url =
@@ -923,6 +953,8 @@ impl AlertUrls {
                 iteration,
                 public_url,
                 console_url,
+                public_threshold_url,
+                console_threshold_url,
                 limit: alert.limit,
             };
             urls.insert((iteration, benchmark, measure), data);
@@ -938,6 +970,26 @@ impl AlertUrls {
 
     fn to_console_url(mut console_url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
         console_url.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
+        console_url
+    }
+
+    fn to_public_threshold_url(
+        mut console_url: Url,
+        project_slug: &Slug,
+        threshold: ThresholdUuid,
+    ) -> Url {
+        console_url.set_path(&format!("/perf/{project_slug}/thresholds/{threshold}"));
+        console_url
+    }
+
+    fn to_console_threshold_url(
+        mut console_url: Url,
+        project_slug: &Slug,
+        threshold: ThresholdUuid,
+    ) -> Url {
+        console_url.set_path(&format!(
+            "/console/projects/{project_slug}/thresholds/{threshold}"
+        ));
         console_url
     }
 }
