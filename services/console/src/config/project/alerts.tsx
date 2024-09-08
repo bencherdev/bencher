@@ -108,7 +108,7 @@ const alertsConfig = {
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Metric",
-					keys: ["benchmark", "metric", "value"],
+					keys: ["metric", "value"],
 					display: Display.RAW,
 				},
 				{
@@ -120,19 +120,19 @@ const alertsConfig = {
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Boundary Baseline",
-					keys: ["benchmark", "boundary", "baseline"],
+					keys: ["boundary", "baseline"],
 					display: Display.RAW,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Lower Boundary Limit",
-					keys: ["benchmark", "boundary", "lower_limit"],
+					keys: ["boundary", "lower_limit"],
 					display: Display.RAW,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Upper Boundary Limit",
-					keys: ["benchmark", "boundary", "upper_limit"],
+					keys: ["boundary", "upper_limit"],
 					display: Display.RAW,
 				},
 				{

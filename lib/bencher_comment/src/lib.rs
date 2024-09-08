@@ -229,7 +229,6 @@ impl ReportComment {
     fn html_alerts(&self, html: &mut String) {
         let alerts_len = self.alert_urls.0.len();
         if alerts_len > 0 {
-            html.push_str("<br/>");
             let (alert, limit) = if alerts_len == 1 {
                 ("ALERT", "Limit")
             } else {
@@ -239,7 +238,6 @@ impl ReportComment {
                 "<blockquote><b>🚨 {alerts_len} {alert}:</b> Threshold Boundary {limit} exceeded!</blockquote>",
             ));
             self.html_alerts_table(html);
-            html.push_str("<br/>");
         }
     }
 
