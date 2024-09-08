@@ -591,11 +591,7 @@ impl ReportComment {
             let bold = matches!(limit, Some(BoundaryLimit::Upper));
             html.push_str(&format!(
                 "<td>{}{} ({}%){}</td>",
-                if bold {
-                    "<b style=\"color: red;\">"
-                } else {
-                    ""
-                },
+                if bold { "<b>" } else { "" },
                 format_number(upper_limit),
                 format_number(limit_percent),
                 if bold { "</b>" } else { "" },
