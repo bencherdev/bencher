@@ -1,6 +1,8 @@
 import type { Params } from "astro";
 import type { JsonReport } from "../../../../../types/bencher";
-import { createMemo, type Resource } from "solid-js";
+import { createMemo, For, Show, type Resource } from "solid-js";
+import { resourcePath } from "../../../../../config/util";
+import { BACK_PARAM, encodePath } from "../../../../../util/url";
 
 export interface Props {
 	isConsole?: boolean;
@@ -10,95 +12,131 @@ export interface Props {
 }
 
 const TableCard = (props: Props) => {
+	const multipleIterations = createMemo(
+		() => (props.value()?.results?.length ?? 0) > 1,
+	);
 	return (
 		<div class="columns is-centered" style="margin-top: 2rem">
-			<div class="column is-two-thirds">
-				<div class="table-container">
-					<table class="table is-bordered is-fullwidth">
-						<thead>
-							<tr>
-								<th>Benchmark</th>
-								<th>Latency</th>
-								<th>
-									Latency Results
-									<br />
-									nanoseconds (ns) | (Δ%)
-								</th>
-								<th>
-									Latency Upper Boundary
-									<br />
-									nanoseconds (ns) | (%)
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr>
-								<td>Adapter::Json</td>
-								<td>
-									🚨 (
-									<a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">
-										view plot
-									</a>{" "}
-									|{" "}
-									<a href="https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5">
-										view alert
-									</a>
-									)
-								</td>
-								<td>3445.600 (+1.52%)</td>
-								<td>3362.079 (102.48%)</td>
-							</tr>
-							<tr>
-								<td>Adapter::Magic (JSON)</td>
-								<td>
-									✅ (
-									<a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3bfd5887-83ec-4e62-8690-02855a38fbc9&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">
-										view plot
-									</a>
-									)
-								</td>
-								<td>3431.400 (+0.69%)</td>
-								<td>3596.950 (95.40%)</td>
-							</tr>
-							<tr>
-								<td>Adapter::Magic (Rust)</td>
-								<td>
-									✅ (
-									<a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">
-										view plot
-									</a>
-									)
-								</td>
-								<td>22095.000 (-0.83%)</td>
-								<td>24732.801 (89.33%)</td>
-							</tr>
-							<tr>
-								<td>Adapter::Rust</td>
-								<td>
-									✅ (
-									<a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=5655ed2a-3e45-4622-bdbd-39cdd9837af8&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">
-										view plot
-									</a>
-									)
-								</td>
-								<td>2305.700 (-2.76%)</td>
-								<td>2500.499 (92.21%)</td>
-							</tr>
-							<tr>
-								<td>Adapter::RustBench</td>
-								<td>
-									✅ (
-									<a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">
-										view plot
-									</a>
-									)
-								</td>
-								<td>2299.900 (-3.11%)</td>
-								<td>2503.419 (91.87%)</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
+			<div class="column is-11">
+				<Show when={(props.value()?.alerts?.length ?? 0) > 0}>
+					<h3 class="title is-3">
+						🚨 {props.value()?.alerts?.length} Alert
+						{props.value()?.alerts?.length === 1 ? "" : "s"}
+					</h3>
+					<div class="table-container">
+						<table class="table is-bordered is-fullwidth">
+							<thead>
+								<tr>
+									<th>Benchmark</th>
+									<th>Measure (units)</th>
+									{multipleIterations() && <th>Iteration</th>}
+									<th>View</th>
+									<th>Value</th>
+									<th>Lower Boundary</th>
+									<th>Upper Boundary</th>
+								</tr>
+							</thead>
+							<tbody>
+								<For each={props.value()?.alerts}>
+									{(alert) => (
+										<tr>
+											<td>
+												<a
+													href={`${resourcePath(props.isConsole)}/${
+														props.params?.project
+													}/benchmarks/${
+														alert?.benchmark?.slug
+													}?${BACK_PARAM}=${encodePath()}`}
+												>
+													{alert?.benchmark?.name}
+												</a>
+											</td>
+											<td>
+												<a
+													href={`${resourcePath(props.isConsole)}/${
+														props.params?.project
+													}/measures/${
+														alert?.threshold?.measure?.slug
+													}?${BACK_PARAM}=${encodePath()}`}
+												>
+													{alert?.threshold?.measure?.name}
+												</a>
+											</td>
+											{multipleIterations() && <td>{alert?.iteration}</td>}
+											<td>
+												📈 <a>plot</a>
+												<br />🚨 <a>alert</a>
+												<br />🚷 <a>threshold</a>
+											</td>
+											<td>
+												{alert?.metric?.value} (
+												{alert?.metric?.value > 0 &&
+												alert?.boundary?.baseline > 0
+													? ((alert?.metric?.value -
+															alert?.boundary?.baseline) /
+															alert?.boundary?.baseline) *
+														100
+													: 0.0}
+												)
+											</td>
+											<td>{alert?.boundary?.lower_limit}</td>
+											<td>{alert?.boundary?.upper_limit}</td>
+										</tr>
+									)}
+								</For>
+							</tbody>
+						</table>
+					</div>
+					<hr />
+				</Show>
+				<For each={props.value()?.results}>
+					{(iteration) => (
+						<div class="table-container">
+							<table class="table is-bordered is-fullwidth">
+								<thead>
+									<tr>
+										<th>Benchmark</th>
+										<th>Latency (ns)</th>
+										<th>
+											Latency Results
+											<br />
+											nanoseconds (ns) | (Δ%)
+										</th>
+										<th>
+											Latency Upper Boundary
+											<br />
+											nanoseconds (ns) | (%)
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									<For each={iteration}>
+										{(result) => (
+											<tr>
+												<td>
+													<a
+														href={`${resourcePath(props.isConsole)}/${
+															props.params?.project
+														}/benchmarks/${
+															result?.benchmark?.slug
+														}?${BACK_PARAM}=${encodePath()}`}
+													>
+														{result?.benchmark?.name}
+													</a>
+												</td>
+												<For each={result?.measures}>
+													{(report_measure) => (
+														<td>{report_measure?.metric?.value}</td>
+													)}
+												</For>
+											</tr>
+										)}
+									</For>
+								</tbody>
+							</table>
+						</div>
+					)}
+				</For>
 			</div>
 		</div>
 	);
