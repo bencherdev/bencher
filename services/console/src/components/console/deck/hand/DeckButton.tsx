@@ -5,12 +5,15 @@ import {
 	Match,
 	createResource,
 	createMemo,
+	Show,
 } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import { ActionButton } from "../../../../config/types";
 import DeleteButton from "./DeleteButton";
 import type { Params } from "astro";
 import ArchiveButton from "./ArchiveButton";
+import { fmtDate } from "../../../../util/convert";
+import { BACK_PARAM, encodePath, pathname } from "../../../../util/url";
 
 export interface Props {
 	apiUrl: string;
@@ -100,6 +103,39 @@ const DeckButton = (props: Props) => {
 						</form>
 					</div>
 				</div>
+			</Match>
+			<Match when={props.config?.kind === ActionButton.REPLACED}>
+				<Show when={props?.data()?.model?.replaced}>
+					<div class="columns">
+						<div class="column">
+							<div class="notification is-warning">
+								<div class="columns is-vcentered">
+									<div class="column">
+										<p>
+											This Threshold model was replaced on{" "}
+											{fmtDate(props?.data()?.model?.replaced)}
+										</p>
+									</div>
+									<div class="column is-narrow">
+										<a
+											class="button is-small"
+											href={`${props.config?.path?.(
+												pathname(),
+												props.params,
+											)}?${BACK_PARAM}=${encodePath()}`}
+										>
+											<span class="fa-stack fa-2x" style="font-size: 1.0em;">
+												<i class="fas fa-walking fa-stack-1x" />
+												<i class="fas fa-ban fa-stack-2x" />
+											</span>
+											<span> View current Threshold</span>
+										</a>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</Show>
 			</Match>
 		</Switch>
 	);

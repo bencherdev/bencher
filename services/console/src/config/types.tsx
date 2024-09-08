@@ -113,6 +113,7 @@ export enum Button {
 export enum ActionButton {
 	DELETE = "delete",
 	ARCHIVE = "archive",
+	REPLACED = "replaced",
 }
 
 export enum Row {
