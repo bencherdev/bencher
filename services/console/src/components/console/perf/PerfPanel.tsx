@@ -716,7 +716,8 @@ const PerfPanel = (props: Props) => {
 			tab() === DEFAULT_PERF_TAB
 		) {
 			const first_measure =
-				first_report?.results?.[first]?.[first]?.measure?.uuid;
+				first_report?.results?.[first]?.[first]?.measures?.[first]?.measure
+					?.uuid;
 			handleReportChecked(first, first_measure, true);
 		}
 	});
@@ -820,9 +821,9 @@ const PerfPanel = (props: Props) => {
 			return;
 		}
 		const report = reports_tab?.[index]?.resource;
-		const benchmarks = report?.results?.[0]
-			?.find((result) => result.measure?.uuid === measure_uuid)
-			?.benchmarks?.map((benchmark) => benchmark.uuid);
+		const benchmarks = report?.results?.[0]?.map(
+			(iteration) => iteration?.benchmark?.uuid,
+		);
 		const start_time = dateTimeMillis(report?.start_time);
 		setSearchParams(
 			{
