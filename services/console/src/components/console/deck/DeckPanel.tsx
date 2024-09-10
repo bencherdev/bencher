@@ -106,6 +106,7 @@ const DeckPanel = (props: Props) => {
 					<div class="columns is-mobile">
 						<div class="column">
 							<Deck
+								isConsole={true}
 								apiUrl={props.apiUrl}
 								params={props.params}
 								user={user}

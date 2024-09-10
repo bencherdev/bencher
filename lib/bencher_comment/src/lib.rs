@@ -7,6 +7,7 @@ use bencher_json::{
     project::{
         boundary::BoundaryLimit,
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
+        threshold::JsonThresholdModel,
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
     JsonReport, MeasureUuid, ModelUuid, ResourceName, Slug, TestbedUuid, ThresholdUuid,
@@ -416,24 +417,28 @@ impl ReportComment {
         measure: &Measure,
         boundary_limits: BoundaryLimits,
     ) {
-        let name = &measure.name;
         let units = &measure.units;
 
         // If there is a boundary limit then we will show the percentage difference
         if boundary_limits.lower || boundary_limits.upper {
-            html.push_str(&format!("<th>{name} Results<br/>{units} | (Δ%)</th>",));
+            html.push_str(&format!("<th>{units}<br/>(Result Δ%)</th>",));
         } else {
-            html.push_str(&format!("<th>{name} Results<br/>{units}</th>",));
+            html.push_str(&format!("<th>{units}</th>",));
         }
 
         if boundary_limits.lower {
-            html.push_str(&format!("<th>{name} Lower Boundary<br/>{units} | (%)</th>"));
+            html.push_str(&format!(
+                "<th>Lower Boundary<br/>{units}<br/>(Limit %)</th>"
+            ));
         }
         if boundary_limits.upper {
-            html.push_str(&format!("<th>{name} Upper Boundary<br/>{units} | (%)</th>"));
+            html.push_str(&format!(
+                "<th>Upper Boundary<br/>{units}<br/>(Limit %)</th>"
+            ));
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn html_benchmarks_table_body(
         &self,
         html: &mut String,
@@ -468,11 +473,12 @@ impl ReportComment {
                     public_url,
                     console_url,
                     value,
+                    threshold,
                     boundary,
                 },
             ) in measure_map
             {
-                if require_threshold && boundary.is_none() {
+                if require_threshold && threshold.is_none() {
                     continue;
                 }
 
@@ -511,16 +517,40 @@ impl ReportComment {
                 };
 
                 let utm = self.utm_query();
+                html.push_str("<td>");
+                html.push_str(&format!(r#"📈 <a href="{plot_url}&{utm}">view plot</a>"#));
                 let row = if let Some((alert_url, threshold_url)) = alert_url {
                     format!(
-                        r#"📈 <a href="{plot_url}&{utm}">view plot</a><br/>🚨 <a href="{alert_url}?{utm}">view alert</a><br/>🚷 <a href="{threshold_url}&{utm}">view threshold</a>"#,
+                        r#"<br/>🚨 <a href="{alert_url}?{utm}">view alert</a><br/>🚷 <a href="{threshold_url}&{utm}">view threshold</a>"#,
                     )
-                } else if boundary.is_some() {
-                    format!(r#"✅ <a href="{plot_url}&{utm}">view plot</a>"#)
+                } else if let Some(threshold) = threshold {
+                    let url = self.console_url.clone();
+                    let threshold_url = if self.public_links {
+                        let path = format!(
+                            "/perf/{project}/thresholds/{threshold}?model={model}&{utm}",
+                            project = self.project_slug,
+                            threshold = threshold.uuid,
+                            model = threshold.model.uuid,
+                            utm = self.utm_query(),
+                        );
+                        url.join(&path)
+                    } else {
+                        let path = format!(
+                            "/console/projects/{project}/thresholds/{threshold}?model={model}&{utm}",
+                            project = self.project_slug,
+                            threshold = threshold.uuid,
+                            model = threshold.model.uuid,
+                            utm = self.utm_query(),
+                        );
+                        url.join(&path)
+                    }
+                    .unwrap_or(url);
+                    format!(r#"<br/>🚷 <a href="{threshold_url}?{utm}">view threshold</a>"#)
                 } else {
-                    format!(r#"➖ <a href="{plot_url}&{utm}">view plot</a>"#)
+                    "<br/>⚠️ NO THRESHOLD".to_owned()
                 };
-                html.push_str(&format!(r#"<td>{row}</td>"#));
+                html.push_str(&row);
+                html.push_str("</td>");
 
                 Self::html_metric_boundary_cells(html, *value, *boundary, limit, false);
             }
@@ -684,6 +714,7 @@ pub struct MeasureData {
     pub public_url: Url,
     pub console_url: Url,
     pub value: f64,
+    pub threshold: Option<JsonThresholdModel>,
     pub boundary: Option<Boundary>,
 }
 
@@ -729,6 +760,7 @@ impl BenchmarkUrls {
                             boundary,
                         ),
                         value: report_measure.metric.value.into(),
+                        threshold: report_measure.threshold.clone(),
                         boundary,
                     };
                     measure_map.insert(measure, data);
@@ -877,17 +909,25 @@ impl BoundaryLimits {
     fn for_iteration(
         benchmark_map: &BenchmarkMap,
         require_threshold: bool,
-    ) -> BTreeMap<Measure, BoundaryLimits> {
+    ) -> BTreeMap<Measure, Self> {
         let mut measures = BTreeMap::new();
         for measure_map in benchmark_map.values() {
-            for (measure, MeasureData { boundary, .. }) in measure_map {
-                if require_threshold && boundary.is_none() {
+            for (
+                measure,
+                MeasureData {
+                    threshold,
+                    boundary,
+                    ..
+                },
+            ) in measure_map
+            {
+                if require_threshold && threshold.is_none() {
                     continue;
                 }
-                let boundary_limits = boundary.map(BoundaryLimits::from).unwrap_or_default();
+                let boundary_limits = boundary.map(Self::from).unwrap_or_default();
                 measures
                     .entry(measure.clone())
-                    .and_modify(|bl: &mut BoundaryLimits| {
+                    .and_modify(|bl: &mut Self| {
                         *bl = bl.union(boundary_limits);
                     })
                     .or_insert(boundary_limits);

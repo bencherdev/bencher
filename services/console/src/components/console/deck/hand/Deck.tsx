@@ -45,7 +45,7 @@ const Deck = (props: Props) => {
 			<For each={props.config?.cards}>
 				{(card) => (
 					<DeckCard
-						isConsole={props.isConsole}
+						isConsole={props.isConsole === true}
 						apiUrl={props.apiUrl}
 						params={props.params}
 						user={props.user}

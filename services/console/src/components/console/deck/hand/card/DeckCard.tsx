@@ -8,7 +8,7 @@ import type { Params } from "astro";
 import TableCard from "./TableCard";
 
 export interface Props {
-	isConsole?: boolean;
+	isConsole: boolean;
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
