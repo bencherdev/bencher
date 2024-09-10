@@ -1,9 +1,15 @@
 import type { Params } from "astro";
-import type { JsonReport } from "../../../../../types/bencher";
+import {
+	BoundaryLimit,
+	type JsonAlert,
+	type JsonReport,
+	type JsonThreshold,
+} from "../../../../../types/bencher";
 import { createMemo, For, Show, type Resource } from "solid-js";
 import { resourcePath } from "../../../../../config/util";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { format } from "d3";
+import { dateTimeMillis } from "../../../../../util/convert";
 
 export interface Props {
 	isConsole?: boolean;
@@ -28,9 +34,9 @@ const TableCard = (props: Props) => {
 						<table class="table is-bordered is-fullwidth">
 							<thead>
 								<tr>
+									{multipleIterations() && <th>Iteration</th>}
 									<th>Benchmark</th>
 									<th>Measure (units)</th>
-									{multipleIterations() && <th>Iteration</th>}
 									<th>View</th>
 									<th>Value</th>
 									<th>Lower Boundary</th>
@@ -63,6 +69,7 @@ const TableCard = (props: Props) => {
 
 										return (
 											<tr>
+												{multipleIterations() && <td>{alert?.iteration}</td>}
 												<td>
 													<a
 														href={`${resourcePath(props.isConsole)}/${
@@ -85,11 +92,37 @@ const TableCard = (props: Props) => {
 														{alert?.threshold?.measure?.name}
 													</a>
 												</td>
-												{multipleIterations() && <td>{alert?.iteration}</td>}
 												<td>
-													📈 <a>plot</a>
-													<br />🚨 <a>alert</a>
-													<br />🚷 <a>threshold</a>
+													📈{" "}
+													<a
+														href={alertPerfUrl(
+															props.isConsole,
+															props.params?.project,
+															alert,
+														)}
+													>
+														plot
+													</a>
+													<br />🚨{" "}
+													<a
+														href={alertUrl(
+															props.isConsole,
+															props.params?.project,
+															alert,
+														)}
+													>
+														alert
+													</a>
+													<br />🚷{" "}
+													<a
+														href={thresholdUrl(
+															props.isConsole,
+															props.params?.project,
+															alert?.threshold,
+														)}
+													>
+														threshold
+													</a>
 												</td>
 												<td>
 													<b>
@@ -99,24 +132,34 @@ const TableCard = (props: Props) => {
 													</b>
 												</td>
 												<td>
-													{lowerLimit === undefined || lowerLimit === null ? (
-														""
-													) : (
-														<b>{`${formatNumber(lowerLimit)} (${formatNumber(
-															lowerLimitPercentage,
-														)}%)`}</b>
-													)}
+													{lowerLimit === undefined || lowerLimit === null
+														? ""
+														: (() => {
+																const lower = `${
+																	alert?.limit === BoundaryLimit.Lower
+																}${formatNumber(lowerLimit)} (${formatNumber(
+																	lowerLimitPercentage,
+																)}%)`;
+																return alert?.limit === BoundaryLimit.Lower ? (
+																	<b>{lower}</b>
+																) : (
+																	lower
+																);
+															})()}
 												</td>
 												<td>
-													{upperLimit === undefined || upperLimit === null ? (
-														""
-													) : (
-														<b>
-															{`${formatNumber(upperLimit)} (${formatNumber(
-																upperLimitPercentage,
-															)}%)`}
-														</b>
-													)}
+													{upperLimit === undefined || upperLimit === null
+														? ""
+														: (() => {
+																const upper = `${formatNumber(
+																	upperLimit,
+																)} (${formatNumber(upperLimitPercentage)}%)`;
+																return alert?.limit === BoundaryLimit.Upper ? (
+																	<b>{upper}</b>
+																) : (
+																	upper
+																);
+															})()}
 												</td>
 											</tr>
 										);
@@ -180,6 +223,57 @@ const TableCard = (props: Props) => {
 	);
 };
 
+// 30 days
+const DEFAULT_ALERT_HISTORY = 30 * 24 * 60 * 60 * 1000;
+
+export const alertPerfUrl = (
+	isConsole: undefined | boolean,
+	project: undefined | string,
+	alert: JsonAlert,
+) => {
+	const start_time = dateTimeMillis(alert?.created);
+	const perfQuery = {
+		branches: alert?.threshold?.branch?.uuid,
+		testbeds: alert?.threshold?.testbed?.uuid,
+		benchmarks: alert?.benchmark?.uuid,
+		measures: alert?.threshold?.measure?.uuid,
+		lower_boundary: alert?.limit === BoundaryLimit.Lower,
+		upper_boundary: alert?.limit === BoundaryLimit.Upper,
+		start_time: start_time ? start_time - DEFAULT_ALERT_HISTORY : null,
+		end_time: dateTimeMillis(alert?.modified),
+	};
+
+	const searchParams = new URLSearchParams();
+	for (const [key, value] of Object.entries(perfQuery)) {
+		if (value) {
+			searchParams.set(key, value.toString());
+		}
+	}
+	return `${
+		isConsole ? `/console/projects/${project}/perf` : `/perf/${project}`
+	}?${searchParams.toString()}`;
+};
+
+const alertUrl = (
+	isConsole: undefined | boolean,
+	project: undefined | string,
+	alert: JsonReport,
+) => {
+	return `${resourcePath(isConsole)}/${project}/alerts/${
+		alert?.uuid
+	}?${BACK_PARAM}=${encodePath()}`;
+};
+
+const thresholdUrl = (
+	isConsole: undefined | boolean,
+	project: undefined | string,
+	threshold: JsonThreshold,
+) => {
+	return `${resourcePath(isConsole)}/${project}/thresholds/${
+		threshold?.uuid
+	}?model=${threshold?.model?.uuid}&${BACK_PARAM}=${encodePath()}`;
+};
+
 // biome-ignore lint/style/useEnumInitializers: variants
 enum Position {
 	Whole,
@@ -200,7 +294,7 @@ const formatNumber = (number: number): string => {
 					(formattedNumber.length - 1 - i) % 3 === 0 &&
 					i !== formattedNumber.length - 1
 				) {
-					numberStr = "," + numberStr;
+					numberStr = `,${numberStr}`;
 				}
 				position = Position.Whole;
 				break;
@@ -217,7 +311,7 @@ const formatNumber = (number: number): string => {
 	}
 
 	if (number < 0) {
-		numberStr = "-" + numberStr;
+		numberStr = `-${numberStr}`;
 	}
 
 	return numberStr;

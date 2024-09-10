@@ -245,7 +245,7 @@ impl ReportComment {
         html.push_str("<table>");
 
         let multiple_iterations = self.json_report.results.len() > 1;
-        html.push_str(&format!("<thead><tr><th>Benchmark</th><th>Measure (units)</th>{iteration}<th>View</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>", iteration = if multiple_iterations {
+        html.push_str(&format!("<thead><tr>{iteration}<th>Benchmark</th><th>Measure (units)</th><th>View</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>", iteration = if multiple_iterations {
             "<th>Iteration</th>"
         } else {
             ""
@@ -267,6 +267,10 @@ impl ReportComment {
             };
 
             html.push_str("<tr>");
+
+            if multiple_iterations {
+                html.push_str(&format!("<td>{iteration}</td>"));
+            }
 
             // Benchmark
             let url = self.console_url.clone();
@@ -302,10 +306,6 @@ impl ReportComment {
                 name = measure.name,
                 units = measure.units,
             ));
-
-            if multiple_iterations {
-                html.push_str(&format!("<td>{iteration}</td>"));
-            }
 
             html.push_str("<td>");
             // Plot

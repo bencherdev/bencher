@@ -11,7 +11,7 @@
 "MeasureUuid" = "Uuid"
 "MetricUuid" = "Uuid"
 "ThresholdUuid" = "Uuid"
-"StatisticUuid" = "Uuid"
+"ModelUuid" = "Uuid"
 "AlertUuid" = "Uuid"
 "UserUuid" = "Uuid"
 "TokenUuid" = "Uuid"

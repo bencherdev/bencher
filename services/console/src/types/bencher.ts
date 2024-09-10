@@ -73,7 +73,7 @@ export type Window = number;
 export type Boundary = number;
 
 export interface JsonModel {
-	uuid: ModelUuid;
+	uuid: Uuid;
 	threshold: Uuid;
 	test: ModelTest;
 	min_sample_size?: SampleSize;
