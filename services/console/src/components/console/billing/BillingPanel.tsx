@@ -184,6 +184,12 @@ const BillingPanelSwitch = (props: {
 	);
 };
 
+const manageSubscription = (
+	<a href="https://billing.stripe.com/p/login/5kAbJU83ieF8dTG5kk">
+		Click here to manage your subscription.
+	</a>
+);
+
 const CloudMeteredPanel = (props: {
 	usage: Resource<null | JsonUsage>;
 }) => {
@@ -207,10 +213,7 @@ const CloudMeteredPanel = (props: {
 			<br />
 			<PaymentMethod usage={props.usage} />
 			<br />
-			<p>
-				To update or cancel your subscription please email{" "}
-				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
-			</p>
+			{manageSubscription}
 		</div>
 	);
 };
@@ -242,10 +245,7 @@ const CloudLicensedPanel = (props: {
 			<br />
 			<PaymentMethod usage={props.usage} />
 			<br />
-			<p>
-				To update or cancel your subscription please email{" "}
-				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
-			</p>
+			{manageSubscription}
 		</div>
 	);
 };
@@ -322,10 +322,7 @@ const CloudSelfHostedLicensedPanel = (props: {
 			<br />
 			<PaymentMethod usage={props.usage} />
 			<br />
-			<p>
-				To update or cancel your subscription please email{" "}
-				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
-			</p>
+			{manageSubscription}
 		</div>
 	);
 };
@@ -519,10 +516,7 @@ const SelfHostedLicensedPanel = (props: {
 				</a>
 			</h4>
 			<br />
-			<p>
-				To update or cancel your subscription please email{" "}
-				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
-			</p>
+			{manageSubscription}
 		</div>
 	);
 };
