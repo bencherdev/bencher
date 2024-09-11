@@ -137,8 +137,8 @@ async fn get_report_results(
         .left_join(schema::model::table)
     )
     // It is important to order by the iteration first in order to make sure they are grouped together below
-    // Then ordering by measure and finally benchmark name makes sure that the benchmarks are in the same order for each iteration
-    .order((schema::report_benchmark::iteration, schema::measure::name, schema::benchmark::name))
+    // Then ordering by benchmark and finally measure name makes sure that the benchmarks are in the same order for each iteration
+    .order((schema::report_benchmark::iteration, schema::benchmark::name, schema::measure::name))
     .select((
         schema::report_benchmark::iteration,
         QueryBenchmark::as_select(),
