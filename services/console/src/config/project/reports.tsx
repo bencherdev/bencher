@@ -107,7 +107,7 @@ const reportsConfig = {
 					display: Display.ADAPTER,
 				},
 				{
-					kind: Card.TABLE,
+					kind: Card.REPORT,
 				},
 			],
 			buttons: [

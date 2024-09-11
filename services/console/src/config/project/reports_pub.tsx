@@ -55,6 +55,9 @@ const reportsPubConfig = {
 				key: "adapter",
 				display: Display.ADAPTER,
 			},
+			{
+				kind: Card.REPORT,
+			},
 		],
 	},
 };

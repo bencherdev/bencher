@@ -1,7 +1,7 @@
 import type { Params } from "astro";
 import { createMemo, type Resource } from "solid-js";
 import type { JsonAlert } from "../../../../types/bencher";
-import { alertPerfUrl } from "../hand/card/TableCard";
+import { alertPerfUrl } from "../hand/card/ReportCard";
 
 export interface Props {
 	isConsole: boolean;

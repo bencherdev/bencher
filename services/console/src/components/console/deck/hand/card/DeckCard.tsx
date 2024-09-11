@@ -5,7 +5,7 @@ import { Card } from "../../../../../config/types";
 import { fmtNestedValue } from "../../../../../util/resource";
 import type CardConfig from "./CardConfig";
 import type { Params } from "astro";
-import TableCard from "./TableCard";
+import ReportCard from "./ReportCard";
 
 export interface Props {
 	isConsole: boolean;
@@ -49,8 +49,8 @@ const DeckCard = (props: Props) => {
 						handleLoopback={props.handleLoopback}
 					/>
 				</Match>
-				<Match when={props.card?.kind === Card.TABLE}>
-					<TableCard
+				<Match when={props.card?.kind === Card.REPORT}>
+					<ReportCard
 						isConsole={props.isConsole}
 						apiUrl={props.apiUrl}
 						params={props.params}

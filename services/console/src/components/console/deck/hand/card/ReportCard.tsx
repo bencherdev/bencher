@@ -22,7 +22,7 @@ export interface Props {
 	value: Resource<JsonReport>;
 }
 
-const TableCard = (props: Props) => {
+const ReportCard = (props: Props) => {
 	const multipleIterations = createMemo(
 		() => (props.value()?.results?.length ?? 0) > 1,
 	);
@@ -606,4 +606,4 @@ const formatNumber = (number: number): string => {
 	return numberStr;
 };
 
-export default TableCard;
+export default ReportCard;
