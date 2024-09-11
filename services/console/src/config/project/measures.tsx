@@ -202,6 +202,9 @@ const measuresConfig = {
 			],
 			buttons: [
 				{
+					kind: ActionButton.RAW,
+				},
+				{
 					kind: ActionButton.DELETE,
 					subtitle:
 						"⚠️ All Reports and Thresholds that use this Measure must be deleted first! ⚠️",

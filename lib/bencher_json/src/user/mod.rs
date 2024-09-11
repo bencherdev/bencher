@@ -28,6 +28,15 @@ pub struct JsonUser {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPubUser {
+    pub uuid: UserUuid,
+    pub name: UserName,
+    pub slug: Slug,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateUser {
     /// The new name of the user.
     /// Maximum length is 64 characters.

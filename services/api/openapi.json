@@ -10345,6 +10345,25 @@
           "$ref": "#/components/schemas/JsonProject"
         }
       },
+      "JsonPubUser": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/UserName"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/UserUuid"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "uuid"
+        ]
+      },
       "JsonReplica": {
         "oneOf": [
           {
@@ -10641,7 +10660,7 @@
             "$ref": "#/components/schemas/JsonTestbed"
           },
           "user": {
-            "$ref": "#/components/schemas/JsonUser"
+            "$ref": "#/components/schemas/JsonPubUser"
           },
           "uuid": {
             "$ref": "#/components/schemas/ReportUuid"

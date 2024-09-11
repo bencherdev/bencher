@@ -26,6 +26,7 @@ import { fmtValues } from "../../util/resource";
 import type CardConfig from "../console/deck/hand/card/CardConfig";
 import { fmtDate } from "../../util/convert";
 import type { PubResourceKind } from "./util";
+import RawButton from "../console/deck/hand/RawButton";
 
 export interface Props {
 	apiUrl: string;
@@ -221,6 +222,22 @@ const PublicDeck = (props: Props) => {
 							handleRefresh={refetch}
 							handleLoopback={setLoopback}
 						/>
+					</div>
+				</div>
+
+				<div class="columns">
+					<div class="column">
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+							}}
+						>
+							<div class="field">
+								<p class="control">
+									<RawButton data={data} />
+								</p>
+							</div>
+						</form>
 					</div>
 				</div>
 			</div>

@@ -1,6 +1,6 @@
 use bencher_json::{
-    organization::member::OrganizationRole, DateTime, Email, JsonSignup, JsonUpdateUser, JsonUser,
-    Jwt, Sanitize, Slug, UserName, UserUuid,
+    organization::member::OrganizationRole, DateTime, Email, JsonPubUser, JsonSignup,
+    JsonUpdateUser, JsonUser, Jwt, Sanitize, Slug, UserName, UserUuid,
 };
 use bencher_token::TokenKey;
 use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -146,6 +146,13 @@ impl QueryUser {
             admin,
             locked,
         }
+    }
+
+    pub fn into_pub_json(self) -> JsonPubUser {
+        let Self {
+            uuid, name, slug, ..
+        } = self;
+        JsonPubUser { uuid, name, slug }
     }
 }
 

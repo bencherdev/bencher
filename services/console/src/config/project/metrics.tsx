@@ -1,5 +1,5 @@
 import type { Params } from "astro";
-import { Button, Card, Display, Operation } from "../types";
+import { ActionButton, Button, Card, Display, Operation } from "../types";
 import { parentPath } from "../util";
 
 const metricsConfig = {
@@ -94,6 +94,11 @@ const metricsConfig = {
 				},
 			],
 		},
+		buttons: [
+			{
+				kind: ActionButton.RAW,
+			},
+		],
 	},
 };
 

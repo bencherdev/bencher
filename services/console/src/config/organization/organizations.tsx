@@ -173,6 +173,9 @@ const organizationsConfig = {
 			],
 			buttons: [
 				{
+					kind: ActionButton.RAW,
+				},
+				{
 					kind: ActionButton.DELETE,
 					subtitle:
 						"⚠️ All data associated with this organization will be deleted! ⚠️",

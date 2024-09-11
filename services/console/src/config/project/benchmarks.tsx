@@ -161,6 +161,9 @@ const benchmarksConfig = {
 			],
 			buttons: [
 				{
+					kind: ActionButton.RAW,
+				},
+				{
 					kind: ActionButton.DELETE,
 					subtitle:
 						"⚠️ All Reports that use this Benchmark must be deleted first! ⚠️",

@@ -262,6 +262,9 @@ const thresholdsConfig = {
 			],
 			buttons: [
 				{
+					kind: ActionButton.RAW,
+				},
+				{
 					kind: ActionButton.DELETE,
 					subtitle:
 						"⚠️ All Reports that use this Threshold must be deleted first! ⚠️",

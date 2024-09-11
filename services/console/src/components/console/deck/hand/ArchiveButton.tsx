@@ -15,6 +15,7 @@ export interface Props {
 	redirect: (pathname: string, data: object) => string;
 	notify?: boolean;
 	effect?: undefined | (() => void);
+	isAllowed: Resource<boolean>;
 	handleRefresh: () => void;
 }
 
@@ -56,22 +57,24 @@ const ArchiveButton = (props: Props) => {
 		<Show
 			when={props.data()?.archived}
 			fallback={
-				<div class="buttons is-right">
-					<button
-						class="button is-small"
-						type="button"
-						disabled={archiving()}
-						onMouseDown={(e) => {
-							e.preventDefault();
-							sendArchive();
-						}}
-					>
-						<span class="icon">
-							<i class="fas fa-archive" />
-						</span>
-						<span>Archive</span>
-					</button>
-				</div>
+				<Show when={props.isAllowed()}>
+					<div class="buttons is-right">
+						<button
+							class="button is-small"
+							type="button"
+							disabled={archiving()}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								sendArchive();
+							}}
+						>
+							<span class="icon">
+								<i class="fas fa-archive" />
+							</span>
+							<span>Archive</span>
+						</button>
+					</div>
+				</Show>
 			}
 		>
 			<div class="notification is-warning">
@@ -82,22 +85,24 @@ const ArchiveButton = (props: Props) => {
 							{fmtDate(props.data()?.archived)}
 						</p>
 					</div>
-					<div class="column is-narrow">
-						<button
-							type="button"
-							class="button is-small"
-							disabled={archiving()}
-							onMouseDown={(e) => {
-								e.preventDefault();
-								sendArchive();
-							}}
-						>
-							<span class="icon">
-								<i class="fas fa-archive" />
-							</span>
-							<span>Unarchive</span>
-						</button>
-					</div>
+					<Show when={props.isAllowed()}>
+						<div class="column is-narrow">
+							<button
+								type="button"
+								class="button is-small"
+								disabled={archiving()}
+								onMouseDown={(e) => {
+									e.preventDefault();
+									sendArchive();
+								}}
+							>
+								<span class="icon">
+									<i class="fas fa-archive" />
+								</span>
+								<span>Unarchive</span>
+							</button>
+						</div>
+					</Show>
 				</div>
 			</div>
 		</Show>

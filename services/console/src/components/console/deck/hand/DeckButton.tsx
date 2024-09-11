@@ -12,6 +12,7 @@ import DeleteButton from "./DeleteButton";
 import type { Params } from "astro";
 import ArchiveButton from "./ArchiveButton";
 import ReplacedButton from "./ReplacedButton";
+import RawButton from "./RawButton";
 
 export interface Props {
 	apiUrl: string;
@@ -51,7 +52,7 @@ const DeckButton = (props: Props) => {
 
 	return (
 		<Switch>
-			<Match when={props.config?.kind === ActionButton.ARCHIVE && isAllowed()}>
+			<Match when={props.config?.kind === ActionButton.ARCHIVE}>
 				<div class="columns">
 					<div class="column">
 						<form
@@ -69,8 +70,29 @@ const DeckButton = (props: Props) => {
 										subtitle={props.config.subtitle}
 										redirect={props.config.path}
 										effect={props.config.effect}
+										isAllowed={isAllowed}
 										handleRefresh={props.handleRefresh}
 									/>
+								</p>
+							</div>
+						</form>
+					</div>
+				</div>
+			</Match>
+			<Match when={props.config?.kind === ActionButton.REPLACED}>
+				<ReplacedButton data={props.data} redirect={props.config.path} />
+			</Match>
+			<Match when={props.config?.kind === ActionButton.RAW}>
+				<div class="columns">
+					<div class="column">
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+							}}
+						>
+							<div class="field">
+								<p class="control">
+									<RawButton data={props.data} />
 								</p>
 							</div>
 						</form>
@@ -101,9 +123,6 @@ const DeckButton = (props: Props) => {
 						</form>
 					</div>
 				</div>
-			</Match>
-			<Match when={props.config?.kind === ActionButton.REPLACED}>
-				<ReplacedButton data={props.data} redirect={props.config.path} />
 			</Match>
 		</Switch>
 	);

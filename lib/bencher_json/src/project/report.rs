@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
-    JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonMetric, JsonProject, JsonTestbed,
-    JsonUser, NameId,
+    JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonMetric, JsonProject, JsonPubUser,
+    JsonTestbed, NameId,
 };
 
 use super::{
@@ -321,7 +321,7 @@ crate::from_vec!(JsonReports[JsonReport]);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
     pub uuid: ReportUuid,
-    pub user: JsonUser,
+    pub user: JsonPubUser,
     pub project: JsonProject,
     pub branch: JsonBranchVersion,
     pub testbed: JsonTestbed,

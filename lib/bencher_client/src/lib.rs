@@ -132,6 +132,7 @@ try_from_client!(
     JsonAlert,
     JsonUsers,
     JsonUser,
+    JsonPubUser,
     JsonTokens,
     JsonToken,
     JsonSignup,

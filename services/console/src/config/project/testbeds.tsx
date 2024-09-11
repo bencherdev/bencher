@@ -169,6 +169,9 @@ const testbedsConfig = {
 			],
 			buttons: [
 				{
+					kind: ActionButton.RAW,
+				},
+				{
 					kind: ActionButton.DELETE,
 					subtitle:
 						"⚠️ All Reports and Thresholds that use this Testbed must be deleted first! ⚠️",

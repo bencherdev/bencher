@@ -112,6 +112,9 @@ const reportsConfig = {
 			],
 			buttons: [
 				{
+					kind: ActionButton.RAW,
+				},
+				{
 					kind: ActionButton.DELETE,
 					subtitle: null,
 					path: parentPath,

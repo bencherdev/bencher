@@ -83,7 +83,7 @@ impl QueryReport {
         } = self;
 
         let query_project = QueryProject::get(conn_lock!(context), project_id)?;
-        let user = QueryUser::get(conn_lock!(context), user_id)?.into_json();
+        let user = QueryUser::get(conn_lock!(context), user_id)?.into_pub_json();
         let branch = QueryBranchVersion::get_json_for_project(
             context,
             &query_project,

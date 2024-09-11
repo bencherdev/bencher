@@ -544,13 +544,10 @@ export interface JsonPlot {
 	modified: string;
 }
 
-export interface JsonUser {
+export interface JsonPubUser {
 	uuid: Uuid;
 	name: UserName;
 	slug: Slug;
-	email: Email;
-	admin: boolean;
-	locked: boolean;
 }
 
 export enum Adapter {
@@ -584,7 +581,7 @@ export enum Adapter {
 
 export interface JsonReport {
 	uuid: Uuid;
-	user: JsonUser;
+	user: JsonPubUser;
 	project: JsonProject;
 	branch: JsonBranchVersion;
 	testbed: JsonTestbed;
@@ -628,6 +625,15 @@ export interface JsonAccept {
 
 export interface JsonAuthAck {
 	email: Email;
+}
+
+export interface JsonUser {
+	uuid: Uuid;
+	name: UserName;
+	slug: Slug;
+	email: Email;
+	admin: boolean;
+	locked: boolean;
 }
 
 export interface JsonAuthUser {

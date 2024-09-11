@@ -211,6 +211,9 @@ const MembersConfig = {
 			],
 			buttons: [
 				{
+					kind: ActionButton.RAW,
+				},
+				{
 					kind: ActionButton.DELETE,
 					subtitle:
 						"⚠️ Are you sure you want to remove this member from your organization? ⚠️",

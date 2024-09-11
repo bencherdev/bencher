@@ -236,6 +236,9 @@ const projectsConfig = {
 			],
 			buttons: [
 				{
+					kind: ActionButton.RAW,
+				},
+				{
 					kind: ActionButton.DELETE,
 					subtitle: null,
 					path: (_pathname: string, data: JsonProject) =>

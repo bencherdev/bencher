@@ -1,5 +1,5 @@
 import type { Params } from "astro";
-import { Button, Card, Display, Operation, Row } from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 import { isAllowedProjectEdit } from "../../util/auth";
 
@@ -176,6 +176,11 @@ const alertsConfig = {
 					label: "Window Size (seconds)",
 					keys: ["threshold", "model", "window"],
 					display: Display.RAW,
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.RAW,
 				},
 			],
 		},
