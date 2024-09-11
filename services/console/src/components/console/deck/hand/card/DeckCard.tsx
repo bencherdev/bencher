@@ -52,7 +52,6 @@ const DeckCard = (props: Props) => {
 				<Match when={props.card?.kind === Card.REPORT}>
 					<ReportCard
 						isConsole={props.isConsole}
-						apiUrl={props.apiUrl}
 						params={props.params}
 						value={props.data}
 					/>

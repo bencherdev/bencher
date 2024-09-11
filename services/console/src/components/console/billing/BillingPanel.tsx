@@ -185,7 +185,7 @@ const BillingPanelSwitch = (props: {
 };
 
 const manageSubscription = (
-	<a href="https://billing.stripe.com/p/login/5kAbJU83ieF8dTG5kk">
+	<a href="https://pay.bencher.dev/p/login/5kAbJU83ieF8dTG5kk">
 		Click here to manage your subscription.
 	</a>
 );

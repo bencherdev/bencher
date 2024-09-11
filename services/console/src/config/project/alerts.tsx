@@ -3,6 +3,8 @@ import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 import { isAllowedProjectEdit } from "../../util/auth";
 
+export const ALERT_ICON = "fas fa-bell";
+
 const alertsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,

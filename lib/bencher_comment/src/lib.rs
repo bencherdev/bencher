@@ -10,7 +10,7 @@ use bencher_json::{
         threshold::JsonThresholdModel,
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
-    JsonReport, MeasureUuid, ModelUuid, ResourceName, Slug, TestbedUuid, ThresholdUuid,
+    JsonReport, MeasureUuid, ModelUuid, ReportUuid, ResourceName, Slug, TestbedUuid, ThresholdUuid,
 };
 use url::Url;
 
@@ -723,6 +723,7 @@ impl BenchmarkUrls {
         let benchmark_url = BenchmarkUrl::new(
             console_url,
             json_report.project.slug.clone(),
+            json_report.uuid,
             json_report.branch.uuid,
             json_report.testbed.uuid,
             json_report.start_time,
@@ -777,6 +778,7 @@ impl BenchmarkUrls {
 struct BenchmarkUrl {
     console_url: Url,
     project_slug: Slug,
+    report_uuid: ReportUuid,
     branch: BranchUuid,
     testbed: TestbedUuid,
     start_time: DateTime,
@@ -790,6 +792,7 @@ impl BenchmarkUrl {
     fn new(
         console_url: Url,
         project_slug: Slug,
+        report_uuid: ReportUuid,
         branch: BranchUuid,
         testbed: TestbedUuid,
         start_time: DateTime,
@@ -798,6 +801,7 @@ impl BenchmarkUrl {
         Self {
             console_url,
             project_slug,
+            report_uuid,
             branch,
             testbed,
             start_time,
@@ -846,9 +850,11 @@ impl BenchmarkUrl {
             format!("/console/projects/{}/perf", self.project_slug)
         };
         url.set_path(&path);
+        let mut query_string = boundary.map(Boundary::to_query_string).unwrap_or_default();
+        query_string.push(("report", Some(self.report_uuid.to_string())));
         url.set_query(Some(
             &json_perf_query
-                .to_query_string(&boundary.map(Boundary::to_query_string).unwrap_or_default())
+                .to_query_string(&query_string)
                 .unwrap_or_default(),
         ));
 

@@ -96,10 +96,7 @@ export interface Props {
 	handleUpperValue: (upper_value: boolean) => void;
 	handleLowerBoundary: (lower_boundary: boolean) => void;
 	handleUpperBoundary: (upper_boundary: boolean) => void;
-	handleReportChecked: (
-		index: number,
-		measure_uuid: undefined | string,
-	) => void;
+	handleReportChecked: (index: number) => void;
 	handleBranchChecked: (index: undefined | number) => void;
 	handleTestbedChecked: (index: undefined | number) => void;
 	handleBenchmarkChecked: (index: undefined | number) => void;
@@ -198,6 +195,7 @@ const PerfPlot = (props: Props) => {
 							project_slug={props.project_slug}
 							theme={props.theme}
 							isConsole={props.isConsole}
+							report={props.report}
 							branches={props.branches}
 							testbeds={props.testbeds}
 							benchmarks={props.benchmarks}

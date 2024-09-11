@@ -21,6 +21,7 @@ const Tab = (props: {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	// Tab UUIDs
+	report: Accessor<undefined | string>;
 	branches: Accessor<string[]>;
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
@@ -135,6 +136,7 @@ const Tab = (props: {
 					theme={props.theme}
 					isConsole={props.isConsole}
 					loading={props.loading}
+					report={props.report}
 					measures={props.measures}
 					tab={props.tab}
 					tabList={tabList as Accessor<TabList<JsonReport>>}

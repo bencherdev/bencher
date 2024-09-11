@@ -17,7 +17,6 @@ import { dateTimeMillis } from "../../../../../util/convert";
 
 export interface Props {
 	isConsole?: boolean;
-	apiUrl: string;
 	params: Params;
 	value: Resource<JsonReport>;
 }
@@ -102,6 +101,7 @@ const ReportCard = (props: Props) => {
 														href={alertPerfUrl(
 															props.isConsole,
 															props.params?.project,
+															props.value()?.uuid as string,
 															alert,
 														)}
 													>
@@ -325,6 +325,7 @@ const ReportCard = (props: Props) => {
 																			href={perfUrl(
 																				props.isConsole,
 																				props.params?.project,
+																				props.value()?.uuid as string,
 																				props.value()?.branch as JsonBranch,
 																				props.value()?.testbed as JsonTestbed,
 																				result.benchmark,
@@ -434,11 +435,13 @@ const DEFAULT_ALERT_HISTORY = 30 * 24 * 60 * 60 * 1000;
 export const alertPerfUrl = (
 	isConsole: undefined | boolean,
 	project: undefined | string,
+	reportUuid: string,
 	alert: JsonAlert,
 ) =>
 	perfUrl(
 		isConsole,
 		project,
+		reportUuid,
 		alert?.threshold?.branch,
 		alert?.threshold?.testbed,
 		alert?.benchmark,
@@ -482,6 +485,7 @@ const measureUrl = (
 export const perfUrl = (
 	isConsole: undefined | boolean,
 	project: undefined | string,
+	reportUuid: string,
 	branch: JsonBranch,
 	testbed: JsonTestbed,
 	benchmark: JsonBenchmark,
@@ -493,6 +497,7 @@ export const perfUrl = (
 ) => {
 	const start_time = dateTimeMillis(startTime);
 	const perfQuery = {
+		report: reportUuid,
 		branches: branch?.uuid,
 		testbeds: testbed?.uuid,
 		benchmarks: benchmark?.uuid,

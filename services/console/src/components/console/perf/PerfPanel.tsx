@@ -715,10 +715,35 @@ const PerfPanel = (props: Props) => {
 			measures().length === 0 &&
 			tab() === DEFAULT_PERF_TAB
 		) {
+			const benchmarks = first_report?.results?.[first]
+				?.map((iteration) => iteration?.benchmark?.uuid)
+				.slice(0, 10);
 			const first_measure =
 				first_report?.results?.[first]?.[first]?.measures?.[first]?.measure
 					?.uuid;
-			handleReportChecked(first, first_measure, true);
+			const start_time = dateTimeMillis(first_report?.start_time);
+			setSearchParams(
+				{
+					[REPORT_PARAM]: first_report?.uuid,
+					[BRANCHES_PARAM]: first_report?.branch?.uuid,
+					[TESTBEDS_PARAM]: first_report?.testbed?.uuid,
+					[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
+					[MEASURES_PARAM]: first_measure,
+					[PLOT_PARAM]: null,
+					[START_TIME_PARAM]: start_time
+						? start_time - DEFAULT_REPORT_HISTORY
+						: null,
+					[END_TIME_PARAM]: dateTimeMillis(first_report?.end_time),
+					[LOWER_VALUE_PARAM]: null,
+					[UPPER_VALUE_PARAM]: null,
+					[LOWER_BOUNDARY_PARAM]:
+						typeof first_measure?.boundary?.lower_limit === "number",
+					[UPPER_BOUNDARY_PARAM]:
+						typeof first_measure?.boundary?.upper_limit === "number",
+					[CLEAR_PARAM]: true,
+				},
+				{ replace: true },
+			);
 		}
 	});
 
@@ -812,39 +837,12 @@ const PerfPanel = (props: Props) => {
 		}
 	});
 
-	const handleReportChecked = (
-		index: number,
-		measure_uuid: undefined | string,
-		replace?: boolean,
-	) => {
-		if (!measure_uuid) {
-			return;
-		}
-		const report = reports_tab?.[index]?.resource;
-		const benchmarks = report?.results?.[0]?.map(
-			(iteration) => iteration?.benchmark?.uuid,
-		);
-		const start_time = dateTimeMillis(report?.start_time);
-		setSearchParams(
-			{
-				[REPORT_PARAM]: report?.uuid,
-				[BRANCHES_PARAM]: report?.branch?.uuid,
-				[TESTBEDS_PARAM]: report?.testbed?.uuid,
-				[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
-				[MEASURES_PARAM]: measure_uuid,
-				[PLOT_PARAM]: null,
-				[START_TIME_PARAM]: start_time
-					? start_time - DEFAULT_REPORT_HISTORY
-					: null,
-				[END_TIME_PARAM]: dateTimeMillis(report?.end_time),
-				[LOWER_VALUE_PARAM]: null,
-				[UPPER_VALUE_PARAM]: null,
-				[LOWER_BOUNDARY_PARAM]: null,
-				[UPPER_BOUNDARY_PARAM]: null,
-				[CLEAR_PARAM]: true,
-			},
-			{ replace: replace === true },
-		);
+	const handleReportChecked = (index: number) => {
+		const reportUuid = reports_tab?.[index]?.resource?.uuid;
+		setSearchParams({
+			[REPORT_PARAM]: report() === reportUuid ? null : reportUuid,
+			[CLEAR_PARAM]: true,
+		});
 	};
 	const handleChecked = (
 		resource_tab: TabList<JsonBranch | JsonTestbed | JsonBenchmark>,
@@ -972,7 +970,7 @@ const PerfPanel = (props: Props) => {
 					[UPPER_BOUNDARY_PARAM]: null,
 					[X_AXIS_PARAM]: null,
 					[TAB_PARAM]: DEFAULT_PERF_TAB,
-					[REPORTS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+					[REPORTS_PER_PAGE_PARAM]: REPORTS_PER_PAGE,
 					[BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
 					[TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
 					[BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
