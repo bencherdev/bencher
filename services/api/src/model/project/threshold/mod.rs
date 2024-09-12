@@ -159,8 +159,6 @@ impl QueryThreshold {
                 .into_json_for_project(conn, &query_project)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json_for_project(&query_project),
             measure: QueryMeasure::get(conn, measure_id)?.into_json_for_project(&query_project),
-            // TODO remove in due time
-            statistic: Some(model),
             model,
             created,
             modified,
@@ -198,8 +196,6 @@ impl QueryThreshold {
         JsonThresholdModel {
             uuid,
             project: project.uuid,
-            // TODO remove in due time
-            statistic: Some(model),
             model,
             created,
         }

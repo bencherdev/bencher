@@ -88,7 +88,6 @@ export interface JsonModel {
 export interface JsonThresholdModel {
 	uuid: Uuid;
 	project: Uuid;
-	statistic?: JsonModel;
 	model: JsonModel;
 	created: string;
 }
@@ -145,7 +144,6 @@ export interface JsonThreshold {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	measure: JsonMeasure;
-	statistic?: JsonModel;
 	model: JsonModel;
 	created: string;
 	modified: string;

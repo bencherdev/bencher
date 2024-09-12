@@ -61,7 +61,6 @@ pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},
     config::JsonConfig,
-    endpoint::JsonEndpoint,
     restart::JsonRestart,
     spec::JsonSpec,
     version::JsonApiVersion,

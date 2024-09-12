@@ -250,8 +250,6 @@ impl Api {
             api.register(system::server::config::server_config_options)?;
             api.register(system::server::config::server_config_console_options)?;
             api.register(system::server::backup::server_backup_options)?;
-            // TODO remove in due time
-            api.register(system::server::endpoint::server_endpoint_options)?;
         }
         api.register(system::server::version::server_version_get)?;
         api.register(system::server::spec::server_spec_get)?;
@@ -260,8 +258,6 @@ impl Api {
         api.register(system::server::config::server_config_put)?;
         api.register(system::server::config::server_config_console_get)?;
         api.register(system::server::backup::server_backup_post)?;
-        // TODO remove in due time
-        api.register(system::server::endpoint::server_endpoint_get)?;
 
         #[cfg(feature = "plus")]
         {

@@ -184,9 +184,6 @@ mod db {
         pub replicas: Vec<LitestreamReplica>,
     }
 
-    // TODO move over to explicit bucket, path, and optional region
-    // https://litestream.io/guides/s3/
-    // also add optional endpoint param
     #[derive(Debug, Clone, Serialize)]
     #[serde(
         tag = "type",

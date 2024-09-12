@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# TODO user per-target profiles
+# TODO use per-target profiles
 # In the mean time, we can use sed to change the value of wasm-opt on aaarch64
 # https://github.com/rust-lang/cargo/issues/4897
 

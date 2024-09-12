@@ -38,8 +38,6 @@ pub struct JsonThreshold {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub measure: JsonMeasure,
-    // TODO remove in due time
-    pub statistic: Option<JsonModel>,
     pub model: JsonModel,
     pub created: DateTime,
     pub modified: DateTime,
@@ -51,8 +49,6 @@ pub struct JsonThreshold {
 pub struct JsonThresholdModel {
     pub uuid: ThresholdUuid,
     pub project: ProjectUuid,
-    // TODO remove in due time
-    pub statistic: Option<JsonModel>,
     pub model: JsonModel,
     pub created: DateTime,
 }

@@ -1,6 +1,12 @@
 ## Pending `v0.4.20`
 - Add public pages for Reports, Branches, Testbeds, Benchmarks, and Measures
 - Add links between all dimension pages
+- **BREAKING CHANGE** Change the Report results format to mirror Bencher Metric Format, from measures owning benchmarks to benchmarks owning measures
+- Add a table view for Reports in the Console UI
+- Update PR comments to be more concise
+- Remove deprecated `statistic` field from Threshold in favor of `model`
+- Remove deprecated server endpoint `/v0/server/endpoint` in favor of `/v0/server/config/console`
+- Track global bus events for `iai-callgrind` adapter (Thank you [@OmarTawfik](https://github.com/OmarTawfik))
 
 ## `v0.4.19`
 - Add the `--format` option to `bencher run`

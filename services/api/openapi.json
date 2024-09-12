@@ -6730,70 +6730,6 @@
         }
       }
     },
-    "/v0/server/endpoint": {
-      "get": {
-        "tags": [
-          "server"
-        ],
-        "summary": "DEPRECATED: View server endpoint",
-        "operationId": "server_endpoint_get",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEndpoint"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/server/restart": {
       "post": {
         "tags": [
@@ -8607,17 +8543,6 @@
         },
         "required": [
           "file"
-        ]
-      },
-      "JsonEndpoint": {
-        "type": "object",
-        "properties": {
-          "endpoint": {
-            "$ref": "#/components/schemas/Url"
-          }
-        },
-        "required": [
-          "endpoint"
         ]
       },
       "JsonFold": {
@@ -11148,14 +11073,6 @@
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
           },
-          "statistic": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonModel"
-              }
-            ]
-          },
           "testbed": {
             "$ref": "#/components/schemas/JsonTestbed"
           },
@@ -11185,14 +11102,6 @@
           },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
-          },
-          "statistic": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonModel"
-              }
-            ]
           },
           "uuid": {
             "$ref": "#/components/schemas/ThresholdUuid"
