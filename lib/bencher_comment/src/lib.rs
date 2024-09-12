@@ -246,7 +246,7 @@ impl ReportComment {
         html.push_str("<table>");
 
         let multiple_iterations = self.json_report.results.len() > 1;
-        html.push_str(&format!("<thead><tr>{iteration}<th>Benchmark</th><th>Measure (units)</th><th>View</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr></thead>", iteration = if multiple_iterations {
+        html.push_str(&format!("<thead><tr>{iteration}<th>Benchmark</th><th>Measure<br/>Units</th><th>View</th><th>Benchmark Result<br/>(Result Δ%)</th><th>Lower Boundary<br/>(Limit %)</th><th>Upper Boundary<br/>(Limit %)</th></tr></thead>", iteration = if multiple_iterations {
             "<th>Iteration</th>"
         } else {
             ""
@@ -302,7 +302,7 @@ impl ReportComment {
             };
             let url = url.join(&path).unwrap_or(url);
             html.push_str(&format!(
-                r#"<td><a href="{url}?{utm}">{name} ({units})</a></td>"#,
+                r#"<td><a href="{url}?{utm}">{name}<br/>{units}</a></td>"#,
                 utm = self.utm_query(),
                 name = measure.name,
                 units = measure.units,
@@ -421,7 +421,9 @@ impl ReportComment {
 
         // If there is a boundary limit then we will show the percentage difference
         if boundary_limits.lower || boundary_limits.upper {
-            html.push_str(&format!("<th>{units}<br/>(Result Δ%)</th>",));
+            html.push_str(&format!(
+                "<th>Benchmark Result<br/>{units}<br/>(Result Δ%)</th>",
+            ));
         } else {
             html.push_str(&format!("<th>{units}</th>",));
         }
@@ -581,7 +583,7 @@ impl ReportComment {
 
             let bold = limit.is_some();
             html.push_str(&format!(
-                "<td>{}{} ({value_plus}{}%){}</td>",
+                "<td>{}{}<br/>({value_plus}{}%){}</td>",
                 if bold { "<b>" } else { "" },
                 format_number(value),
                 format_number(value_percent),
@@ -602,7 +604,7 @@ impl ReportComment {
             };
             let bold = matches!(limit, Some(BoundaryLimit::Lower));
             html.push_str(&format!(
-                "<td>{}{} ({}%){}</td>",
+                "<td>{}{}<br/>({}%){}</td>",
                 if bold { "<b>" } else { "" },
                 format_number(lower_limit),
                 format_number(limit_percent),
@@ -620,7 +622,7 @@ impl ReportComment {
             };
             let bold = matches!(limit, Some(BoundaryLimit::Upper));
             html.push_str(&format!(
-                "<td>{}{} ({}%){}</td>",
+                "<td>{}{}<br/>({}%){}</td>",
                 if bold { "<b>" } else { "" },
                 format_number(upper_limit),
                 format_number(limit_percent),

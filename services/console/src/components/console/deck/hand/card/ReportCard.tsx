@@ -39,11 +39,27 @@ const ReportCard = (props: Props) => {
 								<tr>
 									{multipleIterations() && <th>Iteration</th>}
 									<th>Benchmark</th>
-									<th>Measure (units)</th>
+									<th>
+										Measure
+										<br />
+										Units
+									</th>
 									<th>View</th>
-									<th>Value</th>
-									<th>Lower Boundary</th>
-									<th>Upper Boundary</th>
+									<th>
+										Benchmark Result
+										<br />
+										(Result Δ%)
+									</th>
+									<th>
+										Lower Boundary
+										<br />
+										(Limit %)
+									</th>
+									<th>
+										Upper Boundary
+										<br />
+										(Limit %)
+									</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -93,6 +109,8 @@ const ReportCard = (props: Props) => {
 														}?${BACK_PARAM}=${encodePath()}`}
 													>
 														{alert?.threshold?.measure?.name}
+														<br />
+														{alert?.threshold?.measure?.units}
 													</a>
 												</td>
 												<td>
@@ -130,18 +148,22 @@ const ReportCard = (props: Props) => {
 												</td>
 												<td>
 													<b>
-														{`${formatNumber(value)} (${
-															valuePercent > 0.0 ? "+" : ""
-														}${formatNumber(valuePercent)}%)`}
+														{formatNumber(value)}
+														<br />({valuePercent > 0.0 ? "+" : ""}
+														{formatNumber(valuePercent)}%)
 													</b>
 												</td>
 												<td>
 													{lowerLimit === undefined || lowerLimit === null
 														? ""
 														: (() => {
-																const lower = `${formatNumber(
-																	lowerLimit,
-																)} (${formatNumber(lowerLimitPercentage)}%)`;
+																const lower = (
+																	<>
+																		{formatNumber(lowerLimit)}
+																		<br />({formatNumber(lowerLimitPercentage)}
+																		%)
+																	</>
+																);
 																return alert?.limit === BoundaryLimit.Lower ? (
 																	<b>{lower}</b>
 																) : (
@@ -153,9 +175,13 @@ const ReportCard = (props: Props) => {
 													{upperLimit === undefined || upperLimit === null
 														? ""
 														: (() => {
-																const upper = `${formatNumber(
-																	upperLimit,
-																)} (${formatNumber(upperLimitPercentage)}%)`;
+																const upper = (
+																	<>
+																		{formatNumber(upperLimit)}
+																		<br />({formatNumber(upperLimitPercentage)}
+																		%)
+																	</>
+																);
 																return alert?.limit === BoundaryLimit.Upper ? (
 																	<b>{upper}</b>
 																) : (
@@ -202,6 +228,8 @@ const ReportCard = (props: Props) => {
 																</a>
 															</th>
 															<th>
+																Benchmark Result
+																<br />
 																{measure?.units}
 																{(boundaryLimits.lower ||
 																	boundaryLimits.upper) && (
@@ -298,22 +326,21 @@ const ReportCard = (props: Props) => {
 																<>
 																	{formatNumber(value)}
 																	<Show when={reportMeasure?.threshold}>
-																		{" "}
-																		({valuePercent > 0.0 ? "+" : ""}
+																		<br />({valuePercent > 0.0 ? "+" : ""}
 																		{formatNumber(valuePercent)}%)
 																	</Show>
 																</>
 															);
 															const lowerBoundaryCell = (
 																<>
-																	{formatNumber(lowerLimit ?? 0)} (
-																	{formatNumber(lowerLimitPercentage)}%)
+																	{formatNumber(lowerLimit ?? 0)}
+																	<br />({formatNumber(lowerLimitPercentage)}%)
 																</>
 															);
 															const upperBoundaryCell = (
 																<>
-																	{formatNumber(upperLimit ?? 0)} (
-																	{formatNumber(upperLimitPercentage)}%)
+																	{formatNumber(upperLimit ?? 0)}
+																	<br />({formatNumber(upperLimitPercentage)}%)
 																</>
 															);
 
@@ -556,7 +583,6 @@ const boundaryLimitsMap = (
 			}
 		}
 	}
-	console.log(map);
 	return map;
 };
 

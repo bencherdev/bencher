@@ -51,33 +51,29 @@ const ReportsTab = (props: {
 					<For each={Array(props.per_page())}>
 						{(_) => (
 							<div class="panel-block is-block">
-								<div class="level">
+								<div class="columns is-vcentered">
 									{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
-									<a class={`level-left ${themeText(props.theme())}`}>
-										<div class="level-item">
-											<div class="columns is-vcentered is-mobile">
-												<div class="column is-narrow">
-													<span class="icon is-small">
-														<i class="fas fa-plus" />
-													</span>
-												</div>
-												<div class="column">
-													<small style="word-break: break-word;">⠀</small>
-													<ReportDimension icon={BRANCH_ICON} name="⠀" />
-													<ReportDimension icon={TESTBED_ICON} name="⠀" />
-													<ReportDimension icon={BENCHMARK_ICON} name="⠀" />
-													<ReportDimension icon={MEASURE_ICON} name="⠀" />
-												</div>
+									<a class={`column ${themeText(props.theme())}`}>
+										<div class="columns is-vcentered is-mobile">
+											<div class="column is-narrow">
+												<span class="icon is-small">
+													<i class="fas fa-plus" />
+												</span>
+											</div>
+											<div class="column">
+												<small style="word-break: break-word;">⠀</small>
+												<ReportDimension icon={BRANCH_ICON} name="⠀" />
+												<ReportDimension icon={TESTBED_ICON} name="⠀" />
+												<ReportDimension icon={BENCHMARK_ICON} name="⠀" />
+												<ReportDimension icon={MEASURE_ICON} name="⠀" />
 											</div>
 										</div>
 									</a>
-									<div class="level-right">
-										<div class="level-item">
-											{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
-											<a class="button">
-												{props.isConsole ? "Manage" : "View"}
-											</a>
-										</div>
+									<div class="column is-narrow">
+										{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
+										<a class="button is-fullwidth">
+											{props.isConsole ? "Manage" : "View"}
+										</a>
 									</div>
 								</div>
 							</div>
@@ -127,10 +123,10 @@ const ReportRow = (props: {
 
 	return (
 		<div id={report.uuid} class="panel-block is-block">
-			<div class="level">
+			<div class="columns is-vcentered">
 				{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
 				<a
-					class={`level-left ${themeText(props.theme())}`}
+					class={`column ${themeText(props.theme())}`}
 					title={`View Report from ${fmtDateTime(report?.start_time)}`}
 					disabled={!hasBenchmarks}
 					onMouseDown={(e) => {
@@ -139,102 +135,94 @@ const ReportRow = (props: {
 						props.handleChecked(props.index(), report?.uuid);
 					}}
 				>
-					<div class="level-item">
-						<div class="columns is-vcentered is-mobile">
-							<div class="column is-narrow">
-								<Show
-									when={viewReport()}
-									fallback={
-										<span
-											class={`icon is-small${
-												hasBenchmarks ? "" : " has-text-grey"
-											}`}
-										>
-											<i class="fas fa-plus" />
-										</span>
-									}
-								>
-									<span class="icon is-small">
-										<i class="fas fa-minus" />
+					<div class="columns is-vcentered is-mobile">
+						<div class="column is-narrow">
+							<Show
+								when={viewReport()}
+								fallback={
+									<span
+										class={`icon is-small${
+											hasBenchmarks ? "" : " has-text-grey"
+										}`}
+									>
+										<i class="fas fa-plus" />
 									</span>
-								</Show>
-							</div>
-							<div class="column">
-								<small style="word-break: break-word;">
-									{fmtDateTime(report?.start_time)}
-								</small>
-								<ReportDimension
-									icon={BRANCH_ICON}
-									name={report?.branch?.name}
-								/>
-								<ReportDimension
-									icon={TESTBED_ICON}
-									name={report?.testbed?.name}
-								/>
-								<ReportDimension
-									icon={BENCHMARK_ICON}
-									name={(() => {
-										if (benchmarkCount.length === 0) {
-											return "0 benchmarks";
-										}
-										const plural =
-											benchmarkCount.length > 1 ||
-											benchmarkCount.filter((count) => count > 1).length > 0;
-										return `${benchmarkCount.join(" x ")} benchmark${
-											plural ? "s" : ""
-										}`;
-									})()}
-								/>
-								<ReportDimension
-									icon={MEASURE_ICON}
-									name={(() => {
-										const counts = report?.results?.map((iteration) =>
-											iteration?.reduce((acc, result) => {
-												const c = result?.measures?.length ?? 0;
-												if (!acc.has(c)) {
-													acc.add(c);
-												}
-												return acc;
-											}, new Set<number>()),
+								}
+							>
+								<span class="icon is-small">
+									<i class="fas fa-minus" />
+								</span>
+							</Show>
+						</div>
+						<div class="column">
+							<small style="word-break: break-word;">
+								{fmtDateTime(report?.start_time)}
+							</small>
+							<ReportDimension icon={BRANCH_ICON} name={report?.branch?.name} />
+							<ReportDimension
+								icon={TESTBED_ICON}
+								name={report?.testbed?.name}
+							/>
+							<ReportDimension
+								icon={BENCHMARK_ICON}
+								name={(() => {
+									if (benchmarkCount.length === 0) {
+										return "0 benchmarks";
+									}
+									const plural =
+										benchmarkCount.length > 1 ||
+										benchmarkCount.filter((count) => count > 1).length > 0;
+									return `${benchmarkCount.join(" + ")} benchmark${
+										plural ? "s" : ""
+									}`;
+								})()}
+							/>
+							<ReportDimension
+								icon={MEASURE_ICON}
+								name={(() => {
+									const counts = report?.results?.map((iteration) =>
+										iteration?.reduce((acc, result) => {
+											const c = result?.measures?.length ?? 0;
+											if (!acc.has(c)) {
+												acc.add(c);
+											}
+											return acc;
+										}, new Set<number>()),
+									);
+									if (counts.length === 0) {
+										return "0 measures";
+									}
+									const plural =
+										counts.length > 1 ||
+										counts.some(
+											(count) =>
+												count.size > 1 || Array.from(count).some((c) => c > 1),
 										);
-										if (counts.length === 0) {
-											return "0 measures";
-										}
-										const plural =
-											counts.length > 1 ||
-											counts.some(
-												(count) =>
-													count.size > 1 ||
-													Array.from(count).some((c) => c > 1),
-											);
-										return `${counts
-											.map((iteration) => Array.from(iteration).join(" + "))
-											.join(" x ")} measure${plural ? "s" : ""}`;
+									return `${counts
+										.map((iteration) => Array.from(iteration).join(" || "))
+										.join(" + ")} measure${plural ? "s" : ""}`;
+								})()}
+							/>
+							<Show when={report?.alerts?.length > 0}>
+								<ReportDimension
+									icon={ALERT_ICON}
+									iconClass=" has-text-primary"
+									name={(() => {
+										const count = report?.alerts.length;
+										return `${count} alert${count > 0 ? "s" : ""}`;
 									})()}
 								/>
-								<Show when={report?.alerts?.length > 0}>
-									<ReportDimension
-										icon={ALERT_ICON}
-										iconClass=" has-text-primary"
-										name={(() => {
-											const count = report?.alerts.length;
-											return `${count} alert${count > 0 ? "s" : ""}`;
-										})()}
-									/>
-								</Show>
-							</div>
+							</Show>
 						</div>
 					</div>
 				</a>
-				<div class="level-right">
-					<div class="level-item">
-						<ViewReportButton
-							project_slug={props.project_slug}
-							isConsole={props.isConsole}
-							tab={props.tab}
-							report={report}
-						/>
-					</div>
+				<div class="column is-narrow">
+					<ViewReportButton
+						project_slug={props.project_slug}
+						isConsole={props.isConsole}
+						tab={props.tab}
+						report={report}
+					/>
 				</div>
 			</div>
 			<Show when={viewReport()}>
@@ -258,7 +246,7 @@ const ViewReportButton = (props: {
 }) => {
 	return (
 		<a
-			class="button"
+			class="button is-fullwidth"
 			title={`${props.isConsole ? "Manage" : "View"} Report from ${fmtDateTime(
 				props.report?.start_time,
 			)}`}
@@ -280,11 +268,11 @@ const ReportDimension = (props: {
 }) => {
 	return (
 		<div>
-			<span class="icon-text ">
+			<span class="icon-text">
 				<span class={`icon${props.iconClass ?? ""}`}>
 					<i class={props.icon} />
 				</span>
-				<small style="word-break: break-all;">{props.name}</small>
+				<small style="word-break: break-word;">{props.name}</small>
 			</span>
 		</div>
 	);
