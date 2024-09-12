@@ -661,9 +661,16 @@ impl ReportComment {
     pub fn bencher_tag(&self, id: Option<&str>) -> String {
         let id = id.map_or_else(
             || {
+                let branch: Slug = self
+                    .json_report
+                    .branch
+                    .name
+                    .to_strip_archive_suffix()
+                    .as_ref()
+                    .parse()
+                    .unwrap_or_else(|_| self.json_report.branch.slug.clone());
                 format!(
                     "{branch}/{testbed}/{adapter}",
-                    branch = self.json_report.branch.slug,
                     testbed = self.json_report.testbed.slug,
                     adapter = self.json_report.adapter
                 )

@@ -228,8 +228,13 @@ const ReportCard = (props: Props) => {
 																</a>
 															</th>
 															<th>
-																Benchmark Result
-																<br />
+																{(boundaryLimits.lower ||
+																	boundaryLimits.upper) && (
+																	<>
+																		Benchmark Result
+																		<br />
+																	</>
+																)}
 																{measure?.units}
 																{(boundaryLimits.lower ||
 																	boundaryLimits.upper) && (
