@@ -11,7 +11,7 @@ import {
 	type JsonThreshold,
 } from "../../../../../types/bencher";
 import { createMemo, For, Match, Show, Switch, type Resource } from "solid-js";
-import { resourcePath } from "../../../../../config/util";
+import { perfPath, resourcePath } from "../../../../../config/util";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { dateTimeMillis } from "../../../../../util/convert";
 
@@ -598,11 +598,7 @@ export const perfUrl = (
 			searchParams.set(key, value.toString());
 		}
 	}
-	return `${
-		isConsole === true
-			? `/console/projects/${project}/perf`
-			: `/perf/${project}`
-	}?${searchParams.toString()}`;
+	return `${perfPath(isConsole, project)}?${searchParams.toString()}`;
 };
 
 type Measure = {

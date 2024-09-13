@@ -15,6 +15,7 @@ const redirect = `/perf/${params.project}${Astro.url.search}`;
 <ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title} redirect={redirect}>
   <PlotsPanel
     client:only="solid-js"
+    isConsole={true}
     apiUrl={BENCHER_API_URL}
     params={params}
   >

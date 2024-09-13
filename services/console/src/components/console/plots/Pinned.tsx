@@ -19,6 +19,7 @@ import FieldKind from "../../field/kind";
 import { httpGet, httpPatch } from "../../../util/http";
 import Field, { type FieldHandler } from "../../field/Field";
 import * as Sentry from "@sentry/astro";
+import { perfPath } from "../../../config/util";
 
 enum PinnedState {
 	Front = "front",
@@ -27,6 +28,7 @@ enum PinnedState {
 }
 
 const Pinned = (props: {
+	isConsole: boolean;
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
@@ -81,6 +83,7 @@ const Pinned = (props: {
 	return (
 		<div id={props.plot?.uuid} class="box">
 			<PinnedFront
+				isConsole={props.isConsole}
 				apiUrl={props.apiUrl}
 				user={props.user}
 				project_slug={props.project_slug}
@@ -109,6 +112,7 @@ const Pinned = (props: {
 				</Match>
 				<Match when={state() === PinnedState.Settings}>
 					<PinnedSetting
+						isConsole={props.isConsole}
 						apiUrl={props.apiUrl}
 						params={props.params}
 						user={props.user}
@@ -128,6 +132,7 @@ const Pinned = (props: {
 };
 
 const PinnedFront = (props: {
+	isConsole: boolean;
 	apiUrl: string;
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
@@ -144,6 +149,7 @@ const PinnedFront = (props: {
 		<>
 			<PinnedPlot plot={props.plot} />
 			<PinnedButtons
+				isConsole={props.isConsole}
 				apiUrl={props.apiUrl}
 				user={props.user}
 				project_slug={props.project_slug}
@@ -175,6 +181,7 @@ const PinnedPlot = (props: { plot: JsonPlot }) => {
 };
 
 const PinnedButtons = (props: {
+	isConsole: boolean;
 	apiUrl: string;
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
@@ -298,11 +305,12 @@ const PinnedButtons = (props: {
 						type="button"
 						class="button is-small"
 						title="View plot"
-						href={`/console/projects/${props.project_slug()}/perf?${plotQueryString(
-							props.plot,
-						)}&tab=plots&plot=${props.plot?.uuid}&plots_search=${
+						href={`${perfPath(
+							props.isConsole,
+							props.project_slug(),
+						)}?${plotQueryString(props.plot)}&tab=plots&plot=${
 							props.plot?.uuid
-						}`}
+						}&plots_search=${props.plot?.uuid}`}
 					>
 						<span class="icon is-small">
 							<i class="fas fa-external-link-alt" />
@@ -434,6 +442,7 @@ const PinnedRank = (props: {
 };
 
 const PinnedSetting = (props: {
+	isConsole: boolean;
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
@@ -463,6 +472,7 @@ const PinnedSetting = (props: {
 	return (
 		<>
 			<DeckCard
+				isConsole={props.isConsole}
 				apiUrl={props.apiUrl}
 				params={props.params}
 				user={props.user}
@@ -490,6 +500,7 @@ const PinnedSetting = (props: {
 				handleLoopback={handleUpdate}
 			/>
 			<DeckCard
+				isConsole={props.isConsole}
 				apiUrl={props.apiUrl}
 				params={props.params}
 				user={props.user}
@@ -511,6 +522,23 @@ const PinnedSetting = (props: {
 						nullable: true,
 						config: PLOT_FIELDS.window,
 					},
+				}}
+				data={() => props.plot}
+				handleRefresh={handleUpdate}
+				handleLoopback={handleUpdate}
+			/>
+			<DeckCard
+				isConsole={props.isConsole}
+				apiUrl={props.apiUrl}
+				params={props.params}
+				user={props.user}
+				path={path}
+				card={{
+					kind: Card.FIELD,
+					label: "Plot Page",
+					key: "uuid",
+					display: Display.PLOT_URL,
+					notify: false,
 				}}
 				data={() => props.plot}
 				handleRefresh={handleUpdate}

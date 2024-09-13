@@ -12,6 +12,7 @@ import { NotifyKind, navigateNotify } from "../../../util/notify";
 import * as Sentry from "@sentry/astro";
 
 export interface Props {
+	isConsole: boolean;
 	apiUrl: string;
 	params: Params;
 }
@@ -64,6 +65,7 @@ const PinnedPlot = (props: Props) => {
 
 	return (
 		<Pinned
+			isConsole={props.isConsole}
 			apiUrl={props.apiUrl}
 			params={props.params}
 			user={user}

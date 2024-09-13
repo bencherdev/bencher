@@ -1,0 +1,93 @@
+---
+export const prerender = false;
+
+import PerfLayout from "../../../../layouts/perf/PerfLayout.astro";
+import Tetris from "../../../../components/site/Tetris.astro";
+import { fetchSSR } from "../../../../components/perf/util";
+import * as Sentry from "@sentry/astro";
+import PinnedPlot from "../../../../components/console/plots/PinnedPlot";
+import FallbackPlot from "../../../../components/console/plots/FallbackPlot";
+import type { JsonProject } from "../../../../types/bencher";
+import PlotsPanel from "../../../../components/console/plots/PlotsPanel";
+import FallbackPlots from "../../../../components/console/plots/FallbackPlots";
+
+// Using `meta.env` requires `prerender = false`
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
+const params = Astro.params;
+const getProjectUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
+	params.project
+}`;
+
+let jsonProject: undefined | JsonProject;
+let title = "Public Plots";
+let description =
+	"View continuous benchmarking plots on Bencher";
+let notFound = false;
+if (params.project && params.project !== "undefined") {
+	try {
+		const projectResponse = await fetchSSR(getProjectUrl);
+		jsonProject = await projectResponse.json();
+		if (jsonProject?.uuid) {
+			title = `${jsonProject?.name}`;
+			description = `View ${jsonProject?.name} continuous benchmarking plots on Bencher`;
+		} else {
+			title = "Not Found";
+			description = "Public plots not found";
+			notFound = true;
+		}
+	} catch (e) {
+		console.error(`Failed to fetch plots data: ${e}`);
+		Sentry.captureException(e);
+	}
+}
+---
+
+<PerfLayout
+  title={title}
+  description={description}
+  published={jsonProject?.created}
+  modified={jsonProject?.modified}
+>
+  { notFound ?
+  <section class="section">
+    <div class="container">
+      <div class="columns is-mobile">
+        <div class="column">
+          <h1 class="title is-1">Not Found</h1>
+          <hr />
+          <p>Could not find plots for Project <code>{params.project}</code></p>
+          <p>The Project may be private or the plot may not exist.</p>
+          <br />
+          <a class="button" href={`/perf/${params.project}`}>Go to Project</a>
+        </div>
+        <div class="column">
+          <Tetris />
+        </div>
+      </div>
+    </div>
+  </section>
+  :
+  <section class="section">
+    <div class="container">
+  <PlotsPanel
+    client:only="solid-js"
+    isConsole={false}
+    apiUrl={BENCHER_API_URL}
+    params={params}
+  >
+    <div slot="fallback">
+      <nav class="level">
+        <div class="level-left">
+          <div class="level-item">
+            <h3 class="title is-3">&nbsp;</h3>
+          </div>
+        </div>
+      </nav>
+      <FallbackPlots />
+    </div>
+  </PlotsPanel>
+</div>
+</section>
+  }
+</PerfLayout>

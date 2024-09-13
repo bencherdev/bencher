@@ -1,10 +1,11 @@
-import { Show, type Accessor, type Resource } from "solid-js";
+import { Match, Show, Switch, type Accessor, type Resource } from "solid-js";
 import type { Params } from "astro";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
 import type { JsonProject } from "../../../types/bencher";
 
 export interface Props {
+	isConsole: boolean;
 	apiUrl: string;
 	params: Params;
 	project: Resource<JsonProject>;
@@ -39,9 +40,27 @@ const PlotsHeader = (props: Props) => {
 					/>
 				</p>
 				<p class="level-item">
-					<Show
-						when={props.isAllowedCreate.loading || props.isAllowedCreate()}
-						fallback={
+					<Switch>
+						<Match
+							when={
+								props.isConsole &&
+								(props.isAllowedCreate.loading || props.isAllowedCreate())
+							}
+						>
+							<a
+								class="button"
+								title="Add a plot"
+								href={`/console/projects/${
+									props.project()?.slug
+								}/perf?clear=true`}
+							>
+								<span class="icon">
+									<i class="fas fa-plus" />
+								</span>
+								<span>Add</span>
+							</a>
+						</Match>
+						<Match when={props.isConsole && !props.isAllowedCreate()}>
 							<button
 								type="button"
 								class="button"
@@ -53,21 +72,8 @@ const PlotsHeader = (props: Props) => {
 								</span>
 								<span>Add</span>
 							</button>
-						}
-					>
-						<a
-							class="button"
-							title="Add a plot"
-							href={`/console/projects/${
-								props.project()?.slug
-							}/perf?clear=true`}
-						>
-							<span class="icon">
-								<i class="fas fa-plus" />
-							</span>
-							<span>Add</span>
-						</a>
-					</Show>
+						</Match>
+					</Switch>
 				</p>
 				<p class="level-item">
 					<button

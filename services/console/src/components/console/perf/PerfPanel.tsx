@@ -1070,6 +1070,7 @@ const PerfPanel = (props: Props) => {
 		<>
 			<Show when={!props.isEmbed}>
 				<PerfHeader
+					isConsole={props.isConsole === true}
 					apiUrl={props.apiUrl}
 					user={user}
 					project={project}

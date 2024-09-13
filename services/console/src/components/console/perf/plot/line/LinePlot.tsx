@@ -19,6 +19,7 @@ import { addTooltips } from "./tooltip";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { Theme } from "../../../../navbar/theme/theme";
 import type { ScaleType } from "@observablehq/plot";
+import { resourcePath } from "../../../../../config/util";
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
@@ -560,10 +561,8 @@ const warning_image = (
 };
 
 const dotUrl = (project_slug: string, isConsole: boolean, datum: object) =>
-	`${
-		isConsole
-			? `/console/projects/${project_slug}/metrics/${datum.metric}`
-			: `/perf/${project_slug}/metrics/${datum.metric}`
+	`${resourcePath(isConsole)}/${project_slug}/metrics/${
+		datum.metric
 	}?${BACK_PARAM}=${encodePath()}`;
 
 const thresholdUrl = (
@@ -571,10 +570,8 @@ const thresholdUrl = (
 	isConsole: boolean,
 	datum: object,
 ) =>
-	`${
-		isConsole
-			? `/console/projects/${project_slug}/thresholds/${datum.threshold?.uuid}`
-			: `/perf/${project_slug}/thresholds/${datum.threshold?.uuid}`
+	`${resourcePath(isConsole)}/${project_slug}/thresholds/${
+		datum.threshold?.uuid
 	}?model=${datum.threshold?.model?.uuid}&${BACK_PARAM}=${encodePath()}`;
 
 const alert_image = (
@@ -592,12 +589,9 @@ const alert_image = (
 		title: (datum) =>
 			limit_title(limit, result, datum, "\nClick to view Alert"),
 		href: (datum) =>
-			`${
-				isConsole
-					? `/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`
-					: `/perf/${project_slug}/alerts/${datum.alert?.uuid}`
-			}
-			?${BACK_PARAM}=${encodePath()}`,
+			`${resourcePath(isConsole)}/${project_slug}/alerts/${
+				datum.alert?.uuid
+			}?${BACK_PARAM}=${encodePath()}`,
 		// target: "_blank",
 	};
 };

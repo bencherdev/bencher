@@ -140,6 +140,7 @@ export enum Display {
 	MEASURE = "measure",
 	SWITCH = "switch",
 	SELECT = "select",
+	PLOT_URL = "plot_url",
 	START_POINT = "start_point",
 	GIT_HASH = "git_hash",
 	ADAPTER = "adapter",

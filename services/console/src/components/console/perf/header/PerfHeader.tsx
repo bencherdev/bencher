@@ -18,8 +18,10 @@ import { setPageTitle } from "../../../../util/resource";
 import ShareModal from "./ShareModal";
 import PinModal from "./PinModal";
 import { isAllowedProjectManage } from "../../../../util/auth";
+import { resourcePath } from "../../../../config/util";
 
 export interface Props {
+	isConsole: boolean;
 	apiUrl: string;
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
@@ -153,6 +155,21 @@ const PerfHeader = (props: Props) => {
 										</button>
 									</div>
 								</Show>
+
+								<div class="level-item">
+									<a
+										class="button is-fullwidth"
+										title={`View ${props.project()?.name} Plots`}
+										href={`${resourcePath(props.isConsole)}/${
+											props.project()?.slug
+										}/plots`}
+									>
+										<span class="icon">
+											<i class="fas fa-th-large" />
+										</span>
+										<span>Plots</span>
+									</a>
+								</div>
 
 								<div class="level-item">
 									<button

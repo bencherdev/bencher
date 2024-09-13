@@ -30,6 +30,7 @@ const SEARCH_PARAM = "search";
 const MAX_PLOTS = 64;
 
 export interface Props {
+	isConsole: boolean;
 	apiUrl: string;
 	params: Params;
 }
@@ -202,6 +203,7 @@ const PlotsPanel = (props: Props) => {
 	return (
 		<>
 			<PlotsHeader
+				isConsole={props.isConsole}
 				apiUrl={props.apiUrl}
 				params={props.params}
 				project={project}
@@ -218,6 +220,7 @@ const PlotsPanel = (props: Props) => {
 					{(plot, index) => (
 						<div class="column is-11-tablet is-12-desktop is-6-widescreen">
 							<Pinned
+								isConsole={props.isConsole}
 								apiUrl={props.apiUrl}
 								params={props.params}
 								project_slug={project_slug}
@@ -235,7 +238,11 @@ const PlotsPanel = (props: Props) => {
 						</div>
 					)}
 				</For>
-				<Show when={isAllowedCreate() && plotsLength() < MAX_PLOTS}>
+				<Show
+					when={
+						props.isConsole && isAllowedCreate() && plotsLength() < MAX_PLOTS
+					}
+				>
 					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
 						<PinNewPlot project_slug={project_slug} />
 					</div>

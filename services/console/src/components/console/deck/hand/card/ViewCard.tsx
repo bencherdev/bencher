@@ -147,6 +147,15 @@ const ViewCard = (props: Props) => {
 											);
 										})()}
 									</Match>
+									<Match when={props.card?.display === Display.PLOT_URL}>
+										<a
+											href={`${resourcePath(props.isConsole)}/${
+												props.params?.project
+											}/plots/${props.value}`}
+										>
+											View Plot Page
+										</a>
+									</Match>
 									<Match when={props.card?.display === Display.START_POINT}>
 										<StartPointCard {...props} />
 									</Match>

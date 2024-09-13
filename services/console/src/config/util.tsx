@@ -30,6 +30,14 @@ export const viewUuidPath = (pathname: string, datum: { uuid: string }) => {
 	return `${pathname}/${datum?.uuid}`;
 };
 
+export const perfPath = (
+	isConsole: undefined | boolean,
+	project: undefined | string,
+) =>
+	isConsole !== false
+		? `/console/projects/${project}/perf`
+		: `/perf/${project}`;
+
 export const resourcePath = (isConsole: undefined | boolean) =>
 	isConsole !== false ? "/console/projects" : "/perf";
 
