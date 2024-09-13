@@ -25,8 +25,20 @@ const ReportCard = (props: Props) => {
 	const multipleIterations = createMemo(
 		() => (props.value()?.results?.length ?? 0) > 1,
 	);
+
+	const benchmarkCount = createMemo(() => {
+		if (props.value()?.results?.length === 0) {
+			return 0;
+		}
+		return (
+			props
+				.value()
+				?.results?.reduce((acc, iteration) => acc + iteration.length, 0) ?? 0
+		);
+	});
+
 	return (
-		<div class="columns is-centered" style="margin-top: 2rem">
+		<div class="columns is-centered" style="margin-top: 1rem">
 			<div class="column is-11">
 				<Show when={(props.value()?.alerts?.length ?? 0) > 0}>
 					<h3 class="title is-3">
@@ -197,6 +209,46 @@ const ReportCard = (props: Props) => {
 						</table>
 					</div>
 					<hr />
+				</Show>
+				<Show when={benchmarkCount() === 0}>
+					<h3 class="title is-3">
+						<b>⚠️ WARNING:</b> No benchmarks found!
+					</h3>
+				</Show>
+				<Show
+					when={
+						benchmarkCount() > 0 &&
+						props
+							.value()
+							?.results?.some((iteration) =>
+								Array.from(boundaryLimitsMap(iteration).values()).some(
+									(boundaryLimits) =>
+										!(boundaryLimits.lower || boundaryLimits.upper),
+								),
+							)
+					}
+				>
+					<h3 class="title is-3">
+						<b>⚠️ WARNING:</b> No Threshold found! Without a Threshold, no Alerts
+						will ever be generated.
+					</h3>
+					<Show when={props.isConsole}>
+						<a
+							href={`/console/projects/${
+								props.params?.project
+							}/thresholds/add?${BACK_PARAM}=${encodePath()}`}
+						>
+							Click here to create a new Threshold
+						</a>
+						<br />
+					</Show>
+					<p>
+						For more information, see{" "}
+						<a href="https://bencher.dev/docs/explanation/thresholds/">
+							the Threshold documentation
+						</a>
+					</p>
+					<br />
 				</Show>
 				<For each={props.value()?.results}>
 					{(iteration) => {
