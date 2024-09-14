@@ -89,6 +89,12 @@ const alertsConfig = {
 					display: Display.RAW,
 				},
 				{
+					kind: Card.FIELD,
+					label: "Report",
+					key: null,
+					display: Display.ALERT_REPORT,
+				},
+				{
 					kind: Card.NESTED_FIELD,
 					label: "Branch",
 					keys: ["threshold", "branch"],
