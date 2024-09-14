@@ -61,7 +61,12 @@ const alertsConfig = {
 	[Operation.VIEW]: {
 		operation: Operation.VIEW,
 		header: {
-			keys: [["benchmark", "name"]],
+			keys: [
+				["threshold", "branch", "name"],
+				["threshold", "testbed", "name"],
+				["benchmark", "name"],
+				["threshold", "measure", "name"],
+			],
 			path: parentPath,
 			path_to: "Alerts",
 			buttons: [

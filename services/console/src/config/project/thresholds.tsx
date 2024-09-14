@@ -11,7 +11,6 @@ import {
 	createdUuidPath,
 	echoPath,
 	parentPath,
-	stripQueryPath,
 	viewUuidPath,
 } from "../util";
 

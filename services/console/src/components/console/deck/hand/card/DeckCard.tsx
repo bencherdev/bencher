@@ -31,7 +31,9 @@ const DeckCard = (props: Props) => {
 						user={props.user}
 						path={props.path}
 						card={props.card}
-						value={props.card?.key ? props.data()?.[props.card?.key] : null}
+						value={
+							props.card?.key ? props.data()?.[props.card?.key] : props.data()
+						}
 						handleRefresh={props.handleRefresh}
 						handleLoopback={props.handleLoopback}
 					/>

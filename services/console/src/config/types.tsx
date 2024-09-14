@@ -134,6 +134,7 @@ export enum Card {
 export enum Display {
 	RAW = "raw",
 	DATE_TIME = "date_time",
+	REPORT = "report",
 	BRANCH = "branch",
 	TESTBED = "testbed",
 	BENCHMARK = "benchmark",

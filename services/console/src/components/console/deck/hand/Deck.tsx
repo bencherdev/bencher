@@ -27,7 +27,7 @@ export interface DeckConfig {
 const Deck = (props: Props) => {
 	return (
 		<>
-			<Show when={props.isConsole !== false && props.config?.top_buttons}>
+			<Show when={props.config?.top_buttons}>
 				<For each={props.config?.top_buttons}>
 					{(button) => (
 						<DeckButton
@@ -58,7 +58,7 @@ const Deck = (props: Props) => {
 				)}
 			</For>
 			<br />
-			<Show when={props.isConsole !== false && props.config?.buttons}>
+			<Show when={props.config?.buttons}>
 				<For each={props.config?.buttons}>
 					{(button) => (
 						<DeckButton

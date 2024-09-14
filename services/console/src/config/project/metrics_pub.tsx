@@ -25,9 +25,9 @@ const metricsPubConfig = {
 		cards: [
 			{
 				kind: Card.FIELD,
-				label: "Report Start Time",
-				key: "start_time",
-				display: Display.DATE_TIME,
+				label: "Report",
+				key: null,
+				display: Display.REPORT,
 			},
 			{
 				kind: Card.FIELD,
@@ -76,6 +76,18 @@ const metricsPubConfig = {
 				label: "Metric Upper Value",
 				keys: ["metric", "upper_value"],
 				display: Display.RAW,
+			},
+			{
+				kind: Card.FIELD,
+				label: "Threshold",
+				key: "threshold",
+				display: Display.THRESHOLD,
+			},
+			{
+				kind: Card.NESTED_FIELD,
+				label: "Threshold Model Test",
+				keys: ["threshold", "model", "test"],
+				display: Display.MODEL_TEST,
 			},
 			{
 				kind: Card.NESTED_FIELD,

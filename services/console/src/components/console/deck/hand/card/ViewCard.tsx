@@ -66,6 +66,17 @@ const ViewCard = (props: Props) => {
 											readonly
 										/>
 									</Match>
+									<Match when={props.card?.display === Display.REPORT}>
+										<a
+											href={`${resourcePath(props.isConsole)}/${
+												props.params?.project
+											}/reports/${
+												props.value?.report
+											}?${BACK_PARAM}=${encodePath()}`}
+										>
+											{fmtDateTime(props.value?.start_time)}
+										</a>
+									</Match>
 									<Match
 										when={
 											props.card?.display === Display.BRANCH ||
@@ -99,9 +110,9 @@ const ViewCard = (props: Props) => {
 										<a
 											href={`${resourcePath(props.isConsole)}/${
 												props.params?.project
-											}/thresholds/${
-												props.value?.uuid
-											}?${BACK_PARAM}=${encodePath()}`}
+											}/thresholds/${props.value?.uuid}?model=${
+												props.value?.model?.uuid
+											}&${BACK_PARAM}=${encodePath()}`}
 										>
 											View Threshold
 										</a>
