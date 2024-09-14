@@ -116,8 +116,8 @@ const PerfHeader = (props: Props) => {
 								</a>
 							</div>
 						</Show>
-						<Show when={!props.isPlotInit()}>
-							<nav class="level is-mobile">
+						<nav class="level is-mobile">
+							<Show when={!props.isPlotInit()}>
 								<Show when={props.project()?.visibility === Visibility.Public}>
 									<div class="level-item">
 										<button
@@ -155,22 +155,22 @@ const PerfHeader = (props: Props) => {
 										</button>
 									</div>
 								</Show>
-
-								<div class="level-item">
-									<a
-										class="button is-fullwidth"
-										title={`View ${props.project()?.name} Plots`}
-										href={`${resourcePath(props.isConsole)}/${
-											props.project()?.slug
-										}/plots`}
-									>
-										<span class="icon">
-											<i class="fas fa-th-large" />
-										</span>
-										<span>Plots</span>
-									</a>
-								</div>
-
+							</Show>
+							<div class="level-item">
+								<a
+									class="button is-fullwidth"
+									title={`View ${props.project()?.name} Plots`}
+									href={`${resourcePath(props.isConsole)}/${
+										props.project()?.slug
+									}/plots`}
+								>
+									<span class="icon">
+										<i class="fas fa-th-large" />
+									</span>
+									<span>Plots</span>
+								</a>
+							</div>
+							<Show when={!props.isPlotInit()}>
 								<div class="level-item">
 									<button
 										class="button is-fullwidth"
@@ -187,8 +187,8 @@ const PerfHeader = (props: Props) => {
 										<span>Refresh</span>
 									</button>
 								</div>
-							</nav>
-						</Show>
+							</Show>
+						</nav>
 					</div>
 				</nav>
 			</div>
