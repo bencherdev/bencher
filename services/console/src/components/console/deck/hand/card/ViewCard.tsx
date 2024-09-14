@@ -66,12 +66,7 @@ const ViewCard = (props: Props) => {
 											readonly
 										/>
 									</Match>
-									<Match
-										when={
-											props.card?.display === Display.REPORT ||
-											props.card?.display === Display.ALERT_REPORT
-										}
-									>
+									<Match when={props.card?.display === Display.REPORT}>
 										<a
 											href={`${resourcePath(props.isConsole)}/${
 												props.params?.project
@@ -79,18 +74,9 @@ const ViewCard = (props: Props) => {
 												props.value?.report
 											}?${BACK_PARAM}=${encodePath()}`}
 										>
-											{fmtDateTime(
-												(() => {
-													switch (props.card?.display) {
-														case Display.REPORT:
-															return props.value?.start_time;
-														case Display.ALERT_REPORT:
-															return props.value?.created;
-														default:
-															return "";
-													}
-												})(),
-											)}
+											{props.value?.start_time
+												? fmtDateTime(props.value?.start_time)
+												: "View Report"}
 										</a>
 									</Match>
 									<Match

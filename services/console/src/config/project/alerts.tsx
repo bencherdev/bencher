@@ -92,7 +92,7 @@ const alertsConfig = {
 					kind: Card.FIELD,
 					label: "Report",
 					key: null,
-					display: Display.ALERT_REPORT,
+					display: Display.REPORT,
 				},
 				{
 					kind: Card.NESTED_FIELD,
