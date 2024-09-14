@@ -117,6 +117,18 @@ export type JsonReportResults = JsonReportIteration[];
 
 export type BranchName = string;
 
+export type GitHash = string;
+
+export interface JsonVersion {
+	number: VersionNumber;
+	hash?: GitHash;
+}
+
+export interface JsonStartPoint {
+	branch: Uuid;
+	version: JsonVersion;
+}
+
 export interface JsonBranch {
 	uuid: Uuid;
 	project: Uuid;
@@ -182,8 +194,6 @@ export type Uuid = string;
 export type DateTimeMillis = number;
 
 export type Email = string;
-
-export type GitHash = string;
 
 export type Index = number;
 
@@ -355,11 +365,6 @@ export interface JsonPerfAlert {
 	limit: BoundaryLimit;
 	status: AlertStatus;
 	modified: string;
-}
-
-export interface JsonVersion {
-	number: VersionNumber;
-	hash?: GitHash;
 }
 
 export interface JsonBranchVersion {
