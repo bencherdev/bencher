@@ -25,6 +25,7 @@ import PlotsHeader from "./PlotsHeader";
 import { debounce } from "@solid-primitives/scheduled";
 import FallbackPlots from "./FallbackPlots";
 import * as Sentry from "@sentry/astro";
+import { perfPath } from "../../../config/util";
 
 const SEARCH_PARAM = "search";
 const MAX_PLOTS = 64;
@@ -247,7 +248,9 @@ const PlotsPanel = (props: Props) => {
 						<PinNewPlot project_slug={project_slug} />
 					</div>
 				</Show>
-				<Show when={!isAllowedCreate() && plotsLength() === 0}>
+				<Show
+					when={(!props.isConsole || !isAllowedCreate()) && plotsLength() === 0}
+				>
 					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
 						<div class="box">
 							<div class="content has-text-centered">
@@ -256,7 +259,7 @@ const PlotsPanel = (props: Props) => {
 							<a
 								type="button"
 								class="button is-primary is-fullwidth"
-								href={`/console/projects/${project_slug()}/perf`}
+								href={perfPath(props.isConsole, project_slug())}
 							>
 								View a Perf Plot
 							</a>
