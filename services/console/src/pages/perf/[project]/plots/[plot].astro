@@ -19,7 +19,9 @@ let notFound = false;
 let json: object;
 if (params.project && params.project !== "undefined") {
 	try {
-		const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${params.project}/plots/${params.plot}`;
+		const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
+			params.project
+		}/plots/${params.plot}`;
 		const resp = await fetchSSR(url);
 		json = await resp.json();
 		if (json?.uuid) {
