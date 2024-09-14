@@ -845,7 +845,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "bencher_adapter"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_json",
  "criterion",
@@ -863,7 +863,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_api"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "async-compression",
  "async-trait",
@@ -916,7 +916,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_billing"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "async-stripe",
  "bencher_json",
@@ -931,7 +931,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_bing_index"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "reqwest 0.11.27",
  "serde",
@@ -942,7 +942,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_boundary"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_json",
  "bencher_logger",
@@ -956,7 +956,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_cli"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_adapter",
  "bencher_client",
@@ -983,7 +983,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_client"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_json",
  "bytes",
@@ -1003,7 +1003,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_comment"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_json",
  "serde_json",
@@ -1012,7 +1012,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_github"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_valid",
  "oauth2",
@@ -1025,7 +1025,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_google_index"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "http 0.2.12",
  "reqwest 0.11.27",
@@ -1039,7 +1039,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_json"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_valid",
  "chrono",
@@ -1064,7 +1064,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_license"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1078,7 +1078,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_logger"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "slog",
  "slog-term",
@@ -1086,7 +1086,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_plot"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1101,7 +1101,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_rank"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "diesel",
  "thiserror",
@@ -1109,7 +1109,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_rbac"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_json",
  "literally",
@@ -1120,7 +1120,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_token"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1133,7 +1133,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_valid"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "bin_version"
-version = "0.4.19"
+version = "0.4.20"
 
 [[package]]
 name = "bit-set"
@@ -2768,7 +2768,7 @@ dependencies = [
 
 [[package]]
 name = "gen_installer"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "anyhow",
  "clap",
@@ -2779,7 +2779,7 @@ dependencies = [
 
 [[package]]
 name = "gen_notes"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "anyhow",
  "camino",
@@ -2788,7 +2788,7 @@ dependencies = [
 
 [[package]]
 name = "gen_pkg"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "anyhow",
  "bencher_cli",
@@ -2799,7 +2799,7 @@ dependencies = [
 
 [[package]]
 name = "gen_types"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "anyhow",
  "bencher_api",
@@ -7227,7 +7227,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "test_api"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -7240,7 +7240,7 @@ dependencies = [
 
 [[package]]
 name = "test_netlify"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "anyhow",
  "bencher_json",
@@ -8416,7 +8416,7 @@ checksum = "66fee0b777b0f5ac1c69bb06d361268faafa61cd4682ae064a171c16c433e9e4"
 
 [[package]]
 name = "xtask"
-version = "0.4.19"
+version = "0.4.20"
 dependencies = [
  "anyhow",
  "async-openai",
