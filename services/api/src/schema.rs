@@ -28,9 +28,9 @@ diesel::table! {
     boundary (id) {
         id -> Integer,
         uuid -> Text,
+        metric_id -> Integer,
         threshold_id -> Integer,
         model_id -> Integer,
-        metric_id -> Integer,
         baseline -> Nullable<Double>,
         lower_limit -> Nullable<Double>,
         upper_limit -> Nullable<Double>,

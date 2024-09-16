@@ -20,9 +20,9 @@ crate::util::typed_id::typed_id!(BoundaryId);
 pub struct QueryBoundary {
     pub id: BoundaryId,
     pub uuid: BoundaryUuid,
+    pub metric_id: MetricId,
     pub threshold_id: ThresholdId,
     pub model_id: ModelId,
-    pub metric_id: MetricId,
     pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,
     pub upper_limit: Option<f64>,
@@ -53,9 +53,9 @@ impl QueryBoundary {
 #[diesel(table_name = boundary_table)]
 pub struct InsertBoundary {
     pub uuid: BoundaryUuid,
+    pub metric_id: MetricId,
     pub threshold_id: ThresholdId,
     pub model_id: ModelId,
-    pub metric_id: MetricId,
     pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,
     pub upper_limit: Option<f64>,

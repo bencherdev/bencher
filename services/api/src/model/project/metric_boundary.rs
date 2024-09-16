@@ -72,9 +72,9 @@ impl QueryMetricBoundary {
             Some(QueryBoundary {
                 id,
                 uuid,
+                metric_id,
                 threshold_id,
                 model_id,
-                metric_id,
                 baseline,
                 lower_limit,
                 upper_limit,
