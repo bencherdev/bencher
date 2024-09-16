@@ -115,4 +115,56 @@ FROM branch;
 DROP TABLE branch;
 ALTER TABLE up_branch
     RENAME TO branch;
+-- report
+CREATE TABLE up_report (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    -- Connect to the reference and version individually and not to their reference_version
+    -- This is necessary in order for cloned references to work
+    -- Cloned references will *not* have a report tied to their specific reference_version
+    -- So we don't want to have to query through the reference_version table
+    -- to filter on the branch and list all of the versions
+    reference_id INTEGER NOT NULL,
+    version_id INTEGER NOT NULL,
+    testbed_id INTEGER NOT NULL,
+    adapter INTEGER NOT NULL,
+    start_time BIGINT NOT NULL,
+    end_time BIGINT NOT NULL,
+    created BIGINT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
+    FOREIGN KEY (reference_id) REFERENCES reference (id),
+    FOREIGN KEY (version_id) REFERENCES version (id),
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id)
+);
+INSERT INTO up_report(
+        id,
+        uuid,
+        user_id,
+        project_id,
+        reference_id,
+        version_id,
+        testbed_id,
+        adapter,
+        start_time,
+        end_time,
+        created
+    )
+SELECT id,
+    uuid,
+    user_id,
+    project_id,
+    branch_id,
+    version_id,
+    testbed_id,
+    adapter,
+    start_time,
+    end_time,
+    created
+FROM report;
+DROP TABLE report;
+ALTER TABLE up_report
+    RENAME TO report;
 PRAGMA foreign_keys = on;

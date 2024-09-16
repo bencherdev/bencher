@@ -288,7 +288,7 @@ async fn post_inner(
     let project_id = project.id;
 
     // Get or create the branch and testbed
-    let branch_id = QueryBranch::get_or_create(
+    let (branch_id, reference_id) = QueryBranch::get_or_create(
         log,
         context,
         project_id,
@@ -326,7 +326,7 @@ async fn post_inner(
     let insert_report = InsertReport::from_json(
         auth_user.id(),
         project_id,
-        branch_id,
+        reference_id,
         version_id,
         testbed_id,
         &json_report,
@@ -354,7 +354,13 @@ async fn post_inner(
     let mut usage = 0;
 
     // Process and record the report results
-    let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
+    let mut report_results = ReportResults::new(
+        project_id,
+        branch_id,
+        reference_id,
+        testbed_id,
+        query_report.id,
+    );
     let results_array = json_report
         .results
         .iter()

@@ -10,7 +10,7 @@ use crate::{
     error::{bad_request_error, resource_conflict_err},
     model::project::{
         benchmark::BenchmarkId,
-        branch::BranchId,
+        branch::{reference::ReferenceId, BranchId},
         measure::MeasureId,
         metric::QueryMetric,
         testbed::TestbedId,
@@ -27,7 +27,7 @@ use threshold::Threshold;
 
 #[derive(Debug, Clone)]
 pub struct Detector {
-    pub branch_id: BranchId,
+    pub reference_id: ReferenceId,
     pub testbed_id: TestbedId,
     pub measure_id: MeasureId,
     pub threshold: Threshold,
@@ -37,13 +37,14 @@ impl Detector {
     pub fn new(
         conn: &mut DbConnection,
         branch_id: BranchId,
+        reference_id: ReferenceId,
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Option<Self> {
         // Check to see if there is a threshold for the branch/testbed/measure grouping.
         // If not, then there will be nothing to detect.
         Threshold::new(conn, branch_id, testbed_id, measure_id).map(|threshold| Self {
-            branch_id,
+            reference_id,
             testbed_id,
             measure_id,
             threshold,
@@ -62,7 +63,7 @@ impl Detector {
         let metrics_data = metrics_data(
             log,
             conn_lock!(context),
-            self.branch_id,
+            self.reference_id,
             self.testbed_id,
             benchmark_id,
             self.measure_id,

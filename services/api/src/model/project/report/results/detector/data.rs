@@ -8,7 +8,8 @@ use crate::{
     context::DbConnection,
     error::not_found_error,
     model::project::{
-        benchmark::BenchmarkId, branch::BranchId, measure::MeasureId, testbed::TestbedId,
+        benchmark::BenchmarkId, branch::reference::ReferenceId, measure::MeasureId,
+        testbed::TestbedId,
     },
     schema,
 };
@@ -18,34 +19,35 @@ use super::threshold::ThresholdModel;
 pub fn metrics_data(
     log: &Logger,
     conn: &mut DbConnection,
-    branch_id: BranchId,
+    reference_id: ReferenceId,
     testbed_id: TestbedId,
     benchmark_id: BenchmarkId,
     measure_id: MeasureId,
     model: &ThresholdModel,
 ) -> Result<MetricsData, HttpError> {
-    let mut query =
-        schema::metric::table
-            .inner_join(
-                schema::report_benchmark::table
-                    .inner_join(
-                        schema::report::table
-                            .inner_join(schema::version::table.inner_join(
-                                schema::branch_version::table.inner_join(
-                                    schema::branch::table.on(
-                                        schema::branch_version::branch_id.eq(schema::branch::id),
-                                    ),
+    let mut query = schema::metric::table
+        .inner_join(
+            schema::report_benchmark::table
+                .inner_join(
+                    schema::report::table
+                        .inner_join(
+                            schema::version::table.inner_join(
+                                schema::reference_version::table.inner_join(
+                                    schema::reference::table
+                                        .on(schema::reference_version::reference_id
+                                            .eq(schema::reference::id)),
                                 ),
-                            ))
-                            .inner_join(schema::testbed::table),
-                    )
-                    .inner_join(schema::benchmark::table),
-            )
-            .filter(schema::branch::id.eq(branch_id))
-            .filter(schema::testbed::id.eq(testbed_id))
-            .filter(schema::benchmark::id.eq(benchmark_id))
-            .filter(schema::metric::measure_id.eq(measure_id))
-            .into_boxed();
+                            ),
+                        )
+                        .inner_join(schema::testbed::table),
+                )
+                .inner_join(schema::benchmark::table),
+        )
+        .filter(schema::reference::id.eq(reference_id))
+        .filter(schema::testbed::id.eq(testbed_id))
+        .filter(schema::benchmark::id.eq(benchmark_id))
+        .filter(schema::metric::measure_id.eq(measure_id))
+        .into_boxed();
 
     if let Some(window) = model.window {
         let now = Utc::now().timestamp();

@@ -5,7 +5,7 @@ use bencher_json::{
     },
     BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -49,7 +49,7 @@ pub struct QueryBranch {
     pub id: BranchId,
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
-    pub head_id: ReferenceId,
+    pub head_id: Option<ReferenceId>,
     pub name: BranchName,
     pub slug: Slug,
     pub created: DateTime,
@@ -104,7 +104,7 @@ impl QueryBranch {
         project_id: ProjectId,
         branch: &NameId,
         report_start_point: Option<&JsonReportStartPoint>,
-    ) -> Result<BranchId, HttpError> {
+    ) -> Result<(BranchId, ReferenceId), HttpError> {
         let query_branch =
             Self::get_or_create_inner(log, context, project_id, branch, report_start_point).await?;
 
@@ -173,11 +173,11 @@ impl QueryBranch {
         }) = report_start_point
         {
             // If updating the start point, it is okay if it does not exist.
-            if let Ok(branch_version) =
-                QueryBranchVersion::get_start_point(context, project_id, branch, hash.as_ref())
+            if let Ok(reference_version) =
+                QueryReferenceVersion::get_start_point(context, project_id, branch, hash.as_ref())
                     .await
             {
-                Some(branch_version.to_start_point(context).await?)
+                Some(reference_version.to_start_point(context).await?)
             } else {
                 None
             }
@@ -259,11 +259,11 @@ impl QueryBranch {
     }
 
     async fn get_start_point(&self, context: &ApiContext) -> Result<Option<StartPoint>, HttpError> {
-        let Some(start_point_id) = self.start_point_id else {
+        let Some(head_id) = self.head_id else {
             return Ok(None);
         };
-        let branch_version = QueryBranchVersion::get(conn_lock!(context), start_point_id)?;
-        let start_point = branch_version.to_start_point(context).await?;
+        let reference_version = QueryReferenceVersion::get(conn_lock!(context), head_id)?;
+        let start_point = reference_version.to_start_point(context).await?;
         Ok(Some(start_point))
     }
 
@@ -343,9 +343,9 @@ impl QueryBranch {
         let Self {
             uuid,
             project_id,
+            head_id,
             name,
             slug,
-            start_point_id,
             created,
             modified,
             archived,
@@ -357,8 +357,8 @@ impl QueryBranch {
             BencherResource::Branch,
             project_id,
         );
-        let start_point = if let Some(start_point_id) = start_point_id {
-            Some(QueryBranchVersion::get(conn, start_point_id)?.into_start_point_json(conn)?)
+        let start_point = if let Some(head_id) = head_id {
+            Some(QueryReferenceVersion::get(conn, head_id)?.into_start_point_json(conn)?)
         } else {
             None
         };
@@ -380,7 +380,7 @@ impl QueryBranch {
 pub struct InsertBranch {
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
-    pub head_id: ReferenceId,
+    pub head_id: Option<ReferenceId>,
     pub name: BranchName,
     pub slug: Slug,
     pub created: DateTime,
@@ -409,10 +409,10 @@ impl InsertBranch {
         )?);
         let timestamp = DateTime::now();
 
-        let start_point_id = if let Some(JsonNewStartPoint { branch, hash, .. }) = start_point {
+        let head_id = if let Some(JsonNewStartPoint { branch, hash, .. }) = start_point {
             // When creating a new branch, it is okay if the start point does not yet exist.
             // https://github.com/bencherdev/bencher/issues/450
-            QueryBranchVersion::get_start_point(context, project_id, &branch, hash.as_ref())
+            QueryReferenceVersion::get_start_point(context, project_id, &branch, hash.as_ref())
                 .await
                 .map(|start_point| start_point.id)
                 .ok()
@@ -423,9 +423,9 @@ impl InsertBranch {
         Ok(Self {
             uuid: BranchUuid::new(),
             project_id,
+            head_id,
             name,
             slug,
-            start_point_id,
             created: timestamp,
             modified: timestamp,
             archived: None,
@@ -445,7 +445,7 @@ impl InsertBranch {
         let Some(start_point_id) = self.start_point_id else {
             return Ok(());
         };
-        let start_point = QueryBranchVersion::get(conn_lock!(context), start_point_id)?;
+        let start_point = QueryReferenceVersion::get(conn_lock!(context), start_point_id)?;
         let new_branch_id = QueryBranch::get_id(conn_lock!(context), self.uuid)?;
 
         self.clone_versions(context, &start_point, new_branch_id)
@@ -462,34 +462,41 @@ impl InsertBranch {
     async fn clone_versions(
         &self,
         context: &ApiContext,
-        start_point: &QueryBranchVersion,
+        start_point: &QueryReferenceVersion,
         new_branch_id: BranchId,
     ) -> Result<(), HttpError> {
         let start_point_version = QueryVersion::get(conn_lock!(context), start_point.version_id)?;
         // Get all prior versions (version number less than or equal to) for the start point branch
-        let version_ids = schema::branch_version::table
+        let version_ids = schema::reference_version::table
+            .inner_join(
+                schema::reference::table
+                    .on(schema::reference::id.eq(schema::reference_version::reference_id)),
+            )
             .inner_join(schema::version::table)
-            .filter(schema::branch_version::branch_id.eq(start_point.branch_id))
+            .filter(schema::reference::branch_id.eq(start_point.branch_id))
             .filter(schema::version::number.le(start_point_version.number))
             .order(schema::version::number.desc())
-            .select(schema::branch_version::version_id)
+            .select(schema::reference_version::version_id)
             .load::<VersionId>(conn_lock!(context))
             .map_err(resource_not_found_err!(
-                BranchVersion,
+                ReferenceVersion,
                 (start_point, start_point_version)
             ))?;
 
         // Add new branch to all start point branch versions
         for version_id in version_ids {
-            let insert_branch_version = InsertBranchVersion {
+            let insert_branch_version = InsertReferenceVersion {
                 branch_id: new_branch_id,
                 version_id,
             };
 
-            diesel::insert_into(schema::branch_version::table)
+            diesel::insert_into(schema::reference_version::table)
                 .values(&insert_branch_version)
                 .execute(conn_lock!(context))
-                .map_err(resource_conflict_err!(BranchVersion, insert_branch_version))?;
+                .map_err(resource_conflict_err!(
+                    ReferenceVersion,
+                    insert_branch_version
+                ))?;
         }
 
         Ok(())
@@ -499,7 +506,7 @@ impl InsertBranch {
         &self,
         log: &Logger,
         context: &ApiContext,
-        start_point: &QueryBranchVersion,
+        start_point: &QueryReferenceVersion,
         new_branch_id: BranchId,
     ) -> Result<(), HttpError> {
         // Get all thresholds for the start point branch

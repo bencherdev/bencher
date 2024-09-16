@@ -22,7 +22,6 @@ use crate::{
             measure::QueryMeasure,
             testbed::{QueryTestbed, TestbedId},
             threshold::{alert::QueryAlert, model::QueryModel, QueryThreshold},
-            version::VersionId,
             ProjectId, QueryProject,
         },
         user::{QueryUser, UserId},
@@ -33,7 +32,9 @@ use crate::{
 };
 
 use super::{
-    branch_version::QueryBranchVersion, metric::QueryMetric, metric_boundary::QueryMetricBoundary,
+    branch::{reference::ReferenceId, version::VersionId},
+    metric::QueryMetric,
+    metric_boundary::QueryMetricBoundary,
     threshold::boundary::QueryBoundary,
 };
 
@@ -50,7 +51,7 @@ pub struct QueryReport {
     pub uuid: ReportUuid,
     pub user_id: UserId,
     pub project_id: ProjectId,
-    pub branch_id: BranchId,
+    pub reference_id: ReferenceId,
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
     pub adapter: Adapter,
@@ -73,7 +74,7 @@ impl QueryReport {
             uuid,
             user_id,
             project_id,
-            branch_id,
+            reference_id,
             version_id,
             testbed_id,
             adapter,
@@ -84,7 +85,7 @@ impl QueryReport {
 
         let query_project = QueryProject::get(conn_lock!(context), project_id)?;
         let user = QueryUser::get(conn_lock!(context), user_id)?.into_pub_json();
-        let branch = QueryBranchVersion::get_json_for_project(
+        let branch = QueryReferenceVersion::get_json_for_project(
             context,
             &query_project,
             branch_id,
@@ -326,7 +327,7 @@ pub struct InsertReport {
     pub uuid: ReportUuid,
     pub user_id: UserId,
     pub project_id: ProjectId,
-    pub branch_id: BranchId,
+    pub reference_id: ReferenceId,
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
     pub adapter: Adapter,
@@ -339,7 +340,7 @@ impl InsertReport {
     pub fn from_json(
         user_id: UserId,
         project_id: ProjectId,
-        branch_id: BranchId,
+        reference_id: ReferenceId,
         version_id: VersionId,
         testbed_id: TestbedId,
         report: &JsonNewReport,
@@ -349,7 +350,7 @@ impl InsertReport {
             uuid: ReportUuid::new(),
             user_id,
             project_id,
-            branch_id,
+            reference_id,
             version_id,
             testbed_id,
             adapter,

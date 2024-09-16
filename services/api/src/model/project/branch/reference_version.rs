@@ -60,7 +60,7 @@ impl QueryReferenceVersion {
             .select(Self::as_select())
             .first::<Self>(conn_lock!(context))
             .map_err(resource_not_found_err!(
-                BranchVersion,
+                ReferenceVersion,
                 (branch, hash)
             ))
     }

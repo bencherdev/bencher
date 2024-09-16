@@ -228,7 +228,7 @@ diesel::table! {
         uuid -> Text,
         user_id -> Integer,
         project_id -> Integer,
-        branch_id -> Integer,
+        reference_id -> Integer,
         version_id -> Integer,
         testbed_id -> Integer,
         adapter -> Integer,
@@ -343,8 +343,8 @@ diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
 diesel::joinable!(reference_version -> version (version_id));
-diesel::joinable!(report -> branch (branch_id));
 diesel::joinable!(report -> project (project_id));
+diesel::joinable!(report -> reference (reference_id));
 diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));

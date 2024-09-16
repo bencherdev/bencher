@@ -19,7 +19,7 @@ use crate::{
     error::{bad_request_error, issue_error, resource_conflict_err},
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
-        branch::BranchId,
+        branch::{reference::ReferenceId, BranchId},
         measure::{MeasureId, QueryMeasure},
         metric::{InsertMetric, QueryMetric},
         report::report_benchmark::{InsertReportBenchmark, QueryReportBenchmark},
@@ -39,6 +39,7 @@ use super::ReportId;
 pub struct ReportResults {
     pub project_id: ProjectId,
     pub branch_id: BranchId,
+    pub reference_id: ReferenceId,
     pub testbed_id: TestbedId,
     pub report_id: ReportId,
     pub benchmark_cache: HashMap<BenchmarkName, BenchmarkId>,
@@ -50,12 +51,14 @@ impl ReportResults {
     pub fn new(
         project_id: ProjectId,
         branch_id: BranchId,
+        reference_id: ReferenceId,
         testbed_id: TestbedId,
         report_id: ReportId,
     ) -> Self {
         Self {
             project_id,
             branch_id,
+            reference_id,
             testbed_id,
             report_id,
             benchmark_cache: HashMap::new(),
@@ -231,6 +234,7 @@ impl ReportResults {
             let detector = Detector::new(
                 conn_lock!(context),
                 self.branch_id,
+                self.reference_id,
                 self.testbed_id,
                 measure_id,
             );

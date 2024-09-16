@@ -1,6 +1,6 @@
 use crate::schema::{
-    alert, benchmark, boundary, branch, branch_version, measure, metric, model, project,
-    project_role, report, report_benchmark, testbed, threshold, version,
+    alert, benchmark, boundary, branch, measure, metric, model, project, project_role, reference,
+    reference_version, report, report_benchmark, testbed, threshold, version,
 };
 
 diesel::table! {
@@ -31,12 +31,13 @@ diesel::allow_tables_to_appear_in_same_query!(metric_boundary, alert);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, benchmark);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, boundary);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, branch);
-diesel::allow_tables_to_appear_in_same_query!(metric_boundary, branch_version);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, measure);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, metric);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, model);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, project);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, project_role);
+diesel::allow_tables_to_appear_in_same_query!(metric_boundary, reference);
+diesel::allow_tables_to_appear_in_same_query!(metric_boundary, reference_version);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, report);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, report_benchmark);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, testbed);
