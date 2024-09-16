@@ -42,20 +42,12 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         project_id -> Integer,
+        head_id -> Nullable<Integer>,
         name -> Text,
         slug -> Text,
-        start_point_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
         archived -> Nullable<BigInt>,
-    }
-}
-
-diesel::table! {
-    branch_version (id) {
-        id -> Integer,
-        branch_id -> Integer,
-        version_id -> Integer,
     }
 }
 
@@ -212,6 +204,25 @@ diesel::table! {
 }
 
 diesel::table! {
+    reference (id) {
+        id -> Integer,
+        uuid -> Text,
+        branch_id -> Integer,
+        start_point_id -> Nullable<Integer>,
+        created -> BigInt,
+        replaced -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
+    reference_version (id) {
+        id -> Integer,
+        reference_id -> Integer,
+        version_id -> Integer,
+    }
+}
+
+diesel::table! {
     report (id) {
         id -> Integer,
         uuid -> Text,
@@ -314,7 +325,6 @@ diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
-diesel::joinable!(branch_version -> version (version_id));
 diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> report_benchmark (report_benchmark_id));
@@ -332,6 +342,7 @@ diesel::joinable!(plot_testbed -> testbed (testbed_id));
 diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
+diesel::joinable!(reference_version -> version (version_id));
 diesel::joinable!(report -> branch (branch_id));
 diesel::joinable!(report -> project (project_id));
 diesel::joinable!(report -> testbed (testbed_id));
@@ -352,7 +363,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     benchmark,
     boundary,
     branch,
-    branch_version,
     measure,
     metric,
     model,
@@ -366,6 +376,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     plot_testbed,
     project,
     project_role,
+    reference,
+    reference_version,
     report,
     report_benchmark,
     server,

@@ -20,6 +20,7 @@ pub mod metric;
 pub mod model;
 pub mod perf;
 pub mod plot;
+pub mod reference;
 pub mod report;
 pub mod testbed;
 pub mod threshold;

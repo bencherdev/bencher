@@ -1,35 +1,35 @@
 use bencher_json::{
-    project::branch::JsonBranchVersion, GitHash, JsonBranch, JsonStartPoint, NameId,
+    project::branch::JsonBranchVersion, BranchUuid, GitHash, JsonBranch, JsonStartPoint, NameId,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
 
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
     error::{assert_parentage, resource_not_found_err, BencherResource},
-    schema::{self, branch_version as branch_version_table},
+    schema::{self, reference_version as reference_version_table},
     util::fn_get::fn_get,
 };
 
 use super::{
-    branch::{BranchId, QueryBranch},
+    reference::ReferenceId,
     version::{QueryVersion, VersionId},
-    ProjectId, QueryProject,
+    BranchId, ProjectId, QueryBranch, QueryProject,
 };
 
-crate::util::typed_id::typed_id!(BranchVersionId);
+crate::util::typed_id::typed_id!(ReferenceVersionId);
 
 #[derive(Debug, diesel::Queryable, diesel::Selectable)]
-#[diesel(table_name = branch_version_table)]
-pub struct QueryBranchVersion {
-    pub id: BranchVersionId,
-    pub branch_id: BranchId,
+#[diesel(table_name = reference_version_table)]
+pub struct QueryReferenceVersion {
+    pub id: ReferenceVersionId,
+    pub reference_id: ReferenceId,
     pub version_id: VersionId,
 }
 
-impl QueryBranchVersion {
-    fn_get!(branch_version, BranchVersionId);
+impl QueryReferenceVersion {
+    fn_get!(reference_version, ReferenceVersionId);
 
     pub async fn get_start_point(
         context: &ApiContext,
@@ -40,10 +40,11 @@ impl QueryBranchVersion {
         // Get the start point branch
         let start_point_branch =
             QueryBranch::from_name_id(conn_lock!(context), project_id, branch)?;
-        let mut query = schema::branch_version::table
+        let mut query = schema::reference_version::table
+            .inner_join(schema::reference::table.on(schema::reference::id.eq(schema::reference_version::reference_id)))
             .inner_join(schema::version::table)
             // Filter for the start point branch
-            .filter(schema::branch_version::branch_id.eq(start_point_branch.id))
+            .filter(schema::reference::branch_id.eq(start_point_branch.id))
             // Sanity check that we are in the right project
             .filter(schema::version::project_id.eq(project_id))
             .into_boxed();
@@ -65,7 +66,14 @@ impl QueryBranchVersion {
     }
 
     pub async fn to_start_point(&self, context: &ApiContext) -> Result<StartPoint, HttpError> {
-        let branch = QueryBranch::get(conn_lock!(context), self.branch_id)?;
+        let branch = schema::branch::table
+            .inner_join(
+                schema::reference::table.on(schema::reference::branch_id.eq(schema::branch::id)),
+            )
+            .filter(schema::reference::id.eq(self.reference_id))
+            .select(QueryBranch::as_select())
+            .first::<QueryBranch>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Reference, self.reference_id))?;
         let version = QueryVersion::get(conn_lock!(context), self.version_id)?;
         Ok(StartPoint { branch, version })
     }
@@ -74,8 +82,16 @@ impl QueryBranchVersion {
         self,
         conn: &mut DbConnection,
     ) -> Result<JsonStartPoint, HttpError> {
+        let branch = schema::branch::table
+            .inner_join(
+                schema::reference::table.on(schema::reference::branch_id.eq(schema::branch::id)),
+            )
+            .filter(schema::reference::id.eq(self.reference_id))
+            .select(schema::branch::uuid)
+            .first::<BranchUuid>(conn)
+            .map_err(resource_not_found_err!(Reference, self.reference_id))?;
         Ok(JsonStartPoint {
-            branch: QueryBranch::get_uuid(conn, self.branch_id)?,
+            branch,
             version: QueryVersion::get(conn, self.version_id)?.into_json(),
         })
     }
@@ -137,8 +153,8 @@ pub struct StartPoint {
 }
 
 #[derive(Debug, diesel::Insertable)]
-#[diesel(table_name = branch_version_table)]
-pub struct InsertBranchVersion {
-    pub branch_id: BranchId,
+#[diesel(table_name = reference_version_table)]
+pub struct InsertReferenceVersion {
+    pub reference_id: ReferenceId,
     pub version_id: VersionId,
 }

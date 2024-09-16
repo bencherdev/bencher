@@ -10,10 +10,8 @@ use dropshot::HttpError;
 use slog::Logger;
 
 use super::{
-    branch_version::{BranchVersionId, InsertBranchVersion, QueryBranchVersion, StartPoint},
     plot::UpdatePlot,
     threshold::model::{InsertModel, QueryModel},
-    version::{QueryVersion, VersionId},
     ProjectId, QueryProject,
 };
 use crate::{
@@ -30,6 +28,16 @@ use crate::{
     },
 };
 
+pub mod reference;
+pub mod reference_version;
+pub mod version;
+
+use reference::ReferenceId;
+use reference_version::{
+    InsertReferenceVersion, QueryReferenceVersion, ReferenceVersionId, StartPoint,
+};
+use version::{QueryVersion, VersionId};
+
 crate::util::typed_id::typed_id!(BranchId);
 
 #[derive(
@@ -41,9 +49,9 @@ pub struct QueryBranch {
     pub id: BranchId,
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
+    pub head_id: ReferenceId,
     pub name: BranchName,
     pub slug: Slug,
-    pub start_point_id: Option<BranchVersionId>,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -372,9 +380,9 @@ impl QueryBranch {
 pub struct InsertBranch {
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
+    pub head_id: ReferenceId,
     pub name: BranchName,
     pub slug: Slug,
-    pub start_point_id: Option<BranchVersionId>,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,

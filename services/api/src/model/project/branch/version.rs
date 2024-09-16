@@ -13,7 +13,9 @@ use crate::{
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
-use super::{branch::BranchId, branch_version::InsertBranchVersion, ProjectId, QueryProject};
+use super::{
+    reference::ReferenceId, reference_version::InsertReferenceVersion, ProjectId, QueryProject,
+};
 
 crate::util::typed_id::typed_id!(VersionId);
 
@@ -38,13 +40,13 @@ impl QueryVersion {
     pub fn get_or_increment(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        branch_id: BranchId,
+        reference_id: ReferenceId,
         hash: Option<&GitHash>,
     ) -> Result<VersionId, HttpError> {
         if let Some(hash) = hash {
             if let Ok(version_id) = schema::version::table
-                .inner_join(schema::branch_version::table)
-                .filter(schema::branch_version::branch_id.eq(branch_id))
+                .inner_join(schema::reference_version::table)
+                .filter(schema::reference_version::reference_id.eq(reference_id))
                 .filter(schema::version::project_id.eq(project_id))
                 .filter(schema::version::hash.eq(hash.as_ref()))
                 .order(schema::version::number.desc())
@@ -53,10 +55,10 @@ impl QueryVersion {
             {
                 Ok(version_id)
             } else {
-                InsertVersion::increment(conn, project_id, branch_id, Some(hash.clone()))
+                InsertVersion::increment(conn, project_id, reference_id, Some(hash.clone()))
             }
         } else {
-            InsertVersion::increment(conn, project_id, branch_id, None)
+            InsertVersion::increment(conn, project_id, reference_id, None)
         }
     }
 
@@ -79,14 +81,14 @@ impl InsertVersion {
     pub fn increment(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        branch_id: BranchId,
+        reference_id: ReferenceId,
         hash: Option<GitHash>,
     ) -> Result<VersionId, HttpError> {
         // Get the most recent code version number for this branch and increment it.
         // Otherwise, start a new branch code version number count from zero.
         let number = if let Ok(number) = schema::version::table
-            .inner_join(schema::branch_version::table)
-            .filter(schema::branch_version::branch_id.eq(branch_id))
+            .inner_join(schema::reference_version::table)
+            .filter(schema::reference_version::reference_id.eq(reference_id))
             .select(schema::version::number)
             .order(schema::version::number.desc())
             .first::<VersionNumber>(conn)
@@ -111,15 +113,18 @@ impl InsertVersion {
 
         let version_id = QueryVersion::get_id(conn, version_uuid)?;
 
-        let insert_branch_version = InsertBranchVersion {
-            branch_id,
+        let insert_branch_version = InsertReferenceVersion {
+            reference_id,
             version_id,
         };
 
-        diesel::insert_into(schema::branch_version::table)
+        diesel::insert_into(schema::reference_version::table)
             .values(&insert_branch_version)
             .execute(conn)
-            .map_err(resource_conflict_err!(BranchVersion, insert_branch_version))?;
+            .map_err(resource_conflict_err!(
+                ReferenceVersion,
+                insert_branch_version
+            ))?;
 
         Ok(version_id)
     }

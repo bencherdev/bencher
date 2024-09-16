@@ -24,7 +24,6 @@ use super::{organization::OrganizationId, user::auth::BEARER_TOKEN_FORMAT};
 
 pub mod benchmark;
 pub mod branch;
-pub mod branch_version;
 pub mod measure;
 pub mod metric;
 pub mod metric_boundary;
@@ -33,7 +32,6 @@ pub mod project_role;
 pub mod report;
 pub mod testbed;
 pub mod threshold;
-pub mod version;
 
 crate::util::typed_id::typed_id!(ProjectId);
 
