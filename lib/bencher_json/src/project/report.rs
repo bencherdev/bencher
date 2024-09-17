@@ -7,14 +7,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
-    JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonMetric, JsonProject, JsonPubUser,
-    JsonTestbed, NameId,
+    JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric, JsonNewStartPoint,
+    JsonProject, JsonPubUser, JsonTestbed, NameId,
 };
 
-use super::{
-    branch::{JsonBranchVersion, JsonNewStartPoint},
-    threshold::JsonThresholdModel,
-};
+use super::threshold::JsonThresholdModel;
 
 crate::typed_uuid::typed_uuid!(ReportUuid);
 
@@ -323,7 +320,7 @@ pub struct JsonReport {
     pub uuid: ReportUuid,
     pub user: JsonPubUser,
     pub project: JsonProject,
-    pub branch: JsonBranchVersion,
+    pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub start_time: DateTime,
     pub end_time: DateTime,

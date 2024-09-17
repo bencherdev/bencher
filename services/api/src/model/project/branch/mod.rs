@@ -7,6 +7,7 @@ use bencher_json::{
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use dropshot::HttpError;
+use http::StatusCode;
 use slog::Logger;
 
 use super::{
@@ -17,7 +18,10 @@ use super::{
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
-    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
+    error::{
+        assert_parentage, issue_error, resource_conflict_err, resource_not_found_err,
+        BencherResource,
+    },
     model::project::threshold::{InsertThreshold, QueryThreshold},
     schema::{self, branch as branch_table},
     util::{
@@ -32,7 +36,7 @@ pub mod reference;
 pub mod reference_version;
 pub mod version;
 
-use reference::{QueryReference, ReferenceId};
+use reference::{InsertReference, QueryReference, ReferenceId};
 use reference_version::{
     InsertReferenceVersion, QueryReferenceVersion, ReferenceVersionId, StartPoint,
 };
@@ -68,6 +72,22 @@ impl QueryBranch {
     fn_get_id!(branch, BranchId, BranchUuid);
     fn_get_uuid!(branch, BranchId, BranchUuid);
     fn_from_uuid!(branch, BranchUuid, Branch);
+
+    pub fn head_id(&self) -> Result<ReferenceId, HttpError> {
+        self.head_id.ok_or_else(|| {
+            // A branch should always have a head
+            let err = issue_error(
+                StatusCode::NOT_FOUND,
+                "Failed to find branch head",
+                &format!("No branch head: {}/{}", self.project_id, self.uuid),
+                "branch head reference is null",
+            );
+            debug_assert!(false, "{err}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&err);
+            err
+        })
+    }
 
     pub async fn create_from_json(
         log: &Logger,
@@ -342,12 +362,12 @@ impl QueryBranch {
         conn: &mut DbConnection,
         project: &QueryProject,
     ) -> Result<JsonBranch, HttpError> {
+        let head_id = self.head_id()?;
         let Self {
             uuid,
             project_id,
             name,
             slug,
-            head_id,
             created,
             modified,
             archived,
@@ -359,11 +379,7 @@ impl QueryBranch {
             BencherResource::Branch,
             project_id,
         );
-        let head = if let Some(head_id) = head_id {
-            Some(QueryReferenceVersion::get(conn, head_id)?.into_start_point_json(conn)?)
-        } else {
-            None
-        };
+        let head = QueryReference::get_json(conn, head_id)?;
         Ok(JsonBranch {
             uuid,
             project: project.uuid,
@@ -391,16 +407,12 @@ pub struct InsertBranch {
 }
 
 impl InsertBranch {
-    pub async fn from_json(
+    pub async fn new(
         context: &ApiContext,
         project_id: ProjectId,
-        branch: JsonNewBranch,
+        name: BranchName,
+        slug: Option<Slug>,
     ) -> Result<Self, HttpError> {
-        let JsonNewBranch {
-            name,
-            slug,
-            start_point,
-        } = branch;
         let slug = conn_lock!(context, |conn| ok_slug!(
             conn,
             project_id,
@@ -410,28 +422,96 @@ impl InsertBranch {
             QueryBranch
         )?);
         let timestamp = DateTime::now();
-
-        let head_id = if let Some(JsonNewStartPoint { branch, hash, .. }) = start_point {
-            // When creating a new branch, it is okay if the start point does not yet exist.
-            // https://github.com/bencherdev/bencher/issues/450
-            QueryReferenceVersion::get_start_point(context, project_id, &branch, hash.as_ref())
-                .await
-                .map(|start_point| start_point.id)
-                .ok()
-        } else {
-            None
-        };
-
         Ok(Self {
             uuid: BranchUuid::new(),
             project_id,
             name,
             slug,
-            head_id,
+            head_id: None,
             created: timestamp,
             modified: timestamp,
             archived: None,
         })
+    }
+
+    pub async fn from_json(
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch: JsonNewBranch,
+    ) -> Result<BranchId, HttpError> {
+        let JsonNewBranch {
+            name,
+            slug,
+            start_point,
+        } = branch;
+
+        let insert_branch = Self::new(context, project_id, name, slug).await?;
+
+        // Create branch
+        diesel::insert_into(schema::branch::table)
+            .values(&insert_branch)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Branch, insert_branch))?;
+
+        // Get the new branch
+        let query_branch = schema::branch::table
+            .filter(schema::branch::uuid.eq(&insert_branch.uuid))
+            .first::<Self>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Branch, insert_branch))?;
+
+        // Get the reference version for the start point
+        let start_point_id = if let Some(start_point) = start_point {
+            let start_point = QueryReferenceVersion::get_start_point(
+                context,
+                project_id,
+                &start_point.branch,
+                start_point.hash.as_ref(),
+            )
+            .await?;
+            Some(start_point.id)
+        } else {
+            None
+        };
+
+        // Create the head reference for the branch
+        let insert_reference = InsertReference::new(query_branch.id, start_point_id);
+
+        diesel::insert_into(schema::reference::table)
+            .values(&insert_reference)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Reference, insert_reference))?;
+
+        // Get the new reference
+        let query_reference = schema::reference::table
+            .filter(schema::reference::uuid.eq(&insert_reference.uuid))
+            .first::<QueryReference>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Reference, insert_reference))?;
+
+        // Update the branch head reference
+        diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
+            .set(schema::branch::head_id.eq(query_reference.id))
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(
+                Branch,
+                (&query_branch, &query_reference)
+            ))?;
+
+        // Clone data and optionally thresholds from the start point
+        let clone_thresholds = branch
+            .start_point
+            .as_ref()
+            .and_then(|sp| sp.thresholds)
+            .unwrap_or_default();
+        let query_reference = insert_branch
+            .start_point(log, context, clone_thresholds)
+            .await?;
+
+        let query_branch = schema::branch::table
+            .filter(schema::branch::uuid.eq(&insert_branch.uuid))
+            .first::<Self>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Branch, insert_branch))?;
+
+        todo!()
     }
 
     pub async fn main(context: &ApiContext, project_id: ProjectId) -> Result<Self, HttpError> {

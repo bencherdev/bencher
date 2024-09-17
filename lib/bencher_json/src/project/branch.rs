@@ -94,21 +94,6 @@ impl fmt::Display for JsonBranch {
     }
 }
 
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonBranchVersion {
-    pub uuid: BranchUuid,
-    pub project: ProjectUuid,
-    pub name: BranchName,
-    pub slug: Slug,
-    pub version: JsonVersion,
-    pub start_point: Option<JsonStartPoint>,
-    pub created: DateTime,
-    pub modified: DateTime,
-    pub archived: Option<DateTime>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateBranch {

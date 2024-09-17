@@ -16,7 +16,7 @@ pub struct JsonReference {
     pub branch: BranchUuid,
     pub start_point: Option<JsonStartPoint>,
     pub created: DateTime,
-    pub removed: Option<DateTime>,
+    pub replaced: Option<DateTime>,
 }
 
 #[typeshare::typeshare]
@@ -24,6 +24,7 @@ pub struct JsonReference {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStartPoint {
     pub branch: BranchUuid,
+    pub reference: ReferenceUuid,
     pub version: JsonVersion,
 }
 

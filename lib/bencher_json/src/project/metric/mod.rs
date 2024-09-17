@@ -12,12 +12,9 @@ mod median;
 pub use mean::Mean;
 pub use median::Median;
 
-use crate::{JsonBenchmark, JsonBoundary, JsonMeasure, JsonTestbed, ReportUuid};
+use crate::{JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonTestbed, ReportUuid};
 
-use super::{
-    alert::JsonPerfAlert, branch::JsonBranchVersion, report::Iteration,
-    threshold::JsonThresholdModel,
-};
+use super::{alert::JsonPerfAlert, report::Iteration, threshold::JsonThresholdModel};
 
 crate::typed_uuid::typed_uuid!(MetricUuid);
 
@@ -181,7 +178,7 @@ pub struct JsonOneMetric {
     pub iteration: Iteration,
     pub start_time: DateTime,
     pub end_time: DateTime,
-    pub branch: JsonBranchVersion,
+    pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
     pub measure: JsonMeasure,

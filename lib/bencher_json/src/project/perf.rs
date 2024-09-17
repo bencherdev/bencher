@@ -12,8 +12,8 @@ use crate::{
 
 use super::alert::JsonPerfAlert;
 use super::boundary::JsonBoundary;
-use super::branch::JsonVersion;
 use super::metric::JsonMetric;
+use super::reference::JsonVersion;
 use super::report::Iteration;
 use super::threshold::JsonThresholdModel;
 
@@ -292,7 +292,7 @@ pub mod table {
     use tabled::{Table, Tabled};
 
     use crate::{
-        project::{branch::VersionNumber, report::Iteration},
+        project::{reference::VersionNumber, report::Iteration},
         DateTime, JsonBenchmark, JsonBranch, JsonMeasure, JsonMetric, JsonPerf, JsonProject,
         JsonTestbed,
     };
