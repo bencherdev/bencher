@@ -32,7 +32,9 @@ use crate::{
 };
 
 use super::{
-    branch::{reference::ReferenceId, version::VersionId},
+    branch::{
+        reference::ReferenceId, reference_version::QueryReferenceVersion, version::VersionId,
+    },
     metric::QueryMetric,
     metric_boundary::QueryMetricBoundary,
     threshold::boundary::QueryBoundary,
@@ -88,7 +90,7 @@ impl QueryReport {
         let branch = QueryReferenceVersion::get_json_for_project(
             context,
             &query_project,
-            branch_id,
+            reference_id,
             version_id,
         )
         .await?;

@@ -36,7 +36,7 @@ pub use project::{
     alert::{AlertUuid, JsonAlert, JsonAlerts},
     benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
-    branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonStartPoint, VersionUuid},
+    branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch},
     measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
     metric::{
         JsonMetric, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MeasureNameId,
@@ -45,7 +45,7 @@ pub use project::{
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
-    reference::{JsonReference, ReferenceUuid},
+    reference::{JsonReference, JsonStartPoint, ReferenceUuid, VersionUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},

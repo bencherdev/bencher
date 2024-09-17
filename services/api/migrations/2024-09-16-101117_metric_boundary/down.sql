@@ -54,4 +54,7 @@ SELECT metric.id AS metric_id,
     boundary.upper_limit
 FROM metric
     LEFT OUTER JOIN boundary ON (boundary.metric_id = metric.id);
+-- index
+DROP INDEX index_alert_boundary;
+CREATE INDEX index_alert_boundary ON alert(boundary_id);
 PRAGMA foreign_keys = on;

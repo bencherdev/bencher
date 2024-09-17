@@ -80,9 +80,9 @@ CREATE TABLE up_branch (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     project_id INTEGER NOT NULL,
-    head_id INTEGER,
     name TEXT NOT NULL,
     slug TEXT NOT NULL,
+    head_id INTEGER,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
     archived BIGINT,
@@ -95,9 +95,9 @@ INSERT INTO up_branch(
         id,
         uuid,
         project_id,
-        head_id,
         name,
         slug,
+        head_id,
         created,
         modified,
         archived
@@ -105,9 +105,9 @@ INSERT INTO up_branch(
 SELECT id,
     uuid,
     project_id,
-    id,
     name,
     slug,
+    id,
     created,
     modified,
     archived
@@ -167,4 +167,8 @@ FROM report;
 DROP TABLE report;
 ALTER TABLE up_report
     RENAME TO report;
+-- index
+DROP INDEX index_report_benchmark;
+CREATE INDEX index_report_testbed_end_time ON report(testbed_id, end_time);
+CREATE INDEX index_report_benchmark ON report_benchmark(report_id, benchmark_id);
 PRAGMA foreign_keys = on;

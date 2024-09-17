@@ -32,7 +32,7 @@ pub mod reference;
 pub mod reference_version;
 pub mod version;
 
-use reference::ReferenceId;
+use reference::{QueryReference, ReferenceId};
 use reference_version::{
     InsertReferenceVersion, QueryReferenceVersion, ReferenceVersionId, StartPoint,
 };
@@ -49,9 +49,9 @@ pub struct QueryBranch {
     pub id: BranchId,
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
-    pub head_id: Option<ReferenceId>,
     pub name: BranchName,
     pub slug: Slug,
+    pub head_id: Option<ReferenceId>,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -74,7 +74,7 @@ impl QueryBranch {
         context: &ApiContext,
         project_id: ProjectId,
         branch: JsonNewBranch,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<(Self, QueryReference), HttpError> {
         let insert_branch = InsertBranch::from_json(context, project_id, branch.clone()).await?;
 
         diesel::insert_into(schema::branch::table)
@@ -88,14 +88,16 @@ impl QueryBranch {
             .as_ref()
             .and_then(|sp| sp.thresholds)
             .unwrap_or_default();
-        insert_branch
+        let query_reference = insert_branch
             .start_point(log, context, clone_thresholds)
             .await?;
 
-        schema::branch::table
+        let query_branch = schema::branch::table
             .filter(schema::branch::uuid.eq(&insert_branch.uuid))
             .first::<Self>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Branch, insert_branch))
+            .map_err(resource_not_found_err!(Branch, insert_branch))?;
+
+        Ok((query_branch, query_reference))
     }
 
     pub async fn get_or_create(
@@ -105,7 +107,7 @@ impl QueryBranch {
         branch: &NameId,
         report_start_point: Option<&JsonReportStartPoint>,
     ) -> Result<(BranchId, ReferenceId), HttpError> {
-        let query_branch =
+        let (query_branch, query_reference) =
             Self::get_or_create_inner(log, context, project_id, branch, report_start_point).await?;
 
         if query_branch.archived.is_some() {
@@ -116,7 +118,7 @@ impl QueryBranch {
                 .map_err(resource_conflict_err!(Branch, &query_branch))?;
         }
 
-        Ok(query_branch.id)
+        Ok((query_branch.id, query_reference.id))
     }
 
     async fn get_or_create_inner(
@@ -125,7 +127,7 @@ impl QueryBranch {
         project_id: ProjectId,
         branch: &NameId,
         report_start_point: Option<&JsonReportStartPoint>,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<(Self, QueryReference), HttpError> {
         let query_branch = Self::from_name_id(conn_lock!(context), project_id, branch);
 
         let http_error = match query_branch {
@@ -343,9 +345,9 @@ impl QueryBranch {
         let Self {
             uuid,
             project_id,
-            head_id,
             name,
             slug,
+            head_id,
             created,
             modified,
             archived,
@@ -357,7 +359,7 @@ impl QueryBranch {
             BencherResource::Branch,
             project_id,
         );
-        let start_point = if let Some(head_id) = head_id {
+        let head = if let Some(head_id) = head_id {
             Some(QueryReferenceVersion::get(conn, head_id)?.into_start_point_json(conn)?)
         } else {
             None
@@ -367,7 +369,7 @@ impl QueryBranch {
             project: project.uuid,
             name,
             slug,
-            start_point,
+            head,
             created,
             modified,
             archived,
@@ -380,9 +382,9 @@ impl QueryBranch {
 pub struct InsertBranch {
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
-    pub head_id: Option<ReferenceId>,
     pub name: BranchName,
     pub slug: Slug,
+    pub head_id: Option<ReferenceId>,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -423,9 +425,9 @@ impl InsertBranch {
         Ok(Self {
             uuid: BranchUuid::new(),
             project_id,
-            head_id,
             name,
             slug,
+            head_id,
             created: timestamp,
             modified: timestamp,
             archived: None,
@@ -441,7 +443,7 @@ impl InsertBranch {
         log: &Logger,
         context: &ApiContext,
         clone_thresholds: bool,
-    ) -> Result<(), HttpError> {
+    ) -> Result<QueryReference, HttpError> {
         let Some(start_point_id) = self.start_point_id else {
             return Ok(());
         };

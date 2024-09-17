@@ -99,7 +99,7 @@ SELECT id,
     uuid,
     user_id,
     project_id,
-    branch_id,
+    reference_id,
     version_id,
     testbed_id,
     adapter,
@@ -112,4 +112,8 @@ ALTER TABLE down_report
     RENAME TO report;
 --  reference
 DROP TABLE reference;
+-- index
+DROP INDEX index_report_benchmark;
+CREATE INDEX index_report_testbed_end_time ON report(testbed_id, end_time);
+CREATE INDEX index_report_benchmark ON report_benchmark(report_id, benchmark_id);
 PRAGMA foreign_keys = on;
