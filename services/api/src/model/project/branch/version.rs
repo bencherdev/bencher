@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::branch::{JsonVersion, VersionNumber},
+    project::reference::{JsonVersion, VersionNumber},
     GitHash, VersionUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -113,17 +113,17 @@ impl InsertVersion {
 
         let version_id = QueryVersion::get_id(conn, version_uuid)?;
 
-        let insert_branch_version = InsertReferenceVersion {
+        let insert_reference_version = InsertReferenceVersion {
             reference_id,
             version_id,
         };
 
         diesel::insert_into(schema::reference_version::table)
-            .values(&insert_branch_version)
+            .values(&insert_reference_version)
             .execute(conn)
             .map_err(resource_conflict_err!(
                 ReferenceVersion,
-                insert_branch_version
+                insert_reference_version
             ))?;
 
         Ok(version_id)

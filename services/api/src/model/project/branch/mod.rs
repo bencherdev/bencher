@@ -3,18 +3,15 @@ use bencher_json::{
         branch::{JsonNewStartPoint, JsonUpdateBranch},
         report::JsonReportStartPoint,
     },
-    BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
+    BranchName, BranchUuid, DateTime, GitHash, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use dropshot::HttpError;
 use http::StatusCode;
 use slog::Logger;
+use version::QueryVersion;
 
-use super::{
-    plot::UpdatePlot,
-    threshold::model::{InsertModel, QueryModel},
-    ProjectId, QueryProject,
-};
+use super::{plot::UpdatePlot, ProjectId, QueryProject};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
@@ -22,7 +19,6 @@ use crate::{
         assert_parentage, issue_error, resource_conflict_err, resource_not_found_err,
         BencherResource,
     },
-    model::project::threshold::{InsertThreshold, QueryThreshold},
     schema::{self, branch as branch_table},
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
@@ -37,10 +33,7 @@ pub mod reference_version;
 pub mod version;
 
 use reference::{InsertReference, QueryReference, ReferenceId};
-use reference_version::{
-    InsertReferenceVersion, QueryReferenceVersion, ReferenceVersionId, StartPoint,
-};
-use version::{QueryVersion, VersionId};
+use reference_version::{QueryReferenceVersion, ReferenceVersionId, StartPoint};
 
 crate::util::typed_id::typed_id!(BranchId);
 
@@ -89,35 +82,20 @@ impl QueryBranch {
         })
     }
 
-    pub async fn create_from_json(
-        log: &Logger,
+    pub async fn get_latest_branch_reference_version(
         context: &ApiContext,
         project_id: ProjectId,
-        branch: JsonNewBranch,
-    ) -> Result<(Self, QueryReference), HttpError> {
-        let insert_branch = InsertBranch::from_json(context, project_id, branch.clone()).await?;
-
-        diesel::insert_into(schema::branch::table)
-            .values(&insert_branch)
-            .execute(conn_lock!(context))
-            .map_err(resource_conflict_err!(Branch, insert_branch))?;
-
-        // Clone data and optionally thresholds from the start point
-        let clone_thresholds = branch
-            .start_point
-            .as_ref()
-            .and_then(|sp| sp.thresholds)
-            .unwrap_or_default();
-        let query_reference = insert_branch
-            .start_point(log, context, clone_thresholds)
-            .await?;
-
-        let query_branch = schema::branch::table
-            .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-            .first::<Self>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Branch, insert_branch))?;
-
-        Ok((query_branch, query_reference))
+        branch: &NameId,
+        hash: Option<&GitHash>,
+    ) -> Result<BranchReferenceVersion, HttpError> {
+        let branch = Self::from_name_id(conn_lock!(context), project_id, branch)?;
+        let reference_version =
+            QueryReferenceVersion::get_latest_for_branch(context, project_id, &branch, hash)
+                .await?;
+        Ok(BranchReferenceVersion {
+            branch,
+            reference_version,
+        })
     }
 
     pub async fn get_or_create(
@@ -175,7 +153,7 @@ impl QueryBranch {
                 start_point: report_start_point.and_then(JsonReportStartPoint::to_new_start_point),
             },
         };
-        Self::create_from_json(log, context, project_id, branch).await
+        InsertBranch::from_json(log, context, project_id, branch).await
     }
 
     async fn with_start_point(
@@ -184,7 +162,7 @@ impl QueryBranch {
         context: &ApiContext,
         project_id: ProjectId,
         report_start_point: Option<&JsonReportStartPoint>,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<(Self, QueryReference), HttpError> {
         // Get the current start point.
         let current_start_point = self.get_start_point(context).await?;
         // Get the new start point, if there is a branch specified.
@@ -363,6 +341,17 @@ impl QueryBranch {
         project: &QueryProject,
     ) -> Result<JsonBranch, HttpError> {
         let head_id = self.head_id()?;
+        let head = QueryReference::get(conn, head_id)?;
+        self.into_json_for_head(conn, project, &head, None)
+    }
+
+    pub fn into_json_for_head(
+        self,
+        conn: &mut DbConnection,
+        project: &QueryProject,
+        head: &QueryReference,
+        version: Option<QueryVersion>,
+    ) -> Result<JsonBranch, HttpError> {
         let Self {
             uuid,
             project_id,
@@ -379,7 +368,13 @@ impl QueryBranch {
             BencherResource::Branch,
             project_id,
         );
-        let head = QueryReference::get_json(conn, head_id)?;
+        assert_parentage(
+            BencherResource::Branch,
+            self.id,
+            BencherResource::Reference,
+            head.branch_id,
+        );
+        let head = QueryReference::get_json(conn, head.id, version)?;
         Ok(JsonBranch {
             uuid,
             project: project.uuid,
@@ -390,6 +385,18 @@ impl QueryBranch {
             modified,
             archived,
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BranchReferenceVersion {
+    pub branch: QueryBranch,
+    pub reference_version: QueryReferenceVersion,
+}
+
+impl BranchReferenceVersion {
+    pub fn reference_version_id(&self) -> ReferenceVersionId {
+        self.reference_version.id
     }
 }
 
@@ -435,19 +442,19 @@ impl InsertBranch {
     }
 
     pub async fn from_json(
+        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         branch: JsonNewBranch,
-    ) -> Result<BranchId, HttpError> {
+    ) -> Result<(QueryBranch, QueryReference), HttpError> {
         let JsonNewBranch {
             name,
             slug,
             start_point,
         } = branch;
 
-        let insert_branch = Self::new(context, project_id, name, slug).await?;
-
         // Create branch
+        let insert_branch = Self::new(context, project_id, name, slug).await?;
         diesel::insert_into(schema::branch::table)
             .values(&insert_branch)
             .execute(conn_lock!(context))
@@ -456,25 +463,31 @@ impl InsertBranch {
         // Get the new branch
         let query_branch = schema::branch::table
             .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-            .first::<Self>(conn_lock!(context))
+            .first::<QueryBranch>(conn_lock!(context))
             .map_err(resource_not_found_err!(Branch, insert_branch))?;
 
-        // Get the reference version for the start point
-        let start_point_id = if let Some(start_point) = start_point {
-            let start_point = QueryReferenceVersion::get_start_point(
-                context,
-                project_id,
-                &start_point.branch,
-                start_point.hash.as_ref(),
+        // Get the branch reference version for the start point
+        let branch_start_point = if let Some(start_point) = &start_point {
+            Some(
+                QueryBranch::get_latest_branch_reference_version(
+                    context,
+                    project_id,
+                    &start_point.branch,
+                    start_point.hash.as_ref(),
+                )
+                .await?,
             )
-            .await?;
-            Some(start_point.id)
         } else {
             None
         };
 
         // Create the head reference for the branch
-        let insert_reference = InsertReference::new(query_branch.id, start_point_id);
+        let insert_reference = InsertReference::new(
+            query_branch.id,
+            branch_start_point
+                .as_ref()
+                .map(BranchReferenceVersion::reference_version_id),
+        );
 
         diesel::insert_into(schema::reference::table)
             .values(&insert_reference)
@@ -497,172 +510,31 @@ impl InsertBranch {
             ))?;
 
         // Clone data and optionally thresholds from the start point
-        let clone_thresholds = branch
-            .start_point
+        let new_branch_with_thresholds = start_point
             .as_ref()
-            .and_then(|sp| sp.thresholds)
+            .and_then(|sp| sp.thresholds.map(|t| t.then_some(&query_branch)))
             .unwrap_or_default();
-        let query_reference = insert_branch
-            .start_point(log, context, clone_thresholds)
-            .await?;
-
-        let query_branch = schema::branch::table
-            .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-            .first::<Self>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Branch, insert_branch))?;
-
-        todo!()
-    }
-
-    pub async fn main(context: &ApiContext, project_id: ProjectId) -> Result<Self, HttpError> {
-        Self::from_json(context, project_id, JsonNewBranch::main()).await
-    }
-
-    pub async fn start_point(
-        &self,
-        log: &Logger,
-        context: &ApiContext,
-        clone_thresholds: bool,
-    ) -> Result<QueryReference, HttpError> {
-        let Some(start_point_id) = self.start_point_id else {
-            return Ok(());
-        };
-        let start_point = QueryReferenceVersion::get(conn_lock!(context), start_point_id)?;
-        let new_branch_id = QueryBranch::get_id(conn_lock!(context), self.uuid)?;
-
-        self.clone_versions(context, &start_point, new_branch_id)
-            .await?;
-
-        if clone_thresholds {
-            self.clone_thresholds(log, context, &start_point, new_branch_id)
-                .await?;
-        }
-
-        Ok(())
-    }
-
-    async fn clone_versions(
-        &self,
-        context: &ApiContext,
-        start_point: &QueryReferenceVersion,
-        new_branch_id: BranchId,
-    ) -> Result<(), HttpError> {
-        let start_point_version = QueryVersion::get(conn_lock!(context), start_point.version_id)?;
-        // Get all prior versions (version number less than or equal to) for the start point branch
-        let version_ids = schema::reference_version::table
-            .inner_join(
-                schema::reference::table
-                    .on(schema::reference::id.eq(schema::reference_version::reference_id)),
+        query_reference
+            .start_point(
+                log,
+                context,
+                project_id,
+                branch_start_point.as_ref(),
+                new_branch_with_thresholds,
             )
-            .inner_join(schema::version::table)
-            .filter(schema::reference::branch_id.eq(start_point.branch_id))
-            .filter(schema::version::number.le(start_point_version.number))
-            .order(schema::version::number.desc())
-            .select(schema::reference_version::version_id)
-            .load::<VersionId>(conn_lock!(context))
-            .map_err(resource_not_found_err!(
-                ReferenceVersion,
-                (start_point, start_point_version)
-            ))?;
+            .await?;
 
-        // Add new branch to all start point branch versions
-        for version_id in version_ids {
-            let insert_branch_version = InsertReferenceVersion {
-                branch_id: new_branch_id,
-                version_id,
-            };
-
-            diesel::insert_into(schema::reference_version::table)
-                .values(&insert_branch_version)
-                .execute(conn_lock!(context))
-                .map_err(resource_conflict_err!(
-                    ReferenceVersion,
-                    insert_branch_version
-                ))?;
-        }
-
-        Ok(())
+        Ok((query_branch, query_reference))
     }
 
-    async fn clone_thresholds(
-        &self,
+    pub async fn main(
         log: &Logger,
         context: &ApiContext,
-        start_point: &QueryReferenceVersion,
-        new_branch_id: BranchId,
-    ) -> Result<(), HttpError> {
-        // Get all thresholds for the start point branch
-        let query_thresholds = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(start_point.branch_id))
-            .load::<QueryThreshold>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Threshold, start_point))?;
-
-        // Add new branch to cloned thresholds with cloned current threshold model
-        for query_threshold in query_thresholds {
-            // Hold the database lock across the entire `clone_threshold` call
-            if let Err(e) =
-                self.clone_threshold(conn_lock!(context), new_branch_id, &query_threshold)
-            {
-                slog::warn!(log, "Failed to clone threshold: {e}");
-            }
-        }
-
-        Ok(())
-    }
-
-    fn clone_threshold(
-        &self,
-        conn: &mut DbConnection,
-        new_branch_id: BranchId,
-        query_threshold: &QueryThreshold,
-    ) -> Result<(), HttpError> {
-        // Clone the threshold for the new branch
-        let insert_threshold = InsertThreshold::new(
-            self.project_id,
-            new_branch_id,
-            query_threshold.testbed_id,
-            query_threshold.measure_id,
-        );
-
-        // Create the new threshold
-        diesel::insert_into(schema::threshold::table)
-            .values(&insert_threshold)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
-
-        // Get the new threshold
-        let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
-
-        // Get the current threshold model
-        let model_id = query_threshold.model_id()?;
-        let query_model = schema::model::table
-            .filter(schema::model::id.eq(model_id))
-            .first::<QueryModel>(conn)
-            .map_err(resource_not_found_err!(Model, query_threshold))?;
-
-        // Clone the current threshold model
-        let mut insert_model = InsertModel::from(query_model.clone());
-        // Set the new model to the new threshold
-        insert_model.threshold_id = threshold_id;
-        // Create the new model for the new threshold
-        diesel::insert_into(schema::model::table)
-            .values(&insert_model)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Model, insert_model))?;
-
-        // Get the new model
-        let model_id = QueryModel::get_id(conn, insert_model.uuid)?;
-
-        // Set the new model for the new threshold
-        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
-            .set(schema::threshold::model_id.eq(model_id))
-            .execute(conn)
-            .map_err(resource_conflict_err!(
-                Threshold,
-                (&query_threshold, &query_model)
-            ))?;
-
-        Ok(())
+        project_id: ProjectId,
+    ) -> Result<QueryBranch, HttpError> {
+        Self::from_json(log, context, project_id, JsonNewBranch::main())
+            .await
+            .map(|(branch, _)| branch)
     }
 }
 

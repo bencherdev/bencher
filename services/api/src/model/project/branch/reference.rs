@@ -5,12 +5,27 @@ use bencher_json::{
 use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 
 use dropshot::HttpError;
+use http::StatusCode;
+use slog::Logger;
 
-use super::{reference_version::ReferenceVersionId, BranchId, QueryBranch};
+use super::{
+    reference_version::{InsertReferenceVersion, ReferenceVersionId},
+    version::{QueryVersion, VersionId},
+    BranchId, BranchReferenceVersion, QueryBranch,
+};
 use crate::{
-    context::DbConnection,
-    error::resource_not_found_err,
+    conn_lock,
+    context::{ApiContext, DbConnection},
+    error::{issue_error, resource_conflict_err, resource_not_found_err},
+    model::project::{
+        threshold::{
+            model::{InsertModel, QueryModel},
+            InsertThreshold, QueryThreshold,
+        },
+        ProjectId,
+    },
     schema::{self, reference as reference_table},
+    util::fn_get::fn_get,
 };
 
 crate::util::typed_id::typed_id!(ReferenceId);
@@ -30,9 +45,31 @@ pub struct QueryReference {
 }
 
 impl QueryReference {
+    fn_get!(reference, ReferenceId);
+
+    pub fn from_uuid(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        reference_uuid: ReferenceUuid,
+    ) -> Result<Self, HttpError> {
+        schema::reference::table
+            .inner_join(
+                schema::branch::table.on(schema::branch::id.eq(schema::reference::branch_id)),
+            )
+            .filter(schema::branch::project_id.eq(project_id))
+            .filter(schema::reference::uuid.eq(reference_uuid))
+            .select(Self::as_select())
+            .first(conn)
+            .map_err(resource_not_found_err!(
+                Reference,
+                (project_id, reference_uuid)
+            ))
+    }
+
     pub fn get_json(
         conn: &mut DbConnection,
         reference_id: ReferenceId,
+        version: Option<QueryVersion>,
     ) -> Result<JsonReference, HttpError> {
         let (reference_uuid, branch_uuid, start_point_id, created, replaced) =
             schema::reference::table
@@ -90,9 +127,171 @@ impl QueryReference {
             uuid: reference_uuid,
             branch: branch_uuid,
             start_point,
+            version: version.map(QueryVersion::into_json),
             created,
             replaced,
         })
+    }
+
+    pub async fn start_point(
+        &self,
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch_start_point: Option<&BranchReferenceVersion>,
+        new_branch_with_thresholds: Option<&QueryBranch>,
+    ) -> Result<(), HttpError> {
+        let branch_start_point = match (self.start_point_id, branch_start_point) {
+            (Some(start_point_id), Some(branch_start_point)) => {
+                debug_assert_eq!(start_point_id, branch_start_point.reference_version.id);
+                branch_start_point
+            },
+            (None, None) => return Ok(()),
+            _ => {
+                return Err(issue_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Branch start point mismatch",
+                    "Failed to match branch start point for reference",
+                    format!("{branch_start_point:?}\n{self:?}"),
+                ));
+            },
+        };
+
+        self.clone_versions(context, &branch_start_point).await?;
+
+        if let Some(new_branch) = new_branch_with_thresholds {
+            self.clone_thresholds(log, context, project_id, &branch_start_point, new_branch)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn clone_versions(
+        &self,
+        context: &ApiContext,
+        branch_start_point: &BranchReferenceVersion,
+    ) -> Result<(), HttpError> {
+        let start_point_version = QueryVersion::get(
+            conn_lock!(context),
+            branch_start_point.reference_version.version_id,
+        )?;
+        // Get all prior versions (version number less than or equal to) for the start point branch
+        let version_ids = schema::reference_version::table
+            .inner_join(schema::version::table)
+            .filter(
+                schema::reference_version::reference_id
+                    .eq(branch_start_point.reference_version.reference_id),
+            )
+            .filter(schema::version::number.le(start_point_version.number))
+            .order(schema::version::number.desc())
+            .select(schema::reference_version::version_id)
+            .load::<VersionId>(conn_lock!(context))
+            .map_err(resource_not_found_err!(
+                ReferenceVersion,
+                (branch_start_point, start_point_version)
+            ))?;
+
+        // Add new branch to all start point branch versions
+        for version_id in version_ids {
+            let insert_branch_version = InsertReferenceVersion {
+                reference_id: self.id,
+                version_id,
+            };
+            diesel::insert_into(schema::reference_version::table)
+                .values(&insert_branch_version)
+                .execute(conn_lock!(context))
+                .map_err(resource_conflict_err!(
+                    ReferenceVersion,
+                    insert_branch_version
+                ))?;
+        }
+
+        Ok(())
+    }
+
+    async fn clone_thresholds(
+        &self,
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch_start_point: &BranchReferenceVersion,
+        new_branch: &QueryBranch,
+    ) -> Result<(), HttpError> {
+        // Get all thresholds for the start point branch
+        let query_thresholds = schema::threshold::table
+            .filter(schema::threshold::branch_id.eq(branch_start_point.branch.id))
+            .load::<QueryThreshold>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Threshold, branch_start_point))?;
+
+        // Add new branch to cloned thresholds with cloned current threshold model
+        for query_threshold in query_thresholds {
+            // Hold the database lock across the entire `clone_threshold` call
+            if let Err(e) = self.clone_threshold(
+                conn_lock!(context),
+                project_id,
+                &query_threshold,
+                new_branch,
+            ) {
+                slog::warn!(log, "Failed to clone threshold: {e}");
+            }
+        }
+
+        Ok(())
+    }
+
+    fn clone_threshold(
+        &self,
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        query_threshold: &QueryThreshold,
+        new_branch: &QueryBranch,
+    ) -> Result<(), HttpError> {
+        // Clone the threshold for the new branch
+        let insert_threshold = InsertThreshold::new(
+            project_id,
+            new_branch.id,
+            query_threshold.testbed_id,
+            query_threshold.measure_id,
+        );
+
+        // Create the new threshold
+        diesel::insert_into(schema::threshold::table)
+            .values(&insert_threshold)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
+
+        // Get the new threshold
+        let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
+
+        // Get the current threshold model
+        let model_id = query_threshold.model_id()?;
+        let query_model = schema::model::table
+            .filter(schema::model::id.eq(model_id))
+            .first::<QueryModel>(conn)
+            .map_err(resource_not_found_err!(Model, query_threshold))?;
+
+        // Clone the current threshold model with the new threshold ID
+        let insert_model = InsertModel::with_threshold_id(query_model.clone(), threshold_id);
+        // Create the new model for the new threshold
+        diesel::insert_into(schema::model::table)
+            .values(&insert_model)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Model, insert_model))?;
+
+        // Get the new model
+        let model_id = QueryModel::get_id(conn, insert_model.uuid)?;
+
+        // Set the new model for the new threshold
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
+            .set(schema::threshold::model_id.eq(model_id))
+            .execute(conn)
+            .map_err(resource_conflict_err!(
+                Threshold,
+                (&query_threshold, &query_model)
+            ))?;
+
+        Ok(())
     }
 }
 
@@ -104,6 +303,11 @@ pub struct InsertReference {
     pub start_point_id: Option<ReferenceVersionId>,
     pub created: DateTime,
     pub replaced: Option<DateTime>,
+}
+
+pub struct CloneThresholds {
+    pub old_branch_id: BranchId,
+    pub new_branch_id: BranchId,
 }
 
 impl InsertReference {

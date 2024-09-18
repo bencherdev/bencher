@@ -29,7 +29,7 @@ use crate::{
     model::{
         organization::QueryOrganization,
         project::{
-            branch::{InsertBranch, QueryBranch},
+            branch::InsertBranch,
             measure::{InsertMeasure, QueryMeasure},
             project_role::InsertProjectRole,
             testbed::{InsertTestbed, QueryTestbed},
@@ -270,13 +270,9 @@ async fn post_inner(
     slog::debug!(log, "Added project role: {insert_proj_role:?}");
 
     // Add a `main` branch to the project
-    let insert_branch = InsertBranch::main(context, query_project.id).await?;
-    diesel::insert_into(schema::branch::table)
-        .values(&insert_branch)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Branch, insert_branch))?;
-    let branch_id = QueryBranch::get_id(conn_lock!(context), insert_branch.uuid)?;
-    slog::debug!(log, "Added project branch: {insert_branch:?}");
+    let query_branch = InsertBranch::main(log, context, query_project.id).await?;
+    slog::debug!(log, "Added project branch: {query_branch:?}");
+    let branch_id = query_branch.id;
 
     // Add a `localhost` testbed to the project
     let insert_testbed = InsertTestbed::localhost(conn_lock!(context), query_project.id)?;

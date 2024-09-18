@@ -48,7 +48,7 @@ impl QueryModel {
             )
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::model::uuid.eq(model_uuid))
-            .select(QueryModel::as_select())
+            .select(Self::as_select())
             .first(conn)
             .map_err(resource_not_found_err!(Model, (project_id, model_uuid)))
     }
@@ -108,10 +108,9 @@ pub struct InsertModel {
     pub replaced: Option<DateTime>,
 }
 
-impl From<QueryModel> for InsertModel {
-    fn from(query_model: QueryModel) -> Self {
+impl InsertModel {
+    pub fn with_threshold_id(query_model: QueryModel, threshold_id: ThresholdId) -> Self {
         let QueryModel {
-            threshold_id,
             test,
             min_sample_size,
             max_sample_size,

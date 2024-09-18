@@ -315,7 +315,7 @@ async fn post_inner(
     let version_id = QueryVersion::get_or_increment(
         conn_lock!(context),
         project_id,
-        branch_id,
+        reference_id,
         json_report.hash.as_ref(),
     )?;
 

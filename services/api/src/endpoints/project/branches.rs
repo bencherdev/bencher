@@ -1,6 +1,6 @@
 use bencher_json::{
     project::branch::JsonUpdateBranch, BranchName, JsonBranch, JsonBranches, JsonDirection,
-    JsonNewBranch, JsonPagination, ResourceId,
+    JsonNewBranch, JsonPagination, ReferenceUuid, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -21,10 +21,12 @@ use crate::{
         },
         Endpoint,
     },
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{
+        resource_conflict_err, resource_not_found_err, resource_not_found_error, BencherResource,
+    },
     model::{
         project::{
-            branch::{QueryBranch, UpdateBranch},
+            branch::{reference::QueryReference, InsertBranch, QueryBranch, UpdateBranch},
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -234,7 +236,7 @@ async fn post_inner(
     )?;
 
     let (query_branch, _query_reference) =
-        QueryBranch::create_from_json(log, context, query_project.id, json_branch).await?;
+        InsertBranch::from_json(log, context, query_project.id, json_branch).await?;
 
     query_branch.into_json_for_project(conn_lock!(context), &query_project)
 }
@@ -247,6 +249,15 @@ pub struct ProjBranchParams {
     pub branch: ResourceId,
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjBranchQuery {
+    /// View the branch with the specified HEAD reference UUID.
+    /// This can be useful for viewing branches with historical HEAD references
+    /// that have since been replaced by a new HEAD reference.
+    /// If not specified, then the current HEAD reference is used.
+    pub head: Option<ReferenceUuid>,
+}
+
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -256,6 +267,7 @@ pub struct ProjBranchParams {
 pub async fn proj_branch_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjBranchParams>,
+    _query_params: Query<ProjBranchQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
@@ -274,11 +286,13 @@ pub async fn proj_branch_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
     path_params: Path<ProjBranchParams>,
+    query_params: Query<ProjBranchQuery>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
+        query_params.into_inner(),
         auth_user.as_ref(),
     )
     .await?;
@@ -288,6 +302,7 @@ pub async fn proj_branch_get(
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjBranchParams,
+    query_params: ProjBranchQuery,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonBranch, HttpError> {
     let query_project = QueryProject::is_allowed_public(
@@ -297,16 +312,31 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    conn_lock!(context, |conn| QueryBranch::belonging_to(&query_project)
+    let query_branch = QueryBranch::belonging_to(&query_project)
         .filter(QueryBranch::eq_resource_id(&path_params.branch)?)
-        .first::<QueryBranch>(conn)
+        .first::<QueryBranch>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Branch,
-            (&query_project, path_params.branch)
-        ))
-        .and_then(
-            |branch| branch.into_json_for_project(conn, &query_project)
-        ))
+            (&query_project, &path_params.branch)
+        ))?;
+
+    if let Some(head_uuid) = query_params.head {
+        let query_reference =
+            QueryReference::from_uuid(conn_lock!(context), query_project.id, head_uuid)?;
+        if query_reference.branch_id != query_branch.id {
+            return Err(resource_not_found_error(
+                BencherResource::Reference,
+                head_uuid,
+                format!(
+                    "Specified HEAD reference {head_uuid} does not belong to branch {branch_uuid}",
+                    branch_uuid = query_branch.uuid
+                ),
+            ));
+        }
+        query_branch.into_json_for_head(conn_lock!(context), &query_project, &query_reference)
+    } else {
+        query_branch.into_json_for_project(conn_lock!(context), &query_project)
+    }
 }
 
 /// Update a branch

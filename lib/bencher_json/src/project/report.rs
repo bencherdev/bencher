@@ -72,9 +72,11 @@ impl JsonReportStartPoint {
             branch,
             hash,
             thresholds,
+            // We don't care about the reset field since it is a new start point anyway.
             reset: _,
         } = self;
         Some(JsonNewStartPoint {
+            // The branch field is required for a new start point.
             branch: branch.clone()?,
             hash: hash.clone(),
             thresholds: *thresholds,

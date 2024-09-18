@@ -15,6 +15,7 @@ pub struct JsonReference {
     pub uuid: ReferenceUuid,
     pub branch: BranchUuid,
     pub start_point: Option<JsonStartPoint>,
+    pub version: Option<JsonVersion>,
     pub created: DateTime,
     pub replaced: Option<DateTime>,
 }

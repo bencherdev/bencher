@@ -1,6 +1,4 @@
-use bencher_json::{
-    project::branch::JsonBranchVersion, BranchUuid, GitHash, JsonBranch, JsonStartPoint, NameId,
-};
+use bencher_json::{BranchUuid, GitHash, JsonBranch, JsonStartPoint, NameId};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
 
@@ -20,7 +18,7 @@ use super::{
 
 crate::util::typed_id::typed_id!(ReferenceVersionId);
 
-#[derive(Debug, diesel::Queryable, diesel::Selectable)]
+#[derive(Debug, Clone, diesel::Queryable, diesel::Selectable)]
 #[diesel(table_name = reference_version_table)]
 pub struct QueryReferenceVersion {
     pub id: ReferenceVersionId,
@@ -31,20 +29,17 @@ pub struct QueryReferenceVersion {
 impl QueryReferenceVersion {
     fn_get!(reference_version, ReferenceVersionId);
 
-    pub async fn get_start_point(
+    pub async fn get_latest_for_branch(
         context: &ApiContext,
         project_id: ProjectId,
-        branch: &NameId,
+        query_branch: &QueryBranch,
         hash: Option<&GitHash>,
     ) -> Result<Self, HttpError> {
-        // Get the start point branch
-        let start_point_branch =
-            QueryBranch::from_name_id(conn_lock!(context), project_id, branch)?;
         let mut query = schema::reference_version::table
             .inner_join(schema::reference::table.on(schema::reference::id.eq(schema::reference_version::reference_id)))
             .inner_join(schema::version::table)
             // Filter for the start point branch
-            .filter(schema::reference::branch_id.eq(start_point_branch.id))
+            .filter(schema::reference::branch_id.eq(query_branch.id))
             // Sanity check that we are in the right project
             .filter(schema::version::project_id.eq(project_id))
             .into_boxed();
@@ -61,7 +56,7 @@ impl QueryReferenceVersion {
             .first::<Self>(conn_lock!(context))
             .map_err(resource_not_found_err!(
                 ReferenceVersion,
-                (branch, hash)
+                (query_branch, hash)
             ))
     }
 
@@ -112,18 +107,18 @@ impl QueryReferenceVersion {
         project: &QueryProject,
         branch: QueryBranch,
         version: QueryVersion,
-    ) -> Result<JsonBranchVersion, HttpError> {
+    ) -> Result<JsonBranch, HttpError> {
         let project_id = branch.project_id;
         let JsonBranch {
             uuid,
             project,
             name,
             slug,
-            start_point,
+            head,
             created,
             modified,
             archived,
-        } = branch.into_json_for_project(conn_lock!(context), project)?;
+        } = branch.into_json_for_head(conn_lock!(context), project)?;
         // Make sure that the version is in the same project as the branch
         assert_parentage(
             BencherResource::Project,
