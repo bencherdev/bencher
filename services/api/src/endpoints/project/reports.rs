@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    project::{
-        branch::VersionNumber,
-        report::{JsonReportQuery, JsonReportQueryParams},
-    },
+    project::report::{JsonReportQuery, JsonReportQueryParams},
     JsonDirection, JsonNewReport, JsonPagination, JsonReport, JsonReports, ReportUuid, ResourceId,
 };
 use bencher_rbac::project::Permission;
@@ -30,10 +27,9 @@ use crate::{
     error::{bad_request_error, issue_error, resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            branch::{BranchId, QueryBranch},
+            branch::{version::QueryVersion, BranchId, QueryBranch},
             report::{results::ReportResults, InsertReport, QueryReport, ReportId},
             testbed::QueryTestbed,
-            version::{QueryVersion, VersionId},
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -172,7 +168,9 @@ fn get_ls_query<'q>(
     query_params: &'q JsonReportQuery,
 ) -> Result<BoxedQuery<'q>, HttpError> {
     let mut query = QueryReport::belonging_to(query_project)
-        .inner_join(schema::branch::table)
+        .inner_join(schema::reference::table.inner_join(
+            schema::branch::table.on(schema::reference::branch_id.eq(schema::branch::id)),
+        ))
         .inner_join(schema::testbed::table)
         .into_boxed();
 
@@ -229,7 +227,14 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
         diesel::helper_types::InnerJoinQuerySource<
             diesel::helper_types::InnerJoinQuerySource<
                 schema::report::table,
-                schema::branch::table,
+                diesel::internal::table_macro::SelectStatement<
+                    diesel::internal::table_macro::FromClause<
+                        diesel::helper_types::InnerJoinQuerySource<
+                            schema::reference::table,
+                            schema::branch::table,
+                        >,
+                    >,
+                >,
             >,
             schema::testbed::table,
         >,

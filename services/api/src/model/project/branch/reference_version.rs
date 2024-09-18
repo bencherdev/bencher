@@ -1,11 +1,12 @@
 use bencher_json::{BranchUuid, GitHash, JsonBranch, JsonStartPoint, NameId};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
+use http::StatusCode;
 
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
-    error::{assert_parentage, resource_not_found_err, BencherResource},
+    error::{assert_parentage, issue_error, resource_not_found_err, BencherResource},
     schema::{self, reference_version as reference_version_table},
     util::fn_get::fn_get,
 };
@@ -29,17 +30,27 @@ pub struct QueryReferenceVersion {
 impl QueryReferenceVersion {
     fn_get!(reference_version, ReferenceVersionId);
 
+    pub async fn get_latest_for_branch_name(
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch: &NameId,
+        hash: Option<&GitHash>,
+    ) -> Result<Self, HttpError> {
+        let query_branch = QueryBranch::from_name_id(conn_lock!(context), project_id, branch)?;
+        Self::get_latest_for_branch(context, project_id, &query_branch, hash).await
+    }
+
     pub async fn get_latest_for_branch(
         context: &ApiContext,
         project_id: ProjectId,
         query_branch: &QueryBranch,
         hash: Option<&GitHash>,
     ) -> Result<Self, HttpError> {
+        let head_id = query_branch.head_id()?;
         let mut query = schema::reference_version::table
-            .inner_join(schema::reference::table.on(schema::reference::id.eq(schema::reference_version::reference_id)))
             .inner_join(schema::version::table)
-            // Filter for the start point branch
-            .filter(schema::reference::branch_id.eq(query_branch.id))
+            // Filter for the branch head reference
+            .filter(schema::reference_version::reference_id.eq(head_id))
             // Sanity check that we are in the right project
             .filter(schema::version::project_id.eq(project_id))
             .into_boxed();
@@ -70,7 +81,11 @@ impl QueryReferenceVersion {
             .first::<QueryBranch>(conn_lock!(context))
             .map_err(resource_not_found_err!(Reference, self.reference_id))?;
         let version = QueryVersion::get(conn_lock!(context), self.version_id)?;
-        Ok(StartPoint { branch, version })
+        Ok(StartPoint {
+            id: self.id,
+            branch,
+            version,
+        })
     }
 
     pub fn into_start_point_json(
@@ -143,6 +158,7 @@ impl QueryReferenceVersion {
 
 #[derive(Debug, Clone)]
 pub struct StartPoint {
+    pub id: ReferenceVersionId,
     pub branch: QueryBranch,
     pub version: QueryVersion,
 }

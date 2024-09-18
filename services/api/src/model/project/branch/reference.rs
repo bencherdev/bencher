@@ -2,7 +2,10 @@ use bencher_json::{
     project::reference::{JsonVersion, VersionNumber},
     BranchUuid, DateTime, GitHash, JsonReference, JsonStartPoint, ReferenceUuid,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
 
 use dropshot::HttpError;
 use http::StatusCode;
@@ -133,13 +136,10 @@ impl QueryReference {
         })
     }
 
-    pub async fn start_point(
+    pub async fn clone_start_point(
         &self,
-        log: &Logger,
         context: &ApiContext,
-        project_id: ProjectId,
         branch_start_point: Option<&BranchReferenceVersion>,
-        new_branch_with_thresholds: Option<&QueryBranch>,
     ) -> Result<(), HttpError> {
         let branch_start_point = match (self.start_point_id, branch_start_point) {
             (Some(start_point_id), Some(branch_start_point)) => {
@@ -156,15 +156,7 @@ impl QueryReference {
                 ));
             },
         };
-
-        self.clone_versions(context, &branch_start_point).await?;
-
-        if let Some(new_branch) = new_branch_with_thresholds {
-            self.clone_thresholds(log, context, project_id, &branch_start_point, new_branch)
-                .await?;
-        }
-
-        Ok(())
+        self.clone_versions(context, &branch_start_point).await
     }
 
     async fn clone_versions(
@@ -319,5 +311,45 @@ impl InsertReference {
             created: DateTime::now(),
             replaced: None,
         }
+    }
+
+    pub async fn for_branch(
+        context: &ApiContext,
+        query_branch: QueryBranch,
+        branch_start_point: Option<BranchReferenceVersion>,
+    ) -> Result<(QueryBranch, QueryReference), HttpError> {
+        // Create the head reference for the branch
+        let insert_reference = InsertReference::new(
+            query_branch.id,
+            branch_start_point
+                .as_ref()
+                .map(BranchReferenceVersion::reference_version_id),
+        );
+        diesel::insert_into(schema::reference::table)
+            .values(&insert_reference)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Reference, insert_reference))?;
+
+        // Get the new reference
+        let query_reference = schema::reference::table
+            .filter(schema::reference::uuid.eq(&insert_reference.uuid))
+            .first::<QueryReference>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Reference, insert_reference))?;
+
+        // Update the branch head reference
+        diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
+            .set(schema::branch::head_id.eq(query_reference.id))
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(
+                Branch,
+                (&query_branch, &query_reference)
+            ))?;
+
+        // Clone data from the start point for the head reference
+        query_reference
+            .clone_start_point(context, branch_start_point.as_ref())
+            .await?;
+
+        Ok((query_branch, query_reference))
     }
 }

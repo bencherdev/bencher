@@ -1,8 +1,8 @@
 use bencher_json::{
     project::{
         alert::JsonPerfAlert,
-        branch::{JsonVersion, VersionNumber},
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
+        reference::{JsonVersion, VersionNumber},
         report::Iteration,
         threshold::JsonThresholdModel,
     },
@@ -44,7 +44,7 @@ use crate::{
 
 pub mod img;
 
-const MAX_PERMUTATIONS: usize = 256;
+const MAX_PERMUTATIONS: usize = 255;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
@@ -70,8 +70,8 @@ pub async fn proj_perf_options(
 ///
 /// Query the performance metrics for a project.
 /// The query results are every permutation of each branch, testbed, benchmark, and measure.
-/// There is a limit of 256 permutations for a single request.
-/// Therefore, only the first 256 permutations are returned.
+/// There is a limit of 255 permutations for a single request.
+/// Therefore, only the first 255 permutations are returned.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
@@ -227,15 +227,17 @@ async fn perf_query(
     measure_uuid: MeasureUuid,
     times: Times,
 ) -> Result<Vec<PerfQuery>, HttpError> {
-    let mut query = view::metric_boundary::table
+    let mut query =
+        view::metric_boundary::table
         .inner_join(
             schema::report_benchmark::table.inner_join(
                 schema::report::table
                     .inner_join(schema::version::table
-                        .inner_join(schema::branch_version::table
-                            .inner_join(schema::branch::table
-                                .on(schema::branch_version::branch_id.eq(schema::branch::id)),
+                        .inner_join(schema::reference_version::table
+                            .inner_join(schema::reference::table
+                                .on(schema::reference_version::reference_id.eq(schema::reference::id)),
                             )
+                            .inner_join(schema::branch::table.on(schema::reference::branch_id.eq(schema::branch::id))),
                         ),
                     )
                     .inner_join(schema::testbed::table)
