@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, DateTimeMillis, GitHash};
+use bencher_valid::{DateTime, DateTimeMillis, GitHash, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -56,10 +56,11 @@ pub struct JsonReportStartPoint {
     /// The full git hash of the branch to use as the start point.
     /// Requires the `branch` field to be set.
     pub hash: Option<GitHash>,
-    /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
-    /// This can be useful for pull request branches that should have the same thresholds as their target branch.
+    /// The maximum number of start point branch versions.
+    /// Versions beyond this number will be omitted.
     /// Requires the `branch` field to be set.
-    pub thresholds: Option<bool>,
+    /// Default is 255 if the `branch` field is set.
+    pub max_versions: Option<u32>,
     /// Reset the branch to an empty state.
     /// If the branch already exists, a new empty branch will be created.
     /// If a start point is provided, the new branch will begin at that start point.
@@ -71,7 +72,7 @@ impl JsonReportStartPoint {
         let JsonReportStartPoint {
             branch,
             hash,
-            thresholds,
+            max_versions,
             // We don't care about the reset field since it is a new start point anyway.
             reset: _,
         } = self;
@@ -79,7 +80,7 @@ impl JsonReportStartPoint {
             // The branch field is required for a new start point.
             branch: branch.clone()?,
             hash: hash.clone(),
-            thresholds: *thresholds,
+            max_versions: *max_versions,
         })
     }
 }

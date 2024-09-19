@@ -27,7 +27,10 @@ use crate::{
     error::{bad_request_error, issue_error, resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            branch::{version::QueryVersion, BranchId, QueryBranch},
+            branch::{
+                version::{QueryVersion, VersionId},
+                BranchId, QueryBranch,
+            },
             report::{results::ReportResults, InsertReport, QueryReport, ReportId},
             testbed::QueryTestbed,
             QueryProject,
@@ -294,7 +297,6 @@ async fn post_inner(
 
     // Get or create the branch and testbed
     let (branch_id, reference_id) = QueryBranch::get_or_create(
-        log,
         context,
         project_id,
         &json_report.branch,

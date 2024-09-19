@@ -18,7 +18,6 @@ use crate::{
     model::{
         project::{
             benchmark::QueryBenchmark,
-            branch::BranchId,
             measure::QueryMeasure,
             testbed::{QueryTestbed, TestbedId},
             threshold::{alert::QueryAlert, model::QueryModel, QueryThreshold},
@@ -32,9 +31,7 @@ use crate::{
 };
 
 use super::{
-    branch::{
-        reference::ReferenceId, reference_version::QueryReferenceVersion, version::VersionId,
-    },
+    branch::{reference::ReferenceId, version::VersionId, QueryBranch},
     metric::QueryMetric,
     metric_boundary::QueryMetricBoundary,
     threshold::boundary::QueryBoundary,
@@ -87,13 +84,9 @@ impl QueryReport {
 
         let query_project = QueryProject::get(conn_lock!(context), project_id)?;
         let user = QueryUser::get(conn_lock!(context), user_id)?.into_pub_json();
-        let branch = QueryReferenceVersion::get_json_for_project(
-            context,
-            &query_project,
-            reference_id,
-            version_id,
-        )
-        .await?;
+        let branch =
+            QueryBranch::get_json_for_report(context, &query_project, reference_id, version_id)
+                .await?;
         let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
             .into_json_for_project(&query_project);
         let results = get_report_results(log, context, &query_project, id).await?;

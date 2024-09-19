@@ -270,7 +270,7 @@ async fn post_inner(
     slog::debug!(log, "Added project role: {insert_proj_role:?}");
 
     // Add a `main` branch to the project
-    let query_branch = InsertBranch::main(log, context, query_project.id).await?;
+    let query_branch = InsertBranch::main(context, query_project.id).await?;
     slog::debug!(log, "Added project branch: {query_branch:?}");
     let branch_id = query_branch.id;
 

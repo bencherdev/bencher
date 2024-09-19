@@ -1,17 +1,13 @@
 use bencher_json::{
-    project::{
-        branch::{JsonNewStartPoint, JsonUpdateBranch},
-        report::JsonReportStartPoint,
-    },
-    BranchName, BranchUuid, DateTime, GitHash, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
+    project::{branch::JsonUpdateBranch, report::JsonReportStartPoint},
+    BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
 use http::StatusCode;
-use slog::Logger;
-use version::QueryVersion;
+use version::{QueryVersion, VersionId};
 
-use super::{plot::UpdatePlot, ProjectId, QueryProject};
+use super::{ProjectId, QueryProject};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
@@ -30,10 +26,12 @@ use crate::{
 
 pub mod reference;
 pub mod reference_version;
+pub mod start_point;
 pub mod version;
 
 use reference::{InsertReference, QueryReference, ReferenceId};
-use reference_version::{QueryReferenceVersion, ReferenceVersionId, StartPoint};
+use reference_version::QueryReferenceVersion;
+use start_point::StartPoint;
 
 crate::util::typed_id::typed_id!(BranchId);
 
@@ -82,31 +80,18 @@ impl QueryBranch {
         })
     }
 
-    pub async fn get_latest_branch_reference_version(
-        context: &ApiContext,
-        project_id: ProjectId,
-        branch: &NameId,
-        hash: Option<&GitHash>,
-    ) -> Result<BranchReferenceVersion, HttpError> {
-        let branch = Self::from_name_id(conn_lock!(context), project_id, branch)?;
-        let reference_version =
-            QueryReferenceVersion::get_latest_for_branch(context, project_id, &branch, hash)
-                .await?;
-        Ok(BranchReferenceVersion {
-            branch,
-            reference_version,
-        })
+    pub fn head(&self, conn: &mut DbConnection) -> Result<QueryReference, HttpError> {
+        QueryReference::get(conn, self.head_id()?)
     }
 
     pub async fn get_or_create(
-        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         branch: &NameId,
         report_start_point: Option<&JsonReportStartPoint>,
     ) -> Result<(BranchId, ReferenceId), HttpError> {
         let (query_branch, query_reference) =
-            Self::get_or_create_inner(log, context, project_id, branch, report_start_point).await?;
+            Self::get_or_create_inner(context, project_id, branch, report_start_point).await?;
 
         if query_branch.archived.is_some() {
             let update_branch = UpdateBranch::unarchive();
@@ -120,7 +105,6 @@ impl QueryBranch {
     }
 
     async fn get_or_create_inner(
-        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         branch: &NameId,
@@ -131,7 +115,7 @@ impl QueryBranch {
         let http_error = match query_branch {
             Ok(branch) => {
                 return branch
-                    .with_start_point(log, context, project_id, report_start_point)
+                    .with_start_point(context, project_id, report_start_point)
                     .await;
             },
             Err(e) => e,
@@ -158,46 +142,22 @@ impl QueryBranch {
 
     async fn with_start_point(
         self,
-        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         report_start_point: Option<&JsonReportStartPoint>,
     ) -> Result<(Self, QueryReference), HttpError> {
-        // Get the current start point.
+        // Get the current start point, if one exists.
         let current_start_point = self.get_start_point(context).await?;
         // Get the new start point, if there is a branch specified.
-        let new_start_point = if let Some(JsonReportStartPoint {
-            branch: Some(branch),
-            hash,
-            ..
-        }) = report_start_point
-        {
-            // If updating the start point, it is okay if it does not exist.
-            if let Ok(reference_version) = QueryReferenceVersion::get_latest_for_branch_name(
-                context,
-                project_id,
-                branch,
-                hash.as_ref(),
-            )
-            .await
-            {
-                Some(reference_version.to_start_point(context).await?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let clone_thresholds = report_start_point.and_then(|rsp| rsp.thresholds);
+        let new_start_point =
+            StartPoint::from_report_json(context, project_id, report_start_point).await?;
 
         // If reset is set then the branch needs to be reset.
         if let Some(JsonReportStartPoint {
             reset: Some(true), ..
         }) = report_start_point
         {
-            return self
-                .rename_and_create(log, context, new_start_point.as_ref(), clone_thresholds)
-                .await;
+            return InsertReference::for_branch(context, self, new_start_point.as_ref()).await;
         }
 
         // Compare the current start point against the new start point.
@@ -211,154 +171,83 @@ impl QueryBranch {
                         (Some(current_hash), Some(hash)) => {
                             // If the hashes match, then there is nothing to do.
                             if current_hash == hash {
-                                Ok(self)
+                                self.into_branch_and_head(context).await
                             } else {
                                 // Rename and create a new branch, if the hashes do not match.
-                                self.rename_and_create(
-                                    log,
-                                    context,
-                                    new_start_point.as_ref(),
-                                    clone_thresholds,
-                                )
-                                .await
+                                InsertReference::for_branch(context, self, new_start_point.as_ref())
+                                    .await
                             }
                         },
                         // Rename the current branch if it does not have a start point hash and the new start point does.
                         // This should only rarely happen going forward, as most branches with a start point will have a hash.
                         (None, Some(_)) => {
-                            self.rename_and_create(
-                                log,
-                                context,
-                                new_start_point.as_ref(),
-                                clone_thresholds,
-                            )
-                            .await
+                            InsertReference::for_branch(context, self, new_start_point.as_ref())
+                                .await
                         },
                         // If a start point hash is not specified, then there is nothing to check.
                         // Even if the current branch has a start point hash, it does not need to always be specified.
                         // That is, setting the start point hash is not required on every run.
                         // Requiring it on every run would be a breaking change
                         // for users who have already specified a start point without a hash.
-                        (_, None) => Ok(self),
+                        (_, None) => self.into_branch_and_head(context).await,
                     }
                 } else {
                     // If the current start point branch does not match the new start point branch,
                     // then the branch needs to be recreated from that new start point.
-                    self.rename_and_create(log, context, new_start_point.as_ref(), clone_thresholds)
-                        .await
+                    InsertReference::for_branch(context, self, new_start_point.as_ref()).await
                 }
             },
             // If the current branch does not have a start point and one is specified,
             // then the branch needs to be recreated from that start point.
-            // The naming convention for this will be a detached branch name and slug is okay: `branch_name@detached`
             (None, Some(_)) => {
-                self.rename_and_create(log, context, new_start_point.as_ref(), clone_thresholds)
-                    .await
+                InsertReference::for_branch(context, self, new_start_point.as_ref()).await
             },
             // If a start point is not specified, then there is nothing to check.
             // Even if the current branch has a start point, it does not need to always be specified.
             // That is, setting the start point is not required on every run.
-            (_, None) => Ok(self),
+            (_, None) => self.into_branch_and_head(context).await,
         }
     }
 
     async fn get_start_point(&self, context: &ApiContext) -> Result<Option<StartPoint>, HttpError> {
-        let head_id = self.head_id()?;
-        let reference = QueryReference::get(conn_lock!(context), head_id)?;
-        let Some(start_point_id) = reference.start_point_id else {
+        // Get the head reference for the branch.
+        let head = self.head(conn_lock!(context))?;
+        // Check to see if the head reference has a start point.
+        let Some(start_point_id) = head.start_point_id else {
             return Ok(None);
         };
-        let reference_version = QueryReferenceVersion::get(conn_lock!(context), start_point_id)?;
-        let start_point = reference_version.to_start_point(context).await?;
-        Ok(Some(start_point))
-    }
-
-    pub async fn reset_head(
-        self,
-        log: &Logger,
-        context: &ApiContext,
-        new_start_point: Option<&StartPoint>,
-        clone_thresholds: Option<bool>,
-    ) -> Result<Self, HttpError> {
-        InsertReference::for_branch(
-            log,
+        // If the head reference has a start point, then get the reference version for the start point.
+        let start_point_reference_version =
+            QueryReferenceVersion::get(conn_lock!(context), start_point_id)?;
+        // Get the branch for the start point reference version.
+        let start_point_branch = schema::branch::table
+            .inner_join(
+                schema::reference::table.on(schema::reference::branch_id.eq(schema::branch::id)),
+            )
+            .filter(schema::reference::id.eq(start_point_reference_version.reference_id))
+            .select(Self::as_select())
+            .first::<Self>(conn_lock!(context))
+            .map_err(resource_not_found_err!(
+                ReferenceVersion,
+                &start_point_reference_version
+            ))?;
+        // Create the branch start point for the branch and reference version.
+        StartPoint::new(
             context,
-            project_id,
-            query_branch,
-            branch_start_point,
-            clone_thresholds,
-        )
-        .await;
-
-        todo!()
-    }
-
-    pub async fn rename_and_create(
-        self,
-        log: &Logger,
-        context: &ApiContext,
-        new_start_point: Option<&StartPoint>,
-        clone_thresholds: Option<bool>,
-    ) -> Result<Self, HttpError> {
-        // Update the current branch name and slug
-        self.rename(context).await?;
-
-        // Create new branch with the same name and slug as the current branch
-        let branch = JsonNewBranch {
-            name: self.name.clone(),
-            slug: Some(self.slug.clone()),
-            start_point: new_start_point.map(|start_point| JsonNewStartPoint {
-                branch: NameId::from(start_point.branch.uuid),
-                hash: start_point.version.hash.clone(),
-                thresholds: clone_thresholds,
-            }),
-        };
-        let new_branch = Self::create_from_json(log, context, self.project_id, branch).await?;
-
-        // Update all plots for the current branch and to the new branch
-        UpdatePlot::update_branch_for_all_plots(conn_lock!(context), self.id, new_branch.id)?;
-
-        Ok(new_branch)
-    }
-
-    pub async fn rename(&self, context: &ApiContext) -> Result<(), HttpError> {
-        let branch_name = format!("{name}@{uuid}", name = &self.name, uuid = &self.uuid);
-        let count = schema::branch::table
-            .filter(schema::branch::name.like(&format!("{branch_name}%")))
-            .count()
-            .get_result::<i64>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Branch, (&self, &branch_name)))?;
-        let branch_name = if count > 0 {
-            format!("{branch_name}/{count}")
-        } else {
-            branch_name
-        };
-        let branch_name = branch_name
-            .parse()
-            .map_err(resource_conflict_err!(Branch, (&self, &branch_name)))?;
-
-        let branch_slug = conn_lock!(context, |conn| ok_slug!(
-            conn,
-            self.project_id,
-            &branch_name,
+            start_point_branch,
+            start_point_reference_version,
             None,
-            branch,
-            QueryBranch
-        )?);
+        )
+        .await
+        .map(Some)
+    }
 
-        let json_update_branch = JsonUpdateBranch {
-            name: Some(branch_name),
-            slug: Some(branch_slug),
-            // Auto-archive the current branch
-            archived: Some(true),
-        };
-        let update_branch = UpdateBranch::from(json_update_branch);
-        diesel::update(schema::branch::table.filter(schema::branch::id.eq(self.id)))
-            .set(&update_branch)
-            .execute(conn_lock!(context))
-            .map_err(resource_conflict_err!(Branch, (&self, &update_branch)))?;
-
-        Ok(())
+    pub async fn into_branch_and_head(
+        self,
+        context: &ApiContext,
+    ) -> Result<(Self, QueryReference), HttpError> {
+        let head = self.head(conn_lock!(context))?;
+        Ok((self, head))
     }
 
     pub fn into_json_for_project(
@@ -366,9 +255,20 @@ impl QueryBranch {
         conn: &mut DbConnection,
         project: &QueryProject,
     ) -> Result<JsonBranch, HttpError> {
-        let head_id = self.head_id()?;
-        let head = QueryReference::get(conn, head_id)?;
+        let head = self.head(conn)?;
         self.into_json_for_head(conn, project, &head, None)
+    }
+
+    pub async fn get_json_for_report(
+        context: &ApiContext,
+        project: &QueryProject,
+        reference_id: ReferenceId,
+        version_id: VersionId,
+    ) -> Result<JsonBranch, HttpError> {
+        let reference = QueryReference::get(conn_lock!(context), reference_id)?;
+        let version = QueryVersion::get(conn_lock!(context), version_id)?;
+        let branch = QueryBranch::get(conn_lock!(context), reference.branch_id)?;
+        branch.into_json_for_head(conn_lock!(context), project, &reference, Some(version))
     }
 
     pub fn into_json_for_head(
@@ -411,18 +311,6 @@ impl QueryBranch {
             modified,
             archived,
         })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct BranchReferenceVersion {
-    pub branch: QueryBranch,
-    pub reference_version: QueryReferenceVersion,
-}
-
-impl BranchReferenceVersion {
-    pub fn reference_version_id(&self) -> ReferenceVersionId {
-        self.reference_version.id
     }
 }
 
@@ -492,21 +380,13 @@ impl InsertBranch {
             .map_err(resource_not_found_err!(Branch, insert_branch))?;
 
         // Get the branch reference version for the start point
-        let branch_start_point = if let Some(start_point) = &start_point {
-            Some(
-                QueryBranch::get_latest_branch_reference_version(
-                    context,
-                    project_id,
-                    &start_point.branch,
-                    start_point.hash.as_ref(),
-                )
-                .await?,
-            )
+        let branch_start_point = if let Some(start_point) = start_point {
+            Some(StartPoint::from_json(context, project_id, start_point).await?)
         } else {
             None
         };
 
-        InsertReference::for_branch(context, query_branch, branch_start_point).await
+        InsertReference::for_branch(context, query_branch, branch_start_point.as_ref()).await
     }
 
     pub async fn main(

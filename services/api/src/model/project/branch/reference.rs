@@ -13,8 +13,9 @@ use slog::Logger;
 
 use super::{
     reference_version::{InsertReferenceVersion, ReferenceVersionId},
+    start_point::StartPoint,
     version::{QueryVersion, VersionId},
-    BranchId, BranchReferenceVersion, QueryBranch,
+    BranchId, QueryBranch,
 };
 use crate::{
     conn_lock,
@@ -139,7 +140,7 @@ impl QueryReference {
     pub async fn clone_start_point(
         &self,
         context: &ApiContext,
-        branch_start_point: Option<&BranchReferenceVersion>,
+        branch_start_point: Option<&StartPoint>,
     ) -> Result<(), HttpError> {
         let branch_start_point = match (self.start_point_id, branch_start_point) {
             (Some(start_point_id), Some(branch_start_point)) => {
@@ -162,13 +163,13 @@ impl QueryReference {
     async fn clone_versions(
         &self,
         context: &ApiContext,
-        branch_start_point: &BranchReferenceVersion,
+        branch_start_point: &StartPoint,
     ) -> Result<(), HttpError> {
         let start_point_version = QueryVersion::get(
             conn_lock!(context),
             branch_start_point.reference_version.version_id,
         )?;
-        // Get all prior versions (version number less than or equal to) for the start point branch
+        // Get all prior versions (version number less than or equal to) for the start point reference
         let version_ids = schema::reference_version::table
             .inner_join(schema::version::table)
             .filter(
@@ -177,6 +178,7 @@ impl QueryReference {
             )
             .filter(schema::version::number.le(start_point_version.number))
             .order(schema::version::number.desc())
+            .limit(branch_start_point.max_versions() as i64)
             .select(schema::reference_version::version_id)
             .load::<VersionId>(conn_lock!(context))
             .map_err(resource_not_found_err!(
@@ -184,7 +186,7 @@ impl QueryReference {
                 (branch_start_point, start_point_version)
             ))?;
 
-        // Add new branch to all start point branch versions
+        // Add new reference to all start point reference versions
         for version_id in version_ids {
             let insert_branch_version = InsertReferenceVersion {
                 reference_id: self.id,
@@ -207,7 +209,7 @@ impl QueryReference {
         log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
-        branch_start_point: &BranchReferenceVersion,
+        branch_start_point: &StartPoint,
         new_branch: &QueryBranch,
     ) -> Result<(), HttpError> {
         // Get all thresholds for the start point branch
@@ -316,14 +318,12 @@ impl InsertReference {
     pub async fn for_branch(
         context: &ApiContext,
         query_branch: QueryBranch,
-        branch_start_point: Option<BranchReferenceVersion>,
+        branch_start_point: Option<&StartPoint>,
     ) -> Result<(QueryBranch, QueryReference), HttpError> {
         // Create the head reference for the branch
-        let insert_reference = InsertReference::new(
+        let insert_reference = Self::new(
             query_branch.id,
-            branch_start_point
-                .as_ref()
-                .map(BranchReferenceVersion::reference_version_id),
+            branch_start_point.map(StartPoint::reference_version_id),
         );
         diesel::insert_into(schema::reference::table)
             .values(&insert_reference)
@@ -347,7 +347,7 @@ impl InsertReference {
 
         // Clone data from the start point for the head reference
         query_reference
-            .clone_start_point(context, branch_start_point.as_ref())
+            .clone_start_point(context, branch_start_point)
             .await?;
 
         Ok((query_branch, query_reference))

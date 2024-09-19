@@ -10,6 +10,8 @@ use crate::{JsonReference, ProjectUuid};
 
 crate::typed_uuid::typed_uuid!(BranchUuid);
 
+pub const START_POINT_MAX_VERSIONS: u32 = 255;
+
 pub const BRANCH_MAIN_STR: &str = "main";
 #[allow(clippy::expect_used)]
 static BRANCH_MAIN: Lazy<BranchName> = Lazy::new(|| {
@@ -63,9 +65,10 @@ pub struct JsonNewStartPoint {
     pub branch: NameId,
     /// The full `git` hash of the branch to use as the start point.
     pub hash: Option<GitHash>,
-    /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
-    /// This can be useful for pull request branches that should have the same thresholds as their target branch.
-    pub thresholds: Option<bool>,
+    /// The maximum number of start point branch versions.
+    /// Versions beyond this number will be omitted.
+    /// Default is 255.
+    pub max_versions: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

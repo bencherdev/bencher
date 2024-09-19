@@ -6,7 +6,7 @@ use bencher_rank::{Rank, RankGenerator, Ranked};
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
-use super::{branch::BranchId, ProjectId, QueryProject};
+use super::{ProjectId, QueryProject};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
@@ -14,7 +14,7 @@ use crate::{
         assert_parentage, resource_conflict_err, resource_conflict_error, resource_not_found_err,
         BencherResource,
     },
-    schema::{self, plot as plot_table},
+    schema::plot as plot_table,
 };
 
 mod benchmark;
@@ -23,7 +23,7 @@ mod measure;
 mod testbed;
 
 use benchmark::{InsertPlotBenchmark, QueryPlotBenchmark};
-use branch::{InsertPlotBranch, QueryPlotBranch, UpdatePlotBranch};
+use branch::{InsertPlotBranch, QueryPlotBranch};
 use measure::{InsertPlotMeasure, QueryPlotMeasure};
 use testbed::{InsertPlotTestbed, QueryPlotTestbed};
 
@@ -342,24 +342,6 @@ impl UpdatePlot {
             .execute(conn)
             .map_err(resource_conflict_err!(Plot, (query_plot, &update_plot)))?;
 
-        Ok(())
-    }
-
-    pub fn update_branch_for_all_plots(
-        conn: &mut DbConnection,
-        old_branch_id: BranchId,
-        new_branch_id: BranchId,
-    ) -> Result<(), HttpError> {
-        let update_plot_branch = UpdatePlotBranch::from(new_branch_id);
-        diesel::update(
-            schema::plot_branch::table.filter(schema::plot_branch::branch_id.eq(old_branch_id)),
-        )
-        .set(&update_plot_branch)
-        .execute(conn)
-        .map_err(resource_conflict_err!(
-            PlotBranch,
-            (old_branch_id, new_branch_id, update_plot_branch)
-        ))?;
         Ok(())
     }
 }
