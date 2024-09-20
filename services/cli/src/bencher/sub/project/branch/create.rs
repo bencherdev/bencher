@@ -14,7 +14,7 @@ pub struct Create {
     pub slug: Option<Slug>,
     pub start_point_branch: Option<NameId>,
     pub start_point_hash: Option<GitHash>,
-    pub start_point_thresholds: bool,
+    pub start_point_max_versions: u32,
     pub backend: AuthBackend,
 }
 
@@ -32,7 +32,7 @@ impl TryFrom<CliBranchCreate> for Create {
         let CliBranchStartPoint {
             start_point_branch,
             start_point_hash,
-            start_point_thresholds,
+            start_point_max_versions,
         } = start_point;
         Ok(Self {
             project,
@@ -40,7 +40,7 @@ impl TryFrom<CliBranchCreate> for Create {
             slug,
             start_point_branch,
             start_point_hash,
-            start_point_thresholds,
+            start_point_max_versions,
             backend: backend.try_into()?,
         })
     }
@@ -53,13 +53,13 @@ impl From<Create> for JsonNewBranch {
             slug,
             start_point_branch,
             start_point_hash,
-            start_point_thresholds,
+            start_point_max_versions,
             ..
         } = create;
         let start_point = start_point_branch.map(|branch| JsonNewStartPoint {
             branch: branch.into(),
             hash: start_point_hash.map(Into::into),
-            thresholds: Some(start_point_thresholds),
+            max_versions: Some(start_point_max_versions),
         });
         Self {
             name: name.into(),

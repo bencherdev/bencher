@@ -23,16 +23,16 @@ interface Props {
 const params = Astro.params;
 const search = Object.fromEntries(Astro.url.searchParams);
 const config = Astro.props.config;
+// This is necessary because the `url` function is not available
+// in the `config` object on the client side because it gets serialized to JSON.
+const path = config?.deck?.url(params, search);
 let title = Astro.props.title();
 let description = Astro.props.description();
 let notFound = false;
 let json: object;
 if (params.project && params.project !== "undefined") {
 	try {
-		const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}${config?.deck?.url(
-			params,
-			search,
-		)}`;
+		const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}${path}`;
 		const resp = await fetchSSR(url);
 		json = await resp.json();
 		if (json?.uuid) {
@@ -79,6 +79,7 @@ if (params.project && params.project !== "undefined") {
   <PublicDeck
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
+    path={path}
     params={params}
     config={config}
     data={json}

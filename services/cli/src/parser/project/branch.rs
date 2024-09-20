@@ -85,9 +85,9 @@ pub struct CliBranchStartPoint {
     #[clap(long, requires = "start_point_branch")]
     pub start_point_hash: Option<GitHash>,
 
-    /// Clone thresholds for the new branch start point
-    #[clap(long, requires = "start_point_branch")]
-    pub start_point_thresholds: bool,
+    /// The maximum number of historical branch versions to include.
+    #[clap(long, requires = "start_point_branch", default_value = "255")]
+    pub start_point_max_versions: u32,
 }
 
 #[derive(Parser, Debug)]

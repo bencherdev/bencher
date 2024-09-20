@@ -3570,6 +3570,14 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
             }
+          },
+          {
+            "in": "query",
+            "name": "head",
+            "description": "View the branch with the specified HEAD reference UUID. This can be useful for viewing branches with historical HEAD references that have since been replaced by a new HEAD reference. If not specified, then the current HEAD reference is used.",
+            "schema": {
+              "$ref": "#/components/schemas/ReferenceUuid"
+            }
           }
         ],
         "responses": {
@@ -4375,7 +4383,7 @@
           "perf"
         ],
         "summary": "Query project performance metrics",
-        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 256 permutations for a single request. Therefore, only the first 256 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
@@ -8225,6 +8233,9 @@
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "head": {
+            "$ref": "#/components/schemas/JsonReference"
+          },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -8237,76 +8248,18 @@
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
-          "start_point": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonStartPoint"
-              }
-            ]
-          },
           "uuid": {
             "$ref": "#/components/schemas/BranchUuid"
           }
         },
         "required": [
           "created",
+          "head",
           "modified",
           "name",
           "project",
           "slug",
           "uuid"
-        ]
-      },
-      "JsonBranchVersion": {
-        "type": "object",
-        "properties": {
-          "archived": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
-          },
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "modified": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "name": {
-            "$ref": "#/components/schemas/BranchName"
-          },
-          "project": {
-            "$ref": "#/components/schemas/ProjectUuid"
-          },
-          "slug": {
-            "$ref": "#/components/schemas/Slug"
-          },
-          "start_point": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonStartPoint"
-              }
-            ]
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/BranchUuid"
-          },
-          "version": {
-            "$ref": "#/components/schemas/JsonVersion"
-          }
-        },
-        "required": [
-          "created",
-          "modified",
-          "name",
-          "project",
-          "slug",
-          "uuid",
-          "version"
         ]
       },
       "JsonBranches": {
@@ -9378,10 +9331,12 @@
               }
             ]
           },
-          "thresholds": {
+          "max_versions": {
             "nullable": true,
-            "description": "If set to `true`, the thresholds from the start point branch will be deep copied to the new branch. This can be useful for pull request branches that should have the same thresholds as their target branch.",
-            "type": "boolean"
+            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. Default is 255.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
           }
         },
         "required": [
@@ -9574,7 +9529,7 @@
             ]
           },
           "branch": {
-            "$ref": "#/components/schemas/JsonBranchVersion"
+            "$ref": "#/components/schemas/JsonBranch"
           },
           "end_time": {
             "$ref": "#/components/schemas/DateTime"
@@ -10289,6 +10244,49 @@
           "uuid"
         ]
       },
+      "JsonReference": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "$ref": "#/components/schemas/BranchUuid"
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "replaced": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "start_point": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonStartPoint"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ReferenceUuid"
+          },
+          "version": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVersion"
+              }
+            ]
+          }
+        },
+        "required": [
+          "branch",
+          "created",
+          "uuid"
+        ]
+      },
       "JsonReplica": {
         "oneOf": [
           {
@@ -10558,7 +10556,7 @@
             }
           },
           "branch": {
-            "$ref": "#/components/schemas/JsonBranchVersion"
+            "$ref": "#/components/schemas/JsonBranch"
           },
           "created": {
             "$ref": "#/components/schemas/DateTime"
@@ -10711,14 +10709,16 @@
               }
             ]
           },
+          "max_versions": {
+            "nullable": true,
+            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. Requires the `branch` field to be set. Default is 255 if the `branch` field is set.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "reset": {
             "nullable": true,
             "description": "Reset the branch to an empty state. If the branch already exists, a new empty branch will be created. If a start point is provided, the new branch will begin at that start point.",
-            "type": "boolean"
-          },
-          "thresholds": {
-            "nullable": true,
-            "description": "If set to `true`, the thresholds from the start point branch will be deep copied to the new branch. This can be useful for pull request branches that should have the same thresholds as their target branch. Requires the `branch` field to be set.",
             "type": "boolean"
           }
         }
@@ -10983,12 +10983,16 @@
           "branch": {
             "$ref": "#/components/schemas/BranchUuid"
           },
+          "reference": {
+            "$ref": "#/components/schemas/ReferenceUuid"
+          },
           "version": {
             "$ref": "#/components/schemas/JsonVersion"
           }
         },
         "required": [
           "branch",
+          "reference",
           "version"
         ]
       },
@@ -11794,6 +11798,10 @@
         "format": "uuid"
       },
       "ProjectUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "ReferenceUuid": {
         "type": "string",
         "format": "uuid"
       },

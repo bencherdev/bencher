@@ -16,7 +16,7 @@ use super::{QueryThreshold, ThresholdId};
 
 crate::util::typed_id::typed_id!(ModelId);
 
-#[derive(Debug, Clone, diesel::Queryable, diesel::Selectable)]
+#[derive(Debug, Clone, Copy, diesel::Queryable, diesel::Selectable)]
 #[diesel(table_name = model_table)]
 pub struct QueryModel {
     pub id: ModelId,
@@ -109,6 +109,29 @@ pub struct InsertModel {
 }
 
 impl InsertModel {
+    pub fn from_json(threshold_id: ThresholdId, model: Model) -> Self {
+        let Model {
+            test,
+            min_sample_size,
+            max_sample_size,
+            window,
+            lower_boundary,
+            upper_boundary,
+        } = model;
+        Self {
+            uuid: ModelUuid::new(),
+            threshold_id,
+            test,
+            min_sample_size,
+            max_sample_size,
+            window,
+            lower_boundary,
+            upper_boundary,
+            created: DateTime::now(),
+            replaced: None,
+        }
+    }
+
     pub fn with_threshold_id(query_model: QueryModel, threshold_id: ThresholdId) -> Self {
         let QueryModel {
             test,
@@ -132,31 +155,6 @@ impl InsertModel {
             upper_boundary,
             created,
             replaced,
-        }
-    }
-}
-
-impl InsertModel {
-    pub fn from_json(threshold_id: ThresholdId, model: Model) -> Self {
-        let Model {
-            test,
-            min_sample_size,
-            max_sample_size,
-            window,
-            lower_boundary,
-            upper_boundary,
-        } = model;
-        Self {
-            uuid: ModelUuid::new(),
-            threshold_id,
-            test,
-            min_sample_size,
-            max_sample_size,
-            window,
-            lower_boundary,
-            upper_boundary,
-            created: DateTime::now(),
-            replaced: None,
         }
     }
 }

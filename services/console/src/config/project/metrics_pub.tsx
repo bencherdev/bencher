@@ -38,7 +38,7 @@ const metricsPubConfig = {
 			{
 				kind: Card.NESTED_FIELD,
 				label: "Branch Version Hash",
-				keys: ["branch", "version", "hash"],
+				keys: ["branch", "head", "version", "hash"],
 				display: Display.GIT_HASH,
 			},
 			{

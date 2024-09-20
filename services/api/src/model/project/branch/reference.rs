@@ -144,7 +144,10 @@ impl QueryReference {
     ) -> Result<(), HttpError> {
         let branch_start_point = match (self.start_point_id, branch_start_point) {
             (Some(start_point_id), Some(branch_start_point)) => {
-                debug_assert_eq!(start_point_id, branch_start_point.reference_version.id);
+                debug_assert_eq!(
+                    start_point_id, branch_start_point.reference_version.id,
+                    "Branch start point mismatch"
+                );
                 branch_start_point
             },
             (None, None) => return Ok(()),
@@ -157,7 +160,7 @@ impl QueryReference {
                 ));
             },
         };
-        self.clone_versions(context, &branch_start_point).await
+        self.clone_versions(context, branch_start_point).await
     }
 
     async fn clone_versions(
@@ -345,11 +348,38 @@ impl InsertReference {
                 (&query_branch, &query_reference)
             ))?;
 
+        // If the branch has an old head reference, then mark it as replaced.
+        // This should not run if the branch is new.
+        if let Some(old_head_id) = query_branch.head_id {
+            let update_reference = UpdateReference::replace();
+            diesel::update(schema::reference::table.filter(schema::reference::id.eq(old_head_id)))
+                .set(&update_reference)
+                .execute(conn_lock!(context))
+                .map_err(resource_conflict_err!(
+                    Reference,
+                    (&query_branch, &update_reference)
+                ))?;
+        }
+
         // Clone data from the start point for the head reference
         query_reference
             .clone_start_point(context, branch_start_point)
             .await?;
 
         Ok((query_branch, query_reference))
+    }
+}
+
+#[derive(Debug, Clone, diesel::AsChangeset)]
+#[diesel(table_name = reference_table)]
+pub struct UpdateReference {
+    pub replaced: DateTime,
+}
+
+impl UpdateReference {
+    pub fn replace() -> Self {
+        Self {
+            replaced: DateTime::now(),
+        }
     }
 }

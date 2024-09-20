@@ -120,9 +120,10 @@ pub struct CliReportStartPoint {
     #[clap(long, requires = "start_point_branch")]
     pub start_point_hash: Option<GitHash>,
 
-    /// Clone all thresholds if a new branch is created from the start point (requires: `--start-point-branch`).
-    #[clap(long, requires = "start_point_branch")]
-    pub start_point_thresholds: bool,
+    /// The maximum number of historical branch versions to include (requires: `--start-point-branch`).
+    /// Versions beyond this number will be omitted.
+    #[clap(long, requires = "start_point_branch", default_value = "255")]
+    pub start_point_max_versions: u32,
 
     /// Reset `branch` to an empty state.
     /// If `branch` already exists, a new empty branch will be created.

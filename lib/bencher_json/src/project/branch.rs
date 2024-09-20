@@ -65,7 +65,7 @@ pub struct JsonNewStartPoint {
     pub branch: NameId,
     /// The full `git` hash of the branch to use as the start point.
     pub hash: Option<GitHash>,
-    /// The maximum number of start point branch versions.
+    /// The maximum number of historical branch versions to include.
     /// Versions beyond this number will be omitted.
     /// Default is 255.
     pub max_versions: Option<u32>,

@@ -12,24 +12,22 @@ import { authUser } from "../../util/auth";
 import Deck from "../console/deck/hand/Deck";
 import DeckHeaderButton from "../console/deck/header/DeckHeaderButton";
 import { httpGet } from "../../util/http";
-import {
-	BACK_PARAM,
-	decodePath,
-	encodePath,
-	pathname,
-	useSearchParams,
-} from "../../util/url";
+import { BACK_PARAM, decodePath, useSearchParams } from "../../util/url";
 import * as Sentry from "@sentry/astro";
 import { fmtDateTime } from "../../config/util";
 import { Display, type Button } from "../../config/types";
 import { fmtValues } from "../../util/resource";
 import type CardConfig from "../console/deck/hand/card/CardConfig";
-import { fmtDate } from "../../util/convert";
 import type { PubResourceKind } from "./util";
 import RawButton from "../console/deck/hand/RawButton";
+import HeadReplacedButton from "../console/deck/hand/HeadReplacedButton";
+import ModelReplacedButton from "../console/deck/hand/ModelReplacedButton";
+import ArchivedButton from "../console/deck/hand/ArchivedButton";
+import { set } from "astro/zod";
 
 export interface Props {
 	apiUrl: string;
+	path: string;
 	params: Params;
 	config: PubDeckPanelConfig;
 	data: undefined | object;
@@ -66,6 +64,7 @@ const PublicDeck = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const [searchParams, setSearchParams] = useSearchParams();
+	const [refresh, setRefresh] = createSignal(false);
 
 	createEffect(() => {
 		const initParams: Record<string, null | string> = {};
@@ -83,12 +82,12 @@ const PublicDeck = (props: Props) => {
 	const path = createMemo(() => props.apiUrl);
 
 	const getData = async (_bencher_valid: InitOutput) => {
-		if (props.data) {
+		if (props.data && !refresh()) {
 			return props.data;
 		}
+		setRefresh(false);
 
-		const path = props.config?.deck?.url?.(props.params, searchParams);
-		return await httpGet(props.apiUrl, path, null)
+		return await httpGet(props.apiUrl, props.path, null)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -157,7 +156,10 @@ const PublicDeck = (props: Props) => {
 												path={path}
 												data={data}
 												title={title}
-												handleRefresh={refetch}
+												handleRefresh={() => {
+													setRefresh(true);
+													refetch();
+												}}
 											/>
 										</div>
 									)}
@@ -167,47 +169,9 @@ const PublicDeck = (props: Props) => {
 					</div>
 				</div>
 
-				<Show when={data()?.archived}>
-					<div class="columns">
-						<div class="column">
-							<div class="notification is-warning">
-								<p>
-									This {props.config?.resource} was archived on{" "}
-									{fmtDate(data()?.archived)}
-								</p>
-							</div>
-						</div>
-					</div>
-				</Show>
-
-				<Show when={data()?.model?.replaced}>
-					<div class="columns">
-						<div class="column">
-							<div class="notification is-warning">
-								<div class="columns is-vcentered">
-									<div class="column">
-										<p>
-											This {props.config?.resource} model was replaced on{" "}
-											{fmtDate(data()?.model?.replaced)}
-										</p>
-									</div>
-									<div class="column is-narrow">
-										<a
-											class="button is-small"
-											href={`${pathname()}?${BACK_PARAM}=${encodePath()}`}
-										>
-											<span class="fa-stack fa-2x" style="font-size: 1.0em;">
-												<i class="fas fa-walking fa-stack-1x" />
-												<i class="fas fa-ban fa-stack-2x" />
-											</span>
-											<span> View Current Threshold</span>
-										</a>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</Show>
+				<ArchivedButton resource={props.config?.resource} data={data} />
+				<HeadReplacedButton data={data} />
+				<ModelReplacedButton data={data} />
 
 				<div class="columns is-mobile">
 					<div class="column">
@@ -219,7 +183,10 @@ const PublicDeck = (props: Props) => {
 							config={props.config?.deck}
 							path={path}
 							data={data}
-							handleRefresh={refetch}
+							handleRefresh={() => {
+								setRefresh(true);
+								refetch();
+							}}
 							handleLoopback={setLoopback}
 						/>
 					</div>

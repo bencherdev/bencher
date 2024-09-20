@@ -11,8 +11,11 @@ import { ActionButton } from "../../../../config/types";
 import DeleteButton from "./DeleteButton";
 import type { Params } from "astro";
 import ArchiveButton from "./ArchiveButton";
-import ReplacedButton from "./ReplacedButton";
+import ModelReplacedButton from "./ModelReplacedButton";
 import RawButton from "./RawButton";
+import HeadReplacedButton from "./HeadReplacedButton";
+import ArchivedButton from "./ArchivedButton";
+import type { PubResourceKind } from "../../../perf/util";
 
 export interface Props {
 	apiUrl: string;
@@ -30,6 +33,7 @@ export interface DeckButtonConfig {
 	path: (pathname: string, data: object) => string;
 	is_allowed?: (apiUrl: string, data: object) => boolean;
 	effect?: () => void;
+	resource?: PubResourceKind;
 }
 
 const DeckButton = (props: Props) => {
@@ -79,8 +83,14 @@ const DeckButton = (props: Props) => {
 					</div>
 				</div>
 			</Match>
-			<Match when={props.config?.kind === ActionButton.REPLACED}>
-				<ReplacedButton data={props.data} redirect={props.config.path} />
+			<Match when={props.config?.kind === ActionButton.ARCHIVED}>
+				<ArchivedButton resource={props.config?.resource} data={props.data} />
+			</Match>
+			<Match when={props.config?.kind === ActionButton.HEAD_REPLACED}>
+				<HeadReplacedButton data={props.data} />
+			</Match>
+			<Match when={props.config?.kind === ActionButton.MODEL_REPLACED}>
+				<ModelReplacedButton data={props.data} />
 			</Match>
 			<Match when={props.config?.kind === ActionButton.RAW}>
 				<div class="columns">

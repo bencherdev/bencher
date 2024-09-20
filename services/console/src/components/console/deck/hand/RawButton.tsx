@@ -27,7 +27,7 @@ const RawButton = (props: Props) => {
 				</div>
 			</Match>
 			<Match when={rawClicked() === true}>
-				<div class="columns">
+				<div class="columns is-reverse-mobile">
 					<div class="column">
 						<div class="content">
 							<pre>{JSON.stringify(props.data(), null, 2)}</pre>

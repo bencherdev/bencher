@@ -112,7 +112,9 @@ export enum Button {
 
 export enum ActionButton {
 	ARCHIVE = "archive",
-	REPLACED = "replaced",
+	ARCHIVED = "archived",
+	HEAD_REPLACED = "head_replaced",
+	MODEL_REPLACED = "model_replaced",
 	RAW = "raw",
 	DELETE = "delete",
 }

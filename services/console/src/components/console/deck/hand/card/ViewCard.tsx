@@ -79,9 +79,19 @@ const ViewCard = (props: Props) => {
 												: "View Report"}
 										</a>
 									</Match>
+									<Match when={props.card?.display === Display.BRANCH}>
+										<a
+											href={`${resourcePath(props.isConsole)}/${
+												props.params?.project
+											}/branches/${props.value?.slug}?head=${
+												props.value?.head?.uuid
+											}&${BACK_PARAM}=${encodePath()}`}
+										>
+											{props.value?.name}
+										</a>
+									</Match>
 									<Match
 										when={
-											props.card?.display === Display.BRANCH ||
 											props.card?.display === Display.TESTBED ||
 											props.card?.display === Display.BENCHMARK ||
 											props.card?.display === Display.MEASURE
@@ -92,8 +102,6 @@ const ViewCard = (props: Props) => {
 												props.params?.project
 											}/${(() => {
 												switch (props.card?.display) {
-													case Display.BRANCH:
-														return "branches";
 													case Display.TESTBED:
 														return "testbeds";
 													case Display.BENCHMARK:
@@ -208,6 +216,7 @@ const ViewCard = (props: Props) => {
 };
 
 const StartPointCard = (props: Props) => {
+	console.log(props);
 	const user = authUser();
 	const branchFetcher = createMemo(() => {
 		return {
@@ -247,9 +256,9 @@ const StartPointCard = (props: Props) => {
 		<a
 			href={`${resourcePath(props.isConsole)}/${
 				props.params?.project
-			}/branches/${
-				branch()?.slug ?? props.value?.branch
-			}?${BACK_PARAM}=${encodePath()}`}
+			}/branches/${branch()?.slug ?? props.value?.branch}?head=${
+				branch()?.head?.uuid
+			}&${BACK_PARAM}=${encodePath()}`}
 		>
 			Branch: {branch()?.name}
 			<br />

@@ -113,14 +113,19 @@ const branchesConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (params: Params) =>
-				`/v0/projects/${params?.project}/branches/${params?.branch}`,
+			url: (params: Params, search: Params) =>
+				`/v0/projects/${params?.project}/branches/${params?.branch}${
+					search?.head ? `?head=${search?.head}` : ""
+				}`,
 			top_buttons: [
 				{
 					kind: ActionButton.ARCHIVE,
 					subtitle: "Branch",
 					path: parentPath,
 					is_allowed: isAllowedProjectEdit,
+				},
+				{
+					kind: ActionButton.HEAD_REPLACED,
 				},
 			],
 			cards: [
@@ -165,9 +170,9 @@ const branchesConfig = {
 					display: Display.RAW,
 				},
 				{
-					kind: Card.FIELD,
+					kind: Card.NESTED_FIELD,
 					label: "Branch Start Point",
-					key: "start_point",
+					keys: ["head", "start_point"],
 					display: Display.START_POINT,
 				},
 			],

@@ -6,13 +6,8 @@ import {
 	isAllowedProjectEdit,
 } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import {
-	addPath,
-	createdUuidPath,
-	echoPath,
-	parentPath,
-	viewUuidPath,
-} from "../util";
+import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
+import { PubResourceKind } from "../../components/perf/util";
 
 const paginationUrl = (
 	params: undefined | Params,
@@ -193,8 +188,11 @@ const thresholdsConfig = {
 				}`,
 			top_buttons: [
 				{
-					kind: ActionButton.REPLACED,
-					path: echoPath,
+					kind: ActionButton.ARCHIVED,
+					resource: PubResourceKind.Threshold,
+				},
+				{
+					kind: ActionButton.MODEL_REPLACED,
 				},
 			],
 			cards: [

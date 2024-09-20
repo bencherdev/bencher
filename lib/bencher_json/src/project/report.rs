@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, DateTimeMillis, GitHash, Window};
+use bencher_valid::{DateTime, DateTimeMillis, GitHash};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ pub struct JsonReportStartPoint {
     /// The full git hash of the branch to use as the start point.
     /// Requires the `branch` field to be set.
     pub hash: Option<GitHash>,
-    /// The maximum number of start point branch versions.
+    /// The maximum number of historical branch versions to include.
     /// Versions beyond this number will be omitted.
     /// Requires the `branch` field to be set.
     /// Default is 255 if the `branch` field is set.

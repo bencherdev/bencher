@@ -47,14 +47,14 @@ impl TryFrom<CliReportCreate> for Create {
         let CliReportStartPoint {
             start_point_branch,
             start_point_hash,
-            start_point_thresholds,
+            start_point_max_versions,
             start_point_reset,
         } = start_point;
         let start_point =
             (start_point_branch.is_some() || start_point_reset).then(|| JsonReportStartPoint {
                 branch: start_point_branch.map(Into::into),
                 hash: start_point_hash.map(Into::into),
-                thresholds: Some(start_point_thresholds),
+                max_versions: Some(start_point_max_versions),
                 reset: Some(start_point_reset),
             });
         Ok(Self {

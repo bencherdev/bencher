@@ -14,6 +14,7 @@ pub struct Branch {
 struct StartPoint {
     branch: Option<NameId>,
     hash: Option<GitHash>,
+    max_versions: u32,
     reset: bool,
 }
 
@@ -32,13 +33,18 @@ impl TryFrom<CliRunBranch> for Branch {
             hash,
             branch_start_point,
             branch_start_point_hash,
+            branch_start_point_max_versions,
             branch_reset,
             deprecated: _,
         } = run_branch;
         let branch = try_branch(branch)?;
         let hash = map_hash(hash);
-        let start_point =
-            map_start_point(branch_start_point, branch_start_point_hash, branch_reset);
+        let start_point = map_start_point(
+            branch_start_point,
+            branch_start_point_hash,
+            branch_start_point_max_versions,
+            branch_reset,
+        );
         Ok(Self {
             branch,
             hash,
@@ -92,6 +98,7 @@ fn find_repo() -> Option<gix::Repository> {
 fn map_start_point(
     branch_start_point: Vec<String>,
     branch_start_point_hash: Option<GitHash>,
+    branch_start_point_max_versions: u32,
     branch_reset: bool,
 ) -> Option<StartPoint> {
     let branch_start_point = branch_start_point.first().and_then(|b| {
@@ -102,6 +109,7 @@ fn map_start_point(
     (branch_start_point.is_some() || branch_reset).then_some(StartPoint {
         branch: branch_start_point,
         hash: branch_start_point_hash,
+        max_versions: branch_start_point_max_versions,
         reset: branch_reset,
     })
 }
@@ -122,7 +130,7 @@ impl From<Branch>
                 .map(|start_point| bencher_client::types::JsonReportStartPoint {
                     branch: start_point.branch.map(Into::into),
                     hash: start_point.hash.map(Into::into),
-                    thresholds: Some(true),
+                    max_versions: Some(start_point.max_versions),
                     reset: Some(start_point.reset),
                 });
         (name, hash, start_point)

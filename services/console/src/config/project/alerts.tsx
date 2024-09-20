@@ -2,6 +2,7 @@ import type { Params } from "astro";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 import { isAllowedProjectEdit } from "../../util/auth";
+import { PubResourceKind } from "../../components/perf/util";
 
 export const ALERT_ICON = "fas fa-bell";
 
@@ -81,6 +82,12 @@ const alertsConfig = {
 		deck: {
 			url: (params: Params) =>
 				`/v0/projects/${params?.project}/alerts/${params?.alert}`,
+			top_buttons: [
+				{
+					kind: ActionButton.ARCHIVED,
+					resource: PubResourceKind.Alert,
+				},
+			],
 			cards: [
 				{
 					kind: Card.NESTED_FIELD,

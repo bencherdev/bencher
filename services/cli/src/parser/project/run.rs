@@ -92,6 +92,11 @@ pub struct CliRunBranch {
     #[clap(long, requires = "branch_start_point")]
     pub branch_start_point_hash: Option<GitHash>,
 
+    /// The maximum number of historical branch versions to include (requires: `--branch-start-point`).
+    /// Versions beyond this number will be omitted.
+    #[clap(long, requires = "branch_start_point", default_value = "255")]
+    pub branch_start_point_max_versions: u32,
+
     /// Reset `branch` to an empty state.
     /// If `branch` already exists, a new empty branch will be created.
     /// If a start point is provided, the new branch will begin at that start point.
