@@ -3,7 +3,7 @@ use bencher_json::{
 };
 use clap::{Parser, ValueEnum};
 
-use crate::parser::CliBackend;
+use crate::parser::{CliBackend, ElidedOption};
 
 #[derive(Parser, Debug)]
 #[allow(clippy::option_option)]
@@ -15,9 +15,10 @@ pub struct CliPerf {
     #[clap(long, required = true)]
     pub branches: Vec<BranchUuid>,
 
-    /// Optional branch head reference UUIDs
+    /// Optional branch head reference UUIDs in the same order as `branches`.
+    /// Use an underscore (`_`) to specify the current branch head.
     #[clap(long, required = false)]
-    pub heads: Vec<Option<ReferenceUuid>>,
+    pub heads: Vec<ElidedOption<ReferenceUuid>>,
 
     /// Testbed UUIDs
     #[clap(long, required = true)]

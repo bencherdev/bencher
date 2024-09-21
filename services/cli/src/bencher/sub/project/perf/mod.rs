@@ -7,6 +7,7 @@ use bencher_json::{
 };
 use tabled::Table;
 
+use crate::parser::ElidedOption;
 use crate::{bencher::backend::PubBackend, cli_println, parser::project::perf::CliPerf, CliError};
 
 use crate::bencher::SubCmd;
@@ -50,7 +51,7 @@ impl TryFrom<CliPerf> for Perf {
         Ok(Self {
             project,
             branches,
-            heads,
+            heads: heads.into_iter().map(ElidedOption::into).collect(),
             testbeds,
             benchmarks,
             measures,

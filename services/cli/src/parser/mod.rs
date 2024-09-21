@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use bencher_json::{Jwt, Url, BENCHER_API_URL_STR};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
@@ -195,5 +197,29 @@ impl From<CliArchived> for Option<bool> {
             #[allow(clippy::unreachable)]
             (true, true) => unreachable!("Cannot set both `archive` and `unarchive`"),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ElidedOption<T>(Option<T>);
+
+impl<T> FromStr for ElidedOption<T>
+where
+    T: FromStr,
+{
+    type Err = T::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "_" {
+            Ok(ElidedOption(None))
+        } else {
+            s.parse().map(Some).map(ElidedOption)
+        }
+    }
+}
+
+impl<T> From<ElidedOption<T>> for Option<T> {
+    fn from(elided: ElidedOption<T>) -> Option<T> {
+        elided.0
     }
 }
