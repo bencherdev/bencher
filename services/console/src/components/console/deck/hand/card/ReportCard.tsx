@@ -583,6 +583,7 @@ export const perfUrl = (
 	const perfQuery = {
 		report: reportUuid,
 		branches: branch?.uuid,
+		heads: branch?.head?.uuid,
 		testbeds: testbed?.uuid,
 		benchmarks: benchmark?.uuid,
 		measures: measure?.uuid,

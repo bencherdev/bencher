@@ -440,6 +440,7 @@ export interface JsonProject {
  */
 export interface JsonPerfQuery {
 	branches: Uuid[];
+	heads: ReferenceUuid[];
 	testbeds: Uuid[];
 	benchmarks: Uuid[];
 	measures: Uuid[];
@@ -747,6 +748,7 @@ export enum ProjectPermission {
 
 export enum PerfQueryKey {
 	Branches = "branches",
+	Heads = "heads",
 	Testbeds = "testbeds",
 	Benchmarks = "benchmarks",
 	Measures = "measures",

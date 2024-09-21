@@ -4,10 +4,13 @@ use serde::ser::{self, SerializeStruct};
 use serde::{Deserialize, Serialize, Serializer};
 use url::Url;
 
-use crate::urlencoded::{from_urlencoded_list, to_urlencoded, to_urlencoded_list, UrlEncodedError};
+use crate::urlencoded::{
+    from_urlencoded_list, from_urlencoded_nullable_list, to_urlencoded, to_urlencoded_list,
+    to_urlencoded_optional_list, UrlEncodedError,
+};
 use crate::{
     BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, JsonBenchmark, JsonBranch, JsonMeasure,
-    JsonProject, JsonTestbed, MeasureUuid, ReportUuid, TestbedUuid,
+    JsonProject, JsonTestbed, MeasureUuid, ReferenceUuid, ReportUuid, TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
@@ -29,6 +32,9 @@ crate::typed_uuid::typed_uuid!(ReportBenchmarkUuid);
 pub struct JsonPerfQueryParams {
     /// A comma separated list of branch UUIDs to query.
     pub branches: String,
+    /// An optional comma separated list of branch head reference UUIDs.
+    /// To not specify a particular branch head leave an empty entry in the list.
+    pub heads: Option<String>,
     /// A comma separated list of testbed UUIDs to query.
     pub testbeds: String,
     /// A comma separated list of benchmark UUIDs to query.
@@ -49,6 +55,9 @@ pub struct JsonPerfImgQueryParams {
     pub title: Option<String>,
     /// A comma separated list of branch UUIDs to query.
     pub branches: String,
+    /// An optional comma separated list of branch head reference UUIDs.
+    /// To not specify a particular branch head leave an empty entry in the list.
+    pub heads: Option<String>,
     /// A comma separated list of testbed UUIDs to query.
     pub testbeds: String,
     /// A comma separated list of benchmark UUIDs to query.
@@ -66,6 +75,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
         let JsonPerfImgQueryParams {
             title: _,
             branches,
+            heads,
             testbeds,
             benchmarks,
             measures,
@@ -74,6 +84,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
         } = query;
         Self {
             branches,
+            heads,
             testbeds,
             benchmarks,
             measures,
@@ -89,6 +100,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
 #[derive(Debug, Clone)]
 pub struct JsonPerfQuery {
     pub branches: Vec<BranchUuid>,
+    pub heads: Vec<Option<ReferenceUuid>>,
     pub testbeds: Vec<TestbedUuid>,
     pub benchmarks: Vec<BenchmarkUuid>,
     pub measures: Vec<MeasureUuid>,
@@ -102,6 +114,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
     fn try_from(query_params: JsonPerfQueryParams) -> Result<Self, Self::Error> {
         let JsonPerfQueryParams {
             branches,
+            heads,
             testbeds,
             benchmarks,
             measures,
@@ -123,12 +136,17 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
         }
 
         let branches = from_urlencoded_list(&branches)?;
+        let heads = from_urlencoded_nullable_list(heads.as_deref())?;
         let testbeds = from_urlencoded_list(&testbeds)?;
         let benchmarks = from_urlencoded_list(&benchmarks)?;
         let measures = from_urlencoded_list(&measures)?;
 
+        // Guarantee that the `heads` array is the same length as the `branches` array.
+        let heads = pad_heads_to_branches(branches.len(), &heads);
+
         Ok(Self {
             branches,
+            heads,
             testbeds,
             benchmarks,
             measures,
@@ -136,6 +154,22 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             end_time: end_time.map(Into::into),
         })
     }
+}
+
+// Guarantee that the `heads` array is the same length as the `branches` array.
+// It is okay for their to be less heads than branches.
+// They will just be set to `None`.
+// But there should never be more heads than branches.
+// Those extra heads will just be ignored.
+fn pad_heads_to_branches(
+    branches_len: usize,
+    heads: &[Option<ReferenceUuid>],
+) -> Vec<Option<ReferenceUuid>> {
+    let mut branch_heads = Vec::with_capacity(branches_len);
+    for i in 0..branches_len {
+        branch_heads.push(heads.get(i).copied().flatten());
+    }
+    branch_heads
 }
 
 impl Serialize for JsonPerfQuery {
@@ -174,11 +208,12 @@ impl JsonPerfQuery {
         serde_urlencoded::to_string(query).map_err(Into::into)
     }
 
-    fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 6], UrlEncodedError> {
+    fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 7], UrlEncodedError> {
         QUERY_KEYS
             .into_iter()
             .zip([
                 Some(self.branches()),
+                self.heads(),
                 Some(self.testbeds()),
                 Some(self.benchmarks()),
                 Some(self.measures()),
@@ -192,6 +227,14 @@ impl JsonPerfQuery {
 
     pub fn branches(&self) -> String {
         to_urlencoded_list(&self.branches)
+    }
+
+    pub fn heads(&self) -> Option<String> {
+        if self.heads.is_empty() {
+            None
+        } else {
+            Some(to_urlencoded_optional_list(&self.heads))
+        }
     }
 
     pub fn testbeds(&self) -> String {
@@ -229,6 +272,7 @@ impl JsonPerfQuery {
 #[serde(rename_all = "snake_case")]
 pub enum PerfQueryKey {
     Branches,
+    Heads,
     Testbeds,
     Benchmarks,
     Measures,
@@ -237,13 +281,14 @@ pub enum PerfQueryKey {
 }
 
 pub const BRANCHES: &str = "branches";
+pub const HEADS: &str = "heads";
 pub const TESTBEDS: &str = "testbeds";
 pub const BENCHMARKS: &str = "benchmarks";
 pub const MEASURES: &str = "measures";
 pub const START_TIME: &str = "start_time";
 pub const END_TIME: &str = "end_time";
-const QUERY_KEYS: [&str; 6] = [
-    BRANCHES, TESTBEDS, BENCHMARKS, MEASURES, START_TIME, END_TIME,
+const QUERY_KEYS: [&str; 7] = [
+    BRANCHES, HEADS, TESTBEDS, BENCHMARKS, MEASURES, START_TIME, END_TIME,
 ];
 
 #[typeshare::typeshare]

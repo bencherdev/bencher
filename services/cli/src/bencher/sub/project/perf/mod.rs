@@ -2,8 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MeasureUuid, ResourceId,
-    TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MeasureUuid, ReferenceUuid,
+    ResourceId, TestbedUuid,
 };
 use tabled::Table;
 
@@ -20,6 +20,7 @@ use table_style::TableStyle;
 pub struct Perf {
     project: ResourceId,
     branches: Vec<BranchUuid>,
+    heads: Vec<Option<ReferenceUuid>>,
     testbeds: Vec<TestbedUuid>,
     benchmarks: Vec<BenchmarkUuid>,
     measures: Vec<MeasureUuid>,
@@ -36,6 +37,7 @@ impl TryFrom<CliPerf> for Perf {
         let CliPerf {
             project,
             branches,
+            heads,
             testbeds,
             benchmarks,
             measures,
@@ -48,6 +50,7 @@ impl TryFrom<CliPerf> for Perf {
         Ok(Self {
             project,
             branches,
+            heads,
             testbeds,
             benchmarks,
             measures,
@@ -63,6 +66,7 @@ impl From<Perf> for JsonPerfQuery {
     fn from(perf: Perf) -> Self {
         let Perf {
             branches,
+            heads,
             testbeds,
             benchmarks,
             measures,
@@ -72,6 +76,7 @@ impl From<Perf> for JsonPerfQuery {
         } = perf;
         Self {
             branches,
+            heads,
             testbeds,
             benchmarks,
             measures,
@@ -124,6 +129,10 @@ fn perf_sender(
                 .testbeds(json_perf_query.testbeds())
                 .benchmarks(json_perf_query.benchmarks())
                 .measures(json_perf_query.measures());
+
+            if let Some(heads) = json_perf_query.heads() {
+                client = client.heads(heads);
+            }
 
             if let Some(start_time) = json_perf_query.start_time() {
                 client = client.start_time(start_time);

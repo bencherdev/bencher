@@ -10,7 +10,8 @@ use bencher_json::{
         threshold::JsonThresholdModel,
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
-    JsonReport, MeasureUuid, ModelUuid, ReportUuid, ResourceName, Slug, TestbedUuid, ThresholdUuid,
+    JsonReport, MeasureUuid, ModelUuid, ReferenceUuid, ReportUuid, ResourceName, Slug, TestbedUuid,
+    ThresholdUuid,
 };
 use url::Url;
 
@@ -734,6 +735,7 @@ impl BenchmarkUrls {
             json_report.project.slug.clone(),
             json_report.uuid,
             json_report.branch.uuid,
+            json_report.branch.head.uuid,
             json_report.testbed.uuid,
             json_report.start_time,
             json_report.end_time,
@@ -789,6 +791,7 @@ struct BenchmarkUrl {
     project_slug: Slug,
     report_uuid: ReportUuid,
     branch: BranchUuid,
+    head: ReferenceUuid,
     testbed: TestbedUuid,
     start_time: DateTime,
     end_time: DateTime,
@@ -798,11 +801,13 @@ struct BenchmarkUrl {
 const DEFAULT_REPORT_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 impl BenchmarkUrl {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         console_url: Url,
         project_slug: Slug,
         report_uuid: ReportUuid,
         branch: BranchUuid,
+        head: ReferenceUuid,
         testbed: TestbedUuid,
         start_time: DateTime,
         end_time: DateTime,
@@ -812,6 +817,7 @@ impl BenchmarkUrl {
             project_slug,
             report_uuid,
             branch,
+            head,
             testbed,
             start_time,
             end_time,
@@ -845,6 +851,7 @@ impl BenchmarkUrl {
     ) -> Url {
         let json_perf_query = JsonPerfQuery {
             branches: vec![self.branch],
+            heads: vec![Some(self.head)],
             testbeds: vec![self.testbed],
             benchmarks: vec![benchmark],
             measures: vec![measure],

@@ -54,6 +54,26 @@ where
     Ok(values)
 }
 
+pub fn from_urlencoded_nullable_list<T>(
+    list: Option<&str>,
+) -> Result<Vec<Option<T>>, UrlEncodedError>
+where
+    T: FromStr,
+{
+    let Some(list) = list else {
+        return Ok(Vec::new());
+    };
+
+    let mut values = Vec::new();
+    for value in list.split(',') {
+        if value.is_empty() {
+            values.push(None);
+        }
+        values.push(Some(from_urlencoded(value)?));
+    }
+    Ok(values)
+}
+
 pub fn from_urlencoded<T>(input: &str) -> Result<T, UrlEncodedError>
 where
     T: FromStr,
@@ -70,17 +90,39 @@ pub fn to_urlencoded_list<T>(values: &[T]) -> String
 where
     T: ToString,
 {
-    let mut list: Option<String> = None;
+    let mut list = String::new();
     for value in values {
         let element = to_urlencoded(value);
-        if let Some(list) = list.as_mut() {
+        if list.is_empty() {
             list.push(',');
             list.push_str(&element);
         } else {
-            list = Some(element);
+            list = element;
         }
     }
-    list.unwrap_or_default()
+    list
+}
+
+pub fn to_urlencoded_optional_list<T>(values: &[Option<T>]) -> String
+where
+    T: ToString,
+{
+    let mut list = String::new();
+    for value in values {
+        let Some(value) = value else {
+            list.push(',');
+            continue;
+        };
+
+        let element = to_urlencoded(value);
+        if list.is_empty() {
+            list.push(',');
+            list.push_str(&element);
+        } else {
+            list = element;
+        }
+    }
+    list
 }
 
 pub fn to_urlencoded<T>(value: &T) -> String

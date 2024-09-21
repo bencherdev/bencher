@@ -4423,6 +4423,15 @@
           },
           {
             "in": "query",
+            "name": "heads",
+            "description": "An optional comma separated list of branch head reference UUIDs. To not specify a particular branch head leave an empty entry in the list.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "measures",
             "description": "A comma separated list of measure UUIDs to query.",
             "required": true,
@@ -4548,6 +4557,15 @@
             "description": "Search for metrics before the given date time in milliseconds.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
+            }
+          },
+          {
+            "in": "query",
+            "name": "heads",
+            "description": "An optional comma separated list of branch head reference UUIDs. To not specify a particular branch head leave an empty entry in the list.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
             }
           },
           {

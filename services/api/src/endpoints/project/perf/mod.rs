@@ -6,8 +6,8 @@ use bencher_json::{
         report::Iteration,
         threshold::JsonThresholdModel,
     },
-    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, MeasureUuid, ReportUuid,
-    ResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, MeasureUuid,
+    ReferenceUuid, ReportUuid, ResourceId, TestbedUuid,
 };
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
@@ -28,7 +28,7 @@ use crate::{
     model::{
         project::{
             benchmark::QueryBenchmark,
-            branch::QueryBranch,
+            branch::{reference::QueryReference, QueryBranch},
             measure::QueryMeasure,
             metric_boundary::QueryMetricBoundary,
             testbed::QueryTestbed,
@@ -117,6 +117,7 @@ async fn get_inner(
 
     let JsonPerfQuery {
         branches,
+        heads,
         testbeds,
         benchmarks,
         measures,
@@ -133,6 +134,7 @@ async fn get_inner(
         context,
         &project,
         &branches,
+        &heads,
         &testbeds,
         &benchmarks,
         &measures,
@@ -154,10 +156,12 @@ struct Times {
     end_time: Option<DateTime>,
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn perf_results(
     context: &ApiContext,
     project: &QueryProject,
     branches: &[BranchUuid],
+    heads: &[Option<ReferenceUuid>],
     testbeds: &[TestbedUuid],
     benchmarks: &[BenchmarkUuid],
     measures: &[MeasureUuid],
@@ -166,7 +170,8 @@ async fn perf_results(
     let permutations = branches.len() * testbeds.len() * benchmarks.len() * measures.len();
     let gt_max_permutations = permutations > MAX_PERMUTATIONS;
     let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
-    for (branch_index, branch_uuid) in branches.iter().enumerate() {
+    // It is okay to use `zip` because `JsonPerfQuery` guarantees that the lengths are the same.
+    for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
             for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
                 for (measure_index, measure_uuid) in measures.iter().enumerate() {
@@ -184,6 +189,7 @@ async fn perf_results(
                         context,
                         project,
                         *branch_uuid,
+                        *head_uuid,
                         *testbed_uuid,
                         *benchmark_uuid,
                         *measure_uuid,
@@ -217,11 +223,12 @@ async fn perf_results(
     Ok(results)
 }
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 async fn perf_query(
     context: &ApiContext,
     project: &QueryProject,
     branch_uuid: BranchUuid,
+    head_uuid: Option<ReferenceUuid>,
     testbed_uuid: TestbedUuid,
     benchmark_uuid: BenchmarkUuid,
     measure_uuid: MeasureUuid,
@@ -245,9 +252,12 @@ async fn perf_query(
             .inner_join(schema::benchmark::table)
         )
         .inner_join(schema::measure::table)
-        // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
-        // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
-        // In contrast, the `report` table is only set to a single branch when the report is created.
+        // It is important to filter for the branch through the `reference_version` table
+        // and NOT on the reference in the `report` table.
+        // This is because the `reference_version` table is the one that is updated
+        // when a reference is cloned/used as a start point.
+        // In contrast, the `report` table is only set to a single reference when the report is created.
+        // Therefore, querying from the `report` table's `reference` would not return results for any other references.
         .filter(schema::branch::uuid.eq(branch_uuid))
         .filter(schema::testbed::uuid.eq(testbed_uuid))
         .filter(schema::benchmark::uuid.eq(benchmark_uuid))
@@ -263,6 +273,14 @@ async fn perf_query(
         // There may or may not be an alert for any given boundary
         .left_join(schema::alert::table.on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())))
         .into_boxed();
+
+    // Filter for the branch head reference if it is provided.
+    // Otherwise, filter for the current, non-replaced head reference.
+    if let Some(reference_uuid) = head_uuid {
+        query = query.filter(schema::reference::uuid.eq(reference_uuid));
+    } else {
+        query = query.filter(schema::reference::replaced.is_null());
+    }
 
     let Times {
         start_time,
@@ -286,6 +304,7 @@ async fn perf_query(
         ))
         .select((
             QueryBranch::as_select(),
+            QueryReference::as_select(),
             QueryTestbed::as_select(),
             QueryBenchmark::as_select(),
             QueryMeasure::as_select(),
@@ -340,6 +359,7 @@ async fn perf_query(
 
 type PerfQuery = (
     QueryBranch,
+    QueryReference,
     QueryTestbed,
     QueryBenchmark,
     QueryMeasure,
@@ -355,6 +375,7 @@ type PerfQuery = (
 
 struct QueryDimensions {
     branch: QueryBranch,
+    head: QueryReference,
     testbed: QueryTestbed,
     benchmark: QueryBenchmark,
     measure: QueryMeasure,
@@ -375,6 +396,7 @@ fn split_perf_query(
     project: &QueryProject,
     (
         branch,
+        head,
         testbed,
         benchmark,
         measure,
@@ -390,6 +412,7 @@ fn split_perf_query(
 ) -> (QueryDimensions, JsonPerfMetric) {
     let query_dimensions = QueryDimensions {
         branch,
+        head,
         testbed,
         benchmark,
         measure,
@@ -465,12 +488,13 @@ fn new_perf_metrics(
 ) -> Result<JsonPerfMetrics, HttpError> {
     let QueryDimensions {
         branch,
+        head,
         testbed,
         benchmark,
         measure,
     } = query_dimensions;
     Ok(JsonPerfMetrics {
-        branch: branch.into_json_for_project(conn, project)?,
+        branch: branch.into_json_for_head(conn, project, &head, None)?,
         testbed: testbed.into_json_for_project(project),
         benchmark: benchmark.into_json_for_project(project),
         measure: measure.into_json_for_project(project),

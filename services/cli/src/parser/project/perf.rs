@@ -1,4 +1,6 @@
-use bencher_json::{BenchmarkUuid, BranchUuid, DateTime, MeasureUuid, ResourceId, TestbedUuid};
+use bencher_json::{
+    BenchmarkUuid, BranchUuid, DateTime, MeasureUuid, ReferenceUuid, ResourceId, TestbedUuid,
+};
 use clap::{Parser, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -12,6 +14,10 @@ pub struct CliPerf {
     /// Branch UUIDs
     #[clap(long, required = true)]
     pub branches: Vec<BranchUuid>,
+
+    /// Optional branch head reference UUIDs
+    #[clap(long, required = false)]
+    pub heads: Vec<Option<ReferenceUuid>>,
 
     /// Testbed UUIDs
     #[clap(long, required = true)]
