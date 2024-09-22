@@ -181,7 +181,7 @@ impl QueryReference {
             )
             .filter(schema::version::number.le(start_point_version.number))
             .order(schema::version::number.desc())
-            .limit(branch_start_point.max_versions() as i64)
+            .limit(i64::from(branch_start_point.max_versions()))
             .select(schema::reference_version::version_id)
             .load::<VersionId>(conn_lock!(context))
             .map_err(resource_not_found_err!(
@@ -191,16 +191,16 @@ impl QueryReference {
 
         // Add new reference to all start point reference versions
         for version_id in version_ids {
-            let insert_branch_version = InsertReferenceVersion {
+            let insert_reference_version = InsertReferenceVersion {
                 reference_id: self.id,
                 version_id,
             };
             diesel::insert_into(schema::reference_version::table)
-                .values(&insert_branch_version)
+                .values(&insert_reference_version)
                 .execute(conn_lock!(context))
                 .map_err(resource_conflict_err!(
                     ReferenceVersion,
-                    insert_branch_version
+                    insert_reference_version
                 ))?;
         }
 
