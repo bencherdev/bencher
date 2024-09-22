@@ -25,18 +25,19 @@ INSERT INTO down_boundary(
     )
 SELECT id,
     uuid,
+    metric_id,
     threshold_id,
     model_id,
-    metric_id,
     baseline,
     lower_limit,
     upper_limit
 FROM boundary;
+-- The view has to be dropped before the table can be dropped
+DROP VIEW IF EXISTS metric_boundary;
 DROP TABLE boundary;
 ALTER TABLE down_boundary
     RENAME TO boundary;
 -- metric_boundary
-DROP VIEW metric_boundary;
 CREATE VIEW metric_boundary AS
 SELECT metric.id AS metric_id,
     metric.uuid AS metric_uuid,
