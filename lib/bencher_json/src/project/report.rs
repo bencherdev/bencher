@@ -38,6 +38,11 @@ pub struct JsonNewReport {
     /// Testbed UUID, slug, or name.
     /// If the testbed does not exist, it will be created.
     pub testbed: NameId,
+    /// Thresholds to use for the branch, testbed, and measures in the report.
+    /// If a threshold does not exist, it will be created.
+    /// If a threshold exists and the model is different, it will be updated with the new model.
+    /// If a threshold array is present then any thresholds not included will be set to inactive.
+    // pub thresholds: Option<BTreeMap<NameId, JsonThresholdModel>>,
     /// Start time for the report. Must be an ISO 8601 formatted string.
     pub start_time: DateTime,
     /// End time for the report. Must be an ISO 8601 formatted string.

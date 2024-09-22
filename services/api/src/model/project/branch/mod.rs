@@ -398,7 +398,11 @@ impl InsertBranch {
 
         // Get the branch reference version for the start point
         let branch_start_point = if let Some(start_point) = start_point {
-            Some(StartPoint::from_json(context, project_id, start_point).await?)
+            // It is okay if the start point does not exist.
+            // This prevents a race condition when creating both the branch and start point in CI.
+            StartPoint::from_json(context, project_id, start_point)
+                .await
+                .ok()
         } else {
             None
         };
