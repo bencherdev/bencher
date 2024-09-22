@@ -142,7 +142,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
         let measures = from_urlencoded_list(&measures)?;
 
         // Guarantee that the `heads` array is the same length as the `branches` array.
-        let heads = pad_heads_to_branches(branches.len(), &heads);
+        let heads = size_heads_to_branches(&branches, &heads);
 
         Ok(Self {
             branches,
@@ -161,15 +161,17 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
 // They will just be set to `None`.
 // But there should never be more heads than branches.
 // Those extra heads will just be ignored.
-fn pad_heads_to_branches(
-    branches_len: usize,
+fn size_heads_to_branches(
+    branches: &[BranchUuid],
     heads: &[Option<ReferenceUuid>],
 ) -> Vec<Option<ReferenceUuid>> {
-    let mut branch_heads = Vec::with_capacity(branches_len);
-    for i in 0..branches_len {
-        branch_heads.push(heads.get(i).copied().flatten());
-    }
-    branch_heads
+    branches
+        .iter()
+        .enumerate()
+        .fold(Vec::with_capacity(branches.len()), |mut h, (i, _branch)| {
+            h.push(heads.get(i).copied().flatten());
+            h
+        })
 }
 
 impl Serialize for JsonPerfQuery {
