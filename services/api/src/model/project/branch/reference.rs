@@ -369,6 +369,11 @@ impl InsertReference {
             );
         }
 
+        // Get the updated branch
+        // Make sure to do this after updating the old branch head reference to replaced
+        let query_branch = QueryBranch::get(conn_lock!(context), query_branch.id)?;
+        slog::debug!(log, "Got updated branch: {query_branch:?}");
+
         // Clone data from the start point for the head reference
         query_reference
             .clone_start_point(context, branch_start_point)
