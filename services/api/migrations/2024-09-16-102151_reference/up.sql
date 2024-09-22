@@ -168,7 +168,8 @@ DROP TABLE report;
 ALTER TABLE up_report
     RENAME TO report;
 -- index
-DROP INDEX index_report_benchmark;
+DROP INDEX IF EXISTS index_report_testbed_end_time;
+DROP INDEX IF EXISTS index_report_benchmark;
 CREATE INDEX index_report_testbed_end_time ON report(testbed_id, end_time);
 CREATE INDEX index_report_benchmark ON report_benchmark(report_id, benchmark_id);
 PRAGMA foreign_keys = on;
