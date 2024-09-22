@@ -124,23 +124,29 @@ impl QueryThreshold {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, HttpError> {
-        let model_id = self.model_id()?;
-        let query_model = QueryModel::get(conn, model_id)?;
+        let query_model = self
+            .model_id
+            .map(|model_id| QueryModel::get(conn, model_id))
+            .transpose()?;
         self.into_json_for_model(conn, query_model)
     }
 
     pub fn into_json_for_model(
         self,
         conn: &mut DbConnection,
-        query_model: QueryModel,
+        query_model: Option<QueryModel>,
     ) -> Result<JsonThreshold, HttpError> {
-        assert_parentage(
-            BencherResource::Threshold,
-            self.id,
-            BencherResource::Model,
-            query_model.threshold_id,
-        );
-        let model = query_model.into_json_for_threshold(&self);
+        let model = if let Some(query_model) = &query_model {
+            assert_parentage(
+                BencherResource::Threshold,
+                self.id,
+                BencherResource::Model,
+                query_model.threshold_id,
+            );
+            Some(query_model.into_json_for_threshold(&self))
+        } else {
+            None
+        };
         let Self {
             uuid,
             project_id,
@@ -170,17 +176,19 @@ impl QueryThreshold {
         conn: &mut DbConnection,
     ) -> Result<JsonThresholdModel, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
-        let model_id = self.model_id()?;
-        let model = QueryModel::get(conn, model_id)?;
-        Ok(self.into_threshold_model_json_for_project(&project, model))
+        let query_model = self
+            .model_id
+            .map(|model_id| QueryModel::get(conn, model_id))
+            .transpose()?;
+        Ok(self.into_threshold_model_json_for_project(&project, query_model))
     }
 
     pub fn into_threshold_model_json_for_project(
         self,
         project: &QueryProject,
-        model: QueryModel,
+        query_model: Option<QueryModel>,
     ) -> JsonThresholdModel {
-        let model = model.into_json_for_threshold(&self);
+        let model = query_model.map(|model| model.into_json_for_threshold(&self));
         let Self {
             uuid,
             project_id,

@@ -220,7 +220,7 @@ fn into_report_results_json(
             measure: query_measure.into_json_for_project(project),
             metric: query_metric.into_json(),
             threshold: threshold_model.map(|(threshold, model)| {
-                threshold.into_threshold_model_json_for_project(project, model)
+                threshold.into_threshold_model_json_for_project(project, Some(model))
             }),
             boundary: query_boundary.map(QueryBoundary::into_json),
         };

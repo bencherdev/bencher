@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 
 use bencher_valid::{DateTime, DateTimeMillis, GitHash};
 #[cfg(feature = "schema")]
@@ -42,7 +42,7 @@ pub struct JsonNewReport {
     /// If a threshold does not exist, it will be created.
     /// If a threshold exists and the model is different, it will be updated with the new model.
     /// If a threshold array is present then any thresholds not included will be set to inactive.
-    // pub thresholds: Option<BTreeMap<NameId, JsonThresholdModel>>,
+    pub thresholds: Option<BTreeMap<NameId, JsonThresholdModel>>,
     /// Start time for the report. Must be an ISO 8601 formatted string.
     pub start_time: DateTime,
     /// End time for the report. Must be an ISO 8601 formatted string.

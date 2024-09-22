@@ -38,7 +38,7 @@ pub struct JsonThreshold {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub measure: JsonMeasure,
-    pub model: JsonModel,
+    pub model: Option<JsonModel>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -49,7 +49,7 @@ pub struct JsonThreshold {
 pub struct JsonThresholdModel {
     pub uuid: ThresholdUuid,
     pub project: ProjectUuid,
-    pub model: JsonModel,
+    pub model: Option<JsonModel>,
     pub created: DateTime,
 }
 

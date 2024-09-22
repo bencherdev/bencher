@@ -472,7 +472,7 @@ pub(super) fn threshold_model_alert(
 ) -> (Option<JsonThresholdModel>, Option<JsonPerfAlert>) {
     if let Some((query_threshold, query_model, query_alert)) = tma {
         let threshold =
-            Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
+            Some(query_threshold.into_threshold_model_json_for_project(project, Some(query_model)));
         let alert = query_alert.map(QueryAlert::into_perf_json);
         (threshold, alert)
     } else {

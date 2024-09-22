@@ -392,7 +392,7 @@ async fn get_one_inner(
                 ),
             ));
         }
-        query_threshold.into_json_for_model(conn_lock!(context), query_model)
+        query_threshold.into_json_for_model(conn_lock!(context), Some(query_model))
     } else {
         query_threshold.into_json(conn_lock!(context))
     }
