@@ -342,6 +342,7 @@ diesel::joinable!(plot_testbed -> testbed (testbed_id));
 diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
+diesel::joinable!(reference_version -> reference (reference_id));
 diesel::joinable!(reference_version -> version (version_id));
 diesel::joinable!(report -> project (project_id));
 diesel::joinable!(report -> reference (reference_id));

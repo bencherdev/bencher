@@ -45,36 +45,6 @@ SELECT id,
     version_id
 FROM branch_version;
 DROP TABLE branch_version;
--- reference
-CREATE TABLE up_reference (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    branch_id INTEGER NOT NULL,
-    start_point_id INTEGER,
-    created BIGINT NOT NULL,
-    replaced BIGINT,
-    FOREIGN KEY (branch_id) REFERENCES branch (id) ON DELETE CASCADE,
-    FOREIGN KEY (start_point_id) REFERENCES reference_version (id) ON DELETE
-    SET NULL
-);
-INSERT INTO up_reference(
-        id,
-        uuid,
-        branch_id,
-        start_point_id,
-        created,
-        replaced
-    )
-SELECT id,
-    uuid,
-    branch_id,
-    start_point_id,
-    created,
-    replaced
-FROM reference;
-DROP TABLE reference;
-ALTER TABLE up_reference
-    RENAME TO reference;
 -- branch
 CREATE TABLE up_branch (
     id INTEGER PRIMARY KEY NOT NULL,
