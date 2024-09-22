@@ -340,7 +340,7 @@ const PlotTab = (props: Props) => {
 			<div class="panel-block">
 				<div class="container">
 					<div class="columns is-centered">
-						<div class="column is-11">
+						<div class="column is-12">
 							<br />
 							<Pagination
 								size={PaginationSize.SMALL}

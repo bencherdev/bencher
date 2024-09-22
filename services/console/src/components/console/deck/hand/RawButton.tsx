@@ -30,7 +30,9 @@ const RawButton = (props: Props) => {
 				<div class="columns is-reverse-mobile">
 					<div class="column">
 						<div class="content">
-							<pre>{JSON.stringify(props.data(), null, 2)}</pre>
+							<pre>
+								<code>{JSON.stringify(props.data(), null, 2)}</code>
+							</pre>
 						</div>
 					</div>
 					<div class="column is-narrow">

@@ -104,7 +104,7 @@ const DeckPanel = (props: Props) => {
 			<section class="section">
 				<div class="container">
 					<div class="columns is-mobile">
-						<div class="column">
+						<div class="column is-12">
 							<Deck
 								isConsole={true}
 								apiUrl={props.apiUrl}

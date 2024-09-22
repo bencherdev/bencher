@@ -39,7 +39,7 @@ const ReportCard = (props: Props) => {
 
 	return (
 		<div class="columns is-centered" style="margin-top: 1rem">
-			<div class="column is-11">
+			<div class="column is-12">
 				<Show when={(props.value()?.alerts?.length ?? 0) > 0}>
 					<h3 class="title is-3">
 						🚨 {props.value()?.alerts?.length} Alert
