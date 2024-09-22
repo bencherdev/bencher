@@ -8,7 +8,7 @@ CREATE TABLE reference (
     created BIGINT NOT NULL,
     replaced BIGINT,
     FOREIGN KEY (branch_id) REFERENCES branch (id) ON DELETE CASCADE,
-    FOREIGN KEY (start_point_id) REFERENCES branch_version (id) ON DELETE
+    FOREIGN KEY (start_point_id) REFERENCES reference_version (id) ON DELETE
     SET NULL
 );
 INSERT INTO reference(

@@ -319,6 +319,7 @@ impl InsertReference {
     }
 
     pub async fn for_branch(
+        log: &Logger,
         context: &ApiContext,
         query_branch: QueryBranch,
         branch_start_point: Option<&StartPoint>,
@@ -332,12 +333,14 @@ impl InsertReference {
             .values(&insert_reference)
             .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Reference, insert_reference))?;
+        slog::debug!(log, "Created reference: {insert_reference:?}");
 
         // Get the new reference
         let query_reference = schema::reference::table
             .filter(schema::reference::uuid.eq(&insert_reference.uuid))
             .first::<QueryReference>(conn_lock!(context))
             .map_err(resource_not_found_err!(Reference, insert_reference))?;
+        slog::debug!(log, "Got reference: {query_reference:?}");
 
         // Update the branch head reference
         diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
@@ -347,6 +350,7 @@ impl InsertReference {
                 Branch,
                 (&query_branch, &query_reference)
             ))?;
+        slog::debug!(log, "Updated branch: {query_branch:?}");
 
         // If the branch has an old head reference, then mark it as replaced.
         // This should not run if the branch is new.
@@ -359,12 +363,20 @@ impl InsertReference {
                     Reference,
                     (&query_branch, &update_reference)
                 ))?;
+            slog::debug!(
+                log,
+                "Updated old reference to replaced: {update_reference:?}"
+            );
         }
 
         // Clone data from the start point for the head reference
         query_reference
             .clone_start_point(context, branch_start_point)
             .await?;
+        slog::debug!(
+            log,
+            "Cloned start point for reference: {query_reference:?} {branch_start_point:?}"
+        );
 
         Ok((query_branch, query_reference))
     }

@@ -305,6 +305,7 @@ async fn post_inner(
 
     // Get or create the branch and testbed
     let (branch_id, reference_id) = QueryBranch::get_or_create(
+        log,
         context,
         project_id,
         &json_report.branch,

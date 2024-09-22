@@ -10,6 +10,7 @@ use diesel::{
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 
 use crate::{
     conn_lock,
@@ -208,6 +209,7 @@ pub async fn proj_branch_post(
 ) -> Result<ResponseCreated<JsonBranch>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
@@ -218,6 +220,7 @@ pub async fn proj_branch_post(
 }
 
 async fn post_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: ProjBranchesParams,
     json_branch: JsonNewBranch,
@@ -233,7 +236,7 @@ async fn post_inner(
     )?;
 
     let (query_branch, _query_reference) =
-        InsertBranch::from_json(context, query_project.id, json_branch).await?;
+        InsertBranch::from_json(log, context, query_project.id, json_branch).await?;
 
     query_branch.into_json_for_project(conn_lock!(context), &query_project)
 }

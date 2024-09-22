@@ -5,6 +5,7 @@ use bencher_json::{
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
 use http::StatusCode;
+use slog::Logger;
 use version::{QueryVersion, VersionId};
 
 use super::{ProjectId, QueryProject};
@@ -85,13 +86,14 @@ impl QueryBranch {
     }
 
     pub async fn get_or_create(
+        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         branch: &NameId,
         report_start_point: Option<&JsonReportStartPoint>,
     ) -> Result<(BranchId, ReferenceId), HttpError> {
         let (query_branch, query_reference) =
-            Self::get_or_create_inner(context, project_id, branch, report_start_point).await?;
+            Self::get_or_create_inner(log, context, project_id, branch, report_start_point).await?;
 
         if query_branch.archived.is_some() {
             let update_branch = UpdateBranch::unarchive();
@@ -105,6 +107,7 @@ impl QueryBranch {
     }
 
     async fn get_or_create_inner(
+        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         branch: &NameId,
@@ -115,7 +118,7 @@ impl QueryBranch {
         let http_error = match query_branch {
             Ok(branch) => {
                 return branch
-                    .with_start_point(context, project_id, report_start_point)
+                    .with_start_point(log, context, project_id, report_start_point)
                     .await;
             },
             Err(e) => e,
@@ -137,11 +140,12 @@ impl QueryBranch {
                 start_point: report_start_point.and_then(JsonReportStartPoint::to_new_start_point),
             },
         };
-        InsertBranch::from_json(context, project_id, branch).await
+        InsertBranch::from_json(log, context, project_id, branch).await
     }
 
     async fn with_start_point(
         self,
+        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         report_start_point: Option<&JsonReportStartPoint>,
@@ -157,7 +161,7 @@ impl QueryBranch {
             reset: Some(true), ..
         }) = report_start_point
         {
-            return InsertReference::for_branch(context, self, new_start_point.as_ref()).await;
+            return InsertReference::for_branch(log, context, self, new_start_point.as_ref()).await;
         }
 
         // Compare the current start point against the new start point.
@@ -174,15 +178,25 @@ impl QueryBranch {
                                 self.into_branch_and_head(context).await
                             } else {
                                 // Rename and create a new branch, if the hashes do not match.
-                                InsertReference::for_branch(context, self, new_start_point.as_ref())
-                                    .await
+                                InsertReference::for_branch(
+                                    log,
+                                    context,
+                                    self,
+                                    new_start_point.as_ref(),
+                                )
+                                .await
                             }
                         },
                         // Rename the current branch if it does not have a start point hash and the new start point does.
                         // This should only rarely happen going forward, as most branches with a start point will have a hash.
                         (None, Some(_)) => {
-                            InsertReference::for_branch(context, self, new_start_point.as_ref())
-                                .await
+                            InsertReference::for_branch(
+                                log,
+                                context,
+                                self,
+                                new_start_point.as_ref(),
+                            )
+                            .await
                         },
                         // If a start point hash is not specified, then there is nothing to check.
                         // Even if the current branch has a start point hash, it does not need to always be specified.
@@ -194,13 +208,13 @@ impl QueryBranch {
                 } else {
                     // If the current start point branch does not match the new start point branch,
                     // then the branch needs to be recreated from that new start point.
-                    InsertReference::for_branch(context, self, new_start_point.as_ref()).await
+                    InsertReference::for_branch(log, context, self, new_start_point.as_ref()).await
                 }
             },
             // If the current branch does not have a start point and one is specified,
             // then the branch needs to be recreated from that start point.
             (None, Some(_)) => {
-                InsertReference::for_branch(context, self, new_start_point.as_ref()).await
+                InsertReference::for_branch(log, context, self, new_start_point.as_ref()).await
             },
             // If a start point is not specified, then there is nothing to check.
             // Even if the current branch has a start point, it does not need to always be specified.
@@ -356,6 +370,7 @@ impl InsertBranch {
     }
 
     pub async fn from_json(
+        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         branch: JsonNewBranch,
@@ -372,12 +387,14 @@ impl InsertBranch {
             .values(&insert_branch)
             .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Branch, insert_branch))?;
+        slog::debug!(log, "Created branch {insert_branch:?}");
 
         // Get the new branch
         let query_branch = schema::branch::table
             .filter(schema::branch::uuid.eq(&insert_branch.uuid))
             .first::<QueryBranch>(conn_lock!(context))
             .map_err(resource_not_found_err!(Branch, insert_branch))?;
+        slog::debug!(log, "Got branch {query_branch:?}");
 
         // Get the branch reference version for the start point
         let branch_start_point = if let Some(start_point) = start_point {
@@ -385,15 +402,17 @@ impl InsertBranch {
         } else {
             None
         };
+        slog::debug!(log, "Using start point {branch_start_point:?}");
 
-        InsertReference::for_branch(context, query_branch, branch_start_point.as_ref()).await
+        InsertReference::for_branch(log, context, query_branch, branch_start_point.as_ref()).await
     }
 
     pub async fn main(
+        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
     ) -> Result<QueryBranch, HttpError> {
-        Self::from_json(context, project_id, JsonNewBranch::main())
+        Self::from_json(log, context, project_id, JsonNewBranch::main())
             .await
             .map(|(branch, _)| branch)
     }
