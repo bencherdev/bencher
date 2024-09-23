@@ -49,7 +49,7 @@ pub struct JsonThreshold {
 pub struct JsonThresholdModel {
     pub uuid: ThresholdUuid,
     pub project: ProjectUuid,
-    pub model: Option<JsonModel>,
+    pub model: JsonModel,
     pub created: DateTime,
 }
 

@@ -210,7 +210,7 @@ const ReportCard = (props: Props) => {
 					</div>
 					<hr />
 				</Show>
-				<Show when={benchmarkCount() === 0}>
+				<Show when={!props.value.loading && benchmarkCount() === 0}>
 					<h3 class="title is-3">
 						<b>⚠️ WARNING:</b> No benchmarks found!
 					</h3>

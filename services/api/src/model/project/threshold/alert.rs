@@ -17,7 +17,12 @@ use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
     error::{resource_conflict_err, resource_not_found_err},
-    model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
+    model::project::{
+        benchmark::QueryBenchmark,
+        branch::{reference::ReferenceId, version::VersionId},
+        metric::QueryMetric,
+        ProjectId, QueryProject,
+    },
     schema::{self, alert as alert_table},
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
@@ -59,41 +64,55 @@ impl QueryAlert {
     }
 
     pub async fn into_json(self, context: &ApiContext) -> Result<JsonAlert, HttpError> {
-        let (report_uuid, created, iteration, query_benchmark, query_metric, query_boundary) =
-            schema::alert::table
-                .filter(schema::alert::id.eq(self.id))
-                .inner_join(
-                    schema::boundary::table.inner_join(
-                        schema::metric::table.inner_join(
-                            schema::report_benchmark::table
-                                .inner_join(schema::report::table)
-                                .inner_join(schema::benchmark::table),
-                        ),
+        let (
+            report_uuid,
+            created,
+            reference_id,
+            version_id,
+            iteration,
+            query_benchmark,
+            query_metric,
+            query_boundary,
+        ) = schema::alert::table
+            .filter(schema::alert::id.eq(self.id))
+            .inner_join(
+                schema::boundary::table.inner_join(
+                    schema::metric::table.inner_join(
+                        schema::report_benchmark::table
+                            .inner_join(schema::report::table)
+                            .inner_join(schema::benchmark::table),
                     ),
-                )
-                .select((
-                    schema::report::uuid,
-                    schema::report::created,
-                    schema::report_benchmark::iteration,
-                    QueryBenchmark::as_select(),
-                    QueryMetric::as_select(),
-                    QueryBoundary::as_select(),
-                ))
-                .first::<(
-                    ReportUuid,
-                    DateTime,
-                    Iteration,
-                    QueryBenchmark,
-                    QueryMetric,
-                    QueryBoundary,
-                )>(conn_lock!(context))
-                .map_err(resource_not_found_err!(Alert, self))?;
+                ),
+            )
+            .select((
+                schema::report::uuid,
+                schema::report::created,
+                schema::report::reference_id,
+                schema::report::version_id,
+                schema::report_benchmark::iteration,
+                QueryBenchmark::as_select(),
+                QueryMetric::as_select(),
+                QueryBoundary::as_select(),
+            ))
+            .first::<(
+                ReportUuid,
+                DateTime,
+                ReferenceId,
+                VersionId,
+                Iteration,
+                QueryBenchmark,
+                QueryMetric,
+                QueryBoundary,
+            )>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Alert, self))?;
         let project = QueryProject::get(conn_lock!(context), query_benchmark.project_id)?;
         self.into_json_for_report(
             context,
             &project,
             report_uuid,
             created,
+            reference_id,
+            version_id,
             iteration,
             query_benchmark,
             query_metric,
@@ -109,6 +128,8 @@ impl QueryAlert {
         project: &QueryProject,
         report_uuid: ReportUuid,
         created: DateTime,
+        reference_id: ReferenceId,
+        version_id: VersionId,
         iteration: Iteration,
         query_benchmark: QueryBenchmark,
         query_metric: QueryMetric,
@@ -121,11 +142,14 @@ impl QueryAlert {
             modified,
             ..
         } = self;
-        let threshold = QueryThreshold::get_json(
-            conn_lock!(context),
+        let threshold = QueryThreshold::get_alert_json(
+            context,
             query_boundary.threshold_id,
             query_boundary.model_id,
-        )?;
+            reference_id,
+            version_id,
+        )
+        .await?;
         Ok(JsonAlert {
             uuid,
             report: report_uuid,

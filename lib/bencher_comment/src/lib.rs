@@ -1001,13 +1001,23 @@ impl AlertUrls {
                 url.clone(),
                 &json_report.project.slug,
                 alert.threshold.uuid,
-                alert.threshold.model.uuid,
+                // This should never be `None` when an alert is generated
+                if let Some(model) = alert.threshold.model {
+                    model.uuid
+                } else {
+                    continue;
+                },
             );
             let console_threshold_url = Self::to_console_threshold_url(
                 url.clone(),
                 &json_report.project.slug,
                 alert.threshold.uuid,
-                alert.threshold.model.uuid,
+                // This should never be `None` when an alert is generated
+                if let Some(model) = alert.threshold.model {
+                    model.uuid
+                } else {
+                    continue;
+                },
             );
             let data = AlertData {
                 iteration,

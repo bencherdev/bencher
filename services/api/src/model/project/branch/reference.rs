@@ -70,7 +70,7 @@ impl QueryReference {
             ))
     }
 
-    pub fn get_json(
+    pub fn get_head_json(
         conn: &mut DbConnection,
         reference_id: ReferenceId,
         version: Option<QueryVersion>,
@@ -262,7 +262,8 @@ impl QueryReference {
         let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
 
         // Get the current threshold model
-        let model_id = query_threshold.model_id()?;
+        // let model_id = query_threshold.model_id()?;
+        let model_id = 0;
         let query_model = schema::model::table
             .filter(schema::model::id.eq(model_id))
             .first::<QueryModel>(conn)

@@ -143,7 +143,7 @@ async fn get_ls_inner(
     // Separate out these queries to prevent a deadlock when getting the conn_lock
     let mut json_thresholds = Vec::with_capacity(thresholds.len());
     for threshold in thresholds {
-        match threshold.into_json(conn_lock!(context)) {
+        match threshold.into_json(context).await {
             Ok(threshold) => json_thresholds.push(threshold),
             Err(err) => {
                 debug_assert!(false, "{err}");
@@ -298,12 +298,14 @@ async fn post_inner(
         json_threshold.model,
     )?;
 
-    // Return the new threshold with the new model
-    conn_lock!(context, |conn| schema::threshold::table
+    // Get the new threshold
+    let query_threshold = schema::threshold::table
         .filter(schema::threshold::id.eq(threshold_id))
-        .first::<QueryThreshold>(conn)
-        .map_err(resource_not_found_err!(Threshold, threshold_id))?
-        .into_json(conn))
+        .first::<QueryThreshold>(conn_lock!(context))
+        .map_err(resource_not_found_err!(Threshold, threshold_id))?;
+
+    // Return the new threshold with the new model
+    query_threshold.into_json(context).await
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -392,9 +394,11 @@ async fn get_one_inner(
                 ),
             ));
         }
-        query_threshold.into_json_for_model(conn_lock!(context), Some(query_model))
+        query_threshold
+            .into_json_for_model(context, Some(query_model), None)
+            .await
     } else {
-        query_threshold.into_json(conn_lock!(context))
+        query_threshold.into_json(context).await
     }
 }
 
@@ -452,11 +456,11 @@ async fn put_inner(
     // Hold the database lock across the entire `update_from_json` call
     query_threshold.update_from_json(conn_lock!(context), json_threshold.model)?;
 
-    conn_lock!(context, |conn| QueryThreshold::get(
-        conn,
-        query_threshold.id
-    )?
-    .into_json(conn))
+    // Get the updated threshold with the new model
+    let query_threshold = QueryThreshold::get(conn_lock!(context), query_threshold.id)?;
+
+    // Return the updated threshold with the new model
+    query_threshold.into_json(context).await
 }
 
 /// Delete a threshold

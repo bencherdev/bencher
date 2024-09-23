@@ -166,7 +166,7 @@ export interface JsonThreshold {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	measure: JsonMeasure;
-	model: JsonModel;
+	model?: JsonModel;
 	created: string;
 	modified: string;
 }

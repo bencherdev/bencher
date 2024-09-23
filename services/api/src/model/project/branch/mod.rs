@@ -314,7 +314,7 @@ impl QueryBranch {
             BencherResource::Reference,
             head.branch_id,
         );
-        let head = QueryReference::get_json(conn, head.id, version)?;
+        let head = QueryReference::get_head_json(conn, head.id, version)?;
         Ok(JsonBranch {
             uuid,
             project: project.uuid,

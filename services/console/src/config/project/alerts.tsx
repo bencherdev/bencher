@@ -32,7 +32,12 @@ const alertsConfig = {
 				text: "Learn about Thresholds & Alerts",
 			},
 			row: {
-				keys: [["benchmark", "name"]],
+				keys: [
+					["threshold", "branch", "name"],
+					["threshold", "testbed", "name"],
+					["benchmark", "name"],
+					["threshold", "measure", "name"],
+				],
 				items: [
 					{
 						kind: Row.TEXT,

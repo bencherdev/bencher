@@ -94,6 +94,7 @@ impl From<Create> for JsonNewReport {
             hash,
             start_point,
             testbed,
+            thresholds: None,
             start_time,
             end_time,
             results,

@@ -36,16 +36,15 @@ export interface DeckHeaderConfig {
 
 const DeckHeader = (props: Props) => {
 	const title = createMemo(() => {
+		const data = props.data();
+		if (props.data.loading || !data) {
+			return;
+		}
 		switch (props.config?.display) {
 			case Display.DATE_TIME:
-				return fmtDateTime(props.data?.()?.[props.config?.key] ?? "");
+				return fmtDateTime(data?.[props.config?.key] ?? "");
 			default:
-				return fmtValues(
-					props.data(),
-					props.config?.key,
-					props.config?.keys,
-					" | ",
-				);
+				return fmtValues(data, props.config?.key, props.config?.keys, " | ");
 		}
 	});
 

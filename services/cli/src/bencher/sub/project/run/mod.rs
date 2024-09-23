@@ -183,6 +183,7 @@ impl Run {
             hash,
             start_point,
             testbed: self.testbed.clone().into(),
+            thresholds: None,
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,

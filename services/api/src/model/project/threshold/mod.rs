@@ -4,23 +4,19 @@ use bencher_json::{
 };
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use http::StatusCode;
 
 use self::model::{InsertModel, ModelId, QueryModel};
 use super::{
-    branch::{BranchId, QueryBranch},
+    branch::{reference::ReferenceId, version::VersionId, BranchId, QueryBranch},
     measure::{MeasureId, QueryMeasure},
     testbed::{QueryTestbed, TestbedId},
     ProjectId, QueryProject,
 };
 use crate::{
-    context::DbConnection,
-    error::{
-        assert_parentage, issue_error, resource_conflict_err, resource_not_found_err,
-        BencherResource,
-    },
-    schema::threshold as threshold_table,
-    schema::{self},
+    conn_lock,
+    context::{ApiContext, DbConnection},
+    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
+    schema::{self, threshold as threshold_table},
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
@@ -63,39 +59,12 @@ impl QueryThreshold {
             .map_err(resource_not_found_err!(Threshold, (query_project, uuid)))
     }
 
-    pub fn model_id(&self) -> Result<ModelId, HttpError> {
-        self.model_id.ok_or_else(|| {
-            // A threshold should always have a model
-            let err = issue_error(
-                StatusCode::NOT_FOUND,
-                "Failed to find threshold model",
-                &format!("No threshold model: {}/{}", self.project_id, self.uuid),
-                "threshold model is null",
-            );
-            debug_assert!(false, "{err}");
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&err);
-            err
-        })
-    }
-
-    pub fn get_with_model(
-        conn: &mut DbConnection,
-        threshold_id: ThresholdId,
-        model_id: ModelId,
-    ) -> Result<Self, HttpError> {
-        let mut threshold = Self::get(conn, threshold_id)?;
-        // IMPORTANT: Set the model ID to the one specified and not the current value!
-        threshold.model_id = Some(model_id);
-        Ok(threshold)
-    }
-
-    pub fn get_json(
-        conn: &mut DbConnection,
-        threshold_id: ThresholdId,
-        model_id: ModelId,
-    ) -> Result<JsonThreshold, HttpError> {
-        Self::get_with_model(conn, threshold_id, model_id)?.into_json(conn)
+    pub fn model(&self, conn: &mut DbConnection) -> Result<Option<QueryModel>, HttpError> {
+        if let Some(model_id) = self.model_id {
+            Ok(Some(QueryModel::get(conn, model_id)?))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn update_from_json(&self, conn: &mut DbConnection, model: Model) -> Result<(), HttpError> {
@@ -113,28 +82,41 @@ impl QueryThreshold {
             .execute(conn)
             .map_err(resource_conflict_err!(Threshold, (&self, &insert_model)))?;
 
-        // Update the old model to be replaced
-        let model_id = self.model_id()?;
-        diesel::update(schema::model::table.filter(schema::model::id.eq(model_id)))
-            .set(schema::model::replaced.eq(Some(DateTime::now())))
-            .execute(conn)
-            .map_err(resource_conflict_err!(Model, model_id))?;
+        // Update the old model to be replaced, if there is one
+        if let Some(model_id) = self.model_id {
+            diesel::update(schema::model::table.filter(schema::model::id.eq(model_id)))
+                .set(schema::model::replaced.eq(Some(DateTime::now())))
+                .execute(conn)
+                .map_err(resource_conflict_err!(Model, model_id))?;
+        }
 
         Ok(())
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, HttpError> {
-        let query_model = self
-            .model_id
-            .map(|model_id| QueryModel::get(conn, model_id))
-            .transpose()?;
-        self.into_json_for_model(conn, query_model)
+    pub async fn get_alert_json(
+        context: &ApiContext,
+        threshold_id: ThresholdId,
+        model_id: ModelId,
+        reference_id: ReferenceId,
+        version_id: VersionId,
+    ) -> Result<JsonThreshold, HttpError> {
+        let query_threshold = Self::get(conn_lock!(context), threshold_id)?;
+        let query_model = QueryModel::get(conn_lock!(context), model_id)?;
+        query_threshold
+            .into_json_for_model(context, Some(query_model), Some((reference_id, version_id)))
+            .await
     }
 
-    pub fn into_json_for_model(
+    pub async fn into_json(self, context: &ApiContext) -> Result<JsonThreshold, HttpError> {
+        let query_model = self.model(conn_lock!(context))?;
+        self.into_json_for_model(context, query_model, None).await
+    }
+
+    pub async fn into_json_for_model(
         self,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         query_model: Option<QueryModel>,
+        reference_version: Option<(ReferenceId, VersionId)>,
     ) -> Result<JsonThreshold, HttpError> {
         let model = if let Some(query_model) = &query_model {
             assert_parentage(
@@ -157,38 +139,36 @@ impl QueryThreshold {
             modified,
             ..
         } = self;
-        let query_project = QueryProject::get(conn, project_id)?;
+        let query_project = QueryProject::get(conn_lock!(context), project_id)?;
+        let branch = if let Some((reference_id, version_id)) = reference_version {
+            QueryBranch::get_json_for_report(context, &query_project, reference_id, version_id)
+                .await?
+        } else {
+            let query_branch = QueryBranch::get(conn_lock!(context), branch_id)?;
+            query_branch.into_json_for_project(conn_lock!(context), &query_project)?
+        };
+        let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
+            .into_json_for_project(&query_project);
+        let measure = QueryMeasure::get(conn_lock!(context), measure_id)?
+            .into_json_for_project(&query_project);
         Ok(JsonThreshold {
             uuid,
             project: query_project.uuid,
-            branch: QueryBranch::get(conn, branch_id)?
-                .into_json_for_project(conn, &query_project)?,
-            testbed: QueryTestbed::get(conn, testbed_id)?.into_json_for_project(&query_project),
-            measure: QueryMeasure::get(conn, measure_id)?.into_json_for_project(&query_project),
+            branch,
+            testbed,
+            measure,
             model,
             created,
             modified,
         })
     }
 
-    pub fn into_threshold_model_json(
-        self,
-        conn: &mut DbConnection,
-    ) -> Result<JsonThresholdModel, HttpError> {
-        let project = QueryProject::get(conn, self.project_id)?;
-        let query_model = self
-            .model_id
-            .map(|model_id| QueryModel::get(conn, model_id))
-            .transpose()?;
-        Ok(self.into_threshold_model_json_for_project(&project, query_model))
-    }
-
     pub fn into_threshold_model_json_for_project(
         self,
         project: &QueryProject,
-        query_model: Option<QueryModel>,
+        query_model: QueryModel,
     ) -> JsonThresholdModel {
-        let model = query_model.map(|model| model.into_json_for_threshold(&self));
+        let model = query_model.into_json_for_threshold(&self);
         let Self {
             uuid,
             project_id,

@@ -90,7 +90,8 @@ impl QueryReport {
         let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
             .into_json_for_project(&query_project);
         let results = get_report_results(log, context, &query_project, id).await?;
-        let alerts = get_report_alerts(context, &query_project, id).await?;
+        let alerts =
+            get_report_alerts(context, &query_project, id, reference_id, version_id).await?;
 
         let project = query_project.into_json(conn_lock!(context))?;
         Ok(JsonReport {
@@ -220,7 +221,7 @@ fn into_report_results_json(
             measure: query_measure.into_json_for_project(project),
             metric: query_metric.into_json(),
             threshold: threshold_model.map(|(threshold, model)| {
-                threshold.into_threshold_model_json_for_project(project, Some(model))
+                threshold.into_threshold_model_json_for_project(project, model)
             }),
             boundary: query_boundary.map(QueryBoundary::into_json),
         };
@@ -254,6 +255,8 @@ async fn get_report_alerts(
     context: &ApiContext,
     project: &QueryProject,
     report_id: ReportId,
+    reference_id: ReferenceId,
+    version_id: VersionId,
 ) -> Result<JsonReportAlerts, HttpError> {
     let alerts = schema::alert::table
         .inner_join(
@@ -304,6 +307,8 @@ async fn get_report_alerts(
                 project,
                 report_uuid,
                 created,
+                reference_id,
+                version_id,
                 iteration,
                 query_benchmark,
                 query_metric,
