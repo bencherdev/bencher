@@ -1,11 +1,4 @@
-import {
-	type Accessor,
-	For,
-	Show,
-	Switch,
-	Match,
-	createSignal,
-} from "solid-js";
+import { type Accessor, For, Show, Switch, Match, createMemo } from "solid-js";
 import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime, resourcePath } from "../../../../../config/util";
 import type { JsonReport } from "../../../../../types/bencher";
@@ -19,6 +12,7 @@ import type { TabElement, TabList } from "./PlotTab";
 import DateRange from "../../../../field/kinds/DateRange";
 import { themeText, type Theme } from "../../../../navbar/theme/theme";
 import ReportCard from "../../../deck/hand/card/ReportCard";
+import { createStore } from "solid-js/store";
 
 const ReportsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -36,6 +30,18 @@ const ReportsTab = (props: {
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 }) => {
+	const [checked, setChecked] = createStore(
+		props.tabList().map((report) => report?.resource?.uuid === props.report()),
+	);
+	const handleChecked = (index: number, uuid: string) => {
+		setChecked((prev) => {
+			const next = [...prev];
+			next[index] = !next[index];
+			return next;
+		});
+		props.handleChecked(index, uuid);
+	};
+
 	return (
 		<>
 			<div class="panel-block is-block">
@@ -82,19 +88,21 @@ const ReportsTab = (props: {
 				</Match>
 				<Match when={props.tabList().length > 0}>
 					<For each={props.tabList()}>
-						{(report, index) => (
-							<ReportRow
-								project_slug={props.project_slug}
-								theme={props.theme}
-								isConsole={props.isConsole}
-								measures={props.measures}
-								tab={props.tab}
-								report={report}
-								isActive={props.report() === report.resource.uuid}
-								index={index}
-								handleChecked={props.handleChecked}
-							/>
-						)}
+						{(report, index) => {
+							return (
+								<ReportRow
+									project_slug={props.project_slug}
+									theme={props.theme}
+									isConsole={props.isConsole}
+									measures={props.measures}
+									tab={props.tab}
+									report={report}
+									index={index}
+									isChecked={checked[index()] ?? false}
+									handleChecked={handleChecked}
+								/>
+							);
+						}}
 					</For>
 				</Match>
 			</Switch>
@@ -109,17 +117,15 @@ const ReportRow = (props: {
 	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	report: TabElement<JsonReport>;
-	isActive: boolean;
 	index: Accessor<number>;
-	handleChecked: (index: number, slug?: string) => void;
+	isChecked: boolean;
+	handleChecked: (index: number, uuid: string) => void;
 }) => {
 	const report = props.report?.resource as JsonReport;
 	const benchmarkCount = report?.results?.map((iteration) => iteration?.length);
 	const hasBenchmarks = benchmarkCount.length > 0;
 
-	const [viewReport, setViewReport] = createSignal(
-		props.isActive && hasBenchmarks,
-	);
+	const viewReport = createMemo(() => props.isChecked && hasBenchmarks);
 
 	return (
 		<div id={report.uuid} class="panel-block is-block">
@@ -131,8 +137,7 @@ const ReportRow = (props: {
 					disabled={!hasBenchmarks}
 					onMouseDown={(e) => {
 						e.preventDefault();
-						setViewReport(!viewReport());
-						props.handleChecked(props.index(), report?.uuid);
+						props.handleChecked(props.index(), report.uuid);
 					}}
 				>
 					<div class="columns is-vcentered is-mobile">

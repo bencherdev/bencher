@@ -8,6 +8,7 @@ import {
 	type JsonMeasure,
 	type JsonReport,
 	type JsonReportIteration,
+	type JsonReportResults,
 	type JsonTestbed,
 	type JsonThreshold,
 } from "../../../../../types/bencher";
@@ -37,6 +38,10 @@ const ReportCard = (props: Props) => {
 				?.results?.reduce((acc, iteration) => acc + iteration.length, 0) ?? 0
 		);
 	});
+
+	const measuresMissingThresholds = createMemo(() =>
+		Array.from(missingThresholds(props.value()?.results)),
+	);
 
 	return (
 		<div class="columns is-centered" style="margin-top: 1rem">
@@ -212,44 +217,52 @@ const ReportCard = (props: Props) => {
 					<hr />
 				</Show>
 				<Show when={!props.value.loading && benchmarkCount() === 0}>
-					<h3 class="title is-3">
-						<b>⚠️ WARNING:</b> No benchmarks found!
-					</h3>
+					<div class="content">
+						<h3 class="title is-3">
+							<b>⚠️ WARNING:</b> No benchmarks found!
+						</h3>
+					</div>
 				</Show>
 				<Show
-					when={
-						benchmarkCount() > 0 &&
-						props
-							.value()
-							?.results?.some((iteration) =>
-								Array.from(boundaryLimitsMap(iteration).values()).some(
-									(boundaryLimits) =>
-										!(boundaryLimits.lower || boundaryLimits.upper),
-								),
-							)
-					}
+					when={benchmarkCount() > 0 && measuresMissingThresholds().length > 0}
 				>
-					<h3 class="title is-3">
-						<b>⚠️ WARNING:</b> No Threshold found! Without a Threshold, no Alerts
-						will ever be generated.
-					</h3>
-					<Show when={props.isConsole}>
-						<a
-							href={`/console/projects/${
-								props.params?.project
-							}/thresholds/add?${BACK_PARAM}=${encodePath()}`}
-						>
-							Click here to create a new Threshold
-						</a>
-						<br />
-					</Show>
-					<p>
-						For more information, see{" "}
-						<a href="https://bencher.dev/docs/explanation/thresholds/">
-							the Threshold documentation
-						</a>
-					</p>
-					<br />
+					<div class="content">
+						<h3 class="title is-3">
+							<b>⚠️ WARNING:</b> No Threshold found! Without a Threshold, no
+							Alerts will ever be generated.
+						</h3>
+						<ul>
+							<For each={measuresMissingThresholds()}>
+								{(measure) => (
+									<li>
+										<a
+											href={`${resourcePath(props.isConsole)}/${
+												props.params?.project
+											}/measures/${measure.slug}?${BACK_PARAM}=${encodePath()}`}
+										>
+											{measure.name} ({measure.units})
+										</a>
+									</li>
+								)}
+							</For>
+						</ul>
+						<Show when={props.isConsole}>
+							<a
+								href={`/console/projects/${
+									props.params?.project
+								}/thresholds/add?${BACK_PARAM}=${encodePath()}`}
+							>
+								Click here to create a new Threshold
+							</a>
+							<br />
+						</Show>
+						<p>
+							For more information, see{" "}
+							<a href="https://bencher.dev/docs/explanation/thresholds/">
+								the Threshold documentation
+							</a>
+						</p>
+					</div>
 				</Show>
 				<For each={props.value()?.results}>
 					{(iteration) => {
@@ -622,6 +635,31 @@ type Measure = {
 type BoundaryLimits = {
 	lower: boolean;
 	upper: boolean;
+};
+
+const missingThresholds = (
+	results: undefined | JsonReportResults,
+): Set<Measure> => {
+	if (!results) {
+		return new Set();
+	}
+	const measuresMap: Map<string, Measure> = new Map();
+	for (const iteration of results) {
+		for (const result of iteration) {
+			for (const report_measure of result.measures) {
+				if (!report_measure.threshold) {
+					const measure = {
+						name: report_measure.measure?.name,
+						slug: report_measure.measure?.slug,
+						units: report_measure.measure?.units,
+					};
+					const key = JSON.stringify(measure);
+					measuresMap.set(key, measure);
+				}
+			}
+		}
+	}
+	return new Set(measuresMap.values());
 };
 
 const boundaryLimitsMap = (

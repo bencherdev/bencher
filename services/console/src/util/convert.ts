@@ -28,28 +28,43 @@ export const fmtDate = (date_str: undefined | string) => {
 	return null;
 };
 
-export const addToArray = (array: string[], add: string): string[] => {
-	if (!array.includes(add)) {
-		array.push(add);
+export const addToArray = (
+	array: string[],
+	add: string,
+): [string[], null | number] => {
+	if (array.includes(add)) {
+		return [array, null];
 	}
-	return array;
+	const len = array.push(add);
+	return [array, len - 1];
 };
-export const removeFromArray = (array: string[], remove: string): string[] => {
+export const removeFromArray = (
+	array: string[],
+	remove: string,
+): [string[], null | number] => {
 	const index = array.indexOf(remove);
-	if (index > -1) {
-		array.splice(index, 1);
+	if (index < 0) {
+		return [array, null];
 	}
-	return array;
+	array.splice(index, 1);
+	return [array, index];
 };
 
 export const arrayFromString = (array_str: undefined | string): string[] => {
 	if (typeof array_str === "string") {
 		const array = array_str.split(",");
-		return removeFromArray(array, "");
+		// This breaks the `heads` array where there is a leading empty string
+		// const [a, _i] = removeFromArray(array, "");
+		return array;
 	}
 	return [];
 };
 export const arrayToString = (array: string[]) => array.join();
+
+export const sizeArray = (
+	parent: string[],
+	child: (string | null)[],
+): (string | null)[] => parent.map((_, i) => child[i] ?? "");
 
 export const timeToDate = (time_str: undefined | string): null | Date => {
 	if (typeof time_str === "string") {

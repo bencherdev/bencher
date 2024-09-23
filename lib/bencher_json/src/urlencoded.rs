@@ -66,10 +66,11 @@ where
 
     let mut values = Vec::new();
     for value in list.split(',') {
-        if value.is_empty() {
-            values.push(None);
-        }
-        values.push(Some(from_urlencoded(value)?));
+        values.push(if value.is_empty() {
+            None
+        } else {
+            Some(from_urlencoded(value)?)
+        });
     }
     Ok(values)
 }
@@ -94,10 +95,10 @@ where
     for value in values {
         let element = to_urlencoded(value);
         if list.is_empty() {
+            list = element;
+        } else {
             list.push(',');
             list.push_str(&element);
-        } else {
-            list = element;
         }
     }
     list
@@ -116,10 +117,10 @@ where
 
         let element = to_urlencoded(value);
         if list.is_empty() {
+            list = element;
+        } else {
             list.push(',');
             list.push_str(&element);
-        } else {
-            list = element;
         }
     }
     list

@@ -30,6 +30,7 @@ import {
 	dateToTime,
 	isBoolParam,
 	removeFromArray,
+	sizeArray,
 	timeToDate,
 	timeToDateOnlyIso,
 } from "../../../util/convert";
@@ -51,6 +52,7 @@ import * as Sentry from "@sentry/astro";
 
 // Perf query params
 const BRANCHES_PARAM = PerfQueryKey.Branches;
+const HEADS_PARAM = PerfQueryKey.Heads;
 const TESTBEDS_PARAM = PerfQueryKey.Testbeds;
 const BENCHMARKS_PARAM = PerfQueryKey.Benchmarks;
 const MEASURES_PARAM = PerfQueryKey.Measures;
@@ -102,6 +104,7 @@ const EMBED_KEY_PARAM = "embed_key";
 // This is used to trim down the number of query params when embedding, etc.
 export const PERF_QUERY_PARAMS = [
 	BRANCHES_PARAM,
+	HEADS_PARAM,
 	TESTBEDS_PARAM,
 	BENCHMARKS_PARAM,
 	MEASURES_PARAM,
@@ -214,6 +217,9 @@ const PerfPanel = (props: Props) => {
 		}
 		if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
 			initParams[BRANCHES_PARAM] = null;
+		}
+		if (!Array.isArray(arrayFromString(searchParams[HEADS_PARAM]))) {
+			initParams[HEADS_PARAM] = null;
 		}
 		if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
 			initParams[TESTBEDS_PARAM] = null;
@@ -348,6 +354,9 @@ const PerfPanel = (props: Props) => {
 	);
 	const branches = createMemo(() =>
 		arrayFromString(searchParams[BRANCHES_PARAM]),
+	);
+	const heads = createMemo(() =>
+		sizeArray(branches(), arrayFromString(searchParams[HEADS_PARAM])),
 	);
 	const testbeds = createMemo(() =>
 		arrayFromString(searchParams[TESTBEDS_PARAM]),
@@ -491,6 +500,7 @@ const PerfPanel = (props: Props) => {
 	const perfQuery = createMemo(() => {
 		return {
 			branches: branches(),
+			heads: heads(),
 			testbeds: testbeds(),
 			benchmarks: benchmarks(),
 			measures: measures(),
@@ -726,6 +736,7 @@ const PerfPanel = (props: Props) => {
 				{
 					[REPORT_PARAM]: first_report?.uuid,
 					[BRANCHES_PARAM]: first_report?.branch?.uuid,
+					[HEADS_PARAM]: first_report?.branch?.head?.uuid,
 					[TESTBEDS_PARAM]: first_report?.testbed?.uuid,
 					[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
 					[MEASURES_PARAM]: first_measure,
@@ -849,6 +860,7 @@ const PerfPanel = (props: Props) => {
 		index: undefined | number,
 		param: string,
 		param_array: string[],
+		customParams?: (checked: boolean, i: null | number) => object,
 	) => {
 		// Uncheck all
 		if (index === undefined) {
@@ -869,24 +881,39 @@ const PerfPanel = (props: Props) => {
 			return;
 		}
 		const uuid = item.resource.uuid;
-		if (checked) {
-			setSearchParams({
-				[REPORT_PARAM]: null,
-				[PLOT_PARAM]: null,
-				[param]: arrayToString(removeFromArray(param_array, uuid)),
-				[CLEAR_PARAM]: true,
-			});
-		} else {
-			setSearchParams({
-				[REPORT_PARAM]: null,
-				[PLOT_PARAM]: null,
-				[param]: arrayToString(addToArray(param_array, uuid)),
-				[CLEAR_PARAM]: true,
-			});
-		}
+		const [array, i] = checked
+			? removeFromArray(param_array, uuid)
+			: addToArray(param_array, uuid);
+		setSearchParams({
+			[REPORT_PARAM]: null,
+			[PLOT_PARAM]: null,
+			[param]: arrayToString(array),
+			[CLEAR_PARAM]: true,
+			...customParams?.(checked, i),
+		});
 	};
 	const handleBranchChecked = (index: undefined | number) => {
-		handleChecked(branches_tab, index, BRANCHES_PARAM, branches());
+		handleChecked(
+			branches_tab,
+			index,
+			BRANCHES_PARAM,
+			branches(),
+			(checked, i) => {
+				if (i === null) {
+					return {};
+				}
+				const array = heads();
+				if (checked) {
+					array.splice(i, 1);
+				} else {
+					const head_uuid = branches_tab?.[index]?.resource?.head?.uuid;
+					array.splice(i, 0, head_uuid);
+				}
+				return {
+					[HEADS_PARAM]: arrayToString(array),
+				};
+			},
+		);
 	};
 	const handleTestbedChecked = (index: undefined | number) => {
 		handleChecked(testbeds_tab, index, TESTBEDS_PARAM, testbeds());

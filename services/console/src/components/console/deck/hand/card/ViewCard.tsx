@@ -216,7 +216,6 @@ const ViewCard = (props: Props) => {
 };
 
 const StartPointCard = (props: Props) => {
-	console.log(props);
 	const user = authUser();
 	const branchFetcher = createMemo(() => {
 		return {
