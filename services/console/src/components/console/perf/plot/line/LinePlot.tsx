@@ -348,18 +348,6 @@ const LinePlot = (props: Props) => {
 					),
 				);
 			}
-			alert_arrays.push(
-				Plot.image(
-					lower_alert_data,
-					alert_image(
-						x_axis_kind,
-						BoundaryLimit.Lower,
-						project_slug,
-						result,
-						props.isConsole,
-					),
-				),
-			);
 
 			// Upper Boundary
 			if (props.upper_boundary()) {
@@ -389,6 +377,19 @@ const LinePlot = (props: Props) => {
 					),
 				);
 			}
+
+			alert_arrays.push(
+				Plot.image(
+					lower_alert_data,
+					alert_image(
+						x_axis_kind,
+						BoundaryLimit.Lower,
+						project_slug,
+						result,
+						props.isConsole,
+					),
+				),
+			);
 			alert_arrays.push(
 				Plot.image(
 					upper_alert_data,

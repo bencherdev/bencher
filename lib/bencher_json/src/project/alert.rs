@@ -33,6 +33,7 @@ pub struct JsonAlert {
 
 const ACTIVE_INT: i32 = 0;
 const DISMISSED_INT: i32 = 1;
+const SILENCED_INT: i32 = 2;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, derive_more::Display, Serialize, Deserialize)]
@@ -45,13 +46,15 @@ pub enum AlertStatus {
     #[default]
     /// The alert is active.
     Active = ACTIVE_INT,
-    /// The alert has been dismissed.
+    /// The alert has been dismissed by a user.
     Dismissed = DISMISSED_INT,
+    /// The alert has been silenced by the system.
+    Silenced = SILENCED_INT,
 }
 
 #[cfg(feature = "db")]
 mod alert_status {
-    use super::{AlertStatus, ACTIVE_INT, DISMISSED_INT};
+    use super::{AlertStatus, ACTIVE_INT, DISMISSED_INT, SILENCED_INT};
 
     #[derive(Debug, thiserror::Error)]
     pub enum AlertStatusError {
@@ -71,6 +74,7 @@ mod alert_status {
             match self {
                 Self::Active => ACTIVE_INT.to_sql(out),
                 Self::Dismissed => DISMISSED_INT.to_sql(out),
+                Self::Silenced => SILENCED_INT.to_sql(out),
             }
         }
     }
@@ -84,6 +88,7 @@ mod alert_status {
             match i32::from_sql(bytes)? {
                 ACTIVE_INT => Ok(Self::Active),
                 DISMISSED_INT => Ok(Self::Dismissed),
+                SILENCED_INT => Ok(Self::Silenced),
                 value => Err(Box::new(AlertStatusError::Invalid(value))),
             }
         }

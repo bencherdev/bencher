@@ -23,6 +23,7 @@ use crate::{
     error::{issue_error, resource_conflict_err, resource_not_found_err},
     model::project::{
         threshold::{
+            alert::QueryAlert,
             model::{InsertModel, QueryModel},
             InsertThreshold, QueryThreshold,
         },
@@ -368,6 +369,9 @@ impl InsertReference {
                 log,
                 "Updated old reference to replaced: {update_reference:?}"
             );
+            // Silence all alerts for the old head reference
+            let count = QueryAlert::silence_all(context, old_head_id).await?;
+            slog::debug!(log, "Silenced {count} alerts for old reference");
         }
 
         // Get the updated branch

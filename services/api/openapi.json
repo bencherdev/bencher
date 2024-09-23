@@ -7830,10 +7830,17 @@
             ]
           },
           {
-            "description": "The alert has been dismissed.",
+            "description": "The alert has been dismissed by a user.",
             "type": "string",
             "enum": [
               "dismissed"
+            ]
+          },
+          {
+            "description": "The alert has been silenced by the system.",
+            "type": "string",
+            "enum": [
+              "silenced"
             ]
           }
         ]

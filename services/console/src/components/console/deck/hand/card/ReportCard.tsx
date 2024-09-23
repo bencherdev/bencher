@@ -1,5 +1,6 @@
 import type { Params } from "astro";
 import {
+	AlertStatus,
 	BoundaryLimit,
 	type JsonAlert,
 	type JsonBenchmark,
@@ -145,7 +146,7 @@ const ReportCard = (props: Props) => {
 															alert,
 														)}
 													>
-														alert
+														alert ({alertStatus(alert)})
 													</a>
 													<br />🚷{" "}
 													<a
@@ -433,7 +434,7 @@ const ReportCard = (props: Props) => {
 																						alert as JsonAlert,
 																					)}
 																				>
-																					view alert
+																					view alert ({alertStatus(alert)})
 																				</a>
 																				<br />
 																				{"🚷"}{" "}
@@ -544,6 +545,16 @@ const alertUrl = (
 	return `${resourcePath(isConsole)}/${project}/alerts/${
 		alert?.uuid
 	}?${BACK_PARAM}=${encodePath()}`;
+};
+
+const alertStatus = (alert: JsonAlert) => {
+	switch (alert.status) {
+		case AlertStatus.Active:
+			return "🔔";
+		case AlertStatus.Dismissed:
+		case AlertStatus.Silenced:
+			return "🔕";
+	}
 };
 
 const thresholdUrl = (

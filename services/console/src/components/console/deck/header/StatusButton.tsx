@@ -27,6 +27,7 @@ const StatusButton = (props: Props) => {
 			case AlertStatus.Active:
 				return { status: AlertStatus.Dismissed };
 			case AlertStatus.Dismissed:
+			case AlertStatus.Silenced:
 				return { status: AlertStatus.Active };
 			default:
 				console.error("Unknown status");
@@ -90,7 +91,12 @@ const StatusButton = (props: Props) => {
 					<span>Dismiss</span>
 				</button>
 			</Match>
-			<Match when={props.data()?.status === AlertStatus.Dismissed}>
+			<Match
+				when={
+					props.data()?.status === AlertStatus.Dismissed ||
+					props.data()?.status === AlertStatus.Silenced
+				}
+			>
 				<button
 					class="button is-fullwidth"
 					type="button"

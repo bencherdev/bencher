@@ -166,9 +166,9 @@ pub struct UpdateModel {
 }
 
 impl UpdateModel {
-    pub fn replace() -> Result<Self, HttpError> {
-        Ok(Self {
+    pub fn replace() -> Self {
+        Self {
             replaced: DateTime::now(),
-        })
+        }
     }
 }

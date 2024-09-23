@@ -63,6 +63,33 @@ impl QueryAlert {
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
+    pub async fn silence_all(
+        context: &ApiContext,
+        reference_id: ReferenceId,
+    ) -> Result<usize, HttpError> {
+        let alerts =
+            schema::alert::table
+                .inner_join(schema::boundary::table.inner_join(
+                    schema::metric::table.inner_join(
+                        schema::report_benchmark::table.inner_join(schema::report::table),
+                    ),
+                ))
+                .filter(schema::report::reference_id.eq(reference_id))
+                .select(schema::alert::id)
+                .load::<AlertId>(conn_lock!(context))
+                .map_err(resource_not_found_err!(Alert, reference_id))?;
+
+        let silenced_alert = UpdateAlert::silence();
+        for alert_id in &alerts {
+            diesel::update(schema::alert::table.filter(schema::alert::id.eq(alert_id)))
+                .set(&silenced_alert)
+                .execute(conn_lock!(context))
+                .map_err(resource_conflict_err!(Alert, (alert_id, &silenced_alert)))?;
+        }
+
+        Ok(alerts.len())
+    }
+
     pub async fn into_json(self, context: &ApiContext) -> Result<JsonAlert, HttpError> {
         let (
             report_uuid,
@@ -229,5 +256,14 @@ impl From<JsonUpdateAlert> for UpdateAlert {
             status,
             modified: DateTime::now(),
         }
+    }
+}
+
+impl UpdateAlert {
+    pub fn silence() -> Self {
+        JsonUpdateAlert {
+            status: Some(AlertStatus::Silenced),
+        }
+        .into()
     }
 }

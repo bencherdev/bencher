@@ -179,8 +179,10 @@ export enum BoundaryLimit {
 export enum AlertStatus {
 	/** The alert is active. */
 	Active = "active",
-	/** The alert has been dismissed. */
+	/** The alert has been dismissed by a user. */
 	Dismissed = "dismissed",
+	/** The alert has been silenced by the system. */
+	Silenced = "silenced",
 }
 
 export interface JsonAlert {
