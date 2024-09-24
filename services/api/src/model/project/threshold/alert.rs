@@ -253,7 +253,7 @@ impl From<JsonUpdateAlert> for UpdateAlert {
     fn from(update: JsonUpdateAlert) -> Self {
         let JsonUpdateAlert { status } = update;
         Self {
-            status,
+            status: status.map(Into::into),
             modified: DateTime::now(),
         }
     }
@@ -261,9 +261,9 @@ impl From<JsonUpdateAlert> for UpdateAlert {
 
 impl UpdateAlert {
     pub fn silence() -> Self {
-        JsonUpdateAlert {
+        Self {
             status: Some(AlertStatus::Silenced),
+            modified: DateTime::now(),
         }
-        .into()
     }
 }

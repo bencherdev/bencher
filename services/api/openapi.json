@@ -11318,7 +11318,7 @@
             "description": "The new status of the alert.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/AlertStatus"
+                "$ref": "#/components/schemas/UpdateAlertStatus"
               }
             ]
           }
@@ -11930,6 +11930,24 @@
       "TokenUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "UpdateAlertStatus": {
+        "oneOf": [
+          {
+            "description": "The alert is active.",
+            "type": "string",
+            "enum": [
+              "active"
+            ]
+          },
+          {
+            "description": "The alert has been dismissed by a user.",
+            "type": "string",
+            "enum": [
+              "dismissed"
+            ]
+          }
+        ]
       },
       "Url": {
         "type": "string"

@@ -45,6 +45,17 @@ pub enum CliAlertsSort {
     Modified,
 }
 
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliAlertStatus {
+    /// Active
+    Active,
+    /// Dismissed
+    Dismissed,
+    /// Silenced
+    Silenced,
+}
+
 #[derive(Parser, Debug)]
 pub struct CliAlertView {
     /// Project slug or UUID
@@ -67,16 +78,15 @@ pub struct CliAlertUpdate {
 
     /// Alert status
     #[clap(long)]
-    pub status: Option<CliAlertStatus>,
+    pub status: Option<CliAlertStatusUpdate>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
 }
 
-/// Supported Fold Operations
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
-pub enum CliAlertStatus {
+pub enum CliAlertStatusUpdate {
     /// Active
     Active,
     /// Dismissed

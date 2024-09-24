@@ -4,7 +4,7 @@ use bencher_json::ResourceId;
 use crate::{
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::{
-        project::alert::{CliAlertList, CliAlertsSort},
+        project::alert::{CliAlertList, CliAlertStatus, CliAlertsSort},
         CliPagination,
     },
     CliError,
@@ -64,6 +64,16 @@ impl From<CliPagination<CliAlertsSort>> for Pagination {
             direction: direction.map(Into::into),
             page,
             per_page,
+        }
+    }
+}
+
+impl From<CliAlertStatus> for AlertStatus {
+    fn from(status: CliAlertStatus) -> Self {
+        match status {
+            CliAlertStatus::Active => Self::Active,
+            CliAlertStatus::Dismissed => Self::Dismissed,
+            CliAlertStatus::Silenced => Self::Silenced,
         }
     }
 }

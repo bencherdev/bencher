@@ -52,6 +52,15 @@ pub enum AlertStatus {
     Silenced = SILENCED_INT,
 }
 
+impl From<UpdateAlertStatus> for AlertStatus {
+    fn from(status: UpdateAlertStatus) -> Self {
+        match status {
+            UpdateAlertStatus::Active => Self::Active,
+            UpdateAlertStatus::Dismissed => Self::Dismissed,
+        }
+    }
+}
+
 #[cfg(feature = "db")]
 mod alert_status {
     use super::{AlertStatus, ACTIVE_INT, DISMISSED_INT, SILENCED_INT};
@@ -100,7 +109,18 @@ mod alert_status {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateAlert {
     /// The new status of the alert.
-    pub status: Option<AlertStatus>,
+    pub status: Option<UpdateAlertStatus>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateAlertStatus {
+    /// The alert is active.
+    Active,
+    /// The alert has been dismissed by a user.
+    Dismissed,
 }
 
 #[typeshare::typeshare]

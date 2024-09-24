@@ -367,9 +367,16 @@ export interface JsonUsage {
 	usage?: number;
 }
 
+export enum UpdateAlertStatus {
+	/** The alert is active. */
+	Active = "active",
+	/** The alert has been dismissed by a user. */
+	Dismissed = "dismissed",
+}
+
 export interface JsonUpdateAlert {
 	/** The new status of the alert. */
-	status?: AlertStatus;
+	status?: UpdateAlertStatus;
 }
 
 export interface JsonPerfAlert {

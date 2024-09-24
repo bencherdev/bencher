@@ -1,9 +1,9 @@
-use bencher_client::types::{AlertStatus, JsonUpdateAlert};
+use bencher_client::types::{JsonUpdateAlert, UpdateAlertStatus};
 use bencher_json::{AlertUuid, ResourceId};
 
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::alert::CliAlertUpdate,
+    parser::project::alert::{CliAlertStatusUpdate, CliAlertUpdate},
     CliError,
 };
 
@@ -11,7 +11,7 @@ use crate::{
 pub struct Update {
     pub project: ResourceId,
     pub alert: AlertUuid,
-    pub status: Option<AlertStatus>,
+    pub status: Option<UpdateAlertStatus>,
     pub backend: AuthBackend,
 }
 
@@ -38,6 +38,15 @@ impl From<Update> for JsonUpdateAlert {
     fn from(update: Update) -> Self {
         let Update { status, .. } = update;
         Self { status }
+    }
+}
+
+impl From<CliAlertStatusUpdate> for UpdateAlertStatus {
+    fn from(status: CliAlertStatusUpdate) -> Self {
+        match status {
+            CliAlertStatusUpdate::Active => Self::Active,
+            CliAlertStatusUpdate::Dismissed => Self::Dismissed,
+        }
     }
 }
 
