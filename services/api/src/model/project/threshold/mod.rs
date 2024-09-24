@@ -1,9 +1,13 @@
+use std::collections::HashMap;
+
 use bencher_json::{
     project::threshold::{JsonThreshold, JsonThresholdModel},
-    DateTime, Model, ModelUuid, ThresholdUuid,
+    DateTime, Model, ModelUuid, NameId, ThresholdUuid,
 };
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
+use model::UpdateModel;
+use slog::Logger;
 
 use self::model::{InsertModel, ModelId, QueryModel};
 use super::{
@@ -67,6 +71,23 @@ impl QueryThreshold {
         }
     }
 
+    pub async fn update_model_if_changed(
+        &self,
+        context: &ApiContext,
+        model: Model,
+    ) -> Result<(), HttpError> {
+        if let Some(model_id) = self.model_id {
+            let current_model = QueryModel::get(conn_lock!(context), model_id)?.into_model();
+            // Skip updating the model if it has not changed.
+            // This keeps us from needlessly replacing old models with identical new ones.
+            if current_model == model {
+                return Ok(());
+            }
+        }
+
+        self.update_from_json(conn_lock!(context), model)
+    }
+
     pub fn update_from_json(&self, conn: &mut DbConnection, model: Model) -> Result<(), HttpError> {
         // Insert the new model
         let insert_model = InsertModel::from_json(self.id, model);
@@ -80,16 +101,41 @@ impl QueryThreshold {
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
             .set(&update_threshold)
             .execute(conn)
-            .map_err(resource_conflict_err!(Threshold, (&self, &insert_model)))?;
+            .map_err(resource_conflict_err!(
+                Threshold,
+                (&self, &insert_model, &update_threshold)
+            ))?;
 
+        self.update_replaced_model(conn, update_threshold.modified)
+    }
+
+    pub fn remove_current_model(&self, conn: &mut DbConnection) -> Result<(), HttpError> {
+        // Update the current threshold to remove the new model
+        let update_threshold = UpdateThreshold::remove_model();
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
+            .set(&update_threshold)
+            .execute(conn)
+            .map_err(resource_conflict_err!(
+                Threshold,
+                (&self, &update_threshold)
+            ))?;
+
+        self.update_replaced_model(conn, update_threshold.modified)
+    }
+
+    pub fn update_replaced_model(
+        &self,
+        conn: &mut DbConnection,
+        date_time: DateTime,
+    ) -> Result<(), HttpError> {
         // Update the old model to be replaced, if there is one
         if let Some(model_id) = self.model_id {
+            let update_model = UpdateModel::replaced_at(date_time);
             diesel::update(schema::model::table.filter(schema::model::id.eq(model_id)))
-                .set(schema::model::replaced.eq(Some(DateTime::now())))
+                .set(&update_model)
                 .execute(conn)
-                .map_err(resource_conflict_err!(Model, model_id))?;
+                .map_err(resource_conflict_err!(Model, (&self, &update_model)))?;
         }
-
         Ok(())
     }
 
@@ -223,7 +269,7 @@ impl InsertThreshold {
         }
     }
 
-    pub fn insert_from_json(
+    pub fn from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
         branch_id: BranchId,
@@ -270,7 +316,7 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::insert_from_json(
+        Self::from_json(
             conn,
             project_id,
             branch_id,
@@ -287,7 +333,7 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::insert_from_json(
+        Self::from_json(
             conn,
             project_id,
             branch_id,
@@ -296,20 +342,88 @@ impl InsertThreshold {
             Model::upper_boundary(),
         )
     }
+
+    pub async fn from_report_json(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch_id: BranchId,
+        testbed_id: TestbedId,
+        thresholds: Option<HashMap<NameId, Model>>,
+    ) -> Result<(), HttpError> {
+        let Some(thresholds) = thresholds else {
+            slog::debug!(log, "No thresholds in report");
+            return Ok(());
+        };
+
+        // Get all thresholds for the report branch and testbed
+        let mut current_thresholds = schema::threshold::table
+            .filter(schema::threshold::project_id.eq(project_id))
+            .filter(schema::threshold::branch_id.eq(branch_id))
+            .filter(schema::threshold::testbed_id.eq(testbed_id))
+            .load::<QueryThreshold>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Threshold, (branch_id, testbed_id)))?
+            .into_iter()
+            .map(|threshold| (threshold.measure_id, threshold))
+            .collect::<HashMap<_, _>>();
+        slog::debug!(log, "Current thresholds: {current_thresholds:?}");
+
+        // Iterate over the thresholds in the report.
+        // If the threshold does not exist, create it.
+        // If it does exist, update it.
+        for (measure, model) in thresholds {
+            let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
+            slog::debug!(log, "Processing threshold for measure {measure_id:?}");
+            if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
+                slog::debug!(log, "Updating threshold for measure {measure_id:?}");
+                current_threshold
+                    .update_model_if_changed(context, model)
+                    .await?;
+                slog::debug!(log, "Updated threshold for measure {measure_id:?}");
+            } else {
+                slog::debug!(log, "Creating threshold for measure {measure_id:?}");
+                Self::from_json(
+                    conn_lock!(context),
+                    project_id,
+                    branch_id,
+                    testbed_id,
+                    measure_id,
+                    model,
+                )?;
+                slog::debug!(log, "Created threshold for measure {measure_id:?}");
+            }
+        }
+
+        slog::debug!(log, "Remaining thresholds: {current_thresholds:?}");
+        // Remove the models from the thresholds that were not in the report
+        for (_, current_threshold) in current_thresholds {
+            current_threshold.remove_current_model(conn_lock!(context))?;
+            slog::debug!(log, "Removed model from threshold {}", current_threshold.id);
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = threshold_table)]
 pub struct UpdateThreshold {
-    pub model_id: ModelId,
+    pub model_id: Option<Option<ModelId>>,
     pub modified: DateTime,
 }
 
 impl UpdateThreshold {
     pub fn new_model(conn: &mut DbConnection, model_uuid: ModelUuid) -> Result<Self, HttpError> {
         Ok(Self {
-            model_id: QueryModel::get_id(conn, model_uuid)?,
+            model_id: Some(Some(QueryModel::get_id(conn, model_uuid)?)),
             modified: DateTime::now(),
         })
+    }
+
+    pub fn remove_model() -> Self {
+        Self {
+            model_id: Some(None),
+            modified: DateTime::now(),
+        }
     }
 }

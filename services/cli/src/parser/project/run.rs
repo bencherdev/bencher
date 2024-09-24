@@ -1,10 +1,13 @@
 use bencher_json::{
-    project::testbed::TESTBED_LOCALHOST_STR, DateTime, GitHash, NameId, ResourceId,
+    project::testbed::TESTBED_LOCALHOST_STR, Boundary, DateTime, GitHash, NameId, ResourceId,
+    SampleSize, Window,
 };
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
-use crate::parser::CliBackend;
+use crate::parser::{CliBackend, ElidedOption};
+
+use super::threshold::CliModelTest;
 
 #[derive(Parser, Debug)]
 #[allow(clippy::option_option, clippy::struct_excessive_bools)]
@@ -45,6 +48,9 @@ pub struct CliRun {
     /// Allow benchmark test failure
     #[clap(long)]
     pub allow_failure: bool,
+
+    #[clap(flatten)]
+    pub thresholds: CliRunThresholds,
 
     /// Error on alert
     #[clap(long)]
@@ -122,6 +128,48 @@ pub struct CliRunHash {
     /// Do not try to find a `git` commit hash
     #[clap(long)]
     pub no_hash: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct CliRunThresholds {
+    /// Threshold Measure name, slug, or UUID
+    /// When specifying multiple Thresholds, all of the same options must be used for each Threshold.
+    /// To ignore an option for a specific Threshold, use an underscore (`_`).
+    #[clap(long)]
+    pub threshold_measure: Vec<NameId>,
+
+    /// Threshold model test
+    #[clap(value_enum, long, requires = "threshold_measure")]
+    pub threshold_test: Vec<CliModelTest>,
+
+    /// Min sample size
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_min_sample_size: Vec<ElidedOption<SampleSize>>,
+
+    /// Max sample size
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_max_sample_size: Vec<ElidedOption<SampleSize>>,
+
+    /// Window size (seconds)
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_window: Vec<ElidedOption<Window>>,
+
+    /// Lower boundary
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_lower_boundary: Vec<ElidedOption<Boundary>>,
+
+    /// Upper boundary
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_upper_boundary: Vec<ElidedOption<Boundary>>,
+
+    /// Reset all Thresholds
+    #[clap(long, conflicts_with = "threshold_measure")]
+    pub thresholds_reset: bool,
 }
 
 #[derive(Args, Debug)]

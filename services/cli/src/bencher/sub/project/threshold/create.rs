@@ -1,7 +1,7 @@
 use bencher_client::types::JsonNewThreshold;
 use bencher_json::{NameId, ResourceId};
 
-use super::model::Model;
+use super::{model::Model, ThresholdError};
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::threshold::{CliThresholdCreate, CliThresholdCreateProject},
@@ -16,14 +16,6 @@ pub struct Create {
     pub measure: NameId,
     pub model: Model,
     pub backend: AuthBackend,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ThresholdError {
-    #[error("Failed to find Bencher project. Set the project as the first argument, use the `--project` argument, or the `BENCHER_PROJECT` environment variable.")]
-    NoProject,
-    #[error("Failed to parse UUID or slug for the project: {0}")]
-    ParseProject(bencher_json::ValidError),
 }
 
 impl TryFrom<CliThresholdCreate> for Create {

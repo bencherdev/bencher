@@ -176,12 +176,35 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn insert_from_json(
+    pub fn new(
+        conn: &mut DbConnection,
+        name: UserName,
+        slug: Option<Slug>,
+        email: Email,
+    ) -> Result<Self, HttpError> {
+        let slug = ok_slug!(conn, &name, slug, user, QueryUser)?;
+        let timestamp = DateTime::now();
+        Ok(Self {
+            uuid: UserUuid::new(),
+            name,
+            slug,
+            email,
+            admin: false,
+            locked: false,
+            created: timestamp,
+            modified: timestamp,
+        })
+    }
+
+    pub fn from_json(
         conn: &mut DbConnection,
         token_key: &TokenKey,
         json_signup: &JsonSignup,
     ) -> Result<Self, HttpError> {
-        let mut insert_user = InsertUser::from_json(conn, json_signup.clone())?;
+        let JsonSignup {
+            name, slug, email, ..
+        } = json_signup.clone();
+        let mut insert_user = Self::new(conn, name, slug, email)?;
 
         let count = schema::user::table
             .select(count(schema::user::id))
@@ -227,24 +250,6 @@ impl InsertUser {
             .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
         Ok(insert_user)
-    }
-
-    pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Result<Self, HttpError> {
-        let JsonSignup {
-            name, slug, email, ..
-        } = signup;
-        let slug = ok_slug!(conn, &name, slug, user, QueryUser)?;
-        let timestamp = DateTime::now();
-        Ok(Self {
-            uuid: UserUuid::new(),
-            name,
-            slug,
-            email,
-            admin: false,
-            locked: false,
-            created: timestamp,
-            modified: timestamp,
-        })
     }
 
     pub fn notify(

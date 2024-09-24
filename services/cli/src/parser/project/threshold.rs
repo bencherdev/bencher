@@ -174,10 +174,47 @@ pub struct CliThresholdUpdate {
     pub threshold: ThresholdUuid,
 
     #[clap(flatten)]
-    pub model: CliModel,
+    pub model: CliUpdateModel,
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+#[clap(group(
+    ArgGroup::new("update_model")
+        .required(true)
+        .multiple(false)
+        .args(&["test", "remove_model"]),
+))]
+pub struct CliUpdateModel {
+    /// Threshold model test
+    #[clap(value_enum, long)]
+    pub test: Option<CliModelTest>,
+
+    /// Min sample size
+    #[clap(long, requires = "test")]
+    pub min_sample_size: Option<SampleSize>,
+
+    /// Max sample size
+    #[clap(long, requires = "test")]
+    pub max_sample_size: Option<SampleSize>,
+
+    /// Window size (seconds)
+    #[clap(long, requires = "test")]
+    pub window: Option<Window>,
+
+    /// Lower boundary
+    #[clap(long, requires = "test")]
+    pub lower_boundary: Option<Boundary>,
+
+    /// Upper boundary
+    #[clap(long, requires = "test")]
+    pub upper_boundary: Option<Boundary>,
+
+    /// Remove the threshold model
+    #[clap(long)]
+    pub remove_model: bool,
 }
 
 #[derive(Parser, Debug)]

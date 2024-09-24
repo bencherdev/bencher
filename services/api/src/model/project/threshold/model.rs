@@ -53,6 +53,26 @@ impl QueryModel {
             .map_err(resource_not_found_err!(Model, (project_id, model_uuid)))
     }
 
+    pub fn into_model(self) -> Model {
+        let Self {
+            test,
+            min_sample_size,
+            max_sample_size,
+            window,
+            lower_boundary,
+            upper_boundary,
+            ..
+        } = self;
+        Model {
+            test,
+            min_sample_size,
+            max_sample_size,
+            window,
+            lower_boundary,
+            upper_boundary,
+        }
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonModel, HttpError> {
         let threshold = QueryThreshold::get(conn, self.threshold_id)?;
         Ok(self.into_json_for_threshold(&threshold))
@@ -166,9 +186,7 @@ pub struct UpdateModel {
 }
 
 impl UpdateModel {
-    pub fn replace() -> Self {
-        Self {
-            replaced: DateTime::now(),
-        }
+    pub fn replaced_at(replaced: DateTime) -> Self {
+        Self { replaced }
     }
 }

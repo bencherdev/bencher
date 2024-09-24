@@ -57,8 +57,7 @@ async fn post_inner(
     }
 
     let invited = json_signup.invite.is_some();
-    let insert_user =
-        InsertUser::insert_from_json(conn_lock!(context), &context.token_key, &json_signup)?;
+    let insert_user = InsertUser::from_json(conn_lock!(context), &context.token_key, &json_signup)?;
 
     let token = context
         .token_key

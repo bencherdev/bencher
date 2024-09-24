@@ -1,0 +1,77 @@
+import { type Accessor, type Resource, Show, createSignal } from "solid-js";
+import type { JsonAuthUser, JsonThreshold } from "../../../../types/bencher";
+import { httpPut } from "../../../../util/http";
+import { NotifyKind, pageNotify } from "../../../../util/notify";
+import { validJwt } from "../../../../util/valid";
+import * as Sentry from "@sentry/astro";
+
+export interface Props {
+	apiUrl: string;
+	user: JsonAuthUser;
+	path: Accessor<string>;
+	data: Resource<JsonThreshold>;
+	subtitle: string;
+	redirect: (pathname: string, data: object) => string;
+	notify?: boolean;
+	effect?: undefined | (() => void);
+	isAllowed: Resource<boolean>;
+	handleRefresh: () => void;
+}
+
+const RemoveModelButton = (props: Props) => {
+	const [removing, setRemoving] = createSignal(false);
+
+	const sendRemove = () => {
+		setRemoving(true);
+		const data = props.data();
+		// This guarantees that the wasm has been loaded
+		if (!data) {
+			setRemoving(false);
+			return;
+		}
+
+		const token = props.user?.token;
+		if (!validJwt(token)) {
+			setRemoving(false);
+			return;
+		}
+
+		httpPut(props.apiUrl, props.path(), token, { test: null })
+			.then((_resp) => {
+				setRemoving(false);
+				props.handleRefresh();
+			})
+			.catch((error) => {
+				setRemoving(false);
+				console.error(error);
+				Sentry.captureException(error);
+				pageNotify(
+					NotifyKind.ERROR,
+					"Lettuce romaine calm! Failed to remove model. Please, try again.",
+				);
+			});
+	};
+
+	return (
+		<Show when={props.data()?.model && !props?.data()?.model?.replaced}>
+			<div class="buttons is-right">
+				<button
+					class="button is-small"
+					type="button"
+					disabled={!props.isAllowed() || removing()}
+					onMouseDown={(e) => {
+						e.preventDefault();
+						sendRemove();
+					}}
+				>
+					<span class="icon">
+						<i class="fas fa-th" />
+					</span>
+					<span>Remove Model</span>
+				</button>
+			</div>
+		</Show>
+	);
+};
+
+export default RemoveModelButton;

@@ -192,6 +192,9 @@ const thresholdsConfig = {
 					resource: PubResourceKind.Threshold,
 				},
 				{
+					kind: ActionButton.REMOVE_MODEL,
+				},
+				{
 					kind: ActionButton.MODEL_REPLACED,
 				},
 			],

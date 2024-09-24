@@ -1,9 +1,8 @@
 use bencher_client::types::{Boundary, ModelTest, SampleSize, Window};
 
-use crate::{
-    parser::project::threshold::{CliModel, CliModelTest},
-    CliError,
-};
+use crate::parser::project::threshold::{CliModel, CliModelTest};
+
+use super::ThresholdError;
 
 #[derive(Debug, Clone)]
 pub struct Model {
@@ -16,7 +15,7 @@ pub struct Model {
 }
 
 impl TryFrom<CliModel> for Model {
-    type Error = CliError;
+    type Error = ThresholdError;
 
     fn try_from(model: CliModel) -> Result<Self, Self::Error> {
         let CliModel {
@@ -36,7 +35,7 @@ impl TryFrom<CliModel> for Model {
             upper_boundary,
         }
         .validate()
-        .map_err(CliError::Model)?;
+        .map_err(ThresholdError::BadModel)?;
         Ok(Self {
             test: test.into(),
             min_sample_size: min_sample_size.map(Into::into),
@@ -72,6 +71,28 @@ impl From<CliModelTest> for ModelTest {
             CliModelTest::LogNormal => Self::LogNormal,
             CliModelTest::Iqr => Self::Iqr,
             CliModelTest::DeltaIqr => Self::DeltaIqr,
+        }
+    }
+}
+
+impl From<Model> for bencher_client::types::Model {
+    fn from(model: Model) -> Self {
+        let Model {
+            test,
+            min_sample_size,
+            max_sample_size,
+            window,
+            lower_boundary,
+            upper_boundary,
+        } = model;
+        #[allow(clippy::inconsistent_struct_constructor)]
+        bencher_client::types::Model {
+            test,
+            min_sample_size,
+            max_sample_size,
+            window,
+            lower_boundary,
+            upper_boundary,
         }
     }
 }

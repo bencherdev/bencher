@@ -17,7 +17,7 @@ use model_test::ModelTest;
 use sample_size::SampleSize;
 use window::Window;
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Model {
     /// The test used by the threshold model to calculate the baseline and boundary limits.

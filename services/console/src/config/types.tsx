@@ -114,6 +114,7 @@ export enum ActionButton {
 	ARCHIVE = "archive",
 	ARCHIVED = "archived",
 	HEAD_REPLACED = "head_replaced",
+	REMOVE_MODEL = "remove_model",
 	MODEL_REPLACED = "model_replaced",
 	RAW = "raw",
 	DELETE = "delete",

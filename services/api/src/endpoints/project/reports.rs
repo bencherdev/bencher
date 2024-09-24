@@ -37,6 +37,7 @@ use crate::{
             },
             report::{results::ReportResults, InsertReport, QueryReport, ReportId},
             testbed::QueryTestbed,
+            threshold::InsertThreshold,
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -313,6 +314,17 @@ async fn post_inner(
     )
     .await?;
     let testbed_id = QueryTestbed::get_or_create(context, project_id, &json_report.testbed).await?;
+
+    // Insert the thresholds for the report
+    InsertThreshold::from_report_json(
+        log,
+        context,
+        project_id,
+        branch_id,
+        testbed_id,
+        json_report.thresholds.take(),
+    )
+    .await?;
 
     // Check to see if the project is public or private
     // If private, then validate that there is an active subscription or license

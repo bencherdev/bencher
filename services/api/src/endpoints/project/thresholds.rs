@@ -1,7 +1,7 @@
 use bencher_json::{
     project::threshold::{
-        JsonNewThreshold, JsonThreshold, JsonThresholdQuery, JsonThresholdQueryParams,
-        JsonUpdateThreshold,
+        JsonNewThreshold, JsonRemoveModel, JsonThreshold, JsonThresholdQuery,
+        JsonThresholdQueryParams, JsonUpdateModel, JsonUpdateThreshold,
     },
     JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ResourceId, ThresholdUuid,
 };
@@ -289,7 +289,7 @@ async fn post_inner(
         QueryMeasure::from_name_id(conn_lock!(context), project_id, &json_threshold.measure)?.id;
 
     // Create the new threshold
-    let threshold_id = InsertThreshold::insert_from_json(
+    let threshold_id = InsertThreshold::from_json(
         conn_lock!(context),
         project_id,
         branch_id,
@@ -437,7 +437,13 @@ async fn put_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, HttpError> {
     // Validate the new model
-    json_threshold.model.validate().map_err(bad_request_error)?;
+    let model = match json_threshold {
+        JsonUpdateThreshold::Model(JsonUpdateModel { model }) => {
+            model.validate().map_err(bad_request_error)?;
+            Some(model)
+        },
+        JsonUpdateThreshold::Remove(JsonRemoveModel { test: () }) => None,
+    };
 
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
@@ -452,9 +458,15 @@ async fn put_inner(
     let query_threshold =
         QueryThreshold::get_with_uuid(conn_lock!(context), &query_project, path_params.threshold)?;
 
-    // Update the current threshold with the new model
-    // Hold the database lock across the entire `update_from_json` call
-    query_threshold.update_from_json(conn_lock!(context), json_threshold.model)?;
+    if let Some(model) = model {
+        // Update the current threshold with the new model
+        // Hold the database lock across the entire `update_from_json` call
+        query_threshold.update_from_json(conn_lock!(context), model)?;
+    } else {
+        // Remove the current model from the threshold
+        // Hold the database lock across the entire `clear_model` call
+        query_threshold.remove_current_model(conn_lock!(context))?;
+    }
 
     // Get the updated threshold with the new model
     let query_threshold = QueryThreshold::get(conn_lock!(context), query_threshold.id)?;

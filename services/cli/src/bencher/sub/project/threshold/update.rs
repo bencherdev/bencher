@@ -1,10 +1,10 @@
-use bencher_client::types::JsonUpdateThreshold;
+use bencher_client::types::{JsonRemoveModel, JsonUpdateModel, JsonUpdateThreshold};
 use bencher_json::{ResourceId, ThresholdUuid};
 
 use super::model::Model;
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::threshold::CliThresholdUpdate,
+    parser::project::threshold::{CliModel, CliThresholdUpdate, CliUpdateModel},
     CliError,
 };
 
@@ -12,7 +12,7 @@ use crate::{
 pub struct Update {
     pub project: ResourceId,
     pub threshold: ThresholdUuid,
-    pub model: Model,
+    pub model: Option<Model>,
     pub backend: AuthBackend,
 }
 
@@ -23,13 +23,39 @@ impl TryFrom<CliThresholdUpdate> for Update {
         let CliThresholdUpdate {
             project,
             threshold,
-            model,
+            model:
+                CliUpdateModel {
+                    test,
+                    min_sample_size,
+                    max_sample_size,
+                    window,
+                    lower_boundary,
+                    upper_boundary,
+                    remove_model,
+                },
             backend,
         } = update;
+        #[allow(clippy::if_same_then_else)]
+        let model = if let Some(test) = test {
+            let cli_model = CliModel {
+                test,
+                min_sample_size,
+                max_sample_size,
+                window,
+                lower_boundary,
+                upper_boundary,
+            };
+            Some(cli_model.try_into()?)
+        } else if remove_model {
+            None
+        } else {
+            debug_assert!(remove_model, "model or remove_model must be set");
+            None
+        };
         Ok(Self {
             project,
             threshold,
-            model: model.try_into()?,
+            model,
             backend: backend.try_into()?,
         })
     }
@@ -38,22 +64,32 @@ impl TryFrom<CliThresholdUpdate> for Update {
 impl From<Update> for JsonUpdateThreshold {
     fn from(update: Update) -> Self {
         let Update { model, .. } = update;
-        let Model {
-            test,
-            min_sample_size,
-            max_sample_size,
-            window,
-            lower_boundary,
-            upper_boundary,
-        } = model;
-        #[allow(clippy::inconsistent_struct_constructor)]
-        Self {
-            test,
-            min_sample_size,
-            max_sample_size,
-            window,
-            lower_boundary,
-            upper_boundary,
+        if let Some(model) = model {
+            let Model {
+                test,
+                min_sample_size,
+                max_sample_size,
+                window,
+                lower_boundary,
+                upper_boundary,
+            } = model;
+            #[allow(clippy::inconsistent_struct_constructor)]
+            Self {
+                subtype_0: Some(JsonUpdateModel {
+                    test,
+                    min_sample_size,
+                    max_sample_size,
+                    window,
+                    lower_boundary,
+                    upper_boundary,
+                }),
+                subtype_1: None,
+            }
+        } else {
+            Self {
+                subtype_0: None,
+                subtype_1: Some(JsonRemoveModel { test: () }),
+            }
         }
     }
 }

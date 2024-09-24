@@ -16,6 +16,7 @@ import RawButton from "./RawButton";
 import HeadReplacedButton from "./HeadReplacedButton";
 import ArchivedButton from "./ArchivedButton";
 import type { PubResourceKind } from "../../../perf/util";
+import RemoveModelButton from "./RemoveModelButton";
 
 export interface Props {
 	apiUrl: string;
@@ -88,6 +89,19 @@ const DeckButton = (props: Props) => {
 			</Match>
 			<Match when={props.config?.kind === ActionButton.HEAD_REPLACED}>
 				<HeadReplacedButton data={props.data} />
+			</Match>
+			<Match when={props.config?.kind === ActionButton.REMOVE_MODEL}>
+				<RemoveModelButton
+					apiUrl={props.apiUrl}
+					user={props.user}
+					path={props.path}
+					data={props.data}
+					subtitle={props.config.subtitle}
+					redirect={props.config.path}
+					effect={props.config.effect}
+					isAllowed={isAllowed}
+					handleRefresh={props.handleRefresh}
+				/>
 			</Match>
 			<Match when={props.config?.kind === ActionButton.MODEL_REPLACED}>
 				<ModelReplacedButton data={props.data} />

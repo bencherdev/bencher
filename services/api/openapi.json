@@ -9329,10 +9329,10 @@
           },
           "thresholds": {
             "nullable": true,
-            "description": "Thresholds to use for the branch, testbed, and measures in the report. If a threshold does not exist, it will be created. If a threshold exists and the model is different, it will be updated with the new model. If a threshold array is present then any thresholds not included will be set to inactive.",
+            "description": "Thresholds to use for the branch, testbed, and measures in the report. If a threshold does not exist, it will be created. If a threshold exists and the model is different, it will be updated with the new model. If a threshold array is present then any thresholds not included will be set to inactive. If a measure name or slug is provided, the measure will be created if it does not exist.",
             "type": "object",
             "additionalProperties": {
-              "$ref": "#/components/schemas/JsonThresholdModel"
+              "$ref": "#/components/schemas/Model"
             }
           }
         },
@@ -10318,6 +10318,20 @@
           "branch",
           "created",
           "uuid"
+        ]
+      },
+      "JsonRemoveModel": {
+        "type": "object",
+        "properties": {
+          "test": {
+            "type": "string",
+            "enum": [
+              null
+            ]
+          }
+        },
+        "required": [
+          "test"
         ]
       },
       "JsonReplica": {
@@ -11448,6 +11462,67 @@
           }
         }
       },
+      "JsonUpdateModel": {
+        "type": "object",
+        "properties": {
+          "lower_boundary": {
+            "nullable": true,
+            "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
+          },
+          "max_sample_size": {
+            "nullable": true,
+            "description": "The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "min_sample_size": {
+            "nullable": true,
+            "description": "The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "test": {
+            "description": "The test used by the threshold model to calculate the baseline and boundary limits.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModelTest"
+              }
+            ]
+          },
+          "upper_boundary": {
+            "nullable": true,
+            "description": "The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
+          },
+          "window": {
+            "nullable": true,
+            "description": "The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
+          }
+        },
+        "required": [
+          "test"
+        ]
+      },
       "JsonUpdateOrganization": {
         "anyOf": [
           {
@@ -11507,64 +11582,13 @@
         }
       },
       "JsonUpdateThreshold": {
-        "type": "object",
-        "properties": {
-          "lower_boundary": {
-            "nullable": true,
-            "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Boundary"
-              }
-            ]
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonUpdateModel"
           },
-          "max_sample_size": {
-            "nullable": true,
-            "description": "The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SampleSize"
-              }
-            ]
-          },
-          "min_sample_size": {
-            "nullable": true,
-            "description": "The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SampleSize"
-              }
-            ]
-          },
-          "test": {
-            "description": "The test used by the threshold model to calculate the baseline and boundary limits.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ModelTest"
-              }
-            ]
-          },
-          "upper_boundary": {
-            "nullable": true,
-            "description": "The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Boundary"
-              }
-            ]
-          },
-          "window": {
-            "nullable": true,
-            "description": "The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Window"
-              }
-            ]
+          {
+            "$ref": "#/components/schemas/JsonRemoveModel"
           }
-        },
-        "required": [
-          "test"
         ]
       },
       "JsonUpdateToken": {
@@ -11771,6 +11795,67 @@
       "MetricUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "Model": {
+        "type": "object",
+        "properties": {
+          "lower_boundary": {
+            "nullable": true,
+            "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
+          },
+          "max_sample_size": {
+            "nullable": true,
+            "description": "The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "min_sample_size": {
+            "nullable": true,
+            "description": "The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "test": {
+            "description": "The test used by the threshold model to calculate the baseline and boundary limits.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModelTest"
+              }
+            ]
+          },
+          "upper_boundary": {
+            "nullable": true,
+            "description": "The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
+          },
+          "window": {
+            "nullable": true,
+            "description": "The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
+          }
+        },
+        "required": [
+          "test"
+        ]
       },
       "ModelTest": {
         "type": "string",

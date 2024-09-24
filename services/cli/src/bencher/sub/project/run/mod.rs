@@ -19,12 +19,14 @@ mod error;
 mod fold;
 mod format;
 pub mod runner;
+mod thresholds;
 
 use branch::Branch;
 use ci::Ci;
 pub use error::RunError;
 use format::Format;
 use runner::Runner;
+use thresholds::Thresholds;
 
 use crate::bencher::SubCmd;
 
@@ -40,6 +42,7 @@ pub struct Run {
     fold: Option<JsonFold>,
     backdate: Option<DateTime>,
     allow_failure: bool,
+    thresholds: Thresholds,
     err: bool,
     format: Format,
     log: bool,
@@ -64,6 +67,7 @@ impl TryFrom<CliRun> for Run {
             fold,
             backdate,
             allow_failure,
+            thresholds,
             err,
             output: CliRunOutput { format, quiet },
             ci,
@@ -81,6 +85,7 @@ impl TryFrom<CliRun> for Run {
             fold: fold.map(Into::into),
             backdate,
             allow_failure,
+            thresholds: thresholds.try_into().map_err(RunError::Thresholds)?,
             err,
             format: format.into(),
             log: !quiet,
@@ -183,7 +188,7 @@ impl Run {
             hash,
             start_point,
             testbed: self.testbed.clone().into(),
-            thresholds: None,
+            thresholds: self.thresholds.clone().into_inner(),
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,
