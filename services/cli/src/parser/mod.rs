@@ -14,9 +14,9 @@ use docker::{CliDown, CliLogs, CliUp};
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
-    alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, measure::CliMeasure,
-    metric::CliMetric, perf::CliPerf, plot::CliPlot, report::CliReport, run::CliRun,
-    testbed::CliTestbed, threshold::CliThreshold, CliProject,
+    alert::CliAlert, archive::CliArchive, benchmark::CliBenchmark, branch::CliBranch,
+    measure::CliMeasure, metric::CliMetric, perf::CliPerf, plot::CliPlot, report::CliReport,
+    run::CliRun, testbed::CliTestbed, threshold::CliThreshold, CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
 use user::{token::CliToken, CliUser};
@@ -32,9 +32,22 @@ pub struct CliBencher {
 
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
-    /// Server authentication & authorization
-    #[clap(subcommand)]
-    Auth(CliAuth),
+    /// Run benchmarks
+    Run(Box<CliRun>),
+    /// Generate mock benchmark data
+    Mock(CliMock),
+
+    /// Archive a dimension
+    Archive(CliArchive),
+    /// Unarchive a dimension
+    Unarchive(CliArchive),
+
+    /// Bring up Bencher Self-Hosted containers
+    Up(CliUp),
+    /// View Bencher Self-Hosted container logs
+    Logs(CliLogs),
+    /// Bring down Bencher Self-Hosted containers
+    Down(CliDown),
 
     /// Manage organization
     #[clap(subcommand, alias = "org")]
@@ -51,8 +64,6 @@ pub enum CliSub {
     #[clap(subcommand)]
     Project(CliProject),
 
-    /// Run benchmarks
-    Run(Box<CliRun>),
     /// Manage reports
     #[clap(subcommand)]
     Report(CliReport),
@@ -96,15 +107,9 @@ pub enum CliSub {
     #[clap(subcommand)]
     Server(CliServer),
 
-    /// Generate mock benchmark data
-    Mock(CliMock),
-
-    /// Bring up Bencher Self-Hosted containers
-    Up(CliUp),
-    /// View Bencher Self-Hosted container logs
-    Logs(CliLogs),
-    /// Bring down Bencher Self-Hosted containers
-    Down(CliDown),
+    /// Server authentication & authorization
+    #[clap(subcommand)]
+    Auth(CliAuth),
 }
 
 #[allow(clippy::doc_markdown)]

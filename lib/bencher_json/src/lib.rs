@@ -192,15 +192,15 @@ macro_rules! from_vec {
             }
         }
 
-        impl FromIterator<$single> for $list {
-            fn from_iter<I: IntoIterator<Item = $single>>(iter: I) -> Self {
-                Self(iter.into_iter().collect())
+        impl From<$list> for Vec<$single> {
+            fn from(list: $list) -> Self {
+                list.0
             }
         }
 
-        impl $list {
-            pub fn into_inner(self) -> Vec<$single> {
-                self.0
+        impl FromIterator<$single> for $list {
+            fn from_iter<I: IntoIterator<Item = $single>>(iter: I) -> Self {
+                Self(iter.into_iter().collect())
             }
         }
     };

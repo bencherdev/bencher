@@ -14,11 +14,22 @@ use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};
 use project::{
-    alert::Alert, benchmark::Benchmark, branch::Branch, measure::Measure, metric::Metric,
-    perf::Perf, plot::Plot, project::Project, report::Report, run::Run, testbed::Testbed,
+    alert::Alert,
+    archive::{Archive, ArchiveAction},
+    benchmark::Benchmark,
+    branch::Branch,
+    measure::Measure,
+    metric::Metric,
+    perf::Perf,
+    plot::Plot,
+    project::Project,
+    report::Report,
+    run::Run,
+    testbed::Testbed,
     threshold::Threshold,
 };
 pub use project::{
+    archive::ArchiveError,
     run::{runner::output::Output, thresholds::ThresholdsError, RunError},
     threshold::ThresholdError,
 };
@@ -28,13 +39,17 @@ use user::{token::Token, user::User};
 
 #[derive(Debug)]
 pub enum Sub {
-    Auth(Auth),
+    Run(Box<Run>),
+    Mock(Mock),
+    Archive(Archive),
+    Up(Up),
+    Logs(Logs),
+    Down(Down),
     Organization(Organization),
     Member(Member),
     #[cfg(feature = "plus")]
     Plan(organization::plan::Plan),
     Project(Project),
-    Run(Box<Run>),
     Report(Report),
     Perf(Perf),
     Plot(Plot),
@@ -48,10 +63,7 @@ pub enum Sub {
     User(User),
     Token(Token),
     Server(Server),
-    Mock(Mock),
-    Up(Up),
-    Logs(Logs),
-    Down(Down),
+    Auth(Auth),
 }
 
 impl TryFrom<CliSub> for Sub {
@@ -59,13 +71,22 @@ impl TryFrom<CliSub> for Sub {
 
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
+            CliSub::Run(run) => Self::Run(Box::new((*run).try_into()?)),
+            CliSub::Mock(mock) => Self::Mock(mock.into()),
+            CliSub::Archive(archive) => {
+                Self::Archive((archive, ArchiveAction::Archive).try_into()?)
+            },
+            CliSub::Unarchive(unarchive) => {
+                Self::Archive((unarchive, ArchiveAction::Unarchive).try_into()?)
+            },
+            CliSub::Up(up) => Self::Up(up.into()),
+            CliSub::Logs(logs) => Self::Logs(logs.into()),
+            CliSub::Down(down) => Self::Down(down.into()),
             CliSub::Organization(organization) => Self::Organization(organization.try_into()?),
             CliSub::Member(member) => Self::Member(member.try_into()?),
             #[cfg(feature = "plus")]
             CliSub::Plan(plan) => Self::Plan(plan.try_into()?),
             CliSub::Project(project) => Self::Project(project.try_into()?),
-            CliSub::Run(run) => Self::Run(Box::new((*run).try_into()?)),
             CliSub::Report(report) => Self::Report(report.try_into()?),
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
             CliSub::Plot(plot) => Self::Plot(plot.try_into()?),
@@ -79,10 +100,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::User(user) => Self::User(user.try_into()?),
             CliSub::Token(token) => Self::Token(token.try_into()?),
             CliSub::Server(server) => Self::Server(server.try_into()?),
-            CliSub::Mock(mock) => Self::Mock(mock.into()),
-            CliSub::Up(up) => Self::Up(up.into()),
-            CliSub::Logs(logs) => Self::Logs(logs.into()),
-            CliSub::Down(down) => Self::Down(down.into()),
+            CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
         })
     }
 }
@@ -90,13 +108,17 @@ impl TryFrom<CliSub> for Sub {
 impl SubCmd for Sub {
     async fn exec(&self) -> Result<(), CliError> {
         match self {
-            Self::Auth(auth) => auth.exec().await,
+            Self::Run(run) => run.exec().await,
+            Self::Mock(mock) => mock.exec().await,
+            Self::Archive(archive) => archive.exec().await,
+            Self::Up(up) => up.exec().await,
+            Self::Logs(logs) => logs.exec().await,
+            Self::Down(down) => down.exec().await,
             Self::Organization(organization) => organization.exec().await,
             Self::Member(member) => member.exec().await,
             #[cfg(feature = "plus")]
             Self::Plan(plan) => plan.exec().await,
             Self::Project(project) => project.exec().await,
-            Self::Run(run) => run.exec().await,
             Self::Report(report) => report.exec().await,
             Self::Perf(perf) => perf.exec().await,
             Self::Plot(plot) => plot.exec().await,
@@ -110,10 +132,7 @@ impl SubCmd for Sub {
             Self::User(user) => user.exec().await,
             Self::Token(token) => token.exec().await,
             Self::Server(server) => server.exec().await,
-            Self::Mock(mock) => mock.exec().await,
-            Self::Up(up) => up.exec().await,
-            Self::Logs(logs) => logs.exec().await,
-            Self::Down(down) => down.exec().await,
+            Self::Auth(auth) => auth.exec().await,
         }
     }
 }

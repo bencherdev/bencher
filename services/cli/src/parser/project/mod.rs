@@ -6,6 +6,7 @@ use crate::parser::CliBackend;
 use super::CliPagination;
 
 pub mod alert;
+pub mod archive;
 pub mod benchmark;
 pub mod branch;
 pub mod measure;
