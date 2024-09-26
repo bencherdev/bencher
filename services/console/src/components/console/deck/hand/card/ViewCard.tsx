@@ -304,7 +304,10 @@ const GitHashCard = (props: Props) => {
 		const url = project()?.url;
 		if (url && isGitHubRepoUrl(url)) {
 			return (
-				<a href={`${url.endsWith("/") ? url : `${url}/`}commit/${props.value}`}>
+				<a
+					href={`${url.endsWith("/") ? url : `${url}/`}commit/${props.value}`}
+					target="_top"
+				>
 					{props.value as string}
 				</a>
 			);

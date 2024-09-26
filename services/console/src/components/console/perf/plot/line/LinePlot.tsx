@@ -285,6 +285,10 @@ const LinePlot = (props: Props) => {
 					title: (datum) =>
 						to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
 					href: (datum) => dotUrl(project_slug, props.isConsole, datum),
+					// TODO Set these to open in a fresh page
+					// This will require setting the `back` query parameter to the plot page
+					// with the proper URL fragment for the specific plot
+					// target: "_top",
 				}),
 			);
 
@@ -558,6 +562,10 @@ const warning_image = (
 		title: (_datum) =>
 			"Boundary Limit was not calculated.\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)\nClick to view Threshold",
 		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
+		// TODO Set these to open in a fresh page
+		// This will require setting the `back` query parameter to the plot page
+		// with the proper URL fragment for the specific plot
+		// target: "_top",
 	};
 };
 
@@ -593,7 +601,10 @@ const alert_image = (
 			`${resourcePath(isConsole)}/${project_slug}/alerts/${
 				datum.alert?.uuid
 			}?${BACK_PARAM}=${encodePath()}`,
-		// target: "_blank",
+		// TODO Set these to open in a fresh page
+		// This will require setting the `back` query parameter to the plot page
+		// with the proper URL fragment for the specific plot
+		// target: "_top",
 	};
 };
 
