@@ -28,7 +28,7 @@ const ModelReplacedButton = (props: Props) => {
 										<i class="fas fa-walking fa-stack-1x" />
 										<i class="fas fa-ban fa-stack-2x" />
 									</span>
-									<span> View Current Threshold</span>
+									<span>&nbsp;View Current Threshold</span>
 								</a>
 							</div>
 						</div>

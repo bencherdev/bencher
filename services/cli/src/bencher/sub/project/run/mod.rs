@@ -19,7 +19,7 @@ mod error;
 mod fold;
 mod format;
 pub mod runner;
-mod thresholds;
+pub mod thresholds;
 
 use branch::Branch;
 use ci::Ci;
@@ -188,7 +188,7 @@ impl Run {
             hash,
             start_point,
             testbed: self.testbed.clone().into(),
-            thresholds: self.thresholds.clone().into_inner(),
+            thresholds: self.thresholds.clone().into(),
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,

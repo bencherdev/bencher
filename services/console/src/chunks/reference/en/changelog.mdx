@@ -1,6 +1,7 @@
 ## Pending `v0.4.21`
 - **BREAKING CHANGE** Update the Branch JSON to include the concept of a `HEAD` which now contains the Start Point
 - Changing a branch's start point will now update the branch `HEAD` instead of creating a new branch and archiving the old one
+- Introduce a `max_versions` for Branch Start Points, default to `255`
 - Thresholds are no longer cloned based off of a branch start point
 - Add Thresholds to Report JSON
 - Add `--threshold-measure`, `--threshold-test`, `--threshold-min-sample-size`, `threshold-max-sample-size`, `threshold-window`, `threshold-lower-boundary`, `threshold-upper-boundary`, and `thresholds-reset` to `bencher run`

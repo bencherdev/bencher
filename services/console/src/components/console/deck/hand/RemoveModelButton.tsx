@@ -64,10 +64,11 @@ const RemoveModelButton = (props: Props) => {
 						sendRemove();
 					}}
 				>
-					<span class="icon">
-						<i class="fas fa-th" />
+					<span class="fa-stack fa-2x" style="font-size: 0.75em;">
+						<i class="fas fa-walking fa-stack-1x" />
+						<i class="fas fa-ban fa-stack-2x" />
 					</span>
-					<span>Remove Model</span>
+					<span>&nbsp;Reset Threshold</span>
 				</button>
 			</div>
 		</Show>

@@ -1,7 +1,7 @@
 use bencher_json::{DateTime, GitHash, NameId, ReportUuid, ResourceId};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use super::run::{CliRunAdapter, CliRunAverage, CliRunFold};
+use super::run::{CliRunAdapter, CliRunAverage, CliRunFold, CliRunThresholds};
 use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
@@ -9,9 +9,9 @@ pub enum CliReport {
     /// List reports
     #[clap(alias = "ls")]
     List(CliReportList),
-    /// Create a report (alias to `bencher run`)
+    /// Create a report
     #[clap(alias = "add")]
-    Create(CliReportCreate),
+    Create(Box<CliReportCreate>),
     /// View a report
     #[clap(alias = "get")]
     View(CliReportView),
@@ -78,6 +78,9 @@ pub struct CliReportCreate {
     /// Testbed name, slug, or UUID
     #[clap(long)]
     pub testbed: NameId,
+
+    #[clap(flatten)]
+    pub thresholds: CliRunThresholds,
 
     /// Start time (ISO 8601 formatted string)
     #[clap(long)]

@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    project::threshold::{JsonThreshold, JsonThresholdModel},
-    DateTime, Model, ModelUuid, NameId, ThresholdUuid,
+    project::{
+        report::JsonReportThresholds,
+        threshold::{JsonThreshold, JsonThresholdModel},
+    },
+    DateTime, Model, ModelUuid, ThresholdUuid,
 };
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -349,12 +352,21 @@ impl InsertThreshold {
         project_id: ProjectId,
         branch_id: BranchId,
         testbed_id: TestbedId,
-        thresholds: Option<HashMap<NameId, Model>>,
+        json_thresholds: Option<JsonReportThresholds>,
     ) -> Result<(), HttpError> {
-        let Some(thresholds) = thresholds else {
+        let Some(json_thresholds) = json_thresholds else {
             slog::debug!(log, "No thresholds in report");
             return Ok(());
         };
+        let no_models = json_thresholds
+            .models
+            .as_ref()
+            .map_or(true, HashMap::is_empty);
+        let reset_thresholds = json_thresholds.reset.unwrap_or_default();
+        if no_models && !reset_thresholds {
+            slog::debug!(log, "No threshold models or reset in report");
+            return Ok(());
+        }
 
         // Get all thresholds for the report branch and testbed
         let mut current_thresholds = schema::threshold::table
@@ -368,37 +380,42 @@ impl InsertThreshold {
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
 
-        // Iterate over the thresholds in the report.
+        // Iterate over the threshold models in the report.
         // If the threshold does not exist, create it.
-        // If it does exist, update it.
-        for (measure, model) in thresholds {
-            let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
-            slog::debug!(log, "Processing threshold for measure {measure_id:?}");
-            if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
-                slog::debug!(log, "Updating threshold for measure {measure_id:?}");
-                current_threshold
-                    .update_model_if_changed(context, model)
-                    .await?;
-                slog::debug!(log, "Updated threshold for measure {measure_id:?}");
-            } else {
-                slog::debug!(log, "Creating threshold for measure {measure_id:?}");
-                Self::from_json(
-                    conn_lock!(context),
-                    project_id,
-                    branch_id,
-                    testbed_id,
-                    measure_id,
-                    model,
-                )?;
-                slog::debug!(log, "Created threshold for measure {measure_id:?}");
+        // If it does exist and has changed, update it.
+        if let Some(models) = json_thresholds.models {
+            for (measure, model) in models {
+                let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
+                slog::debug!(log, "Processing threshold for measure {measure_id:?}");
+                if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
+                    slog::debug!(log, "Updating threshold for measure {measure_id:?}");
+                    current_threshold
+                        .update_model_if_changed(context, model)
+                        .await?;
+                    slog::debug!(log, "Updated threshold for measure {measure_id:?}");
+                } else {
+                    slog::debug!(log, "Creating threshold for measure {measure_id:?}");
+                    Self::from_json(
+                        conn_lock!(context),
+                        project_id,
+                        branch_id,
+                        testbed_id,
+                        measure_id,
+                        model,
+                    )?;
+                    slog::debug!(log, "Created threshold for measure {measure_id:?}");
+                }
             }
         }
 
         slog::debug!(log, "Remaining thresholds: {current_thresholds:?}");
-        // Remove the models from the thresholds that were not in the report
-        for (_, current_threshold) in current_thresholds {
-            current_threshold.remove_current_model(conn_lock!(context))?;
-            slog::debug!(log, "Removed model from threshold {}", current_threshold.id);
+
+        // If the reset flag is set, remove any thresholds that were not in the report
+        if reset_thresholds {
+            for (_, current_threshold) in current_thresholds {
+                current_threshold.remove_current_model(conn_lock!(context))?;
+                slog::debug!(log, "Removed model from threshold {}", current_threshold.id);
+            }
         }
 
         Ok(())

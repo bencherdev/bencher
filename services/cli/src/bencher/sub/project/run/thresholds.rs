@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bencher_client::types::JsonReportThresholds;
 use bencher_json::{Boundary, NameId, SampleSize, Window};
 
 use crate::{
@@ -15,7 +16,10 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Thresholds(Option<HashMap<String, bencher_client::types::Model>>);
+pub struct Thresholds {
+    models: Option<HashMap<String, bencher_client::types::Model>>,
+    reset: bool,
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ThresholdsError {
@@ -54,12 +58,16 @@ impl TryFrom<CliRunThresholds> for Thresholds {
             threshold_upper_boundary,
             thresholds_reset,
         } = thresholds;
-        // If thresholds are reset, return an empty thresholds object.
-        if thresholds_reset {
-            return Ok(Self(Some(HashMap::new())));
+        // If thresholds are reset, return an empty models object
+        // and set the `reset` field to true
+        if threshold_measure.is_empty() {
+            return Ok(Self {
+                models: None,
+                reset: thresholds_reset,
+            });
         }
 
-        let mut thresholds_map = HashMap::with_capacity(threshold_measure.len());
+        let mut models_map = HashMap::with_capacity(threshold_measure.len());
 
         let mut tests = threshold_test.into_iter();
         let mut min_sample_sizes = threshold_min_sample_size.into_iter();
@@ -90,7 +98,7 @@ impl TryFrom<CliRunThresholds> for Thresholds {
                 err,
             })?;
 
-            thresholds_map.insert(measure.into(), model.into());
+            models_map.insert(measure.into(), model.into());
         }
 
         let remaining_tests = tests.collect::<Vec<_>>();
@@ -126,12 +134,23 @@ impl TryFrom<CliRunThresholds> for Thresholds {
             ));
         }
 
-        Ok(Self(Some(thresholds_map)))
+        Ok(Self {
+            models: Some(models_map),
+            reset: thresholds_reset,
+        })
     }
 }
 
-impl Thresholds {
-    pub fn into_inner(self) -> Option<HashMap<String, bencher_client::types::Model>> {
-        self.0
+impl From<Thresholds> for Option<JsonReportThresholds> {
+    fn from(thresholds: Thresholds) -> Self {
+        let Thresholds { models, reset } = thresholds;
+        if models.is_none() && !reset {
+            None
+        } else {
+            Some(JsonReportThresholds {
+                models,
+                reset: reset.then_some(reset),
+            })
+        }
     }
 }

@@ -5,7 +5,10 @@ use bencher_client::types::{
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::AuthBackend, sub::SubCmd},
+    bencher::{
+        backend::AuthBackend,
+        sub::{project::run::thresholds::Thresholds, SubCmd},
+    },
     parser::project::report::{CliReportCreate, CliReportStartPoint},
     CliError,
 };
@@ -17,6 +20,7 @@ pub struct Create {
     pub hash: Option<GitHash>,
     pub start_point: Option<JsonReportStartPoint>,
     pub testbed: NameId,
+    pub thresholds: Thresholds,
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub results: Vec<String>,
@@ -36,6 +40,7 @@ impl TryFrom<CliReportCreate> for Create {
             hash,
             start_point,
             testbed,
+            thresholds,
             start_time,
             end_time,
             results,
@@ -63,6 +68,7 @@ impl TryFrom<CliReportCreate> for Create {
             hash: hash.map(Into::into),
             start_point: start_point.map(Into::into),
             testbed: testbed.into(),
+            thresholds: thresholds.try_into().map_err(CliError::Thresholds)?,
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,

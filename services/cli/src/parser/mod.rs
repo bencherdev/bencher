@@ -99,11 +99,11 @@ pub enum CliSub {
     /// Generate mock benchmark data
     Mock(CliMock),
 
-    /// Run `docker compose up` for Bencher Self-Hosted
+    /// Bring up Bencher Self-Hosted containers
     Up(CliUp),
-    /// Run `docker compose logs` for Bencher Self-Hosted
+    /// View Bencher Self-Hosted container logs
     Logs(CliLogs),
-    /// Run `docker compose down` for Bencher Self-Hosted
+    /// Bring down Bencher Self-Hosted containers
     Down(CliDown),
 }
 

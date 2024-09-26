@@ -19,7 +19,7 @@ use project::{
     threshold::Threshold,
 };
 pub use project::{
-    run::{runner::output::Output, RunError},
+    run::{runner::output::Output, thresholds::ThresholdsError, RunError},
     threshold::ThresholdError,
 };
 pub use sub_cmd::SubCmd;

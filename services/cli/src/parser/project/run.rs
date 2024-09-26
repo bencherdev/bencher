@@ -168,7 +168,7 @@ pub struct CliRunThresholds {
     pub threshold_upper_boundary: Vec<ElidedOption<Boundary>>,
 
     /// Reset all Thresholds
-    #[clap(long, conflicts_with = "threshold_measure")]
+    #[clap(long)]
     pub thresholds_reset: bool,
 }
 

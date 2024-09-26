@@ -41,9 +41,8 @@ pub struct JsonNewReport {
     /// Thresholds to use for the branch, testbed, and measures in the report.
     /// If a threshold does not exist, it will be created.
     /// If a threshold exists and the model is different, it will be updated with the new model.
-    /// If a threshold array is present then any thresholds not included will be set to inactive.
     /// If a measure name or slug is provided, the measure will be created if it does not exist.
-    pub thresholds: Option<HashMap<NameId, Model>>,
+    pub thresholds: Option<JsonReportThresholds>,
     /// Start time for the report. Must be an ISO 8601 formatted string.
     pub start_time: DateTime,
     /// End time for the report. Must be an ISO 8601 formatted string.
@@ -89,6 +88,19 @@ impl JsonReportStartPoint {
             max_versions: *max_versions,
         })
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportThresholds {
+    /// Map of measure UUID, slug, or name to the threshold model to use.
+    /// If a measure name or slug is provided, the measure will be created if it does not exist.
+    pub models: Option<HashMap<NameId, Model>>,
+    /// Reset all thresholds for the branch and testbed.
+    /// Any models present in the `models` field will still be updated accordingly.
+    /// If a threshold already exists and is not present in the `models` field,
+    /// its current model will be removed.
+    pub reset: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]

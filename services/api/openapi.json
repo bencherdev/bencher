@@ -9329,11 +9329,12 @@
           },
           "thresholds": {
             "nullable": true,
-            "description": "Thresholds to use for the branch, testbed, and measures in the report. If a threshold does not exist, it will be created. If a threshold exists and the model is different, it will be updated with the new model. If a threshold array is present then any thresholds not included will be set to inactive. If a measure name or slug is provided, the measure will be created if it does not exist.",
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/Model"
-            }
+            "description": "Thresholds to use for the branch, testbed, and measures in the report. If a threshold does not exist, it will be created. If a threshold exists and the model is different, it will be updated with the new model. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportThresholds"
+              }
+            ]
           }
         },
         "required": [
@@ -10766,6 +10767,24 @@
           "reset": {
             "nullable": true,
             "description": "Reset the branch to an empty state. If the branch already exists, a new empty branch will be created. If a start point is provided, the new branch will begin at that start point.",
+            "type": "boolean"
+          }
+        }
+      },
+      "JsonReportThresholds": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "nullable": true,
+            "description": "Map of measure UUID, slug, or name to the threshold model to use. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Model"
+            }
+          },
+          "reset": {
+            "nullable": true,
+            "description": "Reset all thresholds for the branch and testbed. Any models present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed.",
             "type": "boolean"
           }
         }
