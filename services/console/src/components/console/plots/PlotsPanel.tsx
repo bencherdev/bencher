@@ -77,11 +77,12 @@ const PlotsPanel = (props: Props) => {
 		project_slug: string;
 		token: string;
 	}) => {
+		console.log("getProject", fetcher);
 		const EMPTY_OBJECT = {};
 		if (!fetcher.bencher_valid) {
 			return EMPTY_OBJECT;
 		}
-		if (!validJwt(fetcher.token)) {
+		if (fetcher.token && !validJwt(fetcher.token)) {
 			return EMPTY_OBJECT;
 		}
 		const path = `/v0/projects/${fetcher.project_slug}`;
@@ -124,7 +125,7 @@ const PlotsPanel = (props: Props) => {
 		if (!fetcher.bencher_valid) {
 			return EMPTY_ARRAY;
 		}
-		if (!validJwt(fetcher.token)) {
+		if (fetcher.token && !validJwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
 		const searchParams = new URLSearchParams();
