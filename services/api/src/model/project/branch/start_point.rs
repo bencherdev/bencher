@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::{branch::START_POINT_MAX_VERSIONS, report::JsonReportStartPoint},
+    project::branch::{JsonUpdateStartPoint, START_POINT_MAX_VERSIONS},
     GitHash, JsonNewStartPoint,
 };
 use dropshot::HttpError;
@@ -18,6 +18,7 @@ pub struct StartPoint {
     pub reference_version: QueryReferenceVersion,
     pub version: QueryVersion,
     pub max_versions: Option<u32>,
+    pub clone_thresholds: Option<bool>,
 }
 
 impl StartPoint {
@@ -26,6 +27,7 @@ impl StartPoint {
         query_branch: QueryBranch,
         reference_version: QueryReferenceVersion,
         max_versions: Option<u32>,
+        clone_thresholds: Option<bool>,
     ) -> Result<Self, HttpError> {
         let version = QueryVersion::get(conn_lock!(context), reference_version.version_id)?;
         Ok(Self {
@@ -33,6 +35,7 @@ impl StartPoint {
             reference_version,
             version,
             max_versions,
+            clone_thresholds,
         })
     }
 
@@ -42,14 +45,22 @@ impl StartPoint {
         query_branch: QueryBranch,
         hash: Option<&GitHash>,
         max_versions: Option<u32>,
+        clone_thresholds: Option<bool>,
     ) -> Result<Self, HttpError> {
         let reference_version =
             QueryReferenceVersion::get_latest_for_branch(context, project_id, &query_branch, hash)
                 .await?;
-        Self::new(context, query_branch, reference_version, max_versions).await
+        Self::new(
+            context,
+            query_branch,
+            reference_version,
+            max_versions,
+            clone_thresholds,
+        )
+        .await
     }
 
-    pub async fn from_json(
+    pub async fn from_new_json(
         context: &ApiContext,
         project_id: ProjectId,
         json: JsonNewStartPoint,
@@ -58,6 +69,7 @@ impl StartPoint {
             branch,
             hash,
             max_versions,
+            clone_thresholds,
         } = json;
         let query_branch = QueryBranch::from_name_id(conn_lock!(context), project_id, &branch)?;
         Self::latest_for_branch(
@@ -66,20 +78,22 @@ impl StartPoint {
             query_branch,
             hash.as_ref(),
             max_versions,
+            clone_thresholds,
         )
         .await
     }
 
-    pub async fn from_report_json(
+    pub async fn from_update_json(
         context: &ApiContext,
         project_id: ProjectId,
-        json: Option<&JsonReportStartPoint>,
+        json: Option<&JsonUpdateStartPoint>,
     ) -> Result<Option<Self>, HttpError> {
         // Get the new start point, if there is a branch specified.
-        let Some(JsonReportStartPoint {
+        let Some(JsonUpdateStartPoint {
             branch: Some(branch),
             hash,
             max_versions,
+            clone_thresholds,
             reset: _,
         }) = json
         else {
@@ -97,6 +111,7 @@ impl StartPoint {
             query_branch,
             hash.as_ref(),
             *max_versions,
+            *clone_thresholds,
         )
         .await
         .map(Some)

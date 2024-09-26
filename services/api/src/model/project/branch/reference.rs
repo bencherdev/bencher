@@ -21,7 +21,10 @@ use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
-    model::project::{threshold::alert::QueryAlert, ProjectId},
+    model::project::{
+        threshold::{alert::QueryAlert, InsertThreshold},
+        ProjectId,
+    },
     schema::{self, reference as reference_table},
     util::fn_get::fn_get,
 };
@@ -133,32 +136,35 @@ impl QueryReference {
 
     pub async fn clone_start_point(
         &self,
+        log: &Logger,
         context: &ApiContext,
+        query_branch: &QueryBranch,
         branch_start_point: Option<&StartPoint>,
     ) -> Result<(), HttpError> {
-        let branch_start_point = match (self.start_point_id, branch_start_point) {
+        match (self.start_point_id, branch_start_point) {
             (Some(start_point_id), Some(branch_start_point)) => {
                 debug_assert_eq!(
                     start_point_id, branch_start_point.reference_version.id,
                     "Branch start point mismatch"
                 );
-                branch_start_point
+                self.clone_versions(log, context, branch_start_point)
+                    .await?;
+                InsertThreshold::from_start_point(log, context, query_branch, branch_start_point)
+                    .await
             },
-            (None, None) => return Ok(()),
-            _ => {
-                return Err(issue_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Branch start point mismatch",
-                    "Failed to match branch start point for reference",
-                    format!("{branch_start_point:?}\n{self:?}"),
-                ));
-            },
-        };
-        self.clone_versions(context, branch_start_point).await
+            (None, None) => Ok(()),
+            _ => Err(issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Branch start point mismatch",
+                "Failed to match branch start point for reference",
+                format!("{branch_start_point:?}\n{self:?}"),
+            )),
+        }
     }
 
     async fn clone_versions(
         &self,
+        log: &Logger,
         context: &ApiContext,
         branch_start_point: &StartPoint,
     ) -> Result<(), HttpError> {
@@ -166,6 +172,8 @@ impl QueryReference {
             conn_lock!(context),
             branch_start_point.reference_version.version_id,
         )?;
+        slog::debug!(log, "Got start point version: {start_point_version:?}");
+
         // Get all prior versions (version number less than or equal to) for the start point reference
         let version_ids = schema::reference_version::table
             .inner_join(schema::version::table)
@@ -182,6 +190,7 @@ impl QueryReference {
                 ReferenceVersion,
                 (branch_start_point, start_point_version)
             ))?;
+        slog::debug!(log, "Got version ids: {version_ids:?}");
 
         // Add new reference to all start point reference versions
         for version_id in version_ids {
@@ -196,8 +205,13 @@ impl QueryReference {
                     ReferenceVersion,
                     insert_reference_version
                 ))?;
+            slog::debug!(
+                log,
+                "Inserted reference version: {insert_reference_version:?}"
+            );
         }
 
+        slog::debug!(log, "Cloned all reference versions");
         Ok(())
     }
 }
@@ -289,7 +303,7 @@ impl InsertReference {
 
         // Clone data from the start point for the head reference
         query_reference
-            .clone_start_point(context, branch_start_point)
+            .clone_start_point(log, context, &query_branch, branch_start_point)
             .await?;
         slog::debug!(
             log,

@@ -247,13 +247,24 @@ where
     #[error(
         "{parent_resource} ID ({parent_id}) mismatch for {resource} parent ID ({expected_parent_id})"
     )]
-    Mismatch {
+    Parentage {
         parent_resource: BencherResource,
         parent_id: Id,
         resource: BencherResource,
         expected_parent_id: Id,
     },
+    #[error(
+        "{parent_resource} ID is not the same for {left_resource} ID ({left_parent_id}) and {right_resource} ({right_parent_id})"
+    )]
+    Siblings {
+        parent_resource: BencherResource,
+        left_resource: BencherResource,
+        left_parent_id: Id,
+        right_resource: BencherResource,
+        right_parent_id: Id,
+    },
 }
+
 pub fn assert_parentage<Id>(
     parent_resource: BencherResource,
     parent_id: Id,
@@ -263,11 +274,34 @@ pub fn assert_parentage<Id>(
     Id: PartialEq + fmt::Debug + fmt::Display,
 {
     if parent_id != expected_parent_id {
-        let err = ParentageError::Mismatch {
+        let err = ParentageError::Parentage {
             parent_resource,
             parent_id,
             resource,
             expected_parent_id,
+        };
+        debug_assert!(false, "{err}");
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(&err);
+    }
+}
+
+pub fn assert_siblings<Id>(
+    parent_resource: BencherResource,
+    left_resource: BencherResource,
+    left_parent_id: Id,
+    right_resource: BencherResource,
+    right_parent_id: Id,
+) where
+    Id: PartialEq + fmt::Debug + fmt::Display,
+{
+    if left_parent_id != right_parent_id {
+        let err = ParentageError::Siblings {
+            parent_resource,
+            left_resource,
+            left_parent_id,
+            right_resource,
+            right_parent_id,
         };
         debug_assert!(false, "{err}");
         #[cfg(feature = "sentry")]

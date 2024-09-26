@@ -89,25 +89,29 @@ pub struct CliRunBranch {
     /// If `branch` already exists and the start point is different, a new branch will be created.
     /// Specifying more than one start point is now deprecated.
     /// Only the first start point will be used.
-    #[clap(long, alias = "else-if-branch")]
+    #[clap(long, alias = "else-if-branch", alias = "branch-start-point")]
     // TODO move this to Option<String> in due time
-    pub branch_start_point: Vec<String>,
+    pub start_point: Vec<String>,
 
     /// Use the specified full `git` hash as the start point for `branch` (requires: `--branch-start-point`).
     /// If `branch` already exists and the start point hash is different, a new branch will be created.
-    #[clap(long, requires = "branch_start_point")]
-    pub branch_start_point_hash: Option<GitHash>,
+    #[clap(long, alias = "branch-start-point-hash", requires = "start_point")]
+    pub start_point_hash: Option<GitHash>,
 
     /// The maximum number of historical branch versions to include (requires: `--branch-start-point`).
     /// Versions beyond this number will be omitted.
-    #[clap(long, requires = "branch_start_point", default_value = "255")]
-    pub branch_start_point_max_versions: u32,
+    #[clap(long, requires = "start_point", default_value = "255")]
+    pub start_point_max_versions: u32,
 
-    /// Reset `branch` to an empty state.
+    /// Clone thresholds from the start point branch (requires: `--branch-start-point`).
+    #[clap(long, requires = "start_point")]
+    pub start_point_clone_thresholds: bool,
+
+    /// Reset `branch` start point to an empty state.
     /// If `branch` already exists, a new empty branch will be created.
     /// If a start point is provided, the new branch will begin at that start point.
-    #[clap(long)]
-    pub branch_reset: bool,
+    #[clap(long, alias = "branch-reset")]
+    pub start_point_reset: bool,
 
     /// Deprecated: Do not use. This will soon be removed.
     #[clap(long, hide = true, alias = "else-branch", alias = "endif-branch")]

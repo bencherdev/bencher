@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::{branch::JsonUpdateBranch, report::JsonReportStartPoint},
+    project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
     BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
@@ -90,10 +90,10 @@ impl QueryBranch {
         context: &ApiContext,
         project_id: ProjectId,
         branch: &NameId,
-        report_start_point: Option<&JsonReportStartPoint>,
+        start_point: Option<&JsonUpdateStartPoint>,
     ) -> Result<(BranchId, ReferenceId), HttpError> {
         let (query_branch, query_reference) =
-            Self::get_or_create_inner(log, context, project_id, branch, report_start_point).await?;
+            Self::get_or_create_inner(log, context, project_id, branch, start_point).await?;
 
         if query_branch.archived.is_some() {
             let update_branch = UpdateBranch::unarchive();
@@ -111,14 +111,14 @@ impl QueryBranch {
         context: &ApiContext,
         project_id: ProjectId,
         branch: &NameId,
-        report_start_point: Option<&JsonReportStartPoint>,
+        start_point: Option<&JsonUpdateStartPoint>,
     ) -> Result<(Self, QueryReference), HttpError> {
         let query_branch = Self::from_name_id(conn_lock!(context), project_id, branch);
 
         let http_error = match query_branch {
             Ok(branch) => {
                 return branch
-                    .with_start_point(log, context, project_id, report_start_point)
+                    .update_start_point_if_changed(log, context, project_id, start_point)
                     .await;
             },
             Err(e) => e,
@@ -132,34 +132,34 @@ impl QueryBranch {
             NameIdKind::Slug(slug) => JsonNewBranch {
                 name: slug.clone().into(),
                 slug: Some(slug),
-                start_point: report_start_point.and_then(JsonReportStartPoint::to_new_start_point),
+                start_point: start_point.cloned().and_then(Into::into),
             },
             NameIdKind::Name(name) => JsonNewBranch {
                 name,
                 slug: None,
-                start_point: report_start_point.and_then(JsonReportStartPoint::to_new_start_point),
+                start_point: start_point.cloned().and_then(Into::into),
             },
         };
         InsertBranch::from_json(log, context, project_id, branch).await
     }
 
-    async fn with_start_point(
+    pub async fn update_start_point_if_changed(
         self,
         log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
-        report_start_point: Option<&JsonReportStartPoint>,
+        start_point: Option<&JsonUpdateStartPoint>,
     ) -> Result<(Self, QueryReference), HttpError> {
         // Get the current start point, if one exists.
         let current_start_point = self.get_start_point(context).await?;
         // Get the new start point, if there is a branch specified.
         let new_start_point =
-            StartPoint::from_report_json(context, project_id, report_start_point).await?;
+            StartPoint::from_update_json(context, project_id, start_point).await?;
 
         // If reset is set then the branch needs to be reset.
-        if let Some(JsonReportStartPoint {
+        if let Some(JsonUpdateStartPoint {
             reset: Some(true), ..
-        }) = report_start_point
+        }) = start_point
         {
             return InsertReference::for_branch(log, context, self, new_start_point.as_ref()).await;
         }
@@ -250,6 +250,7 @@ impl QueryBranch {
             context,
             start_point_branch,
             start_point_reference_version,
+            None,
             None,
         )
         .await
@@ -400,7 +401,7 @@ impl InsertBranch {
         let branch_start_point = if let Some(start_point) = start_point {
             // It is okay if the start point does not exist.
             // This prevents a race condition when creating both the branch and start point in CI.
-            StartPoint::from_json(context, project_id, start_point)
+            StartPoint::from_new_json(context, project_id, start_point)
                 .await
                 .ok()
         } else {
@@ -436,6 +437,7 @@ impl From<JsonUpdateBranch> for UpdateBranch {
         let JsonUpdateBranch {
             name,
             slug,
+            start_point: _,
             archived,
         } = update;
         let modified = DateTime::now();
@@ -454,6 +456,7 @@ impl UpdateBranch {
         JsonUpdateBranch {
             name: None,
             slug: None,
+            start_point: None,
             archived: Some(false),
         }
         .into()

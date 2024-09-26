@@ -289,7 +289,7 @@ async fn post_inner(
         QueryMeasure::from_name_id(conn_lock!(context), project_id, &json_threshold.measure)?.id;
 
     // Create the new threshold
-    let threshold_id = InsertThreshold::from_json(
+    let threshold_id = InsertThreshold::from_model(
         conn_lock!(context),
         project_id,
         branch_id,
@@ -458,15 +458,10 @@ async fn put_inner(
     let query_threshold =
         QueryThreshold::get_with_uuid(conn_lock!(context), &query_project, path_params.threshold)?;
 
-    if let Some(model) = model {
-        // Update the current threshold with the new model
-        // Hold the database lock across the entire `update_from_json` call
-        query_threshold.update_from_json(conn_lock!(context), model)?;
-    } else {
-        // Remove the current model from the threshold
-        // Hold the database lock across the entire `clear_model` call
-        query_threshold.remove_current_model(conn_lock!(context))?;
-    }
+    // Update the current threshold with the new model, if changed
+    query_threshold
+        .update_model_if_changed(context, model)
+        .await?;
 
     // Get the updated threshold with the new model
     let query_threshold = QueryThreshold::get(conn_lock!(context), query_threshold.id)?;

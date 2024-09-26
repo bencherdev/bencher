@@ -129,7 +129,7 @@ pub struct InsertModel {
 }
 
 impl InsertModel {
-    pub fn from_json(threshold_id: ThresholdId, model: Model) -> Self {
+    pub fn new(threshold_id: ThresholdId, model: Model) -> Self {
         let Model {
             test,
             min_sample_size,

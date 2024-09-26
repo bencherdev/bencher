@@ -69,6 +69,9 @@ pub struct JsonNewStartPoint {
     /// Versions beyond this number will be omitted.
     /// Default is 255.
     pub max_versions: Option<u32>,
+    /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
+    /// This can be useful for pull request branches that should have the same thresholds as their target branch.
+    pub clone_thresholds: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,6 +109,51 @@ pub struct JsonUpdateBranch {
     /// The preferred new slug for the branch.
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
+    /// The new start point for the branch.
+    pub start_point: Option<JsonUpdateStartPoint>,
     /// Set whether the branch is archived.
     pub archived: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateStartPoint {
+    /// The UUID, slug, or name of the branch to use as the start point.
+    pub branch: Option<NameId>,
+    /// The full git hash of the branch to use as the start point.
+    /// Requires the `branch` field to be set.
+    pub hash: Option<GitHash>,
+    /// The maximum number of historical branch versions to include.
+    /// Versions beyond this number will be omitted.
+    /// Requires the `branch` field to be set.
+    /// Default is 255 if the `branch` field is set.
+    pub max_versions: Option<u32>,
+    /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
+    /// This can be useful for pull request branches that should have the same thresholds as their target branch.
+    /// Requires the `branch` field to be set.
+    pub clone_thresholds: Option<bool>,
+    /// Reset the branch to an empty state.
+    /// If the branch already exists, a new empty branch will be created.
+    /// If a start point is provided, the new branch will begin at that start point.
+    pub reset: Option<bool>,
+}
+
+impl From<JsonUpdateStartPoint> for Option<JsonNewStartPoint> {
+    fn from(start_point: JsonUpdateStartPoint) -> Self {
+        let JsonUpdateStartPoint {
+            branch,
+            hash,
+            max_versions,
+            clone_thresholds,
+            // We don't care about the reset field since it is a new start point anyway.
+            reset: _,
+        } = start_point;
+        Some(JsonNewStartPoint {
+            // The branch field is required for a new start point.
+            branch: branch?,
+            hash,
+            max_versions,
+            clone_thresholds,
+        })
+    }
 }

@@ -114,6 +114,7 @@ impl Dimension {
         let update = &JsonUpdateBranch {
             name: None,
             slug: None,
+            start_point: None,
             archived: Some(action.into()),
         };
         backend

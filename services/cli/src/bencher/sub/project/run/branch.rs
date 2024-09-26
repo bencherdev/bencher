@@ -15,6 +15,7 @@ struct StartPoint {
     branch: Option<NameId>,
     hash: Option<GitHash>,
     max_versions: u32,
+    clone_thresholds: bool,
     reset: bool,
 }
 
@@ -31,19 +32,21 @@ impl TryFrom<CliRunBranch> for Branch {
         let CliRunBranch {
             branch,
             hash,
-            branch_start_point,
-            branch_start_point_hash,
-            branch_start_point_max_versions,
-            branch_reset,
+            start_point,
+            start_point_hash,
+            start_point_max_versions,
+            start_point_clone_thresholds,
+            start_point_reset,
             deprecated: _,
         } = run_branch;
         let branch = try_branch(branch)?;
         let hash = map_hash(hash);
         let start_point = map_start_point(
-            branch_start_point,
-            branch_start_point_hash,
-            branch_start_point_max_versions,
-            branch_reset,
+            start_point,
+            start_point_hash,
+            start_point_max_versions,
+            start_point_clone_thresholds,
+            start_point_reset,
         );
         Ok(Self {
             branch,
@@ -96,21 +99,23 @@ fn find_repo() -> Option<gix::Repository> {
 
 #[allow(clippy::needless_pass_by_value)]
 fn map_start_point(
-    branch_start_point: Vec<String>,
-    branch_start_point_hash: Option<GitHash>,
-    branch_start_point_max_versions: u32,
-    branch_reset: bool,
+    start_point: Vec<String>,
+    start_point_hash: Option<GitHash>,
+    start_point_max_versions: u32,
+    start_point_clone_thresholds: bool,
+    start_point_reset: bool,
 ) -> Option<StartPoint> {
-    let branch_start_point = branch_start_point.first().and_then(|b| {
+    let branch = start_point.first().and_then(|b| {
         // The only invalid `NameId` is an empty string.
         // This allows for "continue on empty" semantics for the branch start point.
         b.parse().ok()
     });
-    (branch_start_point.is_some() || branch_reset).then_some(StartPoint {
-        branch: branch_start_point,
-        hash: branch_start_point_hash,
-        max_versions: branch_start_point_max_versions,
-        reset: branch_reset,
+    (branch.is_some() || start_point_reset).then_some(StartPoint {
+        branch,
+        hash: start_point_hash,
+        max_versions: start_point_max_versions,
+        clone_thresholds: start_point_clone_thresholds,
+        reset: start_point_reset,
     })
 }
 
@@ -118,7 +123,7 @@ impl From<Branch>
     for (
         bencher_client::types::NameId,
         Option<bencher_client::types::GitHash>,
-        Option<bencher_client::types::JsonReportStartPoint>,
+        Option<bencher_client::types::JsonUpdateStartPoint>,
     )
 {
     fn from(branch: Branch) -> Self {
@@ -127,10 +132,11 @@ impl From<Branch>
         let start_point =
             branch
                 .start_point
-                .map(|start_point| bencher_client::types::JsonReportStartPoint {
+                .map(|start_point| bencher_client::types::JsonUpdateStartPoint {
                     branch: start_point.branch.map(Into::into),
                     hash: start_point.hash.map(Into::into),
                     max_versions: Some(start_point.max_versions),
+                    clone_thresholds: Some(start_point.clone_thresholds),
                     reset: Some(start_point.reset),
                 });
         (name, hash, start_point)

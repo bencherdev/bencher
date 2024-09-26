@@ -1,7 +1,10 @@
 use bencher_json::{DateTime, GitHash, NameId, ReportUuid, ResourceId};
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 
-use super::run::{CliRunAdapter, CliRunAverage, CliRunFold, CliRunThresholds};
+use super::{
+    branch::CliStartPointUpdate,
+    run::{CliRunAdapter, CliRunAverage, CliRunFold, CliRunThresholds},
+};
 use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
@@ -73,7 +76,7 @@ pub struct CliReportCreate {
     pub hash: Option<GitHash>,
 
     #[clap(flatten)]
-    pub start_point: CliReportStartPoint,
+    pub start_point: CliStartPointUpdate,
 
     /// Testbed name, slug, or UUID
     #[clap(long)]
@@ -108,31 +111,6 @@ pub struct CliReportCreate {
 
     #[clap(flatten)]
     pub backend: CliBackend,
-}
-
-#[allow(clippy::struct_field_names)]
-#[derive(Args, Debug)]
-pub struct CliReportStartPoint {
-    /// Use the specified branch name, slug, or UUID as the start point for `branch`.
-    /// If `branch` already exists and the start point is different, a new branch will be created.
-    #[clap(long)]
-    pub start_point_branch: Option<NameId>,
-
-    /// Use the specified full `git` hash as the start point for `branch` (requires: `--start-point-branch`).
-    /// If `branch` already exists and the start point hash is different, a new branch will be created.
-    #[clap(long, requires = "start_point_branch")]
-    pub start_point_hash: Option<GitHash>,
-
-    /// The maximum number of historical branch versions to include (requires: `--start-point-branch`).
-    /// Versions beyond this number will be omitted.
-    #[clap(long, requires = "start_point_branch", default_value = "255")]
-    pub start_point_max_versions: u32,
-
-    /// Reset `branch` to an empty state.
-    /// If `branch` already exists, a new empty branch will be created.
-    /// If a start point is provided, the new branch will begin at that start point.
-    #[clap(long)]
-    pub start_point_reset: bool,
 }
 
 #[derive(Parser, Debug)]

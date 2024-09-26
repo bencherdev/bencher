@@ -1,6 +1,6 @@
 use bencher_client::types::{
     Adapter, DateTime, GitHash, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings,
-    JsonReportStartPoint, NameId,
+    JsonUpdateStartPoint, NameId,
 };
 use bencher_json::ResourceId;
 
@@ -9,7 +9,7 @@ use crate::{
         backend::AuthBackend,
         sub::{project::run::thresholds::Thresholds, SubCmd},
     },
-    parser::project::report::{CliReportCreate, CliReportStartPoint},
+    parser::project::{branch::CliStartPointUpdate, report::CliReportCreate},
     CliError,
 };
 
@@ -18,7 +18,7 @@ pub struct Create {
     pub project: ResourceId,
     pub branch: NameId,
     pub hash: Option<GitHash>,
-    pub start_point: Option<JsonReportStartPoint>,
+    pub start_point: Option<JsonUpdateStartPoint>,
     pub testbed: NameId,
     pub thresholds: Thresholds,
     pub start_time: DateTime,
@@ -49,17 +49,19 @@ impl TryFrom<CliReportCreate> for Create {
             fold,
             backend,
         } = create;
-        let CliReportStartPoint {
+        let CliStartPointUpdate {
             start_point_branch,
             start_point_hash,
             start_point_max_versions,
+            start_point_clone_thresholds,
             start_point_reset,
         } = start_point;
         let start_point =
-            (start_point_branch.is_some() || start_point_reset).then(|| JsonReportStartPoint {
+            (start_point_branch.is_some() || start_point_reset).then(|| JsonUpdateStartPoint {
                 branch: start_point_branch.map(Into::into),
                 hash: start_point_hash.map(Into::into),
                 max_versions: Some(start_point_max_versions),
+                clone_thresholds: Some(start_point_clone_thresholds),
                 reset: Some(start_point_reset),
             });
         Ok(Self {

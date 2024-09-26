@@ -356,6 +356,7 @@ pub async fn proj_branch_patch(
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
@@ -366,6 +367,7 @@ pub async fn proj_branch_patch(
 }
 
 async fn patch_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: ProjBranchParams,
     json_branch: JsonUpdateBranch,
@@ -382,6 +384,15 @@ async fn patch_inner(
 
     let query_branch =
         QueryBranch::from_resource_id(conn_lock!(context), query_project.id, &path_params.branch)?;
+
+    let (query_branch, _query_reference) = query_branch
+        .update_start_point_if_changed(
+            log,
+            context,
+            query_project.id,
+            json_branch.start_point.as_ref(),
+        )
+        .await?;
 
     let update_branch = UpdateBranch::from(json_branch.clone());
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))

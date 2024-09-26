@@ -14,7 +14,9 @@ use slog::Logger;
 
 use self::model::{InsertModel, ModelId, QueryModel};
 use super::{
-    branch::{reference::ReferenceId, version::VersionId, BranchId, QueryBranch},
+    branch::{
+        reference::ReferenceId, start_point::StartPoint, version::VersionId, BranchId, QueryBranch,
+    },
     measure::{MeasureId, QueryMeasure},
     testbed::{QueryTestbed, TestbedId},
     ProjectId, QueryProject,
@@ -22,7 +24,10 @@ use super::{
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
-    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
+    error::{
+        assert_parentage, assert_siblings, resource_conflict_err, resource_not_found_err,
+        BencherResource,
+    },
     schema::{self, threshold as threshold_table},
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
@@ -77,23 +82,40 @@ impl QueryThreshold {
     pub async fn update_model_if_changed(
         &self,
         context: &ApiContext,
-        model: Model,
+        model: Option<Model>,
     ) -> Result<(), HttpError> {
-        if let Some(model_id) = self.model_id {
-            let current_model = QueryModel::get(conn_lock!(context), model_id)?.into_model();
-            // Skip updating the model if it has not changed.
-            // This keeps us from needlessly replacing old models with identical new ones.
-            if current_model == model {
-                return Ok(());
-            }
+        match (self.model_id, model) {
+            // No current model and no new model,
+            // nothing to do.
+            (None, None) => Ok(()),
+            // No current model but a new model,
+            // insert the new model.
+            (None, Some(model)) => self.update_from_model(conn_lock!(context), model),
+            // Current model but no new model,
+            // remove the current model.
+            (Some(_), None) => self.remove_current_model(conn_lock!(context)),
+            // Current model and new model,
+            // update the current if it has changed.
+            (Some(model_id), Some(model)) => {
+                let current_model = QueryModel::get(conn_lock!(context), model_id)?.into_model();
+                // Skip updating the model if it has not changed.
+                // This keeps us from needlessly replacing old models with identical new ones.
+                if current_model == model {
+                    Ok(())
+                } else {
+                    self.update_from_model(conn_lock!(context), model)
+                }
+            },
         }
-
-        self.update_from_json(conn_lock!(context), model)
     }
 
-    pub fn update_from_json(&self, conn: &mut DbConnection, model: Model) -> Result<(), HttpError> {
+    pub fn update_from_model(
+        &self,
+        conn: &mut DbConnection,
+        model: Model,
+    ) -> Result<(), HttpError> {
         // Insert the new model
-        let insert_model = InsertModel::from_json(self.id, model);
+        let insert_model = InsertModel::new(self.id, model);
         diesel::insert_into(schema::model::table)
             .values(&insert_model)
             .execute(conn)
@@ -113,6 +135,11 @@ impl QueryThreshold {
     }
 
     pub fn remove_current_model(&self, conn: &mut DbConnection) -> Result<(), HttpError> {
+        // Skip if there is no current model
+        if self.model_id.is_none() {
+            return Ok(());
+        }
+
         // Update the current threshold to remove the new model
         let update_threshold = UpdateThreshold::remove_model();
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
@@ -272,7 +299,7 @@ impl InsertThreshold {
         }
     }
 
-    pub fn from_json(
+    pub fn from_model(
         conn: &mut DbConnection,
         project_id: ProjectId,
         branch_id: BranchId,
@@ -291,7 +318,7 @@ impl InsertThreshold {
         let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
 
         // Create the new model
-        let insert_model = InsertModel::from_json(threshold_id, model);
+        let insert_model = InsertModel::new(threshold_id, model);
         diesel::insert_into(schema::model::table)
             .values(&insert_model)
             .execute(conn)
@@ -319,7 +346,7 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_json(
+        Self::from_model(
             conn,
             project_id,
             branch_id,
@@ -336,7 +363,7 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_json(
+        Self::from_model(
             conn,
             project_id,
             branch_id,
@@ -344,6 +371,113 @@ impl InsertThreshold {
             measure_id,
             Model::upper_boundary(),
         )
+    }
+
+    pub async fn from_start_point(
+        log: &Logger,
+        context: &ApiContext,
+        query_branch: &QueryBranch,
+        branch_start_point: &StartPoint,
+    ) -> Result<(), HttpError> {
+        let Some(true) = branch_start_point.clone_thresholds else {
+            slog::debug!(
+                log,
+                "Skipping cloning thresholds for start point: {branch_start_point:?}"
+            );
+            return Ok(());
+        };
+
+        assert_siblings(
+            BencherResource::Project,
+            BencherResource::Branch,
+            query_branch.project_id,
+            BencherResource::Branch,
+            branch_start_point.branch.project_id,
+        );
+
+        let mut current_thresholds = schema::threshold::table
+            .filter(schema::threshold::branch_id.eq(query_branch.id))
+            .load::<QueryThreshold>(conn_lock!(context))
+            .map_err(resource_not_found_err!(
+                Threshold,
+                &branch_start_point.branch
+            ))?
+            .into_iter()
+            .map(|threshold| ((threshold.testbed_id, threshold.measure_id), threshold))
+            .collect::<HashMap<_, _>>();
+        slog::debug!(log, "Current thresholds: {current_thresholds:?}");
+
+        let start_point_thresholds = schema::threshold::table
+            .filter(schema::threshold::branch_id.eq(branch_start_point.branch.id))
+            .load::<QueryThreshold>(conn_lock!(context))
+            .map_err(resource_not_found_err!(
+                Threshold,
+                &branch_start_point.branch
+            ))?
+            .into_iter()
+            .map(|threshold| ((threshold.testbed_id, threshold.measure_id), threshold))
+            .collect::<HashMap<_, _>>();
+        slog::debug!(log, "Start point thresholds: {start_point_thresholds:?}");
+
+        for ((start_point_testbed_id, start_point_measure_id), start_point_threshold) in
+            start_point_thresholds
+        {
+            let start_point_model = start_point_threshold
+                .model(conn_lock!(context))?
+                .map(QueryModel::into_model);
+            slog::debug!(
+                log,
+                "Processing start point threshold ({start_point_threshold:?}) with model ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
+            );
+            if let Some(current_threshold) =
+                current_thresholds.remove(&(start_point_testbed_id, start_point_measure_id))
+            {
+                slog::debug!(
+                    log,
+                    "Updating current threshold ({current_threshold:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
+                );
+                current_threshold
+                    .update_model_if_changed(context, start_point_model)
+                    .await?;
+                slog::debug!(
+                    log,
+                    "Updated current threshold ({current_threshold:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
+                );
+            } else if let Some(start_point_model) = start_point_model {
+                slog::debug!(
+                    log,
+                    "Creating new threshold from start point ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
+                );
+                Self::from_model(
+                    conn_lock!(context),
+                    query_branch.project_id,
+                    query_branch.id,
+                    start_point_testbed_id,
+                    start_point_measure_id,
+                    start_point_model,
+                )?;
+                slog::debug!(
+                    log,
+                    "Created new threshold from start point ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
+                );
+            } else {
+                slog::debug!(
+                    log,
+                    "No model for start point threshold for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
+                );
+            }
+        }
+
+        slog::debug!(log, "Remaining current thresholds: {current_thresholds:?}");
+        for (_, current_threshold) in current_thresholds {
+            current_threshold.remove_current_model(conn_lock!(context))?;
+            slog::debug!(
+                log,
+                "Removed model from current threshold {current_threshold:?}",
+            );
+        }
+
+        Ok(())
     }
 
     pub async fn from_report_json(
@@ -386,16 +520,16 @@ impl InsertThreshold {
         if let Some(models) = json_thresholds.models {
             for (measure, model) in models {
                 let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
-                slog::debug!(log, "Processing threshold for measure {measure_id:?}");
+                slog::debug!(log, "Processing threshold for measure {measure_id}");
                 if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
-                    slog::debug!(log, "Updating threshold for measure {measure_id:?}");
+                    slog::debug!(log, "Updating threshold for measure {measure_id}");
                     current_threshold
-                        .update_model_if_changed(context, model)
+                        .update_model_if_changed(context, Some(model))
                         .await?;
-                    slog::debug!(log, "Updated threshold for measure {measure_id:?}");
+                    slog::debug!(log, "Updated threshold for measure {measure_id}");
                 } else {
-                    slog::debug!(log, "Creating threshold for measure {measure_id:?}");
-                    Self::from_json(
+                    slog::debug!(log, "Creating threshold for measure {measure_id}");
+                    Self::from_model(
                         conn_lock!(context),
                         project_id,
                         branch_id,
@@ -403,18 +537,17 @@ impl InsertThreshold {
                         measure_id,
                         model,
                     )?;
-                    slog::debug!(log, "Created threshold for measure {measure_id:?}");
+                    slog::debug!(log, "Created threshold for measure {measure_id}");
                 }
             }
         }
 
         slog::debug!(log, "Remaining thresholds: {current_thresholds:?}");
-
         // If the reset flag is set, remove any thresholds that were not in the report
         if reset_thresholds {
             for (_, current_threshold) in current_thresholds {
                 current_threshold.remove_current_model(conn_lock!(context))?;
-                slog::debug!(log, "Removed model from threshold {}", current_threshold.id);
+                slog::debug!(log, "Removed model from threshold {current_threshold:?}");
             }
         }
 

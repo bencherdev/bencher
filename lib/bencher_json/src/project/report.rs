@@ -7,11 +7,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
-    JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric, JsonNewStartPoint,
-    JsonProject, JsonPubUser, JsonTestbed, NameId,
+    JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric, JsonProject,
+    JsonPubUser, JsonTestbed, NameId,
 };
 
-use super::threshold::JsonThresholdModel;
+use super::{branch::JsonUpdateStartPoint, threshold::JsonThresholdModel};
 
 crate::typed_uuid::typed_uuid!(ReportUuid);
 
@@ -34,7 +34,7 @@ pub struct JsonNewReport {
     /// That is, all historical metrics data for the start point branch will appear in queries for the branch.
     /// For example, pull request branches often use their base branch as their start point branch.
     /// If a new branch is created, it is not kept in sync with the start point branch.
-    pub start_point: Option<JsonReportStartPoint>,
+    pub start_point: Option<JsonUpdateStartPoint>,
     /// Testbed UUID, slug, or name.
     /// If the testbed does not exist, it will be created.
     pub testbed: NameId,
@@ -51,43 +51,6 @@ pub struct JsonNewReport {
     pub results: Vec<String>,
     /// Settings for how to handle the report.
     pub settings: Option<JsonReportSettings>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonReportStartPoint {
-    /// The UUID, slug, or name of the branch to use as the start point.
-    pub branch: Option<NameId>,
-    /// The full git hash of the branch to use as the start point.
-    /// Requires the `branch` field to be set.
-    pub hash: Option<GitHash>,
-    /// The maximum number of historical branch versions to include.
-    /// Versions beyond this number will be omitted.
-    /// Requires the `branch` field to be set.
-    /// Default is 255 if the `branch` field is set.
-    pub max_versions: Option<u32>,
-    /// Reset the branch to an empty state.
-    /// If the branch already exists, a new empty branch will be created.
-    /// If a start point is provided, the new branch will begin at that start point.
-    pub reset: Option<bool>,
-}
-
-impl JsonReportStartPoint {
-    pub fn to_new_start_point(&self) -> Option<JsonNewStartPoint> {
-        let JsonReportStartPoint {
-            branch,
-            hash,
-            max_versions,
-            // We don't care about the reset field since it is a new start point anyway.
-            reset: _,
-        } = self;
-        Some(JsonNewStartPoint {
-            // The branch field is required for a new start point.
-            branch: branch.clone()?,
-            hash: hash.clone(),
-            max_versions: *max_versions,
-        })
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
