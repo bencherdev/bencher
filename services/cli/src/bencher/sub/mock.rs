@@ -1,11 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{results::adapter_metrics::AdapterMetrics, AdapterResults};
-use bencher_json::{
-    project::measure::built_in::{generic::Latency, BuiltInMeasure},
-    JsonNewMetric,
-};
-use literally::hmap;
+use bencher_json::{JsonNewMetric, NameId};
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 
 use crate::{cli_println, parser::mock::CliMock, CliError};
@@ -17,6 +13,7 @@ const DEFAULT_COUNT: usize = 5;
 #[derive(Debug, Clone)]
 pub struct Mock {
     pub count: Option<usize>,
+    pub measures: Vec<NameId>,
     pub pow: Option<i32>,
     pub fail: bool,
     pub flaky: bool,
@@ -38,12 +35,14 @@ impl From<CliMock> for Mock {
     fn from(mock: CliMock) -> Self {
         let CliMock {
             count,
+            measure,
             pow,
             fail,
             flaky,
         } = mock;
         Self {
             count,
+            measures: measure,
             pow,
             fail,
             flaky,
@@ -81,24 +80,27 @@ impl Mock {
         let mut results = HashMap::with_capacity(count);
         let mut rng = rand::thread_rng();
         for c in 0..count {
-            let low = ten_pow * c as f64;
-            let high = ten_pow * (c + 1) as f64;
-            let uniform = Uniform::new(low, high);
-            let value: f64 = uniform.sample(&mut rng);
-            let variance = value * 0.1;
+            let mut measures_map = HashMap::with_capacity(self.measures.len());
+            for measure in self.measures.clone() {
+                let low = ten_pow * c as f64;
+                let high = ten_pow * (c + 1) as f64;
+                let uniform = Uniform::new(low, high);
+                let value: f64 = uniform.sample(&mut rng);
+                let variance = value * 0.1;
+                let metric = JsonNewMetric {
+                    value: value.into(),
+                    lower_value: Some((value - variance).into()),
+                    upper_value: Some((value + variance).into()),
+                };
+                measures_map.insert(measure.clone(), metric);
+            }
             results.insert(
                 format!("bencher::mock_{c}")
                     .as_str()
                     .parse()
                     .map_err(MockError::ParseBenchmarkName)?,
                 AdapterMetrics {
-                    inner: hmap! {
-                        Latency::name_id() => JsonNewMetric {
-                             value: value.into(),
-                             lower_value: Some((value - variance).into()),
-                             upper_value: Some((value + variance).into()),
-                        }
-                    },
+                    inner: measures_map,
                 },
             );
         }
