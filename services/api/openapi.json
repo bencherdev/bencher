@@ -8949,7 +8949,7 @@
           },
           "start_point": {
             "nullable": true,
-            "description": "The start point for the new branch. All branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their base branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.",
+            "description": "The start point for the new branch. All branch versions from the start point branch will be shallow copied over to the new branch HEAD. That is, all historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their base branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonNewStartPoint"
@@ -9304,7 +9304,7 @@
           },
           "start_point": {
             "nullable": true,
-            "description": "The start point for the report branch. If the branch already exists and the start point is not provided, the current branch will be used. If the branch already exists and the start point provided is different, a new branch will be created from the new start point. If the branch does not exist, the start point will be used to create a new branch. If a new branch is created with a start point, all branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the branch. For example, pull request branches often use their base branch as their start point branch. If a new branch is created, it is not kept in sync with the start point branch.",
+            "description": "The start point for the report branch. If the branch does not exist, the start point will be used to create a new branch. If the branch already exists and the start point is not provided, the current branch will be used. If the branch already exists and the start point provided is different, a new branch HEAD will be created from the new start point. If a new branch or new branch HEAD is created with a start point, all branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the branch. For example, pull request branches often use their base branch as their start point branch. If a new branch is created, it is not kept in sync with the start point branch.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonUpdateStartPoint"
@@ -9358,12 +9358,12 @@
           },
           "clone_thresholds": {
             "nullable": true,
-            "description": "If set to `true`, the thresholds from the start point branch will be deep copied to the new branch. This can be useful for pull request branches that should have the same thresholds as their target branch.",
+            "description": "If set to `true`, the thresholds from the start point branch will be deep copied to the new branch. This can be useful for pull request branches that should have the same thresholds as their target branch. Requires the `branch` field to be set.",
             "type": "boolean"
           },
           "hash": {
             "nullable": true,
-            "description": "The full `git` hash of the branch to use as the start point.",
+            "description": "The full `git` hash of the branch to use as the start point. Requires the `branch` field to be set.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/GitHash"
@@ -9372,7 +9372,7 @@
           },
           "max_versions": {
             "nullable": true,
-            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. Default is 255.",
+            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 255. Requires the `branch` field to be set.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -11579,14 +11579,14 @@
           },
           "max_versions": {
             "nullable": true,
-            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. Requires the `branch` field to be set. Default is 255 if the `branch` field is set.",
+            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 255. Requires the `branch` field to be set.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
           },
           "reset": {
             "nullable": true,
-            "description": "Reset the branch to an empty state. If the branch already exists, a new empty branch will be created. If a start point is provided, the new branch will begin at that start point.",
+            "description": "Reset the branch HEAD to an empty state. If a start point is provided, the branch HEAD will begin at that start point.",
             "type": "boolean"
           }
         }

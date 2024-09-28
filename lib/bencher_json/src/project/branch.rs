@@ -40,7 +40,7 @@ pub struct JsonNewBranch {
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
     /// The start point for the new branch.
-    /// All branch versions from the start point branch will be shallow copied over to the new branch.
+    /// All branch versions from the start point branch will be shallow copied over to the new branch HEAD.
     /// That is, all historical metrics data for the start point branch will appear in queries for the new branch.
     /// For example, pull request branches often use their base branch as their start point branch.
     /// After the new branch is created, it is not kept in sync with the start point branch.
@@ -64,13 +64,16 @@ pub struct JsonNewStartPoint {
     /// The UUID, slug, or name of the branch to use as the start point.
     pub branch: NameId,
     /// The full `git` hash of the branch to use as the start point.
+    /// Requires the `branch` field to be set.
     pub hash: Option<GitHash>,
     /// The maximum number of historical branch versions to include.
     /// Versions beyond this number will be omitted.
-    /// Default is 255.
+    /// The default is 255.
+    /// Requires the `branch` field to be set.
     pub max_versions: Option<u32>,
     /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
     /// This can be useful for pull request branches that should have the same thresholds as their target branch.
+    /// Requires the `branch` field to be set.
     pub clone_thresholds: Option<bool>,
 }
 
@@ -125,16 +128,15 @@ pub struct JsonUpdateStartPoint {
     pub hash: Option<GitHash>,
     /// The maximum number of historical branch versions to include.
     /// Versions beyond this number will be omitted.
+    /// The default is 255.
     /// Requires the `branch` field to be set.
-    /// Default is 255 if the `branch` field is set.
     pub max_versions: Option<u32>,
     /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
     /// This can be useful for pull request branches that should have the same thresholds as their target branch.
     /// Requires the `branch` field to be set.
     pub clone_thresholds: Option<bool>,
-    /// Reset the branch to an empty state.
-    /// If the branch already exists, a new empty branch will be created.
-    /// If a start point is provided, the new branch will begin at that start point.
+    /// Reset the branch HEAD to an empty state.
+    /// If a start point is provided, the branch HEAD will begin at that start point.
     pub reset: Option<bool>,
 }
 

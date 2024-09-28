@@ -97,12 +97,16 @@ const getTypes = (propertyKey, propertyValue) => {
 		return ["integer", getDefault(propertyKey), null];
 	}
 
+	if (propertyKey === "models" || propertyKey === "config") {
+		return ["object", getDefault(propertyKey), propertyKey];
+	}
+
 	return [null, null, null];
 };
 ---
 
 {properties && Object.entries(properties)?.map(([propertyKey, propertyValue]) => {
-  const [types, defaultParam, oneOf] = getTypes(propertyKey, propertyValue);
+  const [types, defaultParam, extra] = getTypes(propertyKey, propertyValue);
   return (
   <hr />
   <p>
@@ -129,13 +133,22 @@ const getTypes = (propertyKey, propertyValue) => {
   {defaultParam && <p>Default: <code>{defaultParam}</code></p>}
   </>
   <>
-  {oneOf && <p>One of: {oneOf.map((variant, index) => { return <>{index !== 0 && ", "}<code>{variant}</code></>})}</p>}
-  </>
-  <>
-  {types === "object" &&
-    ((path === "/v0/server/config" && method === MethodKind.Put) ?
-    <p>See the <a href={`/${langPath(lang)}docs/reference/server-config/`}>Server Config reference</a> for a full overview.</p> :
-    <BodyObject path={path} method={method} propertyKey={propertyKey} propertyValue={propertyValue} />)
-  }
+  {(() => {
+	if (Array.isArray(extra)) {
+		return <p>One of: {extra.map((variant, index) => { return <>{index !== 0 && ", "}<code>{variant}</code></>})}</p>;
+	}
+	if (types !== "object") {
+		return;
+	}
+	switch (extra) {
+		case "models":
+			return <p>See the <a href={`https://bencher.dev/${langPath(lang)}docs/explanation/thresholds/`}>Thresholds documentation</a> for a full overview.</p>;
+		case "config":
+			return <p>See the <a href={`https://bencher.dev/${langPath(lang)}docs/reference/server-config/`}>Server Config reference</a> for a full overview.</p>;
+		default:
+			return <BodyObject path={path} method={method} propertyKey={propertyKey} propertyValue={propertyValue} />;
+
+	}
+  })()}
   </>
 )})}

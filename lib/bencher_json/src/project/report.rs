@@ -26,10 +26,10 @@ pub struct JsonNewReport {
     /// This can be useful for tracking the performance of a specific commit across multiple testbeds.
     pub hash: Option<GitHash>,
     /// The start point for the report branch.
-    /// If the branch already exists and the start point is not provided, the current branch will be used.
-    /// If the branch already exists and the start point provided is different, a new branch will be created from the new start point.
     /// If the branch does not exist, the start point will be used to create a new branch.
-    /// If a new branch is created with a start point,
+    /// If the branch already exists and the start point is not provided, the current branch will be used.
+    /// If the branch already exists and the start point provided is different, a new branch HEAD will be created from the new start point.
+    /// If a new branch or new branch HEAD is created with a start point,
     /// all branch versions from the start point branch will be shallow copied over to the new branch.
     /// That is, all historical metrics data for the start point branch will appear in queries for the branch.
     /// For example, pull request branches often use their base branch as their start point branch.

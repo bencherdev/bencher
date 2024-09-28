@@ -189,7 +189,7 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
             type Value = JsonUpdateThreshold;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("JsonUpdatePlot")
+                formatter.write_str("JsonUpdateThreshold")
             }
 
             fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
