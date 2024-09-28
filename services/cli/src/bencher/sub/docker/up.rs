@@ -24,6 +24,8 @@ pub struct Up {
     detach: bool,
     pull: CliUpPull,
     tag: String,
+    api_port: Option<u16>,
+    console_port: Option<u16>,
     api_env: Option<Vec<String>>,
     console_env: Option<Vec<String>>,
     api_volume: Option<Vec<String>>,
@@ -37,6 +39,8 @@ impl From<CliUp> for Up {
             detach,
             pull,
             tag,
+            api_port,
+            console_port,
             api_env,
             console_env,
             api_volume,
@@ -47,6 +51,8 @@ impl From<CliUp> for Up {
             detach,
             pull,
             tag,
+            api_port,
+            console_port,
             api_env,
             console_env,
             api_volume,
@@ -67,10 +73,10 @@ impl SubCmd for Up {
 
         cli_println!("🐰 Bencher Self-Hosted is up and running!");
         if let CliService::All | CliService::Console = self.service {
-            cli_println!("Web Console: {}", Container::Console.url());
+            cli_println!("Web Console: {}", Container::Console.url(self.console_port));
         }
         if let CliService::All | CliService::Api = self.service {
-            cli_println!("API Server: {}", Container::Api.url());
+            cli_println!("API Server: {}", Container::Api.url(self.api_port));
         }
         cli_println!("");
 
@@ -104,6 +110,7 @@ impl Up {
                 docker,
                 Container::Api,
                 &self.tag,
+                self.api_port,
                 self.api_env.clone(),
                 self.api_volume.clone(),
             )
@@ -114,6 +121,7 @@ impl Up {
                 docker,
                 Container::Console,
                 &self.tag,
+                self.console_port,
                 self.console_env.clone(),
                 self.console_volume.clone(),
             )
@@ -167,10 +175,11 @@ async fn start_container(
     docker: &Docker,
     container: Container,
     tag: &str,
+    port: Option<u16>,
     env: Option<Vec<String>>,
     volume: Option<Vec<String>>,
 ) -> Result<(), DockerError> {
-    let tcp_port = format!("{port}/tcp", port = container.port());
+    let tcp_port = format!("{port}/tcp", port = container.internal_port());
 
     cli_println!("Creating `{container}` container...");
     let options = Some(CreateContainerOptions {
@@ -181,7 +190,7 @@ async fn start_container(
         port_bindings: Some(literally::hmap! {
             tcp_port.clone() => Some(vec![PortBinding {
                 host_ip: Some("0.0.0.0".to_owned()),
-                host_port: Some(container.port().to_string()),
+                host_port: Some(container.external_port(port).to_string()),
             }]),
         }),
         publish_all_ports: Some(true),

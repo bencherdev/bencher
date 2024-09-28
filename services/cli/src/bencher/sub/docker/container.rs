@@ -1,9 +1,6 @@
 use std::fmt;
 
-use bencher_json::{
-    BENCHER_API_PORT, BENCHER_CONSOLE_PORT, LOCALHOST_BENCHER_API_URL_STR,
-    LOCALHOST_BENCHER_URL_STR,
-};
+use bencher_json::{BENCHER_API_PORT, BENCHER_CONSOLE_PORT};
 
 const BENCHER_API_IMAGE: &str = "ghcr.io/bencherdev/bencher-api";
 const BENCHER_API_CONTAINER: &str = "bencher_api";
@@ -41,17 +38,22 @@ impl Container {
         format!("{image}:{tag}")
     }
 
-    pub fn port(self) -> u16 {
+    pub fn external_port(self, port: Option<u16>) -> u16 {
+        if let Some(port) = port {
+            port
+        } else {
+            self.internal_port()
+        }
+    }
+
+    pub fn internal_port(self) -> u16 {
         match self {
             Self::Api => BENCHER_API_PORT,
             Self::Console => BENCHER_CONSOLE_PORT,
         }
     }
 
-    pub fn url(self) -> &'static str {
-        match self {
-            Self::Api => LOCALHOST_BENCHER_API_URL_STR,
-            Self::Console => LOCALHOST_BENCHER_URL_STR,
-        }
+    pub fn url(self, port: Option<u16>) -> String {
+        format!("http://localhost:{}", self.external_port(port))
     }
 }

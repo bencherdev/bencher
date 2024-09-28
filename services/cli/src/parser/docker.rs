@@ -27,6 +27,16 @@ pub struct CliUp {
     pub tag: String,
 
     /// Pass an environment variable to the API container.
+    /// Similar to the `--expose` option for `docker run`.
+    #[clap(long)]
+    pub api_port: Option<u16>,
+
+    /// Pass an environment variable to the Console container.
+    /// Similar to the `--expose` option for `docker run`.
+    #[clap(long)]
+    pub console_port: Option<u16>,
+
+    /// Pass an environment variable to the API container.
     /// Similar to the `--env` option for `docker run`.
     #[clap(long, value_parser = check_env)]
     pub api_env: Option<Vec<String>>,
