@@ -293,7 +293,7 @@ async fn perf_query(
         query = query.filter(schema::report::end_time.le(end_time));
     }
 
-    query
+    let query = query
         // Order by the version number so that the oldest version is first.
         // Because multiple reports can use the same version (via git hash), order by the start time next.
         // Then within a report order by the iteration number.
@@ -349,7 +349,13 @@ async fn perf_query(
                 ).nullable(),
             ).nullable(),
             QueryMetricBoundary::as_select(),
-        ))
+        ));
+
+    // Use this to print the raw SQL query
+    // https://bencher.dev/learn/engineering/sqlite-performance-tuning/
+    // println!("{}", diesel::debug_query(&query).to_string());
+
+    query
         // Acquire the lock on the database connection for every query.
         // This helps to avoid resource contention when the database is under heavy load.
         // This will make the perf query itself slower, but it will make the overall system more stable.

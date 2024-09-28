@@ -142,4 +142,7 @@ DROP INDEX IF EXISTS index_report_testbed_end_time;
 DROP INDEX IF EXISTS index_report_benchmark;
 CREATE INDEX index_report_testbed_end_time ON report(testbed_id, end_time);
 CREATE INDEX index_report_benchmark ON report_benchmark(report_id, benchmark_id);
+-- new indexes
+CREATE INDEX index_measure_project ON measure(uuid, project_id);
+CREATE INDEX index_report_version ON report(version_id, end_time);
 PRAGMA foreign_keys = on;
