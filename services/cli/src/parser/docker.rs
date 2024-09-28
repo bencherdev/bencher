@@ -1,6 +1,9 @@
 use clap::{Parser, ValueEnum};
+use once_cell::sync::Lazy;
 
 use crate::CLI_VERSION;
+
+pub static CLI_VERSION_TAG: Lazy<String> = Lazy::new(|| format!("v{CLI_VERSION}"));
 
 #[derive(Parser, Debug)]
 pub struct CliUp {
@@ -20,7 +23,7 @@ pub struct CliUp {
     pub pull: CliUpPull,
 
     /// Specify the image tag.
-    #[clap(long, default_value = CLI_VERSION)]
+    #[clap(long, default_value = CLI_VERSION_TAG.as_str())]
     pub tag: String,
 
     /// Pass an environment variable to the API container.

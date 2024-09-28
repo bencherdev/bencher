@@ -19,6 +19,7 @@ chrono = { workspace = true, features = ["clock"] }
 clap = { workspace = true, features = ["env"] }
 literally.workspace = true
 octocrab.workspace = true
+once_cell.workspace = true
 progenitor-client.workspace = true
 rand.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
