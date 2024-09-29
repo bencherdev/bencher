@@ -2,11 +2,12 @@
 bencher run \
 --project save-walter-white-1234abcd \
 --branch feature-branch \
---branch-start-point main \
---branch-start-point-hash 32aea434d751648726097ed3ac760b57107edd8b \
---branch-reset \
+--start-point main \
+--start-point-hash 32aea434d751648726097ed3ac760b57107edd8b \
+--start-point-clone-thresholds \
+--start-point-reset \
 --testbed ci-runner \
---adapter json \
 --err \
+--adapter json \
 bencher mock
 ```

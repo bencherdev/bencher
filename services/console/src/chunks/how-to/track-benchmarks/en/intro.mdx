@@ -4,7 +4,7 @@ Some benchmark harnesses let you cache results, but most only do so locally.
 Bencher allows you to track your benchmarks from both local and CI runs and compare the results,
 while still using [your favorite benchmark harness][adapters].
 
-There are two popular ways to compare benchmark results when [Continuous Benchmarking][continuous benchmarking], that is benchmarking in CI:
+There are three popular ways to compare benchmark results when [Continuous Benchmarking][continuous benchmarking], that is benchmarking in CI:
 
 - [Statistical Continuous Benchmarking][statistical continuous benchmarking]
   1. Track benchmark results over time to create a baseline
@@ -12,10 +12,16 @@ There are two popular ways to compare benchmark results when [Continuous Benchma
   3. Compare the new results against this statistical boundary to detect performance regressions
 - [Relative Continuous Benchmarking][relative continuous benchmarking]
   1. Run the benchmarks for the current baseline code
-  2. Use [Percentage Thresholds][percentage thresholds] to create a boundary for the baseline code
-  3. Switch over to the new version of the code
-  4. Run the benchmarks for the new version of the code
+  2. Switch over to the new version of the code
+  3. Run the benchmarks for the new version of the code
+  4. Use [Percentage Thresholds][percentage thresholds] to create a boundary for the baseline code
   5. Compare the new version of the code results against the baseline code results to detect performance regressions
+- [Changepoint Detection][changepoint detection]
+  1. Track benchmark results over time to create a baseline
+  2. Occasionally run the benchmarks for the new versions of the code
+  3. Use a changepoint detection algorithm to detect performance regressions
+  4. Bisection to find the commit that introduced the regression
+  5. Generate an alert for the commit that introduced the regression
 
 [adapters]: /docs/explanation/adapters/
 [continuous benchmarking]: /docs/explanation/continuous-benchmarking/
@@ -24,3 +30,4 @@ There are two popular ways to compare benchmark results when [Continuous Benchma
 
 [statistical continuous benchmarking]: #statistical-continuous-benchmarking
 [relative continuous benchmarking]: #relative-continuous-benchmarking
+[changepoint detection]: #changepoint-detection

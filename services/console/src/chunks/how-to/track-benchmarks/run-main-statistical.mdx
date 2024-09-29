@@ -3,7 +3,11 @@ bencher run \
 --project save-walter-white-1234abcd \
 --branch main \
 --testbed ci-runner \
---adapter json \
+--threshold-measure latency \
+--threshold-test t_test \
+--threshold-max-sample-size 128 \
+--threshold-upper-boundary 0.99 \
 --err \
+--adapter json \
 bencher mock
 ```
