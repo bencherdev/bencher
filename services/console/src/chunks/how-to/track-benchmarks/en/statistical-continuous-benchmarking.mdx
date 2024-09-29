@@ -39,7 +39,7 @@ First, we need to create and maintain a historical baseline for our `main` branc
    See [the `--project` docs][project option] for more details.
    (ex: `--project save-walter-white-1234abcd`)
 3. Set the `--branch` option to the base Branch name.
-   See [branch selection][branch selection branch] for a full overview.
+   See [the `--branch` docs][branch option] for a full overview.
    (ex: `--branch main`)
 4. Set the `--testbed` option to the CI runner Testbed name.
    See [the `--testbed` docs][testbed option] for more details.
@@ -57,6 +57,9 @@ First, we need to create and maintain a historical baseline for our `main` branc
    4. Set the `--threshold-upper-boundary` option to the Upper Boundary of `0.99`.
    See [the `--threshold-upper-boundary` docs][threshold upper boundary] for more details.
    (ex: `--threshold-upper-boundary 0.99`)
+   5. Set the `--thresholds-reset` flag so that only the specified Threshold is active.
+   See [the `--thresholds-reset` flag][thresholds reset] for a full overview.
+   (ex: `--thresholds-reset`)
 6. Set the `--err` flag to fail the command if an Alert is generated.
    See [the `--err` docs][alert err] for a full overview.
    (ex: `--err`)
@@ -67,14 +70,22 @@ First, we need to create and maintain a historical baseline for our `main` branc
    See [benchmark command][command argument] for a full overview.
    (ex: `bencher mock`)
 
+The first time this is command is run in CI,
+it will create the `main` Branch if it does not exist yet.
+The new `main` will _not_ have a start point or existing data.
+A Threshold will be created for the `main` Branch, `ci-runner` Testbed, and `latency` Measure.
+On subsequent runs, new data will be added to the `main` Branch.
+The specified Threshold will then be used to detect performance regressions.
+
 [bencher run]: /docs/explanation/bencher-run/
 [project option]: /docs/explanation/bencher-run/#--project-project
-[branch selection branch]: /docs/explanation/branch-selection/#--branch-branch
+[branch option]: /docs/explanation/branch-selection/#--branch-branch
 [testbed option]: /docs/explanation/bencher-run/#--testbed-testbed
 [threshold measure option]: /docs/explanation/thresholds/#--threshold-measure-measure
 [threshold test option]: /docs/explanation/thresholds/#--threshold-test-test
 [threshold max sample size]: /docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /docs/explanation/thresholds/#--err
 [bmf]: /docs/reference/bencher-metric-format/
 [adapter json]: /docs/explanation/adapters/#-json
@@ -93,7 +104,7 @@ This is how we would track the performance of a new feature branch in CI, aptly 
    See [the `--project` docs][project option] for more details.
    (ex: `--project save-walter-white-1234abcd`)
 3. Set the `--branch` option to the feature Branch name.
-   See [the `--branch` docs][branch] for a full overview.
+   See [the `--branch` docs][branch option] for a full overview.
    (ex: `--branch feature-branch`)
 4. Set the Start Point for the `feature-branch` Branch:
    1. Set the `--start-point` option to the feature Branch start point.
@@ -128,9 +139,9 @@ The new `feature-branch` will use the `main` Branch
 at hash `32aea434d751648726097ed3ac760b57107edd8b` as its start point.
 This means that `feature-branch` will have a copy of all the data and [Thresholds][thresholds]
 from the `main` Branch to compare the results of `bencher mock` against.
-On all subsequent runs, Bencher will reset the `feature-branch` Branch to the start point.
+On all subsequent runs, Bencher will reset the `feature-branch` Branch to the start point,
+and use the `main` Branch data and Thresholds to detect performance regressions.
 
-[branch]: /docs/explanation/branch-selection/#--branch-branch
 [start point]: /docs/explanation/branch-selection/#--start-point-branch
 [start point hash]: /docs/explanation/branch-selection/#--start-point-hash-hash
 [start point clone thresholds]: /docs/explanation/branch-selection/#--start-point-clone-thresholds

@@ -1,0 +1,31 @@
+## Change Point Detection
+
+Change Point Detection uses a [change point algorithm][change detection] to evaluate a large window of recent results.
+This allows the algorithm to ignore outliers as noise and produce fewer false positives.
+Even though Change Point Detection is considered [continuous benchmarking][continuous benchmarking],
+it does not allow you to detect performance regression in CI.
+That is, you cannot detect a performance regression before a feature branch merges.
+This is sometimes referred to as "out-of-band" detection.
+
+For example, if you have a benchmark `bench_my_critical_path`,
+and it had the following historical latencies: `5 ms`, `6 ms`, `5 ms`, `5ms`, `7ms`.
+
+If the next benchmark result was `11 ms` then a Statistical Continuous Benchmarking threshold
+and Change Point Detection algorithm would interpret things very differently.
+The threshold would likely be exceeded and an alert would be generated.
+If this benchmark run was tied to a pull request,
+the build would likely be set to fail due to this alert.
+However, the change point algorithm wouldn't do anything... yet.
+If the next run things dropped back down to `5 ms` then it would probably not generate an alert.
+Conversely, if the next run or two resulted in `10 ms` and `12 ms`,
+only then would the change point algorithm trigger an alert.
+
+Are you interested in using Change Point Detection with Bencher?
+If so, please leave a comment on [the tracking issue][github issue 365]
+or [reach out to us directly][help].
+
+[change detection]: https://en.wikipedia.org/wiki/Change_detection
+[github issue 365]: https://github.com/bencherdev/bencher/issues/365
+
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[help]: /help/

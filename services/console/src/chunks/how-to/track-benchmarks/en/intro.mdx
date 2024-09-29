@@ -16,12 +16,10 @@ There are three popular ways to compare benchmark results when [Continuous Bench
   3. Run the benchmarks for the new version of the code
   4. Use [Percentage Thresholds][percentage thresholds] to create a boundary for the baseline code
   5. Compare the new version of the code results against the baseline code results to detect performance regressions
-- [Changepoint Detection][changepoint detection]
-  1. Track benchmark results over time to create a baseline
-  2. Occasionally run the benchmarks for the new versions of the code
-  3. Use a changepoint detection algorithm to detect performance regressions
-  4. Bisection to find the commit that introduced the regression
-  5. Generate an alert for the commit that introduced the regression
+- [Change Point Detection][change point detection]
+  1. Occasionally run the benchmarks for new versions of the code
+  2. Use a change point detection algorithm to detect performance regressions
+  3. Bisect to find the commit that introduced the performance regression
 
 [adapters]: /docs/explanation/adapters/
 [continuous benchmarking]: /docs/explanation/continuous-benchmarking/
@@ -30,4 +28,4 @@ There are three popular ways to compare benchmark results when [Continuous Bench
 
 [statistical continuous benchmarking]: #statistical-continuous-benchmarking
 [relative continuous benchmarking]: #relative-continuous-benchmarking
-[changepoint detection]: #changepoint-detection
+[change point detection]: #change-point-detection

@@ -2,8 +2,14 @@
 bencher run \
 --project save-walter-white-1234abcd \
 --branch feature-branch \
+--start-point main \
+--start-point-reset \
 --testbed ci-runner \
---adapter json \
+--threshold-measure latency \
+--threshold-test percentage \
+--threshold-upper-boundary 0.25 \
+--thresholds-reset \
 --err \
+--adapter json \
 bencher mock
 ```
