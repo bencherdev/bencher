@@ -1,4 +1,4 @@
-```yaml
+```yaml title=".github/workflows/pr_benchmarks.yml"
 on:
   pull_request:
     types: [opened, reopened, edited, synchronize]
@@ -20,9 +20,10 @@ jobs:
           --project save-walter-white-1234abcd \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch '${{ github.head_ref }}' \
-          --branch-start-point '${{ github.base_ref }}' \
-          --branch-start-point-hash '${{ github.event.pull_request.base.sha }}' \
-          --branch-reset \
+          --start-point '${{ github.base_ref }}' \
+          --start-point-hash '${{ github.event.pull_request.base.sha }}' \
+          --start-point-clone-thresholds \
+          --start-point-reset \
           --testbed ubuntu-latest \
           --adapter json \
           --err \

@@ -51,14 +51,14 @@ First, we need to create and maintain a historical baseline for our `main` branc
    2. Set the `--threshold-test` option to a Student's t-test (`t_test`).
    See [the `--threshold-test` docs][threshold test option] for a full overview.
    (ex: `--threshold-test t_test`)
-   3. Set the `--threshold-max-sample-size` option to the maximum sample size of `128`.
+   3. Set the `--threshold-max-sample-size` option to the maximum sample size of `64`.
    See [the `--threshold-max-sample-size` docs][threshold max sample size] for more details.
-   (ex: `--threshold-max-sample-size 128`)
+   (ex: `--threshold-max-sample-size 64`)
    4. Set the `--threshold-upper-boundary` option to the Upper Boundary of `0.99`.
    See [the `--threshold-upper-boundary` docs][threshold upper boundary] for more details.
    (ex: `--threshold-upper-boundary 0.99`)
    5. Set the `--thresholds-reset` flag so that only the specified Threshold is active.
-   See [the `--thresholds-reset` flag][thresholds reset] for a full overview.
+   See [the `--thresholds-reset` docs][thresholds reset] for a full overview.
    (ex: `--thresholds-reset`)
 6. Set the `--err` flag to fail the command if an Alert is generated.
    See [the `--err` docs][alert err] for a full overview.
@@ -111,14 +111,14 @@ This is how we would track the performance of a new feature branch in CI, aptly 
    See [the `--start-point` docs][start point] for a full overview.
    (ex: `--start-point main`)
    2. Set the `--start-point-hash` option to the feature Branch start point `git` hash.
-   See [`--start-point-hash`][start point hash] for a full overview.
+   See [the `--start-point-hash` docs][start point hash] for a full overview.
    (ex: `--start-point-hash 32ae...dd8b`)
    3. Set the `--start-point-clone-thresholds` flag to clone the Thresholds from the start point.
-   See [the `--start-point-clone-thresholds` flag][start point clone thresholds] for a full overview.
+   See [the `--start-point-clone-thresholds` docs][start point clone thresholds] for a full overview.
    (ex: `--start-point-clone-thresholds`)
    4. Set the `--start-point-reset` flag to always reset the Branch to the start point.
    This will prevent benchmark data drift.
-   See [the `--start-point-reset` flag][start point reset] for a full overview.
+   See [the `--start-point-reset` docs][start point reset] for a full overview.
    (ex: `--start-point-reset`)
 5. Set the `--testbed` option to the Testbed name.
    See [the `--tested` docs][testbed option] for more details.

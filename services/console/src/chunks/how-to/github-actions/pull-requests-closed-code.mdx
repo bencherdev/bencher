@@ -1,0 +1,23 @@
+```yaml title=".github/workflows/pr_benchmarks_closed.yml"
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  archive_pr_branch:
+    name: Archive closed PR branch with Bencher
+     # DO NOT REMOVE: For handling Fork PRs see Pull Requests from Forks
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bencherdev/bencher@main
+      - name: Archive closed PR branch with Bencher
+        run: |
+          bencher archive \
+          --project save-walter-white-1234abcd \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch '${{ github.head_ref }}'
+```

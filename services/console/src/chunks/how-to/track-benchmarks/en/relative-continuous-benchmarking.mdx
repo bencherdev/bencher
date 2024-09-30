@@ -53,7 +53,7 @@ Then we need to run our benchmarks on the `main` branch in CI:
    (ex: `--branch main`)
 4. Set the `--start-point-reset` flag to always reset the base Branch.
    This will make sure that all of the benchmark data is from the current CI runner.
-   See [the `--start-point-reset` flag][start point reset] for a full overview.
+   See [the `--start-point-reset` docs][start point reset] for a full overview.
    (ex: `--start-point-reset`)
 5. Set the `--testbed` option to the CI runner Testbed name.
    See [the `--testbed` docs][testbed option] for more details.
@@ -104,7 +104,7 @@ Finally, we are ready to run our `feature-branch` benchmarks in CI:
    (ex: `--start-point main`)
    2. Set the `--start-point-reset` flag to always reset the Branch to the start point.
    This will use only the latest relative benchmark results.
-   See [the `--start-point-reset` flag][start point reset] for a full overview.
+   See [the `--start-point-reset` docs][start point reset] for a full overview.
    (ex: `--start-point-reset`)
 5. Set the `--testbed` option to the CI runner Testbed name.
    See [the `--testbed` docs][testbed option] for more details.
@@ -120,7 +120,7 @@ Finally, we are ready to run our `feature-branch` benchmarks in CI:
    See [the `--threshold-upper-boundary` docs][threshold upper boundary] for more details.
    (ex: `--threshold-upper-boundary 0.25`)
    4. Set the `--thresholds-reset` flag so that only the specified Threshold is active.
-   See [the `--thresholds-reset` flag][thresholds reset] for a full overview.
+   See [the `--thresholds-reset` docs][thresholds reset] for a full overview.
    (ex: `--thresholds-reset`)
 7. Set the `--err` flag to fail the command if an Alert is generated.
    See [the `--err` docs][alert err] for a full overview.

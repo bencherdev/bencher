@@ -18,7 +18,7 @@ See [using data from the triggering workflow][github actions trigger workflow] f
 <PullRequestsForkRunCode />
 
 1. Create a first GitHub Actions `workflow` file.
-   (ex: `.github/workflows/run_fork_pr_benchmarks.yml`)
+   (ex: `.github/workflows/fork_pr_benchmarks_run.yml`)
 2. Name this workflow so it can be referenced by the second workflow.
    (ex: `name: Run and Cache Benchmarks`)
 3. Run on `pull_request` events:
@@ -49,7 +49,7 @@ See [using data from the triggering workflow][github actions trigger workflow] f
 <PullRequestsForkTrackCode />
 
 1. Create a first GitHub Actions `workflow` file.
-   (ex: `.github/workflows/track_fork_pr_benchmarks.yml`)
+   (ex: `.github/workflows/fork_pr_benchmarks_track.yml`)
 2. Name this workflow second workflow.
    (ex: `name: Track Benchmarks with Bencher`)
 3. Chain the two workflows with
@@ -66,10 +66,9 @@ See [using data from the triggering workflow][github actions trigger workflow] f
    (ex: `runs-on: ubuntu-latest`)
 7. Set the benchmark results and `pull_request` event object file names as environment variables.
    (ex: `env: ...`)
-8. Download the cached benchmark results and `pull_request` event.
-   (ex: `uses: actions/github-script@v6`)
-9. Extract the cached benchmark results and `pull_request` event.
-   (ex: `unzip ...`)
+8. Download the cached benchmark results and `pull_request` event
+   using [the `action-download-artifact` GitHub Action][action download artifact].
+   (ex: `uses: dawidd6/action-download-artifact@v6`)
 10. Export the necessary data from the `pull_request` event as environment variables.
     (ex: `core.exportVariable(...)`)
 11. Install the Bencher CLI using [the GitHub Action][bencher cli github action].
@@ -84,49 +83,53 @@ See [using data from the triggering workflow][github actions trigger workflow] f
 14. Set the `--token` option to the `BENCHER_API_TOKEN` **Repository** secret.
     See [the `--token` docs][token option] for more details.
     (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-15. Set the `--branch` option to the formatted fork PR number using
-    [the GitHub Actions `pull_request` event][github action pull_request].
-    See [branch selection][branch selection branch] for a full overview.
+15. Set the `--branch` option to the fork PR branch name using
+    [the GitHub Actions `github` context][github actions context].
+    See [the `--branch` docs][branch option] for a full overview.
     (ex: `--branch '${{ env.PR_HEAD }}'`)
-16. Set the `--branch-start-point` option to the fork PR base Branch start point using
-    [the GitHub Actions `pull_request` event][github action pull_request].
-    See [branch selection][branch selection start point] for a full overview.
-    (ex: `--branch-start-point '${{ env.PR_BASE }}'`)
-17. Set the `--branch-start-point-hash` option to the fork PR base Branch start point hash using
-    [the GitHub Actions `pull_request` event][github action pull_request].
-    See [branch selection][branch selection start point hash] for a full overview.
-    (ex: `--branch-start-point-hash '${{ env.PR_BASE_SHA }}'`)
-18. Set the `--branch-reset` flag to always reset the Branch to the start point.
+13. Set the Start Point for the fork PR Branch:
+    1. Set the `--start-point` option to the fork PR Branch start point
+    using [the GitHub Actions `github` context][github actions context].
+    See [the `--start-point` docs][start point] for a full overview.
+    (ex: `--start-point '${{ env.PR_BASE }}'`)
+    2. Set the `--start-point-hash` option to the fork PR Branch start point `git` hash
+    using [the GitHub Actions `pull_request` event][github action pull_request].
+    See [the `--start-point-hash` docs][start point hash] for a full overview.
+    (ex: `--start-point-hash '${{ env.PR_BASE_SHA }}'`)
+    3. Set the `--start-point-clone-thresholds` flag to clone the Thresholds from the start point.
+    See [the `--start-point-clone-thresholds` docs][start point clone thresholds] for a full overview.
+    (ex: `--start-point-clone-thresholds`)
+    4. Set the `--start-point-reset` flag to always reset the fork PR Branch to the start point.
     This will prevent benchmark data drift.
-    See [branch selection][branch selection branch reset] for a full overview.
-    (ex: `--branch-reset`)
-19. Set the `--testbed` option to the Testbed name.
+    See [the `--start-point-reset` docs][start point reset] for a full overview.
+    (ex: `--start-point-reset`)
+14. Set the `--testbed` option to the Testbed name.
     This should likely match the machine selected in `runs-on`.
     See [the `--tested` docs][testbed option] for more details.
     (ex: `--testbed ubuntu-latest`)
-20. Set the `--adapter` option to the desired benchmark harness adapter.
-    See [benchmark harness adapters][adapters] for a full overview.
-    (ex: `--adapter json`)
-21. Set the `--err` flag to fail the command if an Alert is generated.
-    See [Threshold & Alerts][alerts] for a full overview.
-    (ex: `--err`)
-22. Set the `--github-actions` option to the GitHub API authentication token to post results as a comment on the Pull Request using
+15. Set the `--err` flag to fail the command if an Alert is generated.
+   See [the `--err` docs][alert err] for a full overview.
+   (ex: `--err`)
+16. Set the `--adapter` option to [Bencher Metric Format JSON (`json`)][bmf] that is generated by `bencher mock`.
+   See [benchmark harness adapters][adapter json] for a full overview.
+   (ex: `--adapter json`)
+17. Set the `--github-actions` option to the GitHub API authentication token to post results as a comment on the Pull Request using
     [the GitHub Actions `GITHUB_TOKEN` environment variable][github token].
     See [the `--github-actions` docs][github actions option] for more details.
     (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-23. Set the `--ci-number` option to the pull request number.
+18. Set the `--ci-number` option to the pull request number.
     See [the `--ci-number` docs][ci number option] for more details.
     (ex: `--ci-number '${{ env.PR_NUMBER }}'`)
-24. Set the `--file` option to the benchmark results file path.
+19. Set the `--file` option to the benchmark results file path.
     See [benchmark command][command argument] for a full overview.
     (ex: `--file "$BENCHMARK_RESULTS"`)
-
 
 [github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
 [github actions workflow_run]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[action download artifact]: https://github.com/dawidd6/action-download-artifact
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 
@@ -134,13 +137,15 @@ See [using data from the triggering workflow][github actions trigger workflow] f
 [bencher run]: /docs/explanation/bencher-run/
 [project option]: /docs/explanation/bencher-run/#--project-project
 [token option]: /docs/explanation/bencher-run/#--token-token
-[branch selection branch]: /docs/explanation/branch-selection/#--branch-branch
-[branch selection start point]: /docs/explanation/branch-selection/#--branch-start-point-branch
-[branch selection start point hash]: /docs/explanation/branch-selection/#--branch-start-point-hash-hash
-[branch selection branch reset]: /docs/explanation/branch-selection/#--branch-reset
+[branch option]: /docs/explanation/branch-selection/#--branch-branch
+[start point]: /docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /docs/explanation/adapters/
-[alerts]: /docs/explanation/thresholds/#alerts
+[alert err]: /docs/explanation/thresholds/#--err
+[bmf]: /docs/reference/bencher-metric-format/
+[adapter json]: /docs/explanation/adapters/#-json
 [github actions option]: /docs/explanation/bencher-run/#--github-actions-github_token
 [ci number option]: /docs/explanation/bencher-run/#--ci-id-id
 [command argument]: /docs/explanation/bencher-run/#benchmark-command

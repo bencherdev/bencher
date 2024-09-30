@@ -50,6 +50,7 @@ impl From<SampleSize> for usize {
 impl SampleSize {
     pub const MIN: Self = Self(2);
     pub const THIRTY: Self = Self(30);
+    pub const SIXTY_FOUR: Self = Self(64);
     pub const TWO_FIFTY_FIVE: Self = Self(u8::MAX as u32);
     pub const MAX: Self = Self(u32::MAX);
 }
@@ -147,6 +148,7 @@ mod test {
         assert_eq!(true, is_valid_sample_size(4));
         assert_eq!(true, is_valid_sample_size(5));
         assert_eq!(true, is_valid_sample_size(SampleSize::THIRTY.into()));
+        assert_eq!(true, is_valid_sample_size(SampleSize::SIXTY_FOUR.into()));
         assert_eq!(
             true,
             is_valid_sample_size(SampleSize::TWO_FIFTY_FIVE.into())

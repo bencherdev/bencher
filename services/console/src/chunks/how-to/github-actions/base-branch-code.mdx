@@ -1,4 +1,4 @@
-```yaml
+```yaml title=".github/workflows/base_benchmarks.yml"
 on:
   push:
     branches: main
@@ -17,7 +17,13 @@ jobs:
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch main \
           --testbed ubuntu-latest \
-          --adapter json \
+          --threshold-measure latency \
+          --threshold-test t_test \
+          --threshold-max-sample-size 64 \
+          --threshold-upper-boundary 0.99 \
+          --thresholds-reset \
           --err \
+          --adapter json \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           bencher mock
 ```

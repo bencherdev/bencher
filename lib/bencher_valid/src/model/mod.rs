@@ -44,9 +44,9 @@ impl Model {
         Self {
             test: ModelTest::TTest,
             min_sample_size: None,
-            max_sample_size: Some(SampleSize::TWO_FIFTY_FIVE),
+            max_sample_size: Some(SampleSize::SIXTY_FOUR),
             window: None,
-            lower_boundary: Some(Boundary::NINETY_EIGHT),
+            lower_boundary: Some(Boundary::NINETY_NINE),
             upper_boundary: None,
         }
     }
@@ -55,10 +55,10 @@ impl Model {
         Self {
             test: ModelTest::TTest,
             min_sample_size: None,
-            max_sample_size: Some(SampleSize::TWO_FIFTY_FIVE),
+            max_sample_size: Some(SampleSize::SIXTY_FOUR),
             window: None,
             lower_boundary: None,
-            upper_boundary: Some(Boundary::NINETY_EIGHT),
+            upper_boundary: Some(Boundary::NINETY_NINE),
         }
     }
 
