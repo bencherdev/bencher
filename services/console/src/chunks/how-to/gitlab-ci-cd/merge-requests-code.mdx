@@ -1,4 +1,4 @@
-```yaml
+```yaml title=".gitlab-ci.yml"
 benchmark_mr_branch:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -12,9 +12,10 @@ benchmark_mr_branch:
       --project save-walter-white-1234abcd \
       --token "$BENCHER_API_TOKEN" \
       --branch "$CI_COMMIT_REF_NAME" \
-      --branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \
-      --branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" \
-      --branch-reset \
+      --start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \
+      --start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" \
+      --start-point-clone-thresholds \
+      --start-point-reset \
       --testbed debian:bullseye \
       --adapter json \
       --err \

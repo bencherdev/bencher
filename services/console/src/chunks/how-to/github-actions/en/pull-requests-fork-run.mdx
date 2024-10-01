@@ -1,0 +1,36 @@
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+
+<PullRequestsForkRunCode />
+
+1. Create a first GitHub Actions `workflow` file.
+   (ex: `.github/workflows/fork_pr_benchmarks_run.yml`)
+2. Name this workflow so it can be referenced by the second workflow.
+   (ex: `name: Run and Cache Benchmarks`)
+3. Run on `pull_request` events:
+    - `opened` - A pull request was created.
+    - `reopened` - A previously closed pull request was reopened.
+    - `edited` - The title or body of a pull request was edited, or the base branch of a pull request was changed.
+    - `synchronize` - A pull request's head branch was updated.
+      For example, the head branch was updated from the base branch or new commits were pushed to the head branch.
+
+   See the [GitHub Actions `on` documentation][github actions on]
+   and [GitHub Actions `pull_request` documentation][github action pull_request] for a full overview.
+   (ex: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. Create a GitHub Actions `job`.
+   (ex: `jobs: benchmark_fork_pr_branch`)
+5. Set the type of machine the job will run on.
+   See the [GitHub Actions `runs-on` documentation][github actions runs-on]
+   for a full overview.
+   (ex: `runs-on: ubuntu-latest`)
+6. Checkout the fork PR branch source code.
+   (ex: `uses: actions/checkout@v4`)
+7. Run your benchmarks and save the results to a file.
+   (ex: `/bin/echo '{ ... }' > benchmark_results.json`)
+8. Upload the benchmark results file as an artifact.
+   (ex: `uses: actions/upload-artifact@v4`)
+9. Upload the `pull_request` event object as an artifact.
+  (ex: `uses: actions/upload-artifact@v4`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on

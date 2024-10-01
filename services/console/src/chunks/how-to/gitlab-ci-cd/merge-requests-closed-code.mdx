@@ -1,0 +1,22 @@
+```yaml title=".gitlab-ci.yml"
+archive_mr_branch:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+  image: debian:bullseye
+  before_script:
+    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+    - |
+      MR_STATE=$(curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID" | jq -r .state)
+      echo "Merge request state: $MR_STATE"
+  script:
+    - |
+      if [ "$MR_STATE" = "closed" ]; then
+        bencher archive \
+        --project save-walter-white-1234abcd \
+        --token "$BENCHER_API_TOKEN" \
+        --branch "$CI_COMMIT_REF_NAME"
+      else
+        echo 'Merge request is not `closed`. Skipping archival.'
+      fi
+```

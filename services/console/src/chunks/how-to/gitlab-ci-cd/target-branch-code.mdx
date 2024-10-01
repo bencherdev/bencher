@@ -1,4 +1,4 @@
-```yaml
+```yaml title=".gitlab-ci.yml"
 benchmark_target_branch:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
@@ -13,7 +13,12 @@ benchmark_target_branch:
       --token "$BENCHER_API_TOKEN" \
       --branch main \
       --testbed debian:bullseye \
-      --adapter json \
+      --threshold-measure latency \
+      --threshold-test t_test \
+      --threshold-max-sample-size 64 \
+      --threshold-upper-boundary 0.99 \
+      --thresholds-reset \
       --err \
+      --adapter json \
       bencher mock
 ```
