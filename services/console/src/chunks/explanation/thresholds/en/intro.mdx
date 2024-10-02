@@ -1,0 +1,61 @@
+import ThresholdCode from "../threshold-code.mdx";
+
+Thresholds are how you catch performance regressions with Bencher.
+A Threshold is assigned to a unique combination of:
+[Branch][branch], [Testbed][testbed], and [Measure][measure].
+A Threshold uses a specific [Test][tests] to detect performance regressions.
+The combination of a Test and its parameters is called a Model.
+A Model must have a Lower Boundary, Upper Boundary, or both.
+
+- Lower Boundary
+  - A Lower Boundary is used when a smaller value would indicate a performance regression,
+  such as with the Throughput Measure.
+- Upper Boundary
+  - An Upper Boundary is used when a larger value would indicate a performance regression,
+  such as with the Latency Measure.
+
+Each Boundary is used to calculate a Boundary Limit.
+Then every new [Metric][metric] is checked against each Boundary Limit.
+An Alert is generated when a new Metric is below a Lower Boundary Limit or above an Upper Boundary Limit.
+
+When [Continuous Benchmarking], that is benchmarking in CI you will want to create Thresholds.
+Using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
+you already specify a Branch with [the `--branch` option][branch option]
+and a Testbed with [the `--testbed` option][testbed option].
+So the only other dimension you need to specify is a Measure, with the `--threshold-measure` option.
+Then you can use the `--threshold-test` option to specify the Test to use for that Measure.
+The `--threshold-min-sample-size`, `--threshold-max-sample-size`, and `--threshold-window` options
+allow you to control what data is used by the Test.
+Finally, the `--threshold-lower-boundary` and `--threshold-upper-boundary` options
+allow you to set the Lower Boundary and Upper Boundary.
+If you want to remove all Models that are not specified,
+you can do so with the `--thresholds-reset` flag.
+
+- If the Threshold does not exits, it will be created for you.
+- If the Threshold does exist and the specified Model is the same, then the Model is ignored.
+- If the Threshold does exist and the specified Model is different, then a new Model is created for the Threshold.
+- If a Threshold does exist and it is reset, then the current Model is removed from the Threshold.
+
+For example, to only use a Threshold for the Latency Measure
+using [a Student's t-test Test][t-test]
+with a maximum sample size of `64`
+and an Upper Boundary of `0.99`, you could write something this:
+
+<ThresholdCode />
+
+> 🐰 When working with feature branches, you may want to copy the existing Thresholds from the base, [Start Point][start point] Branch.
+> This is possible with [the `--start-point-clone-thresholds` flag][start point clone thresholds flag].
+Note that the `--thresholds-reset` flag will still remove any cloned Thresholds that are not explicitly specified.
+
+[branch]: /docs/explanation/benchmarking/#branch
+[testbed]: /docs/explanation/benchmarking/#testbed
+[measure]: /docs/explanation/benchmarking/#measure
+[metric]: /docs/explanation/benchmarking/#metric
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[branch option]: /docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /docs/explanation/bencher-run/#--testbed-testbed
+[start point]: /docs/explanation/benchmarking/#start-point
+[start point clone thresholds flag]: /docs/explanation/branch-selection/#--start-point-clone-thresholds
+
+[tests]: #--threshold-test-test
+[t-test]: #t-test

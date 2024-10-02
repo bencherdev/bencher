@@ -146,12 +146,12 @@ pub struct CliRunThresholds {
     #[clap(value_enum, long, requires = "threshold_measure")]
     pub threshold_test: Vec<CliModelTest>,
 
-    /// Min sample size
+    /// Minimum sample size
     /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
     pub threshold_min_sample_size: Vec<ElidedOption<SampleSize>>,
 
-    /// Max sample size
+    /// Maximum sample size
     /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
     pub threshold_max_sample_size: Vec<ElidedOption<SampleSize>>,

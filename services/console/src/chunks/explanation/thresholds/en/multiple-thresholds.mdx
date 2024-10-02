@@ -1,0 +1,18 @@
+import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
+
+## Multiple Thresholds
+
+It is possible to create multiple Thresholds with the same
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code> invocation.
+When specifying multiple Thresholds, all of the same options must be used for each Threshold.
+To ignore an option for a specific Threshold, use an underscore (`_`).
+
+For example, if you only want to use two Thresholds,
+one for the Latency Measure and one for the Throughput Measure
+then you would likely want to set an Upper Boundary for the Latency Measure
+and a Lower Boundary for the Throughput Measure.
+Therefore, you would use `--threshold-lower-boundary _` for the Latency Measure
+and `--threshold-upper-boundary _` for the Throughput Measure.
+You could write something this:
+
+<MultipleThresholdsCode />

@@ -1,0 +1,20 @@
+## `--threshold-min-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+Optionally specify the minimum number of [Metrics][metric] required to run a Test.
+If this minimum is not met, the Test will not run.
+The specified sample size must be greater than or equal to `2`.
+If [the `--threshold-max-sample-size` option][threshold max sample size option] is also set,
+then the specified sample size must be less than or equal to `--threshold-max-sample-size`.
+This option cannot be used with [the Static (`static`) Test][static].
+
+For example to use a Threshold with a minimum sample size of `10`,
+you could write `--threshold-min-sample-size 10`.
+If there were fewer than `10` Metrics, the Test would not run.
+Conversely, if there were `10` or more Metrics, the Test would run.
+
+[metric]: /docs/explanation/benchmarking/#metric
+
+[threshold max sample size option]: #--threshold-max-sample-size-sample-size
+[static]: #static

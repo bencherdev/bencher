@@ -1,14 +1,16 @@
 ## Pending `v0.4.21`
 - **BREAKING CHANGE** Update the Branch JSON to include the concept of a `HEAD` which now contains the Start Point
 - Changing a branch's start point will now update the branch `HEAD` instead of creating a new branch and archiving the old one
-- Deprecate `--branch-start-point`, `--branch-start-point-hash`, and `--branch-reset` in favor of `--start-point`, `--start-point-hash`, and `--start-point-reset`
+- Deprecate `--branch-start-point`, `--branch-start-point-hash`, and `--branch-reset` in favor of `--start-point`, `--start-point-hash`, and `--start-point-reset` for `bencher run`
 - Introduce a `max_versions` for Branch Start Points, default to `255`
+- Add the `--start-point-max-versions` option to `bencher run`
 - Thresholds are no longer cloned based off of a branch start point
+- Add the `--start-point-clone-thresholds` flag to `bencher run`
 - Add Thresholds to Report JSON
 - Add `--threshold-measure`, `--threshold-test`, `--threshold-min-sample-size`, `threshold-max-sample-size`, `threshold-window`, `threshold-lower-boundary`, `threshold-upper-boundary`, and `thresholds-reset` to `bencher run`
 - Fix public plots pages to not require authentication
 - Add `--measure` option to `bencher mock` to mock multiple measures
-- Add a `bencher archive` and `bencher unarchive` sub-command to archive and unarchive dimensions
+- Add a `bencher archive` and `bencher unarchive` subcommand to archive and unarchive dimensions
 - Fix broken default version tag for `bencher up` (Thank you [@mwasplund](https://github.com/mwasplund))
 - Add `--api-port` and `--console-port` options to `bencher up` to set the API and Console UI ports
 
@@ -352,7 +354,7 @@
 - Add servers to Swagger API docs
 - Fix perf view refresh bug
 - Add an order of `--magnitude` argument to `bencher mock` command
-- Add an API endpoint for threshold statistics and a CLI `statistic` sub-command
+- Add an API endpoint for threshold statistics and a CLI `statistic` subcommand
 - Upgrade the `bencher perf` CLI flag `--table` to accept an optional style parameter
 - Fix long text wrapping in UI deck view, both header and card contents
 - Autogenerate TypeScript types from Rust type definitions

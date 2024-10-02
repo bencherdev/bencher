@@ -1,0 +1,37 @@
+
+### `--start-point-hash <HASH>`
+
+<br />
+
+Use the specified full Git hash as the [Start Point][start point] for the `branch` option.
+This option requires [the `--start-point` option][start point option] to be set.
+
+- If `branch` does not exist, it will be created from `start-point` at the specified hash.
+- If `branch` does exist and both `start-point` and the specified hash are the same,
+  then this option is ignored.
+- If `branch` does exist and either the `start-point` or the specified hash are different,
+  a new instance of `branch` will be created from `start-point` at the specified hash.
+- If `branch` does not exist and the `start-point` does not exist at the specified hash,
+  then the `branch` will be created without any historical data.
+- If `branch` does exist and the `start-point` does not exist at the specified hash,
+  then this option is ignored.
+
+If a new `branch` is created with a Start Point,
+then all the most recent data and optionally Thresholds from the `start-point` at the specified hash are copied over.
+See [the `--start-point-max-versions` option][start point max version option] and [the `--start-point-clone-thresholds` option][start point clone thresholds option] for more details.
+
+For example, if `feature_branch` exists with its Start Point being the `main` Branch
+at hash `32aea434d751648726097ed3ac760b57107edd8b`
+then using `--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
+would:
+
+1. Remove the old instance of `feature_branch`
+2. Create a new instance of `feature_branch`
+3. Copy of all the most recent data from `main` at hash `68b12758509ca5e2b1e3983525625e532eb5f562` to the new instance of `feature_branch`
+4. `bencher run` would then proceed using the new instance of `feature_branch`
+
+[start point]: /docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

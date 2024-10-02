@@ -1,0 +1,20 @@
+
+### `--start-point-clone-thresholds`
+
+<br />
+
+Clone all of the [Thresholds][thresholds] from the [Start Point][start point] for the `branch` option.
+This flag requires [the `--start-point` option][start point option] to be set.
+
+- If a Threshold does not exist, it will be created from the `start-point` Threshold.
+- If a Threshold does exist and it is the same as the `start-point` Threshold, then that Threshold is effectively ignored.
+- If a Threshold does exist and its model is different from the `start-point` Threshold, then the old model will be replaced with the `start-point` Threshold model.
+- If a Threshold does exists and the `start-point` Threshold does not exist, then the Threshold model is removed.
+
+For example, if `feature_branch` exists with its Start Point being the `main` Branch and `main` has a Threshold for the built-in `localhost` Testbed and `latency` Measure,
+then using `--branch feature_branch --start-point main --start-point-clone-thresholds` would create a new Threshold for `feature_branch` with the `localhost` Testbed and `latency` Measure.
+
+[thresholds]: /docs/explanation/thresholds/
+[start point]: /docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

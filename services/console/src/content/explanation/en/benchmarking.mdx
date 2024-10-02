@@ -24,7 +24,7 @@ If a regression is detected, then an Alert will be generated.
 
 From here on out we will refer to your "benchmarks" as "performance regression tests" to avoid any confusion.
 
-## Benchmarks
+## Benchmark
 A Benchmark is a named performance regression test.
 If the performance regression test is new to Bencher, then a Benchmark is automatically created.
 Otherwise, the name of the performance regression test is used as the unique identifier for the Benchmark.
@@ -38,13 +38,13 @@ Depending on the benchmark harness, the path to the performance regression test 
 The only exception to the above caveat is ignoring a Benchmark.
 See [suppressing alerts](/docs/explanation/thresholds/) for a full overview.
 
-### Metrics
+### Metric
 A Metric is a single, point-in-time performance regression test result.
 Up to three Values may be collected for a single Metric: `value`, `lower_value`, and `upper_value`.
 The `value` is required for all Metrics while the `lower_value` and `upper_value` are independently optional.
 Which Values are collected is determined by the [benchmark harness adapter](/docs/explanation/adapters/).
 
-### Measures
+### Measure
 A Measure is the unit of measurement for a Metric.
 By default all Projects start with a `Latency` and `Throughput` Measure
 with units of `nanoseconds (ns)` and `operations / second (ops/s)` respectively.
@@ -77,6 +77,46 @@ A Testbed is the name of the testing environment used when running a Report.
 By default all Projects start with a `localhost` Testbed.
 When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
 `localhost` is the default Testbed if one is not provided.
+
+<br />
+
+## Threshold
+A Threshold is used to catch performance regressions.
+A Threshold is assigned to a unique combination of:
+Branch, Testbed, and Measure.
+See [thresholds](/docs/explanation/thresholds/) for a full overview.
+
+### Test
+A Test is used by a Threshold to detect performance regressions.
+The combination of a Test and its parameters is called a Model.
+See [thresholds](/docs/explanation/thresholds/) for a full overview.
+
+### Model
+A Model is the combination of a Test and its parameters for a Threshold.
+A Model must have a Lower Boundary, Upper Boundary, or both.
+
+- Lower Boundary
+  - A Lower Boundary is used when a smaller value would indicate a performance regression,
+  such as with the `Throughput` Measure.
+- Upper Boundary
+  - An Upper Boundary is used when a larger value would indicate a performance regression,
+  such as with the `Latency` Measure.
+
+Each Boundary is used to calculate a Boundary Limit.
+Then every new Metric is checked against each Boundary Limit.
+An Alert is generated when a new Metric is below a Lower Boundary Limit or above an Upper Boundary Limit.
+See [thresholds](/docs/explanation/thresholds/) for a full overview.
+
+#### Boundary Limit
+A Boundary Limit is the value calculated from a Lower Boundary or Upper Boundary.
+It is used to compare against a new Metric.
+An Alert is generated when a new Metric is below a Lower Boundary Limit or above an Upper Boundary Limit.
+See [thresholds](/docs/explanation/thresholds/) for a full overview.
+
+### Alert
+An Alert is generated when a new Metric fails a Test
+by being below a Lower Boundary Limit or above an Upper Boundary Limit.
+See [thresholds](/docs/explanation/thresholds/) for a full overview.
 
 <br />
 <br />

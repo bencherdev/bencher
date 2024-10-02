@@ -1,0 +1,20 @@
+```sh
+bencher run \
+--project save-walter-white-1234abcd \
+--branch main \
+--testbed localhost \
+--threshold-measure latency \
+--threshold-test t_test \
+--threshold-max-sample-size 64 \
+--threshold-lower-boundary _ \
+--threshold-upper-boundary 0.99 \
+--threshold-measure throughput \
+--threshold-test t_test \
+--threshold-max-sample-size 64 \
+--threshold-lower-boundary 0.99 \
+--threshold-upper-boundary _ \
+--thresholds-reset \
+--err \
+--adapter json \
+bencher mock --measure latency --measure throughput
+```

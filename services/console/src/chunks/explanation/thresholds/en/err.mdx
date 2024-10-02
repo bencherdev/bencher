@@ -1,0 +1,25 @@
+## `--err`
+
+<br />
+
+Optionally error when an Alert is generated.
+An Alert is generated when a new [Metric][metric] is below a Lower Boundary Limit or above an Upper Boundary Limit.
+
+### Suppressing Alerts
+Sometimes it can be useful to suppress Alerts for a particular Benchmark.
+The best way to do this is by adding one of these special suffixes to that Benchmark's name:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+For example, if your Benchmark was named `my_flaky_benchmark` then renaming it to `my_flaky_benchmark_bencher_ignore`
+would ignore just that particular Benchmark going forward.
+Ignored Benchmarks do get checked against existing Thresholds.
+However, an Alert will not be generated for them.
+The Metrics for ignored Benchmarks are still stored.
+The results from `my_flaky_benchmark_bencher_ignore` would still be stored as the Benchmark `my_flaky_benchmark`.
+If you remove the suffix and return to the original Benchmark name,
+then things will pick right back up where you left off.
+
+[metric]: /docs/explanation/benchmarking/#metric

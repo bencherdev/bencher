@@ -9,10 +9,11 @@ you will often want to create or rebase a `branch` on an already existing Branch
 This is called a Branch [Start Point][start point].
 A Start Point is another Branch at a specific version (and `git` hash, if available).
 When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
-select a Start Point with the `--branch-start-point` option.
-Additionally, use the `--branch-start-point-hash` option to specify a specific `git` hash for the Start Point.
-All the data and [Thresholds][thresholds] are copied over from the Start Point.
-To prevent drift, use the `--branch-reset` flag to always reset the Branch to the Start Point.
+select a Start Point with the `--start-point` option.
+Additionally, use the `--start-point-hash` option to specify a specific `git` hash for the Start Point.
+The amount of data that is copied over from the Start Point is controlled with the `--start-point-max-versions` option.
+Similarly, [Thresholds][thresholds] can be copied over from the Start Point with the `--start-point-clone-thresholds` flag.
+To prevent drift, use the `--start-point-reset` flag to always reset the Branch to the Start Point.
 
 [continuous benchmarking]: /docs/explanation/continuous-benchmarking/
 [start point]: /docs/explanation/benchmarking/#start-point

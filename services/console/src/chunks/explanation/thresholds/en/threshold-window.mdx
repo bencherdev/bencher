@@ -1,0 +1,17 @@
+## `--threshold-window <WINDOW>`
+
+<br />
+
+Optionally specify the window of time for [Metrics][metric] used to perform the Test, in seconds.
+The specified window must be greater than `0`.
+This option cannot be used with [the Static (`static`) Test][static].
+
+For example, to use a Threshold with a window of four weeks or `2419200` seconds,
+you could write `--threshold-window 2419200`.
+If there are any Metrics older than four weeks, they would be excluded.
+Conversely, if all Metrics are from within the past four weeks, they would all be included.
+
+[metric]: /docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

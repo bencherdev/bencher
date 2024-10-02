@@ -1,4 +1,4 @@
-### `--branch-start-point-max-versions <COUNT>`
+### `--start-point-max-versions <COUNT>`
 
 <br />
 
@@ -6,13 +6,13 @@ Use the specified maximum number of historical branch versions to include
 from the [Start Point][start point] for the `branch` option.
 Any versions beyond this number will be omitted.
 The default is `255` versions.
-This option requires the [`--branch-start-point`][branch start point] option to be set.
+This option requires [the `--start-point` option][start point option] to be set.
 
 For example, if `feature_branch` exists with its Start Point being the `main` Branch
 and `main` has `300` versions,
-then using `--branch-start-point-max-versions 100`
+then using `--branch feature_branch --start-point main --start-point-max-versions 100`
 would only include the most recent `100` versions of `main` in `feature_branch`.
 
 [start point]: /docs/explanation/benchmarking/#start-point
 
-[branch start point]: #--branch-start-point-branch
+[start point option]: #--branch-start-point-branch
