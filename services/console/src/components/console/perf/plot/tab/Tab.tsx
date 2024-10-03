@@ -140,6 +140,7 @@ const Tab = (props: {
 					measures={props.measures}
 					tab={props.tab}
 					tabList={tabList as Accessor<TabList<JsonReport>>}
+					page={props.page}
 					per_page={props.per_page}
 					start_date={props.reports_start_date}
 					end_date={props.reports_end_date}

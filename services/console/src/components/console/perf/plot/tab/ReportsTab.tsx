@@ -12,7 +12,6 @@ import type { TabElement, TabList } from "./PlotTab";
 import DateRange from "../../../../field/kinds/DateRange";
 import { themeText, type Theme } from "../../../../navbar/theme/theme";
 import ReportCard from "../../../deck/hand/card/ReportCard";
-import { createStore } from "solid-js/store";
 
 const ReportsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -23,6 +22,7 @@ const ReportsTab = (props: {
 	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	tabList: Accessor<TabList<JsonReport>>;
+	page: Accessor<number>;
 	per_page: Accessor<number>;
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
@@ -30,18 +30,6 @@ const ReportsTab = (props: {
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 }) => {
-	const [checked, setChecked] = createStore(
-		props.tabList().map((report) => report?.resource?.uuid === props.report()),
-	);
-	const handleChecked = (index: number, uuid: string) => {
-		setChecked((prev) => {
-			const next = [...prev];
-			next[index] = !next[index];
-			return next;
-		});
-		props.handleChecked(index, uuid);
-	};
-
 	return (
 		<>
 			<div class="panel-block is-block">
@@ -98,8 +86,8 @@ const ReportsTab = (props: {
 									tab={props.tab}
 									report={report}
 									index={index}
-									isChecked={checked[index()] ?? false}
-									handleChecked={handleChecked}
+									isChecked={report?.resource?.uuid === props.report()}
+									handleChecked={props.handleChecked}
 								/>
 							);
 						}}

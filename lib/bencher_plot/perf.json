@@ -18,6 +18,14 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "master",
                 "slug": "master",
+                "head": {
+                    "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                    "branch": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                    "start_point": null,
+                    "version": null,
+                    "created": "2023-07-02T12:53:33Z",
+                    "replaced": null
+                },
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
@@ -231,6 +239,14 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "master",
                 "slug": "master",
+                "head": {
+                    "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                    "branch": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                    "start_point": null,
+                    "version": null,
+                    "created": "2023-07-02T12:53:33Z",
+                    "replaced": null
+                },
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
@@ -444,6 +460,14 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "master",
                 "slug": "master",
+                "head": {
+                    "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                    "branch": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                    "start_point": null,
+                    "version": null,
+                    "created": "2023-07-02T12:53:33Z",
+                    "replaced": null
+                },
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },

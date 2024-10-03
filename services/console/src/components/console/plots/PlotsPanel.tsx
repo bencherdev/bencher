@@ -262,7 +262,7 @@ const PlotsPanel = (props: Props) => {
 								class="button is-primary is-fullwidth"
 								href={perfPath(props.isConsole, project_slug())}
 							>
-								View a Perf Plot
+								View Perf Plot
 							</a>
 						</div>
 					</div>

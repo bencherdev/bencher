@@ -18,6 +18,14 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "goop",
                 "slug": "goop",
+                "head": {
+                    "uuid": "ff685107-8b8b-4034-9133-c41f644a0538",
+                    "branch": "ff685107-8b8b-4034-9133-c41f644a0538",
+                    "start_point": null,
+                    "version": null,
+                    "created": "2023-07-02T12:55:23Z",
+                    "replaced": null
+                },
                 "created": "2023-07-02T12:55:23Z",
                 "modified": "2023-07-02T12:55:23Z"
             },
@@ -165,6 +173,14 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "goop",
                 "slug": "goop",
+                "head": {
+                    "uuid": "ff685107-8b8b-4034-9133-c41f644a0538",
+                    "branch": "ff685107-8b8b-4034-9133-c41f644a0538",
+                    "start_point": null,
+                    "version": null,
+                    "created": "2023-07-02T12:55:23Z",
+                    "replaced": null
+                },
                 "created": "2023-07-02T12:55:23Z",
                 "modified": "2023-07-02T12:55:23Z"
             },
@@ -312,6 +328,14 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "goop",
                 "slug": "goop",
+                "head": {
+                    "uuid": "ff685107-8b8b-4034-9133-c41f644a0538",
+                    "branch": "ff685107-8b8b-4034-9133-c41f644a0538",
+                    "start_point": null,
+                    "version": null,
+                    "created": "2023-07-02T12:55:23Z",
+                    "replaced": null
+                },
                 "created": "2023-07-02T12:55:23Z",
                 "modified": "2023-07-02T12:55:23Z"
             },
