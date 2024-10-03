@@ -11,9 +11,8 @@ crate::typed_uuid::typed_uuid!(VersionUuid);
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonReference {
+pub struct JsonHead {
     pub uuid: ReferenceUuid,
-    pub branch: BranchUuid,
     pub start_point: Option<JsonStartPoint>,
     pub version: Option<JsonVersion>,
     pub created: DateTime,
@@ -25,7 +24,7 @@ pub struct JsonReference {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStartPoint {
     pub branch: BranchUuid,
-    pub reference: ReferenceUuid,
+    pub head: ReferenceUuid,
     pub version: JsonVersion,
 }
 

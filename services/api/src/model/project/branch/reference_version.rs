@@ -64,7 +64,7 @@ impl QueryReferenceVersion {
         self,
         conn: &mut DbConnection,
     ) -> Result<JsonStartPoint, HttpError> {
-        let (branch, reference) = schema::branch::table
+        let (branch, head) = schema::branch::table
             .inner_join(
                 schema::reference::table.on(schema::reference::branch_id.eq(schema::branch::id)),
             )
@@ -75,7 +75,7 @@ impl QueryReferenceVersion {
         let version = QueryVersion::get(conn, self.version_id)?.into_json();
         Ok(JsonStartPoint {
             branch,
-            reference,
+            head,
             version,
         })
     }

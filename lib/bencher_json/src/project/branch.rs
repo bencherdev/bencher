@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{JsonReference, ProjectUuid};
+use crate::{JsonHead, ProjectUuid};
 
 crate::typed_uuid::typed_uuid!(BranchUuid);
 
@@ -91,7 +91,7 @@ pub struct JsonBranch {
     pub project: ProjectUuid,
     pub name: BranchName,
     pub slug: Slug,
-    pub head: JsonReference,
+    pub head: JsonHead,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,

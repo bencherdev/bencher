@@ -1,6 +1,6 @@
 use bencher_json::{
     project::reference::{JsonVersion, VersionNumber},
-    BranchUuid, DateTime, GitHash, JsonReference, JsonStartPoint, ReferenceUuid,
+    BranchUuid, DateTime, GitHash, JsonHead, JsonStartPoint, ReferenceUuid,
 };
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
@@ -71,31 +71,28 @@ impl QueryReference {
         conn: &mut DbConnection,
         reference_id: ReferenceId,
         version: Option<QueryVersion>,
-    ) -> Result<JsonReference, HttpError> {
-        let (reference_uuid, branch_uuid, start_point_id, created, replaced) =
-            schema::reference::table
-                .inner_join(
-                    schema::branch::table.on(schema::branch::id.eq(schema::reference::branch_id)),
-                )
-                .filter(schema::reference::id.eq(reference_id))
-                .select((
-                    schema::reference::uuid,
-                    schema::branch::uuid,
-                    schema::reference::start_point_id.nullable(),
-                    schema::reference::created,
-                    schema::reference::replaced.nullable(),
-                ))
-                .first::<(
-                    ReferenceUuid,
-                    BranchUuid,
-                    Option<ReferenceVersionId>,
-                    DateTime,
-                    Option<DateTime>,
-                )>(conn)
-                .map_err(resource_not_found_err!(Reference, reference_id))?;
+    ) -> Result<JsonHead, HttpError> {
+        let (reference_uuid, start_point_id, created, replaced) = schema::reference::table
+            .inner_join(
+                schema::branch::table.on(schema::branch::id.eq(schema::reference::branch_id)),
+            )
+            .filter(schema::reference::id.eq(reference_id))
+            .select((
+                schema::reference::uuid,
+                schema::reference::start_point_id.nullable(),
+                schema::reference::created,
+                schema::reference::replaced.nullable(),
+            ))
+            .first::<(
+                ReferenceUuid,
+                Option<ReferenceVersionId>,
+                DateTime,
+                Option<DateTime>,
+            )>(conn)
+            .map_err(resource_not_found_err!(Reference, reference_id))?;
 
         let start_point = if let Some(start_point_id) = start_point_id {
-            let (branch, reference, number, hash) = schema::reference_version::table
+            let (branch, head, number, hash) = schema::reference_version::table
                 .inner_join(
                     schema::reference::table
                         .on(schema::reference::id.eq(schema::reference_version::reference_id))
@@ -117,16 +114,15 @@ impl QueryReference {
 
             Some(JsonStartPoint {
                 branch,
-                reference,
+                head,
                 version: JsonVersion { number, hash },
             })
         } else {
             None
         };
 
-        Ok(JsonReference {
+        Ok(JsonHead {
             uuid: reference_uuid,
-            branch: branch_uuid,
             start_point,
             version: version.map(QueryVersion::into_json),
             created,

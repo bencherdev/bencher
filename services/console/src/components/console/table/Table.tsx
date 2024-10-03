@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { Row } from "../../../config/types";
 import { fmtDateTime } from "../../../config/util";
-import type { Slug } from "../../../types/bencher";
+import { AlertStatus, type Slug } from "../../../types/bencher";
 import { fmtValues } from "../../../util/resource";
 import { BACK_PARAM, encodePath, pathname } from "../../../util/url";
 import FallbackTable from "./FallbackTable";
@@ -70,7 +70,29 @@ const Table = (props: Props) => {
 							href={rowHref(props.config?.row?.button, datum)}
 							onMouseDown={(_e) => rowEffect(props.config?.row?.button, datum)}
 						>
-							{rowText(props.config?.row, datum)}
+							<Switch fallback={rowText(props.config?.row, datum)}>
+								<Match when={datum?.status === AlertStatus.Active}>
+									<span class="icon-text">
+										<span class="icon has-text-primary">
+											<i class="far fa-bell" />
+										</span>
+										<span>{rowText(props.config?.row, datum)}</span>
+									</span>
+								</Match>
+								<Match
+									when={
+										datum?.status === AlertStatus.Dismissed ||
+										datum?.status === AlertStatus.Silenced
+									}
+								>
+									<span class="icon-text">
+										<span class="icon">
+											<i class="far fa-bell-slash" />
+										</span>
+										<span>{rowText(props.config?.row, datum)}</span>
+									</span>
+								</Match>
+							</Switch>
 						</a>
 					)}
 				</For>

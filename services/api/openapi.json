@@ -8259,7 +8259,7 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "head": {
-            "$ref": "#/components/schemas/JsonReference"
+            "$ref": "#/components/schemas/JsonHead"
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
@@ -8564,6 +8564,45 @@
           "client_email",
           "private_key",
           "token_uri"
+        ]
+      },
+      "JsonHead": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "replaced": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "start_point": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonStartPoint"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ReferenceUuid"
+          },
+          "version": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVersion"
+              }
+            ]
+          }
+        },
+        "required": [
+          "created",
+          "uuid"
         ]
       },
       "JsonIndex": {
@@ -8872,9 +8911,6 @@
           "test": {
             "$ref": "#/components/schemas/ModelTest"
           },
-          "threshold": {
-            "$ref": "#/components/schemas/ThresholdUuid"
-          },
           "upper_boundary": {
             "nullable": true,
             "allOf": [
@@ -8898,7 +8934,6 @@
         "required": [
           "created",
           "test",
-          "threshold",
           "uuid"
         ]
       },
@@ -10283,49 +10318,6 @@
           "uuid"
         ]
       },
-      "JsonReference": {
-        "type": "object",
-        "properties": {
-          "branch": {
-            "$ref": "#/components/schemas/BranchUuid"
-          },
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "replaced": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
-          },
-          "start_point": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonStartPoint"
-              }
-            ]
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/ReferenceUuid"
-          },
-          "version": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonVersion"
-              }
-            ]
-          }
-        },
-        "required": [
-          "branch",
-          "created",
-          "uuid"
-        ]
-      },
       "JsonRemoveModel": {
         "type": "object",
         "properties": {
@@ -11019,7 +11011,7 @@
           "branch": {
             "$ref": "#/components/schemas/BranchUuid"
           },
-          "reference": {
+          "head": {
             "$ref": "#/components/schemas/ReferenceUuid"
           },
           "version": {
@@ -11028,7 +11020,7 @@
         },
         "required": [
           "branch",
-          "reference",
+          "head",
           "version"
         ]
       },

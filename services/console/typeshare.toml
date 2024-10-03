@@ -6,6 +6,7 @@
 "ReportUuid" = "Uuid"
 "PlotUuid" = "Uuid"
 "BranchUuid" = "Uuid"
+"ReferenceUuid" = "Uuid"
 "TestbedUuid" = "Uuid"
 "BenchmarkUuid" = "Uuid"
 "MeasureUuid" = "Uuid"

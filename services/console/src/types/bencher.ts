@@ -74,7 +74,6 @@ export type Boundary = number;
 
 export interface JsonModel {
 	uuid: Uuid;
-	threshold: Uuid;
 	test: ModelTest;
 	min_sample_size?: SampleSize;
 	max_sample_size?: SampleSize;
@@ -126,13 +125,12 @@ export interface JsonVersion {
 
 export interface JsonStartPoint {
 	branch: Uuid;
-	reference: ReferenceUuid;
+	head: Uuid;
 	version: JsonVersion;
 }
 
-export interface JsonReference {
-	uuid: ReferenceUuid;
-	branch: Uuid;
+export interface JsonHead {
+	uuid: Uuid;
 	start_point?: JsonStartPoint;
 	version?: JsonVersion;
 	created: string;
@@ -144,7 +142,7 @@ export interface JsonBranch {
 	project: Uuid;
 	name: BranchName;
 	slug: Slug;
-	head: JsonReference;
+	head: JsonHead;
 	created: string;
 	modified: string;
 	archived?: string;
@@ -449,7 +447,7 @@ export interface JsonProject {
  */
 export interface JsonPerfQuery {
 	branches: Uuid[];
-	heads: ReferenceUuid[];
+	heads: Uuid[];
 	testbeds: Uuid[];
 	benchmarks: Uuid[];
 	measures: Uuid[];

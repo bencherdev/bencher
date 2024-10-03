@@ -12,7 +12,7 @@ use crate::{
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
-use super::{QueryThreshold, ThresholdId};
+use super::ThresholdId;
 
 crate::util::typed_id::typed_id!(ModelId);
 
@@ -73,12 +73,7 @@ impl QueryModel {
         }
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonModel, HttpError> {
-        let threshold = QueryThreshold::get(conn, self.threshold_id)?;
-        Ok(self.into_json_for_threshold(&threshold))
-    }
-
-    pub fn into_json_for_threshold(self, threshold: &QueryThreshold) -> JsonModel {
+    pub fn into_json(self, parent_id: ThresholdId) -> JsonModel {
         let Self {
             uuid,
             threshold_id,
@@ -94,13 +89,12 @@ impl QueryModel {
         } = self;
         assert_parentage(
             BencherResource::Threshold,
-            threshold.id,
+            parent_id,
             BencherResource::Model,
             threshold_id,
         );
         JsonModel {
             uuid,
-            threshold: threshold.uuid,
             test,
             min_sample_size,
             max_sample_size,
