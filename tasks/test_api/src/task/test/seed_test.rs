@@ -1058,7 +1058,7 @@ impl SeedTest {
             "--threshold-test",
             "t_test",
             "--threshold-upper-boundary",
-            "0.995",
+            "0.9",
             "--thresholds-reset",
             "--format",
             "json",

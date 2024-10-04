@@ -201,7 +201,7 @@ impl QueryThreshold {
                 BencherResource::Model,
                 query_model.threshold_id,
             );
-            Some(query_model.into_json(self.id))
+            Some(query_model.into_json(&self))
         } else {
             None
         };
@@ -244,7 +244,7 @@ impl QueryThreshold {
         project: &QueryProject,
         query_model: QueryModel,
     ) -> JsonThresholdModel {
-        let model = query_model.into_json(self.id);
+        let model = query_model.into_json(&self);
         let Self {
             uuid,
             project_id,

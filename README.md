@@ -63,8 +63,8 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking/)
   - [`bencher run`](https://bencher.dev/docs/explanation/bencher-run/)
   - [Branch Selection](https://bencher.dev/docs/explanation/branch-selection/)
-  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters/)
   - [Thresholds & Alerts](https://bencher.dev/docs/explanation/thresholds/)
+  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters/)
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/)
   - [Talks](https://bencher.dev/docs/explanation/talks/)
 - Reference
