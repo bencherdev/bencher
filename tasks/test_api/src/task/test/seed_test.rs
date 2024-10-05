@@ -754,7 +754,7 @@ impl SeedTest {
             "--threshold-test",
             "t_test",
             "--threshold-upper-boundary",
-            "0.99",
+            "0.98",
             "--thresholds-reset",
             "--format",
             "json",
@@ -982,6 +982,172 @@ impl SeedTest {
         let alerts: bencher_json::JsonAlerts =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(alerts.0.len(), 5);
+
+        // Archive the `feature-branch` branch
+        // cargo run -- archive --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "archive",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            BRANCH_ARG,
+            "feature-branch",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        assert_eq!(
+            String::from_utf8_lossy(&assert.get_output().stdout),
+            "Successfully archived the branch (feature-branch).\n"
+        );
+
+        // cargo run -- alert ls --host http://localhost:61016 the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["alert", "ls", HOST_ARG, host, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 0);
+
+        // These alerts should be silenced
+        // cargo run -- alert ls --host http://localhost:61016 the-computer --status active
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "alert",
+            "ls",
+            HOST_ARG,
+            host,
+            PROJECT_SLUG,
+            "--status",
+            "active",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 0);
+
+        // cargo run -- alert ls --host http://localhost:61016 the-computer --status silenced
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "alert",
+            "ls",
+            HOST_ARG,
+            host,
+            PROJECT_SLUG,
+            "--status",
+            "silenced",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 0);
+
+        // cargo run -- alert ls --host http://localhost:61016 the-computer --status silenced
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "alert",
+            "ls",
+            HOST_ARG,
+            host,
+            PROJECT_SLUG,
+            "--status",
+            "silenced",
+            "--archived",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 5);
+
+        // Unarchive the `feature-branch` branch
+        // cargo run -- archive --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "unarchive",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            BRANCH_ARG,
+            "feature-branch",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        assert_eq!(
+            String::from_utf8_lossy(&assert.get_output().stdout),
+            "Successfully unarchived the branch (feature-branch).\n"
+        );
+
+        // cargo run -- alert ls --host http://localhost:61016 the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["alert", "ls", HOST_ARG, host, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 5);
+
+        // These alerts should be silenced
+        // cargo run -- alert ls --host http://localhost:61016 the-computer --status active
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "alert",
+            "ls",
+            HOST_ARG,
+            host,
+            PROJECT_SLUG,
+            "--status",
+            "active",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 0);
+
+        // cargo run -- alert ls --host http://localhost:61016 the-computer --status silenced
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "alert",
+            "ls",
+            HOST_ARG,
+            host,
+            PROJECT_SLUG,
+            "--status",
+            "silenced",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 5);
+
+        // cargo run -- alert ls --host http://localhost:61016 the-computer --status silenced
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "alert",
+            "ls",
+            HOST_ARG,
+            host,
+            PROJECT_SLUG,
+            "--status",
+            "silenced",
+            "--archived",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let alerts: bencher_json::JsonAlerts =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(alerts.0.len(), 0);
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
