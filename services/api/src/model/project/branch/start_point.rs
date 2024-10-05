@@ -7,7 +7,7 @@ use dropshot::HttpError;
 use crate::{conn_lock, context::ApiContext, model::project::ProjectId};
 
 use super::{
-    reference_version::{QueryReferenceVersion, ReferenceVersionId},
+    head_version::{HeadVersionId, QueryHeadVersion},
     version::QueryVersion,
     QueryBranch,
 };
@@ -15,7 +15,7 @@ use super::{
 #[derive(Debug, Clone)]
 pub struct StartPoint {
     pub branch: QueryBranch,
-    pub reference_version: QueryReferenceVersion,
+    pub head_version: QueryHeadVersion,
     pub version: QueryVersion,
     pub max_versions: Option<u32>,
     pub clone_thresholds: Option<bool>,
@@ -25,14 +25,14 @@ impl StartPoint {
     pub async fn new(
         context: &ApiContext,
         query_branch: QueryBranch,
-        reference_version: QueryReferenceVersion,
+        head_version: QueryHeadVersion,
         max_versions: Option<u32>,
         clone_thresholds: Option<bool>,
     ) -> Result<Self, HttpError> {
-        let version = QueryVersion::get(conn_lock!(context), reference_version.version_id)?;
+        let version = QueryVersion::get(conn_lock!(context), head_version.version_id)?;
         Ok(Self {
             branch: query_branch,
-            reference_version,
+            head_version,
             version,
             max_versions,
             clone_thresholds,
@@ -47,13 +47,13 @@ impl StartPoint {
         max_versions: Option<u32>,
         clone_thresholds: Option<bool>,
     ) -> Result<Self, HttpError> {
-        let reference_version =
-            QueryReferenceVersion::get_latest_for_branch(context, project_id, &query_branch, hash)
+        let head_version =
+            QueryHeadVersion::get_latest_for_branch(context, project_id, &query_branch, hash)
                 .await?;
         Self::new(
             context,
             query_branch,
-            reference_version,
+            head_version,
             max_versions,
             clone_thresholds,
         )
@@ -117,8 +117,8 @@ impl StartPoint {
         .map(Some)
     }
 
-    pub fn reference_version_id(&self) -> ReferenceVersionId {
-        self.reference_version.id
+    pub fn head_version_id(&self) -> HeadVersionId {
+        self.head_version.id
     }
 
     pub fn max_versions(&self) -> u32 {

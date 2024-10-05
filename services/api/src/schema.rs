@@ -52,6 +52,25 @@ diesel::table! {
 }
 
 diesel::table! {
+    head (id) {
+        id -> Integer,
+        uuid -> Text,
+        branch_id -> Integer,
+        start_point_id -> Nullable<Integer>,
+        created -> BigInt,
+        replaced -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
+    head_version (id) {
+        id -> Integer,
+        head_id -> Integer,
+        version_id -> Integer,
+    }
+}
+
+diesel::table! {
     measure (id) {
         id -> Integer,
         uuid -> Text,
@@ -204,31 +223,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    reference (id) {
-        id -> Integer,
-        uuid -> Text,
-        branch_id -> Integer,
-        start_point_id -> Nullable<Integer>,
-        created -> BigInt,
-        replaced -> Nullable<BigInt>,
-    }
-}
-
-diesel::table! {
-    reference_version (id) {
-        id -> Integer,
-        reference_id -> Integer,
-        version_id -> Integer,
-    }
-}
-
-diesel::table! {
     report (id) {
         id -> Integer,
         uuid -> Text,
         user_id -> Integer,
         project_id -> Integer,
-        reference_id -> Integer,
+        head_id -> Integer,
         version_id -> Integer,
         testbed_id -> Integer,
         adapter -> Integer,
@@ -325,6 +325,7 @@ diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
+diesel::joinable!(head_version -> version (version_id));
 diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> report_benchmark (report_benchmark_id));
@@ -342,9 +343,8 @@ diesel::joinable!(plot_testbed -> testbed (testbed_id));
 diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
-diesel::joinable!(reference_version -> version (version_id));
+diesel::joinable!(report -> head (head_id));
 diesel::joinable!(report -> project (project_id));
-diesel::joinable!(report -> reference (reference_id));
 diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));
@@ -363,6 +363,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     benchmark,
     boundary,
     branch,
+    head,
+    head_version,
     measure,
     metric,
     model,
@@ -376,8 +378,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     plot_testbed,
     project,
     project_role,
-    reference,
-    reference_version,
     report,
     report_benchmark,
     server,

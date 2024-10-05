@@ -9,14 +9,14 @@ use crate::urlencoded::{
     to_urlencoded_optional_list, UrlEncodedError,
 };
 use crate::{
-    BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, JsonBenchmark, JsonBranch, JsonMeasure,
-    JsonProject, JsonTestbed, MeasureUuid, ReferenceUuid, ReportUuid, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonBenchmark, JsonBranch,
+    JsonMeasure, JsonProject, JsonTestbed, MeasureUuid, ReportUuid, TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
 use super::boundary::JsonBoundary;
+use super::head::JsonVersion;
 use super::metric::JsonMetric;
-use super::reference::JsonVersion;
 use super::report::Iteration;
 use super::threshold::JsonThresholdModel;
 
@@ -32,7 +32,7 @@ crate::typed_uuid::typed_uuid!(ReportBenchmarkUuid);
 pub struct JsonPerfQueryParams {
     /// A comma separated list of branch UUIDs to query.
     pub branches: String,
-    /// An optional comma separated list of branch head reference UUIDs.
+    /// An optional comma separated list of branch head UUIDs.
     /// To not specify a particular branch head leave an empty entry in the list.
     pub heads: Option<String>,
     /// A comma separated list of testbed UUIDs to query.
@@ -55,7 +55,7 @@ pub struct JsonPerfImgQueryParams {
     pub title: Option<String>,
     /// A comma separated list of branch UUIDs to query.
     pub branches: String,
-    /// An optional comma separated list of branch head reference UUIDs.
+    /// An optional comma separated list of branch head UUIDs.
     /// To not specify a particular branch head leave an empty entry in the list.
     pub heads: Option<String>,
     /// A comma separated list of testbed UUIDs to query.
@@ -100,7 +100,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
 #[derive(Debug, Clone)]
 pub struct JsonPerfQuery {
     pub branches: Vec<BranchUuid>,
-    pub heads: Vec<Option<ReferenceUuid>>,
+    pub heads: Vec<Option<HeadUuid>>,
     pub testbeds: Vec<TestbedUuid>,
     pub benchmarks: Vec<BenchmarkUuid>,
     pub measures: Vec<MeasureUuid>,
@@ -163,8 +163,8 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
 // Those extra heads will just be ignored.
 fn size_heads_to_branches(
     branches: &[BranchUuid],
-    heads: &[Option<ReferenceUuid>],
-) -> Vec<Option<ReferenceUuid>> {
+    heads: &[Option<HeadUuid>],
+) -> Vec<Option<HeadUuid>> {
     branches
         .iter()
         .enumerate()
@@ -339,7 +339,7 @@ pub mod table {
     use tabled::{Table, Tabled};
 
     use crate::{
-        project::{reference::VersionNumber, report::Iteration},
+        project::{head::VersionNumber, report::Iteration},
         DateTime, JsonBenchmark, JsonBranch, JsonMeasure, JsonMetric, JsonPerf, JsonProject,
         JsonTestbed,
     };

@@ -20,7 +20,7 @@ use crate::{
     model::{
         project::{
             benchmark::QueryBenchmark,
-            branch::{reference::QueryReference, version::QueryVersion, QueryBranch},
+            branch::{head::QueryHead, version::QueryVersion, QueryBranch},
             measure::QueryMeasure,
             metric_boundary::QueryMetricBoundary,
             testbed::QueryTestbed,
@@ -94,16 +94,15 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    let perf_query =
-        view::metric_boundary::table
+    let perf_query = view::metric_boundary::table
         .inner_join(
             schema::report_benchmark::table.inner_join(
                 schema::report::table
                     .inner_join(schema::version::table
-                        .inner_join(schema::reference_version::table
-                            .inner_join(schema::reference::table
-                                .on(schema::reference::id.eq(schema::reference_version::reference_id)),
-                            ).inner_join(schema::branch::table.on(schema::branch::id.eq(schema::reference::branch_id))),
+                        .inner_join(schema::head_version::table
+                            .inner_join(schema::head::table
+                                .on(schema::head::id.eq(schema::head_version::head_id)),
+                            ).inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id))),
                         ),
                     )
                     .inner_join(schema::testbed::table)
@@ -124,7 +123,7 @@ async fn get_one_inner(
         .left_join(schema::alert::table.on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())))
         .select((
             QueryBranch::as_select(),
-            QueryReference::as_select(),
+            QueryHead::as_select(),
             QueryVersion::as_select(),
             QueryTestbed::as_select(),
             QueryBenchmark::as_select(),
@@ -177,7 +176,7 @@ async fn get_one_inner(
 
 pub(super) type MetricQuery = (
     QueryBranch,
-    QueryReference,
+    QueryHead,
     QueryVersion,
     QueryTestbed,
     QueryBenchmark,
@@ -195,7 +194,7 @@ async fn metric_query_json(
     project: &QueryProject,
     (
         branch,
-        reference,
+        head,
         version,
         testbed,
         benchmark,
@@ -208,8 +207,7 @@ async fn metric_query_json(
         query_metric_boundary,
     ): MetricQuery,
 ) -> Result<JsonOneMetric, HttpError> {
-    let branch =
-        branch.into_json_for_head(conn_lock!(context), project, &reference, Some(version))?;
+    let branch = branch.into_json_for_head(conn_lock!(context), project, &head, Some(version))?;
     let testbed = testbed.into_json_for_project(project);
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);

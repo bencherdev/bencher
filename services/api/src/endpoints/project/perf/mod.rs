@@ -1,13 +1,13 @@
 use bencher_json::{
     project::{
         alert::JsonPerfAlert,
+        head::{JsonVersion, VersionNumber},
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
-        reference::{JsonVersion, VersionNumber},
         report::Iteration,
         threshold::JsonThresholdModel,
     },
-    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, MeasureUuid,
-    ReferenceUuid, ReportUuid, ResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
+    ReportUuid, ResourceId, TestbedUuid,
 };
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
@@ -28,7 +28,7 @@ use crate::{
     model::{
         project::{
             benchmark::QueryBenchmark,
-            branch::{reference::QueryReference, QueryBranch},
+            branch::{head::QueryHead, QueryBranch},
             measure::QueryMeasure,
             metric_boundary::QueryMetricBoundary,
             testbed::QueryTestbed,
@@ -161,7 +161,7 @@ async fn perf_results(
     context: &ApiContext,
     project: &QueryProject,
     branches: &[BranchUuid],
-    heads: &[Option<ReferenceUuid>],
+    heads: &[Option<HeadUuid>],
     testbeds: &[TestbedUuid],
     benchmarks: &[BenchmarkUuid],
     measures: &[MeasureUuid],
@@ -228,23 +228,22 @@ async fn perf_query(
     context: &ApiContext,
     project: &QueryProject,
     branch_uuid: BranchUuid,
-    head_uuid: Option<ReferenceUuid>,
+    head_uuid: Option<HeadUuid>,
     testbed_uuid: TestbedUuid,
     benchmark_uuid: BenchmarkUuid,
     measure_uuid: MeasureUuid,
     times: Times,
 ) -> Result<Vec<PerfQuery>, HttpError> {
-    let mut query =
-        view::metric_boundary::table
+    let mut query = view::metric_boundary::table
         .inner_join(
             schema::report_benchmark::table.inner_join(
                 schema::report::table
                     .inner_join(schema::version::table
-                        .inner_join(schema::reference_version::table
-                            .inner_join(schema::reference::table
-                                .on(schema::reference_version::reference_id.eq(schema::reference::id)),
+                        .inner_join(schema::head_version::table
+                            .inner_join(schema::head::table
+                                .on(schema::head_version::head_id.eq(schema::head::id)),
                             )
-                            .inner_join(schema::branch::table.on(schema::reference::branch_id.eq(schema::branch::id))),
+                            .inner_join(schema::branch::table.on(schema::head::branch_id.eq(schema::branch::id))),
                         ),
                     )
                     .inner_join(schema::testbed::table)
@@ -252,12 +251,12 @@ async fn perf_query(
             .inner_join(schema::benchmark::table)
         )
         .inner_join(schema::measure::table)
-        // It is important to filter for the branch through the `reference_version` table
-        // and NOT on the reference in the `report` table.
-        // This is because the `reference_version` table is the one that is updated
-        // when a reference is cloned/used as a start point.
-        // In contrast, the `report` table is only set to a single reference when the report is created.
-        // Therefore, querying from the `report` table's `reference` would not return results for any other references.
+        // It is important to filter for the branch through the `head_version` table
+        // and NOT on the head in the `report` table.
+        // This is because the `head_version` table is the one that is updated
+        // when a head is cloned/used as a start point.
+        // In contrast, the `report` table is only set to a single head when the report is created.
+        // Therefore, querying from the `report` table's `head` would not return results for any other heads.
         .filter(schema::branch::uuid.eq(branch_uuid))
         .filter(schema::testbed::uuid.eq(testbed_uuid))
         .filter(schema::benchmark::uuid.eq(benchmark_uuid))
@@ -274,12 +273,12 @@ async fn perf_query(
         .left_join(schema::alert::table.on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())))
         .into_boxed();
 
-    // Filter for the branch head reference if it is provided.
-    // Otherwise, filter for the current, non-replaced head reference.
-    if let Some(reference_uuid) = head_uuid {
-        query = query.filter(schema::reference::uuid.eq(reference_uuid));
+    // Filter for the branch head if it is provided.
+    // Otherwise, filter for the current, non-replaced head.
+    if let Some(head_uuid) = head_uuid {
+        query = query.filter(schema::head::uuid.eq(head_uuid));
     } else {
-        query = query.filter(schema::reference::replaced.is_null());
+        query = query.filter(schema::head::replaced.is_null());
     }
 
     let Times {
@@ -304,7 +303,7 @@ async fn perf_query(
         ))
         .select((
             QueryBranch::as_select(),
-            QueryReference::as_select(),
+            QueryHead::as_select(),
             QueryTestbed::as_select(),
             QueryBenchmark::as_select(),
             QueryMeasure::as_select(),
@@ -365,7 +364,7 @@ async fn perf_query(
 
 type PerfQuery = (
     QueryBranch,
-    QueryReference,
+    QueryHead,
     QueryTestbed,
     QueryBenchmark,
     QueryMeasure,
@@ -381,7 +380,7 @@ type PerfQuery = (
 
 struct QueryDimensions {
     branch: QueryBranch,
-    head: QueryReference,
+    head: QueryHead,
     testbed: QueryTestbed,
     benchmark: QueryBenchmark,
     measure: QueryMeasure,

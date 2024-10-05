@@ -3574,9 +3574,9 @@
           {
             "in": "query",
             "name": "head",
-            "description": "View the branch with the specified HEAD reference UUID. This can be useful for viewing branches with historical HEAD references that have since been replaced by a new HEAD reference. If not specified, then the current HEAD reference is used.",
+            "description": "View the branch with the specified head UUID. This can be useful for viewing branches with historical head that have since been replaced by a new head. If not specified, then the current head is used.",
             "schema": {
-              "$ref": "#/components/schemas/ReferenceUuid"
+              "$ref": "#/components/schemas/HeadUuid"
             }
           }
         ],
@@ -4424,7 +4424,7 @@
           {
             "in": "query",
             "name": "heads",
-            "description": "An optional comma separated list of branch head reference UUIDs. To not specify a particular branch head leave an empty entry in the list.",
+            "description": "An optional comma separated list of branch head UUIDs. To not specify a particular branch head leave an empty entry in the list.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -4562,7 +4562,7 @@
           {
             "in": "query",
             "name": "heads",
-            "description": "An optional comma separated list of branch head reference UUIDs. To not specify a particular branch head leave an empty entry in the list.",
+            "description": "An optional comma separated list of branch head UUIDs. To not specify a particular branch head leave an empty entry in the list.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -7964,6 +7964,10 @@
       "GitHash": {
         "type": "string"
       },
+      "HeadUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "IfExists": {
         "type": "string",
         "enum": [
@@ -8589,7 +8593,7 @@
             ]
           },
           "uuid": {
-            "$ref": "#/components/schemas/ReferenceUuid"
+            "$ref": "#/components/schemas/HeadUuid"
           },
           "version": {
             "nullable": true,
@@ -8984,7 +8988,7 @@
           },
           "start_point": {
             "nullable": true,
-            "description": "The start point for the new branch. All branch versions from the start point branch will be shallow copied over to the new branch HEAD. That is, all historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their base branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.",
+            "description": "The start point for the new branch. All branch versions from the start point branch will be shallow copied over to the new branch head. That is, all historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their base branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonNewStartPoint"
@@ -9339,7 +9343,7 @@
           },
           "start_point": {
             "nullable": true,
-            "description": "The start point for the report branch. If the branch does not exist, the start point will be used to create a new branch. If the branch already exists and the start point is not provided, the current branch will be used. If the branch already exists and the start point provided is different, a new branch HEAD will be created from the new start point. If a new branch or new branch HEAD is created with a start point, all branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the branch. For example, pull request branches often use their base branch as their start point branch. If a new branch is created, it is not kept in sync with the start point branch.",
+            "description": "The start point for the report branch. If the branch does not exist, the start point will be used to create a new branch. If the branch already exists and the start point is not provided, the current branch will be used. If the branch already exists and the start point provided is different, a new branch head will be created from the new start point. If a new branch or new branch head is created with a start point, all branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the branch. For example, pull request branches often use their base branch as their start point branch. If a new branch is created, it is not kept in sync with the start point branch.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonUpdateStartPoint"
@@ -11012,7 +11016,7 @@
             "$ref": "#/components/schemas/BranchUuid"
           },
           "head": {
-            "$ref": "#/components/schemas/ReferenceUuid"
+            "$ref": "#/components/schemas/HeadUuid"
           },
           "version": {
             "$ref": "#/components/schemas/JsonVersion"
@@ -11578,7 +11582,7 @@
           },
           "reset": {
             "nullable": true,
-            "description": "Reset the branch HEAD to an empty state. If a start point is provided, the branch HEAD will begin at that start point.",
+            "description": "Reset the branch head to an empty state. If a start point is provided, the branch head will begin at that start point.",
             "type": "boolean"
           }
         }
@@ -11950,10 +11954,6 @@
         "format": "uuid"
       },
       "ProjectUuid": {
-        "type": "string",
-        "format": "uuid"
-      },
-      "ReferenceUuid": {
         "type": "string",
         "format": "uuid"
       },

@@ -10,7 +10,7 @@ use bencher_json::{
         threshold::JsonThresholdModel,
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
-    JsonReport, MeasureUuid, ModelUuid, ReferenceUuid, ReportUuid, ResourceName, Slug, TestbedUuid,
+    JsonReport, MeasureUuid, ModelUuid, HeadUuid, ReportUuid, ResourceName, Slug, TestbedUuid,
     ThresholdUuid,
 };
 use url::Url;
@@ -784,7 +784,7 @@ struct BenchmarkUrl {
     project_slug: Slug,
     report_uuid: ReportUuid,
     branch: BranchUuid,
-    head: ReferenceUuid,
+    head: HeadUuid,
     testbed: TestbedUuid,
     start_time: DateTime,
     end_time: DateTime,
@@ -800,7 +800,7 @@ impl BenchmarkUrl {
         project_slug: Slug,
         report_uuid: ReportUuid,
         branch: BranchUuid,
-        head: ReferenceUuid,
+        head: HeadUuid,
         testbed: TestbedUuid,
         start_time: DateTime,
         end_time: DateTime,

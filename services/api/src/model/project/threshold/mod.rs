@@ -14,9 +14,7 @@ use slog::Logger;
 
 use self::model::{InsertModel, ModelId, QueryModel};
 use super::{
-    branch::{
-        reference::ReferenceId, start_point::StartPoint, version::VersionId, BranchId, QueryBranch,
-    },
+    branch::{head::HeadId, start_point::StartPoint, version::VersionId, BranchId, QueryBranch},
     measure::{MeasureId, QueryMeasure},
     testbed::{QueryTestbed, TestbedId},
     ProjectId, QueryProject,
@@ -173,13 +171,13 @@ impl QueryThreshold {
         context: &ApiContext,
         threshold_id: ThresholdId,
         model_id: ModelId,
-        reference_id: ReferenceId,
+        head_id: HeadId,
         version_id: VersionId,
     ) -> Result<JsonThreshold, HttpError> {
         let query_threshold = Self::get(conn_lock!(context), threshold_id)?;
         let query_model = QueryModel::get(conn_lock!(context), model_id)?;
         query_threshold
-            .into_json_for_model(context, Some(query_model), Some((reference_id, version_id)))
+            .into_json_for_model(context, Some(query_model), Some((head_id, version_id)))
             .await
     }
 
@@ -192,7 +190,7 @@ impl QueryThreshold {
         self,
         context: &ApiContext,
         query_model: Option<QueryModel>,
-        reference_version: Option<(ReferenceId, VersionId)>,
+        head_version: Option<(HeadId, VersionId)>,
     ) -> Result<JsonThreshold, HttpError> {
         let model = if let Some(query_model) = &query_model {
             assert_parentage(
@@ -216,9 +214,8 @@ impl QueryThreshold {
             ..
         } = self;
         let query_project = QueryProject::get(conn_lock!(context), project_id)?;
-        let branch = if let Some((reference_id, version_id)) = reference_version {
-            QueryBranch::get_json_for_report(context, &query_project, reference_id, version_id)
-                .await?
+        let branch = if let Some((head_id, version_id)) = head_version {
+            QueryBranch::get_json_for_report(context, &query_project, head_id, version_id).await?
         } else {
             let query_branch = QueryBranch::get(conn_lock!(context), branch_id)?;
             query_branch.into_json_for_project(conn_lock!(context), &query_project)?

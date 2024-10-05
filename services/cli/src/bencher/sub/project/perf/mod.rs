@@ -2,7 +2,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MeasureUuid, ReferenceUuid,
+    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MeasureUuid, HeadUuid,
     ResourceId, TestbedUuid,
 };
 use tabled::Table;
@@ -21,7 +21,7 @@ use table_style::TableStyle;
 pub struct Perf {
     project: ResourceId,
     branches: Vec<BranchUuid>,
-    heads: Vec<Option<ReferenceUuid>>,
+    heads: Vec<Option<HeadUuid>>,
     testbeds: Vec<TestbedUuid>,
     benchmarks: Vec<BenchmarkUuid>,
     measures: Vec<MeasureUuid>,

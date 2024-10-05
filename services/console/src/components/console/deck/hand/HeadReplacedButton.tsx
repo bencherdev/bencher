@@ -16,7 +16,7 @@ const HeadReplacedButton = (props: Props) => {
 						<div class="columns is-vcentered">
 							<div class="column">
 								<p>
-									This branch head reference was replaced on{" "}
+									This branch head was replaced on{" "}
 									{fmtDate(props?.data()?.head?.replaced)}
 								</p>
 							</div>

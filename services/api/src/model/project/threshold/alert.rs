@@ -19,7 +19,7 @@ use crate::{
     error::{resource_conflict_err, resource_not_found_err},
     model::project::{
         benchmark::QueryBenchmark,
-        branch::{reference::ReferenceId, version::VersionId},
+        branch::{head::HeadId, version::VersionId},
         metric::QueryMetric,
         ProjectId, QueryProject,
     },
@@ -65,7 +65,7 @@ impl QueryAlert {
 
     pub async fn silence_all(
         context: &ApiContext,
-        reference_id: ReferenceId,
+        head_id: HeadId,
     ) -> Result<usize, HttpError> {
         let alerts =
             schema::alert::table
@@ -74,10 +74,10 @@ impl QueryAlert {
                         schema::report_benchmark::table.inner_join(schema::report::table),
                     ),
                 ))
-                .filter(schema::report::reference_id.eq(reference_id))
+                .filter(schema::report::head_id.eq(head_id))
                 .select(schema::alert::id)
                 .load::<AlertId>(conn_lock!(context))
-                .map_err(resource_not_found_err!(Alert, reference_id))?;
+                .map_err(resource_not_found_err!(Alert, head_id))?;
 
         let silenced_alert = UpdateAlert::silence();
         for alert_id in &alerts {
@@ -94,7 +94,7 @@ impl QueryAlert {
         let (
             report_uuid,
             created,
-            reference_id,
+            head_id,
             version_id,
             iteration,
             query_benchmark,
@@ -114,7 +114,7 @@ impl QueryAlert {
             .select((
                 schema::report::uuid,
                 schema::report::created,
-                schema::report::reference_id,
+                schema::report::head_id,
                 schema::report::version_id,
                 schema::report_benchmark::iteration,
                 QueryBenchmark::as_select(),
@@ -124,7 +124,7 @@ impl QueryAlert {
             .first::<(
                 ReportUuid,
                 DateTime,
-                ReferenceId,
+                HeadId,
                 VersionId,
                 Iteration,
                 QueryBenchmark,
@@ -138,7 +138,7 @@ impl QueryAlert {
             &project,
             report_uuid,
             created,
-            reference_id,
+            head_id,
             version_id,
             iteration,
             query_benchmark,
@@ -155,7 +155,7 @@ impl QueryAlert {
         project: &QueryProject,
         report_uuid: ReportUuid,
         created: DateTime,
-        reference_id: ReferenceId,
+        head_id: HeadId,
         version_id: VersionId,
         iteration: Iteration,
         query_benchmark: QueryBenchmark,
@@ -173,7 +173,7 @@ impl QueryAlert {
             context,
             query_boundary.threshold_id,
             query_boundary.model_id,
-            reference_id,
+            head_id,
             version_id,
         )
         .await?;

@@ -5,14 +5,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::BranchUuid;
 
-crate::typed_uuid::typed_uuid!(ReferenceUuid);
+crate::typed_uuid::typed_uuid!(HeadUuid);
 crate::typed_uuid::typed_uuid!(VersionUuid);
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonHead {
-    pub uuid: ReferenceUuid,
+    pub uuid: HeadUuid,
     pub start_point: Option<JsonStartPoint>,
     pub version: Option<JsonVersion>,
     pub created: DateTime,
@@ -24,7 +24,7 @@ pub struct JsonHead {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStartPoint {
     pub branch: BranchUuid,
-    pub head: ReferenceUuid,
+    pub head: HeadUuid,
     pub version: JsonVersion,
 }
 

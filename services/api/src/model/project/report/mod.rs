@@ -31,7 +31,7 @@ use crate::{
 };
 
 use super::{
-    branch::{reference::ReferenceId, version::VersionId, QueryBranch},
+    branch::{head::HeadId, version::VersionId, QueryBranch},
     metric::QueryMetric,
     metric_boundary::QueryMetricBoundary,
     threshold::boundary::QueryBoundary,
@@ -50,7 +50,7 @@ pub struct QueryReport {
     pub uuid: ReportUuid,
     pub user_id: UserId,
     pub project_id: ProjectId,
-    pub reference_id: ReferenceId,
+    pub head_id: HeadId,
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
     pub adapter: Adapter,
@@ -73,7 +73,7 @@ impl QueryReport {
             uuid,
             user_id,
             project_id,
-            reference_id,
+            head_id,
             version_id,
             testbed_id,
             adapter,
@@ -85,13 +85,11 @@ impl QueryReport {
         let query_project = QueryProject::get(conn_lock!(context), project_id)?;
         let user = QueryUser::get(conn_lock!(context), user_id)?.into_pub_json();
         let branch =
-            QueryBranch::get_json_for_report(context, &query_project, reference_id, version_id)
-                .await?;
+            QueryBranch::get_json_for_report(context, &query_project, head_id, version_id).await?;
         let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
             .into_json_for_project(&query_project);
         let results = get_report_results(log, context, &query_project, id).await?;
-        let alerts =
-            get_report_alerts(context, &query_project, id, reference_id, version_id).await?;
+        let alerts = get_report_alerts(context, &query_project, id, head_id, version_id).await?;
 
         let project = query_project.into_json(conn_lock!(context))?;
         Ok(JsonReport {
@@ -255,7 +253,7 @@ async fn get_report_alerts(
     context: &ApiContext,
     project: &QueryProject,
     report_id: ReportId,
-    reference_id: ReferenceId,
+    head_id: HeadId,
     version_id: VersionId,
 ) -> Result<JsonReportAlerts, HttpError> {
     let alerts = schema::alert::table
@@ -307,7 +305,7 @@ async fn get_report_alerts(
                 project,
                 report_uuid,
                 created,
-                reference_id,
+                head_id,
                 version_id,
                 iteration,
                 query_benchmark,
@@ -327,7 +325,7 @@ pub struct InsertReport {
     pub uuid: ReportUuid,
     pub user_id: UserId,
     pub project_id: ProjectId,
-    pub reference_id: ReferenceId,
+    pub head_id: HeadId,
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
     pub adapter: Adapter,
@@ -340,7 +338,7 @@ impl InsertReport {
     pub fn from_json(
         user_id: UserId,
         project_id: ProjectId,
-        reference_id: ReferenceId,
+        head_id: HeadId,
         version_id: VersionId,
         testbed_id: TestbedId,
         report: &JsonNewReport,
@@ -350,7 +348,7 @@ impl InsertReport {
             uuid: ReportUuid::new(),
             user_id,
             project_id,
-            reference_id,
+            head_id,
             version_id,
             testbed_id,
             adapter,

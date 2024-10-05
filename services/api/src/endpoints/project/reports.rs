@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bencher_json::{
     project::{
-        reference::VersionNumber,
+        head::VersionNumber,
         report::{JsonReportQuery, JsonReportQueryParams},
     },
     JsonDirection, JsonNewReport, JsonPagination, JsonReport, JsonReports, ReportUuid, ResourceId,
@@ -31,7 +31,7 @@ use crate::{
     model::{
         project::{
             branch::{
-                reference::ReferenceId,
+                head::HeadId,
                 version::{QueryVersion, VersionId},
                 QueryBranch,
             },
@@ -175,12 +175,13 @@ fn get_ls_query<'q>(
     pagination_params: &ProjReportsPagination,
     query_params: &'q JsonReportQuery,
 ) -> Result<BoxedQuery<'q>, HttpError> {
-    let mut query = QueryReport::belonging_to(query_project)
-        .inner_join(schema::reference::table.inner_join(
-            schema::branch::table.on(schema::reference::branch_id.eq(schema::branch::id)),
-        ))
-        .inner_join(schema::testbed::table)
-        .into_boxed();
+    let mut query =
+        QueryReport::belonging_to(query_project)
+            .inner_join(schema::head::table.inner_join(
+                schema::branch::table.on(schema::head::branch_id.eq(schema::branch::id)),
+            ))
+            .inner_join(schema::testbed::table)
+            .into_boxed();
 
     if let Some(branch) = query_params.branch.as_ref() {
         filter_branch_name_id!(query, branch);
@@ -238,10 +239,10 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
                 diesel::internal::table_macro::SelectStatement<
                     diesel::internal::table_macro::FromClause<
                         diesel::helper_types::InnerJoinQuerySource<
-                            schema::reference::table,
+                            schema::head::table,
                             schema::branch::table,
                             diesel::dsl::Eq<
-                                schema::reference::columns::branch_id,
+                                schema::head::columns::branch_id,
                                 schema::branch::columns::id,
                             >,
                         >,
@@ -305,7 +306,7 @@ async fn post_inner(
     let project_id = project.id;
 
     // Get or create the branch and testbed
-    let (branch_id, reference_id) = QueryBranch::get_or_create(
+    let (branch_id, head_id) = QueryBranch::get_or_create(
         log,
         context,
         project_id,
@@ -343,7 +344,7 @@ async fn post_inner(
     let version_id = QueryVersion::get_or_increment(
         conn_lock!(context),
         project_id,
-        reference_id,
+        head_id,
         json_report.hash.as_ref(),
     )?;
 
@@ -354,7 +355,7 @@ async fn post_inner(
     let insert_report = InsertReport::from_json(
         auth_user.id(),
         project_id,
-        reference_id,
+        head_id,
         version_id,
         testbed_id,
         &json_report,
@@ -382,13 +383,8 @@ async fn post_inner(
     let mut usage = 0;
 
     // Process and record the report results
-    let mut report_results = ReportResults::new(
-        project_id,
-        branch_id,
-        reference_id,
-        testbed_id,
-        query_report.id,
-    );
+    let mut report_results =
+        ReportResults::new(project_id, branch_id, head_id, testbed_id, query_report.id);
     let results_array = json_report
         .results
         .iter()
@@ -538,7 +534,7 @@ async fn delete_inner(
 
     // If there are no more reports for this version, delete the version
     // This is necessary because multiple reports can use the same version via a git hash
-    // This will cascade and delete all reference versions for this version
+    // This will cascade and delete all head versions for this version
     // Before doing so, decrement all greater versions
     // Otherwise, just return since the version is still in use
     if schema::report::table
@@ -555,32 +551,31 @@ async fn delete_inner(
     }
 
     let query_version = QueryVersion::get(conn_lock!(context), version_id)?;
-    // Get all references that use this version
-    let references = schema::reference::table
+    // Get all heads that use this version
+    let heads = schema::head::table
         .inner_join(
-            schema::reference_version::table
-                .on(schema::reference_version::reference_id.eq(schema::reference::id)),
+            schema::head_version::table.on(schema::head_version::head_id.eq(schema::head::id)),
         )
-        .filter(schema::reference_version::version_id.eq(version_id))
-        .select(schema::reference::id)
-        .load::<ReferenceId>(conn_lock!(context))
+        .filter(schema::head_version::version_id.eq(version_id))
+        .select(schema::head::id)
+        .load::<HeadId>(conn_lock!(context))
         .map_err(resource_not_found_err!(
-            Reference,
+            Head,
             (&query_project, report_id, version_id)
         ))?;
 
     let mut version_map = HashMap::new();
-    // Get all versions greater than this one for each of the references
-    for reference_id in references {
+    // Get all versions greater than this one for each of the heads
+    for head_id in heads {
         schema::version::table
-            .inner_join(schema::reference_version::table)
+            .inner_join(schema::head_version::table)
             .filter(schema::version::number.gt(query_version.number))
-            .filter(schema::reference_version::reference_id.eq(reference_id))
+            .filter(schema::head_version::head_id.eq(head_id))
             .select((schema::version::id, schema::version::number))
             .load::<(VersionId, VersionNumber)>(conn_lock!(context))
             .map_err(resource_not_found_err!(
                 Version,
-                (&query_project, report_id, reference_id, &query_version)
+                (&query_project, report_id, head_id, &query_version)
             ))?
             .into_iter()
             .for_each(|(version_id, version_number)| {

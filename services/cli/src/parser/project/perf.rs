@@ -1,5 +1,5 @@
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, MeasureUuid, ReferenceUuid, ResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, HeadUuid, MeasureUuid, ResourceId, TestbedUuid,
 };
 use clap::{Parser, ValueEnum};
 
@@ -15,10 +15,10 @@ pub struct CliPerf {
     #[clap(long, required = true)]
     pub branches: Vec<BranchUuid>,
 
-    /// Optional branch head reference UUIDs in the same order as `branches`.
+    /// Optional branch head UUIDs in the same order as `branches`.
     /// Use an underscore (`_`) to specify the current branch head.
     #[clap(long, required = false)]
-    pub heads: Vec<ElidedOption<ReferenceUuid>>,
+    pub heads: Vec<ElidedOption<HeadUuid>>,
 
     /// Testbed UUIDs
     #[clap(long, required = true)]

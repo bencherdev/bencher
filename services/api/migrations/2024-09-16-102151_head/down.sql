@@ -1,73 +1,47 @@
 PRAGMA foreign_keys = off;
--- reference
-CREATE TABLE reference (
+-- branch_version
+CREATE TABLE branch_version (
     id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
     branch_id INTEGER NOT NULL,
-    start_point_id INTEGER,
-    created BIGINT NOT NULL,
-    replaced BIGINT,
-    FOREIGN KEY (branch_id) REFERENCES branch (id) ON DELETE CASCADE,
-    FOREIGN KEY (start_point_id) REFERENCES reference_version (id) ON DELETE
-    SET NULL
-);
-INSERT INTO reference(
-        id,
-        uuid,
-        branch_id,
-        start_point_id,
-        created,
-        replaced
-    )
-SELECT id,
-    uuid,
-    id,
-    start_point_id,
-    created,
-    null
-FROM branch;
--- reference_version
-CREATE TABLE reference_version (
-    id INTEGER PRIMARY KEY NOT NULL,
-    reference_id INTEGER NOT NULL,
     version_id INTEGER NOT NULL,
-    FOREIGN KEY (reference_id) REFERENCES reference (id) ON DELETE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branch (id) ON DELETE CASCADE,
     FOREIGN KEY (version_id) REFERENCES version (id) ON DELETE CASCADE,
-    UNIQUE(reference_id, version_id)
+    UNIQUE(branch_id, version_id)
 );
-INSERT INTO reference_version(
+INSERT INTO branch_version(
         id,
-        reference_id,
+        branch_id,
         version_id
     )
 SELECT id,
-    branch_id,
+    head_id,
     version_id
-FROM branch_version;
-DROP TABLE branch_version;
+FROM head_version;
+DROP TABLE head_version;
 -- branch
-CREATE TABLE up_branch (
+CREATE TABLE down_branch (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     project_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     slug TEXT NOT NULL,
-    head_id INTEGER,
+    start_point_id INTEGER,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
     archived BIGINT,
     FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
-    FOREIGN KEY (head_id) REFERENCES reference (id),
-    UNIQUE(project_id, name),
-    UNIQUE(project_id, slug)
+    FOREIGN KEY (start_point_id) REFERENCES branch_version (id) ON DELETE
+    SET NULL,
+        UNIQUE(project_id, name),
+        UNIQUE(project_id, slug)
 );
-INSERT INTO up_branch(
+INSERT INTO down_branch(
         id,
         uuid,
         project_id,
         name,
         slug,
-        head_id,
+        start_point_id,
         created,
         modified,
         archived
@@ -77,26 +51,25 @@ SELECT id,
     project_id,
     name,
     slug,
-    id,
+    (
+        SELECT start_point_id
+        FROM head
+        WHERE head.id = branch.head_id
+    ),
     created,
     modified,
     archived
 FROM branch;
 DROP TABLE branch;
-ALTER TABLE up_branch
+ALTER TABLE down_branch
     RENAME TO branch;
 -- report
-CREATE TABLE up_report (
+CREATE TABLE down_report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
     project_id INTEGER NOT NULL,
-    -- Connect to the reference and version individually and not to their reference_version
-    -- This is necessary in order for cloned references to work
-    -- Cloned references will *not* have a report tied to their specific reference_version
-    -- So we don't want to have to query through the reference_version table
-    -- to filter on the branch and list all of the versions
-    reference_id INTEGER NOT NULL,
+    branch_id INTEGER NOT NULL,
     version_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
     adapter INTEGER NOT NULL,
@@ -105,16 +78,16 @@ CREATE TABLE up_report (
     created BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id),
     FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
-    FOREIGN KEY (reference_id) REFERENCES reference (id),
+    FOREIGN KEY (branch_id) REFERENCES branch (id),
     FOREIGN KEY (version_id) REFERENCES version (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id)
 );
-INSERT INTO up_report(
+INSERT INTO down_report(
         id,
         uuid,
         user_id,
         project_id,
-        reference_id,
+        branch_id,
         version_id,
         testbed_id,
         adapter,
@@ -126,7 +99,7 @@ SELECT id,
     uuid,
     user_id,
     project_id,
-    branch_id,
+    head_id,
     version_id,
     testbed_id,
     adapter,
@@ -135,14 +108,16 @@ SELECT id,
     created
 FROM report;
 DROP TABLE report;
-ALTER TABLE up_report
+ALTER TABLE down_report
     RENAME TO report;
+--  head
+DROP TABLE head;
 -- index
 DROP INDEX IF EXISTS index_report_testbed_end_time;
 DROP INDEX IF EXISTS index_report_benchmark;
 CREATE INDEX index_report_testbed_end_time ON report(testbed_id, end_time);
 CREATE INDEX index_report_benchmark ON report_benchmark(report_id, benchmark_id);
 -- new indexes
-CREATE INDEX index_measure_project ON measure(uuid, project_id);
-CREATE INDEX index_report_version ON report(version_id, end_time);
+DROP INDEX IF EXISTS index_measure_project;
+DROP INDEX IF EXISTS index_report_version;
 PRAGMA foreign_keys = on;

@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::branch::JsonUpdateBranch, BranchName, JsonBranch, JsonBranches, JsonDirection,
-    JsonNewBranch, JsonPagination, ReferenceUuid, ResourceId,
+    project::branch::JsonUpdateBranch, BranchName, HeadUuid, JsonBranch, JsonBranches,
+    JsonDirection, JsonNewBranch, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -26,7 +26,7 @@ use crate::{
     },
     model::{
         project::{
-            branch::{reference::QueryReference, InsertBranch, QueryBranch, UpdateBranch},
+            branch::{head::QueryHead, InsertBranch, QueryBranch, UpdateBranch},
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -235,7 +235,7 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let (query_branch, _query_reference) =
+    let (query_branch, _query_head) =
         InsertBranch::from_json(log, context, query_project.id, json_branch).await?;
 
     query_branch.into_json_for_project(conn_lock!(context), &query_project)
@@ -251,11 +251,11 @@ pub struct ProjBranchParams {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchQuery {
-    /// View the branch with the specified HEAD reference UUID.
-    /// This can be useful for viewing branches with historical HEAD references
-    /// that have since been replaced by a new HEAD reference.
-    /// If not specified, then the current HEAD reference is used.
-    pub head: Option<ReferenceUuid>,
+    /// View the branch with the specified head UUID.
+    /// This can be useful for viewing branches with historical head
+    /// that have since been replaced by a new head.
+    /// If not specified, then the current head is used.
+    pub head: Option<HeadUuid>,
 }
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
@@ -321,19 +321,18 @@ async fn get_one_inner(
         ))?;
 
     if let Some(head_uuid) = query_params.head {
-        let query_reference =
-            QueryReference::from_uuid(conn_lock!(context), query_project.id, head_uuid)?;
-        if query_reference.branch_id != query_branch.id {
+        let query_head = QueryHead::from_uuid(conn_lock!(context), query_project.id, head_uuid)?;
+        if query_head.branch_id != query_branch.id {
             return Err(resource_not_found_error(
-                BencherResource::Reference,
+                BencherResource::Head,
                 head_uuid,
                 format!(
-                    "Specified HEAD reference {head_uuid} does not belong to branch {branch_uuid}",
+                    "Specified head {head_uuid} does not belong to branch {branch_uuid}",
                     branch_uuid = query_branch.uuid
                 ),
             ));
         }
-        query_branch.into_json_for_head(conn_lock!(context), &query_project, &query_reference, None)
+        query_branch.into_json_for_head(conn_lock!(context), &query_project, &query_head, None)
     } else {
         query_branch.into_json_for_project(conn_lock!(context), &query_project)
     }
@@ -385,7 +384,7 @@ async fn patch_inner(
     let query_branch =
         QueryBranch::from_resource_id(conn_lock!(context), query_project.id, &path_params.branch)?;
 
-    let (query_branch, _query_reference) = query_branch
+    let (query_branch, _query_head) = query_branch
         .update_start_point_if_changed(
             log,
             context,

@@ -8,8 +8,7 @@ use crate::{
     context::DbConnection,
     error::not_found_error,
     model::project::{
-        benchmark::BenchmarkId, branch::reference::ReferenceId, measure::MeasureId,
-        testbed::TestbedId,
+        benchmark::BenchmarkId, branch::head::HeadId, measure::MeasureId, testbed::TestbedId,
     },
     schema,
 };
@@ -19,7 +18,7 @@ use super::threshold::ThresholdModel;
 pub fn metrics_data(
     log: &Logger,
     conn: &mut DbConnection,
-    reference_id: ReferenceId,
+    head_id: HeadId,
     testbed_id: TestbedId,
     benchmark_id: BenchmarkId,
     measure_id: MeasureId,
@@ -32,10 +31,9 @@ pub fn metrics_data(
                     schema::report::table
                         .inner_join(
                             schema::version::table.inner_join(
-                                schema::reference_version::table.inner_join(
-                                    schema::reference::table
-                                        .on(schema::reference_version::reference_id
-                                            .eq(schema::reference::id)),
+                                schema::head_version::table.inner_join(
+                                    schema::head::table
+                                        .on(schema::head_version::head_id.eq(schema::head::id)),
                                 ),
                             ),
                         )
@@ -43,7 +41,7 @@ pub fn metrics_data(
                 )
                 .inner_join(schema::benchmark::table),
         )
-        .filter(schema::reference::id.eq(reference_id))
+        .filter(schema::head::id.eq(head_id))
         .filter(schema::testbed::id.eq(testbed_id))
         .filter(schema::benchmark::id.eq(benchmark_id))
         .filter(schema::metric::measure_id.eq(measure_id))
