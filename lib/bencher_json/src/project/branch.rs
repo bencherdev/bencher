@@ -40,8 +40,8 @@ pub struct JsonNewBranch {
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
     /// The start point for the new branch.
-    /// All branch versions from the start point branch will be shallow copied over to the new branch head.
-    /// That is, all historical metrics data for the start point branch will appear in queries for the new branch.
+    /// Historical branch versions from the start point branch will be shallow copied over to the new branch head.
+    /// That is, historical metrics data for the start point branch will appear in queries for the new branch.
     /// For example, pull request branches often use their base branch as their start point branch.
     /// After the new branch is created, it is not kept in sync with the start point branch.
     /// If not provided, the new branch will have no historical data.
@@ -131,12 +131,13 @@ pub struct JsonUpdateStartPoint {
     /// The default is 255.
     /// Requires the `branch` field to be set.
     pub max_versions: Option<u32>,
-    /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
+    /// If set to `true`, the thresholds from the start point branch will be deep copied to the branch.
     /// This can be useful for pull request branches that should have the same thresholds as their target branch.
     /// Requires the `branch` field to be set.
     pub clone_thresholds: Option<bool>,
     /// Reset the branch head to an empty state.
-    /// If a start point is provided, the branch head will begin at that start point.
+    /// If the start point `branch` is specified, the new branch head will begin at that start point.
+    /// Otherwise, the branch head will be reset to an empty state.
     pub reset: Option<bool>,
 }
 

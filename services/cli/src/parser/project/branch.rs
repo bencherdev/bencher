@@ -155,8 +155,8 @@ pub struct CliStartPointUpdate {
     pub start_point_clone_thresholds: bool,
 
     /// Reset `branch` to an empty state.
-    /// If `branch` already exists, a new empty branch will be created.
-    /// If a start point is provided, the new branch will begin at that start point.
+    /// If `start_point_branch` is specified, the new branch head will begin at that start point.
+    /// Otherwise, the branch head will be reset to an empty state.
     #[clap(long)]
     pub start_point_reset: bool,
 }

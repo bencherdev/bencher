@@ -30,8 +30,8 @@ pub struct JsonNewReport {
     /// If the branch already exists and the start point is not provided, the current branch will be used.
     /// If the branch already exists and the start point provided is different, a new branch head will be created from the new start point.
     /// If a new branch or new branch head is created with a start point,
-    /// all branch versions from the start point branch will be shallow copied over to the new branch.
-    /// That is, all historical metrics data for the start point branch will appear in queries for the branch.
+    /// historical branch versions from the start point branch will be shallow copied over to the new branch.
+    /// That is, historical metrics data for the start point branch will appear in queries for the branch.
     /// For example, pull request branches often use their base branch as their start point branch.
     /// If a new branch is created, it is not kept in sync with the start point branch.
     pub start_point: Option<JsonUpdateStartPoint>,

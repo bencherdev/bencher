@@ -107,9 +107,9 @@ pub struct CliRunBranch {
     #[clap(long, requires = "start_point")]
     pub start_point_clone_thresholds: bool,
 
-    /// Reset `branch` start point to an empty state.
-    /// If `branch` already exists, a new empty branch will be created.
-    /// If a start point is provided, the new branch will begin at that start point.
+    /// Reset the branch head to an empty state.
+    /// If `start_point` is specified, the new branch head will begin at that start point.
+    /// Otherwise, the branch head will be reset to an empty state.
     #[clap(long, alias = "branch-reset")]
     pub start_point_reset: bool,
 

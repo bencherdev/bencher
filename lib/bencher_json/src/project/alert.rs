@@ -33,7 +33,7 @@ pub struct JsonAlert {
 
 const ACTIVE_INT: i32 = 0;
 const DISMISSED_INT: i32 = 1;
-const SILENCED_INT: i32 = 2;
+const SILENCED_INT: i32 = 10;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, derive_more::Display, Serialize, Deserialize)]
