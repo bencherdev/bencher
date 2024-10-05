@@ -152,11 +152,11 @@ impl QueryBranch {
     ) -> Result<(Self, QueryHead), HttpError> {
         // Get the current start point, if one exists.
         let current_start_point = self.get_start_point(context).await?;
-        // Get the new start point, if there is a branch specified.
+        // Get the new start point, if there is one specified.
         let new_start_point =
             StartPoint::from_update_json(context, project_id, start_point).await?;
 
-        // If reset is set then the branch needs to be reset.
+        // If reset is set then the branch head needs to be reset.
         if let Some(JsonUpdateStartPoint {
             reset: Some(true), ..
         }) = start_point
@@ -177,19 +177,20 @@ impl QueryBranch {
                             if current_hash == hash {
                                 self.into_branch_and_head(context).await
                             } else {
-                                // Rename and create a new branch, if the hashes do not match.
+                                // If the hashes do not match, create a new branch head.
                                 InsertHead::for_branch(log, context, self, new_start_point.as_ref())
                                     .await
                             }
                         },
-                        // Rename the current branch if it does not have a start point hash and the new start point does.
+                        // If there is no current start point hash and the new start point has a start point hash,
+                        // then the branch head needs to be recreated from the new start point.
                         // This should only rarely happen going forward, as most branches with a start point will have a hash.
                         (None, Some(_)) => {
                             InsertHead::for_branch(log, context, self, new_start_point.as_ref())
                                 .await
                         },
                         // If a start point hash is not specified, then there is nothing to check.
-                        // Even if the current branch has a start point hash, it does not need to always be specified.
+                        // Even if the current branch head has a start point hash, it does not need to always be specified.
                         // That is, setting the start point hash is not required on every run.
                         // Requiring it on every run would be a breaking change
                         // for users who have already specified a start point without a hash.
@@ -197,12 +198,12 @@ impl QueryBranch {
                     }
                 } else {
                     // If the current start point branch does not match the new start point branch,
-                    // then the branch needs to be recreated from that new start point.
+                    // then the branch head needs to be recreated from the new start point.
                     InsertHead::for_branch(log, context, self, new_start_point.as_ref()).await
                 }
             },
             // If the current branch does not have a start point and one is specified,
-            // then the branch needs to be recreated from that start point.
+            // then the branch head needs to be recreated from the new start point.
             (None, Some(_)) => {
                 InsertHead::for_branch(log, context, self, new_start_point.as_ref()).await
             },
