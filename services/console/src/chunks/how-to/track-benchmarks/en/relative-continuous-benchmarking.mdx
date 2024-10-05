@@ -68,8 +68,8 @@ Then we need to run our benchmarks on the `main` branch in CI:
 The first time this is command is run in CI,
 it will create the `feature-branch` Branch since it does not exist yet.
 The new `feature-branch` will _not_ have a start point, existing data, or Thresholds.
-On subsequent runs, the old instances of `feature-branch` will be replaced
-and a new instance of `feature-branch` will be created without a start point, existing data, or Thresholds.
+On subsequent runs, the old `feature-branch` [Head][head] will be replaced
+and a new `feature-branch` [Head][head] will be created without a start point, existing data, or Thresholds.
 
 [bencher run]: /docs/explanation/bencher-run/
 [project option]: /docs/explanation/bencher-run/#--project-project
@@ -79,6 +79,7 @@ and a new instance of `feature-branch` will be created without a start point, ex
 [bmf]: /docs/reference/bencher-metric-format/
 [adapter json]: /docs/explanation/adapters/#-json
 [command argument]: /docs/explanation/bencher-run/#benchmark-command
+[head]: /docs/explanation/benchmarking/#head
 
 Next, we need to checkout the `feature-branch` branch with `git` in CI:
 

@@ -12,11 +12,11 @@ is [Relative Continuous Benchmarking][relative continuous benchmarking].
 
 - If `branch` does not exit and no Start Point is specified, the `branch` will be created without any historical data.
 - If `branch` does exist and no Start Point is specified,
-  a new instance of `branch` will be created without any historical data.
+  a new `branch` [Head][head] will be created without any historical data.
 - If `branch` does not exist and a Start Point is specified,
   the `branch` will be created using the Start Point.
 - If `branch` does exist and a Start Point is specified,
-  a new instance of `branch` will be created using the Start Point.
+  a new `branch` [Head][head] will be created using the Start Point.
 
 If a new `branch` is created with a Start Point,
 then all the most recent data and optionally Thresholds from the `start-point` at the specified hash are copied over.
@@ -26,12 +26,13 @@ For example, if `feature_branch` exists without a Start Point
 then using `--branch feature_branch --start-point-reset`
 would:
 
-1. Remove the old instance of `feature_branch`
-2. Create a new instance of `feature_branch` with no historical data
-3. `bencher run` would then proceed using the new instance of `feature_branch`
+1. Remove the old `feature_branch` [Head][head]
+2. Create a new `feature_branch` Head with no historical data
+3. `bencher run` would then proceed using the new `feature_branch` Head
 
 [statistical continuous benchmarking]: /docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [relative continuous benchmarking]: /docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[head]: /docs/explanation/benchmarking/#head
 
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count

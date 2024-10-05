@@ -1010,7 +1010,7 @@ impl SeedTest {
             "--threshold-test",
             "t_test",
             "--threshold-upper-boundary",
-            "0.995",
+            "0.99",
             "--thresholds-reset",
             "--iter",
             "60",

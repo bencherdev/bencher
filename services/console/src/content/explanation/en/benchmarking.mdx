@@ -64,19 +64,21 @@ When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></c
 `main` is the default Branch if one is not provided.
 See [branch selection](/docs/explanation/branch-selection/) for a full overview.
 
-#### Start Point
-A Branch can have a [Start Point][start point].
-A Start Point is another Branch at a specific version (and `git` hash, if available).
-All the Metrics and optionally Thresholds are copied over from the Start Point.
-See [branch selection](/docs/explanation/branch-selection/) for a full overview.
-
-[start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
-
 #### Head
 The Head of a Branch is the most recent instance of the Branch.
 It references the most recent Start Point, if there is one.
 Whenever a Branch gets a new Start Point, it gets a new Head.
 See [branch selection](/docs/explanation/branch-selection/) for a full overview.
+
+#### Start Point
+A Branch can have a [Start Point][start point].
+A Start Point is another Branch at a specific version (and `git` hash, if available).
+Historical Metrics and optionally Thresholds are copied over from the Start Point.
+See [branch selection](/docs/explanation/branch-selection/) for a full overview.
+
+[start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
+
+
 
 ### Testbed
 A Testbed is the name of the testing environment used when running a Report.

@@ -10,7 +10,7 @@ This option requires [the `--start-point` option][start point option] to be set.
 - If `branch` does exist and both `start-point` and the specified hash are the same,
   then this option is ignored.
 - If `branch` does exist and either the `start-point` or the specified hash are different,
-  a new instance of `branch` will be created from `start-point` at the specified hash.
+  a new `branch` [Head][head] will be created from `start-point` at the specified hash.
 - If `branch` does not exist and the `start-point` does not exist at the specified hash,
   then the `branch` will be created without any historical data.
 - If `branch` does exist and the `start-point` does not exist at the specified hash,
@@ -25,12 +25,13 @@ at hash `32aea434d751648726097ed3ac760b57107edd8b`
 then using `--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
 would:
 
-1. Remove the old instance of `feature_branch`
-2. Create a new instance of `feature_branch`
-3. Copy of all the most recent data from `main` at hash `68b12758509ca5e2b1e3983525625e532eb5f562` to the new instance of `feature_branch`
-4. `bencher run` would then proceed using the new instance of `feature_branch`
+1. Remove the old `feature_branch` [Head][head]
+2. Create a new `feature_branch` Head
+3. Copy of all the most recent data from `main` at hash `68b12758509ca5e2b1e3983525625e532eb5f562` to the new `feature_branch` Head
+4. `bencher run` would then proceed using the new `feature_branch` Head
 
 [start point]: /docs/explanation/benchmarking/#start-point
+[head]: /docs/explanation/benchmarking/#head
 
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count

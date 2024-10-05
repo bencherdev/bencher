@@ -11,7 +11,7 @@ The primary use case for `--start-point` is [Statistical Continuous Benchmarking
 - If `branch` does not exist, it will be created using this Start Point.
 - If `branch` does exist and the Start Point is the same, then this option is ignored.
 - If `branch` does exist and the Start Point is different,
-  a new instance of `branch` will be created using this updated Start Point.
+  a new `branch` [Head][head] will be created using this updated Start Point.
 - If `branch` does not exist and the Start Point does not exist,
   then the `branch` will be created without any historical data.
 - If `branch` does exist and the Start Point does not exist,
@@ -35,6 +35,7 @@ Then using `--branch feature_branch --start-point main` would:
 [gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
 
 [start point]: /docs/explanation/benchmarking/#start-point
+[head]: /docs/explanation/benchmarking/#head
 
 [branch option]: #--branch-branch
 [start point max version option]: #--start-point-max-versions-count
