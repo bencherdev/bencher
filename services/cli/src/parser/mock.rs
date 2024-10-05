@@ -11,7 +11,7 @@ pub struct CliMock {
     #[clap(long, default_value = "latency")]
     pub measure: Vec<NameId>,
 
-    /// Generate values of 10 raised to this power
+    /// The power of 10 to use for the mock metrics
     #[clap(long)]
     pub pow: Option<i32>,
 
