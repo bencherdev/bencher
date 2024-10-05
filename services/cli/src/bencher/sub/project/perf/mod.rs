@@ -2,7 +2,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MeasureUuid, HeadUuid,
+    BenchmarkUuid, BranchUuid, DateTime, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
     ResourceId, TestbedUuid,
 };
 use tabled::Table;

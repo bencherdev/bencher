@@ -9,8 +9,8 @@ use bencher_json::{
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
         threshold::JsonThresholdModel,
     },
-    AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
-    JsonReport, MeasureUuid, ModelUuid, HeadUuid, ReportUuid, ResourceName, Slug, TestbedUuid,
+    AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, HeadUuid, JsonBoundary,
+    JsonPerfQuery, JsonReport, MeasureUuid, ModelUuid, ReportUuid, ResourceName, Slug, TestbedUuid,
     ThresholdUuid,
 };
 use url::Url;

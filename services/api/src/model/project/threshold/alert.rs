@@ -63,10 +63,7 @@ impl QueryAlert {
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
-    pub async fn silence_all(
-        context: &ApiContext,
-        head_id: HeadId,
-    ) -> Result<usize, HttpError> {
+    pub async fn silence_all(context: &ApiContext, head_id: HeadId) -> Result<usize, HttpError> {
         let alerts =
             schema::alert::table
                 .inner_join(schema::boundary::table.inner_join(
