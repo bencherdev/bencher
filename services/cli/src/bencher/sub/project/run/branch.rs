@@ -1,22 +1,16 @@
 use bencher_json::{project::branch::BRANCH_MAIN_STR, GitHash, NameId};
 
-use crate::parser::project::run::{CliRunBranch, CliRunHash};
+use crate::{
+    bencher::sub::project::branch::start_point::StartPoint,
+    parser::project::run::{CliRunBranch, CliRunHash},
+};
 
 #[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone)]
 pub struct Branch {
     branch: NameId,
     hash: Option<GitHash>,
-    start_point: Option<StartPoint>,
-}
-
-#[derive(Debug, Clone)]
-struct StartPoint {
-    branch: Option<NameId>,
-    hash: Option<GitHash>,
-    max_versions: u32,
-    clone_thresholds: bool,
-    reset: bool,
+    start_point: StartPoint,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -104,19 +98,19 @@ fn map_start_point(
     start_point_max_versions: u32,
     start_point_clone_thresholds: bool,
     start_point_reset: bool,
-) -> Option<StartPoint> {
+) -> StartPoint {
     let branch = start_point.first().and_then(|b| {
         // The only invalid `NameId` is an empty string.
         // This allows for "continue on empty" semantics for the branch start point.
         b.parse().ok()
     });
-    (branch.is_some() || start_point_reset).then_some(StartPoint {
+    StartPoint {
         branch,
         hash: start_point_hash,
         max_versions: start_point_max_versions,
         clone_thresholds: start_point_clone_thresholds,
         reset: start_point_reset,
-    })
+    }
 }
 
 impl From<Branch>
@@ -129,16 +123,7 @@ impl From<Branch>
     fn from(branch: Branch) -> Self {
         let name = branch.branch.into();
         let hash = branch.hash.map(Into::into);
-        let start_point =
-            branch
-                .start_point
-                .map(|start_point| bencher_client::types::JsonUpdateStartPoint {
-                    branch: start_point.branch.map(Into::into),
-                    hash: start_point.hash.map(Into::into),
-                    max_versions: Some(start_point.max_versions),
-                    clone_thresholds: Some(start_point.clone_thresholds),
-                    reset: Some(start_point.reset),
-                });
+        let start_point = branch.start_point.into();
         (name, hash, start_point)
     }
 }

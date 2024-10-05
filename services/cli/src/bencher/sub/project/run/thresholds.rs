@@ -58,14 +58,6 @@ impl TryFrom<CliRunThresholds> for Thresholds {
             threshold_upper_boundary,
             thresholds_reset,
         } = thresholds;
-        // If thresholds are reset, return an empty models object
-        // and set the `reset` field to true
-        if threshold_measure.is_empty() {
-            return Ok(Self {
-                models: None,
-                reset: thresholds_reset,
-            });
-        }
 
         let mut models_map = HashMap::with_capacity(threshold_measure.len());
 
@@ -135,7 +127,13 @@ impl TryFrom<CliRunThresholds> for Thresholds {
         }
 
         Ok(Self {
-            models: Some(models_map),
+            // Do not short circuit early if there are no measures
+            // because we need to still check if there are any dangling options
+            models: if models_map.is_empty() {
+                None
+            } else {
+                Some(models_map)
+            },
             reset: thresholds_reset,
         })
     }

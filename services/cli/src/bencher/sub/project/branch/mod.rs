@@ -3,6 +3,7 @@ use crate::{bencher::sub::SubCmd, parser::project::branch::CliBranch, CliError};
 mod create;
 mod delete;
 mod list;
+pub mod start_point;
 mod update;
 mod view;
 

@@ -7,9 +7,12 @@ use bencher_json::ResourceId;
 use crate::{
     bencher::{
         backend::AuthBackend,
-        sub::{project::run::thresholds::Thresholds, SubCmd},
+        sub::{
+            project::{branch::start_point::StartPoint, run::thresholds::Thresholds},
+            SubCmd,
+        },
     },
-    parser::project::{branch::CliStartPointUpdate, report::CliReportCreate},
+    parser::project::report::CliReportCreate,
     CliError,
 };
 
@@ -49,26 +52,11 @@ impl TryFrom<CliReportCreate> for Create {
             fold,
             backend,
         } = create;
-        let CliStartPointUpdate {
-            start_point_branch,
-            start_point_hash,
-            start_point_max_versions,
-            start_point_clone_thresholds,
-            start_point_reset,
-        } = start_point;
-        let start_point =
-            (start_point_branch.is_some() || start_point_reset).then(|| JsonUpdateStartPoint {
-                branch: start_point_branch.map(Into::into),
-                hash: start_point_hash.map(Into::into),
-                max_versions: Some(start_point_max_versions),
-                clone_thresholds: Some(start_point_clone_thresholds),
-                reset: Some(start_point_reset),
-            });
         Ok(Self {
             project,
             branch: branch.into(),
             hash: hash.map(Into::into),
-            start_point: start_point.map(Into::into),
+            start_point: StartPoint::from(start_point).into(),
             testbed: testbed.into(),
             thresholds: thresholds.try_into().map_err(CliError::Thresholds)?,
             start_time: start_time.into(),
