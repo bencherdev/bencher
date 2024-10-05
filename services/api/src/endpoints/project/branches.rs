@@ -252,8 +252,8 @@ pub struct ProjBranchParams {
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchQuery {
     /// View the branch with the specified head UUID.
-    /// This can be useful for viewing branches with historical head
-    /// that have since been replaced by a new head.
+    /// This can be used to view a branch with a historical head
+    /// that has since been replaced by a new head.
     /// If not specified, then the current head is used.
     pub head: Option<HeadUuid>,
 }

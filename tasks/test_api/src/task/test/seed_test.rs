@@ -560,7 +560,7 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(thresholds.0.len(), 2);
 
-        // cargo run -- threshold create --host http://localhost:61016 --token $BENCHER_API_TOKEN --branch master --testbed base --measure latency --test t --upper-boundary 0.995 the-computer
+        // cargo run -- threshold create --host http://localhost:61016 --token $BENCHER_API_TOKEN --branch master --testbed base --measure latency --test t --upper-boundary 0.99 the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "threshold",
@@ -578,7 +578,7 @@ impl SeedTest {
             "--test",
             "t_test",
             "--upper-boundary",
-            "0.995",
+            "0.99",
             PROJECT_SLUG,
         ])
         .current_dir(CLI_DIR);

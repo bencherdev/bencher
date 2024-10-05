@@ -77,7 +77,6 @@ const PlotsPanel = (props: Props) => {
 		project_slug: string;
 		token: string;
 	}) => {
-		console.log("getProject", fetcher);
 		const EMPTY_OBJECT = {};
 		if (!fetcher.bencher_valid) {
 			return EMPTY_OBJECT;

@@ -52,10 +52,10 @@ export const removeFromArray = (
 
 export const arrayFromString = (array_str: undefined | string): string[] => {
 	if (typeof array_str === "string") {
-		const array = array_str.split(",");
-		// This breaks the `heads` array where there is a leading empty string
-		// const [a, _i] = removeFromArray(array, "");
-		return array;
+		if (array_str === "") {
+			return [];
+		}
+		return array_str.split(",");
 	}
 	return [];
 };

@@ -319,8 +319,8 @@ pub struct ProjThresholdParams {
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdQuery {
     /// View the threshold with the specified model UUID.
-    /// This can be useful for viewing thresholds with historical models
-    /// that have since been replaced by a new model.
+    /// This can be used to view a threshold with a historical model
+    /// that has since been replaced by a new model.
     /// If not specified, then the current model is used.
     pub model: Option<ModelUuid>,
 }

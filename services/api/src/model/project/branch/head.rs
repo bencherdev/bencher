@@ -67,19 +67,9 @@ impl QueryHead {
         head_id: HeadId,
         version: Option<QueryVersion>,
     ) -> Result<JsonHead, HttpError> {
-        let (head_uuid, start_point_id, created, replaced) = schema::head::table
-            .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
-            .filter(schema::head::id.eq(head_id))
-            .select((
-                schema::head::uuid,
-                schema::head::start_point_id.nullable(),
-                schema::head::created,
-                schema::head::replaced.nullable(),
-            ))
-            .first::<(HeadUuid, Option<HeadVersionId>, DateTime, Option<DateTime>)>(conn)
-            .map_err(resource_not_found_err!(Head, head_id))?;
+        let query_head = Self::get(conn, head_id)?;
 
-        let start_point = if let Some(start_point_id) = start_point_id {
+        let start_point = if let Some(start_point_id) = query_head.start_point_id {
             let (branch, head, number, hash) = schema::head_version::table
                 .inner_join(
                     schema::head::table
@@ -109,8 +99,14 @@ impl QueryHead {
             None
         };
 
+        let Self {
+            uuid,
+            created,
+            replaced,
+            ..
+        } = query_head;
         Ok(JsonHead {
-            uuid: head_uuid,
+            uuid,
             start_point,
             version: version.map(QueryVersion::into_json),
             created,
