@@ -14,6 +14,7 @@ const PROJECT_ARG: &str = "--project";
 const PROJECT_SLUG: &str = "the-computer";
 const BRANCH_ARG: &str = "--branch";
 const BRANCH_SLUG: &str = "master";
+const HASH_ARG: &str = "--hash";
 const TESTBED_ARG: &str = "--testbed";
 const TESTBED_SLUG: &str = "base";
 const MEASURE_ARG: &str = "--measure";
@@ -670,6 +671,7 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(alerts.0.len(), 0);
 
+        let mut hash = Hash::new();
         for i in 0..30i32 {
             let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
             let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
@@ -685,6 +687,8 @@ impl SeedTest {
                     PROJECT_SLUG,
                     BRANCH_ARG,
                     BRANCH_SLUG,
+                    HASH_ARG,
+                    &hash.next(),
                     TESTBED_ARG,
                     TESTBED_SLUG,
                     "--format",
@@ -704,6 +708,7 @@ impl SeedTest {
                     PROJECT_SLUG,
                     BRANCH_ARG,
                     BRANCH_SLUG,
+                    "--no-hash",
                     TESTBED_ARG,
                     TESTBED_SLUG,
                     "--format",
@@ -747,6 +752,8 @@ impl SeedTest {
             PROJECT_SLUG,
             BRANCH_ARG,
             BRANCH_SLUG,
+            HASH_ARG,
+            &hash.next(),
             TESTBED_ARG,
             TESTBED_SLUG,
             "--threshold-measure",
@@ -793,6 +800,8 @@ impl SeedTest {
             PROJECT_SLUG,
             BRANCH_ARG,
             "feature-branch",
+            HASH_ARG,
+            &hash.next(),
             "--start-point",
             BRANCH_SLUG,
             "--start-point-clone-thresholds",
@@ -835,6 +844,8 @@ impl SeedTest {
             PROJECT_SLUG,
             BRANCH_ARG,
             "feature-branch",
+            HASH_ARG,
+            &hash.next(),
             "--start-point",
             BRANCH_SLUG,
             "--start-point-clone-thresholds",
@@ -879,6 +890,8 @@ impl SeedTest {
             PROJECT_SLUG,
             BRANCH_ARG,
             "feature-branch",
+            HASH_ARG,
+            &hash.next(),
             "--start-point",
             BRANCH_SLUG,
             "--start-point-clone-thresholds",
@@ -925,6 +938,8 @@ impl SeedTest {
             PROJECT_SLUG,
             BRANCH_ARG,
             "feature-branch",
+            HASH_ARG,
+            &hash.next(),
             "--start-point-reset",
             TESTBED_ARG,
             TESTBED_SLUG,
@@ -1151,38 +1166,6 @@ impl SeedTest {
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        // If the start point is missing, then the branch should just be reset
-        // https://github.com/bencherdev/bencher/issues/450
-        // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash df13bc928cc205cb8737e63b97712ba8d7d51b8b --testbed base --quiet bencher mock
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
-        cmd.args([
-            "run",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_ARG,
-            PROJECT_SLUG,
-            BRANCH_ARG,
-            "feature-hash",
-            "--start-point",
-            BRANCH_SLUG,
-            "--start-point-hash",
-            "df13bc928cc205cb8737e63b97712ba8d7d51b8b",
-            TESTBED_ARG,
-            TESTBED_SLUG,
-            "--format",
-            "json",
-            "--quiet",
-            &bencher_cmd,
-            "mock",
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonReport =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
         // cargo run -- alert ls --host http://localhost:61016 the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["alert", "ls", HOST_ARG, host, PROJECT_SLUG])
@@ -1208,6 +1191,8 @@ impl SeedTest {
             PROJECT_SLUG,
             BRANCH_ARG,
             BRANCH_SLUG,
+            HASH_ARG,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             TESTBED_ARG,
             TESTBED_SLUG,
             "--format",
@@ -1294,6 +1279,106 @@ impl SeedTest {
         let _alert: bencher_json::JsonAlert =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // If the start point is missing, then the branch should just be reset
+        // https://github.com/bencherdev/bencher/issues/450
+        // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash badbadbadbadbadbadbadbadbadbadbadbadbad1 --testbed base --quiet bencher mock
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            BRANCH_ARG,
+            "feature-hash",
+            HASH_ARG,
+            &hash.next(),
+            "--start-point",
+            BRANCH_SLUG,
+            "--start-point-hash",
+            "badbadbadbadbadbadbadbadbadbadbadbadbad1",
+            TESTBED_ARG,
+            TESTBED_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert!(json.branch.head.start_point.is_none(), "{json:?}");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            BRANCH_ARG,
+            "feature-hash",
+            HASH_ARG,
+            &hash.next(),
+            "--start-point",
+            BRANCH_SLUG,
+            "--start-point-hash",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            TESTBED_ARG,
+            TESTBED_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(
+            json.branch
+                .head
+                .start_point
+                .unwrap()
+                .version
+                .hash
+                .unwrap()
+                .as_ref(),
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        );
+
         Ok(())
+    }
+}
+
+struct Hash {
+    count: u8,
+}
+
+impl Hash {
+    fn new() -> Self {
+        Self { count: 0 }
+    }
+
+    fn next(&mut self) -> String {
+        let mock_hash = self
+            .count
+            .to_string()
+            .repeat(if self.count > 9 { 20 } else { 40 });
+        self.count += 1;
+        mock_hash
     }
 }
