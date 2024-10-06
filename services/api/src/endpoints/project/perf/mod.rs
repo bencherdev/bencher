@@ -278,7 +278,7 @@ async fn perf_query(
     if let Some(head_uuid) = head_uuid {
         query = query.filter(schema::head::uuid.eq(head_uuid));
     } else {
-        query = query.filter(schema::head::replaced.is_null());
+        query = query.filter(schema::branch::head_id.eq(schema::head::id.nullable()));
     }
 
     let Times {
