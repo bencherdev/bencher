@@ -31,8 +31,8 @@ jobs:
           --branch-start-point-hash '${{ github.event.pull_request.base.sha }}' \
           --branch-reset \
           --testbed ubuntu-latest \
-          --adapter json \
           --err \
+          --adapter json \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           bencher mock
 ```
