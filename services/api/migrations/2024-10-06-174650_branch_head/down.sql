@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS index_branch_head;
