@@ -2,7 +2,7 @@ use bencher_json::{
     project::head::{JsonVersion, VersionNumber},
     GitHash, VersionUuid,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use crate::{
@@ -42,20 +42,11 @@ impl QueryVersion {
         hash: Option<&GitHash>,
     ) -> Result<VersionId, HttpError> {
         if let Some(hash) = hash {
-            // We need to join all the way back to the report.
-            // This ensures that we are only looking for code versions for the current branch head.
-            // That is, we do not want to use the exact same code version for a branch head that used us as a start point.
+            // We need to join directly back to the report.
+            // This ensures that we are only looking for code versions for the current branch head that generated the report.
+            // That is, we do not want to use the exact same code version for a branch head that was later used us as a start point.
             if let Ok(version_id) = schema::version::table
-                .inner_join(
-                    schema::head_version::table.inner_join(
-                        schema::head::table
-                            .on(schema::head::id.eq(schema::head_version::head_id))
-                            .inner_join(
-                                schema::report::table
-                                    .on(schema::head::id.eq(schema::report::head_id)),
-                            ),
-                    ),
-                )
+                .inner_join(schema::report::table)
                 .filter(schema::report::head_id.eq(head_id))
                 .filter(schema::version::project_id.eq(project_id))
                 .filter(schema::version::hash.eq(hash.as_ref()))
@@ -96,8 +87,8 @@ impl InsertVersion {
     ) -> Result<VersionId, HttpError> {
         // Get the most recent code version number for this branch head and increment it.
         // Otherwise, start a new branch code version number count from zero.
-        // Do NOT join all the way back to the report for the particular branch.
-        // This ensures that we continue to increment properly for a branch that used us as a start point.
+        // Do NOT join directly to the report for the particular branch head.
+        // This ensures that we continue to increment properly for a branch head that used us as a start point.
         let number = if let Ok(number) = schema::version::table
             .inner_join(schema::head_version::table)
             .filter(schema::head_version::head_id.eq(head_id))
