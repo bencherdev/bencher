@@ -1,0 +1,19 @@
+## `---thresholds-reset`
+
+<br />
+
+Reset all unspecified Thresholds for the given [Branch][branch] and [Testbed][testbed].
+If a Threshold already exists and is not specified, its current [Model][model] will be removed.
+
+For example, if there were two Thresholds for the `main` Branch and `localhost` Testbed:
+- `main` Branch, `localhost` Testbed, `latency` [Measure][measure]
+- `main` Branch, `localhost` Testbed, `throughput` [Measure][measure]
+
+If only the `latency` Measure is specified in the `bencher run` subcommand
+and `--thresholds-reset` is used,
+then the `throughput` Measure would have its Model removed.
+
+[branch]: /docs/explanation/branch-selection/#--branch-branch
+[testbed]: /docs/explanation/bencher-run/#--testbed-testbed
+[model]: /docs/explanation/benchmarking/#model
+[measure]: /docs/explanation/benchmarking/#measure
