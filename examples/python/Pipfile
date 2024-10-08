@@ -4,10 +4,9 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-
-[dev-packages]
-pytest = "*"
 pytest-benchmark = "*"
 
+[dev-packages]
+
 [requires]
-python_version = "3.8"
+python_version = "3.12"

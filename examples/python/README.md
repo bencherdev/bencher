@@ -2,11 +2,11 @@ To run benchmarks:
 
 ```bash
 pipenv shell
-pytest fun_notification.py
+pytest game.py
 ```
 
 or
 
 ```bash
-pipenv run pytest fun_notification.py
+pipenv run pytest game.py
 ```
