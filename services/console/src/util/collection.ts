@@ -12,6 +12,7 @@ enum Collection {
 	users = "users",
 	server = "server",
 	// Learn
+	benchmarking_python = "benchmarking-python",
 	benchmarking_rust = "benchmarking-rust",
 	case_study = "case-study",
 	engineering = "engineering",
@@ -41,6 +42,8 @@ export const collectionPath = (collection: Collection) => {
 			return "users";
 		case Collection.server:
 			return "server";
+		case Collection.benchmarking_python:
+			return "benchmarking/python";
 		case Collection.benchmarking_rust:
 			return "benchmarking/rust";
 		case Collection.case_study:

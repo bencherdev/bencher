@@ -8,6 +8,7 @@ interface Props {
 }
 
 // Learn
+const benchmarkingPythonCollection = await getLangCollection(Collection.benchmarking_python);
 const benchmarkingRustCollection = await getLangCollection(Collection.benchmarking_rust);
 const caseStudyCollection = await getLangCollection(Collection.case_study);
 const engineeringCollection = await getLangCollection(Collection.engineering);
@@ -19,6 +20,11 @@ const { lang } = Astro.props;
   {
     label: benchmarking(lang),
     sections: [
+      {
+        section: "Python",
+        collection: Collection.benchmarking_python,
+        content: benchmarkingPythonCollection,
+      },
       {
         section: "Rust",
         collection: Collection.benchmarking_rust,
