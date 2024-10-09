@@ -1,12 +1,12 @@
 import RunCmdExample from "../run-cmd-example.mdx";
 
-If you had a script located at `./run/my/benchmarks.sh` that ran your benchmarks
-and printed the results to standard out as BMF JSON,
-then you could track them using
-<code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+You can use [the `bencher mock` CLI subcommand][bencher mock] to generate mock BMF data.
+We will use it as a placeholder for your own custom benchmark runner.
+Using <code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
 and [the `json` adapter][json adapter]
-with the following command:
+we can track our benchmarks with the following command:
 
 <RunCmdExample />
 
+[bencher mock]: /docs/reference/bencher-metric-format/#bencher-mock
 [json adapter]: /docs/explanation/adapters/#-json
