@@ -29,7 +29,7 @@ const usersCollection = await getEnCollection(Collection.users);
 const serverCollection = await getEnCollection(Collection.server);
 
 // Learn
-const rustCollection = await getLangCollection(Collection.rust);
+const benchmarkingRustCollection = await getLangCollection(Collection.benchmarking_rust);
 const caseStudyCollection = await getLangCollection(Collection.case_study);
 const engineeringCollection = await getLangCollection(Collection.engineering);
 
@@ -88,7 +88,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 			case DocsMenuId.Learn:
 				return (
 					1 +
-					rustCollection[lang]?.length +
+					benchmarkingRustCollection[lang]?.length +
 					1 +
 					caseStudyCollection[lang]?.length +
 					1 +

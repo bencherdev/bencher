@@ -54,7 +54,7 @@ export const collections = {
 	users: swagger,
 	server: swagger,
 	// learn
-	rust: page,
+	benchmarking_rust: page,
 	case_study: page,
 	engineering: page,
 	// onboard

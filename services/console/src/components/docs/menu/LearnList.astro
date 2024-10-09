@@ -8,7 +8,7 @@ interface Props {
 }
 
 // Learn
-const rustCollection = await getLangCollection(Collection.rust);
+const benchmarkingRustCollection = await getLangCollection(Collection.benchmarking_rust);
 const caseStudyCollection = await getLangCollection(Collection.case_study);
 const engineeringCollection = await getLangCollection(Collection.engineering);
 
@@ -21,8 +21,8 @@ const { lang } = Astro.props;
     sections: [
       {
         section: "Rust",
-        collection: Collection.rust,
-        content: rustCollection,
+        collection: Collection.benchmarking_rust,
+        content: benchmarkingRustCollection,
       }
     ],
   },
