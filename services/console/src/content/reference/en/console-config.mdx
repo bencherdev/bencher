@@ -1,0 +1,29 @@
+---
+title: "Console Config"
+description: "Bencher Console UI server configuration for self-hosted continuous benchmarking"
+heading: "Console Server Config"
+published: "2024-10-09T09:17:00Z"
+modified: "2024-10-09T09:17:00Z"
+sortOrder: 3
+---
+
+The Bencher Console UI does not require any configuration.
+However, the defaults can be customized to suite your needs:
+
+- `BENCHER_API_URL` environment variable: The URL for [the Bencher API server][server config].
+  By default, this is set to `http://localhost:61016`.
+- `INTERNAL_API_URL` environment variable: When using Docker based networking, such as with `docker compose`,
+  this is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`.
+  Do not set this when using a remote `BENCHER_API_URL`, such as `https://bencher.example.com`.
+  By default, this is not set.
+
+By default, [the Bencher API server][server config] expects the Bencher Console to be running at `http://localhost:3000`.
+If your Bencher Console server is running elsewhere, then you need to set
+[the `console.url` option][console url].
+
+In order to setup HTTPS on your Console Server, you will need to:
+
+...astro nodejs docs
+
+[server config]: /docs/reference/server-config/
+[console url]: /docs/reference/server-config/#console
