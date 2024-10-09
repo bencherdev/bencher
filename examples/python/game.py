@@ -1,3 +1,15 @@
+def game_v0():
+    """v0"""
+    for i in range(1, 101):
+        if i % 15 == 0:
+            print("FizzBuzz")
+        elif i % 3 == 0:
+            print("Fizz")
+        elif i % 5 == 0:
+            print("Buzz")
+        else:
+            print(i)
+
 def play_game_v1(n, should_print):
     """v1"""
     result = fizz_buzz(n)
@@ -6,12 +18,12 @@ def play_game_v1(n, should_print):
     return result
 
 def fizz_buzz(n):
-    if n % 3 == 0:
+    if n % 15 == 0:
+       return "FizzBuzz"
+    elif n % 3 == 0:
         return "Fizz"
     elif n % 5 == 0:
         return "Buzz"
-    elif n % 15 == 0:
-       return "FizzBuzz"
     else:
         return str(n)
 
@@ -25,12 +37,12 @@ def fizz_buzz_fibonacci(n):
     if is_fibonacci_number(n):
         return "Fibonacci"
     else:
-        if n % 3 == 0:
+        if n % 15 == 0:
+            return "FizzBuzz"
+        elif n % 3 == 0:
             return "Fizz"
         elif n % 5 == 0:
             return "Buzz"
-        elif n % 15 == 0:
-            return "FizzBuzz"
         else:
             return str(n)
 
