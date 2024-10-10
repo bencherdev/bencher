@@ -1,24 +1,17 @@
 ## Benchmarking in Python
 
-The three popular options for benchmarking in Rust are:
-[libtest bench](/learn/benchmarking/rust/libtest-bench/),
-[Criterion](/learn/benchmarking/rust/criterion/), and
-[Iai](/learn/benchmarking/rust/iai/).
+The two popular options for benchmarking in Rust are:
+[pytest-benchmark](https://pytest-benchmark.readthedocs.io)
+and
+[airspeed velocity (asv)](https://github.com/airspeed-velocity/asv)
 
-libtest is Rust's built-in unit testing and benchmarking framework.
-Though part of the Rust standard library, libtest bench is still considered unstable,
-so it is only available on `nightly` compiler releases.
-To work on the stable Rust compiler,
-[a separate benchmarking harness](https://github.com/bluss/bencher)
-needs to be used.
-Neither is being actively developed, though.
+`pytest-benchmark` is a powerful benchmarking tool
+integrated with the popular [`pytest` testing framework](https://docs.pytest.org/en/stable/).
+It allows developers to measure and compare the performance of their code by running benchmarks alongside their unit tests.
+Users can easily compare their benchmark results locally
+and export their results in various formats, such as JSON.
 
-The most popular benchmarking harness within the Rust ecosystem is Criterion.
-It works on both stable and `nightly` Rust compiler releases,
-and it has become the de facto standard within the Rust community.
-Criterion is also much more feature-rich compared to libtest bench.
-
-An experimental alternative to Criterion is Iai, from the same creator as Criterion.
-However, it uses instruction counts instead of wall clock time:
-CPU instructions, L1 accesses, L2 access and RAM accesses.
-This allows for single-shot benchmarking since these metrics should stay nearly identical between runs.
+`airspeed velocity (asv)` is another advanced benchmarking tool in the Python ecosystem.
+One of the key benefits of `asv` is its ability to generate detailed and interactive HTML reports,
+which make it easy to visualize performance trends and identify regressions.
+Additionally, `asv` supports [Relative Continuous Benchmarking](/docs/how-to/track-benchmarks/#relative-continuous-benchmarking) out of the box.

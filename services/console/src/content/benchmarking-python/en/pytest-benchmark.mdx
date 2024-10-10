@@ -10,7 +10,24 @@ sortOrder: 1
 import Benchmarking from "../../../chunks/benchmarking/en/benchmarking.mdx";
 import FizzBuzzRules from "../../../chunks/benchmarking/en/fizz-buzz-rules.mdx";
 import FizzBuzzPython from "../../../chunks/benchmarking-python/en/fizz-buzz-python.mdx";
+import StepByStepPython from "../../../chunks/benchmarking-python/en/step-by-step-python.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/en/micro-vs-macro.mdx";
+import BenchmarkingPython from "../../../chunks/benchmarking-python/en/benchmarking-python.mdx";
 
 <Benchmarking />
 
 <FizzBuzzPython />
+
+<StepByStepPython />
+
+<MicroVsMacro />
+
+<BenchmarkingPython />
+
+Both are [support by Bencher](/docs/explanation/adapters/).
+So why choose `pytest-benchmark`?
+`pytest-benchmark` integrates seamlessly with `pytest`,
+which is the de facto standard unit test harness in the Python ecosystem.
+I would suggest using `pytest-benchmark` for benchmarking your code's latency,
+especially if you are already using `pytest`.
+That is, `pytest-benchmark` is great for measuring wall clock time.
