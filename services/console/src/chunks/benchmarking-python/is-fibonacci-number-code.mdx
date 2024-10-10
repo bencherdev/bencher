@@ -1,0 +1,12 @@
+```python
+def is_fibonacci_number(n):
+    for i in range(n + 1):
+        previous, current = 0, 1
+        while current < i:
+            next_value = previous + current
+            previous = current
+            current = next_value
+        if current == n:
+            return True
+    return False
+```
