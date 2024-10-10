@@ -1,0 +1,38 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/en/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenOutput from "../fizz-buzz-fibonacci-open-output.mdx";
+import FizzBuzzFibonacciOpenOutputDefault from "../fizz-buzz-fibonacci-open-output-default.mdx";
+
+## Expand FizzBuzzFibonacci in Python
+
+Our game is a hit! The kids do indeed love playing FizzBuzzFibonacci.
+So much so that word has come down from the execs that they want a sequel.
+But this is the modern world, we need Annual Recurring Revenue (ARR) not one time purchases!
+The new vision for our game is that it is open ended, no more living between the bound of `1` and `100` (even if it is inclusive).
+No, we're on to new frontiers!
+
+<FizzBuzzFibonacciOpenRules />
+
+In order to have our game work for any number, we will need to accept a command line argument.
+Update the default control flow to look like this:
+
+{ props.children }
+
+- Import the `sys` package.
+- Collect all of the arguments (`args`) passed to our game from the command line.
+- Get the first argument passed to our game and check to see if it is a digit.
+  - If so, parse the first argument as an integer, `i`.
+  - Play our game with the newly parsed unsigned integer `i`.
+- If parsing fails or no argument is passed in, default to prompting for a valid input.
+
+Now we can play our game with any number!
+Run `python game.py` followed by an integer to play our game:
+
+
+<FizzBuzzFibonacciOpenOutput />
+
+And if we omit or provide an invalid number:
+
+<FizzBuzzFibonacciOpenOutputDefault />
+
+Wow, that was some thorough testing! CI passes. Our bosses are thrilled.
+Let's ship it! 🚀

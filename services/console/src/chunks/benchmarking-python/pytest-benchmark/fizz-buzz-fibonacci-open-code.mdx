@@ -1,0 +1,10 @@
+```python
+import sys
+
+args = sys.argv
+if len(args) > 1 and args[1].isdigit():
+    i = int(args[1])
+    play_game(i, True)
+else:
+    print("Please, enter a positive integer to play...")
+```
