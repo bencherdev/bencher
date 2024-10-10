@@ -1,0 +1,7 @@
+```python title="game.py"
+def test_game(benchmark):
+    def run_game():
+        for i in range(1, 101):
+            play_game(i, False)
+    benchmark(run_game)
+```

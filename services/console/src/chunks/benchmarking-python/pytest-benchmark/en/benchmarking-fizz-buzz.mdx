@@ -1,0 +1,30 @@
+import TestGame from "../test-game.mdx";
+import PipenvShellOutput from "../../pipenv-shell-output.mdx";
+import PipenvInstallOutput from "../pipenv-install-output.mdx";
+import PytestGameOutput from "../pytest-game-output.mdx";
+
+## Benchmarking FizzBuzz
+
+In order to benchmark our code, we need to create a test function that runs our benchmark.
+At the bottom of `game.py` add the following code:
+
+<TestGame />
+
+- Create a function named `test_game` that takes in a `pytest-benchmark` `benchmark` fixture.
+- Create a `run_game` function that iterate from `1` to `100` inclusively.
+  - For each number, call `play_game`, with `should_print` set to `false`.
+- Pass the `run_game` function the the `benchmark` runner.
+
+Now we need to configure our project to run our benchmarks.
+
+Create a new virtual environment with `pipenv`:
+
+<PipenvShellOutput />
+
+Install `pytest-benchmark` inside of that new `pipenv` environment:
+
+<PipenvInstallOutput />
+
+Now we're ready to benchmark our code, run `pytest game.py`:
+
+<PytestGameOutput />
