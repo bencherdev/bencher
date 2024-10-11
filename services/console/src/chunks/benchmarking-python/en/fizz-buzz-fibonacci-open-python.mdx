@@ -13,7 +13,7 @@ No, we're on to new frontiers!
 <FizzBuzzFibonacciOpenRules />
 
 In order to have our game work for any number, we will need to accept a command line argument.
-Update the default control flow to look like this:
+Update the main execution to look like this:
 
 { props.children }
 
@@ -21,7 +21,7 @@ Update the default control flow to look like this:
 - Collect all of the arguments (`args`) passed to our game from the command line.
 - Get the first argument passed to our game and check to see if it is a digit.
   - If so, parse the first argument as an integer, `i`.
-  - Play our game with the newly parsed unsigned integer `i`.
+  - Play our game with the newly parsed integer `i`.
 - If parsing fails or no argument is passed in, default to prompting for a valid input.
 
 Now we can play our game with any number!
