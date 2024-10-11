@@ -1,0 +1,11 @@
+```python title="game.py"
+def test_game_100(benchmark):
+    def run_game():
+        play_game(100, False)
+    benchmark(run_game)
+
+def test_game_1_000_000(benchmark):
+    def run_game():
+        play_game(1_000_000, False)
+    benchmark(run_game)
+```

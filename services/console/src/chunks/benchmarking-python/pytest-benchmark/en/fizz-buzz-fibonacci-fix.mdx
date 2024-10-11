@@ -1,0 +1,23 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## Fix FizzBuzzFibonacci in Python
+
+Let's take another look at that `is_fibonacci_number` function:
+
+<IsFibonacciNumberCode />
+
+Now that I'm thinking about performance, I do realize that I have an unnecessary, extra loop.
+We can completely get rid of the `for i in range(n + 1):` loop and
+just compare the `current` value to the given number (`n`) 🤦
+
+<IsFibonacciNumberFixCode />
+
+- Update your `is_fibonacci_number` function.
+- Initialize our Fibonacci sequence starting with `0` and `1` as the `previous` and `current` numbers respectively.
+- Iterate while the `current` number is less than the _given number_ `n`.
+- Add the `previous` and `current` number to get the `next_value` number.
+- Update the `previous` number to the `current` number.
+- Update the `current` number to the `next_value` number.
+- Once `current` is greater than or equal to the given number `n`, we will exit the loop.
+- Check to see if the `current` number is equal to the given number `n` and return that result.

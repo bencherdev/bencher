@@ -20,6 +20,18 @@ import PlayGameCode from "../../../chunks/benchmarking-python/pytest-benchmark/p
 import BenchmarkingFizzBuzzFibonacci from "../../../chunks/benchmarking-python/pytest-benchmark/en/benchmarking-fizz-buzz-fibonacci.mdx";
 import FizzBuzzFibonacciOpenPython from "../../../chunks/benchmarking-python/en/fizz-buzz-fibonacci-open-python.mdx";
 import FizzBuzzFibonacciOpenCode from "../../../chunks/benchmarking-python/pytest-benchmark/fizz-buzz-fibonacci-open-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/en/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/en/on-fire.mdx";
+import TestGameOnFireCode from "../../../chunks/benchmarking-python/pytest-benchmark/test-game-on-fire-code.mdx";
+import PytestGameOnFireOutputStart from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output-start.mdx";
+import PytestGameOnFireOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-python/pytest-benchmark/en/fizz-buzz-fibonacci-fix.mdx";
+import PytestGameFixOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/en/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-python/pytest-benchmark/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/en/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 
 <Benchmarking />
 
@@ -52,3 +64,52 @@ That is, `pytest-benchmark` is great for measuring wall clock time.
 <FizzBuzzFibonacciOpenPython>
     <FizzBuzzFibonacciOpenCode />
 </FizzBuzzFibonacciOpenPython>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<TestGameOnFireCode />
+
+- A micro-benchmark `test_game_100` for playing the game with the number one hundred (`100`)
+- A micro-benchmark `test_game_1_000_000` for playing the game with the number one million (`1_000_000`)
+
+When I ran it, I got this:
+
+<PytestGameOnFireOutputStart />
+
+Wait for it... wait for it...
+
+<PytestGameOnFireOutput />
+
+What! `403.57 ns` x `1,000` should be `403,570 ns` not `9,596,800 ns` (`9.5968 ms` x `1_000_000 ns/1 ms`) 🤯
+Even though I got my Fibonacci sequence code functionally correct, I must have a performance bug in there somewhere.
+
+<FizzBuzzFibonacciFix />
+
+Now lets rerun those benchmarks and see how we did:
+
+<PytestGameFixOutput />
+
+Oh, wow! Our `test_game` benchmark is back down to around where it was for the original FizzBuzz.
+I wish I could remember exactly what that score was. It's been three weeks though.
+My terminal history doesn't go back that far.
+And `pytest-benchmark` only stores its results when we ask it to.
+But I think it's close!
+
+The `test_game_100` benchmark is down nearly 10x, `-93.950%`.
+And the `test_game_1_000_000` benchmark is down more than 10,000x! `9,596,800 ns` to `30.403 ns`!
+
+> 🐰 Hey, at least we caught this performance bug before it made it to production... oh, right. Nevermind...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="How to Benchmark Rust with pytest-benchmark" />
+
+<BencherFooter />
