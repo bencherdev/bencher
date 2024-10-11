@@ -1,4 +1,24 @@
 ```
 $ pytest game.py
-=== TODO ===
+======================================================= test session starts ========================================================
+platform darwin -- Python 3.12.7, pytest-8.3.3, pluggy-1.5.0
+benchmark: 4.0.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /usr/bencher/examples/python/pytest-benchmark
+plugins: benchmark-4.0.0
+collected 1 item                                                                                                                   
+
+game.py .                                                                                                                    [100%]
+
+
+------------------------------------------------- benchmark: 1 tests -------------------------------------------------
+Name (time in us)         Min       Max     Mean  StdDev   Median     IQR   Outliers  OPS (Kops/s)  Rounds  Iterations
+----------------------------------------------------------------------------------------------------------------------
+test_game             10.5416  237.7499  10.8307  1.3958  10.7088  0.1248  191;10096       92.3304   57280           1
+----------------------------------------------------------------------------------------------------------------------
+
+Legend:
+  Outliers: 1 Standard Deviation from Mean; 1.5 IQR (InterQuartile Range) from 1st Quartile and 3rd Quartile.
+  OPS: Operations Per Second, computed as 1 / Mean
+======================================================== 1 passed in 1.68s =========================================================
+
 ```

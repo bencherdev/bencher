@@ -84,7 +84,7 @@ Wait for it... wait for it...
 
 <PytestGameOnFireOutput />
 
-What! `403.57 ns` x `1,000` should be `403,570 ns` not `9,596,800 ns` (`9.5968 ms` x `1_000_000 ns/1 ms`) 🤯
+What! `15.8470 us` x `1,000` should be `15,847.0 us` not `571,684.6334 us` 🤯
 Even though I got my Fibonacci sequence code functionally correct, I must have a performance bug in there somewhere.
 
 <FizzBuzzFibonacciFix />
@@ -99,8 +99,8 @@ My terminal history doesn't go back that far.
 And `pytest-benchmark` only stores its results when we ask it to.
 But I think it's close!
 
-The `test_game_100` benchmark is down nearly 10x, `-93.950%`.
-And the `test_game_1_000_000` benchmark is down more than 10,000x! `9,596,800 ns` to `30.403 ns`!
+The `test_game_100` benchmark is down nearly 50x to `322.0815 ns`.
+And the `test_game_1_000_000` benchmark is down more than 500,000x! `571,684,633.4 ns` to `753.1445 ns`!
 
 > 🐰 Hey, at least we caught this performance bug before it made it to production... oh, right. Nevermind...
 

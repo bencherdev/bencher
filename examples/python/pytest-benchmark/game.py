@@ -12,12 +12,12 @@ def game_v0():
 
 def play_game_v1(n, should_print):
     """v1"""
-    result = fizz_buzz(n)
+    result = fizz_buzz_v1(n)
     if should_print:
         print(result)
     return result
 
-def fizz_buzz(n):
+def fizz_buzz_v1(n):
     if n % 15 == 0:
        return "FizzBuzz"
     elif n % 3 == 0:
@@ -26,6 +26,37 @@ def fizz_buzz(n):
         return "Buzz"
     else:
         return str(n)
+
+def play_game_v2(n, should_print):
+    """v2"""
+    result = fizz_buzz_fibonacci_v2(n)
+    if should_print:
+        print(result)
+    return result
+
+def fizz_buzz_fibonacci_v2(n):
+    if is_fibonacci_number_v2(n):
+        return "Fibonacci"
+    else:
+        if n % 15 == 0:
+            return "FizzBuzz"
+        elif n % 3 == 0:
+            return "Fizz"
+        elif n % 5 == 0:
+            return "Buzz"
+        else:
+            return str(n)
+
+def is_fibonacci_number_v2(n):
+    for i in range(n + 1):
+        previous, current = 0, 1
+        while current < i:
+            next_value = previous + current
+            previous = current
+            current = next_value
+        if current == n:
+            return True
+    return False
 
 def play_game(n, should_print):
     result = fizz_buzz_fibonacci(n)
@@ -46,18 +77,6 @@ def fizz_buzz_fibonacci(n):
         else:
             return str(n)
 
-def is_fibonacci_number_v3(n):
-    """v3"""
-    for i in range(n + 1):
-        previous, current = 0, 1
-        while current < i:
-            next_value = previous + current
-            previous = current
-            current = next_value
-        if current == n:
-            return True
-    return False
-
 def is_fibonacci_number(n):
     previous, current = 0, 1
     while current < n:
@@ -66,9 +85,13 @@ def is_fibonacci_number(n):
         current = next_value
     return current == n
 
-def original_game():
+def game_v1():
     for i in range(1, 101):
-        play_game(i, True)
+        play_game_v1(i, True)
+
+def game_v2():
+    for i in range(1, 101):
+        play_game_v2(i, True)
 
 def open_world_game():
     import sys
