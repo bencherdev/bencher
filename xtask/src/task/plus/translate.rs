@@ -13,8 +13,8 @@ use notify_rust::Notification;
 
 use crate::parser::{TaskLanguage, TaskTranslate};
 
-// https://platform.openai.com/docs/models/gpt-4
-const GPT4_MODEL: &str = "gpt-4o-2024-05-13";
+// https://platform.openai.com/docs/models/gpt-4o
+const GPT_MODEL: &str = "gpt-4o-2024-08-06";
 
 // export OPENAI_API_KEY=sk-xxx
 #[derive(Debug)]
@@ -130,7 +130,7 @@ impl Translate {
                 let client = Client::new();
                 // https://platform.openai.com/docs/models/model-endpoint-compatibility
                 let request = CreateChatCompletionRequestArgs::default()
-                    .model(GPT4_MODEL)
+                    .model(GPT_MODEL)
                     .messages([
                         ChatCompletionRequestSystemMessageArgs::default()
                             .content(system_input.as_str())
