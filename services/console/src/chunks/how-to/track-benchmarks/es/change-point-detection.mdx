@@ -1,0 +1,15 @@
+## Detección de Puntos de Cambio
+
+La Detección de Puntos de Cambio utiliza un [algoritmo de detección de cambio][change detection] para evaluar una gran ventana de resultados recientes. Esto permite que el algoritmo ignore valores atípicos como ruido y produzca menos falsos positivos. Aunque la Detección de Puntos de Cambio se considera [evaluación continua][continuous benchmarking], no te permite detectar regresiones de rendimiento en CI. Es decir, no puedes detectar una regresión de rendimiento antes de que se fusione una rama de características. Esto a veces se denomina detección "fuera de banda".
+
+Por ejemplo, si tienes una prueba de referencia `bench_my_critical_path`, y ha tenido las siguientes latencias históricas: `5 ms`, `6 ms`, `5 ms`, `5 ms`, `7 ms`.
+
+Si el siguiente resultado de la prueba de referencia fuera `11 ms`, un umbral de Evaluación Estadística Continua y el algoritmo de Detección de Puntos de Cambio interpretarían las cosas de manera muy diferente. Es probable que se superara el umbral y se generara una alerta. Si esta ejecución de referencia estuviera vinculada a una solicitud de extracción, es probable que la construcción se estableciera para fallar debido a esta alerta. Sin embargo, el algoritmo de punto de cambio no haría nada... todavía. Si la siguiente ejecución vuelve a bajar a `5 ms` entonces probablemente no generaría una alerta. Por el contrario, si los próximos resultados fueran `10 ms` y `12 ms`, solo entonces el algoritmo de punto de cambio activaría una alerta.
+
+¿Estás interesado en usar la Detección de Puntos de Cambio con Bencher? Si es así, por favor deja un comentario en [el problema de seguimiento][github issue 365] o [contáctanos directamente][help].
+
+[change detection]: https://en.wikipedia.org/wiki/Change_detection
+[github issue 365]: https://github.com/bencherdev/bencher/issues/365
+
+[continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
+[help]: /help/

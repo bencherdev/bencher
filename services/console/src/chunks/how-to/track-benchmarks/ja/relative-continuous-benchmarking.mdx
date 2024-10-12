@@ -1,93 +1,77 @@
-import TestbedCreate from "../testbed-create.mdx";
 import GitCheckoutMain from "../git-checkout-main.mdx";
 import RunMainRelative from "../run-main-relative.mdx";
-import ThresholdCreateRelative from "../threshold-create-relative.mdx";
 import GitCheckoutFeature from "../git-checkout-feature.mdx";
 import RunFeatureRelative from "../run-feature-relative.mdx";
 
-## 相対連続ベンチマーキング
+## 相対連続ベンチマーク
 
-[クイックスタート][quick start]と[Docker セルフホスティング][docker self-hosted]のチュートリアルに引き続き、`Save Walter White`プロジェクトに相対連続ベンチマーキングを追加しましょう。
+[クイックスタート][quick start]および[Docker 自己ホスト][docker self-hosted]チュートリアルから引き継いで、`Save Walter White`プロジェクトに相対[連続ベンチマーク][continuous benchmarking]を追加してみましょう。
 
-> 🐰
-> [APIトークンを作成し、`BENCHER_API_TOKEN`環境変数として設定][create an api token]していることを確認してください！
+> 🐰 続ける前に、
+> [APIトークンを作成して、`BENCHER_API_TOKEN`環境変数として設定します][create an api token]
+>！
 
-まず、CIランナを表す新しいTestbedを`ci-runner`として作成する必要があります。
+[quick start]: /ja/docs/tutorial/quick-start/
+[docker self-hosted]: /ja/docs/tutorial/docker/
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
+[create an api token]: /ja/docs/tutorial/quick-start/#create-an-api-token
 
-<TestbedCreate />
+相対連続ベンチマークは、コードの2つのバージョンを並べて比較します。
+これは、利用可能なリソースが実行ごとに大きく変動する可能性がある、ノイズの多いCI/CD環境で役立つことがあります。
+この例では、`main`ブランチでの実行結果と、適切に命名された`feature-branch`という機能ブランチでの結果を比較します。
+すべてのCI環境は少しずつ異なるため、以下の例は実際的というよりも説明的なものです。
+より具体的な例については、[GitHub Actionsで連続ベンチマーク][github actions]と[GitLab CI/CDで連続ベンチマーク][gitlab ci/cd]を参照してください。
 
-1. `bencher testbed create` CLIサブコマンドを使用します。
-   詳細については、[testbed createのドキュメント][testbed create]を参照してください。
-   (例: `bencher testbed create`)
-2. `--name`オプションを所望のTestbed名に設定します。
-   (例: `--name ci-runner`)
-3. プロジェクト引数として`Save Walter White`プロジェクトのスラッグを指定します。
-   (例: `save-walter-white-1234abcd`)
+[github actions]: /ja/docs/how-to/github-actions/
+[gitlab ci/cd]: /ja/docs/how-to/gitlab-ci-cd/
 
-相対連続ベンチマーキングは、コードの2つのバージョンを並行して比較することができます。
-これは、CI/CD環境がノイズの多い場合や、実行間で利用可能なリソースが大きく変動する場合に便利です。
-この例では、`main`ブランチで実行された結果と、`feature-branch`という機能ブランチで実行された結果を比較します。
-CI環境はそれぞれ異なるため、以下の例は説明的であり、実用的とは異なります。
-より具体的な例については、[GitHub Actionsでの連続ベンチマーキング][github actions]および[GitLab CI/CDでの連続ベンチマーキング][gitlab ci/cd]を参照してください。
-
-まず、CIで`git`を使用して`main`ブランチをチェックアウトします：
+まず、CIで`git`を使用して`main`ブランチをチェックアウトする必要があります：
 
 <GitCheckoutMain />
 
-次に、CIで`main`ブランチのベンチマークを実行します：
+次に、CIで`main`ブランチのベンチマークを実行する必要があります：
 
 <RunMainRelative />
 
-1. `main`ブランチのベンチマークを実行するために、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用します。
-   完全な概要については、[bencher run CLIサブコマンド][bencher run]を参照してください。
+1. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して
+   `main`ブランチのベンチマークを実行します。
+   詳細な情報は[ `bencher run` CLIサブコマンド][bencher run]を参照してください。
    (例: `bencher run`)
 2. `--project`オプションをプロジェクトスラッグに設定します。
-   詳細については、[`--project`のドキュメント][project option]を参照してください。
+   詳細は[ `--project`ドキュメント][project option]をご覧ください。
    (例: `--project save-walter-white-1234abcd`)
-3. `--branch`オプションを機能ブランチ名に設定します。
-   完全な概要については、[branch selection][branch selection branch]を参照してください。
-   (例: `--branch feature-branch`)
-4. `--branch-reset`フラグを設定します。
-   完全な概要については、[branch selection][branch selection reset]を参照してください。
-   (例: `--branch-reset`)
-5. `--testbed`オプションをTestbed名に設定します。
-   詳細については、[the `--tested`ドキュメント][testbed option]を参照してください。
+3. `--branch`オプションをベースブランチ名に設定します。
+   詳細は[ `--branch`ドキュメント][branch option]をご覧ください。
+   (例: `--branch main`)
+4. `--start-point-reset`フラグを設定して常にベースブランチをリセットします。
+   この方法で、すべてのベンチマークデータが現在のCIランナーからのものであることを確認します。
+   詳細は[ `--start-point-reset`ドキュメント][start point reset]をご覧ください。
+   (例: `--start-point-reset`)
+5. `--testbed`オプションをCIランナーテストベッドの名前に設定します。
+   詳細は[ `--testbed`ドキュメント][testbed option]をご覧ください。
    (例: `--testbed ci-runner`)
-6. 希望するベンチマークハーネスアダプターに`--adapter`オプションを設定します。
-   完全な概要については、[benchmark harness adapters][adapters]を参照してください。
+6. `--adapter`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された[Bencher Metric Format JSON (`json`)][bmf]に設定します。
+   詳細は[ベンチマーカーアダプター][adapter json]をご覧ください。
    (例: `--adapter json`)
 7.  ベンチマークコマンド引数を指定します。
-    完全な概要については、[benchmark command][command argument]を参照してください。
+    詳細は[ベンチマークコマンド][command argument]をご覧ください。
     (例: `bencher mock`)
 
-CIでこのコマンドが初めて実行されるとき、`feature-branch`ブランチはまだ存在しないため作成されます。
-新しい`feature-branch`には開始点、既存のデータ、閾値がありません。
-後続の実行では、古いバージョンの`feature-branch`がリネームされ、開始点、既存のデータ、閾値のない新しい`feature-branch`が作成されます。
+CIでこのコマンドを初めて実行すると、存在しないため`feature-branch`ブランチが作成されます。
+新しい`feature-branch`には、開始点、既存のデータ、またはスレッショルドがありません。
+その後の実行では、古い`feature-branch`[ヘッド][head]が置き換えられ、新しい`feature-branch`[ヘッド][head]が開始点、既存のデータ、またはスレッショルドなしで作成されます。
 
-次に、CIで新しい`feature-branch`ブランチのための新しい[閾値][thresholds]を作成する必要があります：
+[bencher run]: /ja/docs/explanation/bencher-run/
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[branch option]: /ja/docs/explanation/branch-selection/#--branch-branch
+[start point reset]: /ja/docs/explanation/branch-selection/#--start-point-reset
+[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[adapter json]: /ja/docs/explanation/adapters/#-json
+[command argument]: /ja/docs/explanation/bencher-run/#benchmark-command
+[head]: /ja/docs/explanation/benchmarking/#head
 
-<ThresholdCreateRelative />
-
-1. `bencher threshold create` CLIサブコマンドを使用します。
-   詳細については、[`threshold create`のドキュメント][threshold create]を参照してください。
-   (例: `bencher threshold create`)
-2. `--branch`オプションを新しい`feature-branch`ブランチに設定します。
-   (例: `--branch feature-branch`)
-3. `--testbed`オプションを`ci-runner`Testbedに設定します。
-   (例: `--testbed ci-runner`)
-4. `bencher mock`によって生成される組み込みの`Latency`測定を`--measure`オプションに設定します。
-   測定の定義については、[definition of Measure][measure]を参照してください。
-   (例: `--measure Latency`)
-5. `--test`オプションを`percentage`閾値に設定します。
-   完全な概要については、[Thresholds & Alerts][percentage]を参照してください。
-   (例: `--test t-test`)
-6. 上限値を`0.25` (`25%`)に設定します。
-   完全な概要については、[Thresholds & Alerts][percentage upper boundary]を参照してください。
-   (例: `--upper-boundary 0.25`)
-7. プロジェクト引数として`Save Walter White`プロジェクトのスラッグを指定します。
-   (例: `save-walter-white-1234abcd`)
-
-次に、CIで`git`を使用して`feature-branch`ブランチをチェックアウトします：
+次に、CIで`git`を使用して`feature-branch`ブランチをチェックアウトする必要があります：
 
 <GitCheckoutFeature />
 
@@ -95,47 +79,57 @@ CIでこのコマンドが初めて実行されるとき、`feature-branch`ブ�
 
 <RunFeatureRelative />
 
-1. `feature-branch`のベンチマークを実行するために、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用します。
-   完全な概要については、[bencher run CLIサブコマンド][bencher run]を参照してください。
+1. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して
+   `feature-branch`ベンチマークを実行します。
+   詳細な情報は[ `bencher run` CLIサブコマンド][bencher run]を参照してください。
    (例: `bencher run`)
 2. `--project`オプションをプロジェクトスラッグに設定します。
-   詳細については、[`--project`のドキュメント][project option]を参照してください。
+   詳細は[ `--project`ドキュメント][project option]をご覧ください。
    (例: `--project save-walter-white-1234abcd`)
 3. `--branch`オプションを機能ブランチ名に設定します。
-   完全な概要については、[branch selection][branch selection branch]を参照してください。
+   詳細は[ `--branch`ドキュメント][branch option]をご覧ください。
    (例: `--branch feature-branch`)
-4. `--testbed`オプションをTestbed名に設定します。
-   詳細については、[the `--tested`ドキュメント][testbed option]を参照してください。
+4. `feature-branch`ブランチのスタートポイントを設定します：
+   1. `--start-point`オプションを機能ブランチのスタートポイントに設定します。
+   詳細は[ `--start-point`ドキュメント][start point]をご覧ください。
+   (例: `--start-point main`)
+   2. `--start-point-reset`フラグを設定して、ブランチを常にスタートポイントにリセットします。
+   これにより、最新の相対ベンチマーク結果のみが使用されます。
+   詳細は[ `--start-point-reset`ドキュメント][start point reset]をご覧ください。
+   (例: `--start-point-reset`)
+5. `--testbed`オプションをCIランナーテストベッドの名前に設定します。
+   詳細は[ `--testbed`ドキュメント][testbed option]をご覧ください。
    (例: `--testbed ci-runner`)
-5. 希望するベンチマークハーネスアダプターに`--adapter`オプションを設定します。
-   完全な概要については、[benchmark harness adapters][adapters]を参照してください。
-   (例: `--adapter json`)
-6. アラートが生成された場合にコマンドを失敗させるための`--err`フラグを設定します。
-   完全な概要については、[Threshold & Alerts][alerts]を参照してください。
+6. `feature-branch`ブランチ、`ci-runner`テストベッド、および`latency`測定値のスレッショルドを設定します：
+   1. `--threshold-measure`オプションを、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された組み込み`latency`測定値に設定します。
+   詳細は[`--threshold-measure`ドキュメント][threshold measure option]をご覧ください。
+   (例: `--threshold-measure latency`)
+   2. `--threshold-test`オプションを基本的なパーセンテージ（`percentage`）に設定します。
+   詳細は[`--threshold-test`ドキュメント][threshold test option]をご覧ください。
+   (例: `--threshold-test percentage`)
+   3. `--threshold-upper-boundary`オプションを`0.25`の上限に設定します。
+   詳細は[`--threshold-upper-boundary`ドキュメント][threshold upper boundary]をご覧ください。
+   (例: `--threshold-upper-boundary 0.25`)
+   4. `--thresholds-reset`フラグを設定して、指定されたスレッショルドのみがアクティブになるようにします。
+   詳細は[`--thresholds-reset`ドキュメント][thresholds reset]をご覧ください。
+   (例: `--thresholds-reset`)
+7. アラートが生成された場合にコマンドが失敗するように`--err`フラグを設定します。
+   詳細は[`--err`ドキュメント][alert err]をご覧ください。
    (例: `--err`)
-7. ベンチマークコマンド引数を指定します。
-   完全な概要については、[benchmark command][command argument]を参照してください。
+8. `--adapter`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された[Bencher Metric Format JSON (`json`)][bmf]に設定します。
+   詳細は[ベンチマーカーアダプター][adapter json]をご覧ください。
+   (例: `--adapter json`)
+9. ベンチマークコマンド引数を指定します。
+   詳細は[ベンチマークコマンド][command argument]をご覧ください。
    (例: `bencher mock`)
 
-CIでこのコマンドが実行されるたびに、`feature-branch`からの結果は`main`からの最新の結果とのみ比較されます。
+CIでこのコマンドを実行するたびに、`feature-branch`の結果が`main`の最新の結果とだけ比較されます。
+指定されたスレッショルドを使用し、パフォーマンスの低下を検出します。
 
-[quick start]: /ja/docs/tutorial/quick-start/
-[docker self-hosted]: /ja/docs/tutorial/docker/
-[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
-[create an api token]: /ja/docs/tutorial/quick-start/#create-an-api-token
-[testbed create]: /ja/docs/api/projects/testbeds/#post-v0projectsprojecttestbeds
-[github actions]: /ja/docs/how-to/github-actions/
-[gitlab ci/cd]: /ja/docs/how-to/gitlab-ci-cd/
-[bencher run]: /ja/docs/explanation/bencher-run/
-[project option]: /ja/docs/explanation/bencher-run/#--project-project
-[branch selection branch]: /ja/docs/explanation/branch-selection/#--branch-branch
-[branch selection reset]: /ja/docs/explanation/branch-selection/#--branch-reset
-[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /ja/docs/explanation/adapters/
-[command argument]: /ja/docs/explanation/bencher-run/#benchmark-command
-[thresholds]: /ja/docs/explanation/thresholds/
-[threshold create]: /ja/docs/api/projects/thresholds/#post-v0projectsprojectthresholds
-[measure]: /ja/docs/explanation/benchmarking/#measure
-[percentage]: /ja/docs/explanation/thresholds/#percentage-thresholds
-[percentage upper boundary]: /ja/docs/explanation/thresholds/#percentage-threshold-upper-boundary
-[alerts]: /ja/docs/explanation/thresholds/#alerts
+[start point]: /ja/docs/explanation/branch-selection/#--start-point-branch
+[start point reset]: /ja/docs/explanation/branch-selection/#--start-point-reset
+[threshold measure option]: /ja/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /ja/docs/explanation/thresholds/#--threshold-test-test
+[threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /ja/docs/explanation/thresholds/#--err

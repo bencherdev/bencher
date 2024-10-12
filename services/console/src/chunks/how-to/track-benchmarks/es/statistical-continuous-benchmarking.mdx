@@ -1,151 +1,147 @@
-import TestbedCreate from "../testbed-create.mdx";
-import ThresholdCreateStatistical from "../threshold-create-statistical.mdx";
 import RunMainStatistical from "../run-main-statistical.mdx";
 import RunFeatureStatistical from "../run-feature-statistical.mdx";
 
 ## Benchmarking Continuo Estadístico
 
 Retomando donde lo dejamos en los tutoriales de
-[Inicio Rápido][quick start] y [Docker Autohospedado][docker self-hosted],
-agreguemos [Benchmarking Continuo][continuous benchmarking] Estadístico a nuestro proyecto `Save Walter White`.
+[Inicio Rápido][quick start] y [Auto hospedado en Docker][docker self-hosted],
+agreguemos Benchmarking Continuo Estadístico a nuestro proyecto `Save Walter White`.
 
 > 🐰 Asegúrate de haber
-> [creado un token API y establecido como variable de entorno `BENCHER_API_TOKEN`][create an api token]
+> [creado un token de API y configurarlo como la variable de entorno `BENCHER_API_TOKEN`][create an api token]
 > antes de continuar.
-
-Primero, necesitamos crear un nuevo Banco de Pruebas para representar nuestros runners de CI, llamado apropiadamente `ci-runner`.
-
-<TestbedCreate />
-
-1. Usa el subcomando CLI `bencher testbed create`.
-   Consulta [la documentación de `testbed create`][testbed create] para más detalles.
-   (ej: `bencher testbed create`)
-2. Establece la opción `--name` al nombre deseado del Banco de Pruebas.
-   (ej: `--name ci-runner`)
-3. Especifica el argumento del proyecto como el slug del proyecto `Save Walter White`.
-   (ej: `save-walter-white-1234abcd`)
-
-A continuación, necesitamos crear un nuevo [Umbral][thresholds] para nuestro banco de pruebas `ci-runner`:
-
-<ThresholdCreateStatistical />
-
-1. Usa el subcomando CLI `bencher threshold create`.
-   Consulta [la documentación de `threshold create`][threshold create] para más detalles.
-   (ej: `bencher threshold create`)
-2. Establece la opción `--branch` a la Rama predeterminada `main`.
-   (ej: `--branch main`)
-3. Establece la opción `--branch` al nuevo banco de pruebas `ci-runner`.
-   (ej: `--testbed ci-runner`)
-4. Establece la opción `--measure` a la Medida `Latency` incorporada que es generada por `bencher mock`.
-   Consulta [la definición de Medida][measure] para más detalles.
-   (ej: `--measure Latency`)
-5. Establece la opción `--test` a un Umbral `t-test`.
-   Consulta [Umbrales y Alertas][t-test] para una visión completa.
-   (ej: `--test t-test`)
-6. Establece la opción `--upper-boundary` a un Límite Superior de `0.95`.
-   Consulta [Umbrales y Alertas][t-test upper boundary] para una visión completa.
-   (ej: `--upper-boundary 0.95`)
-7. Especifica el argumento del proyecto como el slug del proyecto `Save Walter White`.
-   (ej: `save-walter-white-1234abcd`)
-
-Ahora estamos listos para ejecutar nuestros benchmarks en CI.
-Debido a que cada entorno de CI es un poco diferente,
-el siguiente ejemplo está destinado a ser más ilustrativo que práctico.
-Para ejemplos más específicos, consulta [Benchmarking Continuo en GitHub Actions][github actions]
-y [Benchmarking Continuo en GitLab CI/CD][gitlab ci/cd].
-
-Necesitamos crear y mantener una línea base histórica para nuestra rama `main` ejecutando benchmarks en cada cambio en CI:
-
-<RunMainStatistical />
-
-1. Usa el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
-   para ejecutar tus benchmarks de la rama `feature-branch`.
-   Consulta [el subcomando CLI `bencher run`][bencher run] para una visión completa.
-   (ej: `bencher run`)
-2. Establece la opción `--project` al slug del Proyecto.
-   Consulta [la documentación de `--project`][project option] para más detalles.
-   (ej: `--project save-walter-white-1234abcd`)
-3. Establece la opción `--branch` al nombre de la Rama predeterminada.
-   Consulta [selección de rama][branch selection branch] para una visión completa.
-   (ej: `--branch main`)
-4. Establece la opción `--testbed` al nombre del Banco de Pruebas.
-   Consulta [la documentación de `--testbed`][testbed option] para más detalles.
-   (ej: `--testbed ci-runner`)
-5. Establece la opción `--adapter` al adaptador de harness de benchmark deseado.
-   Consulta [adaptadores de harness de benchmark][adapters] para una visión completa.
-   (ej: `--adapter json`)
-6. Establece la opción `--err` para fallar el comando si se genera una Alerta.
-   Consulta [Umbrales y Alertas][alerts] para una visión completa.
-   (ej: `--err`)
-7. Especifica los argumentos de comando de benchmark.
-   Consulta [comando de benchmark][command argument] para una visión completa.
-   (ej: `bencher mock`)
-
-Finalmente, estamos listos para detectar regresiones de rendimiento en CI.
-Así es como rastrearíamos el rendimiento de una nueva rama de función, llamada `feature-branch`, en CI:
-
-<RunFeatureStatistical />
-
-1. Usa el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
-   para ejecutar tus benchmarks de la rama `feature-branch`.
-   Consulta [el subcomando CLI `bencher run`][bencher run] para una visión completa.
-   (ej: `bencher run`)
-2. Establece la opción `--project` al slug del Proyecto.
-   Consulta [la documentación de `--project`][project option] para más detalles.
-   (ej: `--project save-walter-white-1234abcd`)
-3. Establece la opción `--branch` al nombre de la Rama de función.
-   Consulta [selección de rama][branch selection branch] para una visión completa.
-   (ej: `--branch feature-branch`)
-4. Establece la opción `--branch-start-point` al punto de inicio de la Rama de función.
-   Consulta [selección de rama][branch selection start point] para una visión completa.
-   (ej: `--branch-start-point main`)
-5. Establece la opción `--branch-start-point-hash` al hash `git` del punto de inicio de la Rama de función.
-   Consulta [selección de rama][branch selection start point hash] para una visión completa.
-   (ej: `--branch-start-point-hash 32ae...dd8b`)
-6. Establece la opción `--branch-reset` para siempre restablecer la Rama al punto de inicio.
-   Esto evitará la deriva de datos de benchmark.
-   Consulta [selección de rama][branch selection branch reset] para una visión completa.
-   (ej: `--branch-reset`)
-7. Establece la opción `--testbed` al nombre del Banco de Pruebas.
-   Consulta [la documentación de `--testbed`][testbed option] para más detalles.
-   (ej: `--testbed ci-runner`)
-8. Establece la opción `--adapter` al adaptador de harness de benchmark deseado.
-   Consulta [adaptadores de harness de benchmark][adapters] para una visión completa.
-   (ej: `--adapter json`)
-9. Establece la opción `--err` para fallar el comando si se genera una Alerta.
-   Consulta [Umbrales y Alertas][alerts] para una visión completa.
-   (ej: `--err`)
-10. Especifica los argumentos de comando de benchmark.
-    Consulta [comando de benchmark][command argument] para una visión completa.
-    (ej: `bencher mock`)
-
-La primera vez que este comando se ejecute en CI,
-creará la Rama `feature-branch` ya que aún no existe.
-La nueva Rama `feature-branch` usará la Rama `main`
-en el hash `32aea434d751648726097ed3ac760b57107edd8b` como su punto de inicio.
-Esto significa que `feature-branch` tendrá una copia de todos los datos y [Umbrales][thresholds]
-de la Rama `main` para comparar los resultados de `bencher mock` frente,
-en la primera y todas las ejecuciones subsiguientes.
 
 [quick start]: /es/docs/tutorial/quick-start/
 [docker self-hosted]: /es/docs/tutorial/docker/
 [continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
 [create an api token]: /es/docs/tutorial/quick-start/#create-an-api-token
-[testbed create]: /es/docs/api/projects/testbeds/#post-v0projectsprojecttestbeds
-[thresholds]: /es/docs/explanation/thresholds/
-[threshold create]: /es/docs/api/projects/thresholds/#post-v0projectsprojectthresholds
-[measure]: /es/docs/explanation/benchmarking/#measure
-[t-test]: /es/docs/explanation/thresholds/#t-test-thresholds
-[t-test upper boundary]: /es/docs/explanation/thresholds/#t-test-threshold-upper-boundary
+
+Ahora estamos listos para ejecutar nuestros benchmarks en CI.
+Debido a que cada entorno de CI es un poco diferente,
+el siguiente ejemplo tiene la intención de ser más ilustrativo que práctico.
+Para ejemplos más específicos, consulta [Benchmarking Continuo en GitHub Actions][github actions]
+y [Benchmarking Continuo en GitLab CI/CD][gitlab ci/cd].
+
 [github actions]: /es/docs/how-to/github-actions/
 [gitlab ci/cd]: /es/docs/how-to/gitlab-ci-cd/
+
+Primero, necesitamos crear y mantener una línea base histórica para nuestra rama `main` haciendo benchmarking de cada cambio en CI:
+
+<RunMainStatistical />
+
+1. Utiliza el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   para ejecutar los benchmarks de tu rama `feature-branch`.
+   Ve [el subcomando CLI `bencher run`][bencher run] para una descripción completa.
+   (ej: `bencher run`)
+2. Establece la opción `--project` en el slug del Proyecto.
+   Consulta [la documentación de `--project`][project option] para más detalles.
+   (ej: `--project save-walter-white-1234abcd`)
+3. Establece la opción `--branch` en el nombre de la rama base.
+   Consulta [la documentación de `--branch`][branch option] para una descripción completa.
+   (ej: `--branch main`)
+4. Establece la opción `--testbed` en el nombre del Testbed del runner CI.
+   Consulta [la documentación de `--testbed`][testbed option] para más detalles.
+   (ej: `--testbed ci-runner`)
+5. Establece el Umbral para la rama `main`, el Testbed `ci-runner` y la medida `latency`:
+   1. Establece la opción `--threshold-measure` en la medida `latency` incorporada que se genera con <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Consulta [la documentación de `--threshold-measure`][threshold measure option] para más detalles.
+   (ej: `--threshold-measure latency`)
+   2. Establece la opción `--threshold-test` en una prueba t de Student (`t_test`).
+   Consulta [la documentación de `--threshold-test`][threshold test option] para una descripción completa.
+   (ej: `--threshold-test t_test`)
+   3. Establece la opción `--threshold-max-sample-size` en el tamaño máximo de muestra de `64`.
+   Consulta [la documentación de `--threshold-max-sample-size`][threshold max sample size] para más detalles.
+   (ej: `--threshold-max-sample-size 64`)
+   4. Establece la opción `--threshold-upper-boundary` en el Límite Superior de `0.99`.
+   Consulta la documentación de [`--threshold-upper-boundary`][threshold upper boundary] para más detalles.
+   (ej: `--threshold-upper-boundary 0.99`)
+   5. Establece la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo.
+   Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una descripción completa.
+   (ej: `--thresholds-reset`)
+6. Establece la bandera `--err` para que el comando falle si se genera una Alerta.
+   Consulta [la documentación de `--err`][alert err] para una descripción completa.
+   (ej: `--err`)
+7. Establece la opción `--adapter` en [Formato Métrico de Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Consulta [adaptadores de arneses de benchmarking][adapter json] para una descripción completa.
+   (ej: `--adapter json`)
+8. Especifica los argumentos del comando de benchmark.
+   Consulta [el comando de benchmark][command argument] para una descripción completa.
+   (ej: `bencher mock`)
+
+La primera vez que este comando se ejecuta en CI,
+creará la rama `main` si aún no existe.
+La nueva `main` _no_ tendrá un punto de inicio ni datos existentes.
+Se creará un Umbral para la rama `main`, el Testbed `ci-runner` y la medida `latency`.
+En ejecuciones posteriores, se agregarán nuevos datos a la rama `main`.
+El Umbral especificado luego se usará para detectar regresiones de rendimiento.
+
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
-[branch selection branch]: /es/docs/explanation/branch-selection/#--branch-branch
+[branch option]: /es/docs/explanation/branch-selection/#--branch-branch
 [testbed option]: /es/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /es/docs/explanation/adapters/
-[alerts]: /es/docs/explanation/thresholds/#alerts
+[threshold measure option]: /es/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /es/docs/explanation/thresholds/#--threshold-test-test
+[threshold max sample size]: /es/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold upper boundary]: /es/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /es/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /es/docs/explanation/thresholds/#--err
+[bmf]: /es/docs/reference/bencher-metric-format/
+[adapter json]: /es/docs/explanation/adapters/#-json
 [command argument]: /es/docs/explanation/bencher-run/#benchmark-command
-[branch selection start point]: /es/docs/explanation/branch-selection/#--branch-start-point-branch
-[branch selection start point hash]: /es/docs/explanation/branch-selection/#--branch-start-point-hash-hash
-[branch selection branch reset]: /es/docs/explanation/branch-selection/#--branch-reset
+
+Ahora, estamos listos para detectar regresiones de rendimiento en CI.
+Así es como rastrearíamos el rendimiento de una nueva rama de características en CI, apropiadamente llamada `feature-branch`:
+
+<RunFeatureStatistical />
+
+1. Utiliza el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   para ejecutar los benchmarks de tu rama `feature-branch`.
+   Consulta [el subcomando CLI `bencher run`][bencher run] para una descripción completa.
+   (ej: `bencher run`)
+2. Establece la opción `--project` en el slug del Proyecto.
+   Consulta [la documentación de `--project`][project option] para más detalles.
+   (ej: `--project save-walter-white-1234abcd`)
+3. Establece la opción `--branch` en el nombre de la rama de características.
+   Consulta [la documentación de `--branch`][branch option] para una descripción completa.
+   (ej: `--branch feature-branch`)
+4. Establece el Punto de Inicio para la rama `feature-branch`:
+   1. Establece la opción `--start-point` en el punto de inicio de la rama de características.
+   Consulta [la documentación de `--start-point`][start point] para una descripción completa.
+   (ej: `--start-point main`)
+   2. Establece la opción `--start-point-hash` en el hash `git` del punto de inicio de la rama de características.
+   Consulta [la documentación de `--start-point-hash`][start point hash] para una descripción completa.
+   (ej: `--start-point-hash 32ae...dd8b`)
+   3. Establece la bandera `--start-point-clone-thresholds` para clonar los Umbrales del punto de inicio.
+   Consulta [la documentación de `--start-point-clone-thresholds`][start point clone thresholds] para una descripción completa.
+   (ej: `--start-point-clone-thresholds`)
+   4. Establece la bandera `--start-point-reset` para siempre restablecer la rama al punto de inicio.
+   Esto evitará el desvío de datos de benchmark.
+   Consulta [la documentación de `--start-point-reset`][start point reset] para una descripción completa.
+   (ej: `--start-point-reset`)
+5. Establece la opción `--testbed` en el nombre del Testbed.
+   Consulta [la documentación de `--tested`][testbed option] para más detalles.
+   (ej: `--testbed ci-runner`)
+6. Establece la bandera `--err` para que el comando falle si se genera una Alerta.
+   Consulta [la documentación de `--err`][alert err] para una descripción completa.
+   (ej: `--err`)
+7. Establece la opción `--adapter` en [Formato Métrico de Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Consulta [adaptadores de arneses de benchmarking][adapter json] para una descripción completa.
+   (ej: `--adapter json`)
+8. Especifica los argumentos del comando de benchmark.
+   Consulta [el comando de benchmark][command argument] para una descripción completa.
+   (ej: `bencher mock`)
+
+La primera vez que este comando se ejecuta en CI,
+Bencher creará la rama `feature-branch` ya que aún no existe.
+La nueva `feature-branch` usará la rama `main`
+en el hash `32aea434d751648726097ed3ac760b57107edd8b` como su punto de inicio.
+Esto significa que `feature-branch` tendrá una copia de todos los datos y [Umbrales][thresholds]
+de la rama `main` para comparar los resultados de `bencher mock`.
+En todas las ejecuciones posteriores, Bencher restablecerá la rama `feature-branch` al punto de inicio,
+y usará los datos y Umbrales de la rama `main` para detectar regresiones de rendimiento.
+
+[start point]: /es/docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /es/docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /es/docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /es/docs/explanation/branch-selection/#--start-point-reset
+[thresholds]: /es/docs/explanation/thresholds/

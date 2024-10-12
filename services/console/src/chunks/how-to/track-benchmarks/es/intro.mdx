@@ -1,21 +1,25 @@
 La mayoría de los resultados de los benchmarks son efímeros.
-Desaparecen tan pronto como su terminal alcanza su límite de desplazamiento.
-Algunos sistemas de benchmark permiten cachear los resultados, pero la mayoría solo lo hacen localmente.
-Bencher le permite rastrear sus benchmarks tanto de ejecuciones locales como de CI y comparar los resultados,
-mientras sigue utilizando [su sistema de benchmark favorito][adapters].
+Desaparecen tan pronto como tu terminal alcanza su límite de retroceso.
+Algunos entornos de benchmarks te permiten almacenar resultados en caché, pero la mayoría solo lo hace localmente.
+Bencher te permite rastrear tus benchmarks de ejecuciones locales y de CI y comparar los resultados,
+mientras sigues usando [tu entorno de benchmarks favorito][adapters].
 
-Hay dos maneras populares de comparar resultados de benchmarks cuando se hace [Benchmarking Continuo][continuous benchmarking], es decir, benchmarking en CI:
+Hay tres formas populares de comparar resultados de benchmarks cuando se [realizan benchmarks continuos][continuous benchmarking], es decir, benchmarks en CI:
 
-- [Benchmarking Continuo Estadístico][statistical continuous benchmarking]
-  1. Rastrear los resultados de los benchmarks a lo largo del tiempo para crear una línea base
-  2. Usar esta línea base junto con [Umbrales Estadísticos][thresholds] para crear un límite estadístico
-  3. Comparar los nuevos resultados contra este límite estadístico para detectar regresiones de rendimiento
-- [Benchmarking Continuo Relativo][relative continuous benchmarking]
-  1. Ejecutar los benchmarks para el código base actual
-  2. Usar [Umbrales Porcentuales][percentage thresholds] para crear un límite para el código base
-  3. Cambiar a la nueva versión del código
-  4. Ejecutar los benchmarks para la nueva versión del código
-  5. Comparar los resultados de la nueva versión del código contra los resultados del código base para detectar regresiones de rendimiento
+- [Benchmarks Continuos Estadísticos][statistical continuous benchmarking]
+  1. Rastrear resultados de benchmarks a lo largo del tiempo para crear una línea base.
+  2. Utilizar esta línea de base junto con [umbrales estadísticos][thresholds] para crear un límite estadístico.
+  3. Comparar los nuevos resultados contra este límite estadístico para detectar regresiones de rendimiento.
+- [Benchmarks Continuos Relativos][relative continuous benchmarking]
+  1. Ejecutar los benchmarks para el código de la línea base actual.
+  2. Cambiar a la nueva versión del código.
+  3. Ejecutar los benchmarks para la nueva versión del código.
+  4. Usar [umbrales porcentuales][percentage thresholds] para crear un límite para el código de la línea base.
+  5. Comparar los resultados de la nueva versión del código contra los resultados del código base para detectar regresiones de rendimiento.
+- [Detección de Cambio de Puntos][change point detection]
+  1. Ocasionalmente ejecutar los benchmarks para nuevas versiones del código.
+  2. Usar un algoritmo de detección de cambio de puntos para detectar regresiones de rendimiento.
+  3. Usar bisección para encontrar el commit que introdujo la regresión de rendimiento.
 
 [adapters]: /es/docs/explanation/adapters/
 [continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
@@ -24,3 +28,4 @@ Hay dos maneras populares de comparar resultados de benchmarks cuando se hace [B
 
 [statistical continuous benchmarking]: #statistical-continuous-benchmarking
 [relative continuous benchmarking]: #relative-continuous-benchmarking
+[change point detection]: #change-point-detection

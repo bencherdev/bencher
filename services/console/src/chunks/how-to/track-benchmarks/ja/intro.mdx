@@ -1,25 +1,32 @@
-ほとんどのベンチマーク結果は一時的です。
-ターミナルがスクロールバックの限界に達すると、その結果は消えてしまいます。
-一部のベンチマークハーネスでは結果をキャッシュする機能がありますが、ほとんどはローカルでのみ行います。
-Bencherは、お気に入りのベンチマークハーネスを使用しながら、ローカルとCIの両方の実行からベンチマークを追跡し、結果を比較することができます。
+ほとんどのベンチマーク結果は短命です。
+それらは、ターミナルのスクロールバック制限に達するとすぐに消えてしまいます。
+一部のベンチマークハーネスは結果をキャッシュすることができますが、大部分はローカルにしかできません。
+Bencherを使用すると、ローカルおよびCIの実行からベンチマークを追跡し、結果を比較し、
+[お気に入りのベンチマークハーネス][adapters]を使い続けることができます。
 
-CIでのベンチマーク、すなわち[継続的ベンチマーク][継続的ベンチマーク]を行う際に人気のある比較方法は2つあります：
+CIでベンチマークを行う場合、つまり[継続的ベンチマーク][continuous benchmarking]の場合に、
+ベンチマーク結果を比較するには、3つの一般的な方法があります：
 
-- [統計的継続的ベンチマーク][統計的継続的ベンチマーク]
-  1. 基準となるベンチマーク結果を時間と共に追跡する
-  2. この基準を[統計的閾値][閾値]と共に使用して、統計的境界を作成する
-  3. 新しい結果をこの統計的境界と比較して、パフォーマンスの退行を検出する
-- [相対的継続的ベンチマーク][相対的継続的ベンチマーク]
-  1. 現在の基準コードのベンチマークを実行する
-  2. [パーセンテージ閾値][パーセンテージ閾値]を使用して、基準コードの境界を作成する
-  3. 新しいバージョンのコードに切り替える
-  4. 新しいバージョンのコードのベンチマークを実行する
-  5. 新しいバージョンのコードの結果を基準コードの結果と比較して、パフォーマンスの退行を検出する
+- [統計的継続ベンチマーク][statistical continuous benchmarking]
+  1. ベンチマーク結果を長期間追跡してベースラインを作成する
+  2. このベースラインを[統計的しきい値][thresholds]と組み合わせて、統計的境界を作成する
+  3. この統計的境界と新しい結果を比較して、パフォーマンスの退行を検出する
+- [相対的継続ベンチマーク][relative continuous benchmarking]
+  1. 現在のベースラインコードのためのベンチマークを実行する
+  2. コードを新しいバージョンに切り替える
+  3. 新しいバージョンのコードのためのベンチマークを実行する
+  4. [パーセンテージしきい値][percentage thresholds]を用いてベースラインコードの境界を作成する
+  5. 新しいバージョンのコード結果とベースラインコード結果を比較し、パフォーマンスの退行を検出する
+- [変化点検出][change point detection]
+  1. 定期的に新しいバージョンのコードのためのベンチマークを実行する
+  2. 変化点検出アルゴリズムを使用してパフォーマンスの退行を検出する
+  3. パフォーマンスの退行を引き起こしたコミットを見つけるためにバイセクトする
 
 [adapters]: /ja/docs/explanation/adapters/
-[継続的ベンチマーク]: /ja/docs/explanation/continuous-benchmarking/
-[閾値]: /ja/docs/explanation/thresholds/
-[パーセンテージ閾値]: /ja/docs/explanation/thresholds/#percentage-thresholds
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
+[thresholds]: /ja/docs/explanation/thresholds/
+[percentage thresholds]: /ja/docs/explanation/thresholds/#percentage-thresholds
 
-[統計的継続的ベンチマーク]: #統計的継続的ベンチマーク
-[相対的継続的ベンチマーク]: #相対的継続的ベンチマーク
+[statistical continuous benchmarking]: #statistical-continuous-benchmarking
+[relative continuous benchmarking]: #relative-continuous-benchmarking
+[change point detection]: #change-point-detection

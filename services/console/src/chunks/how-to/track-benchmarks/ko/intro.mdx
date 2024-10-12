@@ -1,21 +1,25 @@
 대부분의 벤치마크 결과는 일시적입니다.
-터미널이 스크롤백 한계에 도달하자마자 사라집니다.
-일부 벤치마크 하네스는 결과를 캐시할 수 있지만, 대부분은 로컬에서만 그렇게 합니다.
-Bencher를 사용하면 로컬 및 CI 실행 모두에서 벤치마크를 추적하고 결과를 비교할 수 있으며,
-여전히 [선호하는 벤치마크 하네스][adapters]를 사용할 수 있습니다.
+터미널의 스크롤백 한계에 도달하면 사라집니다.
+일부 벤치마크 하니스는 결과를 캐시할 수 있게 하지만, 대부분은 로컬에서만 가능합니다.
+Bencher는 로컬 및 CI 실행 모두에서 벤치마크를 추적하고 결과를 비교할 수 있게 해주며,
+여전히 [좋아하는 벤치마크 하니스][adapters]를 사용할 수 있습니다.
 
-[지속적 벤치마킹][continuous benchmarking] 시, 즉 CI에서 벤치마크를 수행할 때 벤치마크 결과를 비교하는 두 가지 인기 있는 방법이 있습니다:
+[지속적 벤치마킹][continuous benchmarking], 즉 CI에서의 벤치마킹 시 벤치마크 결과를 비교하는 세 가지 인기 있는 방법이 있습니다:
 
 - [통계적 지속적 벤치마킹][statistical continuous benchmarking]
-  1. 기준선을 생성하기 위해 시간이 지남에 따라 벤치마크 결과를 추적합니다
-  2. 이 기준선과 [통계적 임계값][thresholds]을 사용하여 통계적 경계를 생성합니다
-  3. 성능 저하를 탐지하기 위해 새 결과를 이 통계적 경계와 비교합니다
+  1. 벤치마크 결과를 시간에 따라 추적하여 기준선 생성
+  2. 이 기준선을 [통계적 기준][thresholds]과 함께 사용하여 통계적 경계선 생성
+  3. 새로운 결과를 이 통계적 경계선과 비교하여 성능 퇴행 감지
 - [상대적 지속적 벤치마킹][relative continuous benchmarking]
-  1. 현재 기준 코드에 대한 벤치마크를 실행합니다
-  2. [백분율 임계값][percentage thresholds]을 사용하여 기준 코드에 대한 경계를 생성합니다
-  3. 코드의 새 버전으로 전환합니다
-  4. 코드의 새 버전에 대한 벤치마크를 실행합니다
-  5. 성능 저하를 탐지하기 위해 코드의 새 버전 결과를 기준 코드 결과와 비교합니다
+  1. 현재 기준선 코드에 대해 벤치마크 실행
+  2. 코드의 새로운 버전으로 전환
+  3. 코드의 새로운 버전에 대해 벤치마크 실행
+  4. [백분율 기준][percentage thresholds]을 사용하여 기준선 코드의 경계 생성
+  5. 코드의 새로운 버전 결과를 기준선 코드 결과와 비교하여 성능 퇴행 감지
+- [변화점 탐지][change point detection]
+  1. 가끔 코드의 새로운 버전에 대해 벤치마크 실행
+  2. 변화점 탐지 알고리즘을 사용하여 성능 퇴행 감지
+  3. 성능 퇴행을 유발한 커밋 찾기 위해 이분법적 분석 수행
 
 [adapters]: /ko/docs/explanation/adapters/
 [continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
@@ -24,3 +28,4 @@ Bencher를 사용하면 로컬 및 CI 실행 모두에서 벤치마크를 추적
 
 [statistical continuous benchmarking]: #statistical-continuous-benchmarking
 [relative continuous benchmarking]: #relative-continuous-benchmarking
+[change point detection]: #change-point-detection

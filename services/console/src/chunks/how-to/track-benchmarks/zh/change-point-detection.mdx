@@ -1,0 +1,15 @@
+## 变更点检测
+
+变更点检测使用[变更点算法][change detection]来评估最近结果的大窗口。这使得算法能够忽略异常值作为噪声，从而产生更少的误报。尽管变更点检测被认为是[持续性基准测试][continuous benchmarking]，但它不允许您在CI中检测性能回归。也就是说，您无法在功能分支合并之前检测到性能回归。这有时称为“带外”检测。
+
+例如，如果您有一个基准 `bench_my_critical_path`，并且它具有以下历史延迟：`5 ms`，`6 ms`，`5 ms`，`5ms`，`7ms`。
+
+如果下一个基准结果是 `11 ms`，那么统计持续基准测试阈值和变更点检测算法将会做出非常不同的解读。阈值可能会被超出并生成警报。如果这个基准运行与一个拉取请求绑定在一起，构建可能会因为这个警报而失败。然而，变更点算法暂时不会做任何事情。如果下一次运行结果下降回 `5 ms`，则可能不会生成警报。相反，如果接下来的运行结果是 `10 ms` 和 `12 ms`，那么只有这时变更点算法才会触发警报。
+
+您对在 Bencher 中使用变更点检测感兴趣吗？如果是这样，请在[跟踪问题][github issue 365]上留下评论或[直接联系我们][help]。
+
+[change detection]: https://en.wikipedia.org/wiki/Change_detection
+[github issue 365]: https://github.com/bencherdev/bencher/issues/365
+
+[continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
+[help]: /help/

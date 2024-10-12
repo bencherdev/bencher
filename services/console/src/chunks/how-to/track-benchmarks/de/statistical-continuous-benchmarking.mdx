@@ -1,151 +1,114 @@
-import TestbedCreate from "../testbed-create.mdx";
-import ThresholdCreateStatistical from "../threshold-create-statistical.mdx";
 import RunMainStatistical from "../run-main-statistical.mdx";
 import RunFeatureStatistical from "../run-feature-statistical.mdx";
 
-## Statistische kontinuierliche Leistungsbewertung
+## Statistisches Kontinuierliches Benchmarking
 
-Um da weiterzumachen, wo wir im
-[Schnellstart][quick start] und [Docker Selbstgehostet][docker self-hosted] Tutorials aufgehört haben,
-fügen wir Statistische [Kontinuierliche Leistungsbewertung][continuous benchmarking] zu unserem `Save Walter White` Projekt hinzu.
+Anknüpfend an die Tutorials [Schnellstart][quick start] und [Docker Selbstgehostet][docker self-hosted], fügen wir statistisches [kontinuierliches Benchmarking][continuous benchmarking] zu unserem `Save Walter White` Projekt hinzu.
 
 > 🐰 Stellen Sie sicher, dass Sie
-> [einen API-Token erstellt und diesen als Umgebungsvariable `BENCHER_API_TOKEN` gesetzt haben][create an api token]
-> bevor Sie fortfahren!
-
-Zuerst müssen wir eine neue Testumgebung erstellen, um unsere CI-Runners zu repräsentieren, passend `ci-runner` genannt.
-
-<TestbedCreate />
-
-1. Verwenden Sie den CLI-Subbefehl `bencher testbed create`.
-   Weitere Details finden Sie in [den `testbed create` Dokumenten][testbed create].
-   (z.B.: `bencher testbed create`)
-2. Setzen Sie die Option `--name` auf den gewünschten Namen der Testumgebung.
-   (z.B.: `--name ci-runner`)
-3. Geben Sie das Projektargument als `Save Walter White` Projektslug an.
-   (z.B.: `save-walter-white-1234abcd`)
-
-Als Nächstes müssen wir eine neue [Schwelle][thresholds] für unsere `ci-runner` Testumgebung erstellen:
-
-<ThresholdCreateStatistical />
-
-1. Verwenden Sie den CLI-Subbefehl `bencher threshold create`.
-   Weitere Details finden Sie in [den `threshold create` Dokumenten][threshold create].
-   (z.B.: `bencher threshold create`)
-2. Setzen Sie die Option `--branch` auf den Standard-Branch `main`.
-   (z.B.: `--branch main`)
-3. Setzen Sie die Option `--testbed` auf die neue `ci-runner` Testumgebung.
-   (z.B.: `--testbed ci-runner`)
-4. Setzen Sie die Option `--measure` auf das integrierte `Latency` Measure, das von `bencher mock` erstellt wird.
-   Weitere Details finden Sie in [der Definition von Measure][measure].
-   (z.B.: `--measure Latency`)
-5. Setzen Sie die Option `--test` auf einen `t-test` Threshold.
-   Eine vollständige Übersicht finden Sie unter [Schwellen & Warnungen][t-test].
-   (z.B.: `--test t-test`)
-6. Setzen Sie die Option `--upper-boundary` auf eine obere Grenze von `0.95`.
-   Eine vollständige Übersicht finden Sie unter [Schwellen & Warnungen][t-test upper boundary].
-   (z.B.: `--upper-boundary 0.95`)
-7. Geben Sie das Projektargument als `Save Walter White` Projektslug an.
-   (z.B.: `save-walter-white-1234abcd`)
-
-Jetzt sind wir bereit, unsere Benchmarks in der CI auszuführen.
-Da jede CI-Umgebung etwas anders ist,
-ist das folgende Beispiel eher illustrativ als praktisch gedacht.
-Für spezifischere Beispiele siehe [Kontinuierliche Leistungsbewertung in GitHub Actions][github actions]
-und [Kontinuierliche Leistungsbewertung in GitLab CI/CD][gitlab ci/cd].
-
-Wir müssen eine historische Basislinie für unseren `main` Branch erstellen und pflegen, indem wir jede Änderung in der CI benchmarken:
-
-<RunMainStatistical />
-
-1. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Subbefehl,
-   um Ihre Benchmarks des `feature-branch` Branches auszuführen.
-   Eine vollständige Übersicht finden Sie in [dem `bencher run` CLI-Subbefehl][bencher run].
-   (z.B.: `bencher run`)
-2. Setzen Sie die Option `--project` auf den Projektslug.
-   Weitere Details finden Sie in [den `--project` Dokumenten][project option].
-   (z.B.: `--project save-walter-white-1234abcd`)
-3. Setzen Sie die Option `--branch` auf den Standard-Branch-Namen.
-   Eine vollständige Übersicht finden Sie unter [Branch-Auswahl][branch selection branch].
-   (z.B.: `--branch main`)
-4. Setzen Sie die Option `--testbed` auf den Namen der Testumgebung.
-   Weitere Details finden Sie in [den `--tested` Dokumenten][testbed option].
-   (z.B.: `--testbed ci-runner`)
-5. Setzen Sie die Option `--adapter` auf den gewünschten Benchmark-Harness-Adapter.
-   Eine vollständige Übersicht finden Sie unter [Benchmark-Harness-Adapter][adapters].
-   (z.B.: `--adapter json`)
-6. Setzen Sie die Option `--err` auf `true`, um den Befehl zu beenden, wenn eine Warnung generiert wird.
-   Eine vollständige Übersicht finden Sie unter [Schwellen & Warnungen][alerts].
-   (z.B.: `--err`)
-7. Geben Sie die Benchmark-Befehlsargumente an.
-   Eine vollständige Übersicht finden Sie unter [Benchmark-Befehl][command argument].
-   (z.B.: `bencher mock`)
-
-Zuletzt sind wir bereit, Leistungsregressionen in der CI zu erkennen.
-So würden wir die Leistung eines neuen Feature-Branchs namens `feature-branch` in der CI verfolgen:
-
-<RunFeatureStatistical />
-
-1. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Subbefehl,
-   um Ihre Benchmarks des `feature-branch` Branches auszuführen.
-   Eine vollständige Übersicht finden Sie in [dem `bencher run` CLI-Subbefehl][bencher run].
-   (z.B.: `bencher run`)
-2. Setzen Sie die Option `--project` auf den Projektslug.
-   Weitere Details finden Sie in [den `--project` Dokumenten][project option].
-   (z.B.: `--project save-walter-white-1234abcd`)
-3. Setzen Sie die Option `--branch` auf den Feature-Branch-Namen.
-   Eine vollständige Übersicht finden Sie unter [Branch-Auswahl][branch selection branch].
-   (z.B.: `--branch feature-branch`)
-4. Setzen Sie die Option `--branch-start-point` auf den Startpunkt des Feature-Branches.
-   Eine vollständige Übersicht finden Sie unter [Branch-Auswahl][branch selection start point].
-   (z.B.: `--branch-start-point main`)
-5. Setzen Sie die Option `--branch-start-point-hash` auf den `git` Hash des Startpunkts des Feature-Branches.
-   Eine vollständige Übersicht finden Sie unter [Branch-Auswahl][branch selection start point hash].
-   (z.B.: `--branch-start-point-hash 32ae...dd8b`)
-6. Setzen Sie die Flagge `--branch-reset`, um den Branch immer auf den Startpunkt zurückzusetzen.
-   Dies verhindert ein Abdriften der Benchmark-Daten.
-   Eine vollständige Übersicht finden Sie unter [Branch-Auswahl][branch selection branch reset].
-   (z.B.: `--branch-reset`)
-7. Setzen Sie die Option `--testbed` auf den Namen der Testumgebung.
-   Weitere Details finden Sie in [den `--tested` Dokumenten][testbed option].
-   (z.B.: `--testbed ci-runner`)
-8. Setzen Sie die Option `--adapter` auf den gewünschten Benchmark-Harness-Adapter.
-   Eine vollständige Übersicht finden Sie unter [Benchmark-Harness-Adapter][adapters].
-   (z.B.: `--adapter json`)
-9. Setzen Sie die Option `--err` auf `true`, um den Befehl zu beenden, wenn eine Warnung generiert wird.
-   Eine vollständige Übersicht finden Sie unter [Schwellen & Warnungen][alerts].
-   (z.B.: `--err`)
-10. Geben Sie die Benchmark-Befehlsargumente an.
-    Eine vollständige Übersicht finden Sie unter [Benchmark-Befehl][command argument].
-    (z.B.: `bencher mock`)
-
-Beim ersten Mal, wenn dieser Befehl in der CI ausgeführt wird,
-wird der `feature-branch` Branch erstellt, da er noch nicht existiert.
-Der neue `feature-branch` wird die `main` Branch
-mit dem Hash `32aea434d751648726097ed3ac760b57107edd8b` als Startpunkt verwenden.
-Das bedeutet, dass `feature-branch` eine Kopie aller Daten und [Schwellen][thresholds]
-vom `main` Branch haben wird, um die Ergebnisse von `bencher mock` zu vergleichen,
-für die erste und alle nachfolgenden Durchläufe.
+> [einen API-Token erstellt und als die Umgebungsvariable `BENCHER_API_TOKEN` gesetzt haben][create an api token], bevor Sie fortfahren!
 
 [quick start]: /de/docs/tutorial/quick-start/
 [docker self-hosted]: /de/docs/tutorial/docker/
 [continuous benchmarking]: /de/docs/explanation/continuous-benchmarking/
 [create an api token]: /de/docs/tutorial/quick-start/#create-an-api-token
-[testbed create]: /de/docs/api/projects/testbeds/#post-v0projectsprojecttestbeds
-[thresholds]: /de/docs/explanation/thresholds/
-[threshold create]: /de/docs/api/projects/thresholds/#post-v0projectsprojectthresholds
-[measure]: /de/docs/explanation/benchmarking/#measure
-[t-test]: /de/docs/explanation/thresholds/#t-test-thresholds
-[t-test upper boundary]: /de/docs/explanation/thresholds/#t-test-threshold-upper-boundary
+
+Nun sind wir bereit, unsere Benchmarks in CI auszuführen.
+Da jede CI-Umgebung ein wenig anders ist,
+soll das folgende Beispiel eher veranschaulichend als praktisch sein.
+Für spezifischere Beispiele siehe [Kontinuierliches Benchmarking in GitHub Actions][github actions]
+und [Kontinuierliches Benchmarking in GitLab CI/CD][gitlab ci/cd].
+
 [github actions]: /de/docs/how-to/github-actions/
 [gitlab ci/cd]: /de/docs/how-to/gitlab-ci-cd/
+
+Zuerst müssen wir eine historische Basis für unseren `main` Branch erstellen und pflegen, indem wir jede Änderung in CI benchmarken:
+
+1. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl, um Ihre Benchmarks für den `feature-branch` Branch auszuführen.
+   Siehe [den `bencher run` CLI-Unterbefehl][bencher run] für eine vollständige Übersicht. (z.B.: `bencher run`)
+2. Setzen Sie die `--project` Option auf den Projektslug.
+   Siehe [die `--project` Dokumentation][project option] für mehr Details. (z.B.: `--project save-walter-white-1234abcd`)
+3. Setzen Sie die `--branch` Option auf den Basis-Branch-Namen.
+   Siehe [die `--branch` Dokumentation][branch option] für eine vollständige Übersicht. (z.B.: `--branch main`)
+4. Setzen Sie die `--testbed` Option auf den Namen des CI-Runner Testbeds.
+   Siehe [die `--testbed` Dokumentation][testbed option] für mehr Details. (z.B.: `--testbed ci-runner`)
+5. Setzen Sie den Schwellenwert für den `main` Branch, das `ci-runner` Testbed und das `latency` Maß:
+   1. Setzen Sie die `--threshold-measure` Option auf das eingebaute `latency` Maß, das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
+   Siehe [die `--threshold-measure` Dokumentation][threshold measure option] für mehr Details. (z.B.: `--threshold-measure latency`)
+   2. Setzen Sie die `--threshold-test` Option auf einen Student's t-Test (`t_test`).
+   Siehe [die `--threshold-test` Dokumentation][threshold test option] für eine vollständige Übersicht. (z.B.: `--threshold-test t_test`)
+   3. Setzen Sie die `--threshold-max-sample-size` Option auf die maximale Stichprobengröße von `64`.
+   Siehe [die `--threshold-max-sample-size` Dokumentation][threshold max sample size] für mehr Details. (z.B.: `--threshold-max-sample-size 64`)
+   4. Setzen Sie die `--threshold-upper-boundary` Option auf die obere Grenze von `0.99`.
+   Siehe [die `--threshold-upper-boundary` Dokumentation][threshold upper boundary] für mehr Details. (z.B.: `--threshold-upper-boundary 0.99`)
+   5. Setzen Sie das `--thresholds-reset` Flag, sodass nur der angegebene Schwellenwert aktiv ist.
+   Siehe [die `--thresholds-reset` Dokumentation][thresholds reset] für eine vollständige Übersicht. (z.B.: `--thresholds-reset`)
+6. Setzen Sie das `--err` Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alarm generiert wird.
+   Siehe [die `--err` Dokumentation][alert err] für eine vollständige Übersicht. (z.B.: `--err`)
+7. Setzen Sie die `--adapter` Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
+   Siehe [Benchmark-Harness-Adapter][adapter json] für eine vollständige Übersicht. (z.B.: `--adapter json`)
+8. Geben Sie die Benchmark-Befehlsargumente an.
+   Siehe [Benchmark-Befehl][command argument] für eine vollständige Übersicht. (z.B.: `bencher mock`)
+
+Das erste Mal, wenn dieser Befehl in CI ausgeführt wird,
+erstellt er den `main` Branch, falls dieser noch nicht existiert.
+Der neue `main` wird _nicht_ über einen Startpunkt oder vorhandene Daten verfügen.
+Ein Schwellenwert wird für den `main` Branch, das `ci-runner` Testbed und das `latency` Maß erstellt.
+Bei nachfolgenden Ausführungen werden dem `main` Branch neue Daten hinzugefügt.
+Der angegebene Schwellenwert wird dann verwendet, um Leistungsregressionen zu erkennen.
+
 [bencher run]: /de/docs/explanation/bencher-run/
 [project option]: /de/docs/explanation/bencher-run/#--project-project
-[branch selection branch]: /de/docs/explanation/branch-selection/#--branch-branch
+[branch option]: /de/docs/explanation/branch-selection/#--branch-branch
 [testbed option]: /de/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /de/docs/explanation/adapters/
-[alerts]: /de/docs/explanation/thresholds/#alerts
+[threshold measure option]: /de/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /de/docs/explanation/thresholds/#--threshold-test-test
+[threshold max sample size]: /de/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold upper boundary]: /de/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /de/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /de/docs/explanation/thresholds/#--err
+[bmf]: /de/docs/reference/bencher-metric-format/
+[adapter json]: /de/docs/explanation/adapters/#-json
 [command argument]: /de/docs/explanation/bencher-run/#benchmark-command
-[branch selection start point]: /de/docs/explanation/branch-selection/#--branch-start-point-branch
-[branch selection start point hash]: /de/docs/explanation/branch-selection/#--branch-start-point-hash-hash
-[branch selection branch reset]: /de/docs/explanation/branch-selection/#--branch-reset
+
+Jetzt sind wir bereit, Leistungsregressionen in CI zu erkennen.
+So würden wir die Leistung eines neuen Feature-Branchs in CI verfolgen, passend benannt `feature-branch`:
+
+1. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl, um Ihre Benchmarks für den `feature-branch` Branch auszuführen.
+   Siehe [den `bencher run` CLI-Unterbefehl][bencher run] für eine vollständige Übersicht. (z.B.: `bencher run`)
+2. Setzen Sie die `--project` Option auf den Projektslug.
+   Siehe [die `--project` Dokumentation][project option] für mehr Details. (z.B.: `--project save-walter-white-1234abcd`)
+3. Setzen Sie die `--branch` Option auf den Feature-Branch-Namen.
+   Siehe [die `--branch` Dokumentation][branch option] für eine vollständige Übersicht. (z.B.: `--branch feature-branch`)
+4. Setzen Sie den Startpunkt für den `feature-branch` Branch:
+   1. Setzen Sie die `--start-point` Option auf den Startpunkt des Feature-Branches.
+   Siehe [die `--start-point` Dokumentation][start point] für eine vollständige Übersicht. (z.B.: `--start-point main`)
+   2. Setzen Sie die `--start-point-hash` Option auf den Git-Hash des Startpunkts des Feature-Branches.
+   Siehe [die `--start-point-hash` Dokumentation][start point hash] für eine vollständige Übersicht. (z.B.: `--start-point-hash 32ae...dd8b`)
+   3. Setzen Sie das `--start-point-clone-thresholds` Flag, um die Schwellenwerte vom Startpunkt zu klonen.
+   Siehe [die `--start-point-clone-thresholds` Dokumentation][start point clone thresholds] für eine vollständige Übersicht. (z.B.: `--start-point-clone-thresholds`)
+   4. Setzen Sie das `--start-point-reset` Flag, um den Branch immer auf den Startpunkt zurückzusetzen.
+   Dies verhindert das Abdriften von Benchmark-Daten.
+   Siehe [die `--start-point-reset` Dokumentation][start point reset] für eine vollständige Übersicht. (z.B.: `--start-point-reset`)
+5. Setzen Sie die `--testbed` Option auf den Namen des Testbeds.
+   Siehe [die `--tested` Dokumentation][testbed option] für mehr Details. (z.B.: `--testbed ci-runner`)
+6. Setzen Sie das `--err` Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alarm generiert wird.
+   Siehe [die `--err` Dokumentation][alert err] für eine vollständige Übersicht. (z.B.: `--err`)
+7. Setzen Sie die `--adapter` Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
+   Siehe [Benchmark-Harness-Adapter][adapter json] für eine vollständige Übersicht. (z.B.: `--adapter json`)
+8. Geben Sie die Benchmark-Befehlsargumente an.
+   Siehe [Benchmark-Befehl][command argument] für eine vollständige Übersicht. (z.B.: `bencher mock`)
+
+Das erste Mal, wenn dieser Befehl in CI ausgeführt wird,
+wird Bencher den `feature-branch` Branch erstellen, da er noch nicht existiert.
+Der neue `feature-branch` wird den `main` Branch
+bei Hash `32aea434d751648726097ed3ac760b57107edd8b` als seinen Startpunkt verwenden.
+Das bedeutet, dass `feature-branch` eine Kopie aller Daten und [Schwellenwerte][thresholds] vom `main` Branch haben wird, um die Ergebnisse von `bencher mock` damit zu vergleichen.
+Bei allen nachfolgenden Ausführungen wird Bencher den `feature-branch` Branch auf den Startpunkt zurücksetzen
+und die Daten und Schwellenwerte des `main` Branch verwenden, um Leistungsregressionen zu erkennen.
+
+[start point]: /de/docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /de/docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /de/docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /de/docs/explanation/branch-selection/#--start-point-reset
+[thresholds]: /de/docs/explanation/thresholds/

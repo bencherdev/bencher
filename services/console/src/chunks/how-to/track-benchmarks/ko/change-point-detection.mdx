@@ -1,0 +1,17 @@
+## Change Point Detection
+
+Change Point Detection은 [변화점 탐지 알고리즘][change detection]을 사용하여 최근 결과의 큰 윈도우를 평가합니다. 이는 알고리즘이 이상치를 노이즈로 무시하고 허위 긍정을 줄일 수 있게 합니다. Change Point Detection은 [지속적인 벤치마킹][continuous benchmarking]으로 간주되지만, CI에서 성능 회귀를 탐지할 수는 없습니다. 즉, 기능 브랜치가 병합되기 전에 성능 회귀를 탐지할 수 없습니다. 이는 때때로 "외부 검출"이라고도 불립니다.
+
+예를 들어, `bench_my_critical_path`라는 벤치마크가 있고,
+다음과 같은 과거 지연 시간이 있었습니다: `5 ms`, `6 ms`, `5 ms`, `5ms`, `7ms`.
+
+다음 벤치마크 결과가 `11 ms`라면, 통계적 지속 벤치마킹 임계값과 Change Point Detection 알고리즘이 이를 매우 다르게 해석할 것입니다. 임계값은 초과할 가능성이 높고 경고가 생성될 것입니다. 이 벤치마크 실행이 풀 리퀘스트와 연결되었다면, 이 경고로 인해 빌드가 실패로 설정될 가능성이 높습니다. 그러나, 변화점 알고리즘은 아직 아무 것도 하지 않을 것입니다. 다음 실행에서 `5 ms`로 다시 떨어진다면 경고를 생성하지 않을 것입니다. 반대로, 다음 실행 또는 두 번의 실행에서 `10 ms` 및 `12 ms`가 나왔다면, 그제서야 변화점 알고리즘이 경고를 발휘할 것입니다.
+
+Bencher와 Change Point Detection을 사용하고 싶으신가요?
+그렇다면 [트래킹 문제][github issue 365]에 코멘트를 남기거나 [직접 문의하세요][help].
+
+[change detection]: https://en.wikipedia.org/wiki/Change_detection
+[github issue 365]: https://github.com/bencherdev/bencher/issues/365
+
+[continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
+[help]: /help/

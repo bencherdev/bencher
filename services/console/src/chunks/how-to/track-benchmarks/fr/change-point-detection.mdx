@@ -1,0 +1,31 @@
+## Détection de Point de Changement
+
+La Détection de Point de Changement utilise un [algorithme de détection de changement][change detection] pour évaluer une grande fenêtre de résultats récents.
+Cela permet à l'algorithme d'ignorer les valeurs aberrantes comme du bruit et de produire moins de faux positifs.
+Même si la Détection de Point de Changement est considérée comme du [benchmarking en continu][continuous benchmarking],
+elle ne vous permet pas de détecter une régression de performance en CI.
+C'est-à-dire que vous ne pouvez pas détecter une régression de performance avant qu'une branche de fonctionnalité ne soit fusionnée.
+Cela est parfois appelé détection "hors bande".
+
+Par exemple, si vous avez un benchmark `bench_my_critical_path`,
+et qu'il avait les latences historiques suivantes : `5 ms`, `6 ms`, `5 ms`, `5 ms`, `7 ms`.
+
+Si le résultat du benchmark suivant était `11 ms`, alors un seuil de Benchmarking Continu Statistique
+et l'algorithme de Détection de Point de Changement interpréteraient les choses très différemment.
+Il est probable que le seuil serait dépassé et qu'une alerte serait générée.
+Si cette exécution de benchmark était liée à une demande de tirage,
+la construction serait probablement définie pour échouer à cause de cette alerte.
+Cependant, l'algorithme de point de changement ne ferait rien... pour l'instant.
+Si lors de la prochaine exécution, les choses revenaient à `5 ms`, alors il ne générerait probablement pas d'alerte.
+Inversement, si les exécutions suivantes résultaient en `10 ms` et `12 ms`,
+alors seulement l'algorithme de point de changement déclencherait une alerte.
+
+Êtes-vous intéressé par l'utilisation de la Détection de Point de Changement avec Bencher ?
+Si oui, veuillez laisser un commentaire sur [l'issue de suivi][github issue 365]
+ou [contactez-nous directement][help].
+
+[change detection]: https://en.wikipedia.org/wiki/Change_detection
+[github issue 365]: https://github.com/bencherdev/bencher/issues/365
+
+[continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
+[help]: /help/

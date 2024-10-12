@@ -1,0 +1,31 @@
+## Change Point Detection
+
+Change Point Detection verwendet einen [Change Point Algorithmus][change detection], um ein großes Fenster aktueller Ergebnisse auszuwerten.
+Dies ermöglicht es dem Algorithmus, Ausreißer als Rauschen zu ignorieren und weniger Fehlalarme zu erzeugen.
+Obwohl Change Point Detection als [kontinuierliches Benchmarking][continuous benchmarking] betrachtet wird,
+erlaubt es nicht, Leistungsregressionen in CI zu erkennen.
+Das heißt, Sie können eine Leistungsregression nicht erkennen, bevor ein Feature-Branch zusammengeführt wird.
+Dies wird manchmal als "Out-of-Band"-Erkennung bezeichnet.
+
+Zum Beispiel, wenn Sie einen Benchmark `bench_my_critical_path` haben,
+und dieser hatte folgende historische Latenzen: `5 ms`, `6 ms`, `5 ms`, `5ms`, `7ms`.
+
+Wenn das nächste Benchmark-Ergebnis `11 ms` wäre, dann würden ein Schwellenwert für Statistisches Kontinuierliches Benchmarking
+und der Change Point Detection Algorithmus die Dinge sehr unterschiedlich interpretieren.
+Der Schwellenwert würde wahrscheinlich überschritten und ein Alarm würde generiert werden.
+Wenn dieser Benchmark-Lauf mit einem Pull-Request verbunden wäre,
+würde das Build wahrscheinlich aufgrund dieses Alarms fehlschlagen.
+Der Change Point Algorithmus würde jedoch noch nichts unternehmen.
+Wenn beim nächsten Lauf die Werte wieder auf `5 ms` fallen würden, würde wahrscheinlich kein Alarm generiert werden.
+Umgekehrt, wenn der nächste Lauf oder zwei `10 ms` und `12 ms` ergeben würden,
+würde der Change Point Algorithmus erst dann einen Alarm auslösen.
+
+Haben Sie Interesse an der Verwendung von Change Point Detection mit Bencher?
+Falls ja, hinterlassen Sie bitte einen Kommentar im [Tracking Issue][github issue 365]
+oder [kontaktieren Sie uns direkt][help].
+
+[change detection]: https://en.wikipedia.org/wiki/Change_detection
+[github issue 365]: https://github.com/bencherdev/bencher/issues/365
+
+[kontinuierliches Benchmarking]: /de/docs/explanation/continuous-benchmarking/
+[help]: /help/
