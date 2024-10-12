@@ -1,0 +1,21 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## Fix FizzBuzzFibonacci in Python
+
+Werfen wir einen weiteren Blick auf die `is_fibonacci_number`-Funktion:
+
+<IsFibonacciNumberCode />
+
+Jetzt, wo ich über die Leistung nachdenke, merke ich, dass ich eine unnötige, zusätzliche Schleife habe. Wir können die Schleife `for i in range(n + 1):` komplett entfernen und einfach den Wert `current` mit der gegebenen Zahl (`n`) vergleichen 🤦
+
+<IsFibonacciNumberFixCode />
+
+- Aktualisieren Sie unsere `is_fibonacci_number`-Funktion.
+- Initialisieren Sie unsere Fibonacci-Sequenz beginnend mit `0` und `1` als die `previous` und `current` Zahlen.
+- Iterieren Sie, während die `current` Zahl kleiner als die _gegebene Zahl_ `n` ist.
+- Fügen Sie die `previous` und `current` Zahl hinzu, um die `next_value` Zahl zu erhalten.
+- Aktualisieren Sie die `previous` Zahl zu der `current` Zahl.
+- Aktualisieren Sie die `current` Zahl zu der `next_value` Zahl.
+- Sobald `current` größer oder gleich der gegebenen Zahl `n` ist, wird die Schleife beendet.
+- Überprüfen Sie, ob die `current` Zahl gleich der gegebenen Zahl `n` ist und geben Sie das Ergebnis zurück.

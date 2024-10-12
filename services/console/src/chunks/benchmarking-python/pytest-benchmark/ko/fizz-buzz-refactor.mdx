@@ -1,0 +1,22 @@
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## FizzBuzz 리팩토링
+
+우리의 FizzBuzz 애플리케이션을 테스트하기 위해,
+로직을 프로그램의 메인 실행과 분리해야 합니다.
+벤치마크 하네스는 메인 실행을 벤치마킹할 수 없습니다.
+이를 위해 약간의 변경이 필요합니다.
+
+FizzBuzz 로직을 몇 가지 함수로 리팩토링해 봅시다:
+
+<FizzBuzzRefactorCode />
+
+- `play_game`: 정수 `n`을 입력으로 받아 `fizz_buzz`를 그 숫자로 호출하며, `should_print`가 `True`일 경우 결과를 출력합니다.
+- `fizz_buzz`: 정수 `n`을 입력으로 받아 실제 `Fizz`, `Buzz`, `FizzBuzz` 또는 숫자 로직을 수행하고 결과를 문자열로 반환합니다.
+
+그런 다음 메인 실행을 다음과 같이 업데이트합니다:
+
+<PlayGameCode />
+
+우리 프로그램의 메인 실행은 `1`부터 `100`까지의 숫자를 포함하여 반복하며, 각 숫자에 대해 `should_print`가 `True`로 설정된 상태로 `play_game`을 호출합니다.

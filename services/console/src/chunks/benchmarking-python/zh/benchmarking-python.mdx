@@ -1,0 +1,14 @@
+## 在 Python 中进行基准测试
+
+在 Python 中进行基准测试的两个热门选项是：
+[pytest-benchmark](https://pytest-benchmark.readthedocs.io)
+和
+[airspeed velocity (asv)](https://github.com/airspeed-velocity/asv)
+
+`pytest-benchmark` 是一个强大的基准测试工具，与流行的[`pytest`测试框架](https://docs.pytest.org/en/stable/)集成。
+它允许开发者通过与单元测试一起运行基准测试来测量和比较代码的性能。
+用户可以轻松地在本地比较基准测试结果，并将结果导出为各种格式，如 JSON。
+
+`airspeed velocity (asv)` 是 Python 生态系统中另一个高级基准测试工具。
+`asv` 的一个主要优势是它能够生成详细的交互式 HTML 报告，使得可视化性能趋势和识别回归变得简单。
+此外，`asv` 开箱即支持[相对持续基准测试](/zh/docs/how-to/track-benchmarks/#relative-continuous-benchmarking)。

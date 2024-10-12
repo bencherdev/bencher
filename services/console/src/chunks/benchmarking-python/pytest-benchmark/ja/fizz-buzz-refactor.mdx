@@ -1,0 +1,22 @@
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## フィズバズのリファクタリング
+
+フィズバズアプリケーションをテストするためには、
+ロジックをプログラムのメイン実行から切り離す必要があります。
+ベンチマークハーネスはメイン実行をベンチマークすることができません。
+これを行うために、いくつかの変更を行う必要があります。
+
+フィズバズのロジックをいくつかの関数にリファクタリングしましょう：
+
+<FizzBuzzRefactorCode />
+
+- `play_game`: 整数 `n` を受け取り、その数で `fizz_buzz` を呼び出し、`should_print` が `True` の場合は結果を出力します。
+- `fizz_buzz`: 整数 `n` を受け取り、実際の `Fizz`、`Buzz`、`FizzBuzz`、または数のロジックを実行し、結果を文字列として返します。
+
+次に、メインの実行を次のように更新します：
+
+<PlayGameCode />
+
+プログラムのメイン実行は、`1` から `100` までの数を含む範囲を繰り返し、各数に対して `play_game` を `should_print` を `True` に設定して呼び出します。

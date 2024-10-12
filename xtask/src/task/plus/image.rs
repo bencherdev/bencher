@@ -1,5 +1,5 @@
 use async_openai::{
-    types::{CreateImageRequestArgs, ImageSize, ResponseFormat},
+    types::{CreateImageRequestArgs, ImageResponseFormat, ImageSize},
     Client,
 };
 use chrono::Utc;
@@ -32,7 +32,7 @@ impl Image {
         let client = Client::new();
         let request = CreateImageRequestArgs::default()
             .prompt(&self.prompt)
-            .response_format(ResponseFormat::Url)
+            .response_format(ImageResponseFormat::Url)
             .size(ImageSize::S1024x1024)
             .user("bencher.dev")
             .build()?;

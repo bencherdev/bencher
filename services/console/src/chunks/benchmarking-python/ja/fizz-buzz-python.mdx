@@ -1,0 +1,16 @@
+import FizzBuzzRules from "../../benchmarking/en/fizz-buzz-rules.mdx";
+import FizzBuzzCode from "../fizz-buzz-code.mdx";
+
+## PythonでFizzBuzzを書く
+
+<FizzBuzzRules />
+
+<FizzBuzzCode />
+
+- `1`から`100`まで繰り返し、範囲を`101`に設定します。
+- 各数について、`3`と`5`の剰余（除算後の余り）を計算します。
+- 余りが`0`の場合、その数は指定された因数の倍数です。
+  - 余りが`0`で`15`の場合、`FizzBuzz`と表示します。
+  - 余りが`0`で`3`の場合、`Fizz`と表示します。
+  - 余りが`0`で`5`の場合、`Buzz`と表示します。
+- それ以外の場合は、その数をそのまま表示します。

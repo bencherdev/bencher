@@ -1,0 +1,23 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## PythonでのFizzBuzzFibonacciの修正
+
+`is_fibonacci_number` 関数をもう一度見てみましょう：
+
+<IsFibonacciNumberCode />
+
+パフォーマンスを考慮するときに、不要で余分なループがあることに気付きました。
+`for i in range(n + 1):` ループを完全になくし、
+`current` の値を与えられた数 (`n`) と比較するだけでよいのです 🤦
+
+<IsFibonacciNumberFixCode />
+
+- `is_fibonacci_number` 関数を更新します。
+- フィボナッチ数列を `0` と `1` で始め、それぞれを `previous` と `current` の数字として初期化します。
+- `current` の数字が_与えられた数_ `n` より小さい間、繰り返します。
+- `previous` と `current` の数字を加えて `next_value` の数字を得ます。
+- `previous` の数字を `current` の数字に更新します。
+- `current` の数字を `next_value` の数字に更新します。
+- `current` が与えられた数 `n` 以上になったら、ループを終了します。
+- `current` の数字が与えられた数 `n` と等しいか確認し、その結果を返します。

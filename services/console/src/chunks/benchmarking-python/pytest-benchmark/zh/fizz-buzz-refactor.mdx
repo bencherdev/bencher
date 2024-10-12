@@ -1,0 +1,22 @@
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## 重构 FizzBuzz
+
+为了测试我们的 FizzBuzz 应用程序，
+我们需要将逻辑从程序的主要执行中解耦。
+基准工具无法对主要执行进行基准测试。
+为了做到这一点，我们需要做些更改。
+
+让我们将 FizzBuzz 逻辑重构为几个函数：
+
+<FizzBuzzRefactorCode />
+
+- `play_game`：接收一个整数 `n`，用这个数字调用 `fizz_buzz`，如果 `should_print` 为 `True` 则打印结果。
+- `fizz_buzz`：接收一个整数 `n` 并执行实际的 `Fizz`、`Buzz`、`FizzBuzz` 或数字逻辑，返回结果为字符串。
+
+然后将主执行更新为如下所示：
+
+<PlayGameCode />
+
+程序的主执行部分遍历从 `1` 到 `100`（包含）的数字，并为每个数字调用 `play_game`，`should_print` 设置为 `True`。

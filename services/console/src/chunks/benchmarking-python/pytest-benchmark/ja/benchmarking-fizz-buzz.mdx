@@ -1,0 +1,34 @@
+import TestGameCode from "../test-game-code.mdx";
+import PipenvShellOutput from "../../pipenv-shell-output.mdx";
+import PipenvInstallOutput from "../pipenv-install-output.mdx";
+import PytestGameOutput from "../pytest-game-output.mdx";
+
+## FizzBuzzのベンチマーク
+
+コードのベンチマークを行うためには、ベンチマークを実行するテスト関数を作成する必要があります。`game.py`の最後に次のコードを追加します：
+
+<TestGameCode />
+
+- `pytest-benchmark`の`benchmark`フィクスチャを取る`test_game`という名前の関数を作成します。
+- `1`から`100`までを含めて反復する`run_game`関数を作成します。
+  - 各数字に対して、`should_print`を`False`に設定して`play_game`を呼び出します。
+- `benchmark`ランナーに`run_game`関数を渡します。
+
+次に、プロジェクトを構成してベンチマークを実行できるようにしましょう。
+
+`pipenv`で新しい仮想環境を作成します：
+
+<PipenvShellOutput />
+
+その新しい`pipenv`環境内に`pytest-benchmark`をインストールします：
+
+<PipenvInstallOutput />
+
+これでコードのベンチマークを実行する準備が整いました。`pytest game.py`を実行します：
+
+<PytestGameOutput />
+
+> 🐰 レタスをターンアップします！最初のベンチマークメトリックが得られました！
+
+最後に、疲れた開発者の頭を休めることができます...
+冗談です、ユーザーは新しい機能を望んでいます！

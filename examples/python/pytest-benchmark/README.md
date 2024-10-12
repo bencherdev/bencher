@@ -1,12 +1,3 @@
-To run benchmarks:
+# How to benchmark Python code with `pytest-benchmark`
 
-```bash
-pipenv shell
-pytest game.py
-```
-
-or
-
-```bash
-pipenv run pytest game.py
-```
+This is the source code for the post: https://bencher.dev/learn/benchmarking/python/pytest-benchmark/

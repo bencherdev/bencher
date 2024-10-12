@@ -1,0 +1,35 @@
+import TestGameCode from "../test-game-code.mdx";
+import PipenvShellOutput from "../../pipenv-shell-output.mdx";
+import PipenvInstallOutput from "../pipenv-install-output.mdx";
+import PytestGameOutput from "../pytest-game-output.mdx";
+
+## 피즈버즈 벤치마킹
+
+코드를 벤치마크하기 위해, 벤치마크를 실행하는 테스트 함수를 생성해야 합니다.
+`game.py`의 맨 아래에 다음 코드를 추가하세요:
+
+<TestGameCode />
+
+- `pytest-benchmark`의 `benchmark` 픽스처를 받는 `test_game`이라는 이름의 함수를 생성합니다.
+- `1`부터 `100`까지 포괄적으로 반복하는 `run_game` 함수를 생성합니다.
+  - 각 숫자에 대해, `should_print`을 `False`로 설정하여 `play_game`을 호출합니다.
+- `benchmark` 러너에 `run_game` 함수를 전달합니다.
+
+이제 벤치마크를 실행하기 위해 프로젝트를 설정해야 합니다.
+
+`pipenv`로 새로운 가상 환경을 생성하세요:
+
+<PipenvShellOutput />
+
+새로운 `pipenv` 환경 내에 `pytest-benchmark`를 설치하세요:
+
+<PipenvInstallOutput />
+
+이제 코드를 벤치마크할 준비가 되었습니다. `pytest game.py`를 실행하세요:
+
+<PytestGameOutput />
+
+> 🐰 양배추가 많이 들어간 비트를 즐기세요! 첫 벤치마크 메트릭이 나왔습니다!
+
+마지막으로, 피곤한 개발자의 머리를 쉬게 할 수 있습니다...
+농담입니다. 사용자들은 새로운 기능을 원합니다!

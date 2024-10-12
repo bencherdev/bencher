@@ -1,0 +1,41 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/pt/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## Escreva FizzBuzzFibonacci em Python
+
+Nossos Indicadores-Chave de Desempenho (KPIs) estão em queda,
+então nosso Gerente de Produto (PM) quer que adicionemos um novo recurso.
+Após muitas sessões de brainstorming e várias entrevistas com usuários,
+foi decidido que o bom e velho FizzBuzz não é suficiente.
+Hoje em dia, as crianças querem um novo jogo, o FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- Crie uma função chamada `is_fibonacci_number` que recebe um inteiro e retorna um valor booleano.
+- Itere para todos os números de `0` até o nosso número `n` inclusive.
+- Inicialize nossa sequência de Fibonacci começando com `0` e `1` como os números `anterior` e `atual`, respectivamente.
+- Itere enquanto o número `atual` for menor que a iteração corrente `i`.
+- Some os números `anterior` e `atual` para obter o número `next_value`.
+- Atualize o número `anterior` para o número `atual`.
+- Atualize o número `atual` para o número `next_value`.
+- Uma vez que `atual` for maior ou igual ao número dado `n`, o loop será encerrado.
+- Verifique se o número `atual` é igual ao número dado `n` e se for, retorne `True`.
+- Caso contrário, retorne `False`.
+
+Agora precisamos atualizar nossa função `fizz_buzz`:
+
+<FizzBuzzFibonacciCode />
+
+- Renomeie a função `fizz_buzz` para `fizz_buzz_fibonacci` para torná-la mais descritiva.
+- Chame nossa função auxiliar `is_fibonacci_number`.
+- Se o resultado de `is_fibonacci_number` for `True`, então retorne `Fibonacci`.
+- Se o resultado de `is_fibonacci_number` for `False`, então execute a mesma lógica de `Fizz`, `Buzz`, `FizzBuzz` ou número retornando o resultado.
+
+Como renomeamos `fizz_buzz` para `fizz_buzz_fibonacci`, também precisamos atualizar nossa função `play_game`:
+
+{ props.children }
+
+Tanto nossa execução principal quanto a função `test_game` podem permanecer exatamente como estão.

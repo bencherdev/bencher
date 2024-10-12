@@ -1,0 +1,105 @@
+---
+title: "pytest-benchmark"
+description: "pytest-benchmarkを使用してPythonコードをベンチマークするステップバイステップガイド"
+heading: "pytest-benchmarkを使用してPythonコードをベンチマークする方法"
+published: "2024-10-09T16:30:00Z"
+modified: "2024-10-09T16:30:00Z"
+sortOrder: 1
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ja/benchmarking.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ja/fizz-buzz-rules.mdx";
+import FizzBuzzPython from "../../../chunks/benchmarking-python/ja/fizz-buzz-python.mdx";
+import StepByStepPython from "../../../chunks/benchmarking-python/ja/step-by-step-python.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ja/micro-vs-macro.mdx";
+import BenchmarkingPython from "../../../chunks/benchmarking-python/ja/benchmarking-python.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-python/pytest-benchmark/ja/fizz-buzz-refactor.mdx";
+import BenchmarkingFizzBuzz from "../../../chunks/benchmarking-python/pytest-benchmark/ja/benchmarking-fizz-buzz.mdx";
+import FizzBuzzFibonacciPython from "../../../chunks/benchmarking-python/ja/fizz-buzz-fibonacci-python.mdx";
+import PlayGameCode from "../../../chunks/benchmarking-python/pytest-benchmark/play-game-code.mdx";
+import BenchmarkingFizzBuzzFibonacci from "../../../chunks/benchmarking-python/pytest-benchmark/ja/benchmarking-fizz-buzz-fibonacci.mdx";
+import FizzBuzzFibonacciOpenPython from "../../../chunks/benchmarking-python/ja/fizz-buzz-fibonacci-open-python.mdx";
+import FizzBuzzFibonacciOpenCode from "../../../chunks/benchmarking-python/fizz-buzz-fibonacci-open-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/ja/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ja/on-fire.mdx";
+import TestGameOnFireCode from "../../../chunks/benchmarking-python/pytest-benchmark/test-game-on-fire-code.mdx";
+import PytestGameOnFireOutputStart from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output-start.mdx";
+import PytestGameOnFireOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-python/pytest-benchmark/ja/fizz-buzz-fibonacci-fix.mdx";
+import PytestGameFixOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ja/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-python/pytest-benchmark/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ja/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ja/bencher-footer.mdx";
+
+<Benchmarking />
+
+<FizzBuzzPython />
+
+<StepByStepPython />
+
+<MicroVsMacro />
+
+<BenchmarkingPython />
+
+両方とも[Bencherによるサポート](/ja/docs/explanation/adapters/)があります。 では、なぜ`pytest-benchmark`を選ぶのでしょうか？ `pytest-benchmark`は、Pythonエコシステムにおけるデファクトスタンダードなユニットテストハーネスである`pytest`とシームレスに統合されます。 特にすでに`pytest`を使用している場合は、コードのレイテンシをベンチマークするために`pytest-benchmark`を使用することをお勧めします。つまり、`pytest-benchmark`はウォールクロック時間を測定するのに優れています。
+
+<FizzBuzzRefactor />
+
+<BenchmarkingFizzBuzz />
+
+<FizzBuzzFibonacciPython>
+  <PlayGameCode />
+</FizzBuzzFibonacciPython>
+
+<BenchmarkingFizzBuzzFibonacci />
+
+<FizzBuzzFibonacciOpenPython>
+    <FizzBuzzFibonacciOpenCode />
+</FizzBuzzFibonacciOpenPython>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<TestGameOnFireCode />
+
+- 数字の百（`100`）でゲームをするためのマイクロベンチマーク`test_game_100`
+- 数字の百万（`1_000_000`）でゲームをするためのマイクロベンチマーク`test_game_1_000_000`
+
+実行してみたところ、次のような結果が得られました：
+
+<PytestGameOnFireOutputStart />
+
+しばらくお待ちください...
+
+<PytestGameOnFireOutput />
+
+何ですと！ `15.8470 us` x `1,000` は `15,847.0 us` になるべきところが、 `571,684.6334 us` ではないか 🤯
+Fibonacciシーケンスのコードが機能的には正しいのに、どこかにパフォーマンス上のバグがあるに違いない。
+
+<FizzBuzzFibonacciFix />
+
+さて、それらのベンチマークを再実行して、どうなったか見てみましょう：
+
+<PytestGameFixOutput />
+
+おお、すごい！ `test_game`のベンチマークが元のFizzBuzzレベルに戻りました。 具体的にどのスコアだったのか正確には思い出せませんが、3週間も経っていて、ターミナルの履歴もそこまで遡れません。 そして、`pytest-benchmark`は要求した時にのみ結果を保存しますが、おそらく近いと思います！
+
+`test_game_100`のベンチマークはほぼ50倍に減少し、`322.0815 ns`になりました。
+そして`test_game_1_000_000`のベンチマークはなんと500,000倍以上も減少しました！ `571,684,633.4 ns`から`753.1445 ns`に！
+
+> 🐰 おっと、少なくともこのパフォーマンスバグがプロダクションに持ち込まれる前に発見できてよかった... いや、気にしないで...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Rustをpytest-benchmarkでベンチマークする方法" />
+
+<BencherFooter />

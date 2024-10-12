@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/en/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenOutput from "../fizz-buzz-fibonacci-open-output.mdx";
+import FizzBuzzFibonacciOpenOutputDefault from "../fizz-buzz-fibonacci-open-output-default.mdx";
+
+## Étendre FizzBuzzFibonacci en Python
+
+Notre jeu est un succès ! Les enfants adorent vraiment jouer à FizzBuzzFibonacci.
+Tellement que les dirigeants ont décidé qu'ils voulaient une suite.
+Mais c'est le monde moderne, nous avons besoin de revenus récurrents annuels (ARR) et non plus d'achats uniques !
+La nouvelle vision pour notre jeu est qu'il soit ouvert, terminé de vivre entre la limite de `1` et `100` (même si elle est incluse).
+Non, nous explorons de nouveaux horizons !
+
+<FizzBuzzFibonacciOpenRules />
+
+Pour que notre jeu fonctionne pour n'importe quel nombre, nous devrons accepter un argument de la ligne de commande.
+Mettez à jour l'exécution principale pour qu'elle ressemble à ceci :
+
+{ props.children }
+
+- Importez le paquet `sys`.
+- Récupérez tous les arguments (`args`) passés à notre jeu depuis la ligne de commande.
+- Obtenez le premier argument passé à notre jeu et vérifiez s'il s'agit d'un chiffre.
+  - Si c'est le cas, analysez le premier argument en tant qu'entier, `i`.
+  - Jouez à notre jeu avec l'entier nouvellement analysé `i`.
+- Si l'analyse échoue ou si aucun argument n'est passé, par défaut, invitez à entrer une saisie valide.
+
+Maintenant, nous pouvons jouer à notre jeu avec n'importe quel nombre !
+Exécutez `python game.py` suivi d'un nombre entier pour jouer à notre jeu :
+
+<FizzBuzzFibonacciOpenOutput />
+
+Et si nous omettons ou fournissons un nombre invalide :
+
+<FizzBuzzFibonacciOpenOutputDefault />
+
+Wow, cela a été un test exhaustif ! L'intégration continue (CI) réussit. Nos patrons sont ravis.
+Livrons-le ! 🚀

@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/en/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenOutput from "../fizz-buzz-fibonacci-open-output.mdx";
+import FizzBuzzFibonacciOpenOutputDefault from "../fizz-buzz-fibonacci-open-output-default.mdx";
+
+## PythonでのFizzBuzzFibonacciの拡張
+
+我々のゲームは大ヒットです！子供たちは本当にFizzBuzzFibonacciを楽しんでいます。
+その人気ぶりから、経営陣からの要望で続編を求められています。
+しかし、これは現代の世界です。我々は一度の購入ではなく、年間繰り返し収入（ARR）が必要です！
+我々のゲームの新しいビジョンは、境界のないオープンエンド形式にすることです。`1`から`100`までの範囲内に収まっていてはいけません（たとえそれが包括的であっても）。
+いいえ、私たちは新しいフロンティアへと進んでいます！
+
+<FizzBuzzFibonacciOpenRules />
+
+ゲームをどのような数でも動作させるために、コマンドライン引数を受け入れる必要があります。
+メイン実行を次のように更新してください：
+
+{ props.children }
+
+- `sys`パッケージをインポートします。
+- コマンドラインからゲームに渡されたすべての引数（`args`）を収集します。
+- ゲームに渡された最初の引数を取得し、それが数字かどうかを確認します。
+  - もしそうなら、最初の引数を整数としてパースし、`i`とします。
+  - 新しくパースした整数`i`を使ってゲームをプレイします。
+- パースに失敗するか、または引数が渡されない場合は、有効な入力を促すデフォルトに戻ります。
+
+これで、任意の数でゲームをプレイできます！
+ゲームをプレイするには、`python game.py`の後に整数を入力してください：
+
+<FizzBuzzFibonacciOpenOutput />
+
+無視するか無効な数を提供した場合：
+
+<FizzBuzzFibonacciOpenOutputDefault />
+
+素晴らしい、徹底的なテストでした！CIが通過しました。上司たちは大喜びです。
+出荷しましょう！🚀

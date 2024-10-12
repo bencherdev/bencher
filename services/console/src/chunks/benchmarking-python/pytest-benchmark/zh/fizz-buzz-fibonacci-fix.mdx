@@ -1,0 +1,23 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## 修复 Python 中的 FizzBuzzFibonacci
+
+让我们再来看看 `is_fibonacci_number` 函数：
+
+<IsFibonacciNumberCode />
+
+现在考虑性能时，我意识到我有一个不必要的额外循环。
+我们可以完全去掉 `for i in range(n + 1):` 循环，
+只需将 `current` 值与给定的数字 (`n`) 进行比较 🤦
+
+<IsFibonacciNumberFixCode />
+
+- 更新我们的 `is_fibonacci_number` 函数。
+- 用 `0` 和 `1` 分别作为 `previous` 和 `current` 数字来初始化我们的斐波那契数列。
+- 在 `current` 数字小于给定数字 `n` 时迭代。
+- 将 `previous` 和 `current` 数字相加，得到 `next_value` 数字。
+- 将 `previous` 数字更新为 `current` 数字。
+- 将 `current` 数字更新为 `next_value` 数字。
+- 一旦 `current` 大于或等于给定数字 `n`，我们将退出循环。
+- 检查 `current` 数字是否等于给定数字 `n` 并返回该结果。

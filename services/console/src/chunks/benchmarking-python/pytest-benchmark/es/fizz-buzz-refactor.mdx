@@ -1,0 +1,22 @@
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## Refactorizar FizzBuzz
+
+Para probar nuestra aplicación FizzBuzz,
+necesitamos desacoplar nuestra lógica de la ejecución principal de nuestro programa.
+Los bancos de pruebas no pueden evaluar la ejecución principal.
+Para hacer esto, necesitamos realizar algunos cambios.
+
+Vamos a refactorizar nuestra lógica FizzBuzz en un par de funciones:
+
+<FizzBuzzRefactorCode />
+
+- `play_game`: Recibe un número entero `n`, llama a `fizz_buzz` con ese número, y si `should_print` es `True`, imprime el resultado.
+- `fizz_buzz`: Recibe un número entero `n` y realiza la lógica real de `Fizz`, `Buzz`, `FizzBuzz` o número, devolviendo el resultado como una cadena.
+
+Luego, actualiza la ejecución principal para que se vea así:
+
+<PlayGameCode />
+
+La ejecución principal de nuestro programa itera a través de los números del `1` al `100` inclusive y llama a `play_game` para cada número, con `should_print` configurado en `True`.

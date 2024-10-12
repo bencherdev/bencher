@@ -1,0 +1,17 @@
+## Benchmarking en Python
+
+Les deux options populaires pour le benchmarking en Python sont :
+[pytest-benchmark](https://pytest-benchmark.readthedocs.io)
+et
+[airspeed velocity (asv)](https://github.com/airspeed-velocity/asv)
+
+`pytest-benchmark` est un outil de benchmarking puissant
+intégré au populaire [cadre de test `pytest`](https://docs.pytest.org/en/stable/).
+Il permet aux développeurs de mesurer et de comparer la performance de leur code en exécutant des benchmarks en parallèle de leurs tests unitaires.
+Les utilisateurs peuvent facilement comparer leurs résultats de benchmark localement
+et exporter leurs résultats dans divers formats, tels que JSON.
+
+`airspeed velocity (asv)` est un autre outil de benchmarking avancé dans l'écosystème Python.
+L'un des principaux avantages de `asv` est sa capacité à générer des rapports HTML détaillés et interactifs,
+ce qui facilite la visualisation des tendances de performances et l'identification des régressions.
+De plus, `asv` prend en charge le [Benchmarking Continu Relatif](/fr/docs/how-to/track-benchmarks/#relative-continuous-benchmarking) nativement.

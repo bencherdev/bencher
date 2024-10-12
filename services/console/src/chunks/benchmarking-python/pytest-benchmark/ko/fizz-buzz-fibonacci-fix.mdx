@@ -1,0 +1,21 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## Python에서 FizzBuzzFibonacci 수정하기
+
+`is_fibonacci_number` 함수를 다시 한 번 살펴봅시다:
+
+<IsFibonacciNumberCode />
+
+이제 성능에 대해 생각해보니, 불필요한 추가 루프가 있다는 것을 깨달았습니다. `for i in range(n + 1):` 루프를 완전히 제거하고 주어진 숫자(`n`)와 `current` 값을 비교할 수 있습니다. 🤦
+
+<IsFibonacciNumberFixCode />
+
+- `is_fibonacci_number` 함수를 업데이트합니다.
+- 피보나치 수열을 `previous`와 `current` 숫자로 각각 `0`과 `1`로 시작합니다.
+- `current` 숫자가 _주어진 숫자_ `n`보다 작은 동안 반복합니다.
+- `previous`와 `current` 숫자를 더하여 `next_value` 숫자를 얻습니다.
+- `previous` 숫자를 `current` 숫자로 업데이트합니다.
+- `current` 숫자를 `next_value` 숫자로 업데이트합니다.
+- `current`가 주어진 숫자 `n`보다 크거나 같아지면 루프를 종료합니다.
+- `current` 숫자가 주어진 숫자 `n`과 같은지 확인하고 그 결과를 반환합니다.

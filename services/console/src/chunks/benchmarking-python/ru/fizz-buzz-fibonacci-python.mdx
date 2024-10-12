@@ -1,0 +1,41 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/en/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## Написать FizzBuzzFibonacci на Python
+
+Наши ключевые показатели эффективности (KPI) снизились,
+поэтому наш продуктовый менеджер (PM) хочет, чтобы мы добавили новую функцию.
+После множества мозговых штурмов и интервью с пользователями
+было решено, что классического FizzBuzz недостаточно.
+Современные дети хотят новую игру, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- Создайте функцию `is_fibonacci_number`, которая принимает целое число и возвращает булево значение.
+- Итерируйте все числа от `0` до заданного числа `n` включительно.
+- Инициализируйте последовательность Фибоначчи, начиная с `0` и `1` в качестве `previous` и `current` числа, соответственно.
+- Продолжайте итерировать, пока `current` число меньше текущей итерации `i`.
+- Добавьте `previous` и `current` число, чтобы получить число `next_value`.
+- Обновите `previous` число на `current` число.
+- Обновите `current` число на `next_value` число.
+- Как только `current` станет больше или равен данному числу `n`, мы выйдем из цикла.
+- Проверьте, равен ли `current` числу `n`, и если да, верните `True`.
+- В противном случае верните `False`.
+
+Теперь нам нужно обновить нашу функцию `fizz_buzz`:
+
+<FizzBuzzFibonacciCode />
+
+- Переименуйте функцию `fizz_buzz` в `fizz_buzz_fibonacci`, чтобы сделать ее более описательной.
+- Вызовите нашу вспомогательную функцию `is_fibonacci_number`.
+- Если результат из `is_fibonacci_number` равен `True`, то верните `Fibonacci`.
+- Если результат из `is_fibonacci_number` равен `False`, тогда выполните ту же логику `Fizz`, `Buzz`, `FizzBuzz` или возврата числа, возвращая результат.
+
+Поскольку мы переименовали `fizz_buzz` в `fizz_buzz_fibonacci`, нам также нужно обновить нашу функцию `play_game`:
+
+{ props.children }
+
+И основной код выполнения, и функция `test_game` могут остаться точно такими же.

@@ -1,0 +1,35 @@
+import TestGameCode from "../test-game-code.mdx";
+import PipenvShellOutput from "../../pipenv-shell-output.mdx";
+import PipenvInstallOutput from "../pipenv-install-output.mdx";
+import PytestGameOutput from "../pytest-game-output.mdx";
+
+## 基准测试 FizzBuzz
+
+为了对我们的代码进行基准测试，我们需要创建一个运行基准测试的测试函数。
+在 `game.py` 的底部添加以下代码：
+
+<TestGameCode />
+
+- 创建一个名为 `test_game` 的函数，接收一个 `pytest-benchmark` 的 `benchmark` fixture。
+- 创建一个 `run_game` 函数，迭代从 `1` 到 `100`（包括 `100`）。
+  - 对于每个数字，调用 `play_game`，将 `should_print` 设置为 `False`。
+- 将 `run_game` 函数传递给 `benchmark` 运行器。
+
+现在我们需要配置我们的项目以运行基准测试。
+
+使用 `pipenv` 创建一个新的虚拟环境：
+
+<PipenvShellOutput />
+
+在新的 `pipenv` 环境中安装 `pytest-benchmark`：
+
+<PipenvInstallOutput />
+
+现在我们准备好对我们的代码进行基准测试，运行 `pytest game.py`：
+
+<PytestGameOutput />
+
+> 🐰 让我们卷心菜和甜菜根翻起来！我们得到了首个基准测试指标！
+
+最后，我们可以让疲惫的开发者休息一下……
+开玩笑的，我们的用户想要一个新功能！

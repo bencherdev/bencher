@@ -1,0 +1,113 @@
+---
+title: "pytest-benchmark"
+description: "pytest-benchmark를 사용하여 Python 코드를 벤치마킹하는 단계별 가이드"
+heading: "pytest-benchmark를 사용하여 Python 코드를 벤치마킹하는 방법"
+published: "2024-10-09T16:30:00Z"
+modified: "2024-10-09T16:30:00Z"
+sortOrder: 1
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ko/benchmarking.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ko/fizz-buzz-rules.mdx";
+import FizzBuzzPython from "../../../chunks/benchmarking-python/ko/fizz-buzz-python.mdx";
+import StepByStepPython from "../../../chunks/benchmarking-python/ko/step-by-step-python.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ko/micro-vs-macro.mdx";
+import BenchmarkingPython from "../../../chunks/benchmarking-python/ko/benchmarking-python.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-python/pytest-benchmark/ko/fizz-buzz-refactor.mdx";
+import BenchmarkingFizzBuzz from "../../../chunks/benchmarking-python/pytest-benchmark/ko/benchmarking-fizz-buzz.mdx";
+import FizzBuzzFibonacciPython from "../../../chunks/benchmarking-python/ko/fizz-buzz-fibonacci-python.mdx";
+import PlayGameCode from "../../../chunks/benchmarking-python/pytest-benchmark/play-game-code.mdx";
+import BenchmarkingFizzBuzzFibonacci from "../../../chunks/benchmarking-python/pytest-benchmark/ko/benchmarking-fizz-buzz-fibonacci.mdx";
+import FizzBuzzFibonacciOpenPython from "../../../chunks/benchmarking-python/ko/fizz-buzz-fibonacci-open-python.mdx";
+import FizzBuzzFibonacciOpenCode from "../../../chunks/benchmarking-python/fizz-buzz-fibonacci-open-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/ko/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ko/on-fire.mdx";
+import TestGameOnFireCode from "../../../chunks/benchmarking-python/pytest-benchmark/test-game-on-fire-code.mdx";
+import PytestGameOnFireOutputStart from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output-start.mdx";
+import PytestGameOnFireOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-python/pytest-benchmark/ko/fizz-buzz-fibonacci-fix.mdx";
+import PytestGameFixOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ko/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-python/pytest-benchmark/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ko/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ko/bencher-footer.mdx";
+
+<Benchmarking />
+
+<FizzBuzzPython />
+
+<StepByStepPython />
+
+<MicroVsMacro />
+
+<BenchmarkingPython />
+
+둘 다 [벤쳐의 지원을 받습니다](/ko/docs/explanation/adapters/).
+그렇다면 왜 `pytest-benchmark`를 선택해야 할까요?
+`pytest-benchmark`는 Python 생태계에서 사실상 표준 유닛 테스트 하니스인 `pytest`와 매끄럽게 통합됩니다.
+이미 `pytest`를 사용하고 있다면 코드의 지연 시간을 벤치마킹하기 위해 `pytest-benchmark`를 사용하는 것이 좋습니다.
+즉, `pytest-benchmark`는 경과 시간(wall clock time)을 측정하는 데 탁월합니다.
+
+<FizzBuzzRefactor />
+
+<BenchmarkingFizzBuzz />
+
+<FizzBuzzFibonacciPython>
+  <PlayGameCode />
+</FizzBuzzFibonacciPython>
+
+<BenchmarkingFizzBuzzFibonacci />
+
+<FizzBuzzFibonacciOpenPython>
+    <FizzBuzzFibonacciOpenCode />
+</FizzBuzzFibonacciOpenPython>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<TestGameOnFireCode />
+
+- 숫자 백(`100`)을 사용하여 게임을 실행하는 마이크로-벤치마크 `test_game_100`
+- 숫자 백만(`1_000_000`)을 사용하여 게임을 실행하는 마이크로-벤치마크 `test_game_1_000_000`
+
+제가 실행했을 때, 이런 결과가 나왔습니다:
+
+<PytestGameOnFireOutputStart />
+
+잠깐만 기다려 보세요...
+
+<PytestGameOnFireOutput />
+
+뭐라고요! `15.8470 us` x `1,000`이면 `15,847.0 us`이 되어야 하는데 `571,684.6334 us`라니 🤯
+비록 피보나치 수열 코드가 기능적으로는 올바르게 작동했지만, 어딘가에 성능 버그가 있는 것이 틀림없습니다.
+
+<FizzBuzzFibonacciFix />
+
+이제 벤치마크를 다시 실행하여 어떻게 되었는지 확인해 봅시다:
+
+<PytestGameFixOutput />
+
+오, 세상에! 우리의 `test_game` 벤치마크가 원래의 FizzBuzz에 근접한 수준으로 다시 내려왔습니다.
+그 점수가 정확히 무엇이었는지 기억할 수 있었으면 좋겠네요. 벌써 3주나 지났네요.
+터미널 히스토리는 그렇게 오래가지 않거든요.
+그리고 `pytest-benchmark`는 우리가 요청해야만 결과를 저장합니다.
+하지만 거의 근접했다고 생각합니다!
+
+`test_game_100` 벤치마크는 거의 50배나 내려가서 `322.0815 ns`가 되었습니다.
+그리고 `test_game_1_000_000` 벤치마크는 500,000배 이상 내려갔습니다! `571,684,633.4 ns`가 `753.1445 ns`로!
+
+> 🐰 적어도 이 성능 버그가 프로덕션에 배포되기 전에 발견했다는 사실에 감사해야겠죠... 아, 맞다. 그냥 잊으세요...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="pytest-benchmark를 사용하여 Rust를 벤치마킹하는 방법" />
+
+<BencherFooter />

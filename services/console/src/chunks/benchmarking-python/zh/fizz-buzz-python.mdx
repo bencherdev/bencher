@@ -1,0 +1,16 @@
+import FizzBuzzRules from "../../benchmarking/en/fizz-buzz-rules.mdx";
+import FizzBuzzCode from "../fizz-buzz-code.mdx";
+
+## 用Python编写FizzBuzz
+
+<FizzBuzzRules />
+
+<FizzBuzzCode />
+
+- 从 `1` 到 `100` 进行迭代，使用范围为 `101`。
+- 对于每个数字，计算 `3` 和 `5` 的模（除法后的余数）。
+- 如果余数为 `0`，则说明该数字是给定因数的倍数。
+  - 如果 `15` 的余数为 `0`，则打印 `FizzBuzz`。
+  - 如果 `3` 的余数为 `0`，则打印 `Fizz`。
+  - 如果 `5` 的余数为 `0`，则打印 `Buzz`。
+- 否则，只需打印数字。

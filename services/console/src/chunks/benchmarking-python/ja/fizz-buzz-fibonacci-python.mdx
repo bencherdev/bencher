@@ -1,0 +1,40 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/en/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## PythonでFizzBuzzFibonacciを書く
+
+私たちの主要業績評価指標（KPI）が減少しているため、プロダクトマネージャー（PM）は新しい機能を追加するよう求めています。
+多くのブレインストーミングと多数のユーザーインタビューの結果、
+昔ながらのFizzBuzzだけでは十分ではないと決まりました。
+今どきの子供たちは新しいゲーム、FizzBuzzFibonacciを望んでいます。
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- 整数を受け取り、ブール値を返す`is_fibonacci_number`という関数を作成します。
+- すべての数値を`0`から与えられた数値`n`まで含めて反復します。
+- フィボナッチ数列を`0`と`1`から開始し、それぞれ`previous`と`current`の数字として初期化します。
+- `current`の数が現在のイテレーション`i`より小さい間反復します。
+- `previous`と`current`の数字を加えて`next_value`の数字を得ます。
+- `previous`の数字を`current`の数字に更新します。
+- `current`の数字を`next_value`の数字に更新します。
+- `current`が与えられた数値`n`以上になったらループを終了します。
+- `current`の数が与えられた数値`n`と等しいか確認し、そうであれば`True`を返します。
+- そうでなければ、`False`を返します。
+
+次に、`fizz_buzz`関数を更新する必要があります：
+
+<FizzBuzzFibonacciCode />
+
+- `fizz_buzz`関数の名前をより説明的にするために`fizz_buzz_fibonacci`に変更します。
+- `is_fibonacci_number`ヘルパー関数を呼び出します。
+- `is_fibonacci_number`の結果が`True`の場合は、`Fibonacci`を返します。
+- `is_fibonacci_number`の結果が`False`の場合は同じ`Fizz`、`Buzz`、`FizzBuzz`、または数字のロジックを実行して結果を返します。
+
+`fizz_buzz`を`fizz_buzz_fibonacci`に名前を変更したので、`play_game`関数も更新する必要があります：
+
+{ props.children }
+
+メインの実行と`test_game`関数はまったく同じままです。

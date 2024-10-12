@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/en/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenOutput from "../fizz-buzz-fibonacci-open-output.mdx";
+import FizzBuzzFibonacciOpenOutputDefault from "../fizz-buzz-fibonacci-open-output-default.mdx";
+
+## 用Python扩展FizzBuzzFibonacci
+
+我们的游戏大获成功！孩子们确实喜欢玩FizzBuzzFibonacci。
+如此之多，以至于高管决定开发续集。
+但这是一个现代世界，我们需要年经常性收入（ARR），而不是一次性购买！
+我们新游戏的愿景是开放式的，不再局限于`1`到`100`之间（即便是包括在内）。
+不，我们要开拓新的领域！
+
+<FizzBuzzFibonacciOpenRules />
+
+为了使我们的游戏适用于任何数字，我们需要接受一个命令行参数。
+更新主执行代码如下所示：
+
+{ props.children }
+
+- 导入`sys`包。
+- 收集所有从命令行传递给我们的游戏的参数（`args`）。
+- 获取传递给我们游戏的第一个参数，并检查是否为数字。
+  - 如果是，则将第一个参数解析为整数`i`。
+  - 用新解析的整数`i`玩我们的游戏。
+- 如果解析失败或没有传递参数，则默认为提示输入一个有效数字。
+
+现在我们可以用任何数字来玩我们的游戏！
+运行`python game.py`后跟一个整数来玩我们的游戏：
+
+<FizzBuzzFibonacciOpenOutput />
+
+如果我们省略或提供了一个无效的数字：
+
+<FizzBuzzFibonacciOpenOutputDefault />
+
+哇，经过彻底的测试！持续集成通过了。我们的老板们很高兴。
+让我们发布吧！🚀

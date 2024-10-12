@@ -1,0 +1,35 @@
+import TestGameCode from "../test-game-code.mdx";
+import PipenvShellOutput from "../../pipenv-shell-output.mdx";
+import PipenvInstallOutput from "../pipenv-install-output.mdx";
+import PytestGameOutput from "../pytest-game-output.mdx";
+
+## Avaliando FizzBuzz
+
+Para avaliar nosso código, precisamos criar uma função de teste que execute nosso benchmark.
+No final do `game.py`, adicione o seguinte código:
+
+<TestGameCode />
+
+- Crie uma função chamada `test_game` que receba um fixture `benchmark` do `pytest-benchmark`.
+- Crie uma função `run_game` que itere de `1` a `100` inclusivamente.
+  - Para cada número, chame `play_game`, com `should_print` definido como `False`.
+- Passe a função `run_game` para o executor `benchmark`.
+
+Agora precisamos configurar nosso projeto para executar nossos benchmarks.
+
+Crie um novo ambiente virtual com `pipenv`:
+
+<PipenvShellOutput />
+
+Instale `pytest-benchmark` dentro desse novo ambiente `pipenv`:
+
+<PipenvInstallOutput />
+
+Agora estamos prontos para avaliar nosso código, execute `pytest game.py`:
+
+<PytestGameOutput />
+
+> 🐰 Vamos agitar o som! Temos nossas primeiras métricas de benchmark!
+
+Finalmente, podemos descansar nossas cabeças cansadas de desenvolvedor...
+Brincadeira, nossos usuários querem um novo recurso!

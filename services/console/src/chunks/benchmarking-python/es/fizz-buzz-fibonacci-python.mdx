@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/en/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## Escribe FizzBuzzFibonacci en Python
+
+Nuestros Indicadores Clave de Rendimiento (KPIs) están bajos, por lo que nuestro Gerente de Producto (PM) quiere que añadamos una nueva funcionalidad. Después de mucho brainstorming y muchas entrevistas con usuarios, se decide que el buen FizzBuzz no es suficiente. Los niños de hoy quieren un nuevo juego, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- Crea una función llamada `is_fibonacci_number` que reciba un entero y devuelva un booleano.
+- Itera para todos los números desde `0` hasta nuestro número dado `n` inclusive.
+- Inicializa nuestra secuencia de Fibonacci comenzando con `0` y `1` como los números `anterior` y `actual` respectivamente.
+- Itera mientras el número `actual` sea menor que la iteración actual `i`.
+- Suma los números `anterior` y `actual` para obtener el número `next_value`.
+- Actualiza el número `anterior` al número `actual`.
+- Actualiza el número `actual` al número `next_value`.
+- Una vez que `actual` sea mayor o igual al número dado `n`, saldremos del bucle.
+- Verifica si el número `actual` es igual al número dado `n` y si es así, devuelve `True`.
+- De lo contrario, devuelve `False`.
+
+Ahora necesitaremos actualizar nuestra función `fizz_buzz`:
+
+<FizzBuzzFibonacciCode />
+
+- Renombra la función `fizz_buzz` a `fizz_buzz_fibonacci` para que sea más descriptiva.
+- Llama a nuestra función auxiliar `is_fibonacci_number`.
+- Si el resultado de `is_fibonacci_number` es `True` entonces devuelve `Fibonacci`.
+- Si el resultado de `is_fibonacci_number` es `False` entonces realiza la misma lógica de `Fizz`, `Buzz`, `FizzBuzz`, o número devolviendo el resultado.
+
+Debido a que renombramos `fizz_buzz` a `fizz_buzz_fibonacci`, también necesitamos actualizar nuestra función `play_game`:
+
+{ props.children }
+
+Tanto nuestra ejecución principal como la función `test_game` pueden permanecer exactamente iguales.

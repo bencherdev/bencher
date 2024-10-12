@@ -1,0 +1,14 @@
+## Python におけるベンチマーク
+
+Python でのベンチマークの一般的な選択肢は次の2つです：
+[pytest-benchmark](https://pytest-benchmark.readthedocs.io)
+および
+[airspeed velocity (asv)](https://github.com/airspeed-velocity/asv)
+
+`pytest-benchmark` は、人気のある[`pytest` テストフレームワーク](https://docs.pytest.org/en/stable/)と統合された強力なベンチマークツールです。
+開発者は、ユニットテストと並行してベンチマークを実行することで、自分のコードのパフォーマンスを測定し比較することができます。
+ユーザーは、ローカルでベンチマーク結果を簡単に比較でき、JSON などの様々な形式で結果をエクスポートすることも可能です。
+
+`airspeed velocity (asv)` は、Python エコシステム内のもう1つの高度なベンチマークツールです。
+`asv` の主な利点の1つは、詳細でインタラクティブな HTML レポートを生成する機能であり、パフォーマンストレンドを視覚化し、リグレッションを特定するのが容易になります。
+さらに、`asv` は[相対的継続的ベンチマーク](/ja/docs/how-to/track-benchmarks/#relative-continuous-benchmarking)を標準でサポートしています。

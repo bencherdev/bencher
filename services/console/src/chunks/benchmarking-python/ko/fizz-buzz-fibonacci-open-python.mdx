@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/en/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenOutput from "../fizz-buzz-fibonacci-open-output.mdx";
+import FizzBuzzFibonacciOpenOutputDefault from "../fizz-buzz-fibonacci-open-output-default.mdx";
+
+## Python에서 FizzBuzzFibonacci 확대하기
+
+우리의 게임이 대박을 쳤습니다! 아이들이 정말로 FizzBuzzFibonacci 게임을 즐겨합니다.
+그렇게 해서 경영진으로부터 후속작을 만들라는 요청이 내려왔습니다.
+하지만 현대 사회에서는, 일회성 구매가 아닌 연간 경상 수익(ARR)이 필요합니다!
+우리 게임의 새로운 비전은 개방형 게임이라는 것으로, 더 이상 `1`과 `100` 사이(포함)에서 머무르지 않습니다.
+아니요, 우리는 새로운 경계를 향해 나아갑니다!
+
+<FizzBuzzFibonacciOpenRules />
+
+우리 게임이 어떤 숫자에서든 작동하려면 명령줄 인수를 받아야 합니다.
+주 실행을 다음과 같이 업데이트하세요:
+
+{ props.children }
+
+- `sys` 패키지를 가져옵니다.
+- 명령줄에서 우리 게임으로 전달된 모든 인수(`args`)를 수집합니다.
+- 우리 게임에 전달된 첫 번째 인수를 가져와서 숫자인지 확인합니다.
+  - 숫자라면, 첫 번째 인수를 정수 `i`로 파싱합니다.
+  - 새로 파싱된 정수 `i`로 우리의 게임을 실행합니다.
+- 파싱에 실패하거나 어떤 인수도 전달되지 않는다면, 유효한 입력을 요청하는 기본값으로 설정합니다.
+
+이제 어떤 숫자로든 우리의 게임을 플레이할 수 있습니다!
+게임을 하려면 `python game.py` 명령 뒤에 정수를 입력하세요:
+
+<FizzBuzzFibonacciOpenOutput />
+
+그리고 잘못된 수를 생략하거나 제공하는 경우:
+
+<FizzBuzzFibonacciOpenOutputDefault />
+
+와우, 그것은 진정한 철저한 테스트였습니다! CI가 통과했습니다. 상사들도 기뻐합니다.
+배포합시다! 🚀
