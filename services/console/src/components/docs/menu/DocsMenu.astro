@@ -29,8 +29,12 @@ const usersCollection = await getEnCollection(Collection.users);
 const serverCollection = await getEnCollection(Collection.server);
 
 // Learn
-const benchmarkingPythonCollection = await getLangCollection(Collection.benchmarking_python);
-const benchmarkingRustCollection = await getLangCollection(Collection.benchmarking_rust);
+const benchmarkingPythonCollection = await getLangCollection(
+	Collection.benchmarking_python,
+);
+const benchmarkingRustCollection = await getLangCollection(
+	Collection.benchmarking_rust,
+);
 const caseStudyCollection = await getLangCollection(Collection.case_study);
 const engineeringCollection = await getLangCollection(Collection.engineering);
 
