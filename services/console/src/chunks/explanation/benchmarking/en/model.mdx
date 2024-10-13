@@ -1,0 +1,15 @@
+### Model
+A Model is the combination of a Test and its parameters for a Threshold.
+A Model must have a Lower Boundary, Upper Boundary, or both.
+
+- Lower Boundary
+  - A Lower Boundary is used when a smaller value would indicate a performance regression,
+  such as with the `Throughput` Measure.
+- Upper Boundary
+  - An Upper Boundary is used when a larger value would indicate a performance regression,
+  such as with the `Latency` Measure.
+
+Each Boundary is used to calculate a Boundary Limit.
+Then every new Metric is checked against each Boundary Limit.
+An Alert is generated when a new Metric is below a Lower Boundary Limit or above an Upper Boundary Limit.
+See [thresholds](/docs/explanation/thresholds/) for a full overview.

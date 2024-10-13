@@ -1,0 +1,13 @@
+## Benchmark
+Benchmark 是一个命名的性能回归测试。
+如果性能回归测试是 Bencher 的新测试，则会自动创建一个 Benchmark。
+否则，性能回归测试的名称将用作 Benchmark 的唯一标识符。
+
+更改性能回归测试的名称时要小心。
+您需要在 Bencher 中手动重命名 Benchmark 以匹配此新名称。
+否则，重命名的性能回归测试将被视为新的 Benchmark。
+这一警告同样适用于 _移动_ 一些性能回归测试。
+根据基准测试工具，性能回归测试的路径可能会成为其名称的一部分。
+
+上述警告的唯一例外是忽略 Benchmark。
+查看[抑制警报](/zh/docs/explanation/thresholds/)以获取完整的概述。

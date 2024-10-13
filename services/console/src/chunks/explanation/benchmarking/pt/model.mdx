@@ -1,0 +1,15 @@
+### Modelo
+Um Modelo é a combinação de um Teste e seus parâmetros para um Limite.
+Um Modelo deve ter um Limite Inferior, um Limite Superior ou ambos.
+
+- Limite Inferior
+  - Um Limite Inferior é utilizado quando um valor menor indicaria uma regressão de desempenho,
+  como com a Medida de `Throughput`.
+- Limite Superior
+  - Um Limite Superior é utilizado quando um valor maior indicaria uma regressão de desempenho,
+  como com a Medida de `Latency`.
+
+Cada Limite é usado para calcular um Limite de Referência.
+Então, cada nova Métrica é verificada em relação a cada Limite de Referência.
+Um Alerta é gerado quando uma nova Métrica está abaixo de um Limite Inferior ou acima de um Limite Superior.
+Veja [limites](/pt/docs/explanation/thresholds/) para uma visão geral completa.

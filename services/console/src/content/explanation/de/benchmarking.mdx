@@ -1,78 +1,53 @@
 ---
-title: "Übersicht über das Benchmarking"
-description: "Das konzeptionelle Modell und der Wortschatz, den Bencher verwendet, um die Ergebnisse von Code-Benchmarks nachzuverfolgen"
-heading: "Übersicht über das Benchmarking"
-published: "2023-10-27T08:40:00Z"
-modified: "2024-03-27T07:50:00Z"
+title: "Benchmark-Übersicht"
+description: "Das konzeptionelle Modell und die Terminologie, die von Bencher für kontinuierliches Benchmarking verwendet werden"
+heading: "Benchmark-Übersicht"
+published: "2023-08-12T16:07:00Z"
+modified: "2024-10-10T07:50:00Z"
 sortOrder: 1
 ---
 
-Die meisten Benchmark-Ergebnisse sind flüchtig.
-Sie verschwinden, sobald Ihr Terminal seine Scrollback-Grenze erreicht hat.
-Einige Benchmark-Schleifen ermöglichen es Ihnen, Ergebnisse zu speichern, aber die meisten tun dies nur lokal.
-Bencher ermöglicht es Ihnen, Ihre Benchmarks sowohl von lokalen als auch von CI-Läufen zu verfolgen und mit historischen Ergebnissen zu vergleichen.
+import Intro from "../../../chunks/explanation/benchmarking/de/intro.mdx";
+import Benchmark from "../../../chunks/explanation/benchmarking/de/benchmark.mdx";
+import Metric from "../../../chunks/explanation/benchmarking/de/metric.mdx";
+import Measure from "../../../chunks/explanation/benchmarking/de/measure.mdx";
+import Report from "../../../chunks/explanation/benchmarking/de/report.mdx";
+import Branch from "../../../chunks/explanation/benchmarking/de/branch.mdx";
+import Head from "../../../chunks/explanation/benchmarking/de/head.mdx";
+import StartPoint from "../../../chunks/explanation/benchmarking/de/start-point.mdx";
+import Testbed from "../../../chunks/explanation/benchmarking/de/testbed.mdx";
+import Threshold from "../../../chunks/explanation/benchmarking/de/threshold.mdx";
+import Test from "../../../chunks/explanation/benchmarking/de/test.mdx";
+import Model from "../../../chunks/explanation/benchmarking/de/model.mdx";
+import BoundaryLimit from "../../../chunks/explanation/benchmarking/de/boundary-limit.mdx";
+import Alert from "../../../chunks/explanation/benchmarking/de/alert.mdx";
 
-Der einfachste Weg, Ihre Benchmarks zu verfolgen, ist das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando.
-Es umfasst Ihre bestehende Benchmark-Schleifen-Ausgabe und erzeugt einen Bericht.
-Dieser Bericht wird dann an den Bencher-API-Server gesendet,
-wo die Benchmark-Schleifen-Ausgabe mit einem [Benchmark-Schleifen-Adapter](/de/docs/explanation/adapters/) geparst wird.
-Der Benchmark-Schleifen-Adapter erkennt alle vorhandenen Benchmarks und ihre entsprechenden Metriken.
-Diese Benchmarks und Metriken werden dann zusammen mit dem Bericht gespeichert.
-Wenn ein [Schwellenwert](/de/docs/explanation/thresholds/) gesetzt ist, dann werden die neuen Metriken mit den historischen Metriken für jeden Benchmark, der im Bericht vorhanden ist, verglichen.
-Wenn eine Regression erkannt wird, wird ein Alert generiert.
-
-Von nun an werden wir Ihre "Benchmarks" als "Performance-Regressionstests" bezeichnen, um Verwirrungen zu vermeiden.
-
-## Benchmarks
-Ein Benchmark ist ein benannter Performance-Regressionstest.
-Wenn der Performance-Regressionstest neu für Bencher ist, dann wird automatisch ein Benchmark erstellt.
-Andernfalls wird der Name des Performance-Regressionstests als eindeutiger Bezeichner für den Benchmark verwendet.
-
-Seien Sie vorsichtig, wenn Sie den Namen Ihrer Performance-Regressionstests ändern.
-Sie müssen den Benchmark in Bencher manuell umbenennen, um diesen neuen Namen zu matchen.
-Andernfalls wird der umbenannte Performance-Regressionstest als neuer Benchmark angesehen.
-Diese gleiche Warnung gilt auch für das _Verschieben_ einiger Performance-Regressionstests.
-Abhängig von der Benchmark-Schleife kann der Pfad zum Performance-Regressionstest ein Teil seines Namens sein.
-
-Die einzige Ausnahme von der oben genannten Einschränkung ist das Ignorieren eines Benchmarks. Siehe [Unterdrückung von Alerts](/de/docs/explanation/thresholds/) für eine vollständige Übersicht.
-
-### Metriken
-Eine Metrik ist ein einzelnes, zeitspezifisches Ergebnis eines Performance-Regressionstests.
-Für eine einzelne Metrik können bis zu drei Messungen erfasst werden: `value`, `lower_value`, und `upper_value`.
-Der `value` ist für alle Metriken erforderlich, während der `lower_value` und `upper_value` unabhängig optional sind.
-Welche Messungen erfasst werden, wird durch den [Benchmark-Schleifen-Adapter](/de/docs/explanation/adapters/) bestimmt.
-
-### Art der Metrik
-Die Art der Metrik ist die Maßeinheit für eine Metrik.
-Standardmäßig starten alle Projekte mit einer `Latenz` und `Durchsatz` Metrik-Art
-mit den Einheiten `Nanosekunden (ns)` und `Operationen / Sekunde (ops/s)` jeweils.
-Die Art der Metrik wird durch den [Benchmark-Schleifen-Adapter](/de/docs/explanation/adapters/) bestimmt.
+<Intro />
+<Benchmark />
+<Metric />
+<Measure />
 
 <br />
 
-## Bericht
-Ein Bericht ist eine Sammlung von Benchmarks und ihren Metriken für einen bestimmten Zweig und Testbeet.
-Berichte werden am häufigsten mit dem <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando erzeugt.
-Siehe [wie man Performance-Regressionstests verfolgt](/de/docs/how-to/track-benchmarks/) für eine vollständige Übersicht.
+<Report />
+<Branch />
+<Head />
+<StartPoint />
+<Testbed />
 
-### Zweig
-Ein Zweig ist die `git`-Referenz, die beim Erstellen eines Berichts verwendet wird (d. h. Branch-Name oder Tag).
-Standardmäßig starten alle Projekte mit einem `main`-Zweig.
-Wenn das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando verwendet wird,
-ist `main` der Standardzweig, wenn kein anderer angegeben ist.
-Siehe [Zweigauswahl](/de/docs/explanation/branch-selection/) für eine vollständige Übersicht.
+<br />
 
-### Testbett
-Ein Testbett ist der Name der Testumgebung, die beim Erstellen eines Berichts verwendet wird.
-Standardmäßig starten alle Projekte mit einem `localhost`-Testbett.
-Wenn das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando verwendet wird,
-ist `localhost` das Standardtestbett, wenn keines angegeben ist.
+<Threshold />
+<Test />
+<Model />
+<BoundaryLimit />
+<Alert />
 
 <br />
 <br />
 
-> 🐰 Glückwunsch! Sie haben alles über das Verfolgen von ~~Benchmarks~~ Performance-Regressionstests gelernt! 🎉
+> 🐰 Glückwunsch! Sie haben alles über das Verfolgen von ~~Benchmarks~~ Performance-Regressions-Tests gelernt! 🎉
 
 <br/>
 
-<h2><a href="/de/docs/explanation/bencher-run/">Weitermachen: <code>bencher run</code> CLI-Unterkommando ➡</a></h2>
+<h2><a href="/de/docs/explanation/bencher-run/">Weiter: <code>bencher run</code> CLI Unterbefehl ➡</a></h2>

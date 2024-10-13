@@ -1,0 +1,15 @@
+### Modell
+Ein Modell ist die Kombination aus einem Test und seinen Parametern für einen Schwellenwert.
+Ein Modell muss eine Untere Grenze, eine Obere Grenze oder beides haben.
+
+- Untere Grenze
+  - Eine Untere Grenze wird verwendet, wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweisen würde,
+  wie z. B. bei der `Throughput`-Messung.
+- Obere Grenze
+  - Eine Obere Grenze wird verwendet, wenn ein größerer Wert auf eine Leistungsverschlechterung hinweisen würde,
+  wie z. B. bei der `Latency`-Messung.
+
+Jede Grenze wird verwendet, um ein Grenzwertlimit zu berechnen.
+Dann wird jede neue Metrik gegen jedes Grenzwertlimit geprüft.
+Ein Alarm wird erzeugt, wenn eine neue Metrik unter einem Unteren Grenzwertlimit oder über einem Oberen Grenzwertlimit liegt.
+Siehe [Schwellenwerte](/de/docs/explanation/thresholds/) für einen vollständigen Überblick.

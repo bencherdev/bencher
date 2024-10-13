@@ -1,0 +1,16 @@
+La plupart des résultats de benchmark sont éphémères.
+Ils disparaissent dès que votre terminal atteint sa limite de défilement.
+Certains cadres de benchmark vous permettent de mettre en cache les résultats, mais la plupart ne le font que localement.
+Bencher vous permet de suivre vos benchmarks à la fois depuis les exécutions locales et CI, et de les comparer aux résultats historiques.
+
+La façon la plus simple de suivre vos benchmarks est la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>.
+Elle enveloppe la sortie de votre cadre de benchmark existant et génère un Rapport.
+Ce Rapport est ensuite envoyé au serveur API de Bencher,
+où la sortie du cadre de benchmark est analysée à l'aide d'un [adaptateur de cadre de benchmark](/fr/docs/explanation/adapters/).
+L'adaptateur de cadre de benchmark détecte tous les Benchmarks présents ainsi que leurs Metrics correspondants.
+Ces Benchmarks et Metrics sont ensuite enregistrés avec le Rapport.
+S'il y a un [Seuil](/fr/docs/explanation/thresholds/) défini,
+alors les nouvelles Metrics sont comparées aux Metrics historiques pour chaque Benchmark présent dans le Rapport.
+Si une régression est détectée, alors une Alerte sera générée.
+
+Désormais, nous nous référerons à vos "benchmarks" comme "tests de régression des performances" pour éviter toute confusion.

@@ -1,0 +1,5 @@
+### Metric
+A Metric is a single, point-in-time performance regression test result.
+Up to three Values may be collected for a single Metric: `value`, `lower_value`, and `upper_value`.
+The `value` is required for all Metrics while the `lower_value` and `upper_value` are independently optional.
+Which Values are collected is determined by the [benchmark harness adapter](/docs/explanation/adapters/).

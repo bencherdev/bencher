@@ -1,0 +1,16 @@
+A maioria dos resultados de benchmarks são efêmeros.
+Eles desaparecem assim que o seu terminal atinge o limite do scrollback.
+Alguns frameworks de benchmark permitem armazenar resultados em cache, mas a maioria só faz isso localmente.
+O Bencher permite que você acompanhe seus benchmarks tanto de execuções locais quanto de CI e os compare com resultados históricos.
+
+A maneira mais fácil de acompanhar seus benchmarks é através do subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>.
+Ele envolve a saída do seu framework de benchmark existente e gera um Relatório.
+Este Relatório é então enviado para o servidor da API Bencher,
+onde a saída do framework de benchmark é analisada usando um [adaptador de framework de benchmark](/pt/docs/explanation/adapters/).
+O adaptador de framework de benchmark detecta todos os Benchmarks que estão presentes e seus Métricas correspondentes.
+Esses Benchmarks e Métricas são então salvos junto com o Relatório.
+Se houver um [Limite](/pt/docs/explanation/thresholds/) definido,
+então as novas Métricas são comparadas com as Métricas históricas para cada Benchmark presente no Relatório.
+Se uma regressão for detectada, um Alerta será gerado.
+
+Daqui em diante, nos referiremos aos seus "benchmarks" como "testes de regressão de desempenho" para evitar qualquer confusão.

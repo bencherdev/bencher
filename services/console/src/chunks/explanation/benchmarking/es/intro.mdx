@@ -1,0 +1,16 @@
+La mayoría de los resultados de las pruebas de rendimiento son efímeros.
+Desaparecen tan pronto como tu terminal alcanza su límite de retroceso.
+Algunos marcos de pruebas de rendimiento te permiten almacenar resultados en caché, pero la mayoría solo lo hace localmente.
+Bencher te permite rastrear tus pruebas tanto de ejecuciones locales como de CI y comparar con resultados históricos.
+
+La forma más fácil de rastrear tus pruebas es con el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>.
+Envuelve la salida de tu marco de pruebas de rendimiento existente y genera un Reporte.
+Este Reporte se envía al servidor API de Bencher,
+donde la salida del marco de pruebas de rendimiento se analiza utilizando un [adaptador del marco de pruebas de rendimiento](/es/docs/explanation/adapters/).
+El adaptador del marco de pruebas de rendimiento detecta todos los Benchmarks que están presentes y sus Métricas correspondientes.
+Estos Benchmarks y Métricas se guardan junto con el Reporte.
+Si hay un [Umbral](/es/docs/explanation/thresholds/) establecido,
+las nuevas Métricas se comparan con las Métricas históricas para cada Benchmark presente en el Reporte.
+Si se detecta una regresión, se generará una Alerta.
+
+De aquí en adelante nos referiremos a tus "benchmarks" como "pruebas de regresión de rendimiento" para evitar cualquier confusión.

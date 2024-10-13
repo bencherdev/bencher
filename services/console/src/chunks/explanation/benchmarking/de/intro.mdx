@@ -1,0 +1,16 @@
+Most Benchmark-Ergebnisse sind flüchtig.
+Sie verschwinden, sobald Ihr Terminal die Scrollback-Grenze erreicht hat.
+Einige Benchmark-Harnesses ermöglichen es Ihnen, Ergebnisse zu cachen, aber die meisten tun dies nur lokal.
+Bencher ermöglicht es Ihnen, Ihre Benchmarks sowohl von lokalen als auch von CI-Läufen zu verfolgen und mit historischen Ergebnissen zu vergleichen.
+
+Der einfachste Weg, um Ihre Benchmarks zu verfolgen, ist das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando.
+Es umschließt die Ausgabe Ihrer vorhandenen Benchmark-Harness und erzeugt einen Report.
+Dieser Report wird dann an den Bencher API-Server gesendet,
+wo die Benchmark-Harness-Ausgabe mit einem [Benchmark-Harness-Adapter](/de/docs/explanation/adapters/) geparst wird.
+Der Benchmark-Harness-Adapter erkennt alle vorhandenen Benchmarks und deren entsprechende Metriken.
+Diese Benchmarks und Metriken werden dann zusammen mit dem Report gespeichert.
+Wenn ein [Schwellenwert](/de/docs/explanation/thresholds/) festgelegt ist,
+werden die neuen Metriken mit den historischen Metriken für jedes im Report vorhandene Benchmark verglichen.
+Wenn ein Rückschritt festgestellt wird, wird eine Warnung generiert.
+
+Von jetzt an werden wir Ihre "Benchmarks" als "Leistungsregressionstests" bezeichnen, um Verwirrung zu vermeiden.

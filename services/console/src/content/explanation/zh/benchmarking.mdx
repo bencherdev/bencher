@@ -1,78 +1,53 @@
 ---
 title: "基准测试概述"
-description: "Bencher用于跟踪代码基准测试结果的概念模型和词汇表"
+description: "Bencher用于持续基准测试的概念模型和词汇"
 heading: "基准测试概述"
-published: "2023-10-27T08:40:00Z"
-modified: "2024-03-27T07:50:00Z"
+published: "2023-08-12T16:07:00Z"
+modified: "2024-10-10T07:50:00Z"
 sortOrder: 1
 ---
 
-大多数基准测试结果都是短暂的。
-当你的终端达到其滚动返回限制时，它们就会消失。
-一些基准测试工具让你缓存结果，但大多数只在本地进行。
-Bencher让你可以跟踪你在本地和CI运行中的基准测试，并与历史结果进行对比。
+import Intro from "../../../chunks/explanation/benchmarking/zh/intro.mdx";
+import Benchmark from "../../../chunks/explanation/benchmarking/zh/benchmark.mdx";
+import Metric from "../../../chunks/explanation/benchmarking/zh/metric.mdx";
+import Measure from "../../../chunks/explanation/benchmarking/zh/measure.mdx";
+import Report from "../../../chunks/explanation/benchmarking/zh/report.mdx";
+import Branch from "../../../chunks/explanation/benchmarking/zh/branch.mdx";
+import Head from "../../../chunks/explanation/benchmarking/zh/head.mdx";
+import StartPoint from "../../../chunks/explanation/benchmarking/zh/start-point.mdx";
+import Testbed from "../../../chunks/explanation/benchmarking/zh/testbed.mdx";
+import Threshold from "../../../chunks/explanation/benchmarking/zh/threshold.mdx";
+import Test from "../../../chunks/explanation/benchmarking/zh/test.mdx";
+import Model from "../../../chunks/explanation/benchmarking/zh/model.mdx";
+import BoundaryLimit from "../../../chunks/explanation/benchmarking/zh/boundary-limit.mdx";
+import Alert from "../../../chunks/explanation/benchmarking/zh/alert.mdx";
 
-跟踪你的基准测试最简单的方法是使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令。
-它包装了你现有的基准测试工具输出并生成一个报告。
-然后将此报告发送到Bencher API服务器，
-在那里通过[a benchmark harness adapter](/zh/docs/explanation/adapters/)解析基准测试工具的输出。
-基准测试工具适配器检测到所有存在的基准测试和相应的指标。
-然后这些基准测试和指标将一同保存在报告中。
-如果设置了[阈值](/zh/docs/explanation/thresholds/)，则新的指标将与报告中每个基准测试的历史指标进行比较。
-如果检测到退化，将生成一个警报。
-
-从此以后，我们将你的"基准测试"称为"性能回归测试"，以避免任何混淆。
-
-## 基准测试
-基准测试是一个命名的性能回归测试。
-如果性能回归测试对Bencher来说是新的，那么将自动创建一个基准测试。
-否则，性能回归测试的名称将作为基准测试的唯一标识符。
-
-在更改你的性能回归测试的名称时要小心。
-你需要在Bencher中手动重命名基准测试以匹配这个新的名称。
-否则，重命名的性能回归测试将被视为新的基准测试。
-这个警告同样也适用于_移动_某些性能回归测试。
-根据基准测试工具，性能回归测试的路径可能是其名称的一部分。
-
-上述唯一的例外是忽略一个基准测试。请参见[抑制警报](/zh/docs/explanation/thresholds/)以获得完整的概述。
-
-### 指标
-指标是一个单独的，某一时刻的性能回归测试结果。
-对于单个指标，可以收集最多三个度量：`value`，`lower_value`和`upper_value`。
-所有指标都需要`value`，而`lower_value`和`upper_value`则各自独立地可选。
-收集哪些度量是由[benchmark harness adapter](/zh/docs/explanation/adapters/)决定的。
-
-### 指标类型
-指标类型是度量指标的单位。
-默认情况下，所有的项目都以一个`Latency`和`Throughput`指标类型开始。
-单位分别为`纳秒 (ns)`和`次数 / 秒 (ops/s)`。
-指标类型是由[benchmark harness adapter](/zh/docs/explanation/adapters/)确定的。
+<Intro />
+<Benchmark />
+<Metric />
+<Measure />
 
 <br />
 
-## 报告
-报告是特定分支和测试床中的基准测试及其指标的集合。
-报告通常使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令生成。
-请参见[如何跟踪性能回归测试](/zh/docs/how-to/track-benchmarks/)以获得完整的概述。
+<Report />
+<Branch />
+<Head />
+<StartPoint />
+<Testbed />
 
-### 分支
-分支是运行报告时使用的`git`引用（即分支名或标签）。
-默认情况下，所有的项目都以一个`main`分支开始。
-使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令时，
-如果未提供一个分支，`main`将是默认的分支。
-请参见[分支选择](/zh/docs/explanation/branch-selection/)以获得完整的概述。
+<br />
 
-### 测试床
-测试床是运行报告时使用的测试环境的名称。
-默认情况下，所有的项目都以一个`localhost`测试床开始。
-使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令时，
-如果未提供一个测试床，`localhost`将是默认的测试床。
+<Threshold />
+<Test />
+<Model />
+<BoundaryLimit />
+<Alert />
 
 <br />
 <br />
 
-> 🐰 恭喜! 你已经了解了所有关于跟踪 ~~基准测试~~ 性能回归测试的内容！🎉
+> 🐰 恭喜！您已经全面了解了如何跟踪~~基准测试~~性能回归测试！ 🎉
 
 <br/>
 
-<h2><a href="/zh/docs/explanation/bencher-run/">继续学习: <code>bencher run</code> CLI子命令 ➡</a></h2>
+<h2><a href="/zh/docs/explanation/bencher-run/">继续：<code>bencher run</code> CLI 子命令 ➡</a></h2>

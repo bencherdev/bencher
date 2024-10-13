@@ -1,0 +1,13 @@
+## Benchmark
+A Benchmark is a named performance regression test.
+If the performance regression test is new to Bencher, then a Benchmark is automatically created.
+Otherwise, the name of the performance regression test is used as the unique identifier for the Benchmark.
+
+Be careful when changing the name of your performance regression tests.
+You will need to manually rename the Benchmark in Bencher to match this new name.
+Otherwise, the renamed performance regression test will be considered a new Benchmark.
+This same word of caution also applies to _moving_ some performance regression tests.
+Depending on the benchmark harness, the path to the performance regression test may be a part of its name.
+
+The only exception to the above caveat is ignoring a Benchmark.
+See [suppressing alerts](/docs/explanation/thresholds/) for a full overview.

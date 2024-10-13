@@ -1,0 +1,9 @@
+### Modelo
+Un Modelo es la combinación de una Prueba y sus parámetros para un Umbral. Un Modelo debe tener un Límite Inferior, un Límite Superior, o ambos.
+
+- Límite Inferior
+  - Se utiliza un Límite Inferior cuando un valor menor indicaría una regresión de rendimiento, como ocurre con la Medida de `Rendimiento`.
+- Límite Superior
+  - Se utiliza un Límite Superior cuando un valor mayor indicaría una regresión de rendimiento, como ocurre con la Medida de `Latencia`.
+
+Cada Límite se utiliza para calcular un Límite de Frontera. Luego, cada nueva Métrica se verifica contra cada Límite de Frontera. Se genera una Alerta cuando una nueva Métrica está por debajo de un Límite Inferior de Frontera o por encima de un Límite Superior de Frontera. Vea [umbras](/es/docs/explanation/thresholds/) para una visión completa.

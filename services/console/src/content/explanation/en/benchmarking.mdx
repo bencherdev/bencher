@@ -3,128 +3,45 @@ title: "Benchmarking Overview"
 description: "The conceptual model and vocabulary used by Bencher for Continuous Benchmarking"
 heading: "Benchmarking Overview"
 published: "2023-08-12T16:07:00Z"
-modified: "2024-03-27T07:50:00Z"
+modified: "2024-10-10T07:50:00Z"
 sortOrder: 1
 ---
 
-Most benchmark results are ephemeral.
-They disappear as soon as your terminal reaches its scrollback limit.
-Some benchmark harnesses let you cache results, but most only do so locally.
-Bencher allows you to track your benchmarks from both local and CI runs and compare against historical results.
+import Intro from "../../../chunks/explanation/benchmarking/en/intro.mdx";
+import Benchmark from "../../../chunks/explanation/benchmarking/en/benchmark.mdx";
+import Metric from "../../../chunks/explanation/benchmarking/en/metric.mdx";
+import Measure from "../../../chunks/explanation/benchmarking/en/measure.mdx";
+import Report from "../../../chunks/explanation/benchmarking/en/report.mdx";
+import Branch from "../../../chunks/explanation/benchmarking/en/branch.mdx";
+import Head from "../../../chunks/explanation/benchmarking/en/head.mdx";
+import StartPoint from "../../../chunks/explanation/benchmarking/en/start-point.mdx";
+import Testbed from "../../../chunks/explanation/benchmarking/en/testbed.mdx";
+import Threshold from "../../../chunks/explanation/benchmarking/en/threshold.mdx";
+import Test from "../../../chunks/explanation/benchmarking/en/test.mdx";
+import Model from "../../../chunks/explanation/benchmarking/en/model.mdx";
+import BoundaryLimit from "../../../chunks/explanation/benchmarking/en/boundary-limit.mdx";
+import Alert from "../../../chunks/explanation/benchmarking/en/alert.mdx";
 
-The easiest way to track your benchmarks is the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
-It wraps your existing benchmark harness output and generates a Report.
-This Report is then sent to the Bencher API server,
-where the benchmark harness output is parsed using a [benchmark harness adapter](/docs/explanation/adapters/).
-The benchmark harness adapter detects all of the Benchmarks that are present and their corresponding Metrics.
-These Benchmarks and Metrics are then saved along with the Report.
-If there is a [Threshold](/docs/explanation/thresholds/) set,
-then the new Metrics are compared against the historical Metrics for each Benchmark present in the Report.
-If a regression is detected, then an Alert will be generated.
-
-From here on out we will refer to your "benchmarks" as "performance regression tests" to avoid any confusion.
-
-## Benchmark
-A Benchmark is a named performance regression test.
-If the performance regression test is new to Bencher, then a Benchmark is automatically created.
-Otherwise, the name of the performance regression test is used as the unique identifier for the Benchmark.
-
-Be careful when changing the name of your performance regression tests.
-You will need to manually rename the Benchmark in Bencher to match this new name.
-Otherwise, the renamed performance regression test will be considered a new Benchmark.
-This same word of caution also applies to _moving_ some performance regression tests.
-Depending on the benchmark harness, the path to the performance regression test may be a part of its name.
-
-The only exception to the above caveat is ignoring a Benchmark.
-See [suppressing alerts](/docs/explanation/thresholds/) for a full overview.
-
-### Metric
-A Metric is a single, point-in-time performance regression test result.
-Up to three Values may be collected for a single Metric: `value`, `lower_value`, and `upper_value`.
-The `value` is required for all Metrics while the `lower_value` and `upper_value` are independently optional.
-Which Values are collected is determined by the [benchmark harness adapter](/docs/explanation/adapters/).
-
-### Measure
-A Measure is the unit of measurement for a Metric.
-By default all Projects start with a `Latency` and `Throughput` Measure
-with units of `nanoseconds (ns)` and `operations / second (ops/s)` respectively.
-The Measure is determined by the [benchmark harness adapter](/docs/explanation/adapters/).
+<Intro />
+<Benchmark />
+<Metric />
+<Measure />
 
 <br />
 
-## Report
-A Report is a collection Benchmarks and their Metrics for a particular Branch and Testbed.
-Reports are most often generated using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
-See [how to track performance regression tests](/docs/how-to/track-benchmarks/) for a full overview.
-
-### Branch
-A Branch is the `git` ref used when running a Report (ie branch name or tag).
-By default all Projects start with a `main` Branch.
-When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
-`main` is the default Branch if one is not provided.
-See [branch selection](/docs/explanation/branch-selection/) for a full overview.
-
-#### Head
-The Head of a Branch is the most recent instance of the Branch.
-It references the most recent Start Point, if there is one.
-Whenever a Branch gets a new Start Point, it gets a new Head.
-See [branch selection](/docs/explanation/branch-selection/) for a full overview.
-
-#### Start Point
-A Branch can have a [Start Point][start point].
-A Start Point is another Branch at a specific version (and `git` hash, if available).
-Historical Metrics and optionally Thresholds are copied over from the Start Point.
-See [branch selection](/docs/explanation/branch-selection/) for a full overview.
-
-[start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
-
-
-
-### Testbed
-A Testbed is the name of the testing environment used when running a Report.
-By default all Projects start with a `localhost` Testbed.
-When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
-`localhost` is the default Testbed if one is not provided.
+<Report />
+<Branch />
+<Head />
+<StartPoint />
+<Testbed />
 
 <br />
 
-## Threshold
-A Threshold is used to catch performance regressions.
-A Threshold is assigned to a unique combination of:
-Branch, Testbed, and Measure.
-See [thresholds](/docs/explanation/thresholds/) for a full overview.
-
-### Test
-A Test is used by a Threshold to detect performance regressions.
-The combination of a Test and its parameters is called a Model.
-See [thresholds](/docs/explanation/thresholds/) for a full overview.
-
-### Model
-A Model is the combination of a Test and its parameters for a Threshold.
-A Model must have a Lower Boundary, Upper Boundary, or both.
-
-- Lower Boundary
-  - A Lower Boundary is used when a smaller value would indicate a performance regression,
-  such as with the `Throughput` Measure.
-- Upper Boundary
-  - An Upper Boundary is used when a larger value would indicate a performance regression,
-  such as with the `Latency` Measure.
-
-Each Boundary is used to calculate a Boundary Limit.
-Then every new Metric is checked against each Boundary Limit.
-An Alert is generated when a new Metric is below a Lower Boundary Limit or above an Upper Boundary Limit.
-See [thresholds](/docs/explanation/thresholds/) for a full overview.
-
-#### Boundary Limit
-A Boundary Limit is the value calculated from a Lower Boundary or Upper Boundary.
-It is used to compare against a new Metric.
-An Alert is generated when a new Metric is below a Lower Boundary Limit or above an Upper Boundary Limit.
-See [thresholds](/docs/explanation/thresholds/) for a full overview.
-
-### Alert
-An Alert is generated when a new Metric fails a Test
-by being below a Lower Boundary Limit or above an Upper Boundary Limit.
-See [thresholds](/docs/explanation/thresholds/) for a full overview.
+<Threshold />
+<Test />
+<Model />
+<BoundaryLimit />
+<Alert />
 
 <br />
 <br />
