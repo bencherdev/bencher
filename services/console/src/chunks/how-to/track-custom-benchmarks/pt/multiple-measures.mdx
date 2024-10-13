@@ -1,0 +1,46 @@
+import BmfMultiExample from "../bmf-multi-example.mdx";
+import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
+
+## Múltiplas Medidas
+
+No [Formato de Métrica Bencher (BMF) JSON][bmf]
+o objeto [Benchmark][benchmark] pode conter múltiplos nomes, slugs ou UUIDs de [Medida][measure] como chaves.
+Se o valor especificado for um nome ou slug e a Medida ainda não existir, ela será criada para você.
+No entanto, se o valor especificado for um UUID, a Medida deve já existir.
+Cada objeto de Medida deve conter uma [Métrica][metric] com até três valores:
+`value`, `lower_value` e `upper_value`.
+Os valores `lower_value` e `upper_value` são opcionais.
+
+Aqui está um exemplo de BMF JSON com múltiplas Medidas:
+
+<BmfMultiExample />
+
+Neste exemplo, o objeto Medida `latência` contém os seguintes valores:
+
+- Um `value` de `88.0`
+- Um `lower_value` de `87.42`
+- Um `upper_value` de `88.88`
+
+E o objeto Medida `throughput` contém os seguintes valores:
+
+- Um `value` de `5.55`
+- Um `lower_value` de `3.14`
+- Um `upper_value` de `6.30`
+
+Você pode usar [o subcomando CLI `bencher mock`][bencher mock]
+com [a opção `--measure`][measure option]
+para gerar dados BMF simulados com múltiplas Medidas.
+Usaremos isso como um espaço reservado para seu próprio executor de benchmark personalizado.
+Usando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+e o [adaptador `json`][json adapter]
+podemos rastrear nossos benchmarks com múltiplas Medidas com o seguinte comando:
+
+<RunCmdMultiExample />
+
+[bmf]: /pt/docs/reference/bencher-metric-format/
+[benchmark]: /pt/docs/explanation/benchmarking/#benchmark
+[measure]: /pt/docs/explanation/benchmarking/#measure
+[metric]: /pt/docs/explanation/benchmarking/#metric
+[bencher mock]: /pt/docs/reference/bencher-metric-format/#bencher-mock
+[measure option]: /pt/docs/reference/bencher-metric-format/#--measure-measure
+[json adapter]: /pt/docs/explanation/adapters/#-json

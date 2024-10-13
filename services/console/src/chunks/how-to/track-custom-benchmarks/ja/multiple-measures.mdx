@@ -1,0 +1,34 @@
+import BmfMultiExample from "../bmf-multi-example.mdx";
+import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
+
+## 複数のメジャー
+
+[ベンチャー メトリック フォーマット (BMF) JSON][bmf] では、[ベンチマーク][benchmark] オブジェクトに複数の [メジャー][measure] 名、スラグ、または UUID をキーとして含めることができます。指定された値が名前またはスラグであり、メジャーが既に存在しない場合は、自動的に作成されます。ただし、指定された値が UUID の場合は、メジャーは既に存在している必要があります。各メジャーオブジェクトには、最大 3 つの値 (`value`、`lower_value`、および `upper_value`) を持つ [メトリック][metric] を含める必要があります。`lower_value` と `upper_value` の値はオプションです。
+
+以下は、複数のメジャーを持つ BMF JSON の例です：
+
+<BmfMultiExample />
+
+この例では、`latency` メジャーオブジェクトには次の値が含まれています：
+
+- `value` は `88.0`
+- `lower_value` は `87.42`
+- `upper_value` は `88.88`
+
+そして、`throughput` メジャーオブジェクトには次の値が含まれています：
+
+- `value` は `5.55`
+- `lower_value` は `3.14`
+- `upper_value` は `6.30`
+
+あなたは [ベンチャー mock CLI サブコマンド][bencher mock] と [--measure オプション][measure option] を使用して、複数のメジャーを持つモック BMF データを生成することができます。これは、独自のカスタムベンチマークランナーのプレースホルダーとして使用します。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> と [json アダプター][json adapter] を使用して、次のコマンドで複数のメジャーを持つベンチマークを追跡できます：
+
+<RunCmdMultiExample />
+
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+[measure]: /ja/docs/explanation/benchmarking/#measure
+[metric]: /ja/docs/explanation/benchmarking/#metric
+[bencher mock]: /ja/docs/reference/bencher-metric-format/#bencher-mock
+[measure option]: /ja/docs/reference/bencher-metric-format/#--measure-measure
+[json adapter]: /ja/docs/explanation/adapters/#-json

@@ -1,0 +1,46 @@
+import BmfMultiExample from "../bmf-multi-example.mdx";
+import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
+
+## 多个度量
+
+在 [Bencher Metric Format (BMF) JSON][bmf]
+中，[基准测试][benchmark] 对象可以包含多个 [度量][measure] 名称、缩略名或 UUID 作为键。
+如果指定的值是名称或缩略名且该度量尚不存在，它将会为你创建。
+然而，如果指定的值是 UUID，则该度量必须已经存在。
+每个度量对象必须包含一个 [度量指标][metric]，最多可包含三个值：
+`value`，`lower_value` 和 `upper_value`。
+`lower_value` 和 `upper_value` 是可选的。
+
+这是具有多个度量的 BMF JSON 示例：
+
+<BmfMultiExample />
+
+在此示例中，`latency` 度量对象包含以下值：
+
+- `value` 为 `88.0`
+- `lower_value` 为 `87.42`
+- `upper_value` 为 `88.88`
+
+而 `throughput` 度量对象包含以下值：
+
+- `value` 为 `5.55`
+- `lower_value` 为 `3.14`
+- `upper_value` 为 `6.30`
+
+你可以使用 [ `bencher mock` CLI 子命令][bencher mock]
+以及 [ `--measure` 选项][measure option]
+来生成具有多个度量的模拟 BMF 数据。
+我们将其用作你自己的自定义基准测试运行器的占位符。
+使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
+和 [ `json` 适配器][json adapter]
+我们可以使用以下命令跟踪具有多个度量的基准测试：
+
+<RunCmdMultiExample />
+
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+[measure]: /zh/docs/explanation/benchmarking/#measure
+[metric]: /zh/docs/explanation/benchmarking/#metric
+[bencher mock]: /zh/docs/reference/bencher-metric-format/#bencher-mock
+[measure option]: /zh/docs/reference/bencher-metric-format/#--measure-measure
+[json adapter]: /zh/docs/explanation/adapters/#-json

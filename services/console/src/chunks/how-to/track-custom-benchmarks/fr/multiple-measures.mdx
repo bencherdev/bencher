@@ -1,0 +1,34 @@
+import BmfMultiExample from "../bmf-multi-example.mdx";
+import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
+
+## Mesures Multiples
+
+Dans le [Format de Metric Bencher (BMF) JSON][bmf], l'objet [Benchmark][benchmark] peut contenir plusieurs noms, slugs ou UUIDs de [Mesure][measure] en tant que clés. Si la valeur spécifiée est un nom ou un slug et que la Mesure n'existe pas déjà, elle sera créée pour vous. Cependant, si la valeur spécifiée est un UUID, la Mesure doit déjà exister. Chaque objet Mesure doit contenir un [Metric][metric] avec jusqu'à trois valeurs : `value`, `lower_value`, et `upper_value`. Les valeurs `lower_value` et `upper_value` sont facultatives.
+
+Voici un exemple de BMF JSON avec plusieurs Mesures :
+
+<BmfMultiExample />
+
+Dans cet exemple, l'objet Mesure `latency` contient les valeurs suivantes :
+
+- Une `value` de `88.0`
+- Un `lower_value` de `87.42`
+- Un `upper_value` de `88.88`
+
+Et l'objet Mesure `throughput` contient les valeurs suivantes :
+
+- Une `value` de `5.55`
+- Un `lower_value` de `3.14`
+- Un `upper_value` de `6.30`
+
+Vous pouvez utiliser [la sous-commande CLI `bencher mock`][bencher mock] avec [l'option `--measure`][measure option] pour générer des données BMF fictives avec plusieurs Mesures. Nous l'utiliserons comme un espace réservé pour votre propre exécuteur de benchmark personnalisé. En utilisant <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> et [l'adaptateur `json`][json adapter], nous pouvons suivre nos benchmarks avec plusieurs Mesures grâce à la commande suivante :
+
+<RunCmdMultiExample />
+
+[bmf]: /fr/docs/reference/bencher-metric-format/
+[benchmark]: /fr/docs/explanation/benchmarking/#benchmark
+[measure]: /fr/docs/explanation/benchmarking/#measure
+[metric]: /fr/docs/explanation/benchmarking/#metric
+[bencher mock]: /fr/docs/reference/bencher-metric-format/#bencher-mock
+[measure option]: /fr/docs/reference/bencher-metric-format/#--measure-measure
+[json adapter]: /fr/docs/explanation/adapters/#-json
