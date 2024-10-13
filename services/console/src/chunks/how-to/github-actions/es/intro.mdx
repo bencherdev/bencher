@@ -1,25 +1,23 @@
-Dependiendo de su caso de uso, puede configurar [Evaluación continua][continuous benchmarking] en GitHub Actions para su:
+Depending on your use case, you can set up [Continuous Benchmarking][continuous benchmarking] in GitHub Actions for your:
 
-- [Rama Base][base branch]
-- [Solicitudes de Pull][pull requests]
-- [Solicitudes de Pull desde Forks][fork pull requests]
-    - ⛑️ Más seguro: [Evaluar PR de Fork y Subir desde la Rama Predeterminada][benchmark fork pr and upload from default branch]
-    - ⚠️ Más arriesgado: [Evaluar PR de Fork desde la Rama Objetivo con Revisores Requeridos][benchmark fork pr from target branch with required reviewers]
+- [Base Branch][base branch]
+- [Pull Requests][pull requests]
+- [Pull Requests from Forks][fork pull requests]
 
-¡Asegúrese de haber [creado un token de API][create an api token]
-y de haberlo establecido como un secreto del **Repositorio** llamado `BENCHER_API_TOKEN` antes de continuar!
-Navegue a `Su Repo -> Configuración -> Secretos y variables -> Acciones -> Nuevo secreto del repositorio`.
-Nombre el secreto `BENCHER_API_TOKEN` y establezca el valor del secreto para su token de API.
+Make sure you have [created an API token][create an api token]
+and set it as a **Repository** secret named `BENCHER_API_TOKEN` before continuing on!
+Navigate to `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`.
+Name the secret `BENCHER_API_TOKEN` and set the secret value to your API token.
 
-En GitHub Actions,
-[los secretos no se pasan al ejecutor cuando un flujo de trabajo se activa desde un repositorio bifurcado][github actions secrets].
-Por lo tanto, necesitarás usar una rama del _mismo_ repositorio
-al agregar cualquiera de los flujos de trabajo a continuación a tu repositorio con una solicitud de extracción.
-Si intentas agregar Bencher con una solicitud de extracción desde un bifurcación,
-entonces el secreto `BENCHER_API_TOKEN` no estará disponible.
-`${{ secrets.BENCHER_API_TOKEN }}` será una cadena vacía.
+In GitHub Actions,
+[secrets are not passed to the runner when a workflow is triggered from a forked repository][github actions secrets].
+Therefore, you will need to use a branch from the _same_ repository
+when adding any of the workflows below to your repository with a pull request.
+If you try to add Bencher with a pull request from a fork,
+then the `BENCHER_API_TOKEN` secret will not be available.
+`${{ secrets.BENCHER_API_TOKEN }}` will be an empty string.
 
-[github actions secrets]: https://docs.github.com/es/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
+[github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
 [create an api token]: /es/docs/tutorial/quick-start/#create-an-api-token
@@ -27,5 +25,3 @@ entonces el secreto `BENCHER_API_TOKEN` no estará disponible.
 [base branch]: #base-branch
 [pull requests]: #pull-requests
 [fork pull requests]: #pull-requests-from-forks
-[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
-[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

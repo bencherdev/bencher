@@ -1,0 +1,92 @@
+import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
+
+<PullRequestsForkTrackCode />
+
+1. 첫 번째 GitHub Actions `workflow` 파일을 생성합니다.
+   (예: `.github/workflows/fork_pr_benchmarks_track.yml`)
+2. 이 워크플로의 이름을 두 번째 워크플로로 지정합니다.
+   (예: `name: Track Benchmarks with Bencher`)
+3. 두 워크플로를 [the `workflow_run` 이벤트][github actions workflow_run]와 연결합니다.
+   (예: `on: workflow_run: ...`)
+4. GitHub Actions `job`을 생성합니다.
+   (예: `jobs: track_fork_pr_branch`)
+5. 이전 워크플로의 결론이 성공일 경우에만 이 작업을 수행합니다. [the GitHub Actions `workflow_run` 이벤트][github actions workflow_run]를 사용합니다.
+   (예: `if: github.event.workflow_run.conclusion == 'success'`)
+6. 작업이 실행될 머신의 유형을 설정합니다.
+   전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참조하십시오.
+   (예: `runs-on: ubuntu-latest`)
+7. 벤치마크 결과와 `pull_request` 이벤트 객체 파일 이름을 환경 변수로 설정합니다.
+   (예: `env: ...`)
+8. [the `action-download-artifact` GitHub Action][action download artifact]을 사용하여 캐시된 벤치마크 결과와 `pull_request` 이벤트를 다운로드합니다.
+   (예: `uses: dawidd6/action-download-artifact@v6`)
+10. `pull_request` 이벤트에서 필요한 데이터를 환경 변수로 내보냅니다.
+    (예: `core.exportVariable(...)`)
+11. [the GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+   (예: `uses: bencherdev/bencher@main`)
+12. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령을 사용하여 포크 PR 브랜치 벤치마크를 추적합니다.
+    전체 개요는 [the `bencher run` CLI 하위 명령][bencher run]를 참조하십시오.
+    (예: `bencher run`)
+13. `--project` 옵션을 프로젝트 슬러그에 설정합니다.
+    자세한 내용은 [the `--project` 문서][project option]를 참조하십시오.
+    (예: `--project save-walter-white-1234abcd`)
+14. `--token` 옵션을 `BENCHER_API_TOKEN` **저장소** 비밀로 설정합니다.
+    자세한 내용은 [the `--token` 문서][token option]를 참조하십시오.
+    (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. `--branch` 옵션을 [the GitHub Actions `github` context][github actions context]를 사용하여 포크 PR 브랜치 이름으로 설정합니다.
+    전체 개요는 [the `--branch` 문서][branch option]를 참조하십시오.
+    (예: `--branch '${{ env.PR_HEAD }}'`)
+13. 포크 PR 브랜치의 시작점을 설정합니다:
+    1. [the GitHub Actions `github` context][github actions context]를 사용하여 포크 PR 브랜치 시작점을 `--start-point` 옵션에 설정합니다.
+    전체 개요는 [the `--start-point` 문서][start point]를 참조하십시오.
+    (예: `--start-point '${{ env.PR_BASE }}'`)
+    2. [the GitHub Actions `pull_request` 이벤트][github action pull_request]를 사용하여 포크 PR 브랜치 시작점의 `git` 해시를 `--start-point-hash` 옵션에 설정합니다.
+    전체 개요는 [the `--start-point-hash` 문서][start point hash]를 참조하십시오.
+    (예: `--start-point-hash '${{ env.PR_BASE_SHA }}'`)
+    3. 시작점에서 임계값을 클론하기 위해 `--start-point-clone-thresholds` 플래그를 설정합니다.
+    전체 개요는 [the `--start-point-clone-thresholds` 문서][start point clone thresholds]를 참조하십시오.
+    (예: `--start-point-clone-thresholds`)
+    4. 벤치마크 데이터 이동을 방지하기 위해 포크 PR 브랜치를 항상 시작점으로 리셋하는 `--start-point-reset` 플래그를 설정합니다.
+    전체 개요는 [the `--start-point-reset` 문서][start point reset]를 참조하십시오.
+    (예: `--start-point-reset`)
+14. `--testbed` 옵션을 테스트베드 이름으로 설정합니다.
+    이는 아마도 `runs-on`에서 선택한 머신과 일치해야 합니다.
+    자세한 내용은 [the `--tested` 문서][testbed option]를 참조하십시오.
+    (예: `--testbed ubuntu-latest`)
+15. 알림이 생성되면 명령이 실패하도록 `--err` 플래그를 설정합니다.
+   전체 개요는 [the `--err` 문서][alert err]를 참조하십시오.
+   (예: `--err`)
+16. [<code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에서 생성한 Bencher Metric Format JSON (`json`)][bmf]을 `--adapter` 옵션에 설정합니다.
+   전체 개요는 [벤치마크 하니스 어댑터][adapter json]를 참조하십시오.
+   (예: `--adapter json`)
+17. [the GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 결과를 Pull Request의 코멘트로 게시할 GitHub API 인증 토큰을 `--github-actions` 옵션에 설정합니다.
+    자세한 내용은 [the `--github-actions` 문서][github actions option]를 참조하십시오.
+    (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+18. `--ci-number` 옵션을 pull request 번호에 설정합니다.
+    자세한 내용은 [the `--ci-number` 문서][ci number option]를 참조하십시오.
+    (예: `--ci-number '${{ env.PR_NUMBER }}'`)
+19. `--file` 옵션을 벤치마크 결과 파일 경로에 설정합니다.
+    전체 개요는 [벤치마크 명령][command argument]를 참조하십시오.
+    (예: `--file "$BENCHMARK_RESULTS"`)
+
+[github actions workflow_run]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[action download artifact]: https://github.com/dawidd6/action-download-artifact
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+
+[bencher run]: /ko/docs/explanation/bencher-run/
+[project option]: /ko/docs/explanation/bencher-run/#--project-project
+[token option]: /ko/docs/explanation/bencher-run/#--token-token
+[branch option]: /ko/docs/explanation/branch-selection/#--branch-branch
+[start point]: /ko/docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /ko/docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /ko/docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /ko/docs/explanation/branch-selection/#--start-point-reset
+[testbed option]: /ko/docs/explanation/bencher-run/#--testbed-testbed
+[alert err]: /ko/docs/explanation/thresholds/#--err
+[bmf]: /ko/docs/reference/bencher-metric-format/
+[adapter json]: /ko/docs/explanation/adapters/#-json
+[github actions option]: /ko/docs/explanation/bencher-run/#--github-actions-github_token
+[ci number option]: /ko/docs/explanation/bencher-run/#--ci-id-id
+[command argument]: /ko/docs/explanation/bencher-run/#benchmark-command

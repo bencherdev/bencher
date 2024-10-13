@@ -1,0 +1,36 @@
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+
+<PullRequestsForkRunCode />
+
+1. Создайте первый файл `workflow` GitHub Actions.
+   (например: `.github/workflows/fork_pr_benchmarks_run.yml`)
+2. Назовите этот workflow так, чтобы его можно было использовать во втором workflow.
+   (например: `name: Run Benchmarks`)
+3. Запускайте на событиях `pull_request`:
+    - `opened` - Создан новый pull request.
+    - `reopened` - Повторно открыт ранее закрытый pull request.
+    - `edited` - Изменен заголовок или тело pull request, или изменена базовая ветка pull request.
+    - `synchronize` - Обновлена головная ветка pull request.
+      Например, головная ветка была обновлена из базовой ветки или в головную ветку были отправлены новые коммиты.
+
+   См. [документацию по `on` в GitHub Actions][github actions on]
+   и [документацию по `pull_request` в GitHub Actions][github action pull_request] для полного обзора.
+   (например: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. Создайте `job` в GitHub Actions.
+   (например: `jobs: benchmark_fork_pr_branch`)
+5. Установите тип машины, на которой будет выполняться job.
+   См. [документацию по `runs-on` в GitHub Actions][github actions runs-on]
+   для полного обзора.
+   (например: `runs-on: ubuntu-latest`)
+6. Выполните checkout исходного кода ветки fork PR.
+   (например: `uses: actions/checkout@v4`)
+7. Запустите тесты производительности и сохраните результаты в файл.
+   (например: `/bin/echo '{ ... }' > benchmark_results.json`)
+8. Загрузите файл с результатами тестов производительности как артефакт.
+   (например: `uses: actions/upload-artifact@v4`)
+9. Загрузите объект события `pull_request` как артефакт.
+  (например: `uses: actions/upload-artifact@v4`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on

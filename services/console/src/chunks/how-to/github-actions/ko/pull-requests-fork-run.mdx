@@ -1,0 +1,36 @@
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+
+<PullRequestsForkRunCode />
+
+1. 첫 번째 GitHub Actions `workflow` 파일을 생성합니다.
+   (예: `.github/workflows/fork_pr_benchmarks_run.yml`)
+2. 두 번째 워크플로에서 참조할 수 있도록 이 워크플로의 이름을 지정합니다.
+   (예: `name: Run Benchmarks`)
+3. `pull_request` 이벤트에 대해 실행합니다:
+    - `opened` - 풀 리퀘스트가 생성되었습니다.
+    - `reopened` - 이전에 닫힌 풀 리퀘스트가 다시 열렸습니다.
+    - `edited` - 풀 리퀘스트의 제목 또는 본문이 편집되었거나, 풀 리퀘스트의 기본 분기가 변경되었습니다.
+    - `synchronize` - 풀 리퀘스트의 헤드 분기가 업데이트되었습니다.
+      예를 들어, 기본 분기로부터 헤드 분기가 업데이트되거나 새로운 커밋이 헤드 분기로 푸시되었습니다.
+
+   전체 개요는 [GitHub Actions `on` 문서][github actions on]
+   및 [GitHub Actions `pull_request` 문서][github action pull_request]를 참조하세요.
+   (예: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. GitHub Actions `job`을 생성합니다.
+   (예: `jobs: benchmark_fork_pr_branch`)
+5. 잡을 실행할 머신의 유형을 설정합니다.
+   전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]
+   를 참조하세요.
+   (예: `runs-on: ubuntu-latest`)
+6. 포크 PR 브랜치의 소스 코드를 체크아웃합니다.
+   (예: `uses: actions/checkout@v4`)
+7. 벤치마크를 실행하고 결과를 파일에 저장합니다.
+   (예: `/bin/echo '{ ... }' > benchmark_results.json`)
+8. 벤치마크 결과 파일을 아티팩트로 업로드합니다.
+   (예: `uses: actions/upload-artifact@v4`)
+9. `pull_request` 이벤트 객체를 아티팩트로 업로드합니다.
+  (예: `uses: actions/upload-artifact@v4`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on

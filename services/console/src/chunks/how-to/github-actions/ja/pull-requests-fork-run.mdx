@@ -1,0 +1,37 @@
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+
+<PullRequestsForkRunCode />
+
+1. 最初のGitHub Actionsの`workflow`ファイルを作成します。
+   (例: `.github/workflows/fork_pr_benchmarks_run.yml`)
+2. このワークフローに名前を付けて、2番目のワークフローから参照できるようにします。
+   (例: `name: Run Benchmarks`)
+3. `pull_request`イベントで実行します:
+    - `opened` - プルリクエストが作成されました。
+    - `reopened` - 閉じられていたプルリクエストが再度開かれました。
+    - `edited` - プルリクエストのタイトルや本文が編集されたり、ベースブランチが変更されました。
+    - `synchronize` - プルリクエストのヘッドブランチが更新されました。
+      例えば、ベースブランチからヘッドブランチが更新されたり、新しいコミットがヘッドブランチにプッシュされました。
+
+   GitHub Actionsの[`on`ドキュメンテーション][github actions on]と
+   GitHub Actionsの[`pull_request`ドキュメンテーション][github action pull_request]を
+   参照して、詳細を確認してください。
+   (例: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. GitHub Actionsの`job`を作成します。
+   (例: `jobs: benchmark_fork_pr_branch`)
+5. ジョブを実行する機械のタイプを設定します。
+   [GitHub Actionsの`runs-on`ドキュメンテーション][github actions runs-on]を参照して、
+   詳細を確認してください。
+   (例: `runs-on: ubuntu-latest`)
+6. フォークされたPRブランチのソースコードをチェックアウトします。
+   (例: `uses: actions/checkout@v4`)
+7. ベンチマークを実行し、結果をファイルに保存します。
+   (例: `/bin/echo '{ ... }' > benchmark_results.json`)
+8. ベンチマークの結果ファイルをアーティファクトとしてアップロードします。
+   (例: `uses: actions/upload-artifact@v4`)
+9. `pull_request`イベントオブジェクトをアーティファクトとしてアップロードします。
+  (例: `uses: actions/upload-artifact@v4`)
+
+[github actions on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/ja/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on

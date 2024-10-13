@@ -1,0 +1,52 @@
+import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
+
+フォークPRの閉鎖後にそのブランチをクリーンアップするためには、`on` `pull_request` イベントを `closed` タイプで実行する別のワークフローを作成することができます。このワークフローは、`bencher archive` コマンドを使用して、フォークPRブランチをアーカイブします。
+
+<PullRequestsForkClosedCode />
+
+1. GitHub Actionsの `workflow` ファイルを作成します。
+   (例: `.github/workflows/fork_pr_benchmarks_closed.yml`)
+2. `pull_request` イベントで実行します:
+   - `closed` - プルリクエストが閉じられた。
+
+   詳細は[GitHub Actions `on` ドキュメント][github actions on]
+   と[GitHub Actions `pull_request` ドキュメント][github action pull_request]を参照してください。
+   (例: `on: pull_request: types: [closed]`)
+3. GitHub Actions `job` を作成します。
+   (例: `jobs: archive_pr_branch`)
+4. `GITHUB_TOKEN` の[権限を設定][github token permissions]
+   し、`pull-requests` に対して `write` にします。
+   GitHubの設定によっては、これが不要な場合があります。
+   ただし、[2023年2月2日以降に作成された][github token read only]
+   すべての組織と個人のリポジトリでは、これがデフォルトの動作です。
+   詳細は[GitHubドキュメント][github token permissions security]を参照してください。
+   (例: `permissions: pull-requests: write`)
+5. ジョブを実行するマシンの種類を設定します。
+   詳細は[GitHub Actions `runs-on` ドキュメント][github actions runs-on]を参照してください。
+   (例: `runs-on: ubuntu-latest`)
+6. PRブランチのソースコードをチェックアウトします。
+   (例: `uses: actions/checkout@v4`)
+7. [GitHub Action][bencher cli github action]を使用してBencher CLIをインストールします。
+   (例: `uses: bencherdev/bencher@main`)
+8. PRブランチをアーカイブするために、`bencher archive` CLIサブコマンドを使用します。
+   (例: `bencher archive`)
+9. `--project` オプションをプロジェクトスラッグに設定します。
+   詳細は[`--project` ドキュメント][project option]を参照してください。
+   (例: `--project save-walter-white-1234abcd`)
+10. `--token` オプションを `BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
+    詳細は[`--token` ドキュメント][token option]を参照してください。
+    (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+11. [GitHub Actions `github` コンテキスト][github actions context]を使用してPRブランチ名を`--branch` オプションに設定します。
+    (例: `--branch '${{ github.head_ref }}'`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[token option]: /ja/docs/explanation/bencher-run/#--token-token

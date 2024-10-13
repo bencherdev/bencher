@@ -1,20 +1,38 @@
-## Solicitudes de Extracción desde Bifurcaciones
+import PullRequestsForkRun from "./pull-requests-fork-run.mdx";
+import PullRequestsForkTrack from "./pull-requests-fork-track.mdx";
+import PullRequestsForkClosed from "./pull-requests-fork-closed.mdx";
 
-Si planeas aceptar solicitudes de extracción de bifurcaciones, como suele ser el caso en proyectos de código abierto públicos,
-entonces necesitarás manejar las cosas de manera un poco diferente.
-Por razones de seguridad, secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` no están disponibles en GitHub Actions para PRs de bifurcaciones.
-Es decir, si un contribuidor externo abre una PR desde una bifurcación el ejemplo anterior **no** funcionará.
-Hay dos opciones para PRs de bifurcaciones:
+## Pull Requests desde Forks
 
-- ⛑️ Más seguro: [Benchmark Fork PR and Upload from Default Branch][benchmark fork pr and upload from default branch]
-- ⚠️ Más riesgoso: [Benchmark Fork PR from Target Branch with Required Reviewers][benchmark fork pr from target branch with required reviewers]
-
-Consulta este [artículo de GitHub Security Lab][github actions pwn requests]
-y [este blog post][nathandavison.com blog]
-sobre la prevención de pwn requests para una visión completa.
+Si planeas aceptar pull requests desde forks, como suele ser el caso en proyectos de código abierto público,
+entonces tendrás que manejar las cosas de manera un poco diferente.
+Por razones de seguridad, secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` no están disponibles en GitHub Actions para PRs desde forks.
+Es decir, si un contribuyente externo abre un PR desde un fork, el ejemplo anterior **no** funcionará.
+Consulta este [artículo del GitHub Security Lab][github actions pwn requests]
+y [esta entrada de blog][nathandavison.com blog]
+sobre cómo prevenir solicitudes de pwn para obtener una visión completa.
 
 [github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
 [nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
 
-[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
-[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers
+Esta es la forma segura y recomendada de añadir [Continuous Benchmarking][continuous benchmarking] a los pull requests desde forks.
+Requiere dos flujos de trabajo separados.
+El primer flujo de trabajo ejecuta y almacena en caché los resultados del benchmark en el contexto de `pull_request`.
+No hay secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` disponibles allí.
+Entonces, un segundo flujo de trabajo descarga los resultados del benchmark almacenados en caché en el contexto de `workflow_run` y los sube a Bencher.
+Esto funciona porque `workflow_run` se ejecuta en el contexto de la rama por defecto del repositorio,
+donde los secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` están disponibles.
+El número de pull request, la rama principal y la rama base utilizada en el flujo de trabajo inicial `pull_request`
+también deben pasarse explícitamente al flujo de trabajo `workflow_run` ya que no están disponibles allí.
+Estos flujos de trabajo solo se ejecutarán si existen en la rama _predeterminada_.
+Consulta [usando datos del flujo de trabajo desencadenante][github actions trigger workflow] para obtener una visión completa.
+
+[github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/
+
+[continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
+
+<PullRequestsForkRun />
+
+<PullRequestsForkTrack />
+
+<PullRequestsForkClosed />

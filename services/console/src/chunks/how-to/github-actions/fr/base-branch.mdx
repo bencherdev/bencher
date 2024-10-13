@@ -2,66 +2,94 @@ import BaseBranchCode from "../base-branch-code.mdx";
 
 ## Branche de Base
 
-Un pilier du [Benchmarking Continu Statistique][benchmarking continu statistique]
-est d'avoir une ligne de base historique pour votre branche de base.
-Cette ligne de base historique peut ensuite être utilisée pour détecter les régressions de performance dans les Pull Requests.
+Un pilier du [Benchmarking Statistique Continu][statistical continuous benchmarking]
+est d'avoir une base de référence historique pour votre branche de base.
+Cette base de référence historique peut alors être utilisée pour détecter les régressions de performance dans les Pull Requests.
 
 <BaseBranchCode />
 
-1. Créer un fichier `workflow` GitHub Actions.
-   (ex : `.github/workflows/base_benchmarks.yml`)
-2. Exécuter lors des événements `push` vers la branche `main`.
-   Voir la documentation [GitHub Actions `on`][github actions on]
-   et [GitHub Actions `push`][github actions push] pour un aperçu complet.
-   (ex : `on: push: branches: main`)
-3. Créer un `job` GitHub Actions.
-   (ex : `jobs: benchmark_base_branch`)
-4. Définir le type de machine sur lequel le job sera exécuté.
-   Voir la documentation [GitHub Actions `runs-on`][github actions runs-on]
+1. Créez un fichier `workflow` GitHub Actions.
+   (ex: `.github/workflows/base_benchmarks.yml`)
+2. Exécutez sur les événements `push` vers la branche `main`.
+   Consultez la [documentation GitHub Actions `on`][github actions on]
+   et la [documentation GitHub Actions `push`][github actions push] pour un aperçu complet.
+   (ex: `on: push: branches: main`)
+3. Créez un `job` GitHub Actions.
+   (ex: `jobs: benchmark_base_branch`)
+4. Définissez le type de machine sur laquelle le job sera exécuté.
+   Consultez la [documentation GitHub Actions `runs-on`][github actions runs-on]
    pour un aperçu complet.
-   (ex : `runs-on: ubuntu-latest`)
-5. Extraire le code source de votre branche de base.
-   (ex : `uses: actions/checkout@v4`)
-6. Installer le CLI Bencher en utilisant [l'action GitHub][action github bencher cli].
-   (ex : `uses: bencherdev/bencher@main`)
-7. Utiliser la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
-   pour exécuter les benchmarks de votre branche `main`.
-   Voir [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
-   (ex : `bencher run`)
-8. Définir l'option `--project` sur le slug du projet.
-   Voir [la documentation `--project`][option projet] pour plus de détails.
-   (ex : `--project save-walter-white-1234abcd`)
-9. Définir l'option `--token` sur le secret **Repository** `BENCHER_API_TOKEN`.
-   Voir [la documentation `--token`][option token] pour plus de détails.
-   (ex : `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-10. Définir l'option `--branch` sur le nom de la branche.
-    Voir [la sélection de branche][selection branche] pour un aperçu complet.
-    (ex : `--branch main`)
-11. Définir l'option `--testbed` sur le nom du banc d'essai.
+   (ex: `runs-on: ubuntu-latest`)
+5. Récupérez le code source de votre branche de base.
+   (ex: `uses: actions/checkout@v4`)
+6. Installez le Bencher CLI en utilisant [l'Action GitHub][bencher cli github action].
+   (ex: `uses: bencherdev/bencher@main`)
+7. Utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+   pour exécuter vos benchmarks de la branche `main`.
+   Consultez [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
+   (ex: `bencher run`)
+8. Définissez l'option `--project` sur le slug du Projet.
+   Consultez [les documents `--project`][project option] pour plus de détails.
+   (ex: `--project save-walter-white-1234abcd`)
+9. Définissez l'option `--token` sur le secret **Repository** `BENCHER_API_TOKEN`.
+   Consultez [les documents `--token`][token option] pour plus de détails.
+   (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Définissez l'option `--branch` sur le nom de la branche de base.
+    Consultez [les documents `--branch`][branch option] pour un aperçu complet.
+    (ex: `--branch main`)
+11. Réglez l'option `--testbed` sur le nom du Testbed.
     Cela devrait probablement correspondre à la machine sélectionnée dans `runs-on`.
-    Voir [la documentation `--testbed`][option testbed] pour plus de détails.
-    (ex : `--testbed ubuntu-latest`)
-12. Définir l'option `--adapter` sur l'adaptateur de harnais de benchmark souhaité.
-    Voir [les adaptateurs de harnais de benchmark][adaptateurs] pour un aperçu complet.
-    (ex : `--adapter json`)
-13. Définir le drapeau `--err` pour échouer la commande si une alerte est générée.
-    Voir [Seuils & Alertes][alertes] pour un aperçu complet.
-    (ex : `--err`)
-14. Spécifier les arguments de la commande de benchmark.
-    Voir [commande de benchmark][argument commande] pour un aperçu complet.
-    (ex : `bencher mock`)
+    Consultez [les documents `--tested`][testbed option] pour plus de détails.
+    (ex: `--testbed ubuntu-latest`)
+12. Définissez le seuil pour la Branche `main`, le Testbed `ubuntu-latest`, et la Mesure `latency`:
+    1. Définissez l'option `--threshold-measure` sur la Mesure intégrée `latency` générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+    Consultez [les documents `--threshold-measure`][threshold measure option] pour plus de détails.
+    (ex: `--threshold-measure latency`)
+    2. Définissez l'option `--threshold-test` sur un test t de Student (`t_test`).
+    Consultez [les documents `--threshold-test`][threshold test option] pour un aperçu complet.
+    (ex: `--threshold-test t_test`)
+    3. Définissez l'option `--threshold-max-sample-size` sur la taille maximale de l'échantillon de `64`.
+    Consultez [les documents `--threshold-max-sample-size`][threshold max sample size] pour plus de détails.
+    (ex: `--threshold-max-sample-size 64`)
+    4. Définissez l'option `--threshold-upper-boundary` sur la Limite Supérieure de `0.99`.
+    Consultez [les documents `--threshold-upper-boundary`][threshold upper boundary] pour plus de détails.
+    (ex: `--threshold-upper-boundary 0.99`)
+    5. Réglez l'indicateur `--thresholds-reset` pour que seul le seuil spécifié soit actif.
+    Consultez [les documents `--thresholds-reset`][thresholds reset] pour un aperçu complet.
+    (ex: `--thresholds-reset`)
+13. Réglez l'indicateur `--err` pour échouer la commande si une Alerte est générée.
+    Consultez [les documents `--err`][alert err] pour un aperçu complet.
+    (ex: `--err`)
+14. Définissez l'option `--adapter` sur [Bencher Metric Format JSON (`json`)][bmf] qui est généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+    Consultez [les adaptateurs de harnais de benchmark][adapter json] pour un aperçu complet.
+    (ex: `--adapter json`)
+15. Réglez l'option `--github-actions` sur le jeton d'authentification API GitHub pour publier les résultats sous forme de commentaire de Vérifications GitHub en utilisant
+    [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions][github token].
+    Consultez [les documents `--github-actions`][github actions option] pour plus de détails.
+    (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+16. Spécifiez les arguments de la commande de benchmark.
+    Consultez [la commande de benchmark][command argument] pour un aperçu complet.
+    (ex: `bencher mock`)
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
-[action github bencher cli]: https://github.com/marketplace/actions/bencher-cli
+[github actions on]: https://docs.github.com/fr/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/fr/webhooks/webhook-events-and-payloads#push
+[github actions runs-on]: https://docs.github.com/fr/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github token]: https://docs.github.com/fr/actions/security-guides/automatic-token-authentication
 
-[benchmarking continu statistique]: /fr/docs/how-to/track-benchmarks/#benchmarking-continu-statistique
+[statistical continuous benchmarking]: /fr/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /fr/docs/explanation/bencher-run/
-[option projet]: /fr/docs/explanation/bencher-run/#--project-project
-[option token]: /fr/docs/explanation/bencher-run/#--token-token
-[selection branche]: /fr/docs/explanation/branch-selection/#--branch-branch
-[option testbed]: /fr/docs/explanation/bencher-run/#--testbed-testbed
-[adaptateurs]: /fr/docs/explanation/adapters/
-[alertes]: /fr/docs/explanation/thresholds/#alerts
-[argument commande]: /fr/docs/explanation/bencher-run/#benchmark-command
+[project option]: /fr/docs/explanation/bencher-run/#--project-project
+[token option]: /fr/docs/explanation/bencher-run/#--token-token
+[branch option]: /fr/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /fr/docs/explanation/bencher-run/#--testbed-testbed
+[threshold measure option]: /fr/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /fr/docs/explanation/thresholds/#--threshold-test-test
+[threshold max sample size]: /fr/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold upper boundary]: /fr/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /fr/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /fr/docs/explanation/thresholds/#--err
+[bmf]: /fr/docs/reference/bencher-metric-format/
+[adapter json]: /fr/docs/explanation/adapters/#-json
+[github actions option]: /fr/docs/explanation/bencher-run/#--github-actions-github_token
+[command argument]: /fr/docs/explanation/bencher-run/#benchmark-command

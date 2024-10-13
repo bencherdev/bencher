@@ -1,17 +1,34 @@
+import PullRequestsForkRun from "./pull-requests-fork-run.mdx";
+import PullRequestsForkTrack from "./pull-requests-fork-track.mdx";
+import PullRequestsForkClosed from "./pull-requests-fork-closed.mdx";
+
 ## フォークからのプルリクエスト
 
-公開されたオープンソースプロジェクトではよくあることですが、フォークからプルリクエストを受け付ける予定の場合、少し異なる扱いが必要になります。
-セキュリティ上の理由から、`BENCHER_API_TOKEN`や`GITHUB_TOKEN`などの秘密情報は、フォークのPRでGitHub Actionsでは利用できません。
-つまり、外部のコントリビュータがフォークからPRを開いた場合、上記の例は**動作しません**。
-フォークのPRには2つの選択肢があります：
-
-- ⛑️ より安全：[フォークPRをベンチマークしてデフォルトブランチからアップロードする][benchmark fork pr and upload from default branch]
-- ⚠️ よりリスク：[ターゲットブランチから必須レビュアー付きでフォークPRをベンチマークする][benchmark fork pr from target branch with required reviewers]
-
-pwnリクエストを防ぐためのフルオーバービューについては、この[GitHub Security Labの記事][github actions pwn requests]と[このブログ投稿][nathandavison.com blog]を参照してください。
+公開のオープンソースプロジェクトでよくあるようにフォークからのプルリクエストを受け入れる予定の場合、少し異なる方法で処理する必要があります。
+セキュリティ上の理由から、フォークのプルリクエストでは `BENCHER_API_TOKEN` や `GITHUB_TOKEN` などのシークレットは GitHub Actions で利用できません。
+つまり、外部のコントリビューターがフォークから PR を作成すると、上記の例は **動作しません**。
+完全な概要については、この [GitHub Security Lab の説明][github actions pwn requests] と、
+この [ブログ記事][nathandavison.com blog] を参照してください。
 
 [github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
 [nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
 
-[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
-[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers
+これはフォークからのプルリクエストに [継続的ベンチマーク][continuous benchmarking] を追加するための安全で推奨される方法です。
+これには2つの別々のワークフローが必要です。
+最初のワークフローは `pull_request` コンテキストでベンチマーク結果を実行し、キャッシュします。
+そこでは `BENCHER_API_TOKEN` や `GITHUB_TOKEN` のようなシークレットは利用できません。
+次に、2番目のワークフローが `workflow_run` コンテキストでキャッシュされたベンチマーク結果をダウンロードし、それを Bencher にアップロードします。
+これは、`workflow_run` がシークレットである `BENCHER_API_TOKEN` や `GITHUB_TOKEN` が利用可能なリポジトリのデフォルトブランチのコンテキストで実行されるためです。
+元の `pull_request` ワークフローで使用されたプルリクエスト番号、ヘッドブランチ、ベースブランチも、`workflow_run` ワークフローに明示的に渡される必要があります。
+これらのワークフローは、_デフォルト_ ブランチに存在する場合にのみ実行されます。
+完全な概要については、[トリガーワークフローのデータの使用][github actions trigger workflow] を参照してください。
+
+[github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/
+
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
+
+<PullRequestsForkRun />
+
+<PullRequestsForkTrack />
+
+<PullRequestsForkClosed />

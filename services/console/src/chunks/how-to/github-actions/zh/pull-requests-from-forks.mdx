@@ -1,20 +1,22 @@
-## 来自 Fork 的 Pull Requests
+import PullRequestsForkRun from "./pull-requests-fork-run.mdx";
+import PullRequestsForkTrack from "./pull-requests-fork-track.mdx";
+import PullRequestsForkClosed from "./pull-requests-fork-closed.mdx";
 
-如果您计划接受来自 fork 的 pull requests，这在公开的开源项目中经常是这种情况，
-那么您需要稍微不同地处理这些请求。
-出于安全原因，像 `BENCHER_API_TOKEN` 和 `GITHUB_TOKEN` 这样的秘密在 GitHub Actions 中对 fork PRs 是不可用的。
-也就是说，如果一个外部贡献者从 fork 提交了一个 PR，以上的例子将**不**会起作用。
-对于 fork PRs 有两个选项：
+## 从 Fork 中的拉取请求
 
-- ⛑️ 更安全：[从默认分支对 Fork PR 进行基准测试并上传][benchmark fork pr and upload from default branch]
-- ⚠️ 更有风险：[从目标分支对 Fork PR 进行基准测试，且需要审阅者][benchmark fork pr from target branch with required reviewers]
-
-请参阅 [GitHub 安全实验室撰写][github actions pwn requests]
-和 [这篇博客文章][nathandavison.com blog]
-以获得完整的概述，了解如何防止 pwn 请求。
+如果您计划接受来自 fork 的拉取请求，这通常在公共开源项目中发生，那么您需要稍微不同地处理事情。出于安全原因，像 `BENCHER_API_TOKEN` 和 `GITHUB_TOKEN` 这样的秘密在针对 fork 提交的 GitHub Actions 中不可用。也就是说，如果外部贡献者从 fork 中打开拉取请求，上述示例将 **不** 能工作。请参阅这个 [GitHub Security Lab 的文章][github actions pwn requests] 和 [这篇博客文章][nathandavison.com blog]，以了解完整概述如何防止恶意请求。
 
 [github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
 [nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
 
-[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
-[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers
+这是为 fork 的拉取请求添加[持续基准测试][continuous benchmarking]的安全和建议方法。它需要两个独立的工作流。第一个工作流在 `pull_request` 上下文中运行并缓存基准结果。在这里，像 `BENCHER_API_TOKEN` 和 `GITHUB_TOKEN` 这样的秘密不可用。然后，第二个工作流在 `workflow_run` 上下文中下载缓存的基准结果并将它们上传到 Bencher。这有效是因为 `workflow_run` 在仓库默认分支的上下文中运行，在那里，像 `BENCHER_API_TOKEN` 和 `GITHUB_TOKEN` 这样的秘密是可用的。在初始 `pull_request` 工作流中使用的拉取请求编号、head 分支和 base 分支也必须显式传递到 `workflow_run` 工作流中，因为它们在那里不可用。这些工作流仅在它们存在于_默认_分支时才会运行。有关完整概述，请参阅[使用触发工作流的数据][github actions trigger workflow]。
+
+[github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/
+
+[continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
+
+<PullRequestsForkRun />
+
+<PullRequestsForkTrack />
+
+<PullRequestsForkClosed />

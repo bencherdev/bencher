@@ -1,25 +1,21 @@
-사용 사례에 따라 다음에 대해 GitHub Actions에서 [지속적인 벤치마킹][continuous benchmarking]을 설정할 수 있습니다:
+당신의 사용 사례에 따라, GitHub Actions에서 [지속적 벤치마킹][continuous benchmarking]을 설정할 수 있습니다:
 
 - [기본 브랜치][base branch]
 - [풀 리퀘스트][pull requests]
 - [포크로부터의 풀 리퀘스트][fork pull requests]
-    - ⛑️ 더 안전함: [기본 브랜치에서 포크 PR 벤치마크하고 업로드하기][benchmark fork pr and upload from default branch]
-    - ⚠️ 더 위험함: [대상 브랜치에서 포크 PR을 벤치마크하고 필수 검토자를 요구하기][benchmark fork pr from target branch with required reviewers]
 
-API 토큰을 [생성했는지][create an api token]
-확인하고 계속하기 전에 `BENCHER_API_TOKEN`이라는 이름의 **리포지토리** 비밀로 설정했는지 확인하세요!
-`Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`으로 이동하세요.
-비밀 이름을 `BENCHER_API_TOKEN`로 설정하고 비밀 값에 API 토큰을 설정하세요.
+진행하기 전에 [API 토큰을 생성][create an api token]하고, 이를 `BENCHER_API_TOKEN`이라는 **저장소** 비밀로 설정했는지 확인하세요!
+`Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`로 이동합니다.
+비밀 이름을 `BENCHER_API_TOKEN`으로 지정하고 비밀값을 API 토큰으로 설정하세요.
 
 GitHub Actions에서,
-[워크플로우가 포크된 저장소에서 트리거될 때 시크릿은 러너에 전달되지 않습니다][github actions secrets].
-따라서 아래의 워크플로우를 추가할 때 동일한 저장소의 브랜치를 사용하여
-풀 리퀘스트를 만들어야 합니다.
-포크된 저장소에서 Bencher를 추가하려고 시도하면,
-`BENCHER_API_TOKEN` 시크릿을 사용할 수 없습니다.
-`${{ secrets.BENCHER_API_TOKEN }}`은 빈 문자열이 됩니다.
+[비밀은 포크된 리포지토리에서 워크플로우가 트리거될 때 실행자에게 전달되지 않습니다][github actions secrets].
+따라서 아래의 워크플로 중 하나를 저장소에 풀 리퀘스트로 추가할 때는 _같은_ 저장소의 브랜치를 사용해야 합니다.
+포크로부터 풀 리퀘스트로 Bencher를 추가하면,
+`BENCHER_API_TOKEN` 비밀은 사용 가능하지 않습니다.
+`${{ secrets.BENCHER_API_TOKEN }}`는 빈 문자열이 될 것입니다.
 
-[github actions secrets]: https://docs.github.com/ko/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
+[github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
 [create an api token]: /ko/docs/tutorial/quick-start/#create-an-api-token
@@ -27,5 +23,3 @@ GitHub Actions에서,
 [base branch]: #base-branch
 [pull requests]: #pull-requests
 [fork pull requests]: #pull-requests-from-forks
-[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
-[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

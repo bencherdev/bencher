@@ -1,20 +1,22 @@
-## Les Pull Requests provenant de Forks
+import PullRequestsForkRun from "./pull-requests-fork-run.mdx";
+import PullRequestsForkTrack from "./pull-requests-fork-track.mdx";
+import PullRequestsForkClosed from "./pull-requests-fork-closed.mdx";
 
-Si vous prévoyez d'accepter les pull requests provenant de forks, comme c'est souvent le cas dans les projets open source publics,
-alors vous devrez gérer les choses un peu différemment.
-Pour des raisons de sécurité, les secrets tels que votre `BENCHER_API_TOKEN` et le `GITHUB_TOKEN` ne sont pas disponibles dans GitHub Actions pour les PR de forks.
-C'est-à-dire que si un contributeur externe ouvre une PR à partir d'un fork, l'exemple ci-dessus **ne** fonctionnera **pas**.
-Il y a deux options pour les PR de forks :
+## Demandes de Tirage depuis des Fourches
 
-- ⛑️ Plus sûr : [Benchmark Fork PR et Téléversement depuis la Branche par Défaut][benchmark fork pr and upload from default branch]
-- ⚠️ Plus risqué : [Benchmark Fork PR depuis la Branche Cible avec des Réviseurs Requis][benchmark fork pr from target branch with required reviewers]
-
-Voir ce [rapport du GitHub Security Lab][github actions pwn requests]
-et [ce billet de blog][nathandavison.com blog]
-sur la prévention des pwn requests pour un aperçu complet.
+Si vous envisagez d'accepter des demandes de tirage depuis des fourches, comme c'est souvent le cas dans les projets open source publics, alors vous devrez gérer les choses un peu différemment. Pour des raisons de sécurité, des secrets tels que votre `BENCHER_API_TOKEN` et le `GITHUB_TOKEN` ne sont pas disponibles dans les GitHub Actions pour les PRs de fourches. Ainsi, si un contributeur externe ouvre une PR depuis une fourche, l'exemple ci-dessus **ne** fonctionnera **pas**. Consultez cette [analyse de GitHub Security Lab][github actions pwn requests] et [cet article de blog][nathandavison.com blog] sur la prévention des pwn requests pour un aperçu complet.
 
 [github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
 [nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
 
-[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-et-téléversement-depuis-la-branche-par-défaut
-[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-depuis-la-branche-cible-avec-des-réviseurs-requis
+Voici la manière sûre et suggérée pour ajouter [le benchmarking continu][continuous benchmarking] aux demandes de tirage de fourches. Cela nécessite deux workflows distincts. Le premier workflow exécute et met en cache les résultats du benchmark dans le contexte `pull_request`. Aucun secret tel que votre `BENCHER_API_TOKEN` et le `GITHUB_TOKEN` n'y est disponible. Ensuite, un second workflow télécharge les résultats des benchmarks mis en cache dans le contexte `workflow_run` et les télécharge vers Bencher. Cela fonctionne car `workflow_run` s'exécute dans le contexte de la branche par défaut du dépôt, où des secrets tels que votre `BENCHER_API_TOKEN` et le `GITHUB_TOKEN` sont disponibles. Le numéro de la demande de tirage, la branche principale et la branche de base utilisées dans le workflow initial `pull_request` doivent également être explicitement passés dans le workflow `workflow_run` car ils ne sont pas disponibles là-bas. Ces workflows ne s'exécuteront que s'ils existent sur la branche _par défaut_. Voir [utilisation des données du workflow déclencheur][github actions trigger workflow] pour un aperçu complet.
+
+[github actions trigger workflow]: https://docs.github.com/fr/actions/using-workflows/
+
+[continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
+
+<PullRequestsForkRun />
+
+<PullRequestsForkTrack />
+
+<PullRequestsForkClosed />

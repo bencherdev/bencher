@@ -1,0 +1,102 @@
+import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
+
+<PullRequestsForkTrackCode />
+
+1. Создайте первый файл `workflow` для GitHub Actions.
+   (например: `.github/workflows/fork_pr_benchmarks_track.yml`)
+2. Назовите этот рабочий процесс вторым рабочим процессом.
+   (например: `name: Track Benchmarks with Bencher`)
+3. Свяжите два рабочих процесса с использованием
+   [события `workflow_run`][github actions workflow_run].
+   (например: `on: workflow_run: ...`)
+4. Создайте `job` для GitHub Actions.
+   (например: `jobs: track_fork_pr_branch`)
+5. Выполните этот job только в случае успешного завершения предыдущего рабочего процесса, используя
+   [событие `workflow_run` GitHub Actions][github actions workflow_run].
+   (например: `if: github.event.workflow_run.conclusion == 'success'`)
+6. Установите тип машины, на которой будет выполняться job.
+   См. [документацию по `runs-on` GitHub Actions][github actions runs-on]
+   для полного обзора.
+   (например: `runs-on: ubuntu-latest`)
+7. Установите результаты тестирования и объектное событие `pull_request` в качестве переменных среды.
+   (например: `env: ...`)
+8. Загрузите кэшированные результаты тестирования и события `pull_request`,
+   используя [действие `action-download-artifact` GitHub][action download artifact].
+   (например: `uses: dawidd6/action-download-artifact@v6`)
+10. Экспортируйте необходимые данные из события `pull_request` как переменные среды.
+    (например: `core.exportVariable(...)`)
+11. Установите Bencher CLI, используя [действие GitHub][bencher cli github action].
+   (например: `uses: bencherdev/bencher@main`)
+12. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+    для отслеживания тестов вашей ветки-форка pull request.
+    См. [подкоманду CLI `bencher run`][bencher run] для полного обзора.
+    (например: `bencher run`)
+13. Установите параметр `--project` в значение Project slug.
+    См. [документацию по `--project`][project option] для получения более подробной информации.
+    (например: `--project save-walter-white-1234abcd`)
+14. Установите опцию `--token` в **секрет** репозитория `BENCHER_API_TOKEN`.
+    См. [документацию по `--token`][token option] для получения более подробной информации.
+    (например: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. Установите параметр `--branch` в имя ветки форка PR
+    , используя [контекст `github` GitHub Actions][github actions context].
+    См. [документацию по `--branch`][branch option] для полного обзора.
+    (например: `--branch '${{ env.PR_HEAD }}'`)
+13. Установите начальную точку для ветки форка PR:
+    1. Установите параметр `--start-point` в начальную точку ветки форка PR
+    , используя [контекст `github` GitHub Actions][github actions context].
+    См. [документацию по `--start-point`][start point] для полного обзора.
+    (например: `--start-point '${{ env.PR_BASE }}'`)
+    2. Установите параметр `--start-point-hash` в хеш `git` начальной точки ветки форка PR
+    , используя [событие `pull_request` GitHub Actions][github action pull_request].
+    См. [документацию по `--start-point-hash`][start point hash] для полного обзора.
+    (например: `--start-point-hash '${{ env.PR_BASE_SHA }}'`)
+    3. Установите флаг `--start-point-clone-thresholds` для клонирования пороговых значений из начальной точки.
+    См. [документацию по `--start-point-clone-thresholds`][start point clone thresholds] для полного обзора.
+    (например: `--start-point-clone-thresholds`)
+    4. Установите флаг `--start-point-reset` для всегда сбрасывания ветки форка PR до начальной точки.
+    Это предотвратит дрейф данных тестирования.
+    См. [документацию по `--start-point-reset`][start point reset] для полного обзора.
+    (например: `--start-point-reset`)
+14. Установите параметр `--testbed` в имя Testbed.
+    Это, вероятно, должно соответствовать выбранной машине в `runs-on`.
+    См. [документацию по `--tested`][testbed option] для получения более подробной информации.
+    (например: `--testbed ubuntu-latest`)
+15. Установите флаг `--err`, чтобы команда завершалась с ошибкой, если сработает предупреждение.
+   См. [документацию по `--err`][alert err] для полного обзора.
+   (например: `--err`)
+16. Установите параметр `--adapter` для [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   См. [обзор адаптеров для тестов][adapter json] для полного обзора.
+   (например: `--adapter json`)
+17. Установите параметр `--github-actions` в токен аутентификации API GitHub для публикации результатов в виде комментария в Pull Request, используя
+    [переменную окружения `GITHUB_TOKEN` GitHub Actions][github token].
+    См. [документацию по `--github-actions`][github actions option] для получения более подробной информации.
+    (например: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+18. Установите параметр `--ci-number` в номер pull request.
+    См. [документацию по `--ci-number`][ci number option] для получения более подробной информации.
+    (например: `--ci-number '${{ env.PR_NUMBER }}'`)
+19. Установите параметр `--file` в путь к файлу с результатами тестирования.
+    См. [команду benchmark][command argument] для полного обзора.
+    (например: `--file "$BENCHMARK_RESULTS"`)
+
+[github actions workflow_run]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[action download artifact]: https://github.com/dawidd6/action-download-artifact
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+
+[bencher run]: /ru/docs/explanation/bencher-run/
+[project option]: /ru/docs/explanation/bencher-run/#--project-project
+[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[branch option]: /ru/docs/explanation/branch-selection/#--branch-branch
+[start point]: /ru/docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /ru/docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /ru/docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /ru/docs/explanation/branch-selection/#--start-point-reset
+[testbed option]: /ru/docs/explanation/bencher-run/#--testbed-testbed
+[alert err]: /ru/docs/explanation/thresholds/#--err
+[bmf]: /ru/docs/reference/bencher-metric-format/
+[adapter json]: /ru/docs/explanation/adapters/#-json
+[github actions option]: /ru/docs/explanation/bencher-run/#--github-actions-github_token
+[ci number option]: /ru/docs/explanation/bencher-run/#--ci-id-id
+[command argument]: /ru/docs/explanation/bencher-run/#benchmark-command

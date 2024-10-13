@@ -1,0 +1,48 @@
+import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
+
+要清理关闭后的 fork PR 分支，你可以创建一个单独的工作流来运行 `on` `pull_request` 事件，并使用 `closed` 类型。此工作流将使用 `bencher archive` 命令存档 fork PR 分支。
+
+<PullRequestsForkClosedCode />
+
+1. 创建一个 GitHub Actions `workflow` 文件。
+   （例如：`.github/workflows/fork_pr_benchmarks_closed.yml`）
+2. 在 `pull_request` 事件上运行：
+   - `closed` - 拉取请求已关闭。
+
+   查看 [GitHub Actions `on` 文档][github actions on] 和 [GitHub Actions `pull_request` 文档][github action pull_request] 以获取完整概述。
+   （例如：`on: pull_request: types: [closed]`）
+3. 创建一个 GitHub Actions `job`。
+   （例如：`jobs: archive_pr_branch`）
+4. 将 [用于 `GITHUB_TOKEN` 的权限][github token permissions] 设置为 `write`，用于 `pull-requests`。
+   根据您的 GitHub 设置，这可能不是必需的。但对于 [2023年2月2日后创建][github token read only] 的所有组织和个人仓库，这是默认行为。
+   查看 [GitHub 文档][github token permissions security] 以获取完整概述。
+   （例如：`permissions: pull-requests: write`）
+5. 设置作业将在其上运行的机器类型。
+   查看 [GitHub Actions `runs-on` 文档][github actions runs-on] 以获取完整概述。
+   （例如：`runs-on: ubuntu-latest`）
+6. 检出 PR 分支的源代码。
+   （例如：`uses: actions/checkout@v4`）
+7. 使用 [GitHub Action][bencher cli github action] 安装 Bencher CLI。
+   （例如：`uses: bencherdev/bencher@main`）
+8. 使用 `bencher archive` CLI 子命令来存档 PR 分支。
+   （例如：`bencher archive`）
+9.  设置 `--project` 选项为项目的 slug。
+    查看 [关于 `--project` 的文档][project option] 以获取更多详情。
+    （例如：`--project save-walter-white-1234abcd`）
+10. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **仓库** 机密。
+    查看 [关于 `--token` 的文档][token option] 以获取更多详情。
+    （例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`）
+11. 使用 [GitHub Actions `github` 上下文][github actions context] 将 `--branch` 选项设置为 PR 分支名称。
+    （例如：`--branch '${{ github.head_ref }}'`）
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+
+[project option]: /zh/docs/explanation/bencher-run/#--project-project
+[token option]: /zh/docs/explanation/bencher-run/#--token-token

@@ -1,0 +1,65 @@
+import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
+
+Um den PR-Branch nach dem Schließen des PR aufzuräumen,
+können Sie einen separaten Workflow erstellen, der bei `on` `pull_request`-Ereignissen mit dem Typ `closed` ausgeführt wird.
+Dieser Workflow archiviert den PR-Branch mit dem Befehl `bencher archive`.
+
+<PullRequestsClosedCode />
+
+1. Erstellen Sie eine GitHub Actions `workflow` Datei.
+   (z.B.: `.github/workflows/pr_benchmarks_closed.yml`)
+2. Ausführung bei `pull_request`-Ereignissen:
+   - `closed` - Ein Pull Request wurde geschlossen.
+
+   Lesen Sie die [GitHub Actions `on` Dokumentation][github actions on]
+   und die [GitHub Actions `pull_request` Dokumentation][github action pull_request] für einen vollständigen Überblick.
+   (z.B.: `on: pull_request: types: [closed]`)
+3. Erstellen Sie einen GitHub Actions `job`.
+   (z.B.: `jobs: archive_pr_branch`)
+4. Ausführung bei `pull_request`-Ereignissen nur, wenn der Pull Request aus demselben Repository stammt.
+   ⚠️ ENTFERNEN SIE NICHT DIESE ZEILE!
+   Weitere Informationen zum Umgang mit Fork-PRs finden Sie weiter unten unter [Pull Requests von Forks][pull requests from forks].
+   (z.B.: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. Setzen Sie [die Berechtigungen für das `GITHUB_TOKEN`][github token permissions]
+   auf `write` für `pull-requests`.
+   Abhängig von Ihren GitHub-Einstellungen ist dies möglicherweise nicht erforderlich.
+   Doch bei allen Organisationen und persönlichen Repositories,
+   [die nach dem 02. Feb 2023 erstellt wurden][github token read only],
+   ist dies das Standardverhalten.
+   Lesen Sie [die GitHub-Dokumentation][github token permissions security]
+   für einen vollständigen Überblick.
+   (z.B.: `permissions: pull-requests: write`)
+6. Legen Sie den Maschinentyp fest, auf dem der Job ausgeführt werden soll.
+   Lesen Sie die [GitHub Actions `runs-on` Dokumentation][github actions runs-on]
+   für einen vollständigen Überblick.
+   (z.B.: `runs-on: ubuntu-latest`)
+7. Checken Sie den Quellcode des PR-Branches aus.
+   (z.B.: `uses: actions/checkout@v4`)
+8. Installieren Sie die Bencher CLI über [die GitHub Action][bencher cli github action].
+   (z.B.: `uses: bencherdev/bencher@main`)
+9. Verwenden Sie den `bencher archive` CLI-Unterbefehl, um den PR-Branch zu archivieren.
+   (z.B.: `bencher archive`)
+10. Setzen Sie die `--project` Option auf das Projektslug.
+    Siehe [die `--project` Dokumentation][project option] für mehr Details.
+    (z.B.: `--project save-walter-white-1234abcd`)
+11. Setzen Sie die `--token` Option auf das **Repository**-Geheimnis `BENCHER_API_TOKEN`.
+    Siehe [die `--token` Dokumentation][token option] für mehr Details.
+    (z.B.: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+12. Setzen Sie die `--branch` Option auf den Namen des PR-Branches
+    mit dem [GitHub Actions `github` Kontext][github actions context].
+    (z.B.: `--branch '${{ github.head_ref }}'`)
+
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+
+[project option]: /de/docs/explanation/bencher-run/#--project-project
+[token option]: /de/docs/explanation/bencher-run/#--token-token
+
+[pull requests from forks]: #pull-requests-from-forks

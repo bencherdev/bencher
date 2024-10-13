@@ -1,18 +1,22 @@
-## Pull Request'ы из форков
+import PullRequestsForkRun from "./pull-requests-fork-run.mdx";
+import PullRequestsForkTrack from "./pull-requests-fork-track.mdx";
+import PullRequestsForkClosed from "./pull-requests-fork-closed.mdx";
 
-Если вы планируете принимать pull request'ы из форков, как это часто бывает в публичных проектах с открытым исходным кодом, вам потребуется немного иначе подходить к вопросу.
-Из соображений безопасности, такие секреты, как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`, недоступны в GitHub Actions для pull request'ов из форков. То есть, если внешний участник создает pull request из форка, приведенный выше пример **не** сработает.
-Есть два варианта для pull request'ов из форков:
+## Запросы на вытягивание из форков
 
-- ⛑️ Безопаснее: [Бенчмарк pull request'а из форка и загрузка из основной ветви][benchmark fork pr and upload from default branch]
-- ⚠️ Рискованнее: [Бенчмарк pull request'а из форка из целевой ветви с требованием рецензентов][benchmark fork pr from target branch with required reviewers]
-
-Смотрите этот [анализ GitHub Security Lab][github actions pwn requests]
-и [этот блог пост][nathandavison.com blog]
-для получения полного обзора по предотвращению pwn запросов.
+Если вы планируете принимать запросы на вытягивание из форков, как это часто бывает в публичных open source проектах, то вам потребуется немного по-другому с этим справляться. По соображениям безопасности, такие данные, как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`, недоступны в GitHub Actions для запросов на вытягивание из форков. То есть, если внешний участник открывает PR из форка, приведенный выше пример **не будет** работать. Смотрите это [описание безопасности от лаборатории GitHub][github actions pwn requests] и [этот пост в блоге][nathandavison.com blog] для полного обзора о предотвращении атак pwn requests.
 
 [github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
 [nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
 
-[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
-[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers
+Это безопасный и рекомендуемый способ добавления [Непрерывного Бенчмаркинга][continuous benchmarking] к запросам на вытягивание из форков. Он требует двух отдельных рабочих процессов. Первый рабочий процесс запускается и кэширует результаты бенчмаркинга в контексте `pull_request`. Там недоступны такие секреты, как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`. Затем второй рабочий процесс загружает кешированные результаты бенчмаркинга в контексте `workflow_run` и загружает их в Bencher. Это работает, потому что `workflow_run` запускается в контексте основной ветки репозитория, где доступны такие секреты, как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`. Номер запроса на вытягивание, ветка источника и базовая ветка, используемые в первоначальном рабочем процессе `pull_request`, также должны быть явно переданы в рабочий процесс `workflow_run`, так как они там недоступны. Эти рабочие процессы будут выполняться только если они существуют в _основной_ ветке. Смотрите [использование данных от запускающего рабочего процесса][github actions trigger workflow] для полного обзора.
+
+[github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/
+
+[continuous benchmarking]: /ru/docs/explanation/continuous-benchmarking/
+
+<PullRequestsForkRun />
+
+<PullRequestsForkTrack />
+
+<PullRequestsForkClosed />

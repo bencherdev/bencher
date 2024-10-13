@@ -1,25 +1,23 @@
-Selon votre cas d'usage, vous pouvez configurer le [benchmarking continu][continuous benchmarking] dans GitHub Actions pour votre :
+Depending on your use case, you can set up [Continuous Benchmarking][continuous benchmarking] in GitHub Actions for your:
 
-- [Branche de base][base branch]
-- [Demandes de tirage (Pull Requests)][pull requests]
-- [Demandes de tirage à partir de Forks][fork pull requests]
-    - ⛑️ Plus sûr : [Benchmark Fork PR et Upload depuis la Branche par Défaut][benchmark fork pr and upload from default branch]
-    - ⚠️ Plus risqué : [Benchmark Fork PR depuis la Branche Cible avec Réviseurs Requis][benchmark fork pr from target branch with required reviewers]
+- [Base Branch][base branch]
+- [Pull Requests][pull requests]
+- [Pull Requests from Forks][fork pull requests]
 
-Assurez-vous d'avoir [créé un jeton d'API][create an api token]
-et de l'avoir défini comme un secret de **dépôt (Repository)** nommé `BENCHER_API_TOKEN` avant de continuer !
-Naviguez vers `Votre dépôt -> Paramètres -> Secrets et variables -> Actions -> Nouveau secret de dépôt`.
-Nommez le secret `BENCHER_API_TOKEN` et définissez la valeur du secret à votre jeton d'API.
+Assurez-vous d'avoir [créé un jeton API][create an api token]
+et de l'avoir défini comme un secret de **Référentiel** nommé `BENCHER_API_TOKEN` avant de continuer !
+Allez à `Votre Répo -> Paramètres -> Secrets et variables -> Actions -> Nouveau secret de référentiel`.
+Nommez le secret `BENCHER_API_TOKEN` et définissez la valeur secrète sur votre jeton API.
 
 Dans GitHub Actions,
 [les secrets ne sont pas transmis au runner lorsqu'un workflow est déclenché depuis un dépôt forké][github actions secrets].
-Par conséquent, vous devrez utiliser une branche du _même_ dépôt
-lorsque vous ajoutez l'un des workflows ci-dessous à votre dépôt avec une pull request.
-Si vous essayez d'ajouter Bencher avec une pull request provenant d'un fork,
-le secret `BENCHER_API_TOKEN` ne sera pas disponible.
+Par conséquent, vous devrez utiliser une branche du même dépôt
+lors de l'ajout de l'un des workflows ci-dessous à votre dépôt avec une pull request.
+Si vous essayez d'ajouter Bencher avec une pull request à partir d'un fork,
+alors le secret `BENCHER_API_TOKEN` ne sera pas disponible.
 `${{ secrets.BENCHER_API_TOKEN }}` sera une chaîne vide.
 
-[github actions secrets]: https://docs.github.com/fr/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
+[github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
 [create an api token]: /fr/docs/tutorial/quick-start/#create-an-api-token
@@ -27,5 +25,3 @@ le secret `BENCHER_API_TOKEN` ne sera pas disponible.
 [base branch]: #base-branch
 [pull requests]: #pull-requests
 [fork pull requests]: #pull-requests-from-forks
-[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
-[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

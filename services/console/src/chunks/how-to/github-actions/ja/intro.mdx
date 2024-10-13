@@ -1,31 +1,18 @@
-GitHub Actionsであなたのユースケースに応じて、以下のために[継続的ベンチマーキング][継続的ベンチマーキング]を設定できます:
+利用ケースに応じて、GitHub Actionsで[継続的ベンチマーク][continuous benchmarking]を次のためにセットアップできます。
 
-- [ベースブランチ][ベースブランチ]
-- [プルリクエスト][プルリクエスト]
-- [フォークからのプルリクエスト][フォークからのプルリクエスト]
-    - ⛑️ 安全: [デフォルトブランチからフォークPRをベンチマークしてアップロード][デフォルトブランチからフォークPRをベンチマークしてアップロード]
-    - ⚠️ リスキー: [ターゲットブランチからフォークPRをベンチマークしてレビュアーが必要][ターゲットブランチからフォークPRをベンチマークしてレビュアーが必要]
+- [ベースブランチ][base branch]
+- [プルリクエスト][pull requests]
+- [フォークからのプルリクエスト][fork pull requests]
 
-APIトークンを[作成したこと][create an api token]を
-確認し、それを`BENCHER_API_TOKEN`という名前の**リポジトリ**シークレットとして設定する前に進むこと！
-`Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`に移動します。
-シークレットの名前を`BENCHER_API_TOKEN`に設定し、シークレットの値にあなたのAPIトークンを設定してください。
+続行する前に、[APIトークンを作成][create an api token]したうえで、**リポジトリ**のシークレットとして`BENCHER_API_TOKEN`という名前で設定してください。`Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`に移動します。シークレット名を`BENCHER_API_TOKEN`として、シークレットの値にAPIトークンを設定します。
 
-GitHub Actionsでは、
-[ワークフローがフォークされたリポジトリからトリガーされた場合、セcretsはランナーに渡されません][github actions secrets]。
-したがって、以下のいずれかのワークフローをプルリクエストでリポジトリに追加する場合は、
-_同じ_ リポジトリのブランチを使用する必要があります。
-フォークからプルリクエストでBencherを追加しようとすると、
-`BENCHER_API_TOKEN` secretが利用できません。
-`${{ secrets.BENCHER_API_TOKEN }}`は空の文字列になります。
+GitHub Actionsでは、[フォークされたリポジトリからワークフローがトリガーされた場合、シークレットはランナーに渡されません][github actions secrets]。したがって、以下のいずれかのワークフローをプルリクエストでリポジトリに追加する際には、_同じ_リポジトリのブランチを使用する必要があります。フォークからのプルリクエストでBencherを追加しようとすると、`BENCHER_API_TOKEN`シークレットは利用できません。`${{ secrets.BENCHER_API_TOKEN }}`は空の文字列になります。
 
-[github actions secrets]: https://docs.github.com/ja/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
+[github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
-[継続的ベンチマーキング]: /ja/docs/explanation/continuous-benchmarking/
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
 [create an api token]: /ja/docs/tutorial/quick-start/#create-an-api-token
 
-[ベースブランチ]: #base-branch
-[プルリクエスト]: #pull-requests
-[フォークからのプルリクエスト]: #pull-requests-from-forks
-[デフォルトブランチからフォークPRをベンチマークしてアップロード]: #benchmark-fork-pr-and-upload-from-default-branch
-[ターゲットブランチからフォークPRをベンチマークしてレビュアーが必要]: #benchmark-fork-pr-from-target-branch-with-required-reviewers
+[base branch]: #base-branch
+[pull requests]: #pull-requests
+[fork pull requests]: #pull-requests-from-forks

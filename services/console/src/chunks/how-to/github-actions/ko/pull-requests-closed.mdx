@@ -1,0 +1,60 @@
+import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
+
+PR이 닫힌 후 해당 브랜치를 정리하기 위해서,
+`on` `pull_request` 이벤트의 `closed` 타입으로 실행되는 별도의 워크플로를 생성할 수 있습니다.
+이 워크플로는 `bencher archive` 명령을 사용하여 PR 브랜치를 아카이브합니다.
+
+<PullRequestsClosedCode />
+
+1. GitHub Actions `workflow` 파일을 만듭니다.
+   (예: `.github/workflows/pr_benchmarks_closed.yml`)
+2. `pull_request` 이벤트에서 실행:
+   - `closed` - 풀 리퀘스트가 닫힐 때 실행됩니다.
+
+   전체 개요는 [GitHub Actions `on` 설명서][github actions on] 및 [GitHub Actions `pull_request` 설명서][github action pull_request]
+   를 참조하세요. (예: `on: pull_request: types: [closed]`)
+3. GitHub Actions `job`을 만듭니다.
+   (예: `jobs: archive_pr_branch`)
+4. 풀 리퀘스트가 동일한 저장소에서 생성된 경우에만 `pull_request` 이벤트에서 실행합니다.
+   ⚠️ 이 줄은 절대 삭제하지 마세요!
+   Fork PRs를 처리하려면 아래의 [Pull Requests from Forks][pull requests from forks]를 참조하세요.
+   (예: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. [GITHUB_TOKEN의 권한][github token permissions]을 `pull-requests`에 대해서 `write`로 설정하세요.
+   GitHub 설정에 따라 이 설정이 필요하지 않을 수 있습니다.
+   그러나 2023년 2월 2일 이후에 [생성된 모든 조직 및 개인 저장소][github token read only]에 대해
+   이것이 기본 동작입니다.
+   전체 개요는 [GitHub 설명서][github token permissions security]를 참조하세요.
+   (예: `permissions: pull-requests: write`)
+6. 작업이 실행될 머신의 유형을 설정하세요.
+   전체 개요는 [GitHub Actions `runs-on` 설명서][github actions runs-on]를 참조하세요.
+   (예: `runs-on: ubuntu-latest`)
+7. PR 브랜치 소스 코드를 체크아웃하세요.
+   (예: `uses: actions/checkout@v4`)
+8. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치하세요.
+   (예: `uses: bencherdev/bencher@main`)
+9. `bencher archive` CLI 하위 명령을 사용하여 PR 브랜치를 아카이브하세요.
+   (예: `bencher archive`)
+10. `--project` 옵션을 프로젝트 슬러그로 설정하세요.
+    자세한 내용은 [--project 설명서][project option]를 참조하세요.
+    (예: `--project save-walter-white-1234abcd`)
+11. `--token` 옵션을 **저장소** 비밀로 설정된 `BENCHER_API_TOKEN`으로 설정하세요.
+    자세한 내용은 [--token 설명서][token option]를 참조하세요.
+    (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+12. [GitHub Actions `github` 컨텍스트][github actions context]를 사용하여
+   PR 브랜치 이름을 `--branch` 옵션으로 설정하세요.
+    (예: `--branch '${{ github.head_ref }}'`)
+
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+
+[project option]: /ko/docs/explanation/bencher-run/#--project-project
+[token option]: /ko/docs/explanation/bencher-run/#--token-token
+
+[pull requests from forks]: #pull-requests-from-forks

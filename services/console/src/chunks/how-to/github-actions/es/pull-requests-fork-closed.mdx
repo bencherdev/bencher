@@ -1,0 +1,58 @@
+import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
+
+Para limpiar la rama del PR bifurcado después de que su PR se cierre,
+puede crear un flujo de trabajo separado para ejecutar `on` eventos de `pull_request` con el tipo `closed`.
+Este flujo de trabajo archivará la rama del PR bifurcado utilizando el comando `bencher archive`.
+
+<PullRequestsForkClosedCode />
+
+1. Cree un archivo de `workflow` de GitHub Actions.
+   (ej: `.github/workflows/fork_pr_benchmarks_closed.yml`)
+2. Ejecute eventos de `pull_request`:
+   - `closed` - Se cerró un pull request.
+
+   Consulte la [documentación `on` de GitHub Actions][github actions on]
+   y la [documentación `pull_request` de GitHub Actions][github action pull_request] para una visión completa.
+   (ej: `on: pull_request: types: [closed]`)
+3. Cree un `job` de GitHub Actions.
+   (ej: `jobs: archive_pr_branch`)
+4. Establezca [los permisos para el `GITHUB_TOKEN`][github token permissions]
+   en `write` para `pull-requests`.
+   Dependiendo de su configuración de GitHub, esto puede no ser necesario.
+   Pero para todas las organizaciones y repositorios personales
+   [creados después del 02 de febrero de 2023][github token read only],
+   este es el comportamiento predeterminado.
+   Consulte [la documentación de GitHub][github token permissions security]
+   para una visión completa.
+   (ej: `permissions: pull-requests: write`)
+5. Establezca el tipo de máquina en la que se ejecutará el trabajo.
+   Consulte la [documentación `runs-on` de GitHub Actions][github actions runs-on]
+   para una visión completa.
+   (ej: `runs-on: ubuntu-latest`)
+6. Realice el checkout del código fuente de la rama del PR.
+   (ej: `uses: actions/checkout@v4`)
+7. Instale el CLI de Bencher utilizando [la Acción de GitHub][bencher cli github action].
+   (ej: `uses: bencherdev/bencher@main`)
+8. Use el subcomando `bencher archive` de CLI para archivar la rama del PR.
+   (ej: `bencher archive`)
+9.  Establezca la opción `--project` en el slug del Proyecto.
+    Consulte [los documentos `--project`][project option] para más detalles.
+    (ej: `--project save-walter-white-1234abcd`)
+10. Establezca la opción `--token` en el secreto **Repository** `BENCHER_API_TOKEN`.
+    Consulte [los documentos `--token`][token option] para más detalles.
+    (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+11. Establezca la opción `--branch` en el nombre de la rama del PR
+    utilizando [el contexto `github` de GitHub Actions][github actions context].
+    (ej: `--branch '${{ github.head_ref }}'`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+
+[project option]: /es/docs/explanation/bencher-run/#--project-project
+[token option]: /es/docs/explanation/bencher-run/#--token-token

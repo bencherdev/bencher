@@ -1,0 +1,36 @@
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+
+<PullRequestsForkRunCode />
+
+1. 创建第一个 GitHub Actions `workflow` 文件。
+   （例如：`.github/workflows/fork_pr_benchmarks_run.yml`）
+2. 为此工作流程命名，以便可以被第二个工作流程引用。
+   （例如：`name: Run Benchmarks`）
+3. 在 `pull_request` 事件上运行：
+    - `opened` - 创建了一个拉取请求。
+    - `reopened` - 重新打开了一个先前关闭的拉取请求。
+    - `edited` - 拉取请求的标题或正文被编辑，或拉取请求的基分支被更改。
+    - `synchronize` - 拉取请求的头分支被更新。
+      例如，头分支从基分支更新或者有新的提交被推送到头分支。
+
+   查看 [GitHub Actions `on` 文档][github actions on]
+   和 [GitHub Actions `pull_request` 文档][github action pull_request]，了解完整概况。
+   （例如：`on: pull_request: types: [opened, reopened, edited, synchronize]`）
+4. 创建一个 GitHub Actions `job`。
+   （例如：`jobs: benchmark_fork_pr_branch`）
+5. 设置作业将在哪种类型的机器上运行。
+   查看 [GitHub Actions `runs-on` 文档][github actions runs-on]
+   了解完整概况。
+   （例如：`runs-on: ubuntu-latest`）
+6. 检出fork PR分支的源代码。
+   （例如：`uses: actions/checkout@v4`）
+7. 运行基准测试并将结果保存到文件。
+   （例如：`/bin/echo '{ ... }' > benchmark_results.json`）
+8. 将基准测试结果文件作为工件上传。
+   （例如：`uses: actions/upload-artifact@v4`）
+9. 将 `pull_request` 事件对象作为工件上传。
+  （例如：`uses: actions/upload-artifact@v4`）
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on

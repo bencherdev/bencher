@@ -1,0 +1,36 @@
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+
+<PullRequestsForkRunCode />
+
+1. Erstellen Sie eine erste GitHub Actions `workflow`-Datei.
+   (z.B.: `.github/workflows/fork_pr_benchmarks_run.yml`)
+2. Benennen Sie diesen Workflow, sodass er vom zweiten Workflow referenziert werden kann.
+   (z.B.: `name: Run Benchmarks`)
+3. Führen Sie diese bei `pull_request`-Ereignissen aus:
+    - `opened` - Ein Pull-Request wurde erstellt.
+    - `reopened` - Ein zuvor geschlossener Pull-Request wurde wieder geöffnet.
+    - `edited` - Der Titel oder der Hauptteil eines Pull-Requests wurde bearbeitet oder der Basisbranch eines Pull-Requests wurde geändert.
+    - `synchronize` - Der Kopfbranch eines Pull-Requests wurde aktualisiert.
+      Zum Beispiel wurde der Kopfbranch vom Basisbranch aktualisiert oder neue Commits wurden zum Kopfbranch hinzugefügt.
+
+   Siehe die [GitHub Actions `on`-Dokumentation][github actions on]
+   und die [GitHub Actions `pull_request`-Dokumentation][github action pull_request] für einen vollständigen Überblick.
+   (z.B.: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. Erstellen Sie einen GitHub Actions `job`.
+   (z.B.: `jobs: benchmark_fork_pr_branch`)
+5. Legen Sie den Maschinentyp fest, auf dem der Job ausgeführt wird.
+   Siehe die [GitHub Actions `runs-on`-Dokumentation][github actions runs-on]
+   für einen vollständigen Überblick.
+   (z.B.: `runs-on: ubuntu-latest`)
+6. Überprüfen Sie den Quellcode des Fork PR Branch.
+   (z.B.: `uses: actions/checkout@v4`)
+7. Führen Sie Ihre Benchmarks durch und speichern Sie die Ergebnisse in einer Datei.
+   (z.B.: `/bin/echo '{ ... }' > benchmark_results.json`)
+8. Laden Sie die Benchmark-Ergebnisdatei als Artefakt hoch.
+   (z.B.: `uses: actions/upload-artifact@v4`)
+9. Laden Sie das `pull_request`-Ereignisobjekt als Artefakt hoch.
+  (z.B.: `uses: actions/upload-artifact@v4`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on

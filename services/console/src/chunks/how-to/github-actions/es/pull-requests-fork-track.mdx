@@ -1,0 +1,102 @@
+import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
+
+<PullRequestsForkTrackCode />
+
+1. Cree un primer archivo de `workflow` de GitHub Actions.
+   (ej: `.github/workflows/fork_pr_benchmarks_track.yml`)
+2. Nombra este flujo de trabajo como segundo flujo de trabajo.
+   (ej: `name: Track Benchmarks with Bencher`)
+3. Encadena los dos flujos de trabajo con el
+   [evento `workflow_run`][github actions workflow_run].
+   (ej: `on: workflow_run: ...`)
+4. Cree un `job` de GitHub Actions.
+   (ej: `jobs: track_fork_pr_branch`)
+5. Ejecute este trabajo solo si la conclusión del flujo de trabajo anterior fue un éxito usando
+   [el evento `workflow_run` de GitHub Actions][github actions workflow_run].
+   (ej: `if: github.event.workflow_run.conclusion == 'success'`)
+6. Establezca el tipo de máquina en que se ejecutará el trabajo.
+   Consulte la [documentación `runs-on` de GitHub Actions][github actions runs-on]
+   para una visión completa.
+   (ej: `runs-on: ubuntu-latest`)
+7. Establezca los resultados del benchmark y los nombres de los archivos del objeto de evento `pull_request` como variables de entorno.
+   (ej: `env: ...`)
+8. Descargue los resultados del benchmark almacenados en caché y el evento `pull_request`
+   usando [la acción de GitHub `action-download-artifact`][action download artifact].
+   (ej: `uses: dawidd6/action-download-artifact@v6`)
+10. Exporte los datos necesarios del evento `pull_request` como variables de entorno.
+    (ej: `core.exportVariable(...)`)
+11. Instale el Bencher CLI usando [la acción de GitHub][bencher cli github action].
+   (ej: `uses: bencherdev/bencher@main`)
+12. Utilice el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+    para rastrear los benchmarks de su ramificación de pull de fork.
+    Consulte el [subcomando CLI `bencher run`][bencher run] para una visión completa.
+    (ej: `bencher run`)
+13. Establezca la opción `--project` para el slug del Proyecto.
+    Consulte los [documentos de `--project`][project option] para más detalles.
+    (ej: `--project save-walter-white-1234abcd`)
+14. Establezca la opción `--token` en la clave secreta del **repositorio** `BENCHER_API_TOKEN`.
+    Consulte los [documentos de `--token`][token option] para más detalles.
+    (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. Establezca la opción `--branch` en el nombre de la rama PR de fork
+    usando [el contexto de `github` de GitHub Actions][github actions context].
+    Consulte los [documentos de `--branch`][branch option] para una visión completa.
+    (ej: `--branch '${{ env.PR_HEAD }}'`)
+13. Establezca el Punto de Inicio para la Rama PR de Fork:
+    1. Establezca la opción `--start-point` en el punto de inicio de la rama PR de fork
+    usando [el contexto de `github` de GitHub Actions][github actions context].
+    Consulte los [documentos de `--start-point`][start point] para una visión completa.
+    (ej: `--start-point '${{ env.PR_BASE }}'`)
+    2. Establezca la opción `--start-point-hash` en el `git` hash del punto de inicio de la rama PR de fork
+    usando [el evento `pull_request` de GitHub Actions][github action pull_request].
+    Consulte los [documentos de `--start-point-hash`][start point hash] para una visión completa.
+    (ej: `--start-point-hash '${{ env.PR_BASE_SHA }}'`)
+    3. Establezca el flag `--start-point-clone-thresholds` para clonar los Umbrales del punto de inicio.
+    Consulte los [documentos de `--start-point-clone-thresholds`][start point clone thresholds] para una visión completa.
+    (ej: `--start-point-clone-thresholds`)
+    4. Establezca el flag `--start-point-reset` para siempre resetear la Rama PR de Fork al punto de inicio.
+    Esto evitará el desvío de datos de benchmark.
+    Consulte los [documentos de `--start-point-reset`][start point reset] para una visión completa.
+    (ej: `--start-point-reset`)
+14. Establezca la opción `--testbed` al nombre del Banco de Pruebas.
+    Esto probablemente debe coincidir con la máquina seleccionada en `runs-on`.
+    Consulte los [documentos de `--tested`][testbed option] para más detalles.
+    (ej: `--testbed ubuntu-latest`)
+15. Establezca el flag `--err` para fallar el comando si se genera una Alerta.
+   Consulte los [documentos de `--err`][alert err] para una visión completa.
+   (ej: `--err`)
+16. Establezca la opción `--adapter` a [Formato Métrico de Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Consulte las [adaptaciones del arnés de benchmark][adapter json] para una visión completa.
+   (ej: `--adapter json`)
+17. Establezca la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como un comentario en el Pull Request usando
+    [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
+    Consulte los [documentos de `--github-actions`][github actions option] para más detalles.
+    (ej: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+18. Establezca la opción `--ci-number` al número del pull request.
+    Consulte los [documentos de `--ci-number`][ci number option] para más detalles.
+    (ej: `--ci-number '${{ env.PR_NUMBER }}'`)
+19. Establezca la opción `--file` a la ruta del archivo de resultados del benchmark.
+    Consulte el [comando de benchmark][command argument] para una visión completa.
+    (ej: `--file "$BENCHMARK_RESULTS"`)
+
+[github actions workflow_run]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[action download artifact]: https://github.com/dawidd6/action-download-artifact
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+
+[bencher run]: /es/docs/explanation/bencher-run/
+[project option]: /es/docs/explanation/bencher-run/#--project-project
+[token option]: /es/docs/explanation/bencher-run/#--token-token
+[branch option]: /es/docs/explanation/branch-selection/#--branch-branch
+[start point]: /es/docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /es/docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /es/docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /es/docs/explanation/branch-selection/#--start-point-reset
+[testbed option]: /es/docs/explanation/bencher-run/#--testbed-testbed
+[alert err]: /es/docs/explanation/thresholds/#--err
+[bmf]: /es/docs/reference/bencher-metric-format/
+[adapter json]: /es/docs/explanation/adapters/#-json
+[github actions option]: /es/docs/explanation/bencher-run/#--github-actions-github_token
+[ci number option]: /es/docs/explanation/bencher-run/#--ci-id-id
+[command argument]: /es/docs/explanation/bencher-run/#benchmark-command

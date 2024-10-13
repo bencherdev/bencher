@@ -1,0 +1,58 @@
+import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
+
+GitHubのPRがクローズされた後にPRブランチをクリーンアップするためには、`on` `pull_request` イベントの `closed` タイプを使用して実行する別のワークフローを作成できます。このワークフローは、`bencher archive` コマンドを使用してPRブランチをアーカイブします。
+
+<PullRequestsClosedCode />
+
+1. GitHub Actionsの`workflow`ファイルを作成します。
+   (例: `.github/workflows/pr_benchmarks_closed.yml`)
+2. `pull_request`イベントで実行します:
+   - `closed` - プルリクエストがクローズされた。
+
+   詳細は[GitHub Actionsの`on`ドキュメント][github actions on]および[GitHub Actionsの`pull_request`ドキュメント][github action pull_request]を参照してください。
+   (例: `on: pull_request: types: [closed]`)
+3. GitHub Actionsの`job`を作成します。
+   (例: `jobs: archive_pr_branch`)
+4. プルリクエストが同じリポジトリからの場合にのみ`pull_request`イベントを実行します。
+   ⚠️ この行を削除しないでください！
+   フォークからのPRを処理する方法については、以下の[フォークからのプルリクエスト][pull requests from forks]を参照してください。
+   (例: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. `GITHUB_TOKEN`の[権限を設定][github token permissions]
+   `pull-requests`に対して`write`にします。
+   GitHubの設定によって、これは必要ない場合がありますが、
+   2023年2月2日以降に作成されたすべての組織および個人リポジトリについては、
+   [これはデフォルトの動作です][github token read only]。
+   詳細は[GitHubのドキュメント][github token permissions security]を参照してください。
+   (例: `permissions: pull-requests: write`)
+6. ジョブが実行されるマシンのタイプを設定します。
+   詳細は[GitHub Actionsの`runs-on`ドキュメント][github actions runs-on]を参照してください。
+   (例: `runs-on: ubuntu-latest`)
+7. PRブランチのソースコードをチェックアウトします。
+   (例: `uses: actions/checkout@v4`)
+8. Bencher CLIを[GitHub Actionを使用して][bencher cli github action]インストールします。
+   (例: `uses: bencherdev/bencher@main`)
+9. `bencher archive` CLIサブコマンドを使用してPRブランチをアーカイブします。
+   (例: `bencher archive`)
+10. プロジェクトスラッグに`--project`オプションを設定します。
+    詳細は[`--project`のドキュメント][project option]を参照してください。
+    (例: `--project save-walter-white-1234abcd`)
+11. `--token`オプションを`BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
+    詳細は[`--token`のドキュメント][token option]を参照してください。
+    (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+12. GitHub Actionsの`github`コンテキストを使用して、PRブランチ名に`--branch`オプションを設定します。
+    (例: `--branch '${{ github.head_ref }}'`)
+
+
+[github actions on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/ja/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/ja/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/ja/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github actions context]: https://docs.github.com/ja/actions/learn-github-actions/contexts#github-context
+
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[token option]: /ja/docs/explanation/bencher-run/#--token-token
+
+[pull requests from forks]: #pull-requests-from-forks
