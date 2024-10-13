@@ -1,0 +1,9 @@
+Консольный интерфейс Bencher не требует какой-либо настройки. Однако некоторые параметры по умолчанию могут быть изменены в соответствии с вашими потребностями с использованием следующих переменных окружения:
+
+- `BENCHER_API_URL`: URL для [сервера Bencher API][server config]. По умолчанию это значение установлено как `http://localhost:61016`.
+- `INTERNAL_API_URL`: При использовании сетевого взаимодействия на основе Docker, такого как `docker compose`, это необходимо для общения Docker-с-Docker при использовании локального `BENCHER_API_URL`. Не устанавливайте это при использовании удаленного `BENCHER_API_URL`, такого как `https://bencher.example.com`. По умолчанию это не установлено.
+- `GITHUB_CLIENT_ID`: Идентификатор клиента GitHub для [самостоятельно размещенного GitHub приложения][github app], чтобы включить вход через "Login with GitHub". Это требует наличия [плана Bencher Plus Enterprise][bencher plus enterprise]. По умолчанию это не установлено.
+
+[server config]: /ru/docs/reference/server-config/
+[github app]: /ru/docs/how-to/github-app/
+[bencher plus enterprise]: /pricing/?level=enterprise

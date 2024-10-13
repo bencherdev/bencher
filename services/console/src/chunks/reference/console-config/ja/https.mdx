@@ -1,0 +1,10 @@
+## HTTPS
+
+デフォルトでは、Bencher Console サーバーは HTTP を使用します。
+これは、HTTPS を処理するためのプロキシサーバーが前面にある場合に適しています。
+スタンドアロンの Console サーバーが自ら HTTPS を処理する必要がある場合には、
+SSL キーと証明書を提供する必要があります。
+
+以下の環境変数を使用して HTTPS を構成できます：
+  - `SERVER_KEY_PATH`: TLS キーへのファイルパス。
+  - `SERVER_CERT_PATH`: TLS 証明書へのファイルパス。

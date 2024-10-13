@@ -1,0 +1,9 @@
+Die Bencher Console-Benutzeroberfläche erfordert keine Konfiguration. Einige Standardeinstellungen können jedoch an Ihre Bedürfnisse angepasst werden, indem die folgenden Umgebungsvariablen verwendet werden:
+
+- `BENCHER_API_URL`: Die URL für [den Bencher API-Server][server config]. Standardmäßig ist diese auf `http://localhost:61016` eingestellt.
+- `INTERNAL_API_URL`: Bei Verwendung von Docker-basiertem Networking, wie zum Beispiel mit `docker compose`, wird dies für die Docker-zu-Docker-Kommunikation benötigt, wenn eine lokale `BENCHER_API_URL` verwendet wird. Setzen Sie dies nicht, wenn Sie eine entfernte `BENCHER_API_URL` verwenden, wie `https://bencher.example.com`. Standardmäßig ist dies nicht gesetzt.
+- `GITHUB_CLIENT_ID`: Die GitHub Client ID für eine [Self-Hosted GitHub App][github app], um "Login mit GitHub" zu ermöglichen. Dies erfordert einen [Bencher Plus Enterprise-Plan][bencher plus enterprise]. Standardmäßig ist dies nicht gesetzt.
+
+[server config]: /de/docs/reference/server-config/
+[github app]: /de/docs/how-to/github-app/
+[bencher plus enterprise]: /pricing/?level=enterprise

@@ -1,0 +1,10 @@
+## HTTPS
+
+默认情况下，Bencher Console 服务器使用 HTTP。
+如果您在它前面有一个代理服务器来处理 HTTPS，这样可以很好地工作。
+如果您需要一个独立的 Console 服务器自行处理 HTTPS，
+那么您需要提供一个 SSL 密钥和证书。
+
+您可以使用以下环境变量配置 HTTPS：
+  - `SERVER_KEY_PATH`: 您的 TLS 密钥的文件路径。
+  - `SERVER_CERT_PATH`: 您的 TLS 证书的文件路径。

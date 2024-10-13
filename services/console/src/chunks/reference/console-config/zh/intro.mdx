@@ -1,0 +1,14 @@
+Bencher Console UI 不需要任何配置。
+但是，可以使用以下环境变量自定义一些默认设置以满足您的需求：
+
+- `BENCHER_API_URL`: [Bencher API 服务器][server config]的 URL。
+  默认情况下，此值设置为 `http://localhost:61016`。
+- `INTERNAL_API_URL`: 在使用基于 Docker 的网络（例如使用 `docker compose`）时，
+  当使用本地 `BENCHER_API_URL` 时，这对于 Docker 间的通信是必需的。
+  当使用远程 `BENCHER_API_URL` 时，例如 `https://bencher.example.com`，请不要设置此项。
+  默认情况下，此项未设置。
+- `GITHUB_CLIENT_ID`: [自托管 GitHub 应用][github app]的 GitHub 客户端 ID ，以启用“使用 GitHub 登录”。 这需要 [Bencher Plus 企业计划][bencher plus enterprise]。 默认情况下，此项未设置。
+
+[server config]: /zh/docs/reference/server-config/
+[github app]: /zh/docs/how-to/github-app/
+[bencher plus enterprise]: /pricing/?level=enterprise

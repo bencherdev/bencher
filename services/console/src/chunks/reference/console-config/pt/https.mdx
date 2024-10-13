@@ -1,0 +1,7 @@
+## HTTPS
+
+Por padrão, o servidor Bencher Console utiliza HTTP. Isso funciona bem se você tiver um servidor proxy na frente dele para lidar com HTTPS. Se você precisar de um servidor Console autônomo para lidar com HTTPS, então será necessário fornecer uma chave e um certificado SSL.
+
+Você pode configurar o HTTPS usando as seguintes variáveis de ambiente:
+  - `SERVER_KEY_PATH`: O caminho do arquivo para a sua chave TLS.
+  - `SERVER_CERT_PATH`: O caminho do arquivo para o seu certificado TLS.

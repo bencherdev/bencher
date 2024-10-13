@@ -1,0 +1,7 @@
+## HTTPS
+
+기본적으로 Bencher Console 서버는 HTTP를 사용합니다. 이는 HTTPS를 처리하기 위한 프록시 서버가 앞에 있는 경우에 잘 작동합니다. HTTPS를 자체적으로 처리해야 하는 독립 실행형 Console 서버가 필요한 경우 SSL 키와 인증서를 제공해야 합니다.
+
+다음 환경 변수를 사용하여 HTTPS를 구성할 수 있습니다:
+  - `SERVER_KEY_PATH`: TLS 키의 파일 경로.
+  - `SERVER_CERT_PATH`: TLS 인증서의 파일 경로.

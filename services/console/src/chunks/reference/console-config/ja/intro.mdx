@@ -1,0 +1,13 @@
+Bencher Console UIは設定を必要としません。
+しかし、いくつかのデフォルト設定は、以下の環境変数を使用してニーズに合わせてカスタマイズすることができます。
+
+- `BENCHER_API_URL`: [Bencher APIサーバー][server config]のURLです。
+  デフォルトでは、これは`http://localhost:61016`に設定されています。
+- `INTERNAL_API_URL`: `docker compose`のようなDockerベースのネットワークを使用する場合、ローカルの`BENCHER_API_URL`を使用する際のDocker-to-Docker通信に必要です。
+  `https://bencher.example.com`などのリモート`BENCHER_API_URL`を使用する場合は設定しないでください。
+  デフォルトでは、これは設定されていません。
+- `GITHUB_CLIENT_ID`: "Login with GitHub"を有効にするための[セルフホスト型GitHub App][github app]のGitHubクライアントIDです。これには[Bencher Plus Enterpriseプラン][bencher plus enterprise]が必要です。デフォルトでは、これは設定されていません。
+
+[server config]: /ja/docs/reference/server-config/
+[github app]: /ja/docs/how-to/github-app/
+[bencher plus enterprise]: /pricing/?level=enterprise
