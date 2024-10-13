@@ -1,0 +1,8 @@
+### `--ci-id <ID>`
+
+<br />
+
+Optional: Custom ID for posting results to CI.
+By default, Bencher will automatically segment out results by the combination of: Project, Branch, Testbed, and [Adapter](/docs/explanation/adapters/).
+Setting a custom ID is useful when Bencher is being run multiple times in the same CI workflow for the same Project, Branch, Testbed, and Adapter combination.
+Requires: `--github-actions`

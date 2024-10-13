@@ -16,16 +16,27 @@ import BranchSelection from "../../../chunks/explanation/bencher-run/ko/branch-s
 import Hash from "../../../chunks/explanation/bencher-run/ko/hash.mdx";
 import NoHash from "../../../chunks/explanation/bencher-run/ko/no-hash.mdx";
 import Testbed from "../../../chunks/explanation/bencher-run/ko/testbed.mdx";
+import Thresholds from "../../../chunks/explanation/bencher-run/ko/thresholds.mdx";
 import Adapters from "../../../chunks/explanation/bencher-run/ko/adapters.mdx";
 import Iter from "../../../chunks/explanation/bencher-run/ko/iter.mdx";
 import Fold from "../../../chunks/explanation/bencher-run/ko/fold.mdx";
 import Backdate from "../../../chunks/explanation/bencher-run/ko/backdate.mdx";
 import AllowFailure from "../../../chunks/explanation/bencher-run/ko/allow-failure.mdx";
-import Err from "../../../chunks/explanation/bencher-run/ko/err.mdx";
 import Format from "../../../chunks/explanation/bencher-run/ko/format.mdx";
 import Quiet from "../../../chunks/explanation/bencher-run/ko/quiet.mdx";
-
+import GitHubActions from "../../../chunks/explanation/bencher-run/ko/github-actions.mdx";
+import CiOnlyThresholds from "../../../chunks/explanation/bencher-run/ko/ci-only-thresholds.mdx";
+import CiOnlyOnAlert from "../../../chunks/explanation/bencher-run/ko/ci-only-on-alert.mdx";
+import CiId from "../../../chunks/explanation/bencher-run/ko/ci-id.mdx";
+import CiNumber from "../../../chunks/explanation/bencher-run/ko/ci-number.mdx";
+import Shell from "../../../chunks/explanation/bencher-run/ko/shell.mdx";
+import Flag from "../../../chunks/explanation/bencher-run/ko/flag.mdx";
 import Exec from "../../../chunks/explanation/bencher-run/ko/exec.mdx";
+import Host from "../../../chunks/explanation/bencher-run/ko/host.mdx";
+import Attempts from "../../../chunks/explanation/bencher-run/ko/attempts.mdx";
+import RetryAfter from "../../../chunks/explanation/bencher-run/ko/retry-after.mdx";
+import DryRun from "../../../chunks/explanation/bencher-run/ko/dry-run.mdx";
+import Help from "../../../chunks/explanation/bencher-run/ko/help.mdx";
 
 <Intro />
 
@@ -33,7 +44,7 @@ import Exec from "../../../chunks/explanation/bencher-run/ko/exec.mdx";
 
 <BenchmarkCommand />
 
-## 옵션
+## Options
 
 <Project />
 
@@ -59,6 +70,10 @@ import Exec from "../../../chunks/explanation/bencher-run/ko/exec.mdx";
 
 <br />
 
+<Thresholds />
+
+<br />
+
 <Adapters />
 
 <br />
@@ -79,10 +94,6 @@ import Exec from "../../../chunks/explanation/bencher-run/ko/exec.mdx";
 
 <br />
 
-<Err />
-
-<br />
-
 <Format />
 
 <br />
@@ -91,77 +102,31 @@ import Exec from "../../../chunks/explanation/bencher-run/ko/exec.mdx";
 
 <br />
 
-### `--github-actions <GITHUB_TOKEN>`
+<GitHubActions />
 
 <br />
 
-선택사항: GitHub API 인증 토큰을 설정합니다 (예: `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-이 옵션이 설정되고 `bencher run`이 풀 리퀘스트의 일부로 GitHub Actions에서 사용되면,
-결과는 풀 리퀘스트에 댓글로 추가될 것입니다.
-이를 하는 가장 편리한 방법은 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ko/actions/security-guides/automatic-token-authentication)입니다.
-
-> 🐰 Docker 컨테이너 내부에서 실행되는 GitHub Action인 경우, 다음 환경 변수를 전달하고 `GITHUB_EVENT_PATH`에 지정된 경로를 마운트해야 합니다:
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
+<CiOnlyThresholds />
 
 <br />
 
-### `--ci-only-thresholds`
+<CiOnlyOnAlert />
 
 <br />
 
-선택사항: Measure, Branch, 그리고 Testbed에 대해 [Threshold](/ko/docs/explanation/thresholds/)가 존재하는 경우에만 CI에 결과를 게시합니다.
-Threshold가 존재하지 않으면, 아무 것도 게시되지 않습니다.
-필요사항: `--github-actions`
-
-<br />
-
-### `--ci-only-on-alert`
-
-<br />
-
-선택사항: [an Alert](/ko/docs/explanation/thresholds/)가 생성되어야만 CI에 결과를 게시 시작합니다.
-경고가 생성된 경우, 그 후의 결과들도 경고가 없어도 게시될 것입니다.
-필요사항: `--github-actions`
-
-<br />
-
-### `--ci-id`
-
-<br />
-
-선택사항: CI에 결과를 게시하기 위한 사용자 지정 ID입니다.
-기본적으로, Bencher는 자동으로 Project, Branch, Testbed, 그리고 [Adapter](/ko/docs/explanation/adapters/)의 조합에 따라 결과를 분리합니다.
-Bencher가 동일한 Project, Branch, Testbed, 그리고 Adapter 조합으로 동일한 CI 워크플로에서 여러 번 실행될 때 사용자 지정 ID를 설정하는 것이 유용합니다.
-필요사항: `--github-actions`
+<CiId />
 
 <br/>
 
-### `--ci-number`
-
-<br />
-
-선택사항: CI에 결과를 게시하기 위한 이슈 번호입니다.
-Bencher는 결과를 게시하는 데 필요한 CI 이슈 번호를 감지하기 위해 최선을 다합니다.
-그러나 이는, GitHub Actions에서 `workflow_run`을 사용하는 등 복잡한 설정에서 항상 가능한 것은 아닙니다.
-필요사항: `--github-actions`
+<CiNumber />
 
 <br/>
 
-### `--shell <SHELL>`
+<Shell />
 
 <br />
 
-선택사항: 쉘 명령어 경로입니다. 유닉스와 같은 환경에서는 기본값이 `/bin/sh`이고, 윈도우에서는 `cmd`입니다.
-
-<br />
-
-### `--flag <FLAG>`
-
-<br />
-
-선택사항: 쉘 명령어 플래그입니다. 유닉스와 같은 환경에서는 기본값이 `-c`이고, 윈도우에서는 `/C`입니다.
+<Flag />
 
 <br />
 
@@ -169,45 +134,23 @@ Bencher는 결과를 게시하는 데 필요한 CI 이슈 번호를 감지하기
 
 <br />
 
-### `--host <URL>`
+<Host />
 
 <br />
 
-선택사항: 백엔드 호스트 URL입니다. 기본값은 [https://api.bencher.dev](https://api.bencher.dev)입니다.
+<Attempts />
 
 <br />
 
-### `--attempts <ATTEMPTS>`
+<RetryAfter />
 
 <br />
 
-선택사항: 최대 요청 재시도 시도 횟수입니다. 기본값은 `10`입니다.
+<DryRun />
 
 <br />
 
-### `--retry-after <RETRY_AFTER_SECONDS>`
-
-<br />
-
-선택사항: 주어진 초 수 후에 요청을 재시도합니다 (지수 백오프). 기본값은 `1`입니다.
-
-<br />
-
-### `--dry-run`
-
-<br />
-
-선택사항: 드라이 런을 수행합니다. 이는 백엔드에 어떠한 데이터도 저장하지 않습니다.
-[branch selection](/ko/docs/explanation/branch-selection/)에서 상세하게 설명된 Report나 Branch가 생성되지 않습니다.
-
-<br />
-
-### `-h`
-### `--help`
-
-<br />
-
-선택사항: 도움말을 출력합니다.
+<Help />
 
 <br />
 <br />

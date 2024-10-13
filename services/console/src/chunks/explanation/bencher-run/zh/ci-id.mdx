@@ -1,0 +1,8 @@
+### `--ci-id <ID>`
+
+<br />
+
+可选：用于将结果发布到 CI 的自定义 ID。
+默认情况下，Bencher 会自动按以下组合分割结果：项目、分支、测试平台和[适配器](/zh/docs/explanation/adapters/)。
+当 Bencher 在同一个 CI 工作流程中针对相同的项目、分支、测试平台和适配器组合运行多次时，设置自定义 ID 会很有用。
+要求：`--github-actions`

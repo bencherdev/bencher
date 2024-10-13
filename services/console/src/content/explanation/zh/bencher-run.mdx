@@ -16,16 +16,27 @@ import BranchSelection from "../../../chunks/explanation/bencher-run/zh/branch-s
 import Hash from "../../../chunks/explanation/bencher-run/zh/hash.mdx";
 import NoHash from "../../../chunks/explanation/bencher-run/zh/no-hash.mdx";
 import Testbed from "../../../chunks/explanation/bencher-run/zh/testbed.mdx";
+import Thresholds from "../../../chunks/explanation/bencher-run/zh/thresholds.mdx";
 import Adapters from "../../../chunks/explanation/bencher-run/zh/adapters.mdx";
 import Iter from "../../../chunks/explanation/bencher-run/zh/iter.mdx";
 import Fold from "../../../chunks/explanation/bencher-run/zh/fold.mdx";
 import Backdate from "../../../chunks/explanation/bencher-run/zh/backdate.mdx";
 import AllowFailure from "../../../chunks/explanation/bencher-run/zh/allow-failure.mdx";
-import Err from "../../../chunks/explanation/bencher-run/zh/err.mdx";
 import Format from "../../../chunks/explanation/bencher-run/zh/format.mdx";
 import Quiet from "../../../chunks/explanation/bencher-run/zh/quiet.mdx";
-
+import GitHubActions from "../../../chunks/explanation/bencher-run/zh/github-actions.mdx";
+import CiOnlyThresholds from "../../../chunks/explanation/bencher-run/zh/ci-only-thresholds.mdx";
+import CiOnlyOnAlert from "../../../chunks/explanation/bencher-run/zh/ci-only-on-alert.mdx";
+import CiId from "../../../chunks/explanation/bencher-run/zh/ci-id.mdx";
+import CiNumber from "../../../chunks/explanation/bencher-run/zh/ci-number.mdx";
+import Shell from "../../../chunks/explanation/bencher-run/zh/shell.mdx";
+import Flag from "../../../chunks/explanation/bencher-run/zh/flag.mdx";
 import Exec from "../../../chunks/explanation/bencher-run/zh/exec.mdx";
+import Host from "../../../chunks/explanation/bencher-run/zh/host.mdx";
+import Attempts from "../../../chunks/explanation/bencher-run/zh/attempts.mdx";
+import RetryAfter from "../../../chunks/explanation/bencher-run/zh/retry-after.mdx";
+import DryRun from "../../../chunks/explanation/bencher-run/zh/dry-run.mdx";
+import Help from "../../../chunks/explanation/bencher-run/zh/help.mdx";
 
 <Intro />
 
@@ -33,7 +44,7 @@ import Exec from "../../../chunks/explanation/bencher-run/zh/exec.mdx";
 
 <BenchmarkCommand />
 
-## 选项
+## Options
 
 <Project />
 
@@ -59,6 +70,10 @@ import Exec from "../../../chunks/explanation/bencher-run/zh/exec.mdx";
 
 <br />
 
+<Thresholds />
+
+<br />
+
 <Adapters />
 
 <br />
@@ -79,10 +94,6 @@ import Exec from "../../../chunks/explanation/bencher-run/zh/exec.mdx";
 
 <br />
 
-<Err />
-
-<br />
-
 <Format />
 
 <br />
@@ -91,77 +102,31 @@ import Exec from "../../../chunks/explanation/bencher-run/zh/exec.mdx";
 
 <br />
 
-### `--github-actions <GITHUB_TOKEN>`
+<GitHubActions />
 
 <br />
 
-可选：设置 GitHub API 验证令牌 (即 `--github-actions ${{ secrets.GITHUB_TOKEN }}`)。
-当此选项被设置并且 `bencher run` 在一个的拉请求中作为 GitHub 操作的一部分被使用时，
-那么结果将以评论的形式添加到拉请求中。
-这样做最方便的方式是 [GitHub 操作的 `GITHUB_TOKEN` 环境变量](https://docs.github.com/cn/actions/security-guides/automatic-token-authentication)。
-
-> 🐰 如果你在 GitHub 操作中的 Docker 容器内运行，你将需要传入以下环境变量，并挂载由 `GITHUB_EVENT_PATH` 指定的路径：
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
+<CiOnlyThresholds />
 
 <br />
 
-### `--ci-only-thresholds`
+<CiOnlyOnAlert />
 
 <br />
 
-可选：只有在 [一个阈值](/zh/docs/explanation/thresholds/) 存在于度量标准种类，分支和测试环境时，才将结果提交到 CI。
-如果没有阈值存在，那么什么也不会被提交。
-需要：`--github-actions`
-
-<br />
-
-### `--ci-only-on-alert`
-
-<br />
-
-可选：只有在 [一个警报](/zh/docs/explanation/thresholds/) 生成时，才开始将结果提交到 CI。
-如果生成了一个警报，那么后续的结果，即使它们不包含任何警报，也会被提交。
-需要：`--github-actions`
-
-<br />
-
-### `--ci-id`
-
-<br />
-
-可选：自定义 ID 用于将结果提交到 CI。
-默认情况下，Bencher 将自动按组合：项目，分支，测试环境，和 [适配器](/zh/docs/explanation/adapters/) 段出结果。
-在 Bencher 被多次在同一个 CI 工作流中针对同一个项目，分支，测试环境，和适配器组合运行时，设置自定义 ID 很有用。
-需要：`--github-actions`
+<CiId />
 
 <br/>
 
-### `--ci-number`
-
-<br />
-
-可选：将结果提交到 CI 的问题编号。
-Bencher 将尽最大努力检测出需要提交结果的 CI 问题编号。
-然而，这并不总是可用的，在复杂的设置中，像在 GitHub 执行 `workflow_run`。
-需要：`--github-actions`
+<CiNumber />
 
 <br/>
 
-### `--shell <SHELL>`
+<Shell />
 
 <br />
 
-可选：Shell 命令路径。在类 Unix 环境中默认为 `/bin/sh`，在 Windows 上默认为 `cmd`。
-
-<br />
-
-### `--flag <标志>`
-
-<br />
-
-可选：Shell 命令标志。在类 Unix 环境中默认为 `-c`，在 Windows 上默认为 `/C`。
+<Flag />
 
 <br />
 
@@ -169,46 +134,23 @@ Bencher 将尽最大努力检测出需要提交结果的 CI 问题编号。
 
 <br />
 
-### `--host <主机>`
+<Host />
 
 <br />
 
-可选：后端主机 URL。默认为 [https://api.bencher.dev](https://api.bencher.dev)。
+<Attempts />
 
 <br />
 
-### `--attempts <尝试次数>`
+<RetryAfter />
 
 <br />
 
-可选：最大请求重试次数。默认为 `10`。
+<DryRun />
 
 <br />
 
-
-### `--retry-after <重试延迟>`
-
-<br />
-
-可选：在给定的秒数后重试请求 （指数退避）。默认为 `1`。
-
-<br />
-
-### `--dry-run`
-
-<br />
-
-可选：执行一次干运行。这不会将任何数据存储到后端。
-在 [分支选择](/zh/docs/explanation/branch-selection/) 中详述的报告或分支都不会被创建。
-
-<br />
-
-### `-h`
-### `--help`
-
-<br />
-
-可选：打印帮助。
+<Help />
 
 <br />
 <br />

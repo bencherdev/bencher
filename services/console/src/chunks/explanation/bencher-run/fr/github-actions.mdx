@@ -1,0 +1,14 @@
+### `--github-actions <GITHUB_TOKEN>`
+
+<br />
+
+Optionnel : Définir le jeton d'authentification de l'API GitHub (par exemple `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+Lorsque cette option est définie et que `bencher run` est utilisé dans GitHub Actions dans le cadre d'une demande de tirage,
+alors les résultats seront ajoutés à la demande de tirage en tant que commentaire.
+Sinon, les résultats seront ajoutés au commit en tant que commentaire de vérification GitHub.
+La façon la plus pratique de le faire est la [variable d'environnement `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+
+> 🐰 Si vous exécutez à l'intérieur d'un conteneur Docker dans GitHub Action, vous devrez passer les variables d'environnement suivantes et monter le chemin spécifié par `GITHUB_EVENT_PATH`:
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`

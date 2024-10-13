@@ -1,0 +1,10 @@
+### `--github-actions <GITHUB_TOKEN>`
+
+<br />
+
+可选：设置 GitHub API 认证令牌（例如 `--github-actions ${{ secrets.GITHUB_TOKEN }}`）。当此选项设置后并且在 GitHub Actions 中作为拉取请求的一部分使用 `bencher run` 时，结果将作为评论添加到拉取请求中。否则，结果将作为 GitHub Check 评论添加到提交中。最方便的方式是使用 [GitHub Actions `GITHUB_TOKEN` 环境变量](https://docs.github.com/en/actions/security-guides/automatic-token-authentication)。
+
+> 🐰 如果您在 GitHub Action 的 Docker 容器内运行，您需要传递以下环境变量并挂载 `GITHUB_EVENT_PATH` 指定的路径：
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`

@@ -16,16 +16,27 @@ import BranchSelection from "../../../chunks/explanation/bencher-run/fr/branch-s
 import Hash from "../../../chunks/explanation/bencher-run/fr/hash.mdx";
 import NoHash from "../../../chunks/explanation/bencher-run/fr/no-hash.mdx";
 import Testbed from "../../../chunks/explanation/bencher-run/fr/testbed.mdx";
+import Thresholds from "../../../chunks/explanation/bencher-run/fr/thresholds.mdx";
 import Adapters from "../../../chunks/explanation/bencher-run/fr/adapters.mdx";
 import Iter from "../../../chunks/explanation/bencher-run/fr/iter.mdx";
 import Fold from "../../../chunks/explanation/bencher-run/fr/fold.mdx";
 import Backdate from "../../../chunks/explanation/bencher-run/fr/backdate.mdx";
 import AllowFailure from "../../../chunks/explanation/bencher-run/fr/allow-failure.mdx";
-import Err from "../../../chunks/explanation/bencher-run/fr/err.mdx";
 import Format from "../../../chunks/explanation/bencher-run/fr/format.mdx";
 import Quiet from "../../../chunks/explanation/bencher-run/fr/quiet.mdx";
-
+import GitHubActions from "../../../chunks/explanation/bencher-run/fr/github-actions.mdx";
+import CiOnlyThresholds from "../../../chunks/explanation/bencher-run/fr/ci-only-thresholds.mdx";
+import CiOnlyOnAlert from "../../../chunks/explanation/bencher-run/fr/ci-only-on-alert.mdx";
+import CiId from "../../../chunks/explanation/bencher-run/fr/ci-id.mdx";
+import CiNumber from "../../../chunks/explanation/bencher-run/fr/ci-number.mdx";
+import Shell from "../../../chunks/explanation/bencher-run/fr/shell.mdx";
+import Flag from "../../../chunks/explanation/bencher-run/fr/flag.mdx";
 import Exec from "../../../chunks/explanation/bencher-run/fr/exec.mdx";
+import Host from "../../../chunks/explanation/bencher-run/fr/host.mdx";
+import Attempts from "../../../chunks/explanation/bencher-run/fr/attempts.mdx";
+import RetryAfter from "../../../chunks/explanation/bencher-run/fr/retry-after.mdx";
+import DryRun from "../../../chunks/explanation/bencher-run/fr/dry-run.mdx";
+import Help from "../../../chunks/explanation/bencher-run/fr/help.mdx";
 
 <Intro />
 
@@ -59,6 +70,10 @@ import Exec from "../../../chunks/explanation/bencher-run/fr/exec.mdx";
 
 <br />
 
+<Thresholds />
+
+<br />
+
 <Adapters />
 
 <br />
@@ -79,10 +94,6 @@ import Exec from "../../../chunks/explanation/bencher-run/fr/exec.mdx";
 
 <br />
 
-<Err />
-
-<br />
-
 <Format />
 
 <br />
@@ -91,77 +102,31 @@ import Exec from "../../../chunks/explanation/bencher-run/fr/exec.mdx";
 
 <br />
 
-### `--github-actions <GITHUB_TOKEN>`
+<GitHubActions />
 
 <br />
 
-Optionnel : Définir le token d'authentification de l'API GitHub (c'est-à-dire `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-Lorsque cette option est définie et que `bencher run` est utilisé dans GitHub Actions dans le cadre d'une pull request,
-alors les résultats seront ajoutés à la pull request en tant que commentaire.
-La manière la plus commode de faire ceci est la [variable d'environnement `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
-
-> 🐰 Si vous exécutez à l'intérieur d'un conteneur Docker dans GitHub Action, vous aurez besoin de passer les variables d'environnement suivantes et de monter le chemin spécifié par `GITHUB_EVENT_PATH` :
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
+<CiOnlyThresholds />
 
 <br />
 
-### `--ci-only-thresholds`
+<CiOnlyOnAlert />
 
 <br />
 
-Optionnel : Publie les résultats seulement sur CI si [un Seuil](/fr/docs/explanation/thresholds/) existe pour le types de mesures, Branche et Banc d'essai.
-Si aucun Seuils n'existent, alors rien ne sera posté.
-Nécessite : `--github-actions`
-
-<br />
-
-### `--ci-only-on-alert`
-
-<br />
-
-Optionnel : Commence à poster les résultats sur CI seulement si [une Alerte](/fr/docs/explanation/thresholds/) est générée.
-Si une Alerte est générée, alors les résultats suivants, même s'ils ne contiennent pas d'Alertes, seront également postés.
-Nécessite : `--github-actions`
-
-<br />
-
-### `--ci-id`
-
-<br />
-
-Optionnel : ID personnalisé pour poster les résultats sur CI.
-Par défaut, Bencher segmentera automatiquement les résultats par la combinaison de : Projet, Branche, Banc d'essai, et [Adaptateur](/fr/docs/explanation/adapters/).
-Définir un ID personnalisé est utile lorsque Bencher est exécuté plusieurs fois dans la même workflow CI pour la même combinaison de Projet, Branche, Banc d'essai, et Adaptateur.
-Nécessite : `--github-actions`
+<CiId />
 
 <br/>
 
-### `--ci-number`
-
-<br />
-
-Optionnel : Numéro de problème pour poster les résultats sur CI.
-Bencher fera de son mieux pour détecter le numéro de problème CI nécessaire pour poster les résultats.
-Cependant, cela n'est pas toujours disponible dans des configurations complexes, comme utiliser `workflow_run` dans GitHub Actions.
-Nécessite : `--github-actions`
+<CiNumber />
 
 <br/>
 
-### `--shell <SHELL>`
+<Shell />
 
 <br />
 
-Optionnel : Chemin de la commande Shell. Par défaut à `/bin/sh` dans les environnements Unix et `cmd` sur Windows.
-
-<br />
-
-### `--flag <FLAG>`
-
-<br />
-
-Optionnel : Flag de la commande Shell. Par défaut à `-c` dans les environnements Unix et `/C` sur Windows.
+<Flag />
 
 <br />
 
@@ -169,46 +134,23 @@ Optionnel : Flag de la commande Shell. Par défaut à `-c` dans les environnemen
 
 <br />
 
-### `--host <URL>`
+<Host />
 
 <br />
 
-Optionnel : URL du serveur Backend. Par défaut à [https://api.bencher.dev](https://api.bencher.dev).
+<Attempts />
 
 <br />
 
-### `--attempts <ATTEMPTS>`
+<RetryAfter />
 
 <br />
 
-Optionnel : Nombre maximal de tentatives de requête. Par défaut à `10`.
+<DryRun />
 
 <br />
 
-
-### `--retry-after <RETRY_AFTER_SECONDS>`
-
-<br />
-
-Optionnel : Réessayer la requête après le nombre de secondes donné (retard exponentiel). Par défaut à `1`.
-
-<br />
-
-### `--dry-run`
-
-<br />
-
-Optionnel : Effectuer une exécution à blanc. Cela ne stockera aucune donnée sur le backend.
-Ni un Rapport ni une Branche en détail dans [sélection de branche](/fr/docs/explanation/branch-selection/) ne seront créés.
-
-<br />
-
-### `-h`
-### `--help`
-
-<br />
-
-Optionnel : Afficher l'aide.
+<Help />
 
 <br />
 <br />

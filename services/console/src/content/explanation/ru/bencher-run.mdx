@@ -16,16 +16,27 @@ import BranchSelection from "../../../chunks/explanation/bencher-run/ru/branch-s
 import Hash from "../../../chunks/explanation/bencher-run/ru/hash.mdx";
 import NoHash from "../../../chunks/explanation/bencher-run/ru/no-hash.mdx";
 import Testbed from "../../../chunks/explanation/bencher-run/ru/testbed.mdx";
+import Thresholds from "../../../chunks/explanation/bencher-run/ru/thresholds.mdx";
 import Adapters from "../../../chunks/explanation/bencher-run/ru/adapters.mdx";
 import Iter from "../../../chunks/explanation/bencher-run/ru/iter.mdx";
 import Fold from "../../../chunks/explanation/bencher-run/ru/fold.mdx";
 import Backdate from "../../../chunks/explanation/bencher-run/ru/backdate.mdx";
 import AllowFailure from "../../../chunks/explanation/bencher-run/ru/allow-failure.mdx";
-import Err from "../../../chunks/explanation/bencher-run/ru/err.mdx";
 import Format from "../../../chunks/explanation/bencher-run/ru/format.mdx";
 import Quiet from "../../../chunks/explanation/bencher-run/ru/quiet.mdx";
-
+import GitHubActions from "../../../chunks/explanation/bencher-run/ru/github-actions.mdx";
+import CiOnlyThresholds from "../../../chunks/explanation/bencher-run/ru/ci-only-thresholds.mdx";
+import CiOnlyOnAlert from "../../../chunks/explanation/bencher-run/ru/ci-only-on-alert.mdx";
+import CiId from "../../../chunks/explanation/bencher-run/ru/ci-id.mdx";
+import CiNumber from "../../../chunks/explanation/bencher-run/ru/ci-number.mdx";
+import Shell from "../../../chunks/explanation/bencher-run/ru/shell.mdx";
+import Flag from "../../../chunks/explanation/bencher-run/ru/flag.mdx";
 import Exec from "../../../chunks/explanation/bencher-run/ru/exec.mdx";
+import Host from "../../../chunks/explanation/bencher-run/ru/host.mdx";
+import Attempts from "../../../chunks/explanation/bencher-run/ru/attempts.mdx";
+import RetryAfter from "../../../chunks/explanation/bencher-run/ru/retry-after.mdx";
+import DryRun from "../../../chunks/explanation/bencher-run/ru/dry-run.mdx";
+import Help from "../../../chunks/explanation/bencher-run/ru/help.mdx";
 
 <Intro />
 
@@ -33,7 +44,7 @@ import Exec from "../../../chunks/explanation/bencher-run/ru/exec.mdx";
 
 <BenchmarkCommand />
 
-## Опции
+## Options
 
 <Project />
 
@@ -59,6 +70,10 @@ import Exec from "../../../chunks/explanation/bencher-run/ru/exec.mdx";
 
 <br />
 
+<Thresholds />
+
+<br />
+
 <Adapters />
 
 <br />
@@ -79,10 +94,6 @@ import Exec from "../../../chunks/explanation/bencher-run/ru/exec.mdx";
 
 <br />
 
-<Err />
-
-<br />
-
 <Format />
 
 <br />
@@ -91,77 +102,31 @@ import Exec from "../../../chunks/explanation/bencher-run/ru/exec.mdx";
 
 <br />
 
-### `--github-actions <GITHUB_TOKEN>`
+<GitHubActions />
 
 <br />
 
-Опционально: Установить токен аутентификации GitHub API (например, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-Когда этот параметр установлен и `bencher run` используется в GitHub Actions в рамках запроса на вытягивание,
-то результаты будут добавлены к запросу на вытягивание в виде комментария.
-Самый удобный способ это сделать - это [переменная среды `GITHUB_TOKEN` GitHub Actions](https://docs.github.com/ru/actions/security-guides/automatic-token-authentication).
-
-> 🐰 Если вы работаете в контейнере Docker внутри GitHub Action, вам нужно передать следующие переменные окружения и монтировать путь, указанный в `GITHUB_EVENT_PATH`:
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
+<CiOnlyThresholds />
 
 <br />
 
-### `--ci-only-thresholds`
+<CiOnlyOnAlert />
 
 <br />
 
-Опционально: Публиковать результаты в CI только при наличии [порога](/ru/docs/explanation/thresholds/) для типа метрики, ветки и тестового стенда.
-Если пороги не существуют, то ничего не будет опубликовано.
-Требует: `--github-actions`
-
-<br />
-
-### `--ci-only-on-alert`
-
-<br />
-
-Опционально: Начать публикацию результатов в CI только при генерации [оповещения](/ru/docs/explanation/thresholds/).
-Если оповещение сгенерировано, то последующие результаты, даже если они не содержат оповещений, также будут опубликованы.
-Требует: `--github-actions`
-
-<br />
-
-### `--ci-id`
-
-<br />
-
-Опционально: Пользовательский ID для публикации результатов в CI.
-По умолчанию Bencher будет автоматически интерпретировать результаты в зависимости от комбинации: Проект, Ветка, Тестовый стенд и [Адаптер](/ru/docs/explanation/adapters/).
-Установка пользовательского ID полезна, когда Bencher запускается несколько раз в одном и том же CI рабочем процессе для одной и той же комбинации Проект, Ветка, Тестовый стенд и Адаптер.
-Требует: `--github-actions`
+<CiId />
 
 <br/>
 
-### `--ci-number`
-
-<br />
-
-Опционально: Номер проблемы для публикации результатов в CI.
-Bencher постарается как можно лучше определить номер проблемы CI, необходимый для публикации результатов.
-Однако это не всегда доступно в сложных конфигурациях, например, при использовании `workflow_run` в GitHub Actions.
-Требует: `--github-actions`
+<CiNumber />
 
 <br/>
 
-### `--shell <SHELL>`
+<Shell />
 
 <br />
 
-Опционально: Путь к команде оболочки. По умолчанию - `/bin/sh` в Unix-подобных средах и `cmd` на Windows.
-
-<br />
-
-### `--flag <FLAG>`
-
-<br />
-
-Опционально: Флаг команды оболочки. По умолчанию - `-c` в Unix-подобных средах и `/C` на Windows.
+<Flag />
 
 <br />
 
@@ -169,46 +134,23 @@ Bencher постарается как можно лучше определить
 
 <br />
 
-### `--host <URL>`
+<Host />
 
 <br />
 
-Опционально: URL бэкенд-хоста. По умолчанию - [https://api.bencher.dev](https://api.bencher.dev).
+<Attempts />
 
 <br />
 
-### `--attempts <ATTEMPTS>`
+<RetryAfter />
 
 <br />
 
-Опционально: Максимальное количество попыток повторения запроса. По умолчанию - `10`.
+<DryRun />
 
 <br />
 
-
-### `--retry-after <RETRY_AFTER_SECONDS>`
-
-<br />
-
-Опционально: Повторить запрос через указанное количество секунд (экспоненциальное отставание). По умолчанию - `1`.
-
-<br />
-
-### `--dry-run`
-
-<br />
-
-Опционально: Выполнить пробный запуск. Это не сохранит никаких данных в бэкенде.
-Отчет или Ветка, как указано в [выборе ветки](/ru/docs/explanation/branch-selection/), не будут созданы.
-
-<br />
-
-### `-h`
-### `--help`
-
-<br />
-
-Опционально: Вывести справку.
+<Help />
 
 <br />
 <br />

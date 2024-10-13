@@ -16,16 +16,27 @@ import BranchSelection from "../../../chunks/explanation/bencher-run/ja/branch-s
 import Hash from "../../../chunks/explanation/bencher-run/ja/hash.mdx";
 import NoHash from "../../../chunks/explanation/bencher-run/ja/no-hash.mdx";
 import Testbed from "../../../chunks/explanation/bencher-run/ja/testbed.mdx";
+import Thresholds from "../../../chunks/explanation/bencher-run/ja/thresholds.mdx";
 import Adapters from "../../../chunks/explanation/bencher-run/ja/adapters.mdx";
 import Iter from "../../../chunks/explanation/bencher-run/ja/iter.mdx";
 import Fold from "../../../chunks/explanation/bencher-run/ja/fold.mdx";
 import Backdate from "../../../chunks/explanation/bencher-run/ja/backdate.mdx";
 import AllowFailure from "../../../chunks/explanation/bencher-run/ja/allow-failure.mdx";
-import Err from "../../../chunks/explanation/bencher-run/ja/err.mdx";
 import Format from "../../../chunks/explanation/bencher-run/ja/format.mdx";
 import Quiet from "../../../chunks/explanation/bencher-run/ja/quiet.mdx";
-
+import GitHubActions from "../../../chunks/explanation/bencher-run/ja/github-actions.mdx";
+import CiOnlyThresholds from "../../../chunks/explanation/bencher-run/ja/ci-only-thresholds.mdx";
+import CiOnlyOnAlert from "../../../chunks/explanation/bencher-run/ja/ci-only-on-alert.mdx";
+import CiId from "../../../chunks/explanation/bencher-run/ja/ci-id.mdx";
+import CiNumber from "../../../chunks/explanation/bencher-run/ja/ci-number.mdx";
+import Shell from "../../../chunks/explanation/bencher-run/ja/shell.mdx";
+import Flag from "../../../chunks/explanation/bencher-run/ja/flag.mdx";
 import Exec from "../../../chunks/explanation/bencher-run/ja/exec.mdx";
+import Host from "../../../chunks/explanation/bencher-run/ja/host.mdx";
+import Attempts from "../../../chunks/explanation/bencher-run/ja/attempts.mdx";
+import RetryAfter from "../../../chunks/explanation/bencher-run/ja/retry-after.mdx";
+import DryRun from "../../../chunks/explanation/bencher-run/ja/dry-run.mdx";
+import Help from "../../../chunks/explanation/bencher-run/ja/help.mdx";
 
 <Intro />
 
@@ -33,7 +44,7 @@ import Exec from "../../../chunks/explanation/bencher-run/ja/exec.mdx";
 
 <BenchmarkCommand />
 
-## オプション
+## Options
 
 <Project />
 
@@ -59,6 +70,10 @@ import Exec from "../../../chunks/explanation/bencher-run/ja/exec.mdx";
 
 <br />
 
+<Thresholds />
+
+<br />
+
 <Adapters />
 
 <br />
@@ -79,10 +94,6 @@ import Exec from "../../../chunks/explanation/bencher-run/ja/exec.mdx";
 
 <br />
 
-<Err />
-
-<br />
-
 <Format />
 
 <br />
@@ -91,76 +102,31 @@ import Exec from "../../../chunks/explanation/bencher-run/ja/exec.mdx";
 
 <br />
 
-### `--github-actions <GITHUB_TOKEN>`
+<GitHubActions />
 
 <br />
 
-オプション：GitHub API認証トークンを設定します（例 `--github-actions ${{ secrets.GITHUB_TOKEN }}`）。
-このオプションが設定されていて、`bencher run`がプルリクエストの一部としてGitHub Actionsで使用される場合、
-結果はプルリクエストにコメントとして追加されます。
-これを行う最も便利な方法は、[GitHub Actionsの`GITHUB_TOKEN`環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)です。
-
-> 🐰 GitHub Actionの中でDockerコンテナ内で実行している場合、次の環境変数を渡し、`GITHUB_EVENT_PATH`で指定されたパスをマウントする必要があります：
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
+<CiOnlyThresholds />
 
 <br />
 
-### `--ci-only-thresholds`
+<CiOnlyOnAlert />
 
 <br />
 
-オプション：メトリックの種類、ブランチ、テストベッドに対する[Threshold](/ja/docs/explanation/thresholds/)が存在する場合にのみ、結果をCIに投稿します。Thresholdが存在しない場合、何も投稿されません。
-`--github-actions`が必要です。
-
-<br />
-
-### `--ci-only-on-alert`
-
-<br />
-
-オプション：[Alert](/ja/docs/explanation/thresholds/)が生成された場合にのみ、結果の投稿をCIに開始します。
-Alertが生成されると、その後の結果もアラートが含まれていなくても投稿されます。
-`--github-actions`が必要です。
-
-<br />
-
-### `--ci-id`
-
-<br />
-
-オプション：CIに結果を投稿するためのカスタムID。
-デフォルトでは、Bencherはプロジェクト、ブランチ、テストベッド、[Adapter](/ja/docs/explanation/adapters/)の組み合わせによって自動的に結果を分割します。
-同じプロジェクト、ブランチ、テストベッド、アダプタの組み合わせでBencherを同じCIワークフローで複数回実行するときに、カスタムIDを設定することは便利です。
-`--github-actions`が必要です。
+<CiId />
 
 <br/>
 
-### `--ci-number`
-
-<br />
-
-オプション：CIに結果を投稿するための問題番号。
-Bencherは結果を投稿するために必要なCIの問題番号を検出するために最善を尽くします。
-しかし、これは複雑な設定で、GitHub Actionsの`workflow_run`を使用している場合など、常に利用できるわけではありません。
-`--github-actions`が必要です。
+<CiNumber />
 
 <br/>
 
-### `--shell <SHELL>`
+<Shell />
 
 <br />
 
-オプション：シェルコマンドパス。Unixライクな環境ではデフォルトで`/bin/sh`、Windowsでは`cmd`になります。
-
-<br />
-
-### `--flag <FLAG>`
-
-<br />
-
-オプション：シェルコマンドフラグ。Unixライクな環境ではデフォルトで`-c`、Windowsでは`/C`になります。
+<Flag />
 
 <br />
 
@@ -168,46 +134,23 @@ Bencherは結果を投稿するために必要なCIの問題番号を検出す�
 
 <br />
 
-### `--host <URL>`
+<Host />
 
 <br />
 
-オプション：バックエンドホストURL。デフォルトは[https://api.bencher.dev](https://api.bencher.dev)です。
+<Attempts />
 
 <br />
 
-### `--attempts <ATTEMPTS>`
+<RetryAfter />
 
 <br />
 
-オプション：最大リクエスト再試行回数。デフォルトは`10`回です。
+<DryRun />
 
 <br />
 
-
-### `--retry-after <RETRY_AFTER_SECONDS>`
-
-<br />
-
-オプション：指定した秒数後にリクエストを再試行します (指数関数的バックオフ)。デフォルトは`1`秒です。
-
-<br />
-
-### `--dry-run`
-
-<br />
-
-オプション：ドライランを実行します。これはバックエンドに何もデータを保存しません。
-[branch selection](/ja/docs/explanation/branch-selection/)で詳述されるレポートやブランチは作成されません。
-
-<br />
-
-### `-h`
-### `--help`
-
-<br />
-
-オプション：ヘルプを表示します。
+<Help />
 
 <br />
 <br />

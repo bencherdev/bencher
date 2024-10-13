@@ -1,0 +1,13 @@
+### `--github-actions <GITHUB_TOKEN>`
+
+<br />
+
+オプション: GitHub API 認証トークンを設定します (例: `--github-actions ${{ secrets.GITHUB_TOKEN }}`)。
+このオプションが設定され、`bencher run` がプルリクエストの一部としてGitHub Actionsで使用される場合、結果はコメントとしてプルリクエストに追加されます。
+それ以外の場合、結果はGitHub Checkコメントとしてコミットに追加されます。
+これを行う最も便利な方法は、[GitHub Actionsの`GITHUB_TOKEN`環境変数](https://docs.github.com/en/actions/security-guides/automatic-token-authentication)です。
+
+> 🐰 GitHub Action内のDockerコンテナ内で実行している場合、以下の環境変数を渡し、`GITHUB_EVENT_PATH`によって指定されたパスをマウントする必要があります:
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`

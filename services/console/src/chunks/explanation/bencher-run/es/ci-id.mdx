@@ -1,0 +1,8 @@
+### `--ci-id <ID>`
+
+<br />
+
+Opcional: ID personalizado para publicar resultados en CI.  
+Por defecto, Bencher segmentará automáticamente los resultados según la combinación de: Proyecto, Rama, Banco de pruebas y [Adaptador](/es/docs/explanation/adapters/).  
+Establecer un ID personalizado es útil cuando Bencher se ejecuta múltiples veces en el mismo flujo de trabajo de CI para la misma combinación de Proyecto, Rama, Banco de pruebas y Adaptador.  
+Requiere: `--github-actions`
