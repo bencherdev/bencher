@@ -1,59 +1,67 @@
 import MergeRequestsCode from "../merge-requests-code.mdx";
+import MergeRequestsClosed from "./merge-requests-closed.mdx";
 
 ## Merge Requests
 
-Merge Requests에서 성능 회귀를 감지하려면 MR에서 벤치마크를 실행해야 합니다.
-아래 예제는 **동일한** 리포지토리 내의 브랜치에만 사용해야 합니다.
+Merge Requests에서 성능 회귀 문제를 잡기 위해서는, MRs에서 벤치마크를 실행해야 합니다.
+아래 예제는 **같은** 저장소 내의 브랜치에만 사용해야 합니다.
 
 <MergeRequestsCode />
 
-1. GitLab CI/CD 파일을 생성하거나 업데이트합니다.
+1. GitLab CI/CD 파일 업데이트.
    (예: `.gitlab-ci.yml`)
-2. GitLab CI/CD 작업을 만듭니다.
+2. GitLab CI/CD 작업 생성.
    (예: `benchmark_mr_branch`)
-3. `merge_request_event`에 의해 파이프라인이 트리거된 경우 실행합니다.
-   전체 개요는 [GitLab CI/CD `rules` 문서][gitlab ci cd rules] 및 [GitLab CI/CD 미리 정의된 변수 문서][gitlab ci cd redefined variables]를 참조하세요.
-   (예: `rules: - if: ...`)
-4. 작업을 실행할 `image`를 설정합니다.
+3. 파이프라인이 `merge_request_event`에 의해 트리거될 경우 실행.
+   전체 개요는 [GitLab CI/CD `rules` 문서][gitlab ci cd rules]와 [GitLab CI/CD 사전 정의 변수 문서][gitlab ci cd redefined variables]를 참조하세요.
+   (예: `rules: if: ...`)
+4. 작업이 실행될 `image` 설정.
    전체 개요는 [GitLab CI/CD `image` 문서][gitlab ci cd image]를 참조하세요.
    (예: `image: debian:bullseye`)
-5. [편의 스크립트][install bencher cli]를 사용하여 Bencher CLI를 설치합니다.
+5. [편리한 스크립트][install bencher cli]를 사용하여 Bencher CLI 설치.
    (예: `before_script: ...`)
-6. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 사용하여 merge request 브랜치 벤치마크를 실행합니다.
+6. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 사용하여
+   병합 요청 브랜치 벤치마크를 실행합니다.
    전체 개요는 [`bencher run` CLI 하위 명령어][bencher run]를 참조하세요.
    (예: `bencher run`)
-7. 프로젝트 슬러그에 `--project` 옵션을 설정합니다.
+7. 프로젝트 슬러그에 `--project` 옵션 설정.
    자세한 내용은 [`--project` 문서][project option]를 참조하세요.
    (예: `--project save-walter-white-1234abcd`)
-8. 마스크된 `BENCHER_API_TOKEN` 환경 변수를 `--token` 옵션에 설정합니다.
+8. 마스크된 `BENCHER_API_TOKEN` 환경 변수에 `--token` 옵션 설정.
    자세한 내용은 [`--token` 문서][token option]를 참조하세요.
    (예: `--token "$BENCHER_API_TOKEN"`)
-9. [GitLab CI/CD 미리 정의된 변수][branch selection branch]를 사용하여 MR 브랜치 이름에 `--branch` 옵션을 설정합니다.
-   전체 개요는 [브랜치 선택](/ko/docs/explanation/branch-selection/#--branch-branch) 문서를 참조하세요.
+9. GitLab CI/CD 사전 정의 변수를 사용하여 MR 브랜치 이름에 `--branch` 옵션 설정.
+   전체 개요는 [`--branch` 문서][branch option]를 참조하세요.
    (예: `--branch "$CI_COMMIT_REF_NAME"`)
-10. [GitLab CI/CD 미리 정의된 변수][gitlab ci cd redefined variables]를 사용하여 MR 타깃 브랜치 시작 지점에 `--branch-start-point` 옵션을 설정합니다.
-    전체 개요는 [브랜치 선택][branch selection start point]를 참조하세요.
-    (예: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-11. [GitLab CI/CD 미리 정의된 변수][gitlab ci cd redefined variables]를 사용하여 MR 타깃 브랜치 시작 지점 해시에 `--branch-start-point-hash` 옵션을 설정합니다.
-    전체 개요는 [브랜치 선택][branch selection start point hash]를 참조하세요.
-    (예: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
-12. 항상 브랜치를 시작 지점으로 다시 설정하도록 `--branch-reset` 플래그를 설정합니다.
+10. MR 브랜치의 시작 포인트 설정:
+    1. GitLab CI/CD 사전 정의 변수를 사용하여 MR 브랜치 시작 포인트에 `--start-point` 옵션 설정.
+    전체 개요는 [`--start-point` 문서][start point]를 참조하세요.
+    (예: `--start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+    2. GitLab CI/CD 사전 정의 변수를 사용하여 MR 브랜치의 시작 포인트 `git` 해시에 `--start-point-hash` 옵션 설정.
+    전체 개요는 [`--start-point-hash` 문서][start point hash]를 참조하세요.
+    (예: `--start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
+    3. 시작 지점에서 임계값을 복사하도록 `--start-point-clone-thresholds` 플래그 설정.
+    전체 개요는 [`--start-point-clone-thresholds` 문서][start point clone thresholds]를 참조하세요.
+    (예: `--start-point-clone-thresholds`)
+    4. 항상 MR 브랜치를 시작 포인트로 재설정하도록 `--start-point-reset` 플래그 설정.
     이는 벤치마크 데이터 드리프트를 방지합니다.
-    전체 개요는 [브랜치 선택][branch selection branch reset] 문서를 참조하세요.
-    (예: `--branch-reset`)
-13. Testbed 이름에 `--testbed` 옵션을 설정합니다.
-    이는 아마도 `image`에서 선택된 머신과 일치할 가능성이 높습니다.
-    자세한 내용은 [`--testbed` 문서][testbed option]를 참조하세요.
-    (예: `--testbed debian:bullseye`)
-14. 원하는 벤치마크 하네스 어댑터에 `--adapter` 옵션을 설정합니다.
-    전체 개요는 [벤치마크 하네스 어댑터][adapters]를 참조하세요.
-    (예: `--adapter json`)
-15. 경고가 생성되면 명령을 실패하도록 `--err` 플래그를 설정합니다.
-    전체 개요는 [임계값 및 경고][alerts] 문서를 참조하세요.
-    (예: `--err`)
-16. 벤치마크 명령 인수를 지정합니다.
-    전체 개요는 [벤치마크 명령][command argument] 문서를 참조하세요.
-    (예: `bencher mock`)
+    전체 개요는 [`--start-point-reset` 문서][start point reset]를 참조하세요.
+    (예: `--start-point-reset`)
+11. 테스트베드 이름에 `--testbed` 옵션 설정.
+   이는 `image`에서 선택한 머신과 일치해야 할 것입니다.
+   자세한 내용은 [`--tested` 문서][testbed option]를 참조하세요.
+   (예: `--testbed debian:bullseye`)
+12. 경고가 생성될 경우 명령을 실패하게 하는 `--err` 플래그 설정.
+   전체 개요는 [`--err` 문서][alert err]를 참조하세요.
+   (예: `--err`)
+13. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>이 생성한 [Bencher Metric Format JSON (`json`)][bmf]에 `--adapter` 옵션 설정.
+   전체 개요는 [벤치마크 하네스 어댑터][adapter json]를 참조하세요.
+   (예: `--adapter json`)
+14. 벤치마크 명령 인수 지정.
+    전체 개요는 [벤치마크 명령][command argument]을 참조하세요.
+    (예: <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>)
+
+<MergeRequestsClosed />
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -63,11 +71,14 @@ Merge Requests에서 성능 회귀를 감지하려면 MR에서 벤치마크를 �
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
 [token option]: /ko/docs/explanation/bencher-run/#--token-token
-[branch selection branch]: /ko/docs/explanation/branch-selection/#--branch-branch
-[branch selection start point]: /ko/docs/explanation/branch-selection/#--branch-start-point-branch
-[branch selection start point hash]: /ko/docs/explanation/branch-selection/#--branch-start-point-hash-hash
-[branch selection branch reset]: /ko/docs/explanation/branch-selection/#--branch-reset
+[branch option]: /ko/docs/explanation/branch-selection/#--branch-branch
+[start point]: /ko/docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /ko/docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /ko/docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /ko/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /ko/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /ko/docs/explanation/adapters/
-[alerts]: /ko/docs/explanation/thresholds/#alerts
+[alert err]: /ko/docs/explanation/thresholds/#--err
+[bmf]: /ko/docs/reference/bencher-metric-format/
+[adapter json]: /ko/docs/explanation/adapters/#-json
+[github actions option]: /ko/docs/explanation/bencher-run/#--github-actions-github_token
 [command argument]: /ko/docs/explanation/bencher-run/#benchmark-command

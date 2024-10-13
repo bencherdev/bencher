@@ -2,8 +2,8 @@ import TargetBranchCode from "../target-branch-code.mdx";
 
 ## ターゲットブランチ
 
-[統計的連続ベンチマーキング][statistical continuous benchmarking]の基石は、ターゲットブランチの歴史的基準を持つことです。
-この歴史的基準を使用して、マージリクエスト内のパフォーマンスの退行を検出することができます。
+[統計的継続的ベンチマーク][statistical continuous benchmarking]の基盤となるのは、ターゲットブランチの履歴ベースラインを持つことです。
+この履歴ベースラインを使用して、マージリクエストにおけるパフォーマンスの低下を検出できます。
 
 <TargetBranchCode />
 
@@ -11,40 +11,54 @@ import TargetBranchCode from "../target-branch-code.mdx";
    (例: `.gitlab-ci.yml`)
 2. GitLab CI/CDジョブを作成します。
    (例: `benchmark_target_branch`)
-3. パイプラインが`main`ブランチへの`push`によってトリガーされた場合に実行します。
-   [GitLab CI/CD `rules`ドキュメント][gitlab ci cd rules]と
-   [GitLab CI/CD定義済み変数のドキュメント][gitlab ci cd redefined variables]を完全に概観する。
-   (例: `rules: - if: ...`)
+3. パイプラインが`main`ブランチへの`push`によってトリガーされた場合にのみ実行します。
+   詳細については、[GitLab CI/CDの`rules`ドキュメンテーション][gitlab ci cd rules]と[GitLab CI/CDのあらかじめ定義された変数のドキュメンテーション][gitlab ci cd redefined variables]をご覧ください。
+   (例: `rules: if: ...`)
 4. ジョブが実行される`image`を設定します。
-   [GitLab CI/CD `image`ドキュメント][gitlab ci cd image]を参照してください。
+   詳細については、[GitLab CI/CDの`image` ドキュメンテーション][gitlab ci cd image]をご覧ください。
    (例: `image: debian:bullseye`)
-5. [便利なスクリプト][install bencher cli]を使用してBencher CLIをインストールします。
+5. [利便性のためのスクリプト][install bencher cli]を使用してBencher CLIをインストールします。
    (例: `before_script: ...`)
-6. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して
-   `main`ブランチのベンチマークを実行します。
-   [the `bencher run` CLI subcommand][bencher run] を完全に概観する。
+6. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用して`main`ブランチのベンチマークを実行します。
+   詳細については、[`bencher run` CLIサブコマンド][bencher run]をご覧ください。
    (例: `bencher run`)
-7. `--project`オプションをプロジェクトスラグに設定します。
-    [the `--project` docs][project option]を詳しく見る。
+7. プロジェクトスラッグに`--project`オプションを設定します。
+   詳細については、[`--project` ドキュメント][project option]をご覧ください。
    (例: `--project save-walter-white-1234abcd`)
-8. `--token`オプションをマスクされた`BENCHER_API_TOKEN`環境変数に設定します。
-    [the `--token` docs][token option]を詳しく見る。
+8. 隠された`BENCHER_API_TOKEN`環境変数に`--token`オプションを設定します。
+   詳細については、[`--token` ドキュメント][token option]をご覧ください。
    (例: `--token "$BENCHER_API_TOKEN"`)
-9.  `--branch`オプションをブランチ名に設定します。
-    [branch selection][branch selection branch]を完全に概観する。
-    (例: `--branch main`)
+9. `--branch`オプションをブランチ名に設定します。
+   詳細については、[`--branch` ドキュメント][branch option]をご覧ください。
+   (例: `--branch main`)
 10. `--testbed`オプションをテストベッド名に設定します。
-    これは、`image`で選択したマシンと一致することが望ましいです。
-    [the `--testbed` docs][testbed option]を詳しく見る。
+    これは、おそらく`image`で選択したマシンと一致させる必要があります。
+    詳細については、[`--testbed` ドキュメント][testbed option]をご覧ください。
     (例: `--testbed debian:bullseye`)
-11. 希望するベンチマークハーネスアダプターを`--adapter`オプションに設定します。
-    [benchmark harness adapters][adapters]を完全に概観する。
-    (例: `--adapter json`)
-12. アラートが生成された場合にコマンドを失敗させるために`--err`フラグを設定します。
-    [Threshold & Alerts][alerts]を完全に概観する。
-    (例: `--err`)
-13. ベンチマークコマンド引数を指定します。
-    [benchmark command][command argument]を完全に概観する。
+11. `main`ブランチ、`debian:bullseye`テストベッド、および`latency`測定基準のための閾値を設定します。
+    1. 組み込みの`latency`測定基準、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成されるものに`--threshold-measure`オプションを設定します。
+    詳細については、[`--threshold-measure` ドキュメント][threshold measure option]をご覧ください。
+    (例: `--threshold-measure latency`)
+    2. スチューデントのt検定(`t_test`)に`--threshold-test`オプションを設定します。
+    詳細については、[`--threshold-test` ドキュメント][threshold test option]をご覧ください。
+    (例: `--threshold-test t_test`)
+    3. 最大サンプルサイズ`64`に`--threshold-max-sample-size`オプションを設定します。
+    詳細については、[`--threshold-max-sample-size` ドキュメント][threshold max sample size]をご覧ください。
+    (例: `--threshold-max-sample-size 64`)
+    4. 上限境界`0.99`に`--threshold-upper-boundary`オプションを設定します。
+    詳細については、[`--threshold-upper-boundary` ドキュメント][threshold upper boundary]をご覧ください。
+    (例: `--threshold-upper-boundary 0.99`)
+    5. 特定された閾値のみがアクティブであるように`--thresholds-reset`フラグを設定します。
+    詳細については、[`--thresholds-reset` ドキュメント][thresholds reset]をご覧ください。
+    (例: `--thresholds-reset`)
+12. アラートが生成された場合にコマンドが失敗するように`--err`フラグを設定します。
+   詳細については、[`--err` ドキュメント][alert err]をご覧ください。
+   (例: `--err`)
+13. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される[Bencher Metric Format JSON (`json`)][bmf]に`--adapter`オプションを設定します。
+   詳細については、[ベンチマークハーネスアダプタ][adapter json]をご覧ください。
+   (例: `--adapter json`)
+14. ベンチマークコマンドの引数を指定します。
+    詳細については、[ベンチマークコマンド][command argument]をご覧ください。
     (例: `bencher mock`)
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
@@ -56,8 +70,14 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [bencher run]: /ja/docs/explanation/bencher-run/
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
 [token option]: /ja/docs/explanation/bencher-run/#--token-token
-[branch selection branch]: /ja/docs/explanation/branch-selection/#--branch-branch
+[branch option]: /ja/docs/explanation/branch-selection/#--branch-branch
 [testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /ja/docs/explanation/adapters/
-[alerts]: /ja/docs/explanation/thresholds/#alerts
+[threshold measure option]: /ja/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /ja/docs/explanation/thresholds/#--threshold-test-test
+[threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /ja/docs/explanation/thresholds/#--err
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[adapter json]: /ja/docs/explanation/adapters/#-json
 [command argument]: /ja/docs/explanation/bencher-run/#benchmark-command

@@ -1,60 +1,69 @@
 import MergeRequestsCode from "../merge-requests-code.mdx";
+import MergeRequestsClosed from "./merge-requests-closed.mdx";
 
 ## 合并请求
 
-为了在合并请求中捕捉性能回归，您需要在合并请求上运行基准测试。
-下面的示例应仅用于**同一**存储库内的分支。
+为了捕捉合并请求中的性能回归，您需要在MRs上运行您的基准测试。
+下面的例子应该仅用于**相同**存储库内的分支。
 
 <MergeRequestsCode />
 
-1. 创建或更新一个 GitLab CI/CD 文件。
+1. 更新 GitLab CI/CD 文件。
    (例如：`.gitlab-ci.yml`)
 2. 创建一个 GitLab CI/CD 任务。
    (例如：`benchmark_mr_branch`)
-3. 当流水线由`merge_request_event`触发时运行。
+3. 当管道是由`merge_request_event`触发时运行`if`。
    请参阅 [GitLab CI/CD `rules` 文档][gitlab ci cd rules]
-   和 [GitLab CI/CD 预定义变量文档][gitlab ci cd redefined variables] 了解全面概述。
-   (例如：`rules: - if: ...`)
-4. 设置任务将运行的`image`。
-   请参阅 [GitLab CI/CD `image`文档][gitlab ci cd image] 了解全面概述。
+   和 [GitLab CI/CD 预定义变量文档][gitlab ci cd redefined variables]了解完整概览。
+   (例如：`rules: if: ...`)
+4. 设置任务将运行的 `image`。
+   请参阅 [GitLab CI/CD `image` 文档][gitlab ci cd image]
+   了解完整概览。
    (例如：`image: debian:bullseye`)
 5. 使用[便捷脚本][install bencher cli]安装 Bencher CLI。
    (例如：`before_script: ...`)
-6. 使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令运行您的合并请求分支基准测试。
-   请参阅 [ `bencher run` CLI 子命令][bencher run] 了解全面概述。
+6. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令
+   运行您的合并请求分支的基准测试。
+   请参阅[`bencher run` CLI 子命令][bencher run]了解完整概览。
    (例如：`bencher run`)
-7. 设置`--project`选项为项目的 slug。
-   请参阅[ `--project` 文档][project option] 了解更多详情。
+7. 设置 `--project` 选项为项目slug。
+   请参阅[`--project` 文档][project option]了解更多细节。
    (例如：`--project save-walter-white-1234abcd`)
-8. 设置`--token`选项为屏蔽的`BENCHER_API_TOKEN`环境变量。
-   请参阅[ `--token` 文档][token option] 了解更多详情。
+8. 设置 `--token` 选项为掩码的 `BENCHER_API_TOKEN` 环境变量。
+   请参阅[`--token` 文档][token option]了解更多细节。
    (例如：`--token "$BENCHER_API_TOKEN"`)
-9. 使用[GitLab CI/CD 预定义变量][branch selection branch] 设置`--branch`选项为合并请求分支名称。
-   请参阅[分支选择](/zh/docs/explanation/branch-selection/#--branch-branch) 了解全面概述。
+9. 使用 [GitLab CI/CD 预定义变量][gitlab ci cd redefined variables]设置 `--branch` 选项为 MR 分支名称。
+   请参阅[`--branch` 文档][branch option]了解完整概览。
    (例如：`--branch "$CI_COMMIT_REF_NAME"`)
-10. 使用[GitLab CI/CD 预定义变量][gitlab ci cd redefined variables] 设置`--branch-start-point`选项为合并请求目标分支的起点。
-    请参阅[分支选择][branch selection start point] 了解全面概述。
-    (例如：`--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-11. 使用[GitLab CI/CD 预定义变量][gitlab ci cd redefined variables] 设置`--branch-start-point-hash`选项为合并请求目标分支的起点哈希值。
-    请参阅[分支选择][branch selection start point hash] 了解全面概述。
-    (例如：`--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
-12. 设置`--branch-reset`标志以始终将分支重置为起点。
+10. 为 MR 分支设置起始点：
+    1. 使用 [GitLab CI/CD 预定义变量][gitlab ci cd redefined variables]设置 `--start-point` 选项为 MR 分支起始点。
+    请参阅[`--start-point` 文档][start point]了解完整概览。
+    (例如：`--start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+    2. 使用 [GitLab CI/CD 预定义变量][gitlab ci cd redefined variables]设置 `--start-point-hash` 选项为 MR 分支起始点 `git` 哈希值。
+    请参阅[`--start-point-hash` 文档][start point hash]了解完整概览。
+    (例如：`--start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
+    3. 设置 `--start-point-clone-thresholds` 标志以从起始点克隆阈值。
+    请参阅[`--start-point-clone-thresholds` 文档][start point clone thresholds]了解完整概览。
+    (例如：`--start-point-clone-thresholds`)
+    4. 设置 `--start-point-reset` 标志以始终重置MR分支到起始点。
     这将防止基准数据漂移。
-    请参阅[分支选择][branch selection branch reset] 了解全面概述。
-    (例如：`--branch-reset`)
-13. 设置`--testbed`选项为测试床名称。
-    这可能应该与在`image`中选择的机器匹配。
-    请参阅[ `--tested` 文档][testbed option] 了解更多详情。
-    (例如：`--testbed debian:bullseye`)
-14. 设置`--adapter`选项为所需的基准测试适配器。
-    请参阅[基准测试适配器][adapters] 了解全面概述。
-    (例如：`--adapter json`)
-15. 设置`--err`标志以在生成警报时使命令失败。
-    请参阅[阈值与警报][alerts] 了解全面概述。
-    (例如：`--err`)
-16. 指定基准测试命令参数。
-    请参阅[基准测试命令][command argument] 了解全面概述。
-    (例如：`bencher mock`)
+    请参阅[`--start-point-reset` 文档][start point reset]了解完整概览。
+    (例如：`--start-point-reset`)
+11. 设置 `--testbed` 选项为测试平台名称。
+   可能应该与在 `image` 中选择的机器匹配。
+   请参阅[`--tested` 文档][testbed option]了解更多细节。
+   (例如：`--testbed debian:bullseye`)
+12. 设置 `--err` 标志以便在生成警报时使命令失败。
+   请参阅[`--err` 文档][alert err]了解完整概览。
+   (例如：`--err`)
+13. 设置 `--adapter` 选项为 [Bencher Metric Format JSON (`json`)][bmf]，生成可通过 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>。
+   请参阅[基准测试接口适配器][adapter json]了解完整概览。
+   (例如：`--adapter json`)
+14. 指定基准测试命令参数。
+    请参阅[基准测试命令][command argument]了解完整概览。
+    (例如：<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>)
+
+<MergeRequestsClosed />
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -64,11 +73,14 @@ import MergeRequestsCode from "../merge-requests-code.mdx";
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
 [token option]: /zh/docs/explanation/bencher-run/#--token-token
-[branch selection branch]: /zh/docs/explanation/branch-selection/#--branch-branch
-[branch selection start point]: /zh/docs/explanation/branch-selection/#--branch-start-point-branch
-[branch selection start point hash]: /zh/docs/explanation/branch-selection/#--branch-start-point-hash-hash
-[branch selection branch reset]: /zh/docs/explanation/branch-selection/#--branch-reset
+[branch option]: /zh/docs/explanation/branch-selection/#--branch-branch
+[start point]: /zh/docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /zh/docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /zh/docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /zh/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /zh/docs/explanation/adapters/
-[alerts]: /zh/docs/explanation/thresholds/#alerts
+[alert err]: /zh/docs/explanation/thresholds/#--err
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[adapter json]: /zh/docs/explanation/adapters/#-json
+[github actions option]: /zh/docs/explanation/bencher-run/#--github-actions-github_token
 [command argument]: /zh/docs/explanation/bencher-run/#benchmark-command

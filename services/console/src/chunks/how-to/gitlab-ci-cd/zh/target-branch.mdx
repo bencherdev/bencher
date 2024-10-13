@@ -2,52 +2,65 @@ import TargetBranchCode from "../target-branch-code.mdx";
 
 ## 目标分支
 
-[Statistical Continuous Benchmarking][statistical continuous benchmarking]
-的基石是为您的目标分支拥有一个历史基线。
-然后，可以使用此历史基线来检测合并请求中的性能退化。
+[统计连续基准测试][statistical continuous benchmarking] 的基石是为目标分支建立历史基线。这个历史基线可以用于检测合并请求中的性能回归。
 
 <TargetBranchCode />
 
-1. 创建一个GitLab CI/CD文件。
-   （例：`.gitlab-ci.yml`）
-2. 创建一个GitLab CI/CD作业。
-   （例：`benchmark_target_branch`）
-3. 运行`if`管道是由`push`到`main`分支触发的。
-   参见 [GitLab CI/CD `rules` 文档][gitlab ci cd rules]
-   和 [GitLab CI/CD预定义变量文档][gitlab ci cd redefined variables] 以获取完整概述。
-   （例：`rules: - if: ...`）
-4. 设置作业将在其中运行的`image`。
-   参见 [GitLab CI/CD `image` 文档][gitlab ci cd image]
+1. 创建一个 GitLab CI/CD 文件。
+   （例如：`.gitlab-ci.yml`）
+2. 创建一个 GitLab CI/CD 作业。
+   （例如：`benchmark_target_branch`）
+3. 当管道由 `main` 分支的 `push` 触发时运行 `if`。
+   查看 [GitLab CI/CD `rules` 文档][gitlab ci cd rules]
+   和 [GitLab CI/CD 预定义变量文档][gitlab ci cd redefined variables] 以获取完整概述。
+   （例如：`rules: if: ...`）
+4. 设置作业运行的 `image`。
+   查看 [GitLab CI/CD `image` 文档][gitlab ci cd image]
    以获取完整概述。
-   （例：`image: debian:bullseye`）
-5. 使用[便捷脚本][install bencher cli]安装Bencher CLI。
-   （例：`before_script: ...`）
-6. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令
-   运行您的`main`分支基准测试。
-   参见 [the `bencher run` CLI子命令][bencher run] 以获取完整概述。
-   （例：`bencher run`）
-7. 将`--project`选项设置为项目slug。
-   参见 [the `--project` 文档][project option] 了解更多详情。
-   （例：`--project save-walter-white-1234abcd`）
-8. 将`--token`选项设置为屏蔽的`BENCHER_API_TOKEN`环境变量。
-   参见 [the `--token` 文档][token option] 了解更多详情。
-   （例：`--token "$BENCHER_API_TOKEN"`）
-9. 将`--branch`选项设置为分支名称。
-    参见 [分支选择][branch selection branch] 以获取完整概述。
-    （例：`--branch main`）
-10. 将`--testbed`选项设置为测试床名称。
-    这应该与在`image`中选择的机器匹配。
-    参见 [the `--testbed` 文档][testbed option] 了解更多详情。
-    （例：`--testbed debian:bullseye`）
-11. 将`--adapter`选项设置为所需的基准测试适配器。
-    参见 [基准测试适配器][adapters] 以获取完整概述。
-    （例：`--adapter json`）
-12. 设置`--err`标志以在生成警报时使命令失败。
-    参见 [阈值和警报][alerts] 以获取完整概述。
-    （例：`--err`）
-13. 指定基准测试命令参数。
-    参见 [基准测试命令][command argument] 以获取完整概述。
-    （例：`bencher mock`）
+   （例如：`image: debian:bullseye`）
+5. 使用 [便捷脚本][install bencher cli] 安装 Bencher CLI。
+   （例如：`before_script: ...`）
+6. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令运行您的 `main` 分支基准测试。
+   查看 [the `bencher run` CLI 子命令][bencher run] 以获取完整概述。
+   （例如：`bencher run`）
+7. 将 `--project` 选项设置为项目 slug。
+   查看 [the `--project` 文档][project option] 以获取更多详情。
+   （例如：`--project save-walter-white-1234abcd`）
+8. 将 `--token` 选项设置为已屏蔽的 `BENCHER_API_TOKEN` 环境变量。
+   查看 [the `--token` 文档][token option] 以获取更多详情。
+   （例如：`--token "$BENCHER_API_TOKEN"`）
+9.  将 `--branch` 选项设置为分支名称。
+   查看 [the `--branch` 文档][branch option] 以获取完整概述。
+   （例如：`--branch main`）
+10. 将 `--testbed` 选项设置为测试平台名称。
+    这可能应与在 `image` 中选择的机器匹配。
+    查看 [the `--tested` 文档][testbed option] 以获取更多详情。
+    （例如：`--testbed debian:bullseye`）
+11. 为 `main` 分支、`debian:bullseye` 测试平台和 `latency` 测量设置阈值：
+    1. 将 `--threshold-measure` 选项设置为 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的内置 `latency` 测量。
+    查看 [the `--threshold-measure` 文档][threshold measure option] 以获取更多详情。
+    （例如：`--threshold-measure latency`）
+    2. 将 `--threshold-test` 选项设置为 Student's t-test (`t_test`)。
+    查看 [the `--threshold-test` 文档][threshold test option] 以获取完整概述。
+    （例如：`--threshold-test t_test`）
+    3. 将 `--threshold-max-sample-size` 选项设置为最大样本大小 `64`。
+    查看 [the `--threshold-max-sample-size` 文档][threshold max sample size] 以获取更多详情。
+    （例如：`--threshold-max-sample-size 64`）
+    4. 将 `--threshold-upper-boundary` 选项设置为上界 `0.99`。
+    查看 [the `--threshold-upper-boundary` 文档][threshold upper boundary] 以获取更多详情。
+    （例如：`--threshold-upper-boundary 0.99`）
+    5. 设置 `--thresholds-reset` 标志以确保只有指定的阈值处于活动状态。
+    查看 [the `--thresholds-reset` 文档][thresholds reset] 以获取完整概述。
+    （例如：`--thresholds-reset`）
+12. 设置 `--err` 标志以在生成警报时使命令失败。
+    查看 [the `--err` 文档][alert err] 以获取完整概述。
+    （例如：`--err`）
+13. 将 `--adapter` 选项设置为 [Bencher Metric Format JSON (`json`)][bmf]，由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成。
+    查看 [benchmark harness adapters][adapter json] 以获取完整概述。
+    （例如：`--adapter json`）
+14. 指定基准测试命令参数。
+    查看 [benchmark command][command argument] 以获取完整概述。
+    （例如：`bencher mock`）
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -58,8 +71,14 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
 [token option]: /zh/docs/explanation/bencher-run/#--token-token
-[branch selection branch]: /zh/docs/explanation/branch-selection/#--branch-branch
+[branch option]: /zh/docs/explanation/branch-selection/#--branch-branch
 [testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /zh/docs/explanation/adapters/
-[alerts]: /zh/docs/explanation/thresholds/#alerts
+[threshold measure option]: /zh/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /zh/docs/explanation/thresholds/#--threshold-test-test
+[threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /zh/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /zh/docs/explanation/thresholds/#--err
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[adapter json]: /zh/docs/explanation/adapters/#-json
 [command argument]: /zh/docs/explanation/bencher-run/#benchmark-command

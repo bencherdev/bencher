@@ -1,0 +1,44 @@
+import MergeRequestsClosedCode from "../merge-requests-closed-code.mdx";
+
+在 MR 关闭后清理 MR 分支，
+您可以创建一个独立的作业，使用 GitLab API 查询 MR 状态。
+如果状态是 `closed`，该作业将使用 `bencher archive` 命令存档 MR 分支。
+
+<MergeRequestsClosedCode />
+
+1. 更新 GitLab CI/CD 文件。
+   （例如：`.gitlab-ci.yml`）
+2. 创建一个 GitLab CI/CD 作业。
+   （例如：`archive_mr_branch`）
+3. 在管道由 `merge_request_event` 触发时运行 `if`。
+   查看 [GitLab CI/CD `rules` 文档][gitlab ci cd rules]
+   和 [GitLab CI/CD 预定义变量文档][gitlab ci cd redefined variables] 以获得完整概览。
+   （例如：`rules: if: ...`）
+4. 设置作业将运行的 `image`。
+   查看 [GitLab CI/CD `image` 文档][gitlab ci cd image]
+   以获得完整概览。
+   （例如：`image: debian:bullseye`）
+5. 使用[便利脚本][install bencher cli]安装 Bencher CLI。
+   （例如：`before_script: curl ...`）
+6. 使用 GitLab API 检查 MR 状态。
+   （例如：`before_script: MR_STATE=$(...)`）
+7. 使用 `bencher archive` CLI 子命令存档 MR 分支
+   如果 MR 状态是 `closed`。
+   （例如：`bencher archive`）
+8. 设置 `--project` 选项为项目代号。
+   查看 [ `--project` 文档][project option] 获取更多详情。
+   （例如：`--project save-walter-white-1234abcd`）
+9. 将 `--token` 选项设置为屏蔽的 `BENCHER_API_TOKEN` 环境变量。
+   查看 [ `--token` 文档][token option] 获取更多详情。
+   （例如：`--token "$BENCHER_API_TOKEN"`）
+10. 使用[GitLab CI/CD 预定义变量][gitlab ci cd redefined variables]将 `--branch` 选项设置为 MR 分支名称。
+   （例如：`--branch "$CI_COMMIT_REF_NAME"`）
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[install bencher cli]: /zh/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /zh/docs/explanation/bencher-run/
+[project option]: /zh/docs/explanation/bencher-run/#--project-project
+[token option]: /zh/docs/explanation/bencher-run/#--token-token

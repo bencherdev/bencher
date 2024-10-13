@@ -1,0 +1,41 @@
+import MergeRequestsClosedCode from "../merge-requests-closed-code.mdx";
+
+Um den MR-Branch nach dem Schließen seines MRs aufzuräumen, können Sie einen separaten Job erstellen, der den MR-Status über die GitLab-API abfragt. Wenn der Status `closed` ist, archiviert dieser Job den MR-Branch mit dem Befehl `bencher archive`.
+
+<MergeRequestsClosedCode />
+
+1. Aktualisieren Sie die GitLab CI/CD-Datei.
+   (z.B.: `.gitlab-ci.yml`)
+2. Erstellen Sie einen GitLab CI/CD-Job.
+   (z.B.: `archive_mr_branch`)
+3. Führen Sie den Job aus, `wenn` die Pipeline durch ein `merge_request_event` ausgelöst wurde.
+   Siehe die [GitLab CI/CD `rules` Dokumentation][gitlab ci cd rules]
+   und die [GitLab CI/CD vordefinierte Variablen Dokumentation][gitlab ci cd redefined variables] für einen vollständigen Überblick.
+   (z.B.: `rules: if: ...`)
+4. Setzen Sie das `image`, in dem der Job ausgeführt wird.
+   Siehe die [GitLab CI/CD `image` Dokumentation][gitlab ci cd image]
+   für einen vollständigen Überblick.
+   (z.B.: `image: debian:bullseye`)
+5. Installieren Sie die Bencher CLI mit [dem Installationsskript][install bencher cli].
+   (z.B.: `before_script: curl ...`)
+6. Überprüfen Sie den MR-Status über die GitLab-API.
+   (z.B.: `before_script: MR_STATE=$(...)`)
+7. Verwenden Sie das `bencher archive` CLI-Unterbefehl, um den MR-Branch zu archivieren, wenn der MR-Status `closed` ist.
+   (z.B.: `bencher archive`)
+8. Setzen Sie die `--project` Option auf den Projektslug.
+   Siehe [die `--project` Dokumentation][project option] für mehr Details.
+   (z.B.: `--project save-walter-white-1234abcd`)
+9. Setzen Sie die `--token` Option auf die maskierte `BENCHER_API_TOKEN` Umgebungsvariable.
+   Siehe [die `--token` Dokumentation][token option] für mehr Details.
+   (z.B.: `--token "$BENCHER_API_TOKEN"`)
+10. Setzen Sie die `--branch` Option auf den MR-Branch-Namen, indem Sie [eine vordefinierte GitLab CI/CD-Variable][gitlab ci cd redefined variables] verwenden.
+    (z.B.: `--branch "$CI_COMMIT_REF_NAME"`)
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[install bencher cli]: /de/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /de/docs/explanation/bencher-run/
+[project option]: /de/docs/explanation/bencher-run/#--project-project
+[token option]: /de/docs/explanation/bencher-run/#--token-token

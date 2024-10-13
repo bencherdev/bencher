@@ -2,52 +2,68 @@ import TargetBranchCode from "../target-branch-code.mdx";
 
 ## Ramificação Alvo
 
-Uma pedra angular do [Benchmarking Contínuo Estatístico][statistical continuous benchmarking]
-é ter uma base histórica para a sua ramificação alvo.
-Esta base histórica pode então ser usada para detectar regressões de desempenho em Solicitações de Merge.
+Um pilar do [Benchmarking Contínuo e Estatístico][statistical continuous benchmarking]
+é ter uma linha de base histórica para sua ramificação alvo.
+Essa linha de base histórica pode então ser usada para detectar regressões de desempenho em Merge Requests.
 
 <TargetBranchCode />
 
 1. Crie um arquivo GitLab CI/CD.
-   (ex.: `.gitlab-ci.yml`)
+   (ex: `.gitlab-ci.yml`)
 2. Crie um trabalho GitLab CI/CD.
-   (ex.: `benchmark_target_branch`)
+   (ex: `benchmark_target_branch`)
 3. Execute `if` o pipeline foi acionado por um `push` para a ramificação `main`.
-   Consulte a [documentação de `regras` do GitLab CI/CD][gitlab ci cd rules]
+   Veja a [documentação de `rules` do GitLab CI/CD][gitlab ci cd rules]
    e a [documentação de variáveis predefinidas do GitLab CI/CD][gitlab ci cd redefined variables] para uma visão geral completa.
-   (ex.: `rules: - if: ...`)
-4. Defina a `imagem` na qual o trabalho será executado.
-   Consulte a [documentação de `imagem` do GitLab CI/CD][gitlab ci cd image]
+   (ex: `rules: if: ...`)
+4. Defina a `image` na qual o trabalho será executado.
+   Veja a [documentação de `image` do GitLab CI/CD][gitlab ci cd image]
    para uma visão geral completa.
-   (ex.: `image: debian:bullseye`)
-5. Instale o CLI do Bencher usando [o script de conveniência][install bencher cli].
-   (ex.: `before_script: ...`)
+   (ex: `image: debian:bullseye`)
+5. Instale o Bencher CLI usando [o script de conveniência][install bencher cli].
+   (ex: `before_script: ...`)
 6. Use o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-   para rodar os benchmarks da sua ramificação `main`.
-   Consulte [o subcomando CLI `bencher run`][bencher run] para uma visão geral completa.
-   (ex.: `bencher run`)
+   para executar seus benchmarks da ramificação `main`.
+   Veja [o subcomando CLI `bencher run`][bencher run] para uma visão geral completa.
+   (ex: `bencher run`)
 7. Defina a opção `--project` para o slug do Projeto.
-   Consulte [os docs da opção `--project`][project option] para mais detalhes.
-   (ex.: `--project save-walter-white-1234abcd`)
-8. Defina a opção `--token` para a variável de ambiente `BENCHER_API_TOKEN` mascarada.
-   Consulte [os docs da opção `--token`][token option] para mais detalhes.
-   (ex.: `--token "$BENCHER_API_TOKEN"`)
+   Veja [a documentação de `--project`][project option] para mais detalhes.
+   (ex: `--project save-walter-white-1234abcd`)
+8. Defina a opção `--token` para a variável de ambiente mascarada `BENCHER_API_TOKEN`.
+   Veja [a documentação de `--token`][token option] para mais detalhes.
+   (ex: `--token "$BENCHER_API_TOKEN"`)
 9. Defina a opção `--branch` para o nome da Ramificação.
-    Veja [seleção de ramificação][branch selection branch] para uma visão geral completa.
-    (ex.: `--branch main`)
+   Veja [a documentação de `--branch`][branch option] para uma visão geral completa.
+   (ex: `--branch main`)
 10. Defina a opção `--testbed` para o nome do Testbed.
-    Isso provavelmente deve corresponder à máquina selecionada em `imagem`.
-    Veja [os docs da opção `--tested`][testbed option] para mais detalhes.
-    (ex.: `--testbed debian:bullseye`)
-11. Defina a opção `--adapter` para o adaptador de suporte de benchmark desejado.
-    Veja [adaptadores de suporte de benchmark][adapters] para uma visão geral completa.
-    (ex.: `--adapter json`)
-12. Defina a bandeira `--err` para falhar o comando se um Alerta for gerado.
-    Veja [Limite & Alertas][alerts] para uma visão geral completa.
-    (ex.: `--err`)
-13. Especifique os argumentos do comando de benchmark.
+    Isso provavelmente deve coincidir com a máquina selecionada em `image`.
+    Veja [a documentação de `--testbed`][testbed option] para mais detalhes.
+    (ex: `--testbed debian:bullseye`)
+11. Defina o Limite para a Ramificação `main`, Testbed `debian:bullseye` e Medida `latency`:
+    1. Defina a opção `--threshold-measure` para a Medida `latency` incorporada que é gerada por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+    Veja a [documentação de `--threshold-measure`][threshold measure option] para mais detalhes.
+    (ex: `--threshold-measure latency`)
+    2. Defina a opção `--threshold-test` para um teste t de Student (`t_test`).
+    Veja a [documentação de `--threshold-test`][threshold test option] para uma visão geral completa.
+    (ex: `--threshold-test t_test`)
+    3. Defina a opção `--threshold-max-sample-size` para o tamanho máximo da amostra de `64`.
+    Veja a [documentação de `--threshold-max-sample-size`][threshold max sample size] para mais detalhes.
+    (ex: `--threshold-max-sample-size 64`)
+    4. Defina a opção `--threshold-upper-boundary` para o Limite Superior de `0.99`.
+    Veja a [documentação de `--threshold-upper-boundary`][threshold upper boundary] para mais detalhes.
+    (ex: `--threshold-upper-boundary 0.99`)
+    5. Defina a flag `--thresholds-reset` para que apenas o Limite especificado esteja ativo.
+    Veja a [documentação de `--thresholds-reset`][thresholds reset] para uma visão geral completa.
+    (ex: `--thresholds-reset`)
+12. Defina a flag `--err` para falhar o comando se um Alerta for gerado.
+   Veja a [documentação de `--err`][alert err] para uma visão geral completa.
+   (ex: `--err`)
+13. Defina a opção `--adapter` para [Bencher Metric Format JSON (`json`)][bmf] que é gerado por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Veja [adapters de benchmark harness][adapter json] para uma visão geral completa.
+   (ex: `--adapter json`)
+14. Especifique os argumentos do comando de benchmark.
     Veja [comando de benchmark][command argument] para uma visão geral completa.
-    (ex.: `bencher mock`)
+    (ex: `bencher mock`)
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -58,8 +74,14 @@ Esta base histórica pode então ser usada para detectar regressões de desempen
 [bencher run]: /pt/docs/explanation/bencher-run/
 [project option]: /pt/docs/explanation/bencher-run/#--project-project
 [token option]: /pt/docs/explanation/bencher-run/#--token-token
-[branch selection branch]: /pt/docs/explanation/branch-selection/#--branch-branch
+[branch option]: /pt/docs/explanation/branch-selection/#--branch-branch
 [testbed option]: /pt/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /pt/docs/explanation/adapters/
-[alerts]: /pt/docs/explanation/thresholds/#alerts
+[threshold measure option]: /pt/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /pt/docs/explanation/thresholds/#--threshold-test-test
+[threshold max sample size]: /pt/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold upper boundary]: /pt/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /pt/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /pt/docs/explanation/thresholds/#--err
+[bmf]: /pt/docs/reference/bencher-metric-format/
+[adapter json]: /pt/docs/explanation/adapters/#-json
 [command argument]: /pt/docs/explanation/bencher-run/#benchmark-command

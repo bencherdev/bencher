@@ -1,0 +1,40 @@
+import MergeRequestsClosedCode from "../merge-requests-closed-code.mdx";
+
+MRがクローズされた後にMRブランチをクリーンアップするためには、GitLab APIを使用してMRのステートをクエリする別のジョブを作成することができます。
+ステートが`closed`の場合、このジョブは`bencher archive`コマンドを使用してMRブランチをアーカイブします。
+
+<MergeRequestsClosedCode />
+
+1. GitLab CI/CDファイルを更新します。
+   （例: `.gitlab-ci.yml`）
+2. GitLab CI/CDジョブを作成します。
+   （例: `archive_mr_branch`）
+3. パイプラインが`merge_request_event`によってトリガーされた場合に実行します。
+   完全な概要については、[GitLab CI/CD `rules`のドキュメント][gitlab ci cd rules]と[GitLab CI/CDの事前定義された変数のドキュメント][gitlab ci cd redefined variables]を参照してください。
+   （例: `rules: if: ...`）
+4. ジョブが実行される`image`を設定します。
+   完全な概要については、[GitLab CI/CD `image`のドキュメント][gitlab ci cd image]を参照してください。
+   （例: `image: debian:bullseye`）
+5. [便利なスクリプト][install bencher cli]を使用してBencher CLIをインストールします。
+   （例: `before_script: curl ...`）
+6. GitLab APIを使用してMRのステートを確認します。
+   （例: `before_script: MR_STATE=$(...)`）
+7. MRのステートが`closed`の場合、`bencher archive` CLIサブコマンドを使用してMRブランチをアーカイブします。
+   （例: `bencher archive`）
+8. プロジェクトのスラッグに`--project`オプションを設定します。
+   詳細は[ `--project` のドキュメント][project option]を参照してください。
+   （例: `--project save-walter-white-1234abcd`）
+9. マスクされた`BENCHER_API_TOKEN`環境変数を`--token`オプションに設定します。
+   詳細については[ `--token` のドキュメント][token option]を参照してください。
+   （例: `--token "$BENCHER_API_TOKEN"`）
+10. GitLab CI/CDの事前定義された変数を使用してMRブランチ名に`--branch`オプションを設定します。
+    （例: `--branch "$CI_COMMIT_REF_NAME"`）
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[install bencher cli]: /ja/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /ja/docs/explanation/bencher-run/
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[token option]: /ja/docs/explanation/bencher-run/#--token-token

@@ -1,9 +1,9 @@
 import TargetBranchCode from "../target-branch-code.mdx";
 
-## 대상 브랜치
+## 타겟 브랜치
 
-[통계적 지속적 벤치마킹][statistical continuous benchmarking]의 핵심은 대상 브랜치에 대한 역사적 기준선을 갖는 것입니다.
-이 역사적 기준선은 병합 요청에서 성능 회귀를 감지하는 데 사용할 수 있습니다.
+[통계적 지속 벤치마킹][statistical continuous benchmarking]의 핵심 요소는 타겟 브랜치에 대한 역사적인 기준선을 가지는 것입니다.
+이 역사적인 기준선은 병합 요청에서 성능 퇴보를 감지하는 데 사용될 수 있습니다.
 
 <TargetBranchCode />
 
@@ -11,40 +11,54 @@ import TargetBranchCode from "../target-branch-code.mdx";
    (예: `.gitlab-ci.yml`)
 2. GitLab CI/CD 작업을 생성합니다.
    (예: `benchmark_target_branch`)
-3. 파이프라인이 `main` 브랜치로의 `push`에 의해 트리거되었을 때 실행합니다.
-   [GitLab CI/CD `rules` 문서][gitlab ci cd rules]
-   및 [GitLab CI/CD 사전 정의된 변수 문서][gitlab ci cd redefined variables]를 참조하여 전체 개요를 확인하세요.
-   (예: `rules: - if: ...`)
-4. 작업을 실행할 `image`를 설정합니다.
-   [GitLab CI/CD `image` 문서][gitlab ci cd image]
-   를 참조하여 전체 개요를 확인하세요.
+3. 파이프라인이 `main` 브랜치로의 `push`에 의해 트리거된 경우에 실행하십시오.
+   전체 개요는 [GitLab CI/CD `rules` 문서][gitlab ci cd rules] 및 [GitLab CI/CD 사전 정의 변수 문서][gitlab ci cd redefined variables]를 참조하십시오.
+   (예: `rules: if: ...`)
+4. 작업이 실행될 `image`를 설정합니다.
+   전체 개요는 [GitLab CI/CD `image` 문서][gitlab ci cd image]를 참조하십시오.
    (예: `image: debian:bullseye`)
-5. [편리한 스크립트][install bencher cli]를 사용해 Bencher CLI를 설치합니다.
+5. [편리한 스크립트][install bencher cli]를 사용하여 Bencher CLI를 설치합니다.
    (예: `before_script: ...`)
-6. `main` 브랜치 벤치마크를 실행하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 사용합니다.
-   [the `bencher run` CLI 하위 명령어][bencher run]를 참조하여 전체 개요를 확인하세요.
+6. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용하여 `main` 브랜치 벤치마크를 실행합니다.
+   전체 개요는 [`bencher run` CLI 서브커맨드][bencher run]를 참조하십시오.
    (예: `bencher run`)
-7. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
-   [the `--project` 문서][project option]를 참조하여 자세한 내용을 확인하세요.
+7. `--project` 옵션을 프로젝트 슬러그에 설정합니다.
+   자세한 내용은 [`--project` 문서][project option]를 참조하십시오.
    (예: `--project save-walter-white-1234abcd`)
-8. `--token` 옵션을 마스킹된 `BENCHER_API_TOKEN` 환경 변수로 설정합니다.
-   [the `--token` 문서][token option]를 참조하여 자세한 내용을 확인하세요.
+8. `--token` 옵션을 마스킹된 `BENCHER_API_TOKEN` 환경 변수에 설정합니다.
+   자세한 내용은 [`--token` 문서][token option]를 참조하십시오.
    (예: `--token "$BENCHER_API_TOKEN"`)
-9. `--branch` 옵션을 브랜치 이름으로 설정합니다.
-    [브랜치 선택][branch selection branch]을 참조하여 전체 개요를 확인하세요.
-    (예: `--branch main`)
-10. `--testbed` 옵션을 테스트베드 이름으로 설정합니다.
-    이는 `image`에서 선택한 기계와 일치해야 합니다.
-    [the `--testbed` 문서][testbed option]를 참조하여 자세한 내용을 확인하세요.
+9.  `--branch` 옵션을 브랜치 이름으로 설정합니다.
+   전체 개요는 [`--branch` 문서][branch option]를 참조하십시오.
+   (예: `--branch main`)
+10. `--testbed` 옵션을 테스트베드 이름에 설정합니다.
+    이는 `image`에서 선택된 기계와 일치해야 합니다.
+    자세한 내용은 [`--testbed` 문서][testbed option]를 참조하십시오.
     (예: `--testbed debian:bullseye`)
-11. 원하는 벤치마크 하네스 어댑터에 대한 `--adapter` 옵션을 설정합니다.
-    [벤치마크 하네스 어댑터][adapters]를 참조하여 전체 개요를 확인하세요.
-    (예: `--adapter json`)
-12. 경고가 생성되면 명령을 실패하도록 `--err` 플래그를 설정합니다.
-    [임계값 및 경고][alerts]를 참조하여 전체 개요를 확인하세요.
+11. `main` 브랜치, `debian:bullseye` 테스트베드, 및 `latency` 측정을 위한 임계값 설정:
+    1. `--threshold-measure` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 내장 `latency` 측정 값으로 설정합니다.
+    자세한 내용은 [`--threshold-measure` 문서][threshold measure option]를 참조하십시오.
+    (예: `--threshold-measure latency`)
+    2. `--threshold-test` 옵션을 Student's t-test (`t_test`)로 설정합니다.
+    전체 개요는 [`--threshold-test` 문서][threshold test option]를 참조하십시오.
+    (예: `--threshold-test t_test`)
+    3. `--threshold-max-sample-size` 옵션을 최대 샘플 크기 `64`로 설정합니다.
+    자세한 내용은 [`--threshold-max-sample-size` 문서][threshold max sample size]를 참조하십시오.
+    (예: `--threshold-max-sample-size 64`)
+    4. `--threshold-upper-boundary` 옵션을 상한 `0.99`로 설정합니다.
+    자세한 내용은 [`--threshold-upper-boundary` 문서][threshold upper boundary]를 참조하십시오.
+    (예: `--threshold-upper-boundary 0.99`)
+    5. `--thresholds-reset` 플래그를 설정하여 지정된 임계값만 활성화되도록 합니다.
+    전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하십시오.
+    (예: `--thresholds-reset`)
+12. 경고가 생성될 경우 명령이 실패하도록 `--err` 플래그를 설정합니다.
+    전체 개요는 [`--err` 문서][alert err]를 참조하십시오.
     (예: `--err`)
-13. 벤치마크 명령 인수를 지정합니다.
-    [벤치마크 명령][command argument]을 참조하여 전체 개요를 확인하세요.
+13. [Bencher Metric Format JSON (`json`)][bmf]이 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 것으로 `--adapter` 옵션을 설정합니다.
+    전체 개요는 [벤치마크 하네스 어댑터][adapter json]를 참조하십시오.
+    (예: `--adapter json`)
+14. 벤치마크 명령 인수를 지정합니다.
+    전체 개요는 [벤치마크 명령][command argument]를 참조하십시오.
     (예: `bencher mock`)
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
@@ -56,8 +70,14 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
 [token option]: /ko/docs/explanation/bencher-run/#--token-token
-[branch selection branch]: /ko/docs/explanation/branch-selection/#--branch-branch
+[branch option]: /ko/docs/explanation/branch-selection/#--branch-branch
 [testbed option]: /ko/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /ko/docs/explanation/adapters/
-[alerts]: /ko/docs/explanation/thresholds/#alerts
+[threshold measure option]: /ko/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /ko/docs/explanation/thresholds/#--threshold-test-test
+[threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold upper boundary]: /ko/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /ko/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /ko/docs/explanation/thresholds/#--err
+[bmf]: /ko/docs/reference/bencher-metric-format/
+[adapter json]: /ko/docs/explanation/adapters/#-json
 [command argument]: /ko/docs/explanation/bencher-run/#benchmark-command

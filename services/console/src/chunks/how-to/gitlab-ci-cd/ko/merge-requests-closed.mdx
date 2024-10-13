@@ -1,0 +1,41 @@
+import MergeRequestsClosedCode from "../merge-requests-closed-code.mdx";
+
+MR이 닫힌 후 MR 브랜치를 정리하려면,
+GitLab API를 사용하여 MR 상태를 조회하는 별도의 작업을 생성할 수 있습니다.
+상태가 `closed`인 경우, 이 작업은 `bencher archive` 명령을 사용하여 MR 브랜치를 아카이브할 것입니다.
+
+<MergeRequestsClosedCode />
+
+1. GitLab CI/CD 파일을 업데이트합니다.
+   (예: `.gitlab-ci.yml`)
+2. GitLab CI/CD 작업을 생성합니다.
+   (예: `archive_mr_branch`)
+3. 파이프라인이 `merge_request_event`에 의해 트리거될 때 `if` 실행합니다.
+   전체 개요는 [GitLab CI/CD `rules` 문서][gitlab ci cd rules]와 [GitLab CI/CD 사전 정의된 변수 문서][gitlab ci cd redefined variables]를 참조하세요.
+   (예: `rules: if: ...`)
+4. 작업이 실행될 `image`를 설정합니다.
+   전체 개요는 [GitLab CI/CD `image` 문서][gitlab ci cd image]를 참조하세요.
+   (예: `image: debian:bullseye`)
+5. [편리한 스크립트를 사용하여 Bencher CLI를 설치합니다][install bencher cli].
+   (예: `before_script: curl ...`)
+6. GitLab API를 사용하여 MR 상태를 확인합니다.
+   (예: `before_script: MR_STATE=$(...)`)
+7. MR 상태가 `closed`인 경우 MR 브랜치를 아카이브하기 위해 `bencher archive` CLI 하위 명령을 사용합니다.
+   (예: `bencher archive`)
+8. 프로젝트 슬러그에 `--project` 옵션을 설정합니다.
+   자세한 내용은 [`--project` 문서][project option]를 참조하세요.
+   (예: `--project save-walter-white-1234abcd`)
+9. 마스크된 `BENCHER_API_TOKEN` 환경 변수에 `--token` 옵션을 설정합니다.
+   자세한 내용은 [`--token` 문서][token option]를 참조하세요.
+   (예: `--token "$BENCHER_API_TOKEN"`)
+10. [GitLab CI/CD 사전 정의된 변수][gitlab ci cd redefined variables]를 사용하여 MR 브랜치 이름에 `--branch` 옵션을 설정합니다.
+    (예: `--branch "$CI_COMMIT_REF_NAME"`)
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[install bencher cli]: /ko/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /ko/docs/explanation/bencher-run/
+[project option]: /ko/docs/explanation/bencher-run/#--project-project
+[token option]: /ko/docs/explanation/bencher-run/#--token-token

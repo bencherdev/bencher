@@ -1,13 +1,13 @@
-あなたのユースケースに応じて、次のためにGitLab CI/CDで[継続的ベンチマーキング][continuous benchmarking]を設定できます:
+Depending on your use case, you can set up [Continuous Benchmarking][continuous benchmarking] in GitLab CI/CD for your:
 
-- [ターゲットブランチ](#target-branch)
-- [マージリクエスト](#merge-requests)
+- [Target Branch](#target-branch)
+- [Merge Requests](#merge-requests)
 
-> 🐰 [APIトークンを作成][created an api token]して、
-> それを`BENCHER_API_TOKEN`という名前のマスクされた変数として設定しておくことを忘れないでください！
-> `あなたのリポジトリ -> 設定 -> CI/CD -> 変数 -> 展開 -> 変数を追加`に進んでください。
-> 変数のキーは`BENCHER_API_TOKEN`であり、変数の値はあなたのAPIトークンである必要があります。
-> `変数を保護する`と`変数をマスクする`の両方のチェックボックスを選択してください。
+確実に、[APIトークンを作成し][created an api token]
+、続行する前にマスクされた変数 `BENCHER_API_TOKEN` として設定してください！
+`Your Repo -> Settings -> CI/CD -> Variables -> Expand -> Add variable` に移動します。
+変数キーは `BENCHER_API_TOKEN` であり、変数値はあなたのAPIトークンであるべきです。
+`Protect variable` と `Mask variable` のボックスの両方をチェックしてください。
 
 [continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
 [created an api token]: /ja/docs/tutorial/quick-start/#create-an-api-token

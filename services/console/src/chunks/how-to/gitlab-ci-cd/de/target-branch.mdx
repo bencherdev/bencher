@@ -1,9 +1,9 @@
 import TargetBranchCode from "../target-branch-code.mdx";
 
-## Zielbranch
+## Ziel-Branch
 
-Ein Grundpfeiler des [Statistischen Kontinuierlichen Benchmarkings][statistical continuous benchmarking]
-ist eine historische Basislinie für Ihren Zielbranch zu haben.
+Ein Eckpfeiler des [Statistical Continuous Benchmarking][statistical continuous benchmarking]
+ist das Vorhandensein einer historischen Basislinie für Ihren Ziel-Branch.
 Diese historische Basislinie kann dann verwendet werden, um Leistungsregressionen in Merge Requests zu erkennen.
 
 <TargetBranchCode />
@@ -12,41 +12,57 @@ Diese historische Basislinie kann dann verwendet werden, um Leistungsregressione
    (z.B.: `.gitlab-ci.yml`)
 2. Erstellen Sie einen GitLab CI/CD-Job.
    (z.B.: `benchmark_target_branch`)
-3. Führen Sie `if` das Pipeline durch einen `push` auf den `main`-Branch ausgelöst wurde.
+3. Führen Sie das Kommando `if` aus, wenn die Pipeline durch einen `push` auf den `main`-Branch ausgelöst wurde.
    Siehe die [GitLab CI/CD `rules` Dokumentation][gitlab ci cd rules]
-   und [GitLab CI/CD vordefinierte Variablen Dokumentation][gitlab ci cd redefined variables] für einen kompletten Überblick.
-   (z.B.: `rules: - if: ...`)
-4. Stellen Sie das `image` ein, in dem der Job ausgeführt wird.
+   und die [GitLab CI/CD vordefinierten Variablen Dokumentation][gitlab ci cd redefined variables] für einen umfassenden Überblick.
+   (z.B.: `rules: if: ...`)
+4. Legen Sie das `image` fest, in dem der Job ausgeführt wird.
    Siehe die [GitLab CI/CD `image` Dokumentation][gitlab ci cd image]
-   für einen kompletten Überblick.
+   für einen vollständigen Überblick.
    (z.B.: `image: debian:bullseye`)
-5. Installieren Sie das Bencher CLI mithilfe [des Convenience-Skripts][install bencher cli].
+5. Installieren Sie die Bencher CLI mit dem [Convenience-Skript][install bencher cli].
    (z.B.: `before_script: ...`)
-6. Verwenden Sie das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl
-   um Ihre Benchmarks des `main`-Branchs auszuführen.
-   Siehe [den `bencher run` CLI-Unterbefehl][bencher run] für einen kompletten Überblick.
+6. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl,
+   um Ihre `main`-Branch-Benchmarks auszuführen.
+   Siehe [den `bencher run` CLI-Unterbefehl][bencher run] für eine vollständige Übersicht.
    (z.B.: `bencher run`)
-7. Stellen Sie die Option `--project` auf den Projektslug ein.
-   Siehe [die `--project` Docs][project option] für mehr Details.
+7. Setzen Sie die `--project`-Option auf den Project-Slug.
+   Siehe [die `--project`-Dokumentation][project option] für weitere Details.
    (z.B.: `--project save-walter-white-1234abcd`)
-8. Stellen Sie die Option `--token` auf die maskierte `BENCHER_API_TOKEN` Umgebungsvariable ein.
-   Siehe [die `--token` Docs][token option] für mehr Details.
+8. Setzen Sie die `--token`-Option auf die maskierte `BENCHER_API_TOKEN` Umgebungsvariable.
+   Siehe [die `--token`-Dokumentation][token option] für weitere Details.
    (z.B.: `--token "$BENCHER_API_TOKEN"`)
-9.  Stellen Sie die Option `--branch` auf den Branch-Namen ein.
-    Siehe [Branch-Auswahl][branch selection branch] für einen kompletten Überblick.
-    (z.B.: `--branch main`)
-10. Stellen Sie die Option `--testbed` auf den Namen des Testbeds ein.
-    Dies sollte wahrscheinlich mit der Maschine übereinstimmen, die in `image` ausgewählt wurde.
-    Siehe [die `--testbed` Docs][testbed option] für mehr Details.
+9. Setzen Sie die `--branch`-Option auf den Branch-Namen.
+   Siehe [die `--branch`-Dokumentation][branch option] für einen vollständigen Überblick.
+   (z.B.: `--branch main`)
+10. Setzen Sie die `--testbed`-Option auf den Testbed-Namen.
+    Dies sollte wahrscheinlich mit der in `image` ausgewählten Maschine übereinstimmen.
+    Siehe [die `--tested`-Dokumentation][testbed option] für weitere Details.
     (z.B.: `--testbed debian:bullseye`)
-11. Stellen Sie die Option `--adapter` auf den gewünschten Benchmark-Harness-Adapter ein.
-    Siehe [Benchmark-Harness-Adapter][adapters] für einen kompletten Überblick.
-    (z.B.: `--adapter json`)
-12. Stellen Sie die Option `--err` ein, um den Befehl fehlschlagen zu lassen, wenn ein Alert generiert wird.
-    Siehe [Schwellenwerte & Alarme][alerts] für einen kompletten Überblick.
+11. Setzen Sie die Schwelle für den `main`-Branch, `debian:bullseye` Testbed, und `latency` Measurement:
+    1. Setzen Sie die `--threshold-measure`-Option auf das eingebaute `latency` Measurement, das durch den <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> erzeugt wird.
+    Siehe [die `--threshold-measure`-Dokumentation][threshold measure option] für weitere Details.
+    (z.B.: `--threshold-measure latency`)
+    2. Setzen Sie die `--threshold-test`-Option auf einen t-Test (`t_test`).
+    Siehe [die `--threshold-test`-Dokumentation][threshold test option] für einen vollständigen Überblick.
+    (z.B.: `--threshold-test t_test`)
+    3. Setzen Sie die `--threshold-max-sample-size`-Option auf die maximale Stichprobengröße von `64`.
+    Siehe [die `--threshold-max-sample-size`-Dokumentation][threshold max sample size] für weitere Details.
+    (z.B.: `--threshold-max-sample-size 64`)
+    4. Setzen Sie die `--threshold-upper-boundary`-Option auf die obere Grenze von `0,99`.
+    Siehe [die `--threshold-upper-boundary`-Dokumentation][threshold upper boundary] für weitere Details.
+    (z.B.: `--threshold-upper-boundary 0.99`)
+    5. Setzen Sie das `--thresholds-reset`-Flag, sodass nur die festgelegte Schwelle aktiv ist.
+    Siehe [die `--thresholds-reset`-Dokumentation][thresholds reset] für einen vollständigen Überblick.
+    (z.B.: `--thresholds-reset`)
+12. Setzen Sie das `--err`-Flag, um den Befehl zu beenden, wenn eine Warnung generiert wird.
+    Siehe [die `--err`-Dokumentation][alert err] für einen vollständigen Überblick.
     (z.B.: `--err`)
-13. Geben Sie die Benchmark-Befehlsargumente an.
-    Siehe [Benchmark-Befehl][command argument] für einen kompletten Überblick.
+13. Setzen Sie die `--adapter`-Option auf [Bencher Metric Format JSON (`json`)][bmf], das durch den <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> erzeugt wird.
+    Siehe [Benchmark-Harness-Adapter][adapter json] für einen vollständigen Überblick.
+    (z.B.: `--adapter json`)
+14. Geben Sie die Argumente des Benchmark-Kommandos an.
+    Siehe [Benchmark-Kommando][command argument] für einen vollständigen Überblick.
     (z.B.: `bencher mock`)
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
@@ -58,8 +74,14 @@ Diese historische Basislinie kann dann verwendet werden, um Leistungsregressione
 [bencher run]: /de/docs/explanation/bencher-run/
 [project option]: /de/docs/explanation/bencher-run/#--project-project
 [token option]: /de/docs/explanation/bencher-run/#--token-token
-[branch selection branch]: /de/docs/explanation/branch-selection/#--branch-branch
+[branch option]: /de/docs/explanation/branch-selection/#--branch-branch
 [testbed option]: /de/docs/explanation/bencher-run/#--testbed-testbed
-[adapters]: /de/docs/explanation/adapters/
-[alerts]: /de/docs/explanation/thresholds/#alerts
+[threshold measure option]: /de/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold test option]: /de/docs/explanation/thresholds/#--threshold-test-test
+[threshold max sample size]: /de/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold upper boundary]: /de/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
+[thresholds reset]: /de/docs/explanation/thresholds/#--thresholds-reset
+[alert err]: /de/docs/explanation/thresholds/#--err
+[bmf]: /de/docs/reference/bencher-metric-format/
+[adapter json]: /de/docs/explanation/adapters/#-json
 [command argument]: /de/docs/explanation/bencher-run/#benchmark-command
