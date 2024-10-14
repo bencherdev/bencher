@@ -7,7 +7,9 @@ interface Props {
 }
 
 // Api
-const apiOrganizationsCollection = await getEnCollection(Collection.api_organizations);
+const apiOrganizationsCollection = await getEnCollection(
+	Collection.api_organizations,
+);
 const apiProjectsCollection = await getEnCollection(Collection.api_projects);
 const apiUsersCollection = await getEnCollection(Collection.api_users);
 const apiServerCollection = await getEnCollection(Collection.api_server);
