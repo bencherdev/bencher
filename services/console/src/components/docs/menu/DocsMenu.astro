@@ -17,10 +17,16 @@ interface Props {
 }
 
 // Docs
-const tutorialCollection = await getLangCollection(Collection.tutorial);
-const howToCollection = await getLangCollection(Collection.how_to);
-const explanationCollection = await getLangCollection(Collection.explanation);
-const referenceCollection = await getLangCollection(Collection.reference);
+const docsTutorialCollection = await getLangCollection(
+	Collection.docs_tutorial,
+);
+const docsHowToCollection = await getLangCollection(Collection.docs_how_to);
+const docsExplanationCollection = await getLangCollection(
+	Collection.docs_explanation,
+);
+const docsReferenceCollection = await getLangCollection(
+	Collection.docs_reference,
+);
 
 // Api
 const apiOrganizationsCollection = await getEnCollection(
@@ -73,13 +79,13 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 			case DocsMenuId.Docs:
 				return (
 					1 +
-					tutorialCollection[lang]?.length +
+					docsTutorialCollection[lang]?.length +
 					1 +
-					howToCollection[lang]?.length +
+					docsHowToCollection[lang]?.length +
 					1 +
-					explanationCollection[lang]?.length +
+					docsExplanationCollection[lang]?.length +
 					1 +
-					referenceCollection[lang]?.length
+					docsReferenceCollection[lang]?.length
 				);
 			case DocsMenuId.Api:
 				return (

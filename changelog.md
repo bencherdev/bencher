@@ -1,1 +1,0 @@
-services/console/src/chunks/reference/en/changelog.mdx

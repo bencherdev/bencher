@@ -2,10 +2,10 @@ enum Collection {
 	// Legal
 	legal = "legal",
 	// Docs
-	tutorial = "tutorial",
-	how_to = "how-to",
-	explanation = "explanation",
-	reference = "reference",
+	docs_tutorial = "docs-tutorial",
+	docs_how_to = "docs-how-to",
+	docs_explanation = "docs-explanation",
+	docs_reference = "docs-reference",
 	// API
 	api_organizations = "api-organizations",
 	api_projects = "api-projects",
@@ -31,13 +31,13 @@ export const collectionPath = (collection: Collection) => {
 	switch (collection) {
 		case Collection.legal:
 			return "legal";
-		case Collection.tutorial:
+		case Collection.docs_tutorial:
 			return "tutorial";
-		case Collection.how_to:
+		case Collection.docs_how_to:
 			return "how-to";
-		case Collection.explanation:
+		case Collection.docs_explanation:
 			return "explanation";
-		case Collection.reference:
+		case Collection.docs_reference:
 			return "reference";
 		case Collection.api_organizations:
 			return "organizations";

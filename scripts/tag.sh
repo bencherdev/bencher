@@ -4,7 +4,7 @@ VERSION=$(cargo bin-version)
 
 git add Cargo.toml
 git add Cargo.lock
-git add ./services/console/src/chunks/reference/en/changelog.mdx
+git add ./services/console/src/chunks/docs-reference/changelog/en/changelog.mdx
 
 # Generate the API docs from the server and the types for the UI
 cargo gen-types

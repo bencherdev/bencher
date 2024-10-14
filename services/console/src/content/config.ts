@@ -44,10 +44,10 @@ export const collections = {
 	// legal
 	legal: page,
 	// docs
-	tutorial: page,
-	how_to: page,
-	explanation: page,
-	reference: page,
+	docs_tutorial: page,
+	docs_how_to: page,
+	docs_explanation: page,
+	docs_reference: page,
 	// api
 	api_organizations: swagger,
 	api_projects: swagger,

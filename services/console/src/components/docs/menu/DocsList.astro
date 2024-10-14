@@ -14,10 +14,16 @@ interface Props {
 }
 
 // Docs
-const tutorialCollection = await getLangCollection(Collection.tutorial);
-const howToCollection = await getLangCollection(Collection.how_to);
-const explanationCollection = await getLangCollection(Collection.explanation);
-const referenceCollection = await getLangCollection(Collection.reference);
+const docsTutorialCollection = await getLangCollection(
+	Collection.docs_tutorial,
+);
+const docsHowToCollection = await getLangCollection(Collection.docs_how_to);
+const docsExplanationCollection = await getLangCollection(
+	Collection.docs_explanation,
+);
+const docsReferenceCollection = await getLangCollection(
+	Collection.docs_reference,
+);
 
 const { lang } = Astro.props;
 ---
@@ -25,23 +31,23 @@ const { lang } = Astro.props;
 {[
   {
     label: tutorial(lang),
-    collection: Collection.tutorial,
-    content: tutorialCollection[lang],
+    collection: Collection.docs_tutorial,
+    content: docsTutorialCollection[lang],
   },
   {
     label: howTo(lang),
-    collection: Collection.how_to,
-    content: howToCollection[lang],
+    collection: Collection.docs_how_to,
+    content: docsHowToCollection[lang],
   },
   {
     label: explanation(lang),
-    collection: Collection.explanation,
-    content: explanationCollection[lang],
+    collection: Collection.docs_explanation,
+    content: docsExplanationCollection[lang],
   },
   {
     label: reference(lang),
-    collection: Collection.reference,
-    content: referenceCollection[lang],
+    collection: Collection.docs_reference,
+    content: docsReferenceCollection[lang],
     prefix: (
       <li>
         <a href={`/${langPath(lang)}docs/api/`}>REST API</a>
