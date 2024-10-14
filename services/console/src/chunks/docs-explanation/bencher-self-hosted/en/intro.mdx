@@ -1,0 +1,101 @@
+Bencher is [open source][github bencher].
+It is available as a SaaS, [Bencher Cloud][bencher cloud],
+and as a self-hostable set of Docker images:
+
+- Bencher Console Server
+  - [Configuration Reference](/docs/reference/console-config/)
+  - [Download](/download/#console-server)
+- Bencher API Server
+  - [Configuration Reference](/docs/reference/server-config/)
+  - [Download](/download/#api-server)
+
+## Host URL
+
+Whenever you are using a Bencher Self-Hosted instance,
+you will need to set [the `--host` option][host option] for most `bencher` CLI subcommands.
+
+For example, if you were using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
+then you might write:
+
+```sh
+bencher run \
+--host https://bencher.example.com \
+--project save-walter-white-1234abcd \
+--branch main \
+--testbed ci-runner \
+--adapter json \
+bencher mock
+```
+
+[host option]: /docs/explanation/bencher-run/#--host-url
+
+## Deployment
+
+The easiest way to deploy Bencher Self-Hosted is using a triptych of `bencher` CLI subcommands:
+
+- `bencher up`: Bring up the Bencher Self-Hosted containers.
+  This is similar to running `docker compose up`.
+- `bencher logs`: Show the logs for the Bencher Self-Hosted containers,
+  if `bencher up` was run with the `--detach` flag.
+  This is similar to running `docker compose logs`.
+- `bencher down`: Bring down the Bencher Self-Hosted containers,
+  if `bencher up` was run the the `--detach` flag.
+  This is similar to running `docker compose down`.
+
+Alternatively, you could just use `docker compose` orchestrate the containers.
+This is an example `docker-compose.yml` file:
+
+```yml
+version: "3.9"
+services:
+  bencher_api_compose:
+    image: ghcr.io/bencherdev/bencher-api:latest
+    container_name: bencher_api
+    ports:
+      - 61016:61016
+    volumes:
+      - "./services/api/etc:/etc/bencher"
+      - "./services/api/data:/var/lib/bencher/data"
+    # environment:
+      # Set configuration string or file path
+      # - BENCHER_CONFIG=
+      # - BENCHER_CONFIG_PATH=
+
+  bencher_console_compose:
+    image: ghcr.io/bencherdev/bencher-console:latest
+    container_name: bencher_console
+    ports:
+      - 3000:3000
+    environment:
+      - BENCHER_API_URL=http://127.0.0.1:61016
+      # This is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`
+      # Do not set this when using a remote `BENCHER_API_URL`, such as https://bencher.example.com
+      - INTERNAL_API_URL=http://host.docker.internal:61016
+    depends_on:
+      - bencher_api_compose
+```
+
+## Backups
+
+TODO
+
+## Disaster Recovery
+
+TODO
+
+[Replicate to AWS S3 with Litestream](https://litestream.io/guides/s3/)
+
+<hr />
+
+## `bencher up`
+
+<hr />
+
+## `bencher logs`
+
+<hr />
+
+## `bencher down`
+
+[github bencher]: https://github.com/bencherdev/bencher
+[bencher cloud]: https://bencher.dev
