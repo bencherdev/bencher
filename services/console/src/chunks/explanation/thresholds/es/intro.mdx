@@ -1,0 +1,36 @@
+import ThresholdCode from "../threshold-code.mdx";
+
+Los Umbrales son cómo detectas regresiones de rendimiento con Bencher. Un Umbral se asigna a una combinación única de: [Branch][branch], [Testbed][testbed] y [Measure][measure]. Un Umbral utiliza un [Test][tests] específico para detectar regresiones de rendimiento. La combinación de un Test y sus parámetros se llama Modelo. Un Modelo debe tener un Límite Inferior, un Límite Superior, o ambos.
+
+- Límite Inferior
+  - Se utiliza un Límite Inferior cuando un valor más pequeño indicaría una regresión de rendimiento, como con la Medida de Rendimiento.
+- Límite Superior
+  - Se utiliza un Límite Superior cuando un valor más grande indicaría una regresión de rendimiento, como con la Medida de Latencia.
+
+Cada Límite se utiliza para calcular un Límite de Umbral. Luego, cada nuevo [Metric][metric] se verifica contra cada Límite de Umbral. Se genera una alerta cuando un nuevo Métrico está por debajo del Límite Inferior o por encima del Límite Superior.
+
+Al realizar [Benchmarking Continuo], es decir, benchmarking en CI, querrás crear Umbrales. Usando el subcomando <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> de la CLI, ya especificas una Rama con [la opción `--branch`][branch option] y un Banco de Pruebas con [la opción `--testbed`][testbed option]. Así que la única otra dimensión que necesitas especificar es una Medida, con la opción `--threshold-measure`. Luego puedes usar la opción `--threshold-test` para especificar el Test a usar para esa Medida. Las opciones `--threshold-min-sample-size`, `--threshold-max-sample-size` y `--threshold-window` te permiten controlar qué datos se utilizan por el Test. Finalmente, las opciones `--threshold-lower-boundary` y `--threshold-upper-boundary` te permiten establecer el Límite Inferior y el Límite Superior. Si deseas eliminar todos los Modelos que no estén especificados, puedes hacerlo con el flag `--thresholds-reset`.
+
+- Si el Umbral no existe, se creará para ti.
+- Si el Umbral existe y el Modelo especificado es el mismo, entonces el Modelo se ignora.
+- Si el Umbral existe y el Modelo especificado es diferente, entonces se crea un nuevo Modelo para el Umbral.
+- Si un Umbral existe y se restablece, entonces el Modelo actual se elimina del Umbral.
+
+Por ejemplo, para usar solo un Umbral para la Medida de Latencia utilizando [una Prueba t de Student][t-test] con un tamaño de muestra máximo de `64` y un Límite Superior de `0.99`, podrías escribir algo así:
+
+<ThresholdCode />
+
+> 🐰 Al trabajar con ramas de características, es posible que desees copiar los Umbrales existentes desde la rama base, [Punto de Inicio][start point]. Esto es posible con [el flag `--start-point-clone-thresholds`][start point clone thresholds flag]. Ten en cuenta que el flag `--thresholds-reset` aún eliminará cualquier Umbral clonado que no se especifique explícitamente.
+
+[branch]: /es/docs/explanation/benchmarking/#branch
+[testbed]: /es/docs/explanation/benchmarking/#testbed
+[measure]: /es/docs/explanation/benchmarking/#measure
+[metric]: /es/docs/explanation/benchmarking/#metric
+[continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
+[branch option]: /es/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /es/docs/explanation/bencher-run/#--testbed-testbed
+[start point]: /es/docs/explanation/benchmarking/#start-point
+[start point clone thresholds flag]: /es/docs/explanation/branch-selection/#--start-point-clone-thresholds
+
+[tests]: #--threshold-test-test
+[t-test]: #t-test

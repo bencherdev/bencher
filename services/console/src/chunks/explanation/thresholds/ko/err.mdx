@@ -1,0 +1,16 @@
+## `--err`
+
+<br />
+
+경고가 생성될 때 선택적으로 오류가 발생합니다. 새로운 [측정치][metric]가 하한선보다 낮거나 상한선을 초과할 때 경고가 생성됩니다.
+
+### 경고 억제하기
+특정 벤치마크에 대해 경고를 억제하는 것이 유용할 수 있습니다. 이를 수행하는 가장 좋은 방법은 해당 벤치마크 이름에 다음과 같은 특수 접미사 중 하나를 추가하는 것입니다:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+예를 들어, 벤치마크가 `my_flaky_benchmark`로 명명되었다면 `my_flaky_benchmark_bencher_ignore`로 이름을 변경하면 해당 특정 벤치마크는 앞으로 무시됩니다. 무시된 벤치마크는 기존의 임계값에 대해 여전히 검사됩니다. 그러나, 이들에 대해 경고는 생성되지 않습니다. 무시된 벤치마크의 측정치는 여전히 저장됩니다. `my_flaky_benchmark_bencher_ignore`의 결과는 여전히 벤치마크 `my_flaky_benchmark`로 저장됩니다. 접미사를 제거하고 원래 벤치마크 이름으로 돌아가면, 원래 위치에서 다시 시작됩니다.
+
+[metric]: /ko/docs/explanation/benchmarking/#metric

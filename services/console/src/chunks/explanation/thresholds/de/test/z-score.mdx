@@ -1,0 +1,18 @@
+### z-score
+
+Ein z-score Test (`z_score`) misst die Anzahl der [Standardabweichungen](https://en.wikipedia.org/wiki/Standard_deviation) (σ), die eine neue Metrik vom Mittelwert Ihrer historischen Metriken mithilfe eines [z-score](https://en.wikipedia.org/wiki/Standard_score) entfernt ist.
+
+z-score Tests funktionieren am besten, wenn:
+- Es keine extremen Unterschiede zwischen Benchmark-Durchläufen gibt
+- Benchmark-Durchläufe völlig unabhängig voneinander sind
+- Die Anzahl der Iterationen für einen einzelnen Benchmark-Durchlauf weniger als 10% der historischen Metriken beträgt
+- Mindestens 30 historische Metriken vorhanden sind (minimale Stichprobengröße >= 30)
+
+Für z-score Tests werden Standardabweichungen als dezimale kumulative Prozentsätze ausgedrückt. Wenn eine neue Metrik unter einem bestimmten linken kumulativen Prozentsatz (untere Grenze) oder über einem bestimmten rechten kumulativen Prozentsatz (obere Grenze) für Ihre historischen Metriken liegt, wird ein Alarm ausgelöst. Entweder eine untere Grenze, eine obere Grenze oder beide müssen festgelegt werden.
+
+- #### z-score Untere Grenze
+  - Eine z-score Untere Grenze kann jede positive Dezimalzahl zwischen `0.5` und `1.0` sein. Dabei steht `0.5` für den Mittelwert und `1.0` für alle möglichen linken Werte (-∞). Sie wird verwendet, wenn ein kleinerer Wert auf eine Leistungsregression hinweisen würde.
+  - Zum Beispiel, wenn Sie einen z-score Test mit einer unteren Grenze von `0.977` verwenden und Ihre historischen Metriken einen Mittelwert von `100` und eine Standardabweichung von `10` hatten, wäre die untere Grenzschwelle `80.05` und jeder Wert unter `80.05` würde einen Alarm auslösen.
+- #### z-score Obere Grenze
+  - Eine z-score Obere Grenze kann jede positive Dezimalzahl zwischen `0.5` und `1.0` sein. Dabei steht `0.5` für den Mittelwert und `1.0` für alle möglichen rechten Werte (∞). Sie wird verwendet, wenn ein größerer Wert auf eine Leistungsregression hinweisen würde.
+  - Zum Beispiel, wenn Sie einen z-score Test mit einer oberen Grenze von `0.977` verwenden und Ihre historischen Metriken einen Mittelwert von `100` und eine Standardabweichung von `10` hatten, wäre die obere Grenzschwelle `119.95` und jeder Wert über `119.95` würde einen Alarm auslösen.

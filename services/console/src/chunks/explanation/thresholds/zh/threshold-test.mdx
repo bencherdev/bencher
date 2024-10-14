@@ -1,0 +1,35 @@
+import Static from "./test/static.mdx";
+import Percentage from "./test/percentage.mdx";
+import ZScore from "./test/z-score.mdx";
+import TTest from "./test/t-test.mdx";
+import LogNormal from "./test/log-normal.mdx";
+import Iqr from "./test/iqr.mdx";
+import DeltaIqr from "./test/delta-iqr.mdx";
+
+## `--threshold-test <TEST>`
+
+<br />
+
+使用指定的测试来检测性能回归。
+
+有几种不同的测试可用：
+
+<ul>
+  <li>[静态 (`static`)](#static)</li>
+  <li>[百分比 (`percentage`)](#percentage)</li>
+  <li>[z分数 (`z_score`)](#z-score)</li>
+  <li>[t检验 (`t_test`)](#t-test)</li>
+  <li>[对数正态 (`log_normal`)](#log-normal)</li>
+  <li>[四分位间距 (`iqr`)](#interquartile-range)</li>
+  <li>[差异四分位间距 (`delta_iqr`)](#delta-interquartile-range)</li>
+</ul>
+
+例如，要使用包含学生t检验的阈值，你可以写 `--threshold-test t_test`。
+
+<Static />
+<Percentage />
+<ZScore />
+<TTest />
+<LogNormal />
+<Iqr />
+<DeltaIqr />

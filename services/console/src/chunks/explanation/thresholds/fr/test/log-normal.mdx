@@ -1,0 +1,30 @@
+### Log Normal
+
+Un test Log Normal (`log_normal`) évalue la probabilité qu'une nouvelle métrique soit au-dessus ou en dessous du point central de vos métriques historiques en utilisant une [distribution log-normale](https://fr.wikipedia.org/wiki/Loi_normale).
+
+Les tests Log Normal fonctionnent mieux lorsque :
+- Les exécutions de benchmark sont totalement indépendantes les unes des autres
+- Le nombre d'itérations pour une seule exécution de benchmark est inférieur à 10 % des métriques historiques
+- Toutes les données sont positives (le log naturel d'un nombre négatif est `non défini`)
+
+Pour les tests Log Normal, la probabilité est exprimée sous forme de pourcentage décimal.
+Si une nouvelle métrique est en dessous d'un certain pourcentage gauche (Limite Inférieure)
+ou au-dessus d'un certain pourcentage droit (Limite Supérieure) de vos métriques historiques, une alerte est générée.
+Soit une Limite Inférieure, une Limite Supérieure, ou les deux doivent être définies.
+
+- #### Limite Inférieure Log Normale
+  - Une Limite Inférieure pour un test Log Normal peut être n'importe quel décimal positif entre `0,5` et `1,0`.
+Où `0,5` représente le point central et `1,0` représente toutes les valeurs possibles du côté gauche (-∞).
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance.
+  - Par exemple, si vous utilisez un test Log Normal avec une Limite Inférieure de `0,977`
+et que vous avez `25` métriques historiques centrées autour de `100` et un précédent écart à `200`,
+la Limite Inférieure serait `71,20` et
+toute valeur inférieure à `71,20` générerait une alerte.
+- #### Limite Supérieure Log Normale
+  - Une Limite Supérieure pour un test Log Normal peut être n'importe quel décimal positif entre `0,5` et `1,0`.
+Où `0,5` représente le point central et `1,0` représente toutes les valeurs possibles du côté droit (∞).
+Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance.
+  - Par exemple, si vous utilisez un test Log Normal avec une Limite Supérieure de `0,977`
+et que vous avez `25` métriques historiques centrées autour de `100` et un précédent écart à `200`,
+la Limite Supérieure serait `134,18` et
+toute valeur supérieure à `134,18` générerait une alerte.

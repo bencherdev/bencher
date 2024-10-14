@@ -1,0 +1,16 @@
+## `--threshold-window <WINDOW>`
+
+<br />
+
+オプションで、テストを行うために使用される[メトリクス][metric]の時間枠を秒単位で指定できます。
+指定されたウィンドウは`0`より大きくなければなりません。
+このオプションは[静的（`static`）テスト][static]と併用することはできません。
+
+例えば、4週間または`2419200`秒のウィンドウでしきい値を使用するには、`--threshold-window 2419200`と記述します。
+4週間より古いメトリクスがあれば、それらは除外されます。
+逆に、すべてのメトリクスが過去4週間以内であれば、それらはすべて含まれます。
+
+[metric]: /ja/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

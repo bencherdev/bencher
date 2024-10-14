@@ -1,0 +1,17 @@
+## `--threshold-window <WINDOW>`
+
+<br />
+
+Spécifiez éventuellement la fenêtre de temps pour les [Métriques][metric] utilisées pour effectuer le Test, en secondes.
+La fenêtre spécifiée doit être supérieure à `0`.
+Cette option ne peut pas être utilisée avec [le Test Statique (`static`)][static].
+
+Par exemple, pour utiliser un Seuil avec une fenêtre de quatre semaines ou `2419200` secondes,
+vous pourriez écrire `--threshold-window 2419200`.
+Si des Métriques ont plus de quatre semaines, elles seront exclues.
+Inversement, si toutes les Métriques datent des quatre dernières semaines, elles seront toutes incluses.
+
+[metric]: /fr/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

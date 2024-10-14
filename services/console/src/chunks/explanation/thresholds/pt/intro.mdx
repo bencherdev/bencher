@@ -1,0 +1,61 @@
+import ThresholdCode from "../threshold-code.mdx";
+
+Limiares são como você detecta regressões de desempenho com o Bencher.
+Um Limiar é atribuído a uma combinação única de:
+[Ramo][branch], [bancada de testes][testbed] e [medida][measure].
+Um Limiar usa um [teste específico][tests] para detectar regressões de desempenho.
+A combinação de um teste e seus parâmetros é chamada de Modelo.
+Um Modelo deve ter um Limite Inferior, Superior, ou ambos.
+
+- Limite Inferior
+  - Um Limite Inferior é usado quando um valor menor indicaria uma regressão de desempenho,
+  como na Medida de Vazão.
+- Limite Superior
+  - Um Limite Superior é usado quando um valor maior indicaria uma regressão de desempenho,
+  como na Medida de Latência.
+
+Cada Limite é usado para calcular um Limite de Fronteira.
+Então, cada novo [métrica][metric] é verificada em relação a cada Limite de Fronteira.
+Um alerta é gerado quando uma nova Métrica está abaixo de um Limite Inferior de Fronteira ou acima de um Limite Superior de Fronteira.
+
+Quando [Benchmarking Contínuo], ou seja, benchmarking em CI, você vai querer criar Limiares.
+Usando o subcomando de CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
+você já especifica um Ramo com [a opção `--branch`][branch option]
+e uma bancada de testes com [a opção `--testbed`][testbed option].
+Assim, a única outra dimensão que você precisa especificar é uma Medida, com a opção `--threshold-measure`.
+Então, você pode usar a opção `--threshold-test` para especificar o Teste a ser usado para essa Medida.
+As opções `--threshold-min-sample-size`, `--threshold-max-sample-size` e `--threshold-window`
+permitem controlar quais dados são usados pelo Teste.
+Finalmente, as opções `--threshold-lower-boundary` e `--threshold-upper-boundary`
+permitem que você defina o Limite Inferior e o Limite Superior.
+Se você quiser remover todos os Modelos não especificados,
+pode fazer isso com a flag `--thresholds-reset`.
+
+- Se o Limiar não existir, ele será criado para você.
+- Se o Limiar existir e o Modelo especificado for o mesmo, então o Modelo é ignorado.
+- Se o Limiar existir e o Modelo especificado for diferente, então um novo Modelo é criado para o Limiar.
+- Se um Limiar existir e for redefinido, então o Modelo atual é removido do Limiar.
+
+Por exemplo, para usar apenas um Limiar para a Medida de Latência
+usando [um Teste t de Student][t-test]
+com um tamanho máximo de amostra de `64`
+e um Limite Superior de `0.99`, você poderia escrever algo assim:
+
+<ThresholdCode />
+
+> 🐰 Quando estiver trabalhando com branches de recursos, você pode querer copiar os Limiares existentes do Ramo base, [Ponto de Partida][start point].
+> Isso é possível com [a flag `--start-point-clone-thresholds`][start point clone thresholds flag].
+Note que a flag `--thresholds-reset` ainda removerá quaisquer Limiares clonados que não sejam explicitamente especificados.
+
+[branch]: /pt/docs/explanation/benchmarking/#branch
+[testbed]: /pt/docs/explanation/benchmarking/#testbed
+[measure]: /pt/docs/explanation/benchmarking/#measure
+[metric]: /pt/docs/explanation/benchmarking/#metric
+[continuous benchmarking]: /pt/docs/explanation/continuous-benchmarking/
+[branch option]: /pt/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /pt/docs/explanation/bencher-run/#--testbed-testbed
+[start point]: /pt/docs/explanation/benchmarking/#start-point
+[start point clone thresholds flag]: /pt/docs/explanation/branch-selection/#--start-point-clone-thresholds
+
+[tests]: #--threshold-test-test
+[t-test]: #t-test

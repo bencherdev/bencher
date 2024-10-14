@@ -1,0 +1,12 @@
+## `--threshold-window <WINDOW>`
+
+<br />
+
+[메트릭][metric]을(를) 사용하여 테스트를 수행하기 위한 시간 창을 초 단위로 선택적으로 지정합니다. 지정된 창은 `0`보다 커야 합니다. 이 옵션은 [정적인(`static`) 테스트][static]와 함께 사용할 수 없습니다.
+
+예를 들어, 4주 또는 `2419200`초의 창을 갖는 임계값을 사용하려면, `--threshold-window 2419200`이라고 작성할 수 있습니다. 4주보다 오래된 메트릭은 제외됩니다. 반대로, 모든 메트릭이 지난 4주 내에 포함되어 있다면, 모두 포함됩니다.
+
+[metric]: /ko/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

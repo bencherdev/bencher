@@ -1,0 +1,17 @@
+## `---thresholds-reset`
+
+<br />
+
+重置给定[分支][branch]和[测试平台][testbed]中所有未指定的阈值。如果一个阈值已存在但未被指定，其当前[模型][model]将被移除。
+
+例如，如果在`main`分支和`localhost`测试平台中有两个阈值：
+- `main` 分支，`localhost` 测试平台，`latency` [度量][measure]
+- `main` 分支，`localhost` 测试平台，`throughput` [度量][measure]
+
+如果在 `bencher run` 子命令中只指定了 `latency` 度量，并且使用了 `--thresholds-reset`，
+那么 `throughput` 度量的模型将被移除。
+
+[branch]: /zh/docs/explanation/branch-selection/#--branch-branch
+[testbed]: /zh/docs/explanation/bencher-run/#--testbed-testbed
+[model]: /zh/docs/explanation/benchmarking/#model
+[measure]: /zh/docs/explanation/benchmarking/#measure

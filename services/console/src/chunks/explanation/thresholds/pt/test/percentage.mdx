@@ -1,0 +1,22 @@
+### Porcentagem
+
+Um Teste de Porcentagem (`percentage`) é o Teste estatístico mais simples.
+Se uma nova Métrica estiver abaixo de uma certa porcentagem da média (Limite Inferior)
+ou acima de uma certa porcentagem da média (Limite Superior) de suas Métricas históricas, um Alerta é gerado.
+Deve-se definir um Limite Inferior, Limite Superior ou ambos.
+Testes de Porcentagem funcionam melhor quando o valor da Métrica deve permanecer dentro de um intervalo considerado bom.
+
+- #### Limite Inferior de Porcentagem
+  - Um Limite Inferior de Teste de Porcentagem pode ser qualquer porcentagem maior ou igual a zero em forma decimal (ex: use `0.10` para `10%`).
+É utilizado quando um valor menor indicaria uma regressão de desempenho.
+  - Por exemplo, se você tivesse um Teste de Porcentagem com um Limite Inferior definido em `0.10`
+e suas Métricas históricas tivessem uma média de `100`,
+o Limite Inferior seria `90` e
+qualquer valor inferior a `90` geraria um Alerta.
+- #### Limite Superior de Porcentagem
+  - Um Limite Superior de Teste de Porcentagem pode ser qualquer porcentagem maior ou igual a zero em forma decimal (ex: use `0.10` para `10%`).
+É utilizado quando um valor maior indicaria uma regressão de desempenho.
+  - Por exemplo, se você tivesse um Teste de Porcentagem com um Limite Superior definido em `0.10`
+e suas Métricas históricas tivessem uma média de `100`,
+o Limite Superior seria `110` e
+qualquer valor maior que `110` geraria um Alerta.

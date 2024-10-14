@@ -1,0 +1,17 @@
+import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
+
+## 여러 임계값
+
+동일한 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> 호출로 여러 임계값을 생성할 수 있습니다.
+여러 임계값을 지정할 때에는 각 임계값에 대해 동일한 옵션을 사용해야 합니다.
+특정 임계값에 대한 옵션을 무시하려면 언더스코어(`_`)를 사용하세요.
+
+예를 들어, 두 개의 임계값만 사용하고 싶다면,
+하나는 지연 시간(measure)에 대한 것이고 하나는 처리량(measure)에 대한 것이라면,
+지연 시간(measure)에는 상위 경계를 설정하고
+처리량(measure)에는 하위 경계를 설정하고 싶을 것입니다.
+따라서 지연 시간(measure)에는 `--threshold-lower-boundary _`을 사용하고,
+처리량(measure)에는 `--threshold-upper-boundary _`을 사용합니다.
+이렇게 작성할 수 있습니다:
+
+<MultipleThresholdsCode />

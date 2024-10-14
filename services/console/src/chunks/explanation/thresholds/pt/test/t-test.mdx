@@ -1,0 +1,31 @@
+### t-test
+
+Um Teste t (`t_test`) mede o [intervalo de confiança](https://en.wikipedia.org/wiki/Confidence_interval) (IC) para a probabilidade de que
+uma nova Métrica esteja acima ou abaixo da média das suas Métricas históricas usando um [teste t de Student](https://en.wikipedia.org/wiki/Student's_t-test).
+
+Testes t-test funcionam melhor quando:
+- Não há diferenças extremas entre as execuções de benchmark
+- As execuções de benchmark são totalmente independentes umas das outras
+- O número de iterações para uma única execução de benchmark é inferior a 10% das Métricas históricas
+
+Para Testes t-test, os intervalos de confiança são expressos como uma porcentagem decimal de confiança.
+Se uma nova Métrica estiver abaixo de uma certa porcentagem de confiança do lado esquerdo (Limite Inferior)
+ou acima de uma certa porcentagem de confiança do lado direito (Limite Superior) para suas Métricas históricas, será gerado um Alerta.
+Deve-se definir ou um Limite Inferior, um Limite Superior, ou ambos.
+
+- #### Limite Inferior do t-test
+  - Um Limite Inferior do Teste t-test pode ser qualquer decimal positivo entre `0.5` e `1.0`.
+Onde `0.5` representa a média e `1.0` representa todos os possíveis valores do lado esquerdo (-∞).
+É utilizado quando um valor menor indicaria uma regressão de desempenho.
+  - Por exemplo, se você usou um Teste t-test com um Limite Inferior de `0.977`
+e tinha `25` Métricas históricas com uma média de `100` e um desvio padrão de `10`,
+o Limite Inferior seria `78.96` e
+qualquer valor inferior a `78.96` geraria um Alerta.
+- #### Limite Superior do t-test
+  - Um Limite Superior do Teste t-test pode ser qualquer decimal positivo entre `0.5` e `1.0`.
+Onde `0.5` representa a média e `1.0` representa todos os possíveis valores do lado direito (∞).
+É utilizado quando um valor maior indicaria uma regressão de desempenho.
+  - Por exemplo, se você usou um Teste t-test com um Limite Superior de `0.977`
+e tinha `25` Métricas históricas com uma média de `100` e um desvio padrão de `10`,
+o Limite Superior seria `121.04` e
+qualquer valor superior a `121.04` geraria um Alerta.

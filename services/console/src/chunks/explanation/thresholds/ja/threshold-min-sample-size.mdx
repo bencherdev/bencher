@@ -1,0 +1,20 @@
+## `--threshold-min-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+オプションとして、テストを実行するために必要な[メトリクス][metric]の最小数を指定します。
+この最小数に達していない場合、テストは実行されません。
+指定したサンプルサイズは`2`以上でなければなりません。
+[the `--threshold-max-sample-size` option][threshold max sample size option]が設定されている場合、
+指定したサンプルサイズは`--threshold-max-sample-size`以下でなければなりません。
+このオプションは[Static（`static`）テスト][static]では使用できません。
+
+例えば、最小サンプルサイズを`10`でしきい値を使用するには、
+`--threshold-min-sample-size 10`と記述できます。
+メトリクスが`10`未満であれば、テストは実行されません。
+逆に、メトリクスが`10`以上であれば、テストは実行されます。
+
+[metric]: /ja/docs/explanation/benchmarking/#metric
+
+[threshold max sample size option]: #--threshold-max-sample-size-sample-size
+[static]: #static

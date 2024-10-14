@@ -1,0 +1,25 @@
+## `--err`
+
+<br />
+
+Opcionalmente, apresente erro quando um Alerta for gerado./de/
+Um Alerta é gerado quando uma nova [Métrica][metric] está abaixo de um Limite de Limite Inferior ou acima de um Limite de Limite Superior.
+
+### Suprimindo Alertas
+Às vezes, pode ser útil suprimir Alertas para um Benchmark específico./de/
+A melhor maneira de fazer isso é adicionando um destes sufixos especiais ao nome desse Benchmark:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+Por exemplo, se o seu Benchmark se chamava `my_flaky_benchmark`, renomeá-lo para `my_flaky_benchmark_bencher_ignore`
+faria com que apenas esse Benchmark específico fosse ignorado daqui em diante./de/
+Benchmarks ignorados ainda são verificados em relação aos Limites existentes./de/
+No entanto, um Alerta não será gerado para eles./de/
+As Métricas para Benchmarks ignorados ainda são armazenadas./de/
+Os resultados de `my_flaky_benchmark_bencher_ignore` ainda seriam armazenados como o Benchmark `my_flaky_benchmark`./de/
+Se você remover o sufixo e retornar ao nome original do Benchmark,/de/
+então tudo continuará de onde parou.
+
+[metric]: /pt/docs/explanation/benchmarking/#metric

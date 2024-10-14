@@ -1,0 +1,10 @@
+### Delta-Interquartilsbereich
+
+Ein Delta-Interquartilsbereichstest (`delta_iqr`) misst, um wie viele Vielfache der durchschnittlichen prozentualen Änderung (Δ) des [Interquartilsbereichs](https://en.wikipedia.org/wiki/Interquartile_range) (IQR) ein neuer Metrikwert über oder unter dem Median Ihrer historischen Metriken liegt. Wenn eine neue Metrik unter einem bestimmten Vielfachen des ΔIQR vom Median (untere Grenze) oder über einem bestimmten Vielfachen des ΔIQR vom Median (obere Grenze) Ihrer historischen Metriken liegt, wird ein Alarm ausgelöst. Entweder muss eine untere Grenze, eine obere Grenze oder beides gesetzt werden.
+
+- #### Untere Grenze des Delta-Interquartilsbereichs
+  - Eine untere Grenze für den Delta-Interquartilsbereichstest kann jedes Vielfache sein, das größer oder gleich null ist (z. B. `2.0` für `2x` verwenden). Dies wird verwendet, wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweisen würde.
+  - Ein Beispiel: Wenn Sie einen Delta-Interquartilsbereichstest mit einer unteren Grenze von `2.0` haben und Ihre historischen Metriken einen Median von `100`, einen Interquartilsbereich von `10` und einen durchschnittlichen Delta-Interquartilsbereich von `0.2` (`20%`) aufweisen, wäre das untere Grenzwertlimit `60` und jeder Wert unter `60` würde einen Alarm auslösen.
+- #### Obere Grenze des Delta-Interquartilsbereichs
+  - Eine obere Grenze für den Delta-Interquartilsbereichstest kann jedes Vielfache sein, das größer oder gleich null ist (z. B. `2.0` für `2x` verwenden). Dies wird verwendet, wenn ein größerer Wert auf eine Leistungsverschlechterung hinweisen würde.
+  - Ein Beispiel: Wenn Sie einen Delta-Interquartilsbereichstest mit einer oberen Grenze von `2.0` haben und Ihre historischen Metriken einen Median von `100`, einen Interquartilsbereich von `10` und einen durchschnittlichen Delta-Interquartilsbereich von `0.2` (`20%`) aufweisen, wäre das obere Grenzwertlimit `140` und jeder Wert über `140` würde einen Alarm auslösen.

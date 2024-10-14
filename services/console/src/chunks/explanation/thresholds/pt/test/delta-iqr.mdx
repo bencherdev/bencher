@@ -1,0 +1,10 @@
+### Intervalo Interquartil Delta
+
+Um Teste de Intervalo Interquartil Delta (`delta_iqr`) mede quantos múltiplos da média da variação percentual (Δ) do [intervalo interquartil](https://en.wikipedia.org/wiki/Interquartile_range) (IQR) uma nova Métrica está acima ou abaixo da mediana das suas Métricas históricas. Se uma nova Métrica estiver abaixo de um certo múltiplo do ΔIQR da mediana (Limite Inferior) ou acima de um certo múltiplo do ΔIQR da mediana (Limite Superior) das suas Métricas históricas, um Alerta é gerado. Deve-se definir um Limite Inferior, um Limite Superior, ou ambos.
+
+- #### Limite Inferior do Intervalo Interquartil Delta
+  - Um Limite Inferior do Teste de Intervalo Interquartil Delta pode ser qualquer multiplicador maior ou igual a zero (ex: use `2.0` para `2x`). É utilizado quando um valor menor indicaria uma regressão de desempenho.
+  - Por exemplo, se você tivesse um Teste de Intervalo Interquartil Delta com um Limite Inferior definido para `2.0` e suas Métricas históricas tivessem uma mediana de `100`, um intervalo interquartil de `10`, e uma média do intervalo interquartil delta de `0.2` (`20%`), o Limite Inferior seria `60` e qualquer valor menor que `60` geraria um Alerta.
+- #### Limite Superior do Intervalo Interquartil Delta
+  - Um Limite Superior do Teste de Intervalo Interquartil Delta pode ser qualquer multiplicador maior ou igual a zero (ex: use `2.0` para `2x`). É utilizado quando um valor maior indicaria uma regressão de desempenho.
+  - Por exemplo, se você tivesse um Teste de Intervalo Interquartil Delta com um Limite Superior definido para `2.0` e suas Métricas históricas tivessem uma mediana de `100`, um intervalo interquartil de `10`, e uma média do intervalo interquartil delta de `0.2` (`20%`), o Limite Superior seria `140` e qualquer valor maior que `140` geraria um Alerta.

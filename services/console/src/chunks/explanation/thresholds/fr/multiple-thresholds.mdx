@@ -1,0 +1,18 @@
+import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
+
+## Seuils Multiples
+
+Il est possible de créer plusieurs seuils avec la même invocation de
+<code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>.
+Lors de la spécification de plusieurs seuils, toutes les mêmes options doivent être utilisées pour chaque seuil.
+Pour ignorer une option pour un seuil spécifique, utilisez un tiret bas (`_`).
+
+Par exemple, si vous ne souhaitez utiliser que deux seuils,
+un pour la mesure de latence et un pour la mesure de débit,
+vous voudrez probablement définir une limite supérieure pour la mesure de latence
+et une limite inférieure pour la mesure de débit.
+Par conséquent, vous utiliseriez `--threshold-lower-boundary _` pour la mesure de latence
+et `--threshold-upper-boundary _` pour la mesure de débit.
+Vous pourriez écrire ceci :
+
+<MultipleThresholdsCode />

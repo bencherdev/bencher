@@ -1,0 +1,17 @@
+## `--threshold-window <WINDOW>`
+
+<br />
+
+Optional geben Sie das Zeitfenster für [Metriken][metric] an, die für den Test verwendet werden, in Sekunden.
+Das angegebene Zeitfenster muss größer als `0` sein.
+Diese Option kann nicht mit dem [statischen (`static`) Test][static] verwendet werden.
+
+Ein Beispiel: Um einen Schwellwert mit einem Fenster von vier Wochen oder `2419200` Sekunden zu verwenden,
+könnten Sie `--threshold-window 2419200` schreiben.
+Falls Metriken älter als vier Wochen sind, würden sie ausgeschlossen.
+Umgekehrt würden alle Metriken, die innerhalb der letzten vier Wochen liegen, eingeschlossen.
+
+[metric]: /de/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

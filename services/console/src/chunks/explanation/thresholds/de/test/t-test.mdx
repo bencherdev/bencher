@@ -1,0 +1,17 @@
+### t-test
+
+Ein t-Test (`t_test`) misst das [Konfidenzintervall](https://en.wikipedia.org/wiki/Confidence_interval) (CI) für die Wahrscheinlichkeit, dass ein neuer Metrikwert über oder unter dem Mittelwert Ihrer historischen Metriken liegt, mit Hilfe eines [Student's t-Tests](https://en.wikipedia.org/wiki/Student's_t-test).
+
+t-Test-Tests funktionieren am besten, wenn:
+- Keine extremen Unterschiede zwischen Benchmark-Durchläufen bestehen
+- Benchmark-Durchläufe völlig unabhängig voneinander sind
+- Die Anzahl der Iterationen für einen einzelnen Benchmark-Durchlauf weniger als 10% der historischen Metriken beträgt
+
+Bei t-Test-Tests werden Konfidenzintervalle als dezimale Konfidenzprozentsätze ausgedrückt. Wenn ein neuer Metrikwert unterhalb eines bestimmten linksseitigen Konfidenzprozentsatzes (untere Grenze) oder oberhalb eines bestimmten rechtsseitigen Konfidenzprozentsatzes (obere Grenze) für Ihre historischen Metriken liegt, wird eine Warnung generiert. Es muss entweder eine untere Grenze, eine obere Grenze oder beides festgelegt sein.
+
+- #### t-Test untere Grenze
+  - Eine t-Test untere Grenze kann ein beliebiges positives Dezimal zwischen `0.5` und `1.0` sein. Dabei steht `0.5` für den Mittelwert und `1.0` für alle möglichen linksseitigen Werte (-∞). Es wird verwendet, wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweist.
+  - Wenn Sie beispielsweise einen t-Test mit einer unteren Grenze von `0.977` verwenden und `25` historische Metriken mit einem Mittelwert von `100` und einer Standardabweichung von `10` hätten, würde das untere Grenzwertlimit `78.96` betragen und jeder Wert unter `78.96` würde eine Warnung generieren.
+- #### t-Test obere Grenze
+  - Eine t-Test obere Grenze kann ein beliebiges positives Dezimal zwischen `0.5` und `1.0` sein. Dabei steht `0.5` für den Mittelwert und `1.0` für alle möglichen rechtsseitigen Werte (∞). Es wird verwendet, wenn ein größerer Wert auf eine Leistungsverschlechterung hinweist.
+  - Wenn Sie beispielsweise einen t-Test mit einer oberen Grenze von `0.977` verwenden und `25` historische Metriken mit einem Mittelwert von `100` und einer Standardabweichung von `10` hätten, würde das obere Grenzwertlimit `121.04` betragen und jeder Wert über `121.04` würde eine Warnung generieren.

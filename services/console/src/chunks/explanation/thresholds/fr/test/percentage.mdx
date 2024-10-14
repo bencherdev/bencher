@@ -1,0 +1,22 @@
+### Pourcentage
+
+Un test de pourcentage (`pourcentage`) est le test statistique le plus simple.
+Si une nouvelle métrique est en dessous d'un certain pourcentage de la moyenne (limite inférieure)
+ou au-dessus d'un certain pourcentage de la moyenne (limite supérieure) de vos métriques historiques, une alerte est générée.
+Une limite inférieure, une limite supérieure, ou les deux doivent être définies.
+Les tests de pourcentage fonctionnent le mieux lorsque la valeur de la métrique doit rester dans une plage connue et acceptable.
+
+- #### Limite inférieure de pourcentage
+  - Une limite inférieure d'un test de pourcentage peut être n'importe quel pourcentage supérieur ou égal à zéro sous forme décimale (ex: utilisez `0.10` pour `10%`).
+Elle est utilisée lorsqu'une plus petite valeur indiquerait une régression des performances.
+  - Par exemple, si vous avez un test de pourcentage avec une limite inférieure fixée à `0.10`
+et que vos métriques historiques avaient une moyenne de `100`,
+la limite inférieure serait `90` et
+toute valeur inférieure à `90` générerait une alerte.
+- #### Limite supérieure de pourcentage
+  - Une limite supérieure d'un test de pourcentage peut être n'importe quel pourcentage supérieur ou égal à zéro sous forme décimale (ex: utilisez `0.10` pour `10%`).
+Elle est utilisée lorsqu'une plus grande valeur indiquerait une régression des performances.
+  - Par exemple, si vous avez un test de pourcentage avec une limite supérieure fixée à `0.10`
+et que vos métriques historiques avaient une moyenne de `100`,
+la limite supérieure serait `110` et
+toute valeur supérieure à `110` générerait une alerte.

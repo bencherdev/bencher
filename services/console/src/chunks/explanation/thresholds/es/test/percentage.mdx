@@ -1,0 +1,13 @@
+### Porcentaje
+
+Una Prueba de Porcentaje (`percentage`) es la Prueba estadística más simple.
+Si una nueva Métrica está por debajo de un cierto porcentaje de la media (Límite Inferior) o por encima de un cierto porcentaje de la media (Límite Superior) de tus Métricas históricas, se genera una Alerta. Se debe establecer un Límite Inferior, un Límite Superior o ambos. Las Pruebas de Porcentaje funcionan mejor cuando el valor de la Métrica debería mantenerse dentro de un rango reconocido como bueno.
+
+- #### Límite Inferior de Porcentaje
+  - Un Límite Inferior de una Prueba de Porcentaje puede ser cualquier porcentaje mayor o igual a cero en forma decimal (ej: usa `0.10` para `10%`).
+    Se utiliza cuando un valor menor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si tienes una Prueba de Porcentaje con un Límite Inferior establecido en `0.10` y tus Métricas históricas tienen una media de `100`, el Límite Inferior sería `90` y cualquier valor menor que `90` generaría una Alerta.
+- #### Límite Superior de Porcentaje
+  - Un Límite Superior de una Prueba de Porcentaje puede ser cualquier porcentaje mayor o igual a cero en forma decimal (ej: usa `0.10` para `10%`).
+    Se utiliza cuando un valor mayor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si tienes una Prueba de Porcentaje con un Límite Superior establecido en `0.10` y tus Métricas históricas tienen una media de `100`, el Límite Superior sería `110` y cualquier valor mayor que `110` generaría una Alerta.

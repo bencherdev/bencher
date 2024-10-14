@@ -1,0 +1,18 @@
+## `---thresholds-reset`
+
+<br />
+
+Redefina todos os Limiares não especificados para o [Branch][branch] e [Testbed][testbed] dados. Se um Limiar já existe e não for especificado, seu [Modelo][model] atual será removido.
+
+Por exemplo, se houver dois Limiares para o Branch `main` e Testbed `localhost`:
+- Branch `main`, Testbed `localhost`, [Métrica][measure] de `latência`
+- Branch `main`, Testbed `localhost`, [Métrica][measure] de `throughput`
+
+Se apenas a Métrica de `latência` for especificada no subcomando `bencher run`
+e `--thresholds-reset` for usado,
+então a Métrica de `throughput` terá seu Modelo removido.
+
+[branch]: /pt/docs/explanation/branch-selection/#--branch-branch
+[testbed]: /pt/docs/explanation/bencher-run/#--testbed-testbed
+[model]: /pt/docs/explanation/benchmarking/#model
+[measure]: /pt/docs/explanation/benchmarking/#measure

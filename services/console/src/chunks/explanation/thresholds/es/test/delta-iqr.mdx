@@ -1,0 +1,22 @@
+### Rango intercuartil Delta
+
+Una prueba de Rango Intercuartil Delta (`delta_iqr`) mide cuántos múltiplos del promedio de cambio porcentual (Δ) del [rango intercuartil](https://es.wikipedia.org/wiki/Rango_intercuartil) (IQR)
+un nuevo Métrico está por encima o por debajo de la mediana de tus Métricas históricas.
+Si un nuevo Métrico está por debajo de un cierto múltiplo del ΔIQR de la mediana (Límite Inferior)
+o por encima de un cierto múltiplo del ΔIQR de la mediana (Límite Superior) de tus Métricas históricas, se genera una Alerta.
+Debe establecerse al menos un Límite Inferior, un Límite Superior o ambos.
+
+- #### Límite Inferior del Rango Intercuartil Delta
+  - Un Límite Inferior de la Prueba de Rango Intercuartil Delta puede ser cualquier multiplicador mayor o igual a cero (ej: usa `2.0` para `2x`).
+Se utiliza cuando un valor menor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si tuvieras una Prueba de Rango Intercuartil Delta con un Límite Inferior establecido en `2.0`
+y tus Métricas históricas tuvieran una mediana de `100`, un rango intercuartil de `10`, y un rango intercuartil delta promedio de `0.2` (`20%`)
+el Límite Inferior sería `60` y
+cualquier valor menor a `60` generaría una Alerta.
+- #### Límite Superior del Rango Intercuartil Delta
+  - Un Límite Superior de la Prueba de Rango Intercuartil Delta puede ser cualquier multiplicador mayor o igual a cero (ej: usa `2.0` para `2x`).
+Se utiliza cuando un valor mayor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si tuvieras una Prueba de Rango Intercuartil Delta con un Límite Superior establecido en `2.0`
+y tus Métricas históricas tuvieran una mediana de `100`, un rango intercuartil de `10`, y un rango intercuartil delta promedio de `0.2` (`20%`)
+el Límite Superior sería `140` y
+cualquier valor mayor a `140` generaría una Alerta.

@@ -1,0 +1,17 @@
+import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
+
+## 複数の閾値
+
+同じ<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>の呼び出しで複数の閾値を作成することが可能です。
+複数の閾値を指定する場合、各閾値で同じオプションを使用する必要があります。
+特定の閾値に対してオプションを無視したい場合は、アンダースコア（`_`）を使用します。
+
+例えば、2つの閾値を使用したい場合、
+一つはレイテンシの測定用、もう一つはスループットの測定用とすると、
+レイテンシの測定には上限値を設定し、
+スループットの測定には下限値を設定することが考えられます。
+したがって、レイテンシの測定には`--threshold-lower-boundary _`を使用し、
+スループットの測定には`--threshold-upper-boundary _`を使用すると良いでしょう。
+このように書くことができます:
+
+<MultipleThresholdsCode />

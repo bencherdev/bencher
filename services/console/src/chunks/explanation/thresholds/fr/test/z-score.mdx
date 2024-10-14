@@ -1,0 +1,31 @@
+### z-score
+
+Un Test de z-score (`z_score`) mesure le nombre d'[écarts-types](https://en.wikipedia.org/wiki/Standard_deviation) (σ) qu'un nouveau Métrique est par rapport à la moyenne de vos Métriques historiques en utilisant un [z-score](https://en.wikipedia.org/wiki/Standard_score).
+
+Les Tests de z-score fonctionnent le mieux lorsque :
+- Il n'y a pas de différences extrêmes entre les exécutions de référence
+- Les exécutions de référence sont totalement indépendantes les unes des autres
+- Le nombre d'itérations pour une seule exécution de référence est inférieur à 10 % des Métriques historiques
+- Il y a au moins 30 Métriques historiques (taille d'échantillon minimale ≥ 30)
+
+Pour les Tests de z-score, les écarts-types sont exprimés sous forme de pourcentage cumulé décimal.
+Si un nouveau Métrique est en dessous d'un certain pourcentage cumulé à gauche (Limite Inférieure)
+ou au-dessus d'un certain pourcentage cumulé à droite (Limite Supérieure) pour vos Métriques historiques, une alerte est générée.
+Vous devez définir soit une Limite Inférieure, soit une Limite Supérieure, ou les deux.
+
+- #### Limite Inférieure de z-score
+  - Une Limite Inférieure de Test de z-score peut être n'importe quel décimal positif entre `0.5` et `1.0`.
+Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté gauche (-∞).
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance.
+  - Par exemple, si vous utilisez un Test de z-score avec une Limite Inférieure de `0.977`
+et vos Métriques historiques avaient une moyenne de `100` et un écart-type de `10`,
+la Limite Inférieure serait `80,05` et
+toute valeur inférieure à `80,05` générerait une alerte.
+- #### Limite Supérieure de z-score
+  - Une Limite Supérieure de Test de z-score peut être n'importe quel décimal positif entre `0.5` et `1.0`.
+Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté droit (∞).
+Elle est utilisée lorsqu'une valeur supérieure indiquerait une régression de performance.
+  - Par exemple, si vous utilisez un Test de z-score avec une Limite Supérieure de `0.977`
+et vos Métriques historiques avaient une moyenne de `100` et un écart-type de `10`,
+la Limite Supérieure serait `119,95` et
+toute valeur supérieure à `119,95` générerait une alerte.

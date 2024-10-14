@@ -1,0 +1,20 @@
+## `--threshold-min-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+可选地指定运行测试所需的最小[指标][metric]数量。
+如果未达到此最小值，测试将不会运行。
+指定的样本大小必须大于或等于 `2`。
+如果还设置了[ `--threshold-max-sample-size` 选项][threshold max sample size option]，
+那么指定的样本大小必须小于或等于 `--threshold-max-sample-size`。
+此选项不能与[静态 (`static`) 测试][static]一起使用。
+
+例如，要使用最小样本大小为 `10` 的阈值，
+您可以编写 `--threshold-min-sample-size 10`。
+如果指标少于 `10`，测试将不会运行。
+反之，如果有 `10` 个或更多指标，测试将会运行。
+
+[metric]: /zh/docs/explanation/benchmarking/#metric
+
+[threshold max sample size option]: #--threshold-max-sample-size-sample-size
+[static]: #static

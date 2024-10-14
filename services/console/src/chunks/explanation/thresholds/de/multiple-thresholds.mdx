@@ -1,0 +1,18 @@
+import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
+
+## Mehrere Schwellenwerte
+
+Es ist möglich, mehrere Schwellenwerte mit demselben
+<code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> Aufruf zu erstellen.
+Wenn Sie mehrere Schwellenwerte angeben, müssen für jeden Schwellenwert dieselben Optionen verwendet werden.
+Um eine Option für einen spezifischen Schwellenwert zu ignorieren, verwenden Sie einen Unterstrich (`_`).
+
+Zum Beispiel, wenn Sie nur zwei Schwellenwerte verwenden möchten,
+einen für die Latenzmessung und einen für die Durchsatzmessung,
+dann möchten Sie wahrscheinlich eine Obergrenze für die Latenzmessung
+und eine Untergrenze für die Durchsatzmessung festlegen.
+Daher würden Sie `--threshold-lower-boundary _` für die Latenzmessung
+und `--threshold-upper-boundary _` für die Durchsatzmessung verwenden.
+Sie könnten so etwas schreiben:
+
+<MultipleThresholdsCode />

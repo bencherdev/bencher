@@ -1,0 +1,18 @@
+import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
+
+## Múltiplos Limiares
+
+É possível criar múltiplos Limiares com a mesma invocação
+<code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>.
+Ao especificar múltiplos Limiares, todas as mesmas opções devem ser usadas para cada Limiar.
+Para ignorar uma opção para um Limiar específico, use um sublinhado (`_`).
+
+Por exemplo, se você deseja usar apenas dois Limiares,
+um para a Medida de Latência e outro para a Medida de Vazão,
+provavelmente desejará definir um Limite Superior para a Medida de Latência
+e um Limite Inferior para a Medida de Vazão.
+Portanto, você utilizaria `--threshold-lower-boundary _` para a Medida de Latência
+e `--threshold-upper-boundary _` para a Medida de Vazão.
+Você poderia escrever algo assim:
+
+<MultipleThresholdsCode />

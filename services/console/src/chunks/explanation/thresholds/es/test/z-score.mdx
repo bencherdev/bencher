@@ -1,0 +1,29 @@
+### z-score
+
+Una Prueba de puntuación z (`z_score`) mide el número de [desviaciones estándar](https://en.wikipedia.org/wiki/Standard_deviation) (σ) que un nuevo Métrico tiene respecto a la media de sus Métricos históricos usando una [puntuación z](https://en.wikipedia.org/wiki/Standard_score).
+
+Las Pruebas de puntuación z funcionan mejor cuando:
+- No hay diferencias extremas entre ejecuciones de referencia
+- Las ejecuciones de referencia son totalmente independientes entre sí
+- El número de iteraciones para una sola ejecución de referencia es menos del 10% de los Métricos históricos
+- Hay al menos 30 Métricos históricos (Tamaño de Muestra mínimo >= 30)
+
+Para las Pruebas de puntuación z, las desviaciones estándar se expresan como un porcentaje acumulativo decimal.
+Si un nuevo Métrico está por debajo de cierto porcentaje acumulativo del lado izquierdo (Límite Inferior)
+o por encima de cierto porcentaje acumulativo del lado derecho (Límite Superior) de sus Métricos históricos, se genera una Alerta.
+Debe establecerse un Límite Inferior, un Límite Superior, o ambos.
+
+- #### Límite Inferior de puntuación z
+  - Un Límite Inferior de una Prueba de puntuación z puede ser cualquier decimal positivo entre `0.5` y `1.0`.
+Donde `0.5` representa la media y `1.0` representa todos los posibles valores del lado izquierdo (-∞).
+Se utiliza cuando un valor más pequeño indicaría una regresión de rendimiento.
+  - Por ejemplo, si utiliza una Prueba de puntuación z con un Límite Inferior de `0.977`
+y sus Métricos históricos tenían una media de `100` y una desviación estándar de `10`,
+el Límite Inferior sería `80.05` y cualquier valor menor que `80.05` generaría una Alerta.
+- #### Límite Superior de puntuación z
+  - Un Límite Superior de una Prueba de puntuación z puede ser cualquier decimal positivo entre `0.5` y `1.0`.
+Donde `0.5` representa la media y `1.0` representa todos los posibles valores del lado derecho (∞).
+Se utiliza cuando un valor mayor indicaría una regresión de rendimiento.
+  - Por ejemplo, si utiliza una Prueba de puntuación z con un Límite Superior de `0.977`
+y sus Métricos históricos tenían una media de `100` y una desviación estándar de `10`,
+el Límite Superior sería `119.95` y cualquier valor mayor que `119.95` generaría una Alerta.

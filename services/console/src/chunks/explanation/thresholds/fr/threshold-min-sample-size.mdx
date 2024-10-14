@@ -1,0 +1,12 @@
+## `--threshold-min-per-taille-échantillon <TAILLE_ÉCHANTILLON>`
+
+<br />
+
+Spécifiez éventuellement le nombre minimum de [Métriques][metric] requis pour exécuter un Test. Si ce minimum n'est pas atteint, le Test ne s'exécutera pas. La taille de l'échantillon spécifiée doit être supérieure ou égale à `2`. Si l'[option `--threshold-max-sample-size`][threshold max sample size option] est également définie, alors la taille de l'échantillon spécifiée doit être inférieure ou égale à `--threshold-max-sample-size`. Cette option ne peut pas être utilisée avec le Test [Statique (`static`)][static].
+
+Par exemple, pour utiliser un Seuil avec une taille d'échantillon minimale de `10`, vous pouvez écrire `--threshold-min-sample-size 10`. S'il y avait moins de `10` Métriques, le Test ne s'exécuterait pas. Inversement, s'il y avait `10` Métriques ou plus, le Test s'exécuterait.
+
+[metric]: /fr/docs/explanation/benchmarking/#metric
+
+[threshold max sample size option]: #--threshold-max-sample-size-sample-size
+[static]: #static

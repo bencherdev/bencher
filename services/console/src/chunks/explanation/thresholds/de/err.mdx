@@ -1,0 +1,25 @@
+## `--err`
+
+<br />
+
+Optionale Fehlerausgabe, wenn ein Alert erzeugt wird.
+Ein Alert wird erzeugt, wenn eine neue [Metrik][metric] unter ein Untergrenzlimit oder über ein Obergrenzlimit fällt.
+
+### Unterdrücken von Alerts
+Manchmal kann es nützlich sein, Alerts für einen bestimmten Benchmark zu unterdrücken.
+Der beste Weg, dies zu tun, besteht darin, einen dieser speziellen Suffixe an den Namen des Benchmarks anzuhängen:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+Zum Beispiel, wenn Ihr Benchmark `my_flaky_benchmark` genannt wurde, dann würde das Umbenennen in `my_flaky_benchmark_bencher_ignore`
+diesen speziellen Benchmark zukünftig ignorieren.
+Ignorierte Benchmarks werden dennoch gegen bestehende Schwellenwerte überprüft.
+Für sie wird jedoch kein Alert generiert.
+Die Metriken für ignorierte Benchmarks werden dennoch gespeichert.
+Die Ergebnisse von `my_flaky_benchmark_bencher_ignore` würden weiterhin als Benchmark `my_flaky_benchmark` gespeichert.
+Wenn Sie das Suffix entfernen und zum ursprünglichen Benchmark-Namen zurückkehren,
+werden die Dinge genau dort fortgesetzt, wo Sie aufgehört haben.
+
+[metric]: /de/docs/explanation/benchmarking/#metric

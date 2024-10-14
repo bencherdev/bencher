@@ -1,0 +1,31 @@
+### Log Normal
+
+Una Prueba de Log Normal (`log_normal`) mide qué tan probable es que
+una nueva Métrica esté por encima o por debajo de la ubicación central de tus Métricas históricas utilizando una [Distribución Log Normal](https://es.wikipedia.org/wiki/Distribuci%C3%B3n_log-normal).
+
+Las Pruebas de Log Normal funcionan mejor cuando:
+- Las ejecuciones de referencia son totalmente independientes entre sí
+- El número de iteraciones para una sola ejecución de referencia es menos del 10% de las Métricas históricas
+- Todos los datos son positivos (el logaritmo natural de un número negativo es `indefinido`)
+
+Para las Pruebas de Log Normal, la probabilidad se expresa como un porcentaje decimal.
+Si una nueva Métrica está por debajo de cierto porcentaje del lado izquierdo (Límite Inferior)
+o por encima de cierto porcentaje del lado derecho (Límite Superior) para tus Métricas históricas, se genera una Alerta.
+Se debe establecer ya sea un Límite Inferior, un Límite Superior, o ambos.
+
+- #### Límite Inferior del Log Normal
+  - Un Límite Inferior de una Prueba de Log Normal puede ser cualquier decimal positivo entre `0.5` y `1.0`.
+Donde `0.5` representa la ubicación central y `1.0` representa todos los posibles valores del lado izquierdo (-∞).
+Se utiliza cuando un valor menor indicaría una regresión de rendimiento.
+  - Por ejemplo, si utilizas una Prueba de Log Normal con un Límite Inferior de `0.977`
+y tienes `25` Métricas históricas centradas alrededor de `100` y un anterior valor atípico en `200`,
+el Límite Inferior sería `71.20` y
+cualquier valor menor que `71.20` generaría una Alerta.
+- #### Límite Superior del Log Normal
+  - Un Límite Superior de una Prueba de Log Normal puede ser cualquier decimal positivo entre `0.5` y `1.0`.
+Donde `0.5` representa la ubicación central y `1.0` representa todos los posibles valores del lado derecho (∞).
+Se utiliza cuando un valor mayor indicaría una regresión de rendimiento.
+  - Por ejemplo, si utilizas una Prueba de Log Normal con un Límite Superior de `0.977`
+y tienes `25` Métricas históricas centradas alrededor de `100` y un anterior valor atípico en `200`,
+el Límite Superior sería `134.18` y
+cualquier valor mayor que `134.18` generaría una Alerta.

@@ -1,0 +1,12 @@
+## `--threshold-min-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+Opcionalmente, especifique el número mínimo de [Métricas][metric] requerido para ejecutar una Prueba. Si no se cumple este mínimo, la Prueba no se ejecutará. El tamaño de muestra especificado debe ser mayor o igual a `2`. Si también se establece [la opción `--threshold-max-sample-size`][threshold max sample size option], entonces el tamaño de muestra especificado debe ser menor o igual a `--threshold-max-sample-size`. Esta opción no se puede utilizar con la Prueba Estática (`static`)[static].
+
+Por ejemplo, para usar un Umbral con un tamaño de muestra mínimo de `10`, podría escribir `--threshold-min-sample-size 10`. Si hubiera menos de `10` Métricas, la Prueba no se ejecutaría. Por el contrario, si hubiera `10` o más Métricas, la Prueba se ejecutaría.
+
+[metric]: /es/docs/explanation/benchmarking/#metric
+
+[threshold max sample size option]: #--threshold-max-sample-size-sample-size
+[static]: #static

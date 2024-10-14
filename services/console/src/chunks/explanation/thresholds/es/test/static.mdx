@@ -1,0 +1,18 @@
+### Static
+
+Una Prueba Estática (`static`) es la prueba más sencilla.
+Si un nueva Métrica está por debajo de un Límite Inferior establecido o por encima de un Límite Superior establecido, se genera una Alerta.
+Es decir, el Límite Inferior/Superior es un Límite Inferior/Superior explícito.
+Debe establecerse un Límite Inferior, un Límite Superior, o ambos.
+Las Pruebas Estáticas funcionan mejor cuando el valor de la Métrica debe mantenerse dentro de un rango constante en todos los Benchmarks, como la cobertura de código.
+
+- #### Límite Inferior Estático
+- Un Límite Inferior de Prueba Estática puede ser cualquier número de punto flotante.
+Se utiliza cuando un valor más pequeño indicaría una regresión de rendimiento.
+El Límite Inferior debe ser menor o igual al Límite Superior, si ambos están especificados.
+- Por ejemplo, si tuvieras una Prueba Estática con un Límite Inferior establecido en `100`, el Límite Inferior sería igualmente `100` y cualquier valor menor a `100` generaría una Alerta.
+- #### Límite Superior Estático
+- Un Límite Superior de Prueba Estática puede ser cualquier número de punto flotante.
+Se utiliza cuando un valor mayor indicaría una regresión de rendimiento.
+El Límite Superior debe ser mayor o igual al Límite Inferior, si ambos están especificados.
+- Por ejemplo, si tuvieras una Prueba Estática con un Límite Superior establecido en `100`, el Límite Superior sería igualmente `100` y cualquier valor mayor a `100` generaría una Alerta.

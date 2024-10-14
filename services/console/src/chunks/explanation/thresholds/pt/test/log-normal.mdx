@@ -1,0 +1,30 @@
+### Log Normal
+
+Um Teste Log Normal (`log_normal`) mede a probabilidade de uma nova Métrica estar acima ou abaixo da localização central de suas Métricas históricas usando uma [Distribuição Log Normal](https://en.wikipedia.org/wiki/Log-normal_distribution).
+
+Os Testes Log Normal funcionam melhor quando:
+- As execuções dos benchmarks são totalmente independentes umas das outras
+- O número de iterações de uma única execução de benchmark é menor que 10% das Métricas históricas
+- Todos os dados são positivos (o logaritmo natural de um número negativo é `indefinido`)
+
+Para Testes Log Normal, a probabilidade é expressa como uma porcentagem decimal.
+Se uma nova Métrica estiver abaixo de uma certa porcentagem do lado esquerdo (Limite Inferior)
+ou acima de uma certa porcentagem do lado direito (Limite Superior) de suas Métricas históricas, um Alerta é gerado.
+Um Limite Inferior, Limite Superior ou ambos devem ser definidos.
+
+- #### Limite Inferior Log Normal
+  - Um Limite Inferior em um Teste Log Normal pode ser qualquer decimal positivo entre `0.5` e `1.0`.
+Onde `0.5` representa a localização central e `1.0` representa todos os possíveis valores do lado esquerdo (-∞).
+É usado quando um valor menor indicaria uma regressão de desempenho.
+  - Por exemplo, se você usasse um Teste Log Normal com um Limite Inferior de `0.977`
+e tivesse `25` Métricas históricas centradas em torno de `100` e um outlier anterior em `200`,
+o Limite Inferior seria `71.20` e
+qualquer valor inferior a `71.20` geraria um Alerta.
+- #### Limite Superior Log Normal
+  - Um Limite Superior em um Teste Log Normal pode ser qualquer decimal positivo entre `0.5` e `1.0`.
+Onde `0.5` representa a localização central e `1.0` representa todos os possíveis valores do lado direito (∞).
+É usado quando um valor maior indicaria uma regressão de desempenho.
+  - Por exemplo, se você usasse um Teste Log Normal com um Limite Superior de `0.977`
+e tive `25` Métricas históricas centradas em torno de `100` e um outlier anterior em `200`,
+o Limite Superior seria `134.18` e
+qualquer valor superior a `134.18` geraria um Alerta.

@@ -1,0 +1,18 @@
+## `--threshold-max-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+可选项，指定运行测试时使用的[度量][metric]的最大数量。
+如果超过此最大值，最旧的度量将被忽略。
+指定的样本大小必须大于或等于 `2`。
+如果同时设置了[`--threshold-min-sample-size` 选项][threshold min sample size option]，那么指定的样本大小必须大于或等于 `--threshold-min-sample-size`。
+此选项不能与[静态（`static`）测试][static]一起使用。
+
+例如，要使用最大样本大小为 `100` 的阈值，可以写作 `--threshold-max-sample-size 100`。
+如果存在超过 `100` 个度量，则只有最近的 `100` 个度量会被包含。
+相反，如果有 `100` 个或更少的度量，则所有度量都会被包含。
+
+[metric]: /zh/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

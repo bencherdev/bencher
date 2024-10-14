@@ -1,0 +1,36 @@
+import ThresholdCode from "../threshold-code.mdx";
+
+Thresholdsは、Bencherを使用してパフォーマンスの退行を検出する方法です。Thresholdは、次のユニークな組み合わせに割り当てられます：[Branch][branch]、[Testbed][testbed]、および[Measure][measure]。Thresholdは特定の[Test][tests]を使用してパフォーマンスの退行を検出します。Testとそのパラメータの組み合わせはModelと呼ばれます。Modelは、Lower Boundary、Upper Boundary、またはその両方を持っていなければなりません。
+
+- Lower Boundary
+  - Lower Boundaryは、より小さい値がパフォーマンスの退行を示す場合、例えばThroughput Measureの場合に使用されます。
+- Upper Boundary
+  - Upper Boundaryは、より大きい値がパフォーマンスの退行を示す場合、例えばLatency Measureの場合に使用されます。
+
+各BoundaryはBoundary Limitを計算するために使用されます。その後、すべての新しい[Metric][metric]は各Boundary Limitに対してチェックされます。新しいMetricがLower Boundary Limitを下回ったりUpper Boundary Limitを上回ったりすると、Alertが生成されます。
+
+[Continuous Benchmarking]、すなわちCIでベンチマークを行う際にはThresholdsを作成したいでしょう。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用すると、[the `--branch` option][branch option]でBranchを、[the `--testbed` option][testbed option]でTestbedを既に指定しますので、指定する必要がある唯一の次元はMeasureであり、`--threshold-measure`オプションを使用します。そのMeasureに使用するTestを`--threshold-test`オプションで指定できます。`--threshold-min-sample-size`、`--threshold-max-sample-size`、および`--threshold-window`オプションを使用して、Testで使用されるデータを制御できます。最後に、`--threshold-lower-boundary`と`--threshold-upper-boundary`オプションを使用して、Lower BoundaryとUpper Boundaryを設定できます。指定されていないすべてのModelを削除したい場合は、`--thresholds-reset`フラグでそれを行うことができます。
+
+- Thresholdが存在しない場合は、自動的に作成されます。
+- Thresholdが存在し、指定されたModelが同じ場合、Modelは無視されます。
+- Thresholdが存在し、指定されたModelが異なる場合、新しいModelがThresholdのために作成されます。
+- 既存のThresholdがあり、リセットされる場合、現在のModelはThresholdから削除されます。
+
+例えば、[a Student's t-test Test][t-test]を使用して、`64`の最大サンプルサイズと`0.99`のUpper Boundaryで、Latency MeasureにのみThresholdを使用する場合、以下のように記述できます:
+
+<ThresholdCode />
+
+> 🐰 フィーチャーブランチで作業する際は、ベースである[Start Point][start point] Branchから既存のThresholdsをコピーしたい場合があります。これは、[the `--start-point-clone-thresholds` flag][start point clone thresholds flag]を使用して可能です。ただし、`--thresholds-reset`フラグは、明示的に指定されていないすべてのクローンされたThresholdsも削除します。
+
+[branch]: /ja/docs/explanation/benchmarking/#branch
+[testbed]: /ja/docs/explanation/benchmarking/#testbed
+[measure]: /ja/docs/explanation/benchmarking/#measure
+[metric]: /ja/docs/explanation/benchmarking/#metric
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
+[branch option]: /ja/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[start point]: /ja/docs/explanation/benchmarking/#start-point
+[start point clone thresholds flag]: /ja/docs/explanation/branch-selection/#--start-point-clone-thresholds
+
+[tests]: #--threshold-test-test
+[t-test]: #t-test

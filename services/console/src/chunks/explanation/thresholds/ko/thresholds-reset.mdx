@@ -1,0 +1,16 @@
+## `---thresholds-reset`
+
+<br />
+
+주어진 [Branch][branch] 및 [Testbed][testbed]에 대해 지정되지 않은 모든 Threshold를 재설정합니다. Threshold가 이미 존재하고 지정되지 않은 경우, 현재의 [Model][model]이 제거됩니다.
+
+예를 들어, `main` Branch와 `localhost` Testbed에 두 개의 Threshold가 있었을 경우:
+- `main` Branch, `localhost` Testbed, `latency` [Measure][measure]
+- `main` Branch, `localhost` Testbed, `throughput` [Measure][measure]
+
+만약 `bencher run` 하위 명령어에서 `latency` Measure만 지정되고 `--thresholds-reset`이 사용되면, `throughput` Measure의 Model은 제거됩니다.
+
+[branch]: /ko/docs/explanation/branch-selection/#--branch-branch
+[testbed]: /ko/docs/explanation/bencher-run/#--testbed-testbed
+[model]: /ko/docs/explanation/benchmarking/#model
+[measure]: /ko/docs/explanation/benchmarking/#measure

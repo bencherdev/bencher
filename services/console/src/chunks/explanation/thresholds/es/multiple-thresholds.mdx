@@ -1,0 +1,17 @@
+import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
+
+## Múltiples Umbrales
+
+Es posible crear múltiples Umbrales con la misma invocación de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>.
+Al especificar múltiples Umbrales, se deben utilizar las mismas opciones para cada Umbral.
+Para ignorar una opción para un Umbral específico, utiliza un guion bajo (`_`).
+
+Por ejemplo, si solo deseas utilizar dos Umbrales,
+uno para la Medida de Latencia y otro para la Medida de Rendimiento,
+entonces probablemente querrás establecer un Límite Superior para la Medida de Latencia
+y un Límite Inferior para la Medida de Rendimiento.
+Por lo tanto, utilizarías `--threshold-lower-boundary _` para la Medida de Latencia
+y `--threshold-upper-boundary _` para la Medida de Rendimiento.
+Podrías escribir algo así:
+
+<MultipleThresholdsCode />

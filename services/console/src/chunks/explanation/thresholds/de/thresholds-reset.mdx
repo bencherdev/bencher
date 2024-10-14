@@ -1,0 +1,16 @@
+## `---thresholds-reset`
+
+<br />
+
+Setzen Sie alle nicht spezifizierten Schwellenwerte für den angegebenen [Branch][branch] und [Testbed][testbed] zurück. Wenn ein Schwellenwert bereits existiert und nicht spezifiziert ist, wird sein aktuelles [Modell][model] entfernt.
+
+Zum Beispiel, wenn es zwei Schwellenwerte für den `main` Branch und das `localhost` Testbed gäbe:
+- `main` Branch, `localhost` Testbed, `latency` [Messung][measure]
+- `main` Branch, `localhost` Testbed, `throughput` [Messung][measure]
+
+Wenn nur die `latency` Messung im `bencher run` Unterbefehl spezifiziert wird und `--thresholds-reset` verwendet wird, würde die `throughput` Messung ihr Modell entfernt bekommen.
+
+[branch]: /de/docs/explanation/branch-selection/#--branch-branch
+[testbed]: /de/docs/explanation/bencher-run/#--testbed-testbed
+[model]: /de/docs/explanation/benchmarking/#model
+[measure]: /de/docs/explanation/benchmarking/#measure

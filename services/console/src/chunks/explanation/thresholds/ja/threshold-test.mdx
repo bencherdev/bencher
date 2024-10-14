@@ -1,0 +1,35 @@
+import Static from "./test/static.mdx";
+import Percentage from "./test/percentage.mdx";
+import ZScore from "./test/z-score.mdx";
+import TTest from "./test/t-test.mdx";
+import LogNormal from "./test/log-normal.mdx";
+import Iqr from "./test/iqr.mdx";
+import DeltaIqr from "./test/delta-iqr.mdx";
+
+## `--threshold-test <TEST>`
+
+<br />
+
+指定されたテストを使用してパフォーマンスの退行を検出します。
+
+いくつかの異なるテストが利用可能です：
+
+<ul>
+  <li>[Static (`static`)](#static)</li>
+  <li>[Percentage (`percentage`)](#percentage)</li>
+  <li>[z-score (`z_score`)](#z-score)</li>
+  <li>[t-test (`t_test`)](#t-test)</li>
+  <li>[Log Normal (`log_normal`)](#log-normal)</li>
+  <li>[Interquartile Range (`iqr`)](#interquartile-range)</li>
+  <li>[Delta Interquartile Range (`delta_iqr`)](#delta-interquartile-range)</li>
+</ul>
+
+例えば、スチューデントのt検定を使用してしきい値を設定するには、`--threshold-test t_test`と書きます。
+
+<Static />
+<Percentage />
+<ZScore />
+<TTest />
+<LogNormal />
+<Iqr />
+<DeltaIqr />

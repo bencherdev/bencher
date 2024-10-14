@@ -1,0 +1,24 @@
+### Lognormalverteilung
+
+Ein Lognormaltest (`log_normal`) misst, wie wahrscheinlich es ist, dass ein neuer Metrikwert über oder unter dem zentralen Standort Ihrer historischen Metriken liegt, wobei eine [Lognormalverteilung](https://de.wikipedia.org/wiki/Logarithmische_Normalverteilung) verwendet wird.
+
+Lognormaltests funktionieren am besten, wenn:
+- Benchmark-Läufe vollkommen unabhängig voneinander sind
+- Die Anzahl der Iterationen für einen einzelnen Benchmark-Lauf weniger als 10 % der historischen Metriken beträgt
+- Alle Daten positiv sind (der natürliche Logarithmus einer negativen Zahl ist `undefiniert`)
+
+Für Lognormaltests wird die Wahrscheinlichkeit als dezimaler Prozentsatz ausgedrückt.
+Wenn ein neuer Metrikwert unter einem bestimmten Prozentsatz auf der linken Seite (Untere Grenze)
+oder über einem bestimmten Prozentsatz auf der rechten Seite (Obere Grenze) Ihrer historischen Metriken liegt, wird ein Alarm ausgelöst.
+Entweder muss eine Untere Grenze, eine Obere Grenze oder beide festgelegt werden.
+
+- #### Untere Grenze der Lognormalverteilung
+  - Eine Untere Grenze eines Lognormaltests kann jede positive Dezimalzahl zwischen `0,5` und `1,0` sein.
+Wo `0,5` den zentralen Standort und `1,0` alle möglichen linken Werte (-∞) darstellt.
+Sie wird verwendet, wenn ein kleinerer Wert eine Leistungsverschlechterung anzeigen würde.
+  - Wenn Sie beispielsweise einen Lognormaltest mit einer Unteren Grenze von `0,977` verwenden und `25` historische Metriken um `100` zentriert sowie einen vorherigen Ausreißer bei `200` haben, wäre die Untere Grenzgrenze `71,20` und jeder Wert unter `71,20` würde einen Alarm auslösen.
+- #### Obere Grenze der Lognormalverteilung
+  - Eine Obere Grenze eines Lognormaltests kann jede positive Dezimalzahl zwischen `0,5` und `1,0` sein.
+Wo `0,5` den zentralen Standort und `1,0` alle möglichen rechten Werte (∞) darstellt.
+Sie wird verwendet, wenn ein größerer Wert eine Leistungsverschlechterung anzeigen würde.
+  - Wenn Sie beispielsweise einen Lognormaltest mit einer Oberen Grenze von `0,977` verwenden und `25` historische Metriken um `100` zentriert sowie einen vorherigen Ausreißer bei `200` haben, wäre die Obere Grenzgrenze `134,18` und jeder Wert über `134,18` würde einen Alarm auslösen.

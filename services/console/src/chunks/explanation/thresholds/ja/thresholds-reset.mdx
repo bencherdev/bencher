@@ -1,0 +1,17 @@
+## `---thresholds-reset`
+
+<br />
+
+指定された[ブランチ][branch]と[テストベッド][testbed]の、すべての指定されていないしきい値をリセットします。しきい値が既に存在し、指定されていない場合、その現在の[モデル][model]は削除されます。
+
+例えば、`main`ブランチと`localhost`テストベッドに2つのしきい値がある場合：
+- `main`ブランチ、`localhost`テストベッド、`latency`[メジャー][measure]
+- `main`ブランチ、`localhost`テストベッド、`throughput`[メジャー][measure]
+
+`bencher run`サブコマンドで`latency`メジャーのみが指定され、`--thresholds-reset`が使用されると、
+`throughput`メジャーはそのモデルが削除されます。
+
+[branch]: /ja/docs/explanation/branch-selection/#--branch-branch
+[testbed]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[model]: /ja/docs/explanation/benchmarking/#model
+[measure]: /ja/docs/explanation/benchmarking/#measure

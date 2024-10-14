@@ -1,0 +1,10 @@
+### Intervalle Interquartile
+
+Un test d'intervalle interquartile (`iqr`) mesure combien de multiples de l'[intervalle interquartile](https://en.wikipedia.org/wiki/Interquartile_range) (IQR) une nouvelle métrique se situe au-dessus ou en dessous de la médiane de vos métriques historiques. Si une nouvelle métrique est en dessous d'un certain multiple de l'IQR par rapport à la médiane (Limite Inférieure) ou au-dessus d'un certain multiple de l'IQR par rapport à la médiane (Limite Supérieure) de vos métriques historiques, une alerte est générée. Une limite inférieure, une limite supérieure ou les deux doivent être définies.
+
+- #### Limite Inférieure de l'Intervalle Interquartile
+  - Une limite inférieure de test d'intervalle interquartile peut être n'importe quel multiplicateur supérieur ou égal à zéro (ex : utilisez `2.0` pour `2x`). Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance.
+  - Par exemple, si vous avez un test d'intervalle interquartile avec une limite inférieure fixée à `2.0` et que vos métriques historiques ont une médiane de `100` et un intervalle interquartile de `10`, la limite inférieure serait de `80` et toute valeur inférieure à `80` générerait une alerte.
+- #### Limite Supérieure de l'Intervalle Interquartile
+  - Une limite supérieure de test d'intervalle interquartile peut être n'importe quel multiplicateur supérieur ou égal à zéro (ex : utilisez `2.0` pour `2x`). Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance.
+  - Par exemple, si vous avez un test d'intervalle interquartile avec une limite supérieure fixée à `2.0` et que vos métriques historiques ont une médiane de `100` et un intervalle interquartile de `10`, la limite supérieure serait de `120` et toute valeur supérieure à `120` générerait une alerte.

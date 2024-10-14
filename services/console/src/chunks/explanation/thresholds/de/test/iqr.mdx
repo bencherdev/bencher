@@ -1,0 +1,10 @@
+### Interquartilbereich
+
+Ein Interquartilbereichstest (`iqr`) misst, wie viele Vielfache des [Interquartilbereichs](https://en.wikipedia.org/wiki/Interquartile_range) (IQR) eine neue Metrik über oder unter dem Median Ihrer historischen Metriken liegt. Wenn eine neue Metrik unter einem bestimmten Vielfachen des IQR vom Median (untere Grenze) oder über einem bestimmten Vielfachen des IQR vom Median (obere Grenze) Ihrer historischen Metriken liegt, wird ein Alarm ausgelöst. Entweder muss eine untere Grenze, eine obere Grenze oder beide festgelegt werden.
+
+- #### Untere Grenze des Interquartilbereichs
+  - Eine untere Grenze des Interquartilbereichstests kann jeder Multiplikator größer oder gleich null sein (z. B. verwenden Sie `2.0` für `2x`). Sie wird verwendet, wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweisen würde.
+  - Beispielsweise, wenn Sie einen Interquartilbereichstest mit einer unteren Grenze von `2.0` hatten und Ihre historischen Metriken einen Median von `100` und einen Interquartilbereich von `10` aufwiesen, würde das Grenzwert-Limit bei `80` liegen und jeder Wert unter `80` würde einen Alarm auslösen.
+- #### Obere Grenze des Interquartilbereichs
+  - Eine obere Grenze des Interquartilbereichstests kann jeder Multiplikator größer oder gleich null sein (z. B. verwenden Sie `2.0` für `2x`). Sie wird verwendet, wenn ein größerer Wert auf eine Leistungsverschlechterung hinweisen würde.
+  - Beispielsweise, wenn Sie einen Interquartilbereichstest mit einer oberen Grenze von `2.0` hatten und Ihre historischen Metriken einen Median von `100` und einen Interquartilbereich von `10` aufwiesen, würde das Grenzwert-Limit bei `120` liegen und jeder Wert über `120` würde einen Alarm auslösen.

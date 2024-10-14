@@ -1,0 +1,17 @@
+### t-test
+
+Un test t (`t_test`) mesure l'[intervalle de confiance](https://en.wikipedia.org/wiki/Confidence_interval) (CI) pour évaluer la probabilité qu'une nouvelle métrique soit au-dessus ou en-dessous de la moyenne de vos métriques historiques en utilisant un [test t de Student](https://en.wikipedia.org/wiki/Student's_t-test).
+
+Les tests t-test sont plus efficaces lorsque :
+- Il n'y a pas de différences extrêmes entre les exécutions de référence
+- Les exécutions de référence sont totalement indépendantes les unes des autres
+- Le nombre d'itérations pour une seule exécution de référence est inférieur à 10 % des métriques historiques
+
+Pour les tests t-test, les intervalles de confiance sont exprimés en pourcentage décimal de confiance. Si une nouvelle métrique est en dessous d'un certain pourcentage de confiance côté gauche (Limite Inférieure) ou au-dessus d'un certain pourcentage de confiance côté droit (Limite Supérieure) pour vos métriques historiques, une alerte est générée. Une limite inférieure, une limite supérieure, ou les deux doivent être définies.
+
+- #### Limite Inférieure du t-test
+  - La Limite Inférieure d'un test t peut être n'importe quel décimal positif entre `0.5` et `1.0`. Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté gauche (-∞). Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance.
+  - Par exemple, si vous utilisez un test t avec une Limite Inférieure de `0.977` et que vous avez `25` métriques historiques avec une moyenne de `100` et un écart-type de `10`, la Limite Inférieure serait `78,96` et toute valeur inférieure à `78,96` générerait une alerte.
+- #### Limite Supérieure du t-test
+  - La Limite Supérieure d'un test t peut être n'importe quel décimal positif entre `0.5` et `1.0`. Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté droit (∞). Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance.
+  - Par exemple, si vous utilisez un test t avec une Limite Supérieure de `0.977` et que vous avez `25` métriques historiques avec une moyenne de `100` et un écart-type de `10`, la Limite Supérieure serait `121,04` et toute valeur supérieure à `121,04` générerait une alerte.

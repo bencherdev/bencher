@@ -1,0 +1,10 @@
+### Prozentsatz
+
+Ein Prozentsatztest (`percentage`) ist der einfachste statistische Test. Wenn eine neue Metrik unter einem bestimmten Prozentsatz des Mittels (untere Grenze) oder über einem bestimmten Prozentsatz des Mittels (obere Grenze) Ihrer historischen Metriken liegt, wird eine Warnung generiert. Es muss entweder eine untere Grenze, eine obere Grenze oder beides festgelegt werden. Prozentsatztests eignen sich am besten, wenn der Wert der Metrik innerhalb eines bekannten guten Bereichs bleiben sollte.
+
+- #### Prozentsatz Untere Grenze
+  - Eine untere Grenze eines Prozentsatztests kann in Dezimalform jeder Prozentsatz größer oder gleich null sein (z. B.: verwenden Sie `0.10` für `10%`). Sie wird verwendet, wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweisen würde.
+  - Ein Beispiel: Wenn Sie einen Prozentsatztest mit einer unteren Grenze von `0.10` hätten und Ihre historischen Metriken einen Mittelwert von `100` hätten, würde das untere Grenzlager `90` betragen, und jeder Wert unter `90` würde eine Warnung generieren.
+- #### Prozentsatz Obere Grenze
+  - Eine obere Grenze eines Prozentsatztests kann in Dezimalform jeder Prozentsatz größer oder gleich null sein (z. B.: verwenden Sie `0.10` für `10%`). Sie wird verwendet, wenn ein größerer Wert auf eine Leistungsverschlechterung hinweisen würde.
+  - Ein Beispiel: Wenn Sie einen Prozentsatztest mit einer oberen Grenze von `0.10` hätten und Ihre historischen Metriken einen Mittelwert von `100` hätten, würde das obere Grenzlager `110` betragen, und jeder Wert über `110` würde eine Warnung generieren.

@@ -1,0 +1,18 @@
+## `---thresholds-reset`
+
+<br />
+
+Сбросьте все неуказанные Пороги для данного [Ветки][branch] и [Тестового окружения][testbed]. Если Порог уже существует и не указан, его текущая [Модель][model] будет удалена.
+
+Например, если для Ветки `main` и Тестового окружения `localhost` было два Порога:
+- Ветка `main`, Тестовое окружение `localhost`, `latency` [Мера][measure]
+- Ветка `main`, Тестовое окружение `localhost`, `throughput` [Мера][measure]
+
+Если указана только Мера `latency` в подкоманде `bencher run`
+и используется `--thresholds-reset`,
+тогда Мера `throughput` будет очищена от своей Модели.
+
+[branch]: /ru/docs/explanation/branch-selection/#--branch-branch
+[testbed]: /ru/docs/explanation/bencher-run/#--testbed-testbed
+[model]: /ru/docs/explanation/benchmarking/#model
+[measure]: /ru/docs/explanation/benchmarking/#measure

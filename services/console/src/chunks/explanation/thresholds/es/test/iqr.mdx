@@ -1,0 +1,11 @@
+### Rango Intercuartílico
+
+Una Prueba de Rango Intercuartílico (`iqr`) mide cuántos múltiplos del [rango intercuartílico](https://en.wikipedia.org/wiki/Interquartile_range) (IQR) está una nueva Métrica por encima o por debajo de la mediana de tus Métricas históricas. Si una nueva Métrica está por debajo de cierto múltiplo del IQR desde la mediana (Límite Inferior) o por encima de cierto múltiplo del IQR desde la mediana (Límite Superior) de tus Métricas históricas, se genera una Alerta. Se debe establecer ya sea un Límite Inferior, un Límite Superior, o ambos.
+
+- #### Límite Inferior del Rango Intercuartílico
+  - Un Límite Inferior de Prueba de Rango Intercuartílico puede ser cualquier multiplicador mayor o igual a cero (ej: usar `2.0` para `2x`). Se utiliza cuando un valor menor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si tuvieras una Prueba de Rango Intercuartílico con un Límite Inferior establecido en `2.0` y tus Métricas históricas tuviesen una mediana de `100` y un rango intercuartílico de `10`, el Límite Inferior sería `80` y cualquier valor menor que `80` generaría una Alerta.
+
+- #### Límite Superior del Rango Intercuartílico
+  - Un Límite Superior de Prueba de Rango Intercuartílico puede ser cualquier multiplicador mayor o igual a cero (ej: usar `2.0` para `2x`). Se utiliza cuando un valor mayor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si tuvieras una Prueba de Rango Intercuartílico con un Límite Superior establecido en `2.0` y tus Métricas históricas tuviesen una mediana de `100` y un rango intercuartílico de `10`, el Límite Superior sería `120` y cualquier valor mayor que `120` generaría una Alerta.

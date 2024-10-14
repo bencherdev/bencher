@@ -1,0 +1,20 @@
+## `--threshold-max-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+최대 [Metric][metric] 수를 지정하여 테스트를 실행할 수 있습니다.
+이 최대치를 초과하면 가장 오래된 Metric이 무시됩니다.
+지정된 샘플 크기는 `2` 이상이어야 합니다.
+[```--threshold-min-sample-size``` 옵션][threshold min sample size option]이 설정된 경우,
+지정된 샘플 크기는 `--threshold-min-sample-size` 이상이어야 합니다.
+이 옵션은 [정적(`static`) 테스트][static]와 함께 사용할 수 없습니다.
+
+예를 들어, 최대 샘플 크기가 `100`인 Threshold를 사용하려면,
+`--threshold-max-sample-size 100`이라고 작성할 수 있습니다.
+Metric이 `100`개 이상이면 가장 최근의 `100`개의 Metric만 포함됩니다.
+반대로, Metric이 `100`개 이하라면 모든 Metric이 포함됩니다.
+
+[metric]: /ko/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

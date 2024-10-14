@@ -1,0 +1,12 @@
+## `--threshold-min-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+테스트를 실행하기 위해 요구되는 [메트릭][metric]의 최소 개수를 선택적으로 지정할 수 있습니다. 이 최소값이 충족되지 않으면 테스트는 실행되지 않습니다. 지정된 샘플 크기는 `2` 이상이어야 합니다. [또한 `--threshold-max-sample-size` 옵션][threshold max sample size option]이 설정된 경우, 지정된 샘플 크기는 `--threshold-max-sample-size` 이하이어야 합니다. 이 옵션은 [정적(`static`) 테스트][static]와 함께 사용할 수 없습니다.
+
+예를 들어 최소 샘플 크기가 `10`인 임계값을 사용하려면, `--threshold-min-sample-size 10`으로 작성할 수 있습니다. 만약 `10`개 미만의 메트릭이 있다면, 테스트는 실행되지 않습니다. 반대로 `10`개 이상의 메트릭이 있다면, 테스트는 실행됩니다.
+
+[metric]: /ko/docs/explanation/benchmarking/#metric
+
+[threshold max sample size option]: #--threshold-max-sample-size-sample-size
+[static]: #static

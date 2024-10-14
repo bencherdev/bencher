@@ -1,0 +1,20 @@
+## `--threshold-min-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+Optional geben Sie die minimale Anzahl von [Metriken][metric] an, die erforderlich sind, um einen Test durchzuführen.
+Wenn dieses Minimum nicht erreicht wird, wird der Test nicht durchgeführt.
+Die angegebene Stichprobengröße muss größer oder gleich `2` sein.
+Wenn auch die [Option `--threshold-max-sample-size`][threshold max sample size option] gesetzt ist,
+muss die angegebene Stichprobengröße kleiner oder gleich `--threshold-max-sample-size` sein.
+Diese Option kann nicht mit dem [statischen (`static`) Test][static] verwendet werden.
+
+Um beispielsweise einen Schwellenwert mit einer minimalen Stichprobengröße von `10` zu verwenden,
+könnten Sie `--threshold-min-sample-size 10` schreiben.
+Wenn es weniger als `10` Metriken gäbe, würde der Test nicht durchgeführt.
+Im Gegensatz dazu würde der Test durchgeführt, wenn es `10` oder mehr Metriken gäbe.
+
+[metric]: /de/docs/explanation/benchmarking/#metric
+
+[threshold max sample size option]: #--threshold-max-sample-size-sample-size
+[static]: #static

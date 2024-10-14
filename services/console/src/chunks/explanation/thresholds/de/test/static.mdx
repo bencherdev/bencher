@@ -1,0 +1,23 @@
+### Static
+
+Ein statischer Test (`static`) ist der einfachste Test.
+Wenn ein neuer Metrikwert unter eine festgelegte Untergrenze oder über eine festgelegte Obergrenze fällt, wird ein Alarm ausgelöst.
+Das heißt, die Unter-/Obergrenze ist ein expliziter Unter-/Obergrenzwert.
+Es muss entweder eine Untergrenze, eine Obergrenze oder beides festgelegt werden.
+Statische Tests funktionieren am besten, wenn der Wert der Metrik in einem konstanten Bereich über alle Benchmarks hinweg bleiben soll,
+wie beispielsweise die Codeabdeckung.
+
+- #### Statische Untergrenze
+  - Eine statische Test-Untergrenze kann eine beliebige Gleitkommazahl sein.
+Sie wird verwendet, wenn ein kleinerer Wert auf einen Leistungseinbruch hinweisen würde.
+Die Untergrenze muss kleiner oder gleich der Obergrenze sein, wenn beide angegeben sind.
+  - Zum Beispiel, wenn Sie einen statischen Test mit einer festgelegten Untergrenze von `100` hätten,
+wäre der Untergrenzwert ebenfalls `100` und
+jeder Wert, der kleiner als `100` ist, würde einen Alarm auslösen.
+- #### Statische Obergrenze
+  - Eine statische Test-Obergrenze kann eine beliebige Gleitkommazahl sein.
+Sie wird verwendet, wenn ein größerer Wert auf einen Leistungseinbruch hinweisen würde.
+Die Obergrenze muss größer oder gleich der Untergrenze sein, wenn beide angegeben sind.
+  - Zum Beispiel, wenn Sie einen statischen Test mit einer festgelegten Obergrenze von `100` hätten,
+wäre der Obergrenzwert ebenfalls `100` und
+jeder Wert, der größer als `100` ist, würde einen Alarm auslösen.

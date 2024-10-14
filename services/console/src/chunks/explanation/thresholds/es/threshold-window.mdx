@@ -1,0 +1,17 @@
+## `--threshold-window <WINDOW>`
+
+<br />
+
+Opcionalmente, especifica el intervalo de tiempo para las [Métricas][metric] utilizadas para realizar la Prueba, en segundos.
+La ventana especificada debe ser mayor a `0`.
+Esta opción no se puede utilizar con [la Prueba Estática (`static`)][static].
+
+Por ejemplo, para usar un Umbral con una ventana de cuatro semanas o `2419200` segundos,
+podrías escribir `--threshold-window 2419200`.
+Si hay alguna Métrica más antigua de cuatro semanas, sería excluida.
+Por el contrario, si todas las Métricas son de las últimas cuatro semanas, todas serían incluidas.
+
+[metric]: /es/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

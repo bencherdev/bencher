@@ -1,0 +1,16 @@
+## `--err`
+
+<br />
+
+如果生成了警报，则可选择性地出错。 当新[指标][metric]低于最低边界限或高于最高边界限时，会生成警报。
+
+### 抑制警报
+有时抑制某个基准测试的警报可能很有用。 最好的方法是在该基准测试的名称中添加以下特殊后缀之一：
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+例如，如果您的基准测试命名为 `my_flaky_benchmark`，那么将其重命名为 `my_flaky_benchmark_bencher_ignore` 将会忽略该特定基准测试以后的警报。 被忽略的基准测试仍会与现有的阈值进行检查。 但是，不会为其生成警报。 被忽略基准测试的指标仍会被存储。 `my_flaky_benchmark_bencher_ignore` 的结果仍将存储为基准测试 `my_flaky_benchmark`。 如果您删除后缀并返回到原来的基准测试名称，事情将会继续进行，正如您所暂停时的状态。
+
+[metric]: /zh/docs/explanation/benchmarking/#metric

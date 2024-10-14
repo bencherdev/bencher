@@ -1,0 +1,11 @@
+import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
+
+## 多重阈值
+
+可以在同一次<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>调用中创建多个阈值。
+指定多个阈值时，必须为每个阈值使用相同的选项。
+要忽略特定阈值的某个选项，请使用下划线 (`_`)。
+
+例如，如果您只想使用两个阈值，一个用于延迟度量，一个用于吞吐量度量，那么您可能想为延迟度量设置上限，为吞吐量度量设置下限。因此，您将为延迟度量使用 `--threshold-lower-boundary _`，为吞吐量度量使用 `--threshold-upper-boundary _`。您可以这样写：
+
+<MultipleThresholdsCode />

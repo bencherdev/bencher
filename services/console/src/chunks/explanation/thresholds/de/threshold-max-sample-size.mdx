@@ -1,0 +1,12 @@
+## `--threshold-max-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+Optional kann die maximale Anzahl der [Metriken][metric] angegeben werden, die zum Ausführen eines Tests verwendet werden. Wenn dieses Maximum überschritten wird, werden die ältesten Metriken ignoriert. Die angegebene Stichprobengröße muss größer oder gleich `2` sein. Wenn auch die Option [`--threshold-min-sample-size`][threshold min sample size option] gesetzt ist, muss die angegebene Stichprobengröße größer oder gleich `--threshold-min-sample-size` sein. Diese Option kann nicht mit dem [statischen (`static`) Test][static] verwendet werden.
+
+Zum Beispiel, um einen Schwellenwert mit einer maximalen Stichprobengröße von `100` zu verwenden, könnten Sie `--threshold-max-sample-size 100` schreiben. Wenn es mehr als `100` Metriken gäbe, würden nur die aktuellsten `100` Metriken einbezogen. Umgekehrt, wenn es `100` oder weniger Metriken gäbe, würden alle Metriken einbezogen.
+
+[metric]: /de/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

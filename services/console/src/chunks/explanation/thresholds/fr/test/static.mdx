@@ -1,0 +1,23 @@
+### Statique
+
+Un Test Statique (`statique`) est le Test le plus simple.
+Si une nouvelle Mesure est en dessous d'une Limite Inférieure définie ou au-dessus d'une Limite Supérieure définie, une Alerte est générée.
+C'est-à-dire que la Limite Inférieure/Supérieure est une Limite Inférieure/Supérieure explicite.
+Il faut définir soit une Limite Inférieure, soit une Limite Supérieure, soit les deux.
+Les Tests Statiques fonctionnent mieux lorsque la valeur de la Mesure doit rester dans une plage constante pour tous les Repères,
+comme la couverture de code.
+
+- #### Limite Inférieure Statique
+  - Une Limite Inférieure d'un Test Statique peut être n'importe quel nombre à virgule flottante.
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance.
+La Limite Inférieure doit être inférieure ou égale à la Limite Supérieure, si les deux sont spécifiées.
+  - Par exemple, si vous aviez un Test Statique avec une Limite Inférieure définie à `100`
+la Limite Inférieure serait également `100` et
+toute valeur inférieure à `100` générerait une Alerte.
+- #### Limite Supérieure Statique
+  - Une Limite Supérieure d'un Test Statique peut être n'importe quel nombre à virgule flottante.
+Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance.
+La Limite Supérieure doit être supérieure ou égale à la Limite Inférieure, si les deux sont spécifiées.
+  - Par exemple, si vous aviez un Test Statique avec une Limite Supérieure définie à `100`
+la Limite Supérieure serait également `100` et
+toute valeur supérieure à `100` générerait une Alerte.

@@ -1,0 +1,35 @@
+import Static from "./test/static.mdx";
+import Percentage from "./test/percentage.mdx";
+import ZScore from "./test/z-score.mdx";
+import TTest from "./test/t-test.mdx";
+import LogNormal from "./test/log-normal.mdx";
+import Iqr from "./test/iqr.mdx";
+import DeltaIqr from "./test/delta-iqr.mdx";
+
+## `--threshold-test <TEST>`
+
+<br />
+
+지정된 테스트를 사용하여 성능 저하를 감지합니다.
+
+사용할 수 있는 여러 가지 테스트가 있습니다:
+
+<ul>
+  <li>[Static (`static`)](#static)</li>
+  <li>[Percentage (`percentage`)](#percentage)</li>
+  <li>[z-score (`z_score`)](#z-score)</li>
+  <li>[t-test (`t_test`)](#t-test)</li>
+  <li>[Log Normal (`log_normal`)](#log-normal)</li>
+  <li>[Interquartile Range (`iqr`)](#interquartile-range)</li>
+  <li>[Delta Interquartile Range (`delta_iqr`)](#delta-interquartile-range)</li>
+</ul>
+
+예를 들어, 학생의 t-테스트와 함께 임계값을 사용하려면, `--threshold-test t_test`라고 쓸 수 있습니다.
+
+<Static />
+<Percentage />
+<ZScore />
+<TTest />
+<LogNormal />
+<Iqr />
+<DeltaIqr />

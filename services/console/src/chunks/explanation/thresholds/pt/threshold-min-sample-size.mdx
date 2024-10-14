@@ -1,0 +1,12 @@
+## `--threshold-minimum-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+Opcionalmente, especifique o número mínimo de [Métricas][metric] necessárias para executar um Teste. Se esse mínimo não for atingido, o Teste não será executado. O tamanho amostral especificado deve ser maior ou igual a `2`. Se a [opção `--threshold-max-sample-size`][threshold max sample size option] também estiver definida, então o tamanho amostral especificado deve ser menor ou igual a `--threshold-max-sample-size`. Esta opção não pode ser usada com o Teste [Estático (`static`)][static].
+
+Por exemplo, para usar um Limite com um tamanho mínimo de amostra de `10`, você poderia escrever `--threshold-min-sample-size 10`. Se houvesse menos de `10` Métricas, o Teste não seria executado. Por outro lado, se houvesse `10` ou mais Métricas, o Teste seria executado.
+
+[metric]: /pt/docs/explanation/benchmarking/#metric
+
+[threshold max sample size option]: #--threshold-max-sample-size-sample-size
+[static]: #static

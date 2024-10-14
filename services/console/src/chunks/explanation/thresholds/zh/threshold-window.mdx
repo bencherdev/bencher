@@ -1,0 +1,16 @@
+## `--threshold-window <WINDOW>`
+
+<br />
+
+可以选择性地指定用于执行测试的[指标][metric]时间窗口，以秒为单位。
+指定的窗口必须大于`0`。
+此选项不能与[静态（`static`）测试][static]一起使用。
+
+例如，要使用一个窗口为四周或`2419200`秒的阈值，你可以写作`--threshold-window 2419200`。
+如果有任何指标早于四周，它们将被排除。
+相反，如果所有指标都来自过去四周内，则它们都将被纳入。
+
+[metric]: /zh/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

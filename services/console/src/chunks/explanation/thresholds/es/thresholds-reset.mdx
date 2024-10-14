@@ -1,0 +1,18 @@
+## `---thresholds-reset`
+
+<br />
+
+Restablecer todos los Umbrales no especificados para el [Branch][branch] y [Testbed][testbed] dados. Si ya existe un Umbral y no está especificado, su [Modelo][model] actual será eliminado.
+
+Por ejemplo, si había dos Umbrales para el Branch `main` y Testbed `localhost`:
+- Branch `main`, Testbed `localhost`, [Medida][measure] `latency`
+- Branch `main`, Testbed `localhost`, [Medida][measure] `throughput`
+
+Si solo se especifica la Medida `latency` en el subcomando `bencher run`
+y se utiliza `--thresholds-reset`,
+entonces la Medida `throughput` tendría su Modelo eliminado.
+
+[branch]: /es/docs/explanation/branch-selection/#--branch-branch
+[testbed]: /es/docs/explanation/bencher-run/#--testbed-testbed
+[model]: /es/docs/explanation/benchmarking/#model
+[measure]: /es/docs/explanation/benchmarking/#measure

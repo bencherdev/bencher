@@ -1,0 +1,12 @@
+## `--threshold-max-sample-size <SAMPLE_SIZE>`
+
+<br />
+
+Spécifiez éventuellement le nombre maximum de [Métriques][metric] utilisées pour exécuter un Test. Si ce maximum est dépassé, les Métriques les plus anciennes seront ignorées. La taille d'échantillon spécifiée doit être supérieure ou égale à `2`. Si [l'option `--threshold-min-sample-size`][threshold min sample size option] est également définie, alors la taille d'échantillon spécifiée doit être supérieure ou égale à `--threshold-min-sample-size`. Cette option ne peut pas être utilisée avec [le Test Statique (`static`)][static].
+
+Par exemple, pour utiliser un seuil avec une taille d'échantillon maximale de `100`, vous pourriez écrire `--threshold-max-sample-size 100`. S'il y avait plus de `100` Métriques, seules les `100` Métriques les plus récentes seraient incluses. Inversement, s'il y avait `100` Métriques ou moins, toutes les Métriques seraient incluses.
+
+[metric]: /fr/docs/explanation/benchmarking/#metric
+
+[threshold min sample size option]: #--threshold-min-sample-size-sample-size
+[static]: #static

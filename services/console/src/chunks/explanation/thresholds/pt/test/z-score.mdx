@@ -1,0 +1,32 @@
+### z-score
+
+Um Teste de z-score (`z_score`) mede o número de [desvios padrão](https://en.wikipedia.org/wiki/Standard_deviation) (σ)
+que uma nova Métrica está em relação à média de suas Métricas históricas usando um [z-score](https://en.wikipedia.org/wiki/Standard_score).
+
+Testes de z-score funcionam melhor quando:
+- Não existem diferenças extremas entre execuções de benchmark
+- Execuções de benchmark são totalmente independentes umas das outras
+- O número de iterações para uma única execução de benchmark é inferior a 10% das Métricas históricas
+- Há pelo menos 30 Métricas históricas (Tamanho mínimo da amostra >= 30)
+
+Para Testes de z-score, desvios padrão são expressos como uma porcentagem cumulativa decimal.
+Se uma nova Métrica estiver abaixo de uma certa porcentagem cumulativa do lado esquerdo (Limite Inferior)
+ou acima de uma certa porcentagem cumulativa do lado direito (Limite Superior) para suas Métricas históricas, um Alerta é gerado.
+Deve-se definir pelo menos um Limite Inferior, Limite Superior ou ambos.
+
+- #### Limite Inferior do z-score
+  - Um Limite Inferior de Teste de z-score pode ser qualquer decimal positivo entre `0.5` e `1.0`.
+Onde `0.5` representa a média e `1.0` representa todos os possíveis valores do lado esquerdo (-∞).
+É usado quando um valor menor indicaria uma regressão de desempenho.
+  - Por exemplo, se você usasse um Teste de z-score com um Limite Inferior de `0.977`
+e suas Métricas históricas tivessem uma média de `100` e um desvio padrão de `10`,
+o Limite Inferior seria `80.05` e
+qualquer valor inferior a `80.05` geraria um Alerta.
+- #### Limite Superior do z-score
+  - Um Limite Superior de Teste de z-score pode ser qualquer decimal positivo entre `0.5` e `1.0`.
+Onde `0.5` representa a média e `1.0` representa todos os possíveis valores do lado direito (∞).
+É usado quando um valor maior indicaria uma regressão de desempenho.
+  - Por exemplo, se você usasse um Teste de z-score com um Limite Superior de `0.977`
+e suas Métricas históricas tivessem uma média de `100` e um desvio padrão de `10`,
+o Limite Superior seria `119.95` e
+qualquer valor superior a `119.95` geraria um Alerta.
