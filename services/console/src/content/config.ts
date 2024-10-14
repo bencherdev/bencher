@@ -49,10 +49,10 @@ export const collections = {
 	explanation: page,
 	reference: page,
 	// api
-	organizations: swagger,
-	projects: swagger,
-	users: swagger,
-	server: swagger,
+	api_organizations: swagger,
+	api_projects: swagger,
+	api_users: swagger,
+	api_server: swagger,
 	// learn
 	benchmarking_python: page,
 	benchmarking_rust: page,

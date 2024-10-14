@@ -9,11 +9,11 @@ import {
 	API_DOCS_PUBLISHED,
 } from "../../../../../i18n/utils";
 
-const collection = Collection.organizations;
+const collection = Collection.api_organizations;
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-	const collection = Collection.organizations;
+	const collection = Collection.api_organizations;
 	const pages = await getCollection(collection);
 	return otherLanguages.flatMap((lang) => {
 		return pages.map((page) => ({

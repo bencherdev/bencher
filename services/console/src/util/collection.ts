@@ -7,10 +7,10 @@ enum Collection {
 	explanation = "explanation",
 	reference = "reference",
 	// API
-	organizations = "organizations",
-	projects = "projects",
-	users = "users",
-	server = "server",
+	api_organizations = "api-organizations",
+	api_projects = "api-projects",
+	api_users = "api-users",
+	api_server = "api-server",
 	// Learn
 	benchmarking_python = "benchmarking-python",
 	benchmarking_rust = "benchmarking-rust",
@@ -20,7 +20,12 @@ enum Collection {
 	onboard = "onboard",
 }
 
-export const ApiCollections = [Collection.organizations];
+export const ApiCollections = [
+	Collection.api_organizations,
+	Collection.api_projects,
+	Collection.api_users,
+	Collection.api_server,
+];
 
 export const collectionPath = (collection: Collection) => {
 	switch (collection) {
@@ -34,13 +39,13 @@ export const collectionPath = (collection: Collection) => {
 			return "explanation";
 		case Collection.reference:
 			return "reference";
-		case Collection.organizations:
+		case Collection.api_organizations:
 			return "organizations";
-		case Collection.projects:
+		case Collection.api_projects:
 			return "projects";
-		case Collection.users:
+		case Collection.api_users:
 			return "users";
-		case Collection.server:
+		case Collection.api_server:
 			return "server";
 		case Collection.benchmarking_python:
 			return "benchmarking/python";

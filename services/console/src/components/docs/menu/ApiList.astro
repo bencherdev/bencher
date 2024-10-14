@@ -7,10 +7,10 @@ interface Props {
 }
 
 // Api
-const organizationsCollection = await getEnCollection(Collection.organizations);
-const projectsCollection = await getEnCollection(Collection.projects);
-const usersCollection = await getEnCollection(Collection.users);
-const serverCollection = await getEnCollection(Collection.server);
+const apiOrganizationsCollection = await getEnCollection(Collection.api_organizations);
+const apiProjectsCollection = await getEnCollection(Collection.api_projects);
+const apiUsersCollection = await getEnCollection(Collection.api_users);
+const apiServerCollection = await getEnCollection(Collection.api_server);
 
 const { lang } = Astro.props;
 ---
@@ -18,23 +18,23 @@ const { lang } = Astro.props;
 {[
     {
       label: "Organizations",
-      collection: Collection.organizations,
-      content: organizationsCollection,
+      collection: Collection.api_organizations,
+      content: apiOrganizationsCollection,
     },
     {
       label: "Projects",
-      collection: Collection.projects,
-      content: projectsCollection,
+      collection: Collection.api_projects,
+      content: apiProjectsCollection,
     },
     {
       label: "Users",
-      collection: Collection.users,
-      content: usersCollection,
+      collection: Collection.api_users,
+      content: apiUsersCollection,
     },
     {
       label: "Server",
-      collection: Collection.server,
-      content: serverCollection,
+      collection: Collection.api_server,
+      content: apiServerCollection,
     }
 ].map(({ label, collection, content }) => (
   <p class="menu-label">{label}</p>

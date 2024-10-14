@@ -23,10 +23,10 @@ const explanationCollection = await getLangCollection(Collection.explanation);
 const referenceCollection = await getLangCollection(Collection.reference);
 
 // Api
-const organizationsCollection = await getEnCollection(Collection.organizations);
-const projectsCollection = await getEnCollection(Collection.projects);
-const usersCollection = await getEnCollection(Collection.users);
-const serverCollection = await getEnCollection(Collection.server);
+const apiOrganizationsCollection = await getEnCollection(Collection.api_organizations);
+const apiProjectsCollection = await getEnCollection(Collection.api_projects);
+const apiUsersCollection = await getEnCollection(Collection.api_users);
+const apiServerCollection = await getEnCollection(Collection.api_server);
 
 // Learn
 const benchmarkingPythonCollection = await getLangCollection(
@@ -82,13 +82,13 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 			case DocsMenuId.Api:
 				return (
 					1 +
-					organizationsCollection?.length +
+					apiOrganizationsCollection?.length +
 					1 +
-					projectsCollection?.length +
+					apiProjectsCollection?.length +
 					1 +
-					usersCollection?.length +
+					apiUsersCollection?.length +
 					1 +
-					serverCollection?.length
+					apiServerCollection?.length
 				);
 			case DocsMenuId.Learn:
 				return (
