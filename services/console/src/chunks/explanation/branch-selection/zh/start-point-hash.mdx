@@ -1,0 +1,27 @@
+### `--start-point-hash <HASH>`
+
+<br />
+
+使用指定的完整 Git 哈希作为`branch`选项的[起始点][start point]。此选项需要设置[`--start-point`选项][start point option]。
+
+- 如果`branch`不存在，它将从指定哈希的`start-point`创建。
+- 如果`branch`存在且`start-point`与指定的哈希相同，则忽略此选项。
+- 如果`branch`存在并且`start-point`或指定的哈希不同，将从指定哈希的`start-point`创建新的`branch`[分支头][head]。
+- 如果`branch`不存在且`start-point`在指定哈希处不存在，则该`branch`将在没有任何历史数据的情况下创建。
+- 如果`branch`存在且`start-point`在指定的哈希处不存在，则忽略此选项。
+
+如果通过起始点创建了新的`branch`，那么来自指定哈希的`start-point`的所有最新数据和可选的阈值将被复制。有关更多细节，请参见[`--start-point-max-versions` 选项][start point max version option]和[`--start-point-clone-thresholds` 选项][start point clone thresholds option]。
+
+例如，如果存在`feature_branch`且其起始点是哈希为`32aea434d751648726097ed3ac760b57107edd8b`的`main`分支，则使用`--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`将会：
+
+1. 移除旧的`feature_branch`[分支头][head]
+2. 创建新的`feature_branch`分支头
+3. 将来自`main`在哈希`68b12758509ca5e2b1e3983525625e532eb5f562`的所有最新数据复制到新的`feature_branch`分支头
+4. 然后使用新的`feature_branch`分支头执行`bencher run`
+
+[start point]: /zh/docs/explanation/benchmarking/#start-point
+[head]: /zh/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

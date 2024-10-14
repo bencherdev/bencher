@@ -1,0 +1,11 @@
+### `--start-point-max-versions <COUNT>`
+
+<br />
+
+Укажите максимальное количество исторических версий ветки, которые будут включены из [Начальной Точки][start point] для опции `branch`. Любые версии, превышающие это число, будут исключены. Значение по умолчанию — `255` версий. Эта опция требует установки [опции `--start-point`][start point option].
+
+Например, если существует `feature_branch` с Начальной Точкой в ветке `main`, и в `main` содержится `300` версий, то использование `--branch feature_branch --start-point main --start-point-max-versions 100` включит в `feature_branch` только последние `100` версий `main`.
+
+[start point]: /ru/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

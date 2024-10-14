@@ -1,0 +1,17 @@
+### `--start-point-max-versions <COUNT>`
+
+<br />
+
+指定された最大数の履歴ブランチバージョンを`branch` オプションの[開始ポイント][start point]から含めるようにします。
+この数を超えるバージョンは省略されます。
+デフォルトは`255`バージョンです。
+このオプションを使用するには、[`--start-point` オプション][start point option]を設定する必要があります。
+
+例えば、`feature_branch`が存在し、その開始ポイントが`main`ブランチであり、
+`main`が`300`バージョンある場合、
+`--branch feature_branch --start-point main --start-point-max-versions 100`を使用すると、
+`main`の最新の`100`バージョンのみが`feature_branch`に含まれます。
+
+[start point]: /ja/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

@@ -1,0 +1,26 @@
+### `--start-point-reset`
+
+<br />
+
+지정된 `branch`를 재설정합니다. [`--start-point`][start point option] 옵션이 설정되면, `branch`는 지정된 시작 지점(Start Point)으로 재설정됩니다. 이는 [통계적 연속 벤치마킹][statistical continuous benchmarking] 데이터의 표류를 방지하는 데 유용합니다. 시작 지점을 지정하지 않고 `--start-point-reset`을 사용하는 주된 사용 사례는 [상대적 연속 벤치마킹][relative continuous benchmarking]입니다.
+
+- `branch`가 존재하지 않고 시작 지점이 지정되지 않은 경우, `branch`는 어떠한 기록 데이터 없이 생성됩니다.
+- `branch`가 존재하고 시작 지점이 지정되지 않은 경우, 새로운 `branch` [Head][head]는 기록 데이터 없이 생성됩니다.
+- `branch`가 존재하지 않고 시작 지점이 지정된 경우, 시작 지점을 사용하여 `branch`가 생성됩니다.
+- `branch`가 존재하고 시작 지점이 지정된 경우, 시작 지점을 사용하여 새로운 `branch` [Head][head]가 생성됩니다.
+
+시작 지점과 함께 새로운 `branch`가 생성되면, 지정된 해시의 모든 최신 데이터와 선택적으로 `start-point`의 임계값이 복사됩니다. 자세한 내용은 [`--start-point-max-versions` 옵션][start point max version option] 및 [`--start-point-clone-thresholds` 옵션][start point clone thresholds option]을 참조하세요.
+
+예를 들어, `feature_branch`가 시작 지점 없이 존재하는 경우, `--branch feature_branch --start-point-reset`를 사용하면:
+
+1. 기존 `feature_branch` [Head][head]를 제거합니다.
+2. 기록 데이터가 없는 새로운 `feature_branch` Head를 생성합니다.
+3. `bencher run`은 새로 생성된 `feature_branch` Head를 사용하여 진행됩니다.
+
+[statistical continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[head]: /ko/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

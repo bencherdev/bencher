@@ -1,0 +1,11 @@
+### `--start-point-max-versions <COUNT>`
+
+<br />
+
+Utilice el número máximo de versiones históricas de rama especificadas para incluir desde el [Punto de Inicio][start point] para la opción `branch`. Cualquier versión más allá de este número será omitida. El valor predeterminado es `255` versiones. Esta opción requiere que se establezca [la opción `--start-point`][start point option].
+
+Por ejemplo, si `feature_branch` existe con su Punto de Inicio siendo la rama `main` y `main` tiene `300` versiones, entonces al usar `--branch feature_branch --start-point main --start-point-max-versions 100` solo se incluirían las `100` versiones más recientes de `main` en `feature_branch`.
+
+[start point]: /es/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

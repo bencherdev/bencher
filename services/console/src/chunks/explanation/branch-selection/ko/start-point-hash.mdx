@@ -1,0 +1,35 @@
+### `--start-point-hash <HASH>`
+
+<br />
+
+지정된 전체 Git 해시를 `branch` 옵션의 [시작 지점][start point]으로 사용합니다.
+이 옵션은 [‘--start-point’ 옵션][start point option]이 설정되어야 합니다.
+
+- `branch`가 존재하지 않는 경우, 지정된 해시의 `start-point`에서 생성됩니다.
+- `branch`가 존재하고 `start-point`와 지정된 해시가 모두 동일하면,
+  이 옵션은 무시됩니다.
+- `branch`가 존재하고 `start-point` 또는 지정된 해시가 다르면,
+  지정된 해시의 `start-point`에서 새로운 `branch` [헤드][head]가 생성됩니다.
+- `branch`가 존재하지 않고 지정된 해시의 `start-point`가 존재하지 않으면,
+  `branch`는 아무런 기록 데이터 없이 생성됩니다.
+- `branch`가 존재하고 지정된 해시에 `start-point`가 존재하지 않으면,
+  이 옵션은 무시됩니다.
+
+새로운 `branch`가 시작 지점과 함께 생성되면,
+모든 최신 데이터와 선택적으로 지정 해시의 `start-point`에서의 THresholds가 복사됩니다.
+자세한 내용은 [`--start-point-max-versions` 옵션][start point max version option] 및 [`--start-point-clone-thresholds` 옵션][start point clone thresholds option]을 참조하세요.
+
+예를 들어, `feature_branch`가 `main` 브랜치에서 해시 `32aea434d751648726097ed3ac760b57107edd8b`로 시작 지점을 가지고 존재할 때,
+`--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`를 사용하면 다음과 같은 일이 발생합니다:
+
+1. 기존의 `feature_branch` [헤드][head] 제거
+2. 새로운 `feature_branch` 헤드 생성
+3. 해시 `68b12758509ca5e2b1e3983525625e532eb5f562`에서 `main`의 모든 최신 데이터 복사하여 새로운 `feature_branch` 헤드로 이동
+4. `bencher run`은 새로운 `feature_branch` 헤드를 사용하여 진행
+
+[start point]: /ko/docs/explanation/benchmarking/#start-point
+[head]: /ko/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

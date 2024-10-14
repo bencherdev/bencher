@@ -1,18 +1,6 @@
-Branchは`git`の参照（例えばブランチ名やタグ）です。
-<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する際は、
-`--branch`オプションか`BENCHER_BRANCH`環境変数を使ってBranchを選択します。
-デフォルトでは、すべてのプロジェクトは`main`ブランチから始まり、
-どちらも指定しない場合は`main`がデフォルトとして使用されます。
+A Branch は `git` のリファレンス（つまり、ブランチ名やタグ）です。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用する際に、`--branch` オプションまたは `BENCHER_BRANCH` 環境変数でブランチを選択します。デフォルトでは、すべてのプロジェクトは `main` ブランチから始まり、それらの指定がない場合は `main` がデフォルトで使用されます。
 
-[連続ベンチマーク][continuous benchmarking]、つまりCIでのベンチマークの際には、
-既存のBranchに対してブランチを作成またはリベースしたいことがよくあります。
-これをBranchの[開始ポイント][start point]と呼びます。
-開始ポイントは、特定のバージョン（と可能なら`git`ハッシュ）の別のBranchです。
-<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する際は、
-`--branch-start-point`オプションで開始ポイントを選択します。
-さらに、`--branch-start-point-hash`オプションを用いて開始ポイントの特定の`git`ハッシュを指定します。
-すべてのデータと[しきい値][thresholds]が開始ポイントからコピーされます。
-ドリフトを防ぐために、`--branch-reset`フラグを使って常にブランチを開始ポイントにリセットするようにします。
+[継続的ベンチマーキング][continuous benchmarking]、つまり CI でのベンチマーキングでは、既存のブランチ上に `branch` を作成またはリベースしたいことがよくあります。これをブランチ[スタートポイント][start point]と呼びます。スタートポイントは特定のバージョン（および利用可能であれば `git` ハッシュ）の別のブランチです。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用する際に、`--start-point` オプションでスタートポイントを選択します。さらに、`--start-point-hash` オプションを使ってスタートポイントの特定の `git` ハッシュを指定します。スタートポイントからコピーされるデータの量は、`--start-point-max-versions` オプションで制御します。同様に、[しきい値][thresholds]は `--start-point-clone-thresholds` フラグでスタートポイントからコピーできます。ドリフトを防ぐために、`--start-point-reset` フラグを使用してブランチを常にスタートポイントにリセットします。
 
 [continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
 [start point]: /ja/docs/explanation/benchmarking/#start-point

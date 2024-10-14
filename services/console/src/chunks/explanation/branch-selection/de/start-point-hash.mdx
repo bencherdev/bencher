@@ -1,0 +1,35 @@
+### `--start-point-hash <HASH>`
+
+<br />
+
+Verwenden Sie den angegebenen vollständigen Git-Hash als [Startpunkt][start point] für die `branch`-Option. Diese Option erfordert, dass [die `--start-point`-Option][start point option] gesetzt ist.
+
+- Wenn `branch` nicht existiert, wird es vom `start-point` aus mit dem angegebenen Hash erstellt.
+- Wenn `branch` existiert und sowohl `start-point` als auch der angegebene Hash identisch sind,
+  wird diese Option ignoriert.
+- Wenn `branch` existiert und entweder der `start-point` oder der angegebene Hash unterschiedlich sind,
+  wird ein neuer `branch`-[Head][head] vom `start-point` aus mit dem angegebenen Hash erstellt.
+- Wenn `branch` nicht existiert und der `start-point` am angegebenen Hash nicht existiert,
+  wird der `branch` ohne historische Daten erstellt.
+- Wenn `branch` existiert und der `start-point` am angegebenen Hash nicht existiert,
+  wird diese Option ignoriert.
+
+Wenn ein neuer `branch` mit einem Startpunkt erstellt wird,
+dann werden alle jüngsten Daten und optional Schwellenwerte vom `start-point` zum angegebenen Hash kopiert.
+Siehe [die `--start-point-max-versions`-Option][start point max version option] und [die `--start-point-clone-thresholds`-Option][start point clone thresholds option] für weitere Details.
+
+Beispielsweise, wenn `feature_branch` existiert, wobei der Startpunkt der `main` Branch
+am Hash `32aea434d751648726097ed3ac760b57107edd8b` ist,
+würde die Verwendung von `--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562` folgendes bewirken:
+
+1. Entfernen des alten `feature_branch`-[Heads][head]
+2. Erstellen eines neuen `feature_branch`-Heads
+3. Kopieren aller jüngsten Daten von `main` am Hash `68b12758509ca5e2b1e3983525625e532eb5f562` zum neuen `feature_branch`-Head
+4. `bencher run` würde dann mit dem neuen `feature_branch`-Head fortfahren
+
+[start point]: /de/docs/explanation/benchmarking/#start-point
+[head]: /de/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

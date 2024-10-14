@@ -1,0 +1,17 @@
+### `--start-point-clone-thresholds`
+
+<br />
+
+`branch`オプションのために[Start Point][start point]からすべての[Thresholds][thresholds]をクローンします。このフラグを使用するには、[the `--start-point` option][start point option]を設定する必要があります。
+
+- Thresholdが存在しない場合、`start-point` Thresholdから作成されます。
+- Thresholdが存在し、かつ`start-point` Thresholdと同じである場合、そのThresholdは事実上無視されます。
+- Thresholdが存在し、そのモデルが`start-point` Thresholdと異なる場合、古いモデルは`start-point` Thresholdモデルで置き換えられます。
+- Thresholdが存在し、`start-point` Thresholdが存在しない場合、そのThresholdモデルは削除されます。
+
+例えば、`feature_branch`が存在し、そのStart Pointが`main`ブランチであり、`main`には組み込みの`localhost` Testbedと`latency` MeasureのためのThresholdが存在する場合、`--branch feature_branch --start-point main --start-point-clone-thresholds`を使用すると、`localhost` Testbedと`latency` Measureを持つ新しいThresholdが`feature_branch`に作成されます。
+
+[thresholds]: /ja/docs/explanation/thresholds/
+[start point]: /ja/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

@@ -1,0 +1,18 @@
+### `--start-point-clone-thresholds`
+
+<br />
+
+`branch` 옵션에 대해 [시작 지점][start point]에서 모든 [임계값][thresholds]을 복제합니다. 이 플래그는 [`--start-point` 옵션][start point option]이 설정되어야 합니다.
+
+- 임계값이 존재하지 않으면 `start-point` 임계값에서 생성됩니다.
+- 임계값이 존재하고, `start-point` 임계값과 동일하다면 해당 임계값은 무시됩니다.
+- 임계값이 존재하고, 그 모델이 `start-point` 임계값과 다르면, 오래된 모델은 `start-point` 임계값 모델로 교체됩니다.
+- 임계값이 존재하고, `start-point` 임계값이 존재하지 않으면, 임계값 모델이 제거됩니다.
+
+예를 들어, `feature_branch`가 존재하고 그 시작 지점이 `main` 브랜치이며, `main`이 내장된 `localhost` 테스트베드와 `latency` 측정을 위한 임계값을 가지고 있다면,
+`--branch feature_branch --start-point main --start-point-clone-thresholds`를 사용하면 `feature_branch`에 `localhost` 테스트베드와 `latency` 측정을 위한 새 임계값이 생성됩니다.
+
+[thresholds]: /ko/docs/explanation/thresholds/
+[start point]: /ko/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

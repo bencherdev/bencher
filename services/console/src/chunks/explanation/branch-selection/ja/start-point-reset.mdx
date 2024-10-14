@@ -1,0 +1,36 @@
+### `--start-point-reset`
+
+<br />
+
+指定された `branch` をリセットします。
+[`--start-point`][start point option] オプションが設定されている場合、
+`branch` は指定されたスタートポイントにリセットされます。
+これは[統計的継続的ベンチマーキング][statistical continuous benchmarking]データのドリフトを防ぐのに役立ちます。
+スタートポイントを指定しない `--start-point-reset` の主な使用ケースは[相対的継続的ベンチマーキング][relative continuous benchmarking]です。
+
+- `branch` が存在せず、スタートポイントが指定されていない場合、`branch` は履歴データなしで作成されます。
+- `branch` が存在し、スタートポイントが指定されていない場合、
+  新しい `branch` [Head][head] が履歴データなしで作成されます。
+- `branch` が存在せず、スタートポイントが指定されている場合、
+  スタートポイントを使用して `branch` が作成されます。
+- `branch` が存在し、スタートポイントが指定されている場合、
+  スタートポイントを使用して新しい `branch` [Head][head] が作成されます。
+
+スタートポイントで新しい `branch` が作成された場合、
+指定されたハッシュで `start-point` から最新のデータとオプションでしきい値がコピーされます。
+詳細は[ `--start-point-max-versions` オプション][start point max version option]と[ `--start-point-clone-thresholds` オプション][start point clone thresholds option]を参照してください。
+
+例えば、`feature_branch` がスタートポイントなしで存在している場合に、
+`--branch feature_branch --start-point-reset` を使用すると：
+
+1. 古い `feature_branch` [Head][head] を削除します
+2. 履歴データなしで新しい `feature_branch` Head を作成します
+3. `bencher run` が新しい `feature_branch` Head を使用して続行されます
+
+[statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[head]: /ja/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

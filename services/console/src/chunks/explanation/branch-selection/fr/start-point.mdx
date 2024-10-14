@@ -1,0 +1,42 @@
+### `--start-point <BRANCH>`
+
+<br />
+
+Utilisez le nom de branche, le slug ou l'UUID spécifié comme [point de départ][start point] pour [l'option `branch`][branch option].
+Pour GitHub, il s'agit généralement de [la branche `base` pour une Pull Request][github base],
+et pour GitLab, il s'agit généralement de [la branche `target` pour une Merge Request][gitlab target].
+Le cas d'utilisation principal de `--start-point` est le [Benchmarking Continu Statistique](/fr/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
+
+- Si le point de départ spécifié est une chaîne vide, cette option est ignorée.
+- Si `branch` n'existe pas, elle sera créée en utilisant ce point de départ.
+- Si `branch` existe et que le point de départ est le même, cette option est ignorée.
+- Si `branch` existe et que le point de départ est différent,
+  une nouvelle [tête][head] de `branch` sera créée en utilisant ce point de départ mis à jour.
+- Si `branch` n'existe pas et que le point de départ n'existe pas,
+  alors `branch` sera créée sans aucune donnée historique.
+- Si `branch` existe et que le point de départ n'existe pas,
+  alors cette option est ignorée.
+
+Si une nouvelle `branch` est créée avec un point de départ,
+alors les données les plus récentes et éventuellement les seuils du point de départ spécifié sont copiés.
+Voir [l'option `--start-point-max-versions`][start point max version option] et [l'option `--start-point-clone-thresholds`][start point clone thresholds option] pour plus de détails.
+
+Par exemple, si `feature_branch` n'existe pas encore, mais que `main` existe et possède des données historiques.
+Alors utiliser `--branch feature_branch --start-point main` ferait :
+1. Créer une nouvelle branche nommée `feature_branch`
+2. Copier les données les plus récentes de `main` vers `feature_branch`
+3. `bencher run` continuerait en utilisant `feature_branch`
+<br />
+
+> 🐰 Remarque : Lors de l'utilisation de variables d'environnement, elles doivent être entourées de guillemets doubles (par exemple `--start-point "$MY_BRANCH_ENV_VAR"`),
+> si vous souhaitez que `bencher run` ne génère pas d'erreur lorsque `MY_BRANCH_ENV_VAR` n'est pas défini.
+
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+
+[start point]: /fr/docs/explanation/benchmarking/#start-point
+[head]: /fr/docs/explanation/benchmarking/#head
+
+[branch option]: #--branch-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

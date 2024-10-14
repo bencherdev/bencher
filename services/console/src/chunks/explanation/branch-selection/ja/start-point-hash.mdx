@@ -1,0 +1,27 @@
+### `--start-point-hash <HASH>`
+
+<br />
+
+指定された完全なGitハッシュを[`branch`オプションのためのスタートポイント][start point]として使用します。このオプションは[ `--start-point`オプション][start point option]が設定されていることを必要とします。
+
+- `branch`が存在しない場合は、指定されたハッシュで`start-point`から作成されます。
+- `branch`が存在し、`start-point`と指定されたハッシュが同じ場合、このオプションは無視されます。
+- `branch`が存在し、`start-point`または指定されたハッシュが異なる場合、新しい`branch`[Head][head]が指定されたハッシュで`start-point`から作成されます。
+- `branch`が存在せず、指定されたハッシュで`start-point`が存在しない場合、`branch`は履歴データなしで作成されます。
+- `branch`が存在し、指定されたハッシュで`start-point`が存在しない場合、このオプションは無視されます。
+
+スタートポイントで新しい`branch`が作成された場合、指定されたハッシュで`start-point`からの最新データおよび任意でスレッショルドもコピーされます。詳細は[`--start-point-max-versions`オプション][start point max version option]および[`--start-point-clone-thresholds`オプション][start point clone thresholds option]を参照してください。
+
+例えば、`feature_branch`がそのスタートポイントを`main`ブランチのハッシュ`32aea434d751648726097ed3ac760b57107edd8b`として存在している場合、`--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`を使用すると:
+
+1. 古い`feature_branch`[Head][head]が削除されます。
+2. 新しい`feature_branch` Headが作成されます。
+3. `main`のハッシュ`68b12758509ca5e2b1e3983525625e532eb5f562`からの最新データが新しい`feature_branch` Headにコピーされます。
+4. その後、`bencher run`は新しい`feature_branch` Headを使用して進行します。
+
+[start point]: /ja/docs/explanation/benchmarking/#start-point
+[head]: /ja/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

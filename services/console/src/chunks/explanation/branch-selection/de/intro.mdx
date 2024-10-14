@@ -1,18 +1,19 @@
-Eine Branch ist die `git` Ref (d.h. Branch-Name oder Tag).
+Ein Branch ist der `git` Verweis (d.h. Branch-Name oder Tag).
 Beim Verwenden des <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehls,
-wähle eine Branch mit der Option `--branch` oder der Umgebungsvariable `BENCHER_BRANCH`.
-Standardmäßig starten alle Projekte mit einer `main` Branch, und
-`main` wird standardmäßig verwendet, falls weder noch angegeben sind.
+wählen Sie einen Branch mit der Option `--branch` oder der Umgebungsvariable `BENCHER_BRANCH` aus.
+Standardmäßig beginnen alle Projekte mit einem `main` Branch, und
+`main` wird standardmäßig verwendet, wenn keiner der beiden angegeben wird.
 
-Beim [Kontinuierlichen Benchmarking][continuous benchmarking], also Benchmarking in CI,
-will man oft eine `branch` auf eine bereits existierende Branch erstellen oder rebasen.
-Dies wird ein Branch [Startpunkt][start point] genannt.
-Ein Startpunkt ist eine andere Branch zu einer bestimmten Version (und `git` Hash, falls verfügbar).
+Bei [Kontinuierlichem Benchmarking][continuous benchmarking], das heißt Benchmarking in CI,
+möchten Sie oft einen `branch` auf einem bereits vorhandenen Branch erstellen oder erneut basieren.
+Dies wird als Branch [Ausgangspunkt][start point] bezeichnet.
+Ein Ausgangspunkt ist ein anderer Branch in einer bestimmten Version (und `git` Hash, falls verfügbar).
 Beim Verwenden des <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehls,
-wähle einen Startpunkt mit der Option `--branch-start-point`.
-Zusätzlich kann die Option `--branch-start-point-hash` verwendet werden, um einen bestimmten `git` Hash für den Startpunkt anzugeben.
-Alle Daten und [Schwellenwerte][thresholds] werden vom Startpunkt kopiert.
-Um Drift zu verhindern, benutze die Option `--branch-reset`, um die Branch immer auf den Startpunkt zurückzusetzen.
+wählen Sie einen Ausgangspunkt mit der Option `--start-point`.
+Zusätzlich verwenden Sie die Option `--start-point-hash`, um einen bestimmten `git` Hash für den Ausgangspunkt anzugeben.
+Die Menge der Daten, die vom Ausgangspunkt kopiert werden, wird mit der Option `--start-point-max-versions` gesteuert.
+Ähnlich können [Schwellenwerte][thresholds] vom Ausgangspunkt mit dem Flag `--start-point-clone-thresholds` kopiert werden.
+Um Abweichungen zu verhindern, verwenden Sie das Flag `--start-point-reset`, um den Branch immer auf den Ausgangspunkt zurückzusetzen.
 
 [continuous benchmarking]: /de/docs/explanation/continuous-benchmarking/
 [start point]: /de/docs/explanation/benchmarking/#start-point

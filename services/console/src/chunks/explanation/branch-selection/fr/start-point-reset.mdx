@@ -1,0 +1,26 @@
+### `--start-point-reset`
+
+<br />
+
+Réinitialise la `branche` spécifiée. Lorsque l'option [`--start-point`][start point option] est définie, la `branche` sera réinitialisée au Point de Départ spécifié. Cela est utile pour prévenir la dérive dans les données de [Benchmarking Statistique Continu][statistical continuous benchmarking]. Le principal cas d'utilisation de `--start-point-reset` sans spécifier de Point de Départ est le [Benchmarking Continu Relatif][relative continuous benchmarking].
+
+- Si la `branche` n'existe pas et qu'aucun Point de Départ n'est spécifié, la `branche` sera créée sans aucune donnée historique.
+- Si la `branche` existe et qu'aucun Point de Départ n'est spécifié, une nouvelle [Tête][head] de `branche` sera créée sans aucune donnée historique.
+- Si la `branche` n'existe pas et qu'un Point de Départ est spécifié, la `branche` sera créée en utilisant le Point de Départ.
+- Si la `branche` existe et qu'un Point de Départ est spécifié, une nouvelle [Tête][head] de `branche` sera créée en utilisant le Point de Départ.
+
+Si une nouvelle `branche` est créée avec un Point de Départ, alors toutes les données les plus récentes et éventuellement les Seuils du `start-point` au hachage spécifié sont copiés. Voir [l'option `--start-point-max-versions`][start point max version option] et [l'option `--start-point-clone-thresholds`][start point clone thresholds option] pour plus de détails.
+
+Par exemple, si `feature_branch` existe sans Point de Départ, alors utiliser `--branch feature_branch --start-point-reset` ferait :
+
+1. Supprimer l'ancienne [Tête][head] de `feature_branch`
+2. Créer une nouvelle Tête de `feature_branch` sans aucune donnée historique
+3. `bencher run` continuerait alors en utilisant la nouvelle Tête `feature_branch`
+
+[statistical continuous benchmarking]: /fr/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /fr/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[head]: /fr/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

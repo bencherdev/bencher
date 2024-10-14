@@ -1,0 +1,18 @@
+### `--start-point-max-versions <COUNT>`
+
+<br />
+
+Especifique o número máximo de versões históricas da ramificação a serem incluídas
+a partir do [Ponto de Início][start point] para a opção `branch`.
+Quaisquer versões além desse número serão omitidas.
+O padrão é `255` versões.
+Esta opção requer que [a opção `--start-point`][start point option] esteja definida.
+
+Por exemplo, se `feature_branch` existir com seu Ponto de Início sendo a Ramificação `main`
+e `main` tiver `300` versões,
+então usar `--branch feature_branch --start-point main --start-point-max-versions 100`
+incluiria apenas as `100` versões mais recentes de `main` em `feature_branch`.
+
+[start point]: /pt/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

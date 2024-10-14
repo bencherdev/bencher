@@ -1,0 +1,42 @@
+### `--start-point <BRANCH>`
+
+<br />
+
+使用指定的分支名称、标识或 UUID 作为[起始点][start point]，用于[`branch` 选项][branch option]。
+对于 GitHub，通常是[拉取请求的 `base` 分支][github base]，
+对于 GitLab，通常是[合并请求的 `target` 分支][gitlab target]。
+`--start-point` 的主要用例是[统计连续基准测试](/zh/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking)。
+
+- 如果指定的起始点是一个空字符串，则忽略此选项。
+- 如果 `branch` 不存在，将使用此起始点创建它。
+- 如果 `branch` 已存在且起始点相同，则忽略此选项。
+- 如果 `branch` 已存在且起始点不同，
+  将使用此更新的起始点创建一个新的 `branch` [Head][head]。
+- 如果 `branch` 不存在且起始点不存在，
+  则该 `branch` 将在没有任何历史数据的情况下被创建。
+- 如果 `branch` 已存在且起始点不存在，
+  则忽略此选项。
+
+如果使用起始点创建了一个新的 `branch`，
+则将从指定的起始点复制最近的数据和可选的阈值。
+有关详细信息，请参阅[`--start-point-max-versions` 选项][start point max version option]和[`--start-point-clone-thresholds` 选项][start point clone thresholds option]。
+
+例如，如果 `feature_branch` 尚不存在，但 `main` 存在并具有历史数据。
+那么使用 `--branch feature_branch --start-point main` 将会：
+1. 创建一个名为 `feature_branch` 的新分支
+2. 将最近的数据从 `main` 复制到 `feature_branch`
+3. `bencher run` 将使用 `feature_branch` 进行处理
+<br />
+
+> 🐰 注意：使用环境变量时，应该将其用双引号包裹（如 `--start-point "$MY_BRANCH_ENV_VAR"`），
+> 如果您希望在 `MY_BRANCH_ENV_VAR` 未定义时不出错地执行 `bencher run`。
+
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+
+[start point]: /zh/docs/explanation/benchmarking/#start-point
+[head]: /zh/docs/explanation/benchmarking/#head
+
+[branch option]: #--branch-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

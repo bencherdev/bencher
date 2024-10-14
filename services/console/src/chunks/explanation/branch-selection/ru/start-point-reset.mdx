@@ -1,0 +1,26 @@
+### `--start-point-reset`
+
+<br />
+
+Сброс указанной `ветки`. Когда установлена опция [`--start-point`][start point option], `ветка` будет сброшена до указанной начальной точки. Это полезно для предотвращения отклонений в данных [Статистического непрерывного тестирования производительности][statistical continuous benchmarking]. Основной случай использования для `--start-point-reset` без указания начальной точки — это [Относительное непрерывное тестирование производительности][relative continuous benchmarking].
+
+- Если `ветка` не существует и начальная точка не указана, `ветка` будет создана без каких-либо исторических данных.
+- Если `ветка` существует и начальная точка не указана, будет создана новая [Голова][head] `ветки` без каких-либо исторических данных.
+- Если `ветка` не существует и указана начальная точка, `ветка` будет создана с использованием начальной точки.
+- Если `ветка` существует и указана начальная точка, будет создана новая [Голова][head] `ветки` с использованием начальной точки.
+
+Если новая `ветка` создается с начальной точкой, то все самые последние данные и, при необходимости, Пороги из `начальной точки` на указанном хэше копируются. См. [опцию `--start-point-max-versions`][start point max version option] и [опцию `--start-point-clone-thresholds`][start point clone thresholds option] для получения более подробной информации.
+
+Например, если `feature_branch` существует без начальной точки, использование `--branch feature_branch --start-point-reset` приведет к следующим действиям:
+
+1. Удалит старую [Голову][head] `feature_branch`
+2. Создаст новую Голову `feature_branch` без каких-либо исторических данных
+3. `bencher run` затем продолжит, используя новую Голову `feature_branch`
+
+[statistical continuous benchmarking]: /ru/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /ru/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[head]: /ru/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

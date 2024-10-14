@@ -1,0 +1,11 @@
+### `--start-point-max-versions <COUNT>`
+
+<br />
+
+Verwenden Sie die angegebene maximale Anzahl an historischen Zweigversionen, die vom [Startpunkt][start point] für die `branch`-Option enthalten sein sollen. Alle Versionen, die über diese Anzahl hinausgehen, werden weggelassen. Die Standardeinstellung ist `255` Versionen. Diese Option erfordert, dass [die `--start-point`-Option][start point option] gesetzt ist.
+
+Zum Beispiel, wenn `feature_branch` existiert und der Startpunkt der `main`-Zweig ist und `main` `300` Versionen hat, würde die Verwendung von `--branch feature_branch --start-point main --start-point-max-versions 100` nur die neuesten `100` Versionen von `main` in `feature_branch` einschließen.
+
+[start point]: /de/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

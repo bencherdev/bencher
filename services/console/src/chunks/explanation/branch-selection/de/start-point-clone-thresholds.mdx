@@ -1,0 +1,19 @@
+### `--start-point-clone-thresholds`
+
+<br />
+
+Klonen Sie alle [Schwellenwerte][thresholds] aus dem [Startpunkt][start point] für die `branch`-Option.
+Dieses Flag erfordert, dass [die `--start-point`-Option][start point option] gesetzt ist.
+
+- Wenn ein Schwellenwert nicht existiert, wird er aus dem `start-point`-Schwellenwert erstellt.
+- Wenn ein Schwellenwert existiert und er identisch mit dem `start-point`-Schwellenwert ist, wird dieser Schwellenwert effektiv ignoriert.
+- Wenn ein Schwellenwert existiert und sein Modell vom `start-point`-Schwellenwert abweicht, wird das alte Modell durch das `start-point`-Schwellenwertmodell ersetzt.
+- Wenn ein Schwellenwert existiert und der `start-point`-Schwellenwert nicht existiert, wird das Schwellenwertmodell entfernt.
+
+Zum Beispiel, wenn `feature_branch` existiert mit seinem Startpunkt als dem `main` Branch und `main` einen Schwellenwert für das integrierte `localhost` Testbed und Maß `latency` hat,
+dann würde die Nutzung von `--branch feature_branch --start-point main --start-point-clone-thresholds` einen neuen Schwellenwert für `feature_branch` mit dem `localhost` Testbed und dem Maß `latency` erstellen.
+
+[thresholds]: /de/docs/explanation/thresholds/
+[start point]: /de/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

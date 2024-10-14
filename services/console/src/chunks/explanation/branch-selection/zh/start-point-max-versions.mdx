@@ -1,0 +1,11 @@
+### `--start-point-max-versions <COUNT>`
+
+<br />
+
+使用指定的历史分支版本最大数量，从[`起始点`][start point]中为`branch`选项包含。超出此数量的版本将被省略。默认值是`255`版本。此选项需要设置[`--start-point`选项][start point option]。
+
+例如，如果`feature_branch`的起始点为`main`分支，并且`main`有`300`个版本，那么使用`--branch feature_branch --start-point main --start-point-max-versions 100`只会在`feature_branch`中包含`main`的最近`100`个版本。
+
+[start point]: /zh/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

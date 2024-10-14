@@ -1,18 +1,19 @@
-A Branch é a referência (`git` ref, ou seja, nome da branch ou tag).
+Uma Branch é a referência `git` (ou seja, nome da branch ou tag).
 Ao usar o subcomando de CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
 selecione uma Branch com a opção `--branch` ou a variável de ambiente `BENCHER_BRANCH`.
 Por padrão, todos os projetos começam com uma Branch `main`, e
-`main` é usada por padrão se nenhuma das duas for especificada.
+`main` é usada por padrão se nenhuma das opções for especificada.
 
-Ao fazer [Benchmarking Contínuo][continuous benchmarking], ou seja, benchmarking no CI,
-você frequentemente desejará criar ou fazer rebase de uma `branch` em uma Branch já existente.
-Isso é chamado de [Ponto de Partida][start point] da Branch.
-Um Ponto de Partida é outra Branch em uma versão específica (e hash do `git`, se disponível).
+Ao fazer [Benchmarking Contínuo][continuous benchmarking], ou seja, benchmarking em CI,
+você frequentemente desejará criar ou rebasear uma `branch` em uma Branch já existente.
+Isso é chamado de Ponto de Início de Branch [Start Point][start point].
+Um Ponto de Início é outra Branch em uma versão específica (e hash `git`, se disponível).
 Ao usar o subcomando de CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
-selecione um Ponto de Partida com a opção `--branch-start-point`.
-Além disso, use a opção `--branch-start-point-hash` para especificar um hash específico do `git` para o Ponto de Partida.
-Todos os dados e [Limites][thresholds] são copiados a partir do Ponto de Partida.
-Para evitar desvios, use a flag `--branch-reset` para sempre resetar a Branch para o Ponto de Partida.
+selecione um Ponto de Início com a opção `--start-point`.
+Além disso, use a opção `--start-point-hash` para especificar um hash `git` específico para o Ponto de Início.
+A quantidade de dados copiada do Ponto de Início é controlada com a opção `--start-point-max-versions`.
+Da mesma forma, [Limiares][thresholds] podem ser copiados do Ponto de Início com o flag `--start-point-clone-thresholds`.
+Para evitar desvio, use o flag `--start-point-reset` para sempre redefinir a Branch para o Ponto de Início.
 
 [continuous benchmarking]: /pt/docs/explanation/continuous-benchmarking/
 [start point]: /pt/docs/explanation/benchmarking/#start-point

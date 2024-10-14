@@ -1,0 +1,17 @@
+### `--start-point-clone-thresholds`
+
+<br />
+
+克隆所有来自[起始点][start point]的[阈值][thresholds]用于`branch`选项。此标志需要设置[ `--start-point` 选项][start point option]。
+
+- 如果阈值不存在，则会从`start-point` 阈值创建。
+- 如果阈值存在且与`start-point` 阈值相同，则该阈值实际上被忽略。
+- 如果阈值存在且其模型与`start-point` 阈值不同，则旧模型将被`start-point` 阈值模型替换。
+- 如果阈值存在且`start-point` 阈值不存在，则将移除该阈值模型。
+
+例如，如果`feature_branch` 存在，其起始点为`main` 分支，并且`main` 有一个用于内置`localhost` 测试平台和`latency` 度量的阈值，那么使用`--branch feature_branch --start-point main --start-point-clone-thresholds` 将为`feature_branch` 创建一个新的`localhost` 测试平台和`latency` 度量的阈值。
+
+[thresholds]: /zh/docs/explanation/thresholds/
+[start point]: /zh/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

@@ -1,0 +1,37 @@
+### `--start-point-hash <HASH>`
+
+<br />
+
+Используйте указанный полный хэш Git в качестве [Начальной точки][start point] для опции `branch`.
+Эта опция требует установки [опции `--start-point`][start point option].
+
+- Если `branch` не существует, он будет создан из `start-point` с указанным хэшем.
+- Если `branch` существует и `start-point`, и указанный хэш одинаковы,
+  то эта опция игнорируется.
+- Если `branch` существует и либо `start-point`, либо указанный хэш отличаются,
+  будет создана новая [Head][head] ветка `branch` из `start-point` с указанным хэшем.
+- Если `branch` не существует и `start-point` не существует с указанным хэшем,
+  тогда `branch` будет создан без каких-либо исторических данных.
+- Если `branch` существует и `start-point` не существует с указанным хэшем,
+  то эта опция игнорируется.
+
+Если новая `branch` создается с Начальной точкой,
+тогда все последние данные и, при необходимости, Пороги из `start-point` с указанным хэшем копируются.
+См. [опцию `--start-point-max-versions`][start point max version option] и [опцию `--start-point-clone-thresholds`][start point clone thresholds option] для более подробной информации.
+
+Например, если `feature_branch` существует с его Начальной точкой в ветке `main`
+с хэшем `32aea434d751648726097ed3ac760b57107edd8b`
+тогда использование `--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
+выполнит:
+
+1. Удалит старую [Head][head] ветку `feature_branch`
+2. Создаст новую Head ветку `feature_branch`
+3. Скопирует все последние данные из `main` с хэшем `68b12758509ca5e2b1e3983525625e532eb5f562` в новую Head ветку `feature_branch`
+4. `bencher run` затем продолжит использование новой Head ветки `feature_branch`
+
+[start point]: /ru/docs/explanation/benchmarking/#start-point
+[head]: /ru/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

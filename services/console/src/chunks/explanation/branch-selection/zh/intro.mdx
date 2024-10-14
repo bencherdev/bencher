@@ -1,18 +1,15 @@
-一个分支是 `git` 引用（即分支名或标签）。
-当使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 命令行子命令时，
-可以使用 `--branch` 选项或 `BENCHER_BRANCH` 环境变量来选择一个分支。
-默认情况下所有项目都从 `main` 分支开始，
-如果没有指定，默认使用 `main`。
+一个分支是 `git` 引用（即分支名称或标签）。
+当使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令时，可以通过 `--branch` 选项或 `BENCHER_BRANCH` 环境变量来选择一个分支。
+默认情况下，所有项目都从 `main` 分支开始，如果两者都未指定，则默认使用 `main` 分支。
 
-当[持续基准测试][continuous benchmarking]（即在 CI 中进行基准测试）时，
-你通常需要在一个已经存在的分支上创建或重置一个 `branch`。
+当进行[持续基准测试][continuous benchmarking]时，即在 CI 中进行基准测试时，您通常会希望在已存在的分支上创建或变基一个 `branch`。
 这被称为分支[起始点][start point]。
-起始点是一个特定版本（如果有的话，还包括 `git` 哈希值）的另一个分支。
-当使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 命令行子命令时，
-可以使用 `--branch-start-point` 选项来选择一个起始点。
-此外，使用 `--branch-start-point-hash` 选项来指定起始点的特定 `git` 哈希值。
-所有的数据和[阈值][thresholds]都会从起始点复制过来。
-为了防止漂移，可以使用 `--branch-reset` 标志总是将分支重置为起始点。
+起始点是特定版本（如果有，也包括 `git` 哈希）的另一个分支。
+当使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令时，使用 `--start-point` 选项选择一个起始点。
+此外，使用 `--start-point-hash` 选项指定起始点的特定 `git` 哈希。
+从起始点复制的数据量可以通过 `--start-point-max-versions` 选项进行控制。
+同样，[阈值][thresholds]可以通过 `--start-point-clone-thresholds` 标志从起始点复制。
+为了防止偏移，可以使用 `--start-point-reset` 标志始终将分支重置为起始点。
 
 [continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
 [start point]: /zh/docs/explanation/benchmarking/#start-point

@@ -1,0 +1,19 @@
+### `--start-point-clone-thresholds`
+
+<br />
+
+Клонирует все [Пороги][thresholds] из [Точки старта][start point] для опции `branch`.
+Этот флаг требует установки [опции `--start-point`][start point option].
+
+- Если Порог не существует, он будет создан из Порога `start-point`.
+- Если Порог существует и он такой же, как Порог `start-point`, то этот Порог фактически игнорируется.
+- Если Порог существует и его модель отличается от модели Порога `start-point`, то старая модель будет заменена моделью Порога `start-point`.
+- Если Порог существует, а Порог `start-point` не существует, то модель Порога удаляется.
+
+Например, если существует `feature_branch` с Точкой старта, являющейся Веткой `main`, и `main` имеет Порог для встроенной `localhost` Тестовой среды и показателя `latency`,
+то использование `--branch feature_branch --start-point main --start-point-clone-thresholds` создаст новый Порог для `feature_branch` с Тестовой средой `localhost` и показателем `latency`.
+
+[thresholds]: /ru/docs/explanation/thresholds/
+[start point]: /ru/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

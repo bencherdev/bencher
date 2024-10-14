@@ -1,0 +1,35 @@
+### `--start-point-hash <HASH>`
+
+<br />
+
+Utiliza el hash completo de Git especificado como el [Punto de Inicio][start point] para la opción `branch`. Esta opción requiere que se establezca [la opción `--start-point`][start point option].
+
+- Si `branch` no existe, se creará desde `start-point` en el hash especificado.
+- Si `branch` existe y tanto `start-point` como el hash especificado son iguales,
+  entonces esta opción se ignora.
+- Si `branch` existe y ya sea el `start-point` o el hash especificado son diferentes,
+  se creará un nuevo [Head][head] del `branch` desde `start-point` en el hash especificado.
+- Si `branch` no existe y el `start-point` no existe en el hash especificado,
+  entonces el `branch` se creará sin ningún dato histórico.
+- Si `branch` existe y el `start-point` no existe en el hash especificado,
+  entonces esta opción se ignora.
+
+Si se crea un nuevo `branch` con un Punto de Inicio,
+entonces se copian todos los datos más recientes y opcionalmente los Umbrales desde el `start-point` en el hash especificado.
+Consulta [la opción `--start-point-max-versions`][start point max version option] y [la opción `--start-point-clone-thresholds`][start point clone thresholds option] para más detalles.
+
+Por ejemplo, si `feature_branch` existe con su Punto de Inicio siendo la Rama `main`
+en el hash `32aea434d751648726097ed3ac760b57107edd8b`
+entonces al usar `--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562` se:
+
+1. Eliminará el antiguo [Head][head] de `feature_branch`
+2. Creará un nuevo Head de `feature_branch`
+3. Copiará todos los datos más recientes desde `main` en el hash `68b12758509ca5e2b1e3983525625e532eb5f562` al nuevo Head de `feature_branch`
+4. `bencher run` procederá entonces usando el nuevo Head de `feature_branch`
+
+[start point]: /es/docs/explanation/benchmarking/#start-point
+[head]: /es/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

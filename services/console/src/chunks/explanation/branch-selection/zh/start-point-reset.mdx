@@ -1,0 +1,36 @@
+### `--start-point-reset`
+
+<br />
+
+重置指定的 `branch`。
+当设置了 [`--start-point`][start point option] 选项时，
+`branch` 将被重置到指定的起始点。
+这对于防止[统计连续基准测试][statistical continuous benchmarking]数据的偏差非常有用。
+在未指定起始点的情况下，`--start-point-reset` 的主要用例是[相对连续基准测试][relative continuous benchmarking]。
+
+- 如果 `branch` 不存在且未指定起始点，将在没有任何历史数据的情况下创建该 `branch`。
+- 如果 `branch` 存在且未指定起始点，
+  将在没有任何历史数据的情况下创建一个新的 `branch` [Head][head]。
+- 如果 `branch` 不存在且指定了起始点，
+  将使用起始点创建该 `branch`。
+- 如果 `branch` 存在且指定了起始点，
+  将使用起始点创建一个新的 `branch` [Head][head]。
+
+如果使用起始点创建新的 `branch`，
+则从指定哈希值的 `start-point` 复制所有最新数据以及可选的阈值。
+有关更多详细信息，请参阅[`--start-point-max-versions` 选项][start point max version option]和[`--start-point-clone-thresholds` 选项][start point clone thresholds option]。
+
+例如，如果存在 `feature_branch` 而没有起始点，
+那么使用 `--branch feature_branch --start-point-reset` 会：
+
+1. 移除旧的 `feature_branch` [Head][head]
+2. 创建一个没有历史数据的新 `feature_branch` Head
+3. `bencher run` 随后将使用新的 `feature_branch` Head 进行
+
+[statistical continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[relative continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[head]: /zh/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

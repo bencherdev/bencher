@@ -1,0 +1,42 @@
+### `--start-point <BRANCH>`
+
+<br />
+
+Use o nome do Branch especificado, slug ou UUID como o [Ponto de Partida][start point] para [a opção `branch`][branch option].
+No GitHub, isso geralmente é [o branch `base` para uma Pull Request][github base],
+e no GitLab, isso geralmente é [o branch `target` para uma Merge Request][gitlab target].
+O principal caso de uso para `--start-point` é [Benchmarking Contínuo Estatístico](/pt/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
+
+- Se o Ponto de Partida especificado for uma string vazia, essa opção será ignorada.
+- Se `branch` não existir, ele será criado usando este Ponto de Partida.
+- Se `branch` existir e o Ponto de Partida for o mesmo, essa opção será ignorada.
+- Se `branch` existir e o Ponto de Partida for diferente,
+  um novo `branch` [Head][head] será criado usando este Ponto de Partida atualizado.
+- Se `branch` não existir e o Ponto de Partida não existir,
+  então o `branch` será criado sem nenhum dado histórico.
+- Se `branch` existir e o Ponto de Partida não existir,
+  então essa opção será ignorada.
+
+Se um novo `branch` for criado com um Ponto de Partida,
+os dados mais recentes e, opcionalmente, os Limiares do Ponto de Partida especificado serão copiados.
+Veja [a opção `--start-point-max-versions`][start point max version option] e [a opção `--start-point-clone-thresholds`][start point clone thresholds option] para mais detalhes.
+
+Por exemplo, se `feature_branch` ainda não existir, mas `main` existir e tiver dados históricos.
+Então, usar `--branch feature_branch --start-point main` seria:
+1. Criar um novo Branch chamado `feature_branch`
+2. Copiar os dados mais recentes de `main` para `feature_branch`
+3. `bencher run` prosseguiria usando `feature_branch`
+<br />
+
+> 🐰 Nota: Sempre que utilizar variáveis de ambiente, elas devem estar entre aspas duplas (ou seja, `--start-point "$MY_BRANCH_ENV_VAR"`),
+> se desejar que `bencher run` não apresente erro quando `MY_BRANCH_ENV_VAR` não estiver definida.
+
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+
+[start point]: /pt/docs/explanation/benchmarking/#start-point
+[head]: /pt/docs/explanation/benchmarking/#head
+
+[branch option]: #--branch-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

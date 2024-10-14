@@ -1,0 +1,37 @@
+### `--start-point-hash <HASH>`
+
+<br />
+
+Utilisez le hash Git complet spécifié comme [Point de départ][start point] pour l'option `branch`.
+Cette option nécessite que [l'option `--start-point`][start point option] soit définie.
+
+- Si `branch` n'existe pas, il sera créé à partir de `start-point` au hash spécifié.
+- Si `branch` existe et que `start-point` et le hash spécifié sont identiques,
+  alors cette option est ignorée.
+- Si `branch` existe et que soit `start-point` soit le hash spécifié est différent,
+  une nouvelle [Tête][head] de `branch` sera créée à partir de `start-point` au hash spécifié.
+- Si `branch` n'existe pas et que `start-point` n'existe pas au hash spécifié,
+  alors le `branch` sera créé sans aucune donnée historique.
+- Si `branch` existe et que `start-point` n'existe pas au hash spécifié,
+  alors cette option est ignorée.
+
+Si un nouveau `branch` est créé avec un Point de Départ,
+alors toutes les données les plus récentes et éventuellement les Seuils du `start-point` au hash spécifié sont copiées.
+Voir [l'option `--start-point-max-versions`][start point max version option] et [l'option `--start-point-clone-thresholds`][start point clone thresholds option] pour plus de détails.
+
+Par exemple, si `feature_branch` existe avec son Point de Départ étant la Branche `main`
+au hash `32aea434d751648726097ed3ac760b57107edd8b`
+alors l'utilisation de `--branch feature_branch --start-point main --start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
+effectuerait :
+
+1. Supprimer l'ancienne [Tête][head] de `feature_branch`
+2. Créer une nouvelle Tête de `feature_branch`
+3. Copier toutes les données les plus récentes de `main` au hash `68b12758509ca5e2b1e3983525625e532eb5f562` vers la nouvelle Tête de `feature_branch`
+4. `bencher run` se déroulerait ensuite en utilisant la nouvelle Tête de `feature_branch`
+
+[start point]: /fr/docs/explanation/benchmarking/#start-point
+[head]: /fr/docs/explanation/benchmarking/#head
+
+[start point option]: #--branch-start-point-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

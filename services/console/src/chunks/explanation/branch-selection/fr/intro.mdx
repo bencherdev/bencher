@@ -1,18 +1,6 @@
-Une Branch est la référence `git` (c'est-à-dire le nom de la branche ou le tag).
-Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
-sélectionnez une Branch avec l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH`.
-Par défaut, tous les projets commencent avec une Branch `main`, et
-`main` est utilisée par défaut si elles ne sont pas spécifiées.
+Une branche est la référence `git` (c'est-à-dire le nom de branche ou le tag). Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>, sélectionnez une branche avec l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH`. Par défaut, tous les projets commencent avec une branche `main`, et `main` est utilisé par défaut si aucun n'est spécifié.
 
-Lors du [Benchmarking Continu][continuous benchmarking], c'est-à-dire du benchmarking en CI,
-vous souhaiterez souvent créer ou rebaser une `branche` sur une Branch déjà existante.
-Ceci est appelé un Point de Départ de Branch [Start Point][start point].
-Un Point de Départ est une autre Branch à une version spécifique (et un hash `git`, si disponible).
-Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
-sélectionnez un Point de Départ avec l'option `--branch-start-point`.
-De plus, utilisez l'option `--branch-start-point-hash` pour spécifier un hash `git` spécifique pour le Point de Départ.
-Toutes les données et les [Seuils][thresholds] sont copiés à partir du Point de Départ.
-Pour éviter la dérive, utilisez le drapeau `--branch-reset` pour toujours réinitialiser la Branch au Point de Départ.
+Lors du [benchmarking en continu][continuous benchmarking], c'est-à-dire le benchmarking en CI, vous voudrez souvent créer ou rebaser une `branche` sur une branche déjà existante. Cela s'appelle un [point de départ][start point] de branche. Un point de départ est une autre branche à une version spécifique (et un hash `git`, si disponible). Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>, sélectionnez un point de départ avec l'option `--start-point`. De plus, utilisez l'option `--start-point-hash` pour spécifier un hash `git` spécifique pour le point de départ. La quantité de données copiées depuis le point de départ est contrôlée avec l'option `--start-point-max-versions`. De même, les [seuils][thresholds] peuvent être copiés depuis le point de départ avec le flag `--start-point-clone-thresholds`. Pour éviter la dérive, utilisez le flag `--start-point-reset` pour toujours réinitialiser la branche au point de départ.
 
 [continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
 [start point]: /fr/docs/explanation/benchmarking/#start-point

@@ -1,0 +1,38 @@
+### `--start-point <BRANCH>`
+
+<br />
+
+지정된 브랜치 이름, 슬러그 또는 UUID를 [시작점][start point]으로 사용하여 [`branch` 옵션][branch option]을 설정하십시오. GitHub의 경우, 이는 보통 [풀 리퀘스트의 `base` 브랜치][github base]이며, GitLab의 경우, 보통 [머지 요청의 `target` 브랜치][gitlab target]입니다. `--start-point`의 주요 용도는 [통계적 지속 벤치마킹](/ko/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking)입니다.
+
+- 지정된 시작점이 빈 문자열인 경우, 이 옵션은 무시됩니다.
+- `branch`가 존재하지 않으면, 이 시작점을 사용하여 생성됩니다.
+- `branch`가 존재하고 시작점이 동일하면, 이 옵션은 무시됩니다.
+- `branch`가 존재하고 시작점이 다르면,
+  이 업데이트된 시작점을 사용하여 새로운 `branch` [Head][head]가 생성됩니다.
+- `branch`가 존재하지 않고 시작점도 존재하지 않으면,
+  `branch`는 어떠한 과거 데이터 없이 생성됩니다.
+- `branch`가 존재하고 시작점이 존재하지 않으면,
+  이 옵션은 무시됩니다.
+
+시작점으로 새로운 `branch`가 생성되면,
+지정된 시작점의 최신 데이터와 선택적으로 임계값이 복사됩니다.
+자세한 내용은 [`--start-point-max-versions` 옵션][start point max version option] 및 [`--start-point-clone-thresholds` 옵션][start point clone thresholds option]을 참조하십시오.
+
+예를 들어, `feature_branch`가 아직 존재하지 않지만 `main`이 존재하고 역사적 데이터를 가지고 있을 때,
+`--branch feature_branch --start-point main`을 사용하면:
+1. `feature_branch`라는 새로운 브랜치를 생성합니다.
+2. `main`에서 가장 최근의 데이터를 `feature_branch`로 복사합니다.
+3. `bencher run`은 `feature_branch`를 사용하여 진행됩니다.
+<br />
+
+> 🐰 참고: 환경 변수를 사용할 때는 항상 큰따옴표로 감싸야 합니다 (예: `--start-point "$MY_BRANCH_ENV_VAR"`). `MY_BRANCH_ENV_VAR`이 정의되지 않은 경우, `bencher run`에서 오류가 발생하지 않도록 할 수 있습니다.
+
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+
+[start point]: /ko/docs/explanation/benchmarking/#start-point
+[head]: /ko/docs/explanation/benchmarking/#head
+
+[branch option]: #--branch-branch
+[start point max version option]: #--start-point-max-versions-count
+[start point clone thresholds option]: #--start-point-clone-thresholds

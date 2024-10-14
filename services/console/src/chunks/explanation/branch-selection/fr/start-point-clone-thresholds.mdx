@@ -1,0 +1,19 @@
+### `--start-point-clone-thresholds`
+
+<br />
+
+Clone tous les [Seuils][thresholds] du [Point de Départ][start point] pour l'option `branche`.
+Ce drapeau nécessite que [l'option `--start-point`][start point option] soit définie.
+
+- Si un Seuil n'existe pas, il sera créé à partir du Seuil `point de départ`.
+- Si un Seuil existe et qu'il est identique au Seuil `point de départ`, alors ce Seuil est effectivement ignoré.
+- Si un Seuil existe et que son modèle est différent de celui du Seuil `point de départ`, alors l'ancien modèle sera remplacé par le modèle du Seuil `point de départ`.
+- Si un Seuil existe et que le Seuil `point de départ` n'existe pas, alors le modèle du Seuil est supprimé.
+
+Par exemple, si `feature_branch` existe avec son Point de Départ étant la Branche `main` et que `main` a un Seuil pour le Banc d'Essai intégré `localhost` et la Mesure de `latence`,
+alors utiliser `--branch feature_branch --start-point main --start-point-clone-thresholds` créerait un nouveau Seuil pour `feature_branch` avec le Banc d'Essai `localhost` et la Mesure de `latence`.
+
+[thresholds]: /fr/docs/explanation/thresholds/
+[start point]: /fr/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch

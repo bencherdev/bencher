@@ -1,0 +1,11 @@
+### `--start-point-max-versions <COUNT>`
+
+<br />
+
+지정된 최대 개수의 역사적 브랜치 버전을 `branch` 옵션의 [시작 지점][start point]부터 포함합니다. 이 수를 초과하는 버전은 제외됩니다. 기본값은 `255` 버전입니다. 이 옵션을 사용하려면 [`--start-point` 옵션][start point option]을 설정해야 합니다.
+
+예를 들어, `feature_branch`가 존재하고 그 시작 지점이 `main` 브랜치이며 `main`이 `300` 버전을 가지고 있을 경우, `--branch feature_branch --start-point main --start-point-max-versions 100`을 사용하면 `main`의 최신 `100`개 버전만 `feature_branch`에 포함됩니다.
+
+[start point]: /ko/docs/explanation/benchmarking/#start-point
+
+[start point option]: #--branch-start-point-branch
