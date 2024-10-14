@@ -1,0 +1,31 @@
+## `bencher mock`
+
+Подкоманда CLI `bencher mock` используется для генерации тестовых данных в формате Bencher Metric Format (BMF) в формате JSON.
+
+### `--count <COUNT>`
+Количество тестовых [Бенчмарков][benchmark] для генерации.
+
+[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
+
+### `--measure <MEASURE>`
+[Измерение][measure], которое будет использоваться для каждого [Бенчмарка][benchmark].
+Можно указать несколько Измерений, используя параметр `--measure` несколько раз.
+По умолчанию используется встроенное Измерение `latency`.
+
+[measure]: /ru/docs/explanation/benchmarking/#measure
+[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
+
+### `--pow <POW>`
+Степень 10, используемая для тестовых [Метрик][metric].
+По умолчанию значение — `1`.
+
+[metric]: /ru/docs/explanation/benchmarking/#metric
+
+### `--fail`
+Выполнение с ошибкой.
+
+### `--flaky`
+Случайные сбои во время выполнения.
+
+### `--help`
+Вывести сообщение помощи.

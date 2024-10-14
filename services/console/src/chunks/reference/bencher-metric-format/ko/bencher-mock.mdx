@@ -1,0 +1,31 @@
+## `bencher mock`
+
+`bencher mock` CLI 하위 명령어는 모의 Bencher Metric Format (BMF) JSON 데이터를 생성하는 데 사용됩니다.
+
+### `--count <COUNT>`
+생성할 모의 [벤치마크][benchmark]의 수입니다.
+
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+
+### `--measure <MEASURE>`
+각 [벤치마크][benchmark]에 사용할 [측정][measure]입니다.
+여러 측정을 지정하려면 `--measure` 옵션을 여러 번 사용하면 됩니다.
+기본값은 내장 `latency` 측정입니다.
+
+[measure]: /ko/docs/explanation/benchmarking/#measure
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+
+### `--pow <POW>`
+모의 [지표][metric]에 사용할 10의 거듭제곱입니다.
+기본값은 `1`입니다.
+
+[metric]: /ko/docs/explanation/benchmarking/#metric
+
+### `--fail`
+실행 중 실패합니다.
+
+### `--flaky`
+실행 중간에 간헐적으로 실패합니다.
+
+### `--help`
+도움말 메시지를 출력합니다.

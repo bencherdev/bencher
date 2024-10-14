@@ -1,0 +1,31 @@
+## `bencher mock`
+
+Der `bencher mock` CLI-Unterbefehl wird verwendet, um mock Bencher Metric Format (BMF) JSON-Daten zu generieren.
+
+### `--count <COUNT>`
+Die Anzahl der zu generierenden mock [Benchmarks][benchmark].
+
+[benchmark]: /de/docs/explanation/benchmarking/#benchmark
+
+### `--measure <MEASURE>`
+Das [Measure][measure], das für jedes [Benchmark][benchmark] verwendet werden soll.
+Mehrere Measures können angegeben werden, indem die Option `--measure` mehrfach verwendet wird.
+Der Standardwert ist das integrierte `latency` Measure.
+
+[measure]: /de/docs/explanation/benchmarking/#measure
+[benchmark]: /de/docs/explanation/benchmarking/#benchmark
+
+### `--pow <POW>`
+Die Zehnerpotenz, die für die mock [Metrics][metric] verwendet werden soll.
+Der Standardwert ist `1`.
+
+[metric]: /de/docs/explanation/benchmarking/#metric
+
+### `--fail`
+Fehlermeldung während der Ausführung.
+
+### `--flaky`
+Zeitweise Fehler während der Ausführung.
+
+### `--help`
+Zeigt die Hilfe an.

@@ -1,0 +1,28 @@
+## `bencher mock`
+
+`bencher mock` CLI 子命令用于生成模拟的 Bencher Metric Format (BMF) JSON 数据。
+
+### `--count <COUNT>`
+生成的模拟[基准测试][benchmark]的数量。
+
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+
+### `--measure <MEASURE>`
+用于每个[基准测试][benchmark]的[度量][measure]。可以多次使用 `--measure` 选项来指定多个度量。默认使用内置的 `latency` 度量。
+
+[measure]: /zh/docs/explanation/benchmarking/#measure
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+
+### `--pow <POW>`
+用于模拟[指标][metric]的10的幂。默认值是 `1`。
+
+[metric]: /zh/docs/explanation/benchmarking/#metric
+
+### `--fail`
+运行时失败。
+
+### `--flaky`
+运行时间歇性失败。
+
+### `--help`
+打印帮助信息。

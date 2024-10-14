@@ -1,0 +1,31 @@
+## `bencher mock`
+
+`bencher mock` CLI サブコマンドは、モックの Bencher Metric Format (BMF) JSON データを生成するために使用されます。
+
+### `--count <COUNT>`
+生成するモック[ベンチマーク][benchmark]の数。
+
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+
+### `--measure <MEASURE>`
+各[ベンチマーク][benchmark]に使用する[測定値][measure]。
+複数の測定値を指定するには、複数回 `--measure` オプションを使用します。
+デフォルトは組み込みの `latency` 測定値です。
+
+[measure]: /ja/docs/explanation/benchmarking/#measure
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+
+### `--pow <POW>`
+モック[メトリクス][metric]に使用する 10 のべき乗。
+デフォルトは `1` です。
+
+[metric]: /ja/docs/explanation/benchmarking/#metric
+
+### `--fail`
+実行中に失敗します。
+
+### `--flaky`
+実行中に断続的に失敗します。
+
+### `--help`
+ヘルプメッセージを印刷します。
