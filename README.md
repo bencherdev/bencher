@@ -70,7 +70,8 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
 - Reference
   - [REST API](https://bencher.dev/docs/api/)
   - [Architecture](https://bencher.dev/docs/reference/architecture/)
-  - [Server Config](https://bencher.dev/docs/reference/server-config/)
+  - [Console Server Config](https://bencher.dev/docs/reference/console-config/)
+  - [API Server Config](https://bencher.dev/docs/reference/server-config/)
   - [Bencher Metric Format](https://bencher.dev/docs/reference/bencher-metric-format/)
   - [Prior Art](https://bencher.dev/docs/reference/prior-art/)
   - [Roadmap](https://bencher.dev/docs/reference/roadmap/)
