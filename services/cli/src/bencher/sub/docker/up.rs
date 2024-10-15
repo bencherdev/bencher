@@ -24,8 +24,8 @@ pub struct Up {
     detach: bool,
     pull: CliUpPull,
     tag: String,
-    api_port: Option<u16>,
-    console_port: Option<u16>,
+    api_port: u16,
+    console_port: u16,
     api_env: Option<Vec<String>>,
     console_env: Option<Vec<String>>,
     api_volume: Option<Vec<String>>,
@@ -73,10 +73,10 @@ impl SubCmd for Up {
 
         cli_println!("🐰 Bencher Self-Hosted is up and running!");
         if let CliService::All | CliService::Console = self.service {
-            cli_println!("Web Console: {}", Container::Console.url(self.console_port));
+            cli_println!("Web Console: {}", Container::url(self.console_port));
         }
         if let CliService::All | CliService::Api = self.service {
-            cli_println!("API Server: {}", Container::Api.url(self.api_port));
+            cli_println!("API Server: {}", Container::url(self.api_port));
         }
         cli_println!("");
 
@@ -175,7 +175,7 @@ async fn start_container(
     docker: &Docker,
     container: Container,
     tag: &str,
-    port: Option<u16>,
+    port: u16,
     env: Option<Vec<String>>,
     volume: Option<Vec<String>>,
 ) -> Result<(), DockerError> {
@@ -190,7 +190,7 @@ async fn start_container(
         port_bindings: Some(literally::hmap! {
             tcp_port.clone() => Some(vec![PortBinding {
                 host_ip: Some("0.0.0.0".to_owned()),
-                host_port: Some(container.external_port(port).to_string()),
+                host_port: Some(port.to_string()),
             }]),
         }),
         publish_all_ports: Some(true),

@@ -13,48 +13,52 @@ pub struct CliUp {
     pub service: CliService,
 
     /// Detached mode: Run containers in the background.
-    /// Similar to the `--detach` option for `docker compose up`.
+    /// Similar to the `--detach` flag for `docker compose up`.
     #[clap(short, long)]
     pub detach: bool,
 
     /// Pull image before running.
     /// Similar to the `--pull` option for `docker compose up`.
-    #[clap(long, default_value = "always")]
+    #[clap(long, value_name = "WHEN", default_value = "always")]
     pub pull: CliUpPull,
 
     /// Specify the image tag.
     #[clap(long, default_value = CLI_VERSION_TAG.as_str())]
     pub tag: String,
 
-    /// Pass an environment variable to the API container.
+    /// Set a port number for the Console container.
     /// Similar to the `--expose` option for `docker run`.
-    #[clap(long)]
-    pub api_port: Option<u16>,
+    #[clap(long, value_name = "PORT", default_value = "3000")]
+    pub console_port: u16,
+
+    /// Set a port number for the API container.
+    /// Similar to the `--expose` option for `docker run`.
+    #[clap(long, value_name = "PORT", default_value = "61016")]
+    pub api_port: u16,
 
     /// Pass an environment variable to the Console container.
-    /// Similar to the `--expose` option for `docker run`.
-    #[clap(long)]
-    pub console_port: Option<u16>,
-
-    /// Pass an environment variable to the API container.
+    /// Expected format is `KEY=value`.
     /// Similar to the `--env` option for `docker run`.
-    #[clap(long, value_parser = check_env)]
-    pub api_env: Option<Vec<String>>,
-
-    /// Pass an environment variable to the Console container.
-    /// Similar to the `--env` option for `docker run`.
-    #[clap(long, value_parser = check_env)]
+    #[clap(long, value_name = "KEY_VALUE", value_parser = check_env)]
     pub console_env: Option<Vec<String>>,
 
-    /// Pass a mount volume to the API container.
-    /// Similar to the `--volume` option for `docker run`.
-    #[clap(long, value_parser = check_volume)]
-    pub api_volume: Option<Vec<String>>,
+    /// Pass an environment variable to the API container.
+    /// Expected format is `KEY=value`.
+    /// Similar to the `--env` option for `docker run`.
+    #[clap(long, value_name = "KEY_VALUE", value_parser = check_env)]
+    pub api_env: Option<Vec<String>>,
 
     /// Pass a mount volume to the Console container.
+    /// Expected format is `/host/path:/container/path`.
     /// Similar to the `--volume` option for `docker run`.
-    #[clap(long, value_parser = check_volume)]
+    #[clap(long, value_name = "HOST_CONTAINER", value_parser = check_volume)]
     pub console_volume: Option<Vec<String>>,
+
+    /// Pass a mount volume to the API container.
+    /// Expected format is `/host/path:/container/path`.
+    /// Similar to the `--volume` option for `docker run`.
+    #[clap(long, value_name = "HOST_CONTAINER", value_parser = check_volume)]
+    pub api_volume: Option<Vec<String>>,
 }
 
 #[derive(ValueEnum, Debug, Clone, Copy)]

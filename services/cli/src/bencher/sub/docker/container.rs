@@ -38,14 +38,6 @@ impl Container {
         format!("{image}:{tag}")
     }
 
-    pub fn external_port(self, port: Option<u16>) -> u16 {
-        if let Some(port) = port {
-            port
-        } else {
-            self.internal_port()
-        }
-    }
-
     pub fn internal_port(self) -> u16 {
         match self {
             Self::Api => BENCHER_API_PORT,
@@ -53,7 +45,7 @@ impl Container {
         }
     }
 
-    pub fn url(self, port: Option<u16>) -> String {
-        format!("http://localhost:{}", self.external_port(port))
+    pub fn url(port: u16) -> String {
+        format!("http://localhost:{port}")
     }
 }

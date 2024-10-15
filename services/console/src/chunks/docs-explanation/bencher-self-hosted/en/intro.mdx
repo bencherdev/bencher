@@ -4,18 +4,21 @@ and as a self-hostable set of Docker images:
 
 - Bencher Console Server
   - [Configuration Reference](/docs/reference/console-config/)
-  - [Download](/download/#console-server)
+  - [Download Options](/download/#console-server)
 - Bencher API Server
   - [Configuration Reference](/docs/reference/server-config/)
-  - [Download](/download/#api-server)
+  - [Download Options](/download/#api-server)
 
 ## Host URL
 
-Whenever you are using a Bencher Self-Hosted instance,
-you will need to set [the `--host` option][host option] for most `bencher` CLI subcommands.
+When using Bencher Self-Hosted,
+you will need to set [the `--host` option][host option]
+to the URL of your Bencher API server
+for most `bencher` CLI subcommands.
 
-For example, if you were using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
-then you might write:
+For example, if you were using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+with a Bencher API server at `https://bencher.example.com`
+then you could write something like this:
 
 ```sh
 bencher run \
@@ -34,15 +37,21 @@ bencher mock
 The easiest way to deploy Bencher Self-Hosted is using a triptych of `bencher` CLI subcommands:
 
 - `bencher up`: Bring up the Bencher Self-Hosted containers.
-  This is similar to running `docker compose up`.
+  This is similar to running [`docker compose up`][docker compose up].
 - `bencher logs`: Show the logs for the Bencher Self-Hosted containers,
-  if `bencher up` was run with the `--detach` flag.
-  This is similar to running `docker compose logs`.
+  if `bencher up` was run with [the `--detach` flag][detach flag].
+  This is similar to running [`docker compose logs`][docker compose logs].
 - `bencher down`: Bring down the Bencher Self-Hosted containers,
-  if `bencher up` was run the the `--detach` flag.
-  This is similar to running `docker compose down`.
+  if `bencher up` was run with [the `--detach` flag][detach flag].
+  This is similar to running [`docker compose down`][docker compose down].
 
-Alternatively, you could just use `docker compose` orchestrate the containers.
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[detach flag]: #detatch
+
+Alternatively, you could just use `docker compose` to orchestrate the containers.
 This is an example `docker-compose.yml` file:
 
 ```yml
@@ -89,13 +98,118 @@ TODO
 
 ## `bencher up`
 
+Bring up the Bencher Self-Hosted containers.
+This is similar to running [`docker compose up`][docker compose up].
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+
+```
+bencher up [OPTIONS] [SERVICE]
+```
+
+### Service
+
+Select the containers to run.
+The possible choices are: `all`, `api`, and `console`.
+By default `all` is chosen.
+Similar to the `service` argument for [`docker compose up`][docker compose up].
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+
+### Options
+
+### `--detach`
+
+Run in detached mode.
+The containers will be run in the background.
+Similar to the `--detach` flag for [`docker compose up`][docker compose up].
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+
+### `--pull <WHEN>`
+
+Pull images before running.
+The possible choices are: `always`, `missing`, and `never`.
+By default `always` is chosen.
+Similar to the `--pull` option for [`docker compose up`][docker compose up].
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+
+import { BENCHER_VERSION } from "../../../../util/ext";
+
+### `--tag <TAG>`
+
+Specify the image tag for the containers.
+By default the most recent release tag (<code>{`v${BENCHER_VERSION}`}</code>) is chosen.
+
+### `--console-port <PORT>`
+
+Set a port number for the Console server container.
+By default, port `3000` is used.
+Similar to the port only form of [the `--expose` option][docker run expose] for `docker run`.
+
+[docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish
+
+### `--api-port <PORT>`
+
+Pass an environment variable to the API server container.
+By default, port `61016` is used.
+Similar to the port only form of [the `--expose` option][docker run expose] for `docker run`.
+
+[docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish
+
+### `--console-env <KEY_VALUE>`
+
+Pass an environment variable to the Console server container.
+The expected format is `KEY=value`.
+This can be useful when working with [the Console Server configuration][console config].
+Similar to [the `--env` option][docker run env] for `docker run`.
+
+[docker run env]: https://docs.docker.com/reference/cli/docker/container/run/#env
+
+[console config]: /docs/reference/console-config/
+
+### `--api-env <KEY_VALUE>`
+
+Pass an environment variable to the API server container.
+The expected format is `KEY=value`.
+This can be useful when working with [the API Server configuration][api config].
+Similar to [the `--env` option][docker run env] for `docker run`.
+
+[docker run env]: https://docs.docker.com/reference/cli/docker/container/run/#env
+
+[api config]: /docs/reference/server-config/
+
+### `--console-volume <HOST_CONTAINER>`
+
+Pass a mount volume to the Console server container.
+The expected format is `/host/path:/container/path`.
+Similar to [the `--volume` option][docker run volume] for `docker run`.
+
+[docker run volume]: https://docs.docker.com/reference/cli/docker/container/run/#volume
+
+### `--api-volume <HOST_CONTAINER>`
+
+Pass a mount volume to the API server container.
+The expected format is `/host/path:/container/path`.
+This can be useful when working with [the API Server configuration][api config].
+Similar to [the `--volume` option][docker run volume] for `docker run`.
+
+[docker run volume]: https://docs.docker.com/reference/cli/docker/container/run/#volume
+
+[api config]: /docs/reference/server-config/
+
 <hr />
 
 ## `bencher logs`
 
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+
 <hr />
 
 ## `bencher down`
+
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
 
 [github bencher]: https://github.com/bencherdev/bencher
 [bencher cloud]: https://bencher.dev
