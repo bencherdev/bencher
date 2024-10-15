@@ -29,7 +29,7 @@ pub struct CliTokenList {
     pub name: Option<ResourceName>,
 
     /// Token search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]

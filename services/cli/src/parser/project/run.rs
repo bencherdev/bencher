@@ -33,16 +33,16 @@ pub struct CliRun {
     pub average: Option<CliRunAverage>,
 
     /// Number of run iterations
-    #[clap(long, default_value = "1")]
+    #[clap(long, value_name = "COUNT", default_value = "1")]
     pub iter: usize,
 
-    /// Fold multiple results into a single result
-    #[clap(value_enum, long, requires = "iter")]
+    /// Fold multiple results into a single result using an aggregate function
+    #[clap(value_enum, long, requires = "iter", value_name = "AGGREGATE_FUNCTION")]
     pub fold: Option<CliRunFold>,
 
     /// Backdate the report (seconds since epoch)
     /// NOTE: This will NOT effect the ordering of past reports
-    #[clap(long)]
+    #[clap(long, value_name = "SECONDS")]
     pub backdate: Option<DateTime>,
 
     /// Allow benchmark test failure

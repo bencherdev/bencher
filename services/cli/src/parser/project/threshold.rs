@@ -107,23 +107,23 @@ pub struct CliModel {
     pub test: CliModelTest,
 
     /// Min sample size
-    #[clap(long)]
+    #[clap(long, value_name = "SAMPLE_SIZE")]
     pub min_sample_size: Option<SampleSize>,
 
     /// Max sample size
-    #[clap(long)]
+    #[clap(long, value_name = "SAMPLE_SIZE")]
     pub max_sample_size: Option<SampleSize>,
 
     /// Window size (seconds)
-    #[clap(long)]
+    #[clap(long, value_name = "SECONDS")]
     pub window: Option<Window>,
 
     /// Lower boundary
-    #[clap(long)]
+    #[clap(long, value_name = "BOUNDARY")]
     pub lower_boundary: Option<Boundary>,
 
     /// Upper boundary
-    #[clap(long)]
+    #[clap(long, value_name = "BOUNDARY")]
     pub upper_boundary: Option<Boundary>,
 }
 
@@ -193,23 +193,23 @@ pub struct CliUpdateModel {
     pub test: Option<CliModelTest>,
 
     /// Min sample size
-    #[clap(long, requires = "test")]
+    #[clap(long, requires = "test", value_name = "SAMPLE_SIZE")]
     pub min_sample_size: Option<SampleSize>,
 
     /// Max sample size
-    #[clap(long, requires = "test")]
+    #[clap(long, requires = "test", value_name = "SAMPLE_SIZE")]
     pub max_sample_size: Option<SampleSize>,
 
     /// Window size (seconds)
-    #[clap(long, requires = "test")]
+    #[clap(long, requires = "test", value_name = "SECONDS")]
     pub window: Option<Window>,
 
     /// Lower boundary
-    #[clap(long, requires = "test")]
+    #[clap(long, requires = "test", value_name = "BOUNDARY")]
     pub lower_boundary: Option<Boundary>,
 
     /// Upper boundary
-    #[clap(long, requires = "test")]
+    #[clap(long, requires = "test", value_name = "BOUNDARY")]
     pub upper_boundary: Option<Boundary>,
 
     /// Remove the threshold model

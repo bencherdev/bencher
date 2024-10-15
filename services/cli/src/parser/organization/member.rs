@@ -31,7 +31,7 @@ pub struct CliMemberList {
     pub name: Option<UserName>,
 
     /// Member search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]

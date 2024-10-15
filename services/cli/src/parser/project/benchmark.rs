@@ -32,7 +32,7 @@ pub struct CliBenchmarkList {
     pub name: Option<BenchmarkName>,
 
     /// Benchmark search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]

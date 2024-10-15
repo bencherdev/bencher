@@ -37,11 +37,11 @@ pub struct CliReportList {
     pub testbed: Option<NameId>,
 
     /// Start time (seconds since epoch)
-    #[clap(long)]
+    #[clap(long, value_name = "SECONDS")]
     pub start_time: Option<DateTime>,
 
     /// End time (seconds since epoch)
-    #[clap(long)]
+    #[clap(long, value_name = "SECONDS")]
     pub end_time: Option<DateTime>,
 
     #[clap(flatten)]

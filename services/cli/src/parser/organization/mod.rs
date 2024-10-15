@@ -45,7 +45,7 @@ pub struct CliOrganizationList {
     pub name: Option<ResourceName>,
 
     /// Organization search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]

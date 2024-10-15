@@ -35,7 +35,7 @@ pub struct CliPlotList {
     pub title: Option<ResourceName>,
 
     /// Plot search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]
@@ -92,27 +92,27 @@ pub struct CliPlotCreate {
 
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
-    #[clap(long)]
+    #[clap(long, value_name = "SECONDS")]
     pub window: Window,
 
     /// The branches to include in the plot.
     /// At least one branch must be specified.
-    #[clap(long, required = true)]
+    #[clap(long, required = true, value_name = "BRANCH")]
     pub branches: Vec<BranchUuid>,
 
     /// The testbeds to include in the plot.
     /// At least one testbed must be specified.
-    #[clap(long, required = true)]
+    #[clap(long, required = true, value_name = "TESTBED")]
     pub testbeds: Vec<TestbedUuid>,
 
     /// The benchmarks to include in the plot.
     /// At least one benchmark must be specified.
-    #[clap(long, required = true)]
+    #[clap(long, required = true, value_name = "BENCHMARK")]
     pub benchmarks: Vec<BenchmarkUuid>,
 
     /// The measures to include in the plot.
     /// At least one measure must be specified.
-    #[clap(long, required = true)]
+    #[clap(long, required = true, value_name = "MEASURE")]
     pub measures: Vec<MeasureUuid>,
 
     #[clap(flatten)]
@@ -162,7 +162,7 @@ pub struct CliPlotUpdate {
 
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
-    #[clap(long)]
+    #[clap(long, value_name = "SECONDS")]
     pub window: Option<Window>,
 
     #[clap(flatten)]

@@ -32,7 +32,7 @@ pub struct CliMeasureList {
     pub name: Option<ResourceName>,
 
     /// Measure search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]

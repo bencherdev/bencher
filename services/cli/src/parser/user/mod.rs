@@ -25,7 +25,7 @@ pub struct CliUserList {
     pub name: Option<UserName>,
 
     /// User search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]

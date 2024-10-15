@@ -48,7 +48,7 @@ pub struct CliProjectList {
     pub name: Option<ResourceName>,
 
     /// Project search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]

@@ -32,7 +32,7 @@ pub struct CliTestbedList {
     pub name: Option<ResourceName>,
 
     /// Testbed search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]

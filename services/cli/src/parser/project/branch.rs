@@ -32,7 +32,7 @@ pub struct CliBranchList {
     pub name: Option<BranchName>,
 
     /// Branch search string
-    #[clap(long)]
+    #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
     #[clap(flatten)]
@@ -78,15 +78,20 @@ pub struct CliBranchCreate {
 pub struct CliStartPointCreate {
     /// Branch name, slug, or UUID to use as the new branch start point
     /// https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
-    #[clap(long)]
+    #[clap(long, value_name = "BRANCH")]
     pub start_point_branch: Option<NameId>,
 
     /// Branch `git` hash to use as the new branch start point
-    #[clap(long, requires = "start_point_branch")]
+    #[clap(long, requires = "start_point_branch", value_name = "HASH")]
     pub start_point_hash: Option<GitHash>,
 
     /// The maximum number of historical branch versions to include.
-    #[clap(long, requires = "start_point_branch", default_value = "255")]
+    #[clap(
+        long,
+        requires = "start_point_branch",
+        value_name = "COUNT",
+        default_value = "255"
+    )]
     pub start_point_max_versions: u32,
 
     /// Clone thresholds from the start point branch
@@ -137,17 +142,22 @@ pub struct CliBranchUpdate {
 pub struct CliStartPointUpdate {
     /// Use the specified branch name, slug, or UUID as the start point for `branch`.
     /// If `branch` already exists and the start point is different, a new branch will be created.
-    #[clap(long)]
+    #[clap(long, value_name = "BRANCH")]
     pub start_point_branch: Option<NameId>,
 
     /// Use the specified full `git` hash as the start point for `branch` (requires: `--start-point-branch`).
     /// If `branch` already exists and the start point hash is different, a new branch will be created.
-    #[clap(long, requires = "start_point_branch")]
+    #[clap(long, requires = "start_point_branch", value_name = "HASH")]
     pub start_point_hash: Option<GitHash>,
 
     /// The maximum number of historical branch versions to include (requires: `--start-point-branch`).
     /// Versions beyond this number will be omitted.
-    #[clap(long, requires = "start_point_branch", default_value = "255")]
+    #[clap(
+        long,
+        requires = "start_point_branch",
+        value_name = "COUNT",
+        default_value = "255"
+    )]
     pub start_point_max_versions: u32,
 
     /// Clone all thresholds if a new branch is created from the start point (requires: `--start-point-branch`).

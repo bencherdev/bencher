@@ -116,7 +116,7 @@ pub enum CliSub {
 #[derive(Args, Debug)]
 pub struct CliBackend {
     /// Backend host URL
-    #[clap(long, env = "BENCHER_HOST", default_value = BENCHER_API_URL_STR)]
+    #[clap(long, value_name = "URL", env = "BENCHER_HOST", default_value = BENCHER_API_URL_STR)]
     pub host: Url,
 
     /// User API token
@@ -124,11 +124,11 @@ pub struct CliBackend {
     pub token: Option<Jwt>,
 
     /// Request attempt(s)
-    #[clap(long, default_value = "10")]
+    #[clap(long, value_name = "COUNT", default_value = "10")]
     pub attempts: usize,
 
     /// Initial seconds to wait between attempts (exponential backoff)
-    #[clap(long, default_value = "1")]
+    #[clap(long, value_name = "SECONDS", default_value = "1")]
     pub retry_after: u64,
 
     /// Strictly parse JSON responses
@@ -142,7 +142,7 @@ where
     T: ValueEnum + Clone + Send + Sync + 'static,
 {
     /// What to sort results by
-    #[clap(long)]
+    #[clap(long, value_name = "BY")]
     pub sort: Option<T>,
 
     /// The direction to sort the results by
@@ -150,11 +150,11 @@ where
     pub direction: Option<CliDirection>,
 
     /// The number of results per page (default 8) (max 255)
-    #[clap(long)]
+    #[clap(long, value_name = "COUNT")]
     pub per_page: Option<u8>,
 
     /// Page number of the results to fetch
-    #[clap(long)]
+    #[clap(long, value_name = "NUMBER")]
     pub page: Option<u32>,
 }
 
