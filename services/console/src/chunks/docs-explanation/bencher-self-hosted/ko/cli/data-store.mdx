@@ -1,0 +1,11 @@
+### `--data-store <DATA_STORE>`
+
+데이터베이스 백업을 이 데이터 스토어에 저장합니다.
+이 작업은 두 번째로 실행됩니다.
+
+지원되는 데이터 스토어:
+- `aws_s3`: AWS S3로 백업
+
+Bencher 자체 호스팅 API 서버의 데이터 스토어를 설정하려면 API 서버 구성의 [`database.data_store` 섹션][database data store]을 사용하세요.
+
+[database data store]: /ko/docs/reference/server-config/#database

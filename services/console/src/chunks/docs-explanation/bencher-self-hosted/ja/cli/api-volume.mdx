@@ -1,0 +1,10 @@
+## `--api-volume <HOST_CONTAINER>`
+
+APIサーバーコンテナにマウントボリュームを渡します。
+期待される形式は `/host/path:/container/path` です。
+これは[APIサーバーの設定][api config]を扱う際に便利です。
+`docker run` の[ `--volume` オプション][docker run volume]に似ています。
+
+[docker run volume]: https://docs.docker.com/reference/cli/docker/container/run/#volume
+
+[api config]: /ja/docs/reference/server-config/

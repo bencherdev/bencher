@@ -1,0 +1,10 @@
+## `--api-volume <HOST_CONTAINER>`
+
+Pass a mount volume to the API server container.
+The expected format is `/host/path:/container/path`.
+This can be useful when working with [the API Server configuration][api config].
+Similar to [the `--volume` option][docker run volume] for `docker run`.
+
+[docker run volume]: https://docs.docker.com/reference/cli/docker/container/run/#volume
+
+[api config]: /docs/reference/server-config/

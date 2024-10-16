@@ -1,0 +1,17 @@
+## ディザスタリカバリ
+
+バックアップ間でのデータ損失を防ぐために、Bencherは組み込みのディザスタリカバリソリューションを提供します。
+この機能にはアクティブな[Bencher Plus][pricing]ライセンスが必要です。
+
+サポートされているレプリケーションスキーム：
+
+- `file`: ローカルファイルパスへレプリケーション
+- `sftp`: SFTP経由でレプリケーション
+- `s3`: S3互換の任意のブロブストレージへレプリケーション
+- `abs`: Azure Blob Storageへレプリケーション
+- `gcs`: Google Cloud Storageへレプリケーション
+
+Bencher Self-Hosted APIサーバー用のディザスタリカバリを設定するには、APIサーバー設定の[`plus.disaster_recovery`セクション][plus disaster recovery]を使用してください。
+
+[pricing]: /pricing/
+[plus disaster recovery]: /ja/docs/reference/server-config/#plusdisaster_recovery

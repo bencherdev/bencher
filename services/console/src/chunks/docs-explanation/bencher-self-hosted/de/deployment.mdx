@@ -1,0 +1,42 @@
+import DockerCompose from "../docker-compose.mdx";
+import BencherUp from "./bencher-up.mdx";
+import BencherLogs from "./bencher-logs.mdx";
+import BencherDown from "./bencher-down.mdx";
+
+## Bereitstellung
+
+Der einfachste Weg, Bencher Self-Hosted bereitzustellen, ist die Verwendung eines Triptychons von `bencher` CLI-Subkommandos:
+
+- [`bencher up`][bencher up]: Starten Sie die Bencher Self-Hosted Container.
+  Dies ist ähnlich wie bei der Ausführung von [`docker compose up`][docker compose up].
+- [`bencher logs`][bencher logs]: Anzeigen der Ausgabe der Bencher Self-Hosted Container,
+  falls `bencher up` mit [dem `--detach`-Flag][detach flag] ausgeführt wurde.
+  Dies ist ähnlich wie bei der Ausführung von [`docker compose logs`][docker compose logs].
+- [`bencher down`][bencher down]: Stoppen und Entfernen der Bencher Self-Hosted Container,
+  falls `bencher up` mit [dem `--detach`-Flag][detach flag] ausgeführt wurde.
+  Dies ist ähnlich wie bei der Ausführung von [`docker compose down`][docker compose down].
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[bencher up]: #bencher-up
+[bencher logs]: #bencher-logs
+[bencher down]: #bencher-down
+[detach flag]: #--detach
+
+<div class="box">
+  <BencherUp />
+</div>
+
+<div class="box">
+  <BencherLogs />
+</div>
+
+<div class="box">
+  <BencherDown />
+</div>
+
+Alternativ können Sie einfach `docker compose` verwenden, um die Container zu orchestrieren. Dies ist eine Beispiel-`docker-compose.yml`-Datei:
+
+<DockerCompose />

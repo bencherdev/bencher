@@ -1,0 +1,16 @@
+## 재해 복구
+
+백업 사이의 데이터 손실을 방지하기 위해 Bencher는 내장된 재해 복구 솔루션을 제공합니다. 이 기능은 활성화된 [Bencher Plus][pricing] 라이선스가 필요합니다.
+
+지원되는 복제 스키마:
+
+- `file`: 로컬 파일 경로로 복제
+- `sftp`: SFTP를 통한 복제
+- `s3`: S3 호환 블롭 스토리지로 복제
+- `abs`: Azure Blob Storage로 복제
+- `gcs`: Google Cloud Storage로 복제
+
+Bencher 자체 호스팅 API 서버의 재해 복구를 설정하려면 API 서버 구성의 [ `plus.disaster_recovery` 섹션][plus disaster recovery]을 사용하세요.
+
+[pricing]: /pricing/
+[plus disaster recovery]: /ko/docs/reference/server-config/#plusdisaster_recovery

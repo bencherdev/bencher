@@ -1,0 +1,10 @@
+## `--api-volume <HOST_CONTAINER>`
+
+Передайте том для монтирования в контейнер сервера API.
+Ожидаемый формат: `/host/path:/container/path`.
+Это может быть полезно при работе с [конфигурацией сервера API][api config].
+Аналогично [опции `--volume`][docker run volume] для `docker run`.
+
+[docker run volume]: https://docs.docker.com/reference/cli/docker/container/run/#volume
+
+[api config]: /ru/docs/reference/server-config/

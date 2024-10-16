@@ -1,0 +1,43 @@
+import DockerCompose from "../docker-compose.mdx";
+import BencherUp from "./bencher-up.mdx";
+import BencherLogs from "./bencher-logs.mdx";
+import BencherDown from "./bencher-down.mdx";
+
+## 部署
+
+部署 Bencher 自托管的最简单方法是使用一系列 `bencher` CLI 子命令：
+
+- [`bencher up`][bencher up]：启动 Bencher 自托管容器。
+  这类似于运行 [`docker compose up`][docker compose up]。
+- [`bencher logs`][bencher logs]：查看 Bencher 自托管容器的输出，
+  如果 `bencher up` 是以 [`--detach` 标志][detach flag]运行。
+  这类似于运行 [`docker compose logs`][docker compose logs]。
+- [`bencher down`][bencher down]：停止并移除 Bencher 自托管容器，
+  如果 `bencher up` 是以 [`--detach` 标志][detach flag]运行。
+  这类似于运行 [`docker compose down`][docker compose down]。
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[bencher up]: #bencher-up
+[bencher logs]: #bencher-logs
+[bencher down]: #bencher-down
+[detach flag]: #--detach
+
+<div class="box">
+  <BencherUp />
+</div>
+
+<div class="box">
+  <BencherLogs />
+</div>
+
+<div class="box">
+  <BencherDown />
+</div>
+
+或者，您也可以仅使用 `docker compose` 来编排容器。
+这是一个 `docker-compose.yml` 文件的示例：
+
+<DockerCompose />

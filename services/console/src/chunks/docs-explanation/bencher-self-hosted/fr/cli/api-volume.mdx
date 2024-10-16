@@ -1,0 +1,10 @@
+## `--api-volume <HOST_CONTAINER>`
+
+Passez un volume de montage au conteneur du serveur API.
+Le format attendu est `/host/path:/container/path`.
+Cela peut être utile lors de l'utilisation de [la configuration du serveur API][api config].
+Similaire à [l'option `--volume`][docker run volume] pour `docker run`.
+
+[docker run volume]: https://docs.docker.com/reference/cli/docker/container/run/#volume
+
+[api config]: /fr/docs/reference/server-config/

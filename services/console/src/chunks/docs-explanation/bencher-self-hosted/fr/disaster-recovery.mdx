@@ -1,0 +1,16 @@
+## Récupération après sinistre
+
+Afin de prévenir la perte de données entre les sauvegardes, Bencher propose une solution intégrée de récupération après sinistre. Cette fonctionnalité nécessite une licence [Bencher Plus][pricing] active.
+
+Schémas de réplication pris en charge :
+
+- `file`: Répliquer vers un chemin de fichier local
+- `sftp`: Répliquer via SFTP
+- `s3`: Répliquer vers tout stockage d'objets compatible S3
+- `abs`: Répliquer vers Azure Blob Storage
+- `gcs`: Répliquer vers Google Cloud Storage
+
+Utilisez la section [`plus.disaster_recovery`][plus disaster recovery] de la configuration du serveur API pour configurer la récupération après sinistre de votre serveur API Bencher Self-Hosted.
+
+[pricing]: /pricing/
+[plus disaster recovery]: /fr/docs/reference/server-config/#plusdisaster_recovery

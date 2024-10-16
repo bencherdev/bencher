@@ -1,0 +1,19 @@
+## Recuperação de Desastres
+
+Para evitar a perda de dados entre os backups,
+o Bencher oferece uma solução de recuperação de desastres integrada.
+Esta funcionalidade requer uma licença ativa do [Bencher Plus][pricing].
+
+Esquemas de replicação suportados:
+
+- `file`: Replicar para um caminho de arquivo local
+- `sftp`: Replicar via SFTP
+- `s3`: Replicar para qualquer armazenamento de blob compatível com S3
+- `abs`: Replicar para o Azure Blob Storage
+- `gcs`: Replicar para o Google Cloud Storage
+
+Use a seção [`plus.disaster_recovery`][plus disaster recovery] da configuração do servidor API
+para configurar a recuperação de desastres para o seu servidor API Bencher Self-Hosted.
+
+[pricing]: /pricing/
+[plus disaster recovery]: /pt/docs/reference/server-config/#plusdisaster_recovery

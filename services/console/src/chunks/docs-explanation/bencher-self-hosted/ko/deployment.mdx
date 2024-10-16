@@ -1,0 +1,43 @@
+import DockerCompose from "../docker-compose.mdx";
+import BencherUp from "./bencher-up.mdx";
+import BencherLogs from "./bencher-logs.mdx";
+import BencherDown from "./bencher-down.mdx";
+
+## 배포
+
+Bencher Self-Hosted를 배포하는 가장 쉬운 방법은 `bencher` CLI 하위 명령어의 삼중체를 사용하는 것입니다:
+
+- [`bencher up`][bencher up]: Bencher Self-Hosted 컨테이너를 시작합니다.
+  이는 [`docker compose up`][docker compose up]을 실행하는 것과 유사합니다.
+- [`bencher logs`][bencher logs]: Bencher Self-Hosted 컨테이너의 출력을 봅니다,
+  만약 `bencher up`이 [the `--detach` flag][detach flag]와 함께 실행되었다면.
+  이는 [`docker compose logs`][docker compose logs]를 실행하는 것과 유사합니다.
+- [`bencher down`][bencher down]: Bencher Self-Hosted 컨테이너를 중지하고 제거합니다,
+  만약 `bencher up`이 [the `--detach` flag][detach flag]와 함께 실행되었다면.
+  이는 [`docker compose down`][docker compose down]을 실행하는 것과 유사합니다.
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[bencher up]: #bencher-up
+[bencher logs]: #bencher-logs
+[bencher down]: #bencher-down
+[detach flag]: #--detach
+
+<div class="box">
+  <BencherUp />
+</div>
+
+<div class="box">
+  <BencherLogs />
+</div>
+
+<div class="box">
+  <BencherDown />
+</div>
+
+또는, `docker compose`를 사용하여 컨테이너를 오케스트레이션할 수 있습니다.
+다음은 `docker-compose.yml` 파일의 예시입니다:
+
+<DockerCompose />

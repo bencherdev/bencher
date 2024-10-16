@@ -1,0 +1,16 @@
+## Notfallwiederherstellung
+
+Um Datenverlust zwischen den Backups zu verhindern, bietet Bencher eine integrierte Notfallwiederherstellungslösung. Diese Funktion erfordert eine aktive [Bencher Plus][pricing] Lizenz.
+
+Unterstützte Replikationsschemata:
+
+- `file`: Replizieren zu einem lokalen Dateipfad
+- `sftp`: Replizieren über SFTP
+- `s3`: Replizieren zu einem S3-kompatiblen Blob-Speicher
+- `abs`: Replizieren zu Azure Blob Storage
+- `gcs`: Replizieren zu Google Cloud Storage
+
+Verwenden Sie den [Abschnitt `plus.disaster_recovery`][plus disaster recovery] der API-Serverkonfiguration, um die Notfallwiederherstellung für Ihren Bencher Self-Hosted API-Server einzurichten.
+
+[pricing]: /pricing/
+[plus disaster recovery]: /de/docs/reference/server-config/#plusdisaster_recovery

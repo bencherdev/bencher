@@ -1,0 +1,10 @@
+## `--api-volume <HOST_CONTAINER>`
+
+将挂载卷传递给 API 服务器容器。
+预期格式为 `/host/path:/container/path`。
+这在使用 [API 服务器配置][api config] 时很有用。
+类似于 `docker run` 的 [`--volume` 选项][docker run volume]。
+
+[docker run volume]: https://docs.docker.com/reference/cli/docker/container/run/#volume
+
+[api config]: /zh/docs/reference/server-config/
