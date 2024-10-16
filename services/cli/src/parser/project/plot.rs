@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliBackend, CliPagination};
+use crate::parser::{CliBackend, CliPagination, ElidedOption};
 
 #[derive(Subcommand, Debug)]
 pub enum CliPlot {
@@ -153,12 +153,10 @@ pub struct CliPlotUpdate {
     pub index: Option<Index>,
 
     /// The new title of the plot.
-    /// Set to `null` to remove the current title.
     /// Maximum length is 64 characters.
-    /// (null to remove)
+    /// To remove the current title without replacing it, use an underscore (`_`).
     #[clap(long)]
-    #[allow(clippy::option_option)]
-    pub title: Option<Option<ResourceName>>,
+    pub title: Option<ElidedOption<ResourceName>>,
 
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.

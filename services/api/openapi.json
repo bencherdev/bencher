@@ -6484,7 +6484,7 @@
           "server"
         ],
         "summary": "Backup server",
-        "description": "Backup the API server database to blob storage. The user must be an admin on the server to use this route.",
+        "description": "Backup the API server database. The user must be an admin on the server to use this route.",
         "operationId": "server_backup_post",
         "requestBody": {
           "content": {
@@ -8122,10 +8122,12 @@
         "properties": {
           "compress": {
             "nullable": true,
+            "description": "Compress the database backup with gzip. This operation runs first.",
             "type": "boolean"
           },
           "data_store": {
             "nullable": true,
+            "description": "Save the database backup to this data store. This operation runs second.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonDataStore"
@@ -8134,6 +8136,7 @@
           },
           "rm": {
             "nullable": true,
+            "description": "Remove the local copy of the database backup. This operation runs third.",
             "type": "boolean"
           }
         }

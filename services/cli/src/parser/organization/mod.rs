@@ -10,7 +10,7 @@ pub mod usage;
 #[cfg(feature = "plus")]
 use self::usage::CliOrganizationUsage;
 
-use super::CliPagination;
+use super::{CliPagination, ElidedOption};
 
 #[derive(Subcommand, Debug)]
 pub enum CliOrganization {
@@ -90,19 +90,19 @@ pub struct CliOrganizationUpdate {
     /// Organization slug or UUID
     pub organization: ResourceId,
 
-    /// New organization name
+    /// Organization name
     #[clap(long)]
     pub name: Option<ResourceName>,
 
-    /// New organization slug
+    /// Organization slug
     #[clap(long)]
     pub slug: Option<Slug>,
 
     #[cfg(feature = "plus")]
-    #[cfg_attr(feature = "plus", allow(clippy::option_option))]
-    /// New organization license
-    #[clap(long)]
-    pub license: Option<Option<bencher_json::Jwt>>,
+    /// Organization license
+    /// To remove the current license key without replacing it, use an underscore (`_`).
+    #[clap(long, value_name = "KEY")]
+    pub license: Option<ElidedOption<bencher_json::Jwt>>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

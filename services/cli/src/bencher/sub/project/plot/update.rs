@@ -34,7 +34,7 @@ impl TryFrom<CliPlotUpdate> for Update {
             project,
             plot,
             index,
-            title,
+            title: title.map(Into::into),
             window,
             backend: backend.try_into()?,
         })

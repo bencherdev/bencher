@@ -1,6 +1,6 @@
 Bencher is [open source][github bencher].
 It is available as a SaaS, [Bencher Cloud][bencher cloud],
-and as a self-hostable set of Docker images:
+and as a self-hostable set of container images:
 
 - Bencher Console Server
   - [Configuration Reference](/docs/reference/console-config/)
@@ -9,39 +9,16 @@ and as a self-hostable set of Docker images:
   - [Configuration Reference](/docs/reference/server-config/)
   - [Download Options](/download/#api-server)
 
-## Host URL
-
-When using Bencher Self-Hosted,
-you will need to set [the `--host` option][host option]
-to the URL of your Bencher API server
-for most `bencher` CLI subcommands.
-
-For example, if you were using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
-with a Bencher API server at `https://bencher.example.com`
-then you could write something like this:
-
-```sh
-bencher run \
---host https://bencher.example.com \
---project save-walter-white-1234abcd \
---branch main \
---testbed ci-runner \
---adapter json \
-bencher mock
-```
-
-[host option]: /docs/explanation/bencher-run/#--host-url
-
 ## Deployment
 
 The easiest way to deploy Bencher Self-Hosted is using a triptych of `bencher` CLI subcommands:
 
-- `bencher up`: Bring up the Bencher Self-Hosted containers.
+- [`bencher up`][bencher up]: Bring up the Bencher Self-Hosted containers.
   This is similar to running [`docker compose up`][docker compose up].
-- `bencher logs`: Show the logs for the Bencher Self-Hosted containers,
+- [`bencher logs`][bencher logs]: View output from the Bencher Self-Hosted containers,
   if `bencher up` was run with [the `--detach` flag][detach flag].
   This is similar to running [`docker compose logs`][docker compose logs].
-- `bencher down`: Bring down the Bencher Self-Hosted containers,
+- [`bencher down`][bencher down]: Stop and remove the Bencher Self-Hosted containers,
   if `bencher up` was run with [the `--detach` flag][detach flag].
   This is similar to running [`docker compose down`][docker compose down].
 
@@ -49,56 +26,18 @@ The easiest way to deploy Bencher Self-Hosted is using a triptych of `bencher` C
 [docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
 [docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
 
-[detach flag]: #detatch
-
-Alternatively, you could just use `docker compose` to orchestrate the containers.
-This is an example `docker-compose.yml` file:
-
-```yml
-version: "3.9"
-services:
-  bencher_api_compose:
-    image: ghcr.io/bencherdev/bencher-api:latest
-    container_name: bencher_api
-    ports:
-      - 61016:61016
-    volumes:
-      - "./services/api/etc:/etc/bencher"
-      - "./services/api/data:/var/lib/bencher/data"
-    # environment:
-      # Set configuration string or file path
-      # - BENCHER_CONFIG=
-      # - BENCHER_CONFIG_PATH=
-
-  bencher_console_compose:
-    image: ghcr.io/bencherdev/bencher-console:latest
-    container_name: bencher_console
-    ports:
-      - 3000:3000
-    environment:
-      - BENCHER_API_URL=http://127.0.0.1:61016
-      # This is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`
-      # Do not set this when using a remote `BENCHER_API_URL`, such as https://bencher.example.com
-      - INTERNAL_API_URL=http://host.docker.internal:61016
-    depends_on:
-      - bencher_api_compose
-```
-
-## Backups
-
-TODO
-
-## Disaster Recovery
-
-TODO
-
-[Replicate to AWS S3 with Litestream](https://litestream.io/guides/s3/)
+[bencher up]: #bencher-up
+[bencher logs]: #bencher-logs
+[bencher down]: #bencher-down
+[detach flag]: #--detach
 
 <hr />
 
 ## `bencher up`
 
-Bring up the Bencher Self-Hosted containers.
+<br />
+
+Create and start the Bencher Self-Hosted containers.
 This is similar to running [`docker compose up`][docker compose up].
 
 [docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
@@ -112,13 +51,15 @@ bencher up [OPTIONS] [SERVICE]
 Select the containers to run.
 The possible choices are: `all`, `api`, and `console`.
 By default `all` is chosen.
-Similar to the `service` argument for [`docker compose up`][docker compose up].
+Similar to the `SERVICE` argument for [`docker compose up`][docker compose up].
 
 [docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
 
 ### Options
 
 ### `--detach`
+
+<br />
 
 Run in detached mode.
 The containers will be run in the background.
@@ -127,6 +68,8 @@ Similar to the `--detach` flag for [`docker compose up`][docker compose up].
 [docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
 
 ### `--pull <WHEN>`
+
+<br />
 
 Pull images before running.
 The possible choices are: `always`, `missing`, and `never`.
@@ -139,12 +82,17 @@ import { BENCHER_VERSION } from "../../../../util/ext";
 
 ### `--tag <TAG>`
 
+<br />
+
 Specify the image tag for the containers.
-By default the most recent release tag (<code>{`v${BENCHER_VERSION}`}</code>) is chosen.
+By default the image tag matches the `bencher` CLI version.
+The most recent `bencher` CLI version is <code>{`v${BENCHER_VERSION}`}</code>.
 
 ### `--console-port <PORT>`
 
-Set a port number for the Console server container.
+<br />
+
+Specify a port number for the Console server container.
 By default, port `3000` is used.
 Similar to the port only form of [the `--expose` option][docker run expose] for `docker run`.
 
@@ -152,13 +100,17 @@ Similar to the port only form of [the `--expose` option][docker run expose] for 
 
 ### `--api-port <PORT>`
 
-Pass an environment variable to the API server container.
+<br />
+
+Specify a port number for the API server container.
 By default, port `61016` is used.
 Similar to the port only form of [the `--expose` option][docker run expose] for `docker run`.
 
 [docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish
 
 ### `--console-env <KEY_VALUE>`
+
+<br />
 
 Pass an environment variable to the Console server container.
 The expected format is `KEY=value`.
@@ -171,6 +123,8 @@ Similar to [the `--env` option][docker run env] for `docker run`.
 
 ### `--api-env <KEY_VALUE>`
 
+<br />
+
 Pass an environment variable to the API server container.
 The expected format is `KEY=value`.
 This can be useful when working with [the API Server configuration][api config].
@@ -182,13 +136,20 @@ Similar to [the `--env` option][docker run env] for `docker run`.
 
 ### `--console-volume <HOST_CONTAINER>`
 
+<br />
+
 Pass a mount volume to the Console server container.
 The expected format is `/host/path:/container/path`.
+This can be useful when working with [the Console Server configuration][console config].
 Similar to [the `--volume` option][docker run volume] for `docker run`.
 
 [docker run volume]: https://docs.docker.com/reference/cli/docker/container/run/#volume
 
+[console config]: /docs/reference/console-config/
+
 ### `--api-volume <HOST_CONTAINER>`
+
+<br />
 
 Pass a mount volume to the API server container.
 The expected format is `/host/path:/container/path`.
@@ -199,17 +160,228 @@ Similar to [the `--volume` option][docker run volume] for `docker run`.
 
 [api config]: /docs/reference/server-config/
 
+### `--help`
+
+<br />
+
+Print help.
+
+
 <hr />
 
 ## `bencher logs`
 
+<br />
+
+View output from the Bencher Self-Hosted containers,
+if `bencher up` was run with [the `--detach` flag][detach flag].
+This is similar to running [`docker compose logs`][docker compose logs].
+
 [docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+
+[detach flag]: #--detach
+
+```
+bencher up [OPTIONS] [SERVICE]
+```
+
+### Service
+
+Select the containers to run.
+The possible choices are: `all`, `api`, and `console`.
+By default `all` is chosen.
+Similar to the `SERVICE` argument for [`docker compose logs`][docker compose logs].
+
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+
+### Options
+
+### `--help`
+
+<br />
+
+Print help.
 
 <hr />
 
 ## `bencher down`
 
+<br />
+
+Stop and remove the Bencher Self-Hosted containers,
+if `bencher up` was run with [the `--detach` flag][detach flag].
+This is similar to running [`docker compose down`][docker compose down].
+
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[detach flag]: #--detach
+
+```
+bencher down [OPTIONS] [SERVICE]
+```
+
+### Service
+
+Select the containers to run.
+The possible choices are: `all`, `api`, and `console`.
+By default `all` is chosen.
+Similar to the `SERVICE` argument for [`docker compose down`][docker compose logs].
+
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+
+### Options
+
+### `--help`
+
+<br />
+
+Print help.
+
 [docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
 
 [github bencher]: https://github.com/bencherdev/bencher
 [bencher cloud]: https://bencher.dev
+
+<hr />
+
+Alternatively, you could just use `docker compose` to orchestrate the containers.
+This is an example `docker-compose.yml` file:
+
+```yml
+version: "3.9"
+services:
+  bencher_api_compose:
+    image: ghcr.io/bencherdev/bencher-api:latest
+    container_name: bencher_api
+    ports:
+      - 61016:61016
+    volumes:
+      # Mount the configuration directory
+      - "./services/api/etc:/etc/bencher"
+      # Mount the database directory
+      - "./services/api/data:/var/lib/bencher/data"
+    # environment:
+      # Set configuration string or file path
+      # - BENCHER_CONFIG=
+      # - BENCHER_CONFIG_PATH=
+
+  bencher_console_compose:
+    image: ghcr.io/bencherdev/bencher-console:latest
+    container_name: bencher_console
+    ports:
+      - 3000:3000
+    environment:
+      # Set the API URL to the localhost IPv4 address
+      - BENCHER_API_URL=http://127.0.0.1:61016
+      # This is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`
+      # Do not set this when using a remote `BENCHER_API_URL`, such as https://bencher.example.com
+      - INTERNAL_API_URL=http://host.docker.internal:61016
+    depends_on:
+      - bencher_api_compose
+```
+
+## Host URL
+
+When using Bencher Self-Hosted,
+you will need to set [the `--host` option][host option]
+to the URL of your Bencher API server
+for most `bencher` CLI subcommands.
+
+For example, if you were using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+with a Bencher API server at `https://api.bencher.example.com`
+then you could write something like this:
+
+```sh
+bencher run \
+--host https://api.bencher.example.com \
+--project save-walter-white-1234abcd \
+--branch main \
+--testbed ci-runner \
+--adapter json \
+bencher mock
+```
+
+[host option]: /docs/explanation/bencher-run/#--host-url
+
+## Backups
+
+The easiest way to backup your Bencher Self-Hosted API server is using
+[the `bencher server backup` CLI subcommand][bencher server backup].
+The user must be an admin on the server to use this subcommand.
+
+[bencher server backup]: /docs/api/server/server/#post-v0serverbackup
+
+<hr />
+
+## `bencher server backup`
+
+<br />
+
+Backup the API server database.
+
+### Options
+
+### `--host <URL>`
+
+<br />
+
+The Bencher Self-Hosted API server URL.
+For example, `https://api.bencher.example.com`.
+
+### `--token <TOKEN>`
+
+<br />
+
+Either the `--token` option or the `BENCHER_API_TOKEN` environment variable must be set to a valid API token.
+If both are specified, the `--token` option takes precedence over the `BENCHER_API_TOKEN` environment variable.
+
+### `--compress`
+
+<br />
+
+Compress the database backup with `gzip`.
+This operation runs first.
+
+### `--data-store <DATA_STORE>`
+
+<br />
+
+Save the database backup to this data store.
+This operation runs second.
+
+Supported data stores:
+- `aws_s3`: Backup to AWS S3
+
+Use [the `database.data_store` section][database data store] of the API server configuration
+to setup the data store for your Bencher Self-Hosted API server.
+
+[database data store]: /docs/reference/server-config/#database
+
+### `--remove`
+
+<br />
+
+Remove the local copy of the database backup.
+This operation runs third.
+
+<hr />
+
+## Disaster Recovery
+
+In order to prevent data loss in between backups,
+Bencher offers a built-in disaster recovery solution.
+This feature requires an active [Bencher Plus][pricing] license.
+
+Supported replication schemes:
+
+- `file`: Replicate to a local file path
+- `sftp`: Replicate over SFTP
+- `s3`: Replicate to any S3 compatible blob storage
+- `abs`: Replicate to Azure Blob Storage
+- `gcs`: Replicate to Google Cloud Storage
+
+Use [the `plus.disaster_recovery` section][plus disaster recovery] of the API server configuration
+to setup disaster recovery for your Bencher Self-Hosted API server.
+
+[pricing]: /pricing/
+[plus disaster recovery]: /docs/reference/server-config/#plusdisaster_recovery

@@ -135,7 +135,19 @@ const getTypes = (propertyKey, propertyValue) => {
   <>
   {(() => {
 	if (Array.isArray(extra)) {
-		return <p>One of: {extra.map((variant, index) => { return <>{index !== 0 && ", "}<code>{variant}</code></>})}</p>;
+		return <>
+			{(
+				() => {
+					switch(propertyKey) {
+						case "data_store":
+							return <p>
+								<a href={`https://bencher.dev/${langPath(lang)}docs/reference/server-config/#database`}>The <code>database.data_store</code> section</a> of the API server configuration must be configured for this data store.
+								</p>;
+					}
+				}
+			)}
+			<p>One of: {extra.map((variant, index) => { return <>{index !== 0 && ", "}<code>{variant}</code></>})}</p>
+		</>;
 	}
 	if (types !== "object") {
 		return;

@@ -37,7 +37,7 @@ impl TryFrom<CliOrganizationUpdate> for Update {
             name,
             slug,
             #[cfg(feature = "plus")]
-            license,
+            license: license.map(Into::into),
             backend: backend.try_into()?,
         })
     }

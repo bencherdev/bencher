@@ -38,7 +38,7 @@ pub async fn server_backup_options(
 
 /// Backup server
 ///
-/// Backup the API server database to blob storage.
+/// Backup the API server database.
 /// The user must be an admin on the server to use this route.
 #[endpoint {
     method = POST,

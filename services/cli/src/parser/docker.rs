@@ -26,12 +26,12 @@ pub struct CliUp {
     #[clap(long, default_value = CLI_VERSION_TAG.as_str())]
     pub tag: String,
 
-    /// Set a port number for the Console container.
+    /// Specify a port number for the Console container.
     /// Similar to the `--expose` option for `docker run`.
     #[clap(long, value_name = "PORT", default_value = "3000")]
     pub console_port: u16,
 
-    /// Set a port number for the API container.
+    /// Specify a port number for the API container.
     /// Similar to the `--expose` option for `docker run`.
     #[clap(long, value_name = "PORT", default_value = "61016")]
     pub api_port: u16,

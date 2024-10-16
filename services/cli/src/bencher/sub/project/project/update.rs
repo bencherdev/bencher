@@ -36,7 +36,7 @@ impl TryFrom<CliProjectUpdate> for Update {
             project,
             name,
             slug,
-            url,
+            url: url.map(Into::into),
             visibility: visibility.map(Into::into),
             backend: backend.try_into()?,
         })

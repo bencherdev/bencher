@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
 
-use super::CliPagination;
+use super::{CliPagination, ElidedOption};
 
 pub mod alert;
 pub mod archive;
@@ -122,9 +122,10 @@ pub struct CliProjectUpdate {
     pub slug: Option<Slug>,
 
     #[allow(clippy::option_option)]
-    /// Project URL (null to remove)
+    /// Project URL
+    /// To remove the current project URL without replacing it, use an underscore (`_`).
     #[clap(long)]
-    pub url: Option<Option<Url>>,
+    pub url: Option<ElidedOption<Url>>,
 
     /// Project visibility
     #[clap(long)]

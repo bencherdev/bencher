@@ -42,11 +42,11 @@ pub enum CliSub {
     /// Unarchive a dimension
     Unarchive(CliArchive),
 
-    /// Bring up Bencher Self-Hosted containers
+    /// Create and start Bencher Self-Hosted containers
     Up(CliUp),
-    /// View Bencher Self-Hosted container logs
+    /// View output from Bencher Self-Hosted containers
     Logs(CliLogs),
-    /// Bring down Bencher Self-Hosted containers
+    /// Stop and remove Bencher Self-Hosted containers
     Down(CliDown),
 
     /// Manage organization

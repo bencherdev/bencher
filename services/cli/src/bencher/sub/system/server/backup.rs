@@ -10,7 +10,7 @@ use crate::{
 pub struct Backup {
     pub compress: Option<bool>,
     pub data_store: Option<JsonDataStore>,
-    pub rm: Option<bool>,
+    pub remove: Option<bool>,
     pub backend: AuthBackend,
 }
 
@@ -21,13 +21,13 @@ impl TryFrom<CliBackup> for Backup {
         let CliBackup {
             compress,
             data_store,
-            rm,
+            remove,
             backend,
         } = create;
         Ok(Self {
             compress: Some(compress),
             data_store: data_store.map(Into::into),
-            rm: Some(rm),
+            remove: Some(remove),
             backend: backend.try_into()?,
         })
     }
@@ -46,13 +46,13 @@ impl From<Backup> for JsonBackup {
         let Backup {
             compress,
             data_store,
-            rm,
+            remove,
             ..
         } = backup;
         Self {
             compress,
             data_store,
-            rm,
+            rm: remove,
         }
     }
 }
