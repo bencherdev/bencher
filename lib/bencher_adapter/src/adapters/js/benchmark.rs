@@ -11,8 +11,8 @@ use nom::{
 
 use crate::{
     adapters::util::{
-        nom_error, parse_benchmark_name_chars, parse_f64, parse_u64, throughput_as_secs, NomError,
-        Units,
+        nom_error, parse_benchmark_name_chars, parse_f64, parse_number_as_f64, parse_u64,
+        throughput_as_secs, NomError, Units,
     },
     results::adapter_results::AdapterResults,
     Adaptable, Settings,
@@ -58,7 +58,7 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
         tuple((
             tuple((space1, tag("x"), space1)),
-            parse_u64,
+            parse_number_as_f64,
             tuple((space1, tag("ops/sec"), space1, tag("±"))),
             parse_f64,
             tuple((
@@ -74,7 +74,7 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonNewMetric> {
         )),
         |(_, throughput, _, percent_error, _)| {
             let value = throughput_as_secs(throughput, Units::Sec);
-            let error = value * percent_error;
+            let error = value * (percent_error / 100.0);
             JsonNewMetric {
                 value,
                 lower_value: Some(value - error),
@@ -103,7 +103,7 @@ pub(crate) mod test_js_benchmark {
 
     #[test]
     fn test_adapter_js_benchmark_average() {
-        let file_path = "./tool_output/js/benchmark/three.txt";
+        let file_path = "./tool_output/js/benchmark/four.txt";
         assert_eq!(
             None,
             opt_convert_file_path::<AdapterJsBenchmark>(
@@ -126,30 +126,67 @@ pub(crate) mod test_js_benchmark {
 
     #[test]
     fn test_adapter_js_benchmark() {
-        let results = convert_js_benchmark("three");
+        let results = convert_js_benchmark("four");
         validate_adapter_js_benchmark(&results);
     }
 
     pub fn validate_adapter_js_benchmark(results: &AdapterResults) {
-        assert_eq!(results.inner.len(), 3);
+        assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("fib(10)").unwrap();
         validate_throughput(
             metrics,
             1_431_759.0,
-            Some(372_257.340_000_000_1),
-            Some(2_491_260.66),
+            Some(1_421_163.983_4),
+            Some(1_442_354.016_6),
         );
 
         let metrics = results.get("fib(20)").unwrap();
-        validate_throughput(
-            metrics,
-            12146.0,
-            Some(8_259.279_999_999_999),
-            Some(16_032.720_000_000_001),
-        );
+        validate_throughput(metrics, 12_146.0, Some(12_107.132_8), Some(12_184.867_2));
 
         let metrics = results.get("benchmark with x 2 many things").unwrap();
-        validate_throughput(metrics, 50.0, Some(45.0), Some(55.0));
+        validate_throughput(metrics, 50.0, Some(49.95), Some(50.05));
+
+        let metrics = results.get("createObjectBuffer with 200 comments").unwrap();
+        validate_throughput(metrics, 81.61, Some(80.222_63), Some(82.997_37));
+    }
+
+    #[test]
+    fn test_adapter_js_benchmark_issue_506() {
+        let results = convert_js_benchmark("issue_506");
+        assert_eq!(results.inner.len(), 6);
+
+        let metrics = results.get("text encoder utf8").unwrap();
+        validate_throughput(
+            metrics,
+            28.33,
+            Some(27.395_11),
+            Some(29.264_889_999_999_998),
+        );
+
+        let metrics = results.get("text encoder utf16").unwrap();
+        validate_throughput(metrics, 55.25, Some(46.078_5), Some(64.421_5));
+
+        let metrics = results.get("sha512 wasm from string utf8").unwrap();
+        validate_throughput(metrics, 15.20, Some(13.862_4), Some(16.537_599_999_999_998));
+
+        let metrics = results.get("sha512 wasm from string utf16").unwrap();
+        validate_throughput(
+            metrics,
+            19.23,
+            Some(18.903_09),
+            Some(19.556_910_000_000_002),
+        );
+
+        let metrics = results.get("sha512 native from string utf8").unwrap();
+        validate_throughput(metrics, 21.46, Some(20.580_14), Some(22.339_86));
+
+        let metrics = results.get("sha512 native from string utf16").unwrap();
+        validate_throughput(
+            metrics,
+            29.76,
+            Some(27.736_320_000_000_003),
+            Some(31.783_68),
+        );
     }
 }

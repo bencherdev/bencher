@@ -85,7 +85,7 @@ mod test_magic {
 
     #[test]
     fn test_adapter_magic_js_benchmark() {
-        let results = convert_file_path::<AdapterMagic>("./tool_output/js/benchmark/three.txt");
+        let results = convert_file_path::<AdapterMagic>("./tool_output/js/benchmark/four.txt");
         test_js_benchmark::validate_adapter_js_benchmark(&results);
     }
 

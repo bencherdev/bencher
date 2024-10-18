@@ -1,0 +1,8 @@
+Running 6 benchmarks on Chromium...
+text encoder utf8 x 28.33 ops/sec ±3.3% (13 runs sampled)
+text encoder utf16 x 55.25 ops/sec ±16.6% (19 runs sampled)
+sha512 wasm from string utf8 x 15.20 ops/sec ±8.8% (7 runs sampled)
+sha512 wasm from string utf16 x 19.23 ops/sec ±1.7% (8 runs sampled)
+sha512 native from string utf8 x 21.46 ops/sec ±4.1% (9 runs sampled)
+sha512 native from string utf16 x 29.76 ops/sec ±6.8% (14 runs sampled)
+Done!

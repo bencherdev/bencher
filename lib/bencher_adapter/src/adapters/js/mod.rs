@@ -20,7 +20,7 @@ mod test_js {
 
     #[test]
     fn test_adapter_js_benchmark() {
-        let results = convert_file_path::<AdapterJs>("./tool_output/js/benchmark/three.txt");
+        let results = convert_file_path::<AdapterJs>("./tool_output/js/benchmark/four.txt");
         test_js_benchmark::validate_adapter_js_benchmark(&results);
     }
 
