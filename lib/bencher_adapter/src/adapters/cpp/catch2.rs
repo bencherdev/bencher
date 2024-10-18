@@ -10,12 +10,13 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     adapters::util::{
-        latency_as_nanos, nom_error, parse_benchmark_name_chars, parse_f64, parse_u64, parse_units,
-        NomError, Units,
+        latency_as_nanos, parse_number_as_f64, parse_u64, parse_units, NomError, Units,
     },
     results::adapter_results::AdapterResults,
     Adaptable, Settings,
 };
+
+const CATCH2_METRICS_LINE_COUNT: usize = 5;
 
 pub struct AdapterCppCatch2;
 
@@ -27,91 +28,105 @@ impl Adaptable for AdapterCppCatch2 {
         }
 
         let mut benchmark_metrics = Vec::new();
-
-        let mut benchmark_name_line = None;
-        let mut mean_line = None;
-        for line in input.lines() {
-            if let Some(benchmark_name_line) = benchmark_name_line {
-                if let Some(mean_line) = mean_line {
-                    if let Ok((remainder, benchmark_metric)) =
-                        parse_catch2(benchmark_name_line, mean_line, line)
-                    {
-                        if remainder.is_empty() {
-                            benchmark_metrics.push(benchmark_metric);
-                        }
-                    }
-                }
+        let mut test_case = None;
+        let lines = input.lines().collect::<Vec<_>>();
+        for lines in lines.windows(CATCH2_METRICS_LINE_COUNT) {
+            let Ok(lines) = lines.try_into() else {
+                debug_assert!(
+                    false,
+                    "Windows struct should always be convertible to array of the same size."
+                );
+                continue;
+            };
+            if let Some(name) = parse_catch2_test_case(lines) {
+                test_case = Some(name);
+                continue;
             }
-
-            benchmark_name_line = mean_line.replace(line);
+            let Some(name) = test_case.clone() else {
+                continue;
+            };
+            if let Some((benchmark_name, metrics)) = parse_catch2_lines(name, lines) {
+                benchmark_metrics.push((benchmark_name, metrics));
+            }
         }
 
         AdapterResults::new_latency(benchmark_metrics)
     }
 }
 
-fn parse_catch2<'i>(
-    benchmark_name_line: &str,
-    mean_line: &str,
-    input: &'i str,
-) -> IResult<&'i str, (BenchmarkName, JsonNewMetric)> {
-    map_res(
-        parse_catch2_time,
-        |std_dev| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
-            #[allow(clippy::map_err_ignore)]
-            let (benchmark_name_remainder, benchmark_name) =
-                parse_catch2_benchmark_name(benchmark_name_line)
-                    .map_err(|_| nom_error(benchmark_name_line))?;
+fn parse_catch2_test_case(lines: [&str; CATCH2_METRICS_LINE_COUNT]) -> Option<String> {
+    const PAGE_BREAK: &str =
+        "-------------------------------------------------------------------------------";
 
-            #[allow(clippy::map_err_ignore)]
-            let (mean_remainder, mean) =
-                parse_catch2_time(mean_line).map_err(|_| nom_error(mean_line))?;
-
-            if benchmark_name_remainder.is_empty() && mean_remainder.is_empty() {
-                let json_metric = JsonNewMetric {
-                    value: mean,
-                    lower_value: Some(mean - std_dev),
-                    upper_value: Some(mean + std_dev),
-                };
-
-                Ok((benchmark_name, json_metric))
-            } else {
-                Err(nom_error(input))
-            }
-        },
-    )(input)
+    let [page_break, test_case, l1, l2, l3] = lines;
+    if page_break != PAGE_BREAK {
+        return None;
+    }
+    let mut name = test_case.trim().to_owned();
+    for l in [l1, l2, l3] {
+        if l == PAGE_BREAK {
+            return Some(name);
+        }
+        name.push(' ');
+        name.push_str(l.trim());
+    }
+    None
 }
 
-fn parse_catch2_time(input: &str) -> IResult<&str, OrderedFloat<f64>> {
-    map(
-        tuple((
-            space1,
-            parse_catch2_duration,
-            space1,
-            parse_catch2_duration,
-            space1,
-            parse_catch2_duration,
-            space1,
-            eof,
-        )),
-        |(_, column_one, _, _, _, _, _, _)| column_one,
-    )(input)
+fn parse_catch2_lines(
+    mut name: String,
+    lines: [&str; CATCH2_METRICS_LINE_COUNT],
+) -> Option<(BenchmarkName, JsonNewMetric)> {
+    let [prelude_line, mean_line, std_dev_line, ..] = lines;
+
+    let Ok(("", benchmark_name_prelude)) = parse_catch2_prelude_line(prelude_line) else {
+        return None;
+    };
+    name.push_str(": ");
+    name.push_str(&benchmark_name_prelude);
+
+    let Ok(("", (benchmark_name_mean, mean))) = parse_catch2_benchmark_time(mean_line) else {
+        return None;
+    };
+    if let Some(benchmark_name_mean) = benchmark_name_mean {
+        name.push(' ');
+        name.push_str(&benchmark_name_mean);
+    }
+
+    let Ok(("", (benchmark_name_std_dev, std_dev))) = parse_catch2_benchmark_time(std_dev_line)
+    else {
+        return None;
+    };
+    if let Some(benchmark_name_std_dev) = benchmark_name_std_dev {
+        name.push(' ');
+        name.push_str(&benchmark_name_std_dev);
+    }
+
+    let benchmark_name = name.parse().ok()?;
+
+    let json_metric = JsonNewMetric {
+        value: mean,
+        lower_value: Some(mean - std_dev),
+        upper_value: Some(mean + std_dev),
+    };
+
+    Some((benchmark_name, json_metric))
 }
 
-fn parse_catch2_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
-    map_res(
-        tuple((parse_f64, space1, parse_units)),
-        |(duration, _, units)| -> Result<OrderedFloat<f64>, NomError> {
-            Ok(latency_as_nanos(duration, units))
-        },
-    )(input)
-}
-
-fn parse_catch2_benchmark_name(input: &str) -> IResult<&str, BenchmarkName> {
+fn parse_catch2_prelude_line(input: &str) -> IResult<&str, String> {
     map_res(
         many_till(anychar, parse_catch2_prelude),
-        |(name_chars, _)| -> Result<BenchmarkName, NomError> {
-            parse_benchmark_name_chars(&name_chars)
+        |(name_chars, _)| -> Result<String, NomError> { Ok(name_chars.into_iter().collect()) },
+    )(input)
+}
+
+fn parse_catch2_benchmark_time(input: &str) -> IResult<&str, (Option<String>, OrderedFloat<f64>)> {
+    map_res(
+        many_till(anychar, parse_catch2_time),
+        |(name_chars, time)| -> Result<(Option<String>, OrderedFloat<f64>), NomError> {
+            let name = name_chars.into_iter().collect::<String>();
+            let name = (!name.is_empty()).then_some(name);
+            Ok((name, time))
         },
     )(input)
 }
@@ -132,7 +147,7 @@ fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
             space1,
             parse_u64,
             space1,
-            parse_f64,
+            parse_number_as_f64,
             space1,
             parse_units,
             space0,
@@ -147,6 +162,31 @@ fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
     )(input)
 }
 
+fn parse_catch2_time(input: &str) -> IResult<&str, OrderedFloat<f64>> {
+    map(
+        tuple((
+            space1,
+            parse_catch2_duration,
+            space1,
+            parse_catch2_duration,
+            space1,
+            parse_catch2_duration,
+            space0,
+            eof,
+        )),
+        |(_, column_one, _, _, _, _, _, _)| column_one,
+    )(input)
+}
+
+fn parse_catch2_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
+    map_res(
+        tuple((parse_number_as_f64, space1, parse_units)),
+        |(duration, _, units)| -> Result<OrderedFloat<f64>, NomError> {
+            Ok(latency_as_nanos(duration, units))
+        },
+    )(input)
+}
+
 #[cfg(test)]
 pub(crate) mod test_cpp_catch2 {
     use bencher_json::project::report::JsonAverage;
@@ -157,7 +197,7 @@ pub(crate) mod test_cpp_catch2 {
         AdapterResults, Settings,
     };
 
-    use super::{parse_catch2_benchmark_name, AdapterCppCatch2};
+    use super::{parse_catch2_prelude_line, AdapterCppCatch2};
 
     fn convert_cpp_catch2(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/cpp/catch2/{suffix}.txt");
@@ -189,7 +229,7 @@ pub(crate) mod test_cpp_catch2 {
         {
             assert_eq!(
                 expected,
-                parse_catch2_benchmark_name(input),
+                parse_catch2_prelude_line(input),
                 "#{index}: {input}"
             );
         }
@@ -227,16 +267,16 @@ pub(crate) mod test_cpp_catch2 {
     pub fn validate_adapter_cpp_catch2(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 4);
 
-        let metrics = results.get("Fibonacci 10").unwrap();
+        let metrics = results.get("Fibonacci: Fibonacci 10").unwrap();
         validate_latency(metrics, 344.0, Some(325.0), Some(363.0));
 
-        let metrics = results.get("Fibonacci 20").unwrap();
+        let metrics = results.get("Fibonacci: Fibonacci 20").unwrap();
         validate_latency(metrics, 41731.0, Some(38475.0), Some(44987.0));
 
-        let metrics = results.get("Fibonacci~ 5!").unwrap();
+        let metrics = results.get("More Fibonacci: Fibonacci~ 5!").unwrap();
         validate_latency(metrics, 36.0, Some(32.0), Some(40.0));
 
-        let metrics = results.get("Fibonacci-15_bench").unwrap();
+        let metrics = results.get("More Fibonacci: Fibonacci-15_bench").unwrap();
         validate_latency(metrics, 3789.0, Some(3427.0), Some(4151.0));
     }
 
@@ -245,10 +285,42 @@ pub(crate) mod test_cpp_catch2 {
         let results = convert_cpp_catch2("two");
         assert_eq!(results.inner.len(), 2);
 
-        let metrics = results.get("Fibonacci 10").unwrap();
+        let metrics = results.get("Fibonacci: Fibonacci 10").unwrap();
         validate_latency(metrics, 0.0, Some(0.0), Some(0.0));
 
-        let metrics = results.get("Fibonacci 20").unwrap();
+        let metrics = results.get("Fibonacci: Fibonacci 20").unwrap();
         validate_latency(metrics, 1.0, Some(1.0), Some(1.0));
+    }
+
+    #[test]
+    fn test_adapter_cpp_catch2_issue_351() {
+        let results = convert_cpp_catch2("issue_351");
+        assert_eq!(results.inner.len(), 6);
+
+        let metrics = results
+            .get("Unit_assignment Construction: Fibonacci 10")
+            .unwrap();
+        validate_latency(metrics, 344.0, Some(325.0), Some(363.0));
+
+        let metrics = results
+            .get("Unit_assignment Construction: Fibonacci 20")
+            .unwrap();
+        validate_latency(metrics, 41_731.0, Some(38_475.0), Some(44_987.0));
+
+        let metrics = results.get("More Fibonacci: Fibonacci~ 5!").unwrap();
+        validate_latency(metrics, 36.0, Some(32.0), Some(40.0));
+
+        let metrics = results.get("More Fibonacci: Fibonacci-15_bench").unwrap();
+        validate_latency(metrics, 3_789.0, Some(3_427.0), Some(4_151.0));
+
+        let metrics = results
+            .get("Even More Fibonacci With a long name: Fibonacci 10 with a long name")
+            .unwrap();
+        validate_latency(metrics, 344.0, Some(325.0), Some(363.0));
+
+        let metrics = results
+            .get("Even More Fibonacci With a long name: Fibonacci 20")
+            .unwrap();
+        validate_latency(metrics, 41_731.0, Some(38_475.0), Some(44_987.0));
     }
 }
