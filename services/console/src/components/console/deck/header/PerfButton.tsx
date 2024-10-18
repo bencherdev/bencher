@@ -14,6 +14,7 @@ const PerfButton = (props: Props) => {
 		alertPerfUrl(
 			props.isConsole,
 			props.params?.project,
+			undefined,
 			props.data() as JsonAlert,
 		),
 	);

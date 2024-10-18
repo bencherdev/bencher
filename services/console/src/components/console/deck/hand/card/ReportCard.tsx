@@ -533,7 +533,7 @@ const DEFAULT_ALERT_HISTORY = 30 * 24 * 60 * 60 * 1000;
 export const alertPerfUrl = (
 	isConsole: undefined | boolean,
 	project: undefined | string,
-	reportUuid: string,
+	reportUuid: undefined | string,
 	alert: JsonAlert,
 ) =>
 	perfUrl(
@@ -593,7 +593,7 @@ const measureUrl = (
 export const perfUrl = (
 	isConsole: undefined | boolean,
 	project: undefined | string,
-	reportUuid: string,
+	reportUuid: undefined | string,
 	branch: JsonBranch,
 	testbed: JsonTestbed,
 	benchmark: JsonBenchmark,
