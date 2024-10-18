@@ -1,4 +1,11 @@
-import { type Accessor, For, createMemo, type Resource } from "solid-js";
+import {
+	type Accessor,
+	For,
+	createMemo,
+	type Resource,
+	createSignal,
+	createEffect,
+} from "solid-js";
 import { PerfTab } from "../../../../../config/types";
 import type {
 	JsonBenchmark,
@@ -11,6 +18,7 @@ import Pagination, { PaginationSize } from "../../../../site/Pagination";
 import Tab from "./Tab";
 import type { FieldHandler } from "../../../../field/Field";
 import type { Theme } from "../../../../navbar/theme/theme";
+import { createElementSize } from "@solid-primitives/resize-observer";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -245,8 +253,21 @@ const PlotTab = (props: Props) => {
 		}
 	};
 
+	let tabRef: HTMLDivElement | undefined;
+	const tabSize = createElementSize(() => tabRef);
+	const [width, setWidth] = createSignal(null);
+	createEffect(() => {
+		if (!width()) {
+			setWidth(tabSize.width);
+		}
+	});
+
 	return (
-		<>
+		<div
+			ref={(e) => {
+				tabRef = e;
+			}}
+		>
 			<div class="panel-tabs">
 				<nav class="level">
 					<div class="level-item">
@@ -329,6 +350,7 @@ const PlotTab = (props: Props) => {
 				per_page={perPage}
 				page={page}
 				search={search}
+				width={width}
 				reports_start_date={props.reports_start_date}
 				reports_end_date={props.reports_end_date}
 				handlePage={handlePage}
@@ -355,7 +377,7 @@ const PlotTab = (props: Props) => {
 					</div>
 				</div>
 			</div>
-		</>
+		</div>
 	);
 };
 

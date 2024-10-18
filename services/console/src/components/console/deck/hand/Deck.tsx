@@ -1,9 +1,17 @@
 import type { Params } from "astro";
-import { type Accessor, For, type Resource, Show } from "solid-js";
+import {
+	type Accessor,
+	createEffect,
+	createSignal,
+	For,
+	type Resource,
+	Show,
+} from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import DeckButton, { type DeckButtonConfig } from "./DeckButton";
 import type CardConfig from "./card/CardConfig";
 import DeckCard from "./card/DeckCard";
+import { createElementSize } from "@solid-primitives/resize-observer";
 
 export interface Props {
 	isConsole?: boolean;
@@ -25,8 +33,21 @@ export interface DeckConfig {
 }
 
 const Deck = (props: Props) => {
+	let deckRef: HTMLDivElement | undefined;
+	const deckSize = createElementSize(() => deckRef);
+	const [width, setWidth] = createSignal(null);
+	createEffect(() => {
+		if (!width()) {
+			setWidth(deckSize.width);
+		}
+	});
+
 	return (
-		<>
+		<div
+			ref={(e) => {
+				deckRef = e;
+			}}
+		>
 			<Show when={props.config?.top_buttons}>
 				<For each={props.config?.top_buttons}>
 					{(button) => (
@@ -52,6 +73,7 @@ const Deck = (props: Props) => {
 						path={props.path}
 						card={card}
 						data={props.data}
+						width={width}
 						handleRefresh={props.handleRefresh}
 						handleLoopback={props.handleLoopback}
 					/>
@@ -73,7 +95,7 @@ const Deck = (props: Props) => {
 					)}
 				</For>
 			</Show>
-		</>
+		</div>
 	);
 };
 

@@ -37,6 +37,7 @@ const Tab = (props: {
 	per_page: Accessor<number>;
 	page: Accessor<number>;
 	search: Accessor<undefined | string>;
+	width: Accessor<number>;
 	reports_start_date: Accessor<undefined | string>;
 	reports_end_date: Accessor<undefined | string>;
 	handlePage: (page: number) => void;
@@ -144,6 +145,7 @@ const Tab = (props: {
 					per_page={props.per_page}
 					start_date={props.reports_start_date}
 					end_date={props.reports_end_date}
+					width={props.width}
 					handleChecked={props.handleChecked}
 					handleStartTime={props.handleReportsStartTime}
 					handleEndTime={props.handleReportsEndTime}

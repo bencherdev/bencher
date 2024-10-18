@@ -15,6 +15,7 @@ export interface Props {
 	path: Accessor<string>;
 	card: CardConfig;
 	data: Resource<object>;
+	width: Accessor<number>;
 	handleRefresh: () => void;
 	handleLoopback: (pathname: null | string) => void;
 }
@@ -56,6 +57,7 @@ const DeckCard = (props: Props) => {
 						isConsole={props.isConsole}
 						params={props.params}
 						value={props.data}
+						width={props.width}
 					/>
 				</Match>
 			</Switch>

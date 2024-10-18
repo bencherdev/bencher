@@ -26,6 +26,7 @@ const ReportsTab = (props: {
 	per_page: Accessor<number>;
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
+	width: Accessor<number>;
 	handleChecked: (index: number, slug?: string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
@@ -84,6 +85,7 @@ const ReportsTab = (props: {
 									isConsole={props.isConsole}
 									measures={props.measures}
 									tab={props.tab}
+									width={props.width}
 									report={report}
 									index={index}
 									isChecked={report?.resource?.uuid === props.report()}
@@ -104,6 +106,7 @@ const ReportRow = (props: {
 	isConsole: boolean;
 	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
+	width: Accessor<number>;
 	report: TabElement<JsonReport>;
 	index: Accessor<number>;
 	isChecked: boolean;
@@ -225,6 +228,7 @@ const ReportRow = (props: {
 						project: props.project_slug(),
 					}}
 					value={() => report}
+					width={props.width}
 				/>
 			</Show>
 		</div>
