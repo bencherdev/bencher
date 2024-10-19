@@ -45,7 +45,10 @@ impl ReportComment {
         let multiple_iterations = self.json_report.results.len() > 1;
         for (iter, benchmark_map) in self.benchmark_urls.0.iter().enumerate() {
             if multiple_iterations {
-                comment.push_str(&format!("\nIteration {iter}"));
+                if iter != 0 {
+                    comment.push('\n');
+                }
+                comment.push_str(&format!("\nIteration {iter}:"));
             }
             for (benchmark, measure_map) in benchmark_map {
                 for (measure, MeasureData { console_url, .. }) in measure_map {
@@ -56,16 +59,13 @@ impl ReportComment {
                     ));
                 }
             }
-            if multiple_iterations {
-                comment.push('\n');
-            }
         }
 
         if self.json_report.alerts.is_empty() {
             return comment;
         }
 
-        comment.push_str("\nView alerts:");
+        comment.push_str("\n\nView alerts:");
         for ((iteration, benchmark, measure), AlertData { console_url, .. }) in &self.alert_urls.0 {
             comment.push_str(&format!(
                 "\n- {benchmark_name} ({measure_name}){iter}: {console_url}",
