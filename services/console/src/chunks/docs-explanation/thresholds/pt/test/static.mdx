@@ -2,6 +2,14 @@
 
 Um Teste Estático (`static`) é o Teste mais simples. Se uma nova Métrica está abaixo de um Limite Inferior definido ou acima de um Limite Superior definido, um Alerta é gerado. Ou seja, o Limite Inferior/Superior é um Limite Inferior/Superior explícito. Deve-se definir pelo menos um Limite Inferior ou um Limite Superior, ou ambos. Testes Estáticos funcionam melhor quando o valor da Métrica deve permanecer dentro de um intervalo constante em todos os Benchmarks, como cobertura de código.
 
+> 🐰 Se você deseja um Limite Inferior/Superior Estático diferente para cada Benchmark,
+> você deve usar o [Teste de Porcentagem (`percentage`)][percentage test]
+> com o Limite Inferior/Superior definido para `0.0`
+> e o [Tamanho Máximo da Amostra][max sample size] definido para `2`.
+
+[percentage test]: #percentage
+[max sample size]: #--threshold-max-sample-size-sample_size
+
 - #### Limite Inferior Estático
   - Um Limite Inferior de Teste Estático pode ser qualquer número de ponto flutuante. É usado quando um valor menor indicaria uma regressão de desempenho. O Limite Inferior deve ser menor ou igual ao Limite Superior, se ambos forem especificados.
   - Por exemplo, se você tivesse um Teste Estático com um Limite Inferior definido para `100`, o Limite Inferior seria igualmente `100` e qualquer valor menor que `100` geraria um Alerta.

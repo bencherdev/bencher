@@ -7,6 +7,14 @@ Il faut définir soit une Limite Inférieure, soit une Limite Supérieure, soit 
 Les Tests Statiques fonctionnent mieux lorsque la valeur de la Mesure doit rester dans une plage constante pour tous les Repères,
 comme la couverture de code.
 
+> 🐰 Si vous souhaitez une limite de seuil inférieure/supérieure statique différente pour chaque benchmark,
+> alors vous devriez utiliser le [Test de Pourcentage (`percentage`)][percentage test]
+> avec la Limite Inférieure/Supérieure définie à `0.0`
+> et la [Taille d'Échantillon Max][max sample size] définie à `2`.
+
+[percentage test]: #percentage
+[max sample size]: #--threshold-max-sample-size-sample_size
+
 - #### Limite Inférieure Statique
   - Une Limite Inférieure d'un Test Statique peut être n'importe quel nombre à virgule flottante.
 Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance.

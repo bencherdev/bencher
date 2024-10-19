@@ -1,10 +1,10 @@
-import Static from "./test/static.mdx";
 import Percentage from "./test/percentage.mdx";
 import ZScore from "./test/z-score.mdx";
 import TTest from "./test/t-test.mdx";
 import LogNormal from "./test/log-normal.mdx";
 import Iqr from "./test/iqr.mdx";
 import DeltaIqr from "./test/delta-iqr.mdx";
+import Static from "./test/static.mdx";
 
 ## `--threshold-test <TEST>`
 
@@ -15,22 +15,22 @@ Verwenden Sie den angegebenen Test, um Leistungsregressionen zu erkennen.
 Es stehen mehrere verschiedene Tests zur Verfügung:
 
 <ul>
-  <li>[Statisch (`static`)](#static)</li>
   <li>[Prozentsatz (`percentage`)](#percentage)</li>
   <li>[z-score (`z_score`)](#z-score)</li>
   <li>[t-test (`t_test`)](#t-test)</li>
   <li>[Log-Normal (`log_normal`)](#log-normal)</li>
   <li>[Interquartilsabstand (`iqr`)](#interquartile-range)</li>
   <li>[Delta Interquartilsabstand (`delta_iqr`)](#delta-interquartile-range)</li>
+  <li>[Statisch (`static`)](#static)</li>
 </ul>
 
 Zum Beispiel, um ein Schwellenwert mit einem Student's t-test zu verwenden,
 könnten Sie `--threshold-test t_test` schreiben.
 
-<Static />
 <Percentage />
 <ZScore />
 <TTest />
 <LogNormal />
 <Iqr />
 <DeltaIqr />
+<Static />

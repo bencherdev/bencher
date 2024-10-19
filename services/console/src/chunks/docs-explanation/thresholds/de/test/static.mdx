@@ -7,6 +7,14 @@ Es muss entweder eine Untergrenze, eine Obergrenze oder beides festgelegt werden
 Statische Tests funktionieren am besten, wenn der Wert der Metrik in einem konstanten Bereich über alle Benchmarks hinweg bleiben soll,
 wie beispielsweise die Codeabdeckung.
 
+> 🐰 Wenn Sie ein anderes statisches Unter-/Obergrenzen-Limit für jeden Benchmark wünschen,
+> sollten Sie den [Prozent-Test (`percentage`)][percentage test]
+> mit der Unter-/Obergrenze auf `0.0`
+> und der [maximalen Stichprobengröße][max sample size] auf `2` einstellen.
+
+[percentage test]: #percentage
+[max sample size]: #--threshold-max-sample-size-sample_size
+
 - #### Statische Untergrenze
   - Eine statische Test-Untergrenze kann eine beliebige Gleitkommazahl sein.
 Sie wird verwendet, wenn ein kleinerer Wert auf einen Leistungseinbruch hinweisen würde.

@@ -7,6 +7,14 @@ Either a Lower Boundary, Upper Boundary, or both must be set.
 Static Tests work best when the value of the Metric should stay within a constant range across all Benchmarks,
 such as code coverage.
 
+> 🐰 If you want a different static Lower/Upper Boundary Limit for each Benchmark,
+> then you should use a [Percentage Test (`percentage`)][percentage test]
+> with the Lower/Upper Boundary set to `0.0`
+> and the [Max Sample Size][max sample size] set to `2`.
+
+[percentage test]: #percentage
+[max sample size]: #--threshold-max-sample-size-sample_size
+
 - #### Static Lower Boundary
   - A Static Test Lower Boundary can be any floating point number.
 It is used when a smaller value would indicate a performance regression.

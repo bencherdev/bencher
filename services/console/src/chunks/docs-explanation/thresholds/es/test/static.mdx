@@ -6,6 +6,14 @@ Es decir, el Límite Inferior/Superior es un Límite Inferior/Superior explícit
 Debe establecerse un Límite Inferior, un Límite Superior, o ambos.
 Las Pruebas Estáticas funcionan mejor cuando el valor de la Métrica debe mantenerse dentro de un rango constante en todos los Benchmarks, como la cobertura de código.
 
+> 🐰 Si deseas un Límite Inferior/Superior Estático diferente para cada Benchmark,
+> entonces deberías usar [Prueba de Porcentaje (`percentage`)][percentage test]
+> con el Límite Inferior/Superior establecido en `0.0`
+> y el [Tamaño Máximo de Muestra][max sample size] establecido en `2`.
+
+[percentage test]: #percentage
+[max sample size]: #--threshold-max-sample-size-sample_size
+
 - #### Límite Inferior Estático
 - Un Límite Inferior de Prueba Estática puede ser cualquier número de punto flotante.
 Se utiliza cuando un valor más pequeño indicaría una regresión de rendimiento.
