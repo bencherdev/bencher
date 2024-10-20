@@ -45,10 +45,13 @@ chrono = { version = "0.4", default-features = false }
 clap = { version = "4.5", features = ["derive"] }
 derive_more = { version = "1.0", features = ["display"] }
 diesel = "2.2"
+# Blocked by dropshot
 http = "0.2"
+# Blocked by dropshot
 hyper = "0.14"
 jsonwebtoken = "9.3"
 literally = "0.1"
+# Blocked by dropshot
 octocrab = "0.39"
 once_cell = "1.19"
 ordered-float = "4.2"
@@ -113,12 +116,14 @@ must_use_candidate = "allow"      # Checks for public functions that have no #[m
 absolute_paths = "warn"                    # Checks for usage of items through absolute paths, like std::env::current_dir.
 as_underscore = "warn"                     # Checks for the usage of as _ conversion using inferred type.
 big_endian_bytes = "warn"                  # Checks for the usage of the to_be_bytes method and/or the function from_be_bytes.
+cfg_not_test = "warn"                      # Checks for usage of cfg that excludes code from test builds. (i.e., #[cfg(not(test))])
 dbg_macro = "warn"                         # Checks for usage of the dbg! macro.
 decimal_literal_representation = "warn"    # Warns if there is a better representation for a numeric literal.
 error_impl_error = "warn"                  # Checks for types named Error that implement Error.
 empty_enum_variants_with_brackets = "warn" # Finds enum variants without fields that are declared with empty brackets.
 exit = "warn"                              # Detects calls to the exit() function which terminates the program.
 expect_used = "warn"                       # Checks for .expect() or .expect_err() calls on Results and .expect() call on Options.
+field_scoped_visibility_modifiers = "warn" # Checks for usage of scoped visibility modifiers, like pub(crate), on fields. These make a field visible within a scope between public and private.
 filetype_is_file = "warn"                  # Checks for FileType::is_file().
 float_cmp_const = "warn"                   # Checks for (in-)equality comparisons on floating-point value and constant, except in functions called *eq* (which probably implement equality for a type involving floats).
 fn_to_numeric_cast_any = "warn"            # Checks for casts of a function pointer to any integer type.
@@ -147,12 +152,14 @@ mutex_atomic = "warn"                      # Checks for usage of Mutex<X> where 
 needless_raw_strings = "warn"              # Checks for raw string literals where a string literal can be used instead.
 panic = "warn"                             # Checks for usage of panic!.
 partial_pub_fields = "warn"                # Checks whether partial fields of a struct are public.
+pathbuf_init_then_push = "warn"            # Checks for calls to push immediately after creating a new PathBuf.
 print_stdout = "warn"                      # Checks for printing on stdout. The purpose of this lint is to catch debugging remnants.
 print_stderr = "warn"                      # Checks for printing on stderr. The purpose of this lint is to catch debugging remnants.
 rc_buffer = "warn"                         # Checks for Rc<T> and Arc<T> when T is a mutable buffer type such as String or Vec.
 rc_mutex = "warn"                          # Checks for Rc<Mutex<T>>.
 redundant_type_annotations = "warn"        # Warns about needless / redundant type annotations.
 ref_patterns = "warn"                      # Checks for usages of the ref keyword.
+renamed_function_params = "warn"           # Lints when the name of function parameters from trait impl is different than its default implementation.
 rest_pat_in_fully_bound_structs = "warn"   # Checks for unnecessary ‘…’ pattern binding on struct when all fields are explicitly matched.
 same_name_method = "warn"                  # It lints if a struct has two methods with the same name: one from a trait, another not from trait.
 semicolon_inside_block = "warn"            # Suggests moving the semicolon after a block to the inside of the block, after its last expression.
@@ -173,6 +180,7 @@ unnecessary_safety_comment = "warn"        # Checks for // SAFETY: comments on s
 unnecessary_safety_doc = "warn"            # Checks for the doc comments of publicly visible safe functions and traits and warns if there is a # Safety section.
 unnecessary_self_imports = "warn"          # Checks for imports ending in ::{self}.
 unreachable = "warn"                       # Checks for usage of unreachable!.
+unused_result_ok = "warn"                  # Checks for calls to Result::ok() without using the returned Option.
 unwrap_used = "warn"                       # Checks for .unwrap() or .unwrap_err() calls on Results and .unwrap() call on Options.
 use_debug = "warn"                         # Checks for usage of Debug formatting. The purpose of this lint is to catch debugging remnants.
 verbose_file_reads = "warn"                # Checks for usage of File::read_to_end and File::read_to_string.
