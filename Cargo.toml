@@ -45,19 +45,20 @@ chrono = { version = "0.4", default-features = false }
 clap = { version = "4.5", features = ["derive"] }
 derive_more = { version = "1.0", features = ["display"] }
 diesel = "2.2"
-# Blocked by dropshot
+# Blocked by http 1.0
 http = "0.2"
-# Blocked by dropshot
+# Blocked by http 1.0
 hyper = "0.14"
 jsonwebtoken = "9.3"
 literally = "0.1"
-# Blocked by dropshot
+# Blocked by http 1.0
 octocrab = "0.39"
 once_cell = "1.19"
 ordered-float = "4.2"
 oso = "0.27"
 pretty_assertions = "1.4"
 rand = "0.8"
+# Blocked by http 1.0
 reqwest = { version = "0.11", default-features = false }
 schemars = { version = "0.8", features = ["uuid1"] }
 serde = { version = "1.0", features = ["derive"] }
