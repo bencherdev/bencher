@@ -45,7 +45,8 @@ RUN rustup update
 RUN rustup toolchain install $RUST_VERSION-$(uname -m)-unknown-linux-gnu
 RUN rustup component add clippy rust-src rustfmt --toolchain $RUST_VERSION-$(uname -m)-unknown-linux-gnu
 RUN rustup target add wasm32-unknown-unknown --toolchain $RUST_VERSION-$(uname -m)-unknown-linux-gnu
-RUN cargo install diesel_cli --version 2.2.4 --locked --no-default-features --features sqlite
+# https://github.com/diesel-rs/diesel/issues/4316
+RUN cargo install diesel_cli --version 2.1.1 --locked --no-default-features --features sqlite
 RUN cargo install wasm-pack --version 0.12.1 --locked
 RUN cargo install typeshare-cli --version 1.9.2 --locked
 # RUN cargo install lychee --version 0.15.0 --locked
