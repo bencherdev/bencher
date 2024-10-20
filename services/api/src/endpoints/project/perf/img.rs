@@ -3,9 +3,8 @@ use bencher_json::{
     JsonPerfQuery,
 };
 use bencher_plot::LinePlot;
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
+use dropshot::{endpoint, Body, HttpError, Path, Query, RequestContext};
 use http::{Response, StatusCode};
-use hyper::Body;
 
 use crate::{
     context::ApiContext,
