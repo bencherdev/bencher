@@ -406,7 +406,7 @@ jobs:
       - name: Install nightly toolchain
         run: rustup toolchain install nightly
       - name: Install udeps
-        run: cargo install --version 0.1.45 --locked --force cargo-udeps
+        run: cargo install --version 0.1.50 --locked --force cargo-udeps
       - name: Run API udeps
         continue-on-error: true
         working-directory: ./services/api
