@@ -95,10 +95,10 @@ impl Ord for JsonNewMetric {
 impl Add for JsonNewMetric {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
-        let value = self.value + other.value;
-        let lower_value = option_add(self.lower_value, self.value, other.lower_value, other.value);
-        let upper_value = option_add(self.upper_value, self.value, other.upper_value, other.value);
+    fn add(self, rhs: Self) -> Self {
+        let value = self.value + rhs.value;
+        let lower_value = option_add(self.lower_value, self.value, rhs.lower_value, rhs.value);
+        let upper_value = option_add(self.upper_value, self.value, rhs.upper_value, rhs.value);
         Self {
             value,
             lower_value,

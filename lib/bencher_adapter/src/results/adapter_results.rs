@@ -268,8 +268,8 @@ impl AdapterResults {
 impl std::ops::Add for AdapterResults {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
-        self.combined(other, CombinedKind::Add)
+    fn add(self, rhs: Self) -> Self {
+        self.combined(rhs, CombinedKind::Add)
     }
 }
 

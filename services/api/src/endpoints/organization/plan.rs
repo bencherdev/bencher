@@ -126,10 +126,9 @@ pub async fn org_plan_post(
         &auth_user,
     )
     .await
-    .map_err(|e| {
+    .inspect_err(|e| {
         #[cfg(feature = "sentry")]
-        sentry::capture_error(&e);
-        e
+        sentry::capture_error(e);
     })?;
     Ok(Post::auth_response_created(json))
 }
@@ -262,10 +261,9 @@ pub async fn org_plan_delete(
         &auth_user,
     )
     .await
-    .map_err(|e| {
+    .inspect_err(|e| {
         #[cfg(feature = "sentry")]
         sentry::capture_error(&e);
-        e
     })?;
     Ok(Delete::auth_response_deleted())
 }
@@ -295,10 +293,9 @@ async fn delete_inner(
     // Wait to return the result of the biller delete until after the plan has been deleted locally
     let delete_plan_result = delete_plan(context, biller, &query_organization, &query_plan, remote)
         .await
-        .map_err(|e| {
+        .inspect_err(|e| {
             #[cfg(feature = "sentry")]
             sentry::capture_error(&e);
-            e
         });
 
     diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))

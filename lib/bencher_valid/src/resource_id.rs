@@ -91,10 +91,10 @@ impl Visitor<'_> for ResourceIdVisitor {
         formatter.write_str("a valid UUID or slug.")
     }
 
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        ResourceId::from_str(value).map_err(|_e| E::invalid_value(Unexpected::Str(value), &self))
+        ResourceId::from_str(v).map_err(|_e| E::invalid_value(Unexpected::Str(v), &self))
     }
 }

@@ -81,18 +81,18 @@ impl Visitor<'_> for SampleSizeVisitor {
         formatter.write_str("a model sample size greater than or equal to 2")
     }
 
-    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        self.visit_u32(u32::try_from(value).map_err(E::custom)?)
+        self.visit_u32(u32::try_from(v).map_err(E::custom)?)
     }
 
-    fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E>
+    fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        value.try_into().map_err(E::custom)
+        v.try_into().map_err(E::custom)
     }
 }
 

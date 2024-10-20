@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use crate::{audience::Audience, billing_cycle::BillingCycle, LicenseError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Claims {
     pub aud: Audience,         // Audience
     pub exp: i64,              // Expiration time (as UTC timestamp)

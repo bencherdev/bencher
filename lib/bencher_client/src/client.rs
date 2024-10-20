@@ -113,7 +113,7 @@ impl BencherClient {
     /// # Parameters
     ///
     /// - `sender`: A function that takes a `codegen::Client` and returns a `Future` that resolves
-    ///  to a `Result` containing a `serde_json::Value` or an `Error`
+    ///   to a `Result` containing a `serde_json::Value` or an `Error`
     ///
     /// # Returns
     ///
@@ -141,7 +141,7 @@ impl BencherClient {
     /// # Parameters
     ///
     /// - `sender`: A function that takes a `codegen::Client` and returns a `Future` that resolves
-    ///  to a `Result` containing a `ResponseValue` or an `Error`
+    ///   to a `Result` containing a `ResponseValue` or an `Error`
     ///
     /// # Returns
     ///
@@ -260,6 +260,7 @@ impl BencherClient {
         Err(ClientError::SendTimeout(attempts))
     }
 
+    #[allow(clippy::result_large_err)]
     fn log<T>(&self, response: &T) -> Result<(), ClientError>
     where
         T: Serialize,

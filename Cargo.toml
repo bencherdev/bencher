@@ -83,7 +83,6 @@ macro_use_extern_crate = "warn"
 meta_variable_misuse = "warn"
 non_ascii_idents = "warn"
 noop_method_call = "warn"
-pointer_structural_match = "warn"
 single_use_lifetimes = "warn"
 trivial_casts = "warn"
 trivial_numeric_casts = "warn"
@@ -97,17 +96,17 @@ variant_size_differences = "warn"
 
 [workspace.lints.clippy]
 # https://github.com/rust-lang/rust-clippy
-all = "warn"
+all = { level = "warn", priority = -1 }
 # cargo
 cargo = { level = "warn", priority = -1 }
 cargo_common_metadata = "allow"           # Checks to see if all common metadata is defined in Cargo.toml.
 multiple_crate_versions = "allow"         # Checks to see if multiple versions of a crate are being used.
 # pedantic
-pedantic = "warn"
-missing_errors_doc = "allow"      # Checks the doc comments of publicly visible functions that return a Result type and warns if there is no # Errors section.
-missing_panics_doc = "allow"      # Checks the doc comments of publicly visible functions that may panic and warns if there is no # Panics section.
-module_name_repetitions = "allow" # Detects type names that are prefixed or suffixed by the containing module’s name.
-must_use_candidate = "allow"      # Checks for public functions that have no #[must_use] attribute, but return something not already marked must-use, have no mutable arg and mutate no statics.
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"                 # Checks the doc comments of publicly visible functions that return a Result type and warns if there is no # Errors section.
+missing_panics_doc = "allow"                 # Checks the doc comments of publicly visible functions that may panic and warns if there is no # Panics section.
+module_name_repetitions = "allow"            # Detects type names that are prefixed or suffixed by the containing module’s name.
+must_use_candidate = "allow"                 # Checks for public functions that have no #[must_use] attribute, but return something not already marked must-use, have no mutable arg and mutate no statics.
 # restriction
 absolute_paths = "warn"                    # Checks for usage of items through absolute paths, like std::env::current_dir.
 as_underscore = "warn"                     # Checks for the usage of as _ conversion using inferred type.

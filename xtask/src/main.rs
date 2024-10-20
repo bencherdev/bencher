@@ -14,7 +14,8 @@ use task::Task;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
-    dotenvy::from_path("xtask/.env").ok();
+    #[allow(let_underscore_drop, reason = "Optional dotenv file")]
+    let _ = dotenvy::from_path("xtask/.env");
     exec().await
 }
 

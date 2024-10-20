@@ -18,8 +18,9 @@ fn main() {
     let ast = syn::parse2(tokens).unwrap();
     let content = prettyplease::unparse(&ast);
 
-    let mut out_file = Path::new(&std::env::var("OUT_DIR").unwrap()).to_path_buf();
-    out_file.push("codegen.rs");
+    let out_file = Path::new(&std::env::var("OUT_DIR").unwrap())
+        .to_path_buf()
+        .join("codegen.rs");
 
     #[cfg(unix)]
     {

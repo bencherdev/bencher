@@ -66,18 +66,18 @@ impl Visitor<'_> for IndexVisitor {
         formatter.write_str("a plot index greater than or equal to 0 and less than or equal to 64")
     }
 
-    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        self.visit_u8(u8::try_from(value).map_err(E::custom)?)
+        self.visit_u8(u8::try_from(v).map_err(E::custom)?)
     }
 
-    fn visit_u8<E>(self, value: u8) -> Result<Self::Value, E>
+    fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        value.try_into().map_err(E::custom)
+        v.try_into().map_err(E::custom)
     }
 }
 

@@ -132,11 +132,11 @@ impl Visitor<'_> for DateTimeMillisVisitor {
         formatter.write_str("a date time timestamp in milliseconds")
     }
 
-    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        value.try_into().map_err(E::custom)
+        v.try_into().map_err(E::custom)
     }
 }
 

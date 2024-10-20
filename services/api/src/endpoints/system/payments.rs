@@ -51,10 +51,9 @@ pub async fn payments_post(
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
-        .map_err(|e| {
+        .inspect_err(|e| {
             #[cfg(feature = "sentry")]
             sentry::capture_error(&e);
-            e
         })?;
     Ok(Post::pub_response_created(json))
 }
@@ -126,10 +125,9 @@ pub async fn checkouts_post(
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = checkouts_post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
-        .map_err(|e| {
+        .inspect_err(|e| {
             #[cfg(feature = "sentry")]
             sentry::capture_error(&e);
-            e
         })?;
     Ok(Post::auth_response_created(json))
 }

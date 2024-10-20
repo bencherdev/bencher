@@ -54,7 +54,7 @@ impl ReleaseNotes {
                 break;
             }
             buffered_writer.write_all(line.as_bytes())?;
-            buffered_writer.write_all(&[b'\n'])?;
+            buffered_writer.write_all(b"\n")?;
         }
 
         Ok(())

@@ -73,11 +73,11 @@ impl Visitor<'_> for UserNameVisitor {
         formatter.write_str("a valid user name")
     }
 
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        value.parse().map_err(E::custom)
+        v.parse().map_err(E::custom)
     }
 }
 

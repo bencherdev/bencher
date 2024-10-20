@@ -73,25 +73,25 @@ impl Visitor<'_> for ExpirationMonthVisitor {
         formatter.write_str("a valid payment card expiration month")
     }
 
-    fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E>
+    fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        value.try_into().map_err(E::custom)
+        v.try_into().map_err(E::custom)
     }
 
-    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        self.visit_i32(i32::try_from(value).map_err(E::custom)?)
+        self.visit_i32(i32::try_from(v).map_err(E::custom)?)
     }
 
-    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        self.visit_i32(i32::try_from(value).map_err(E::custom)?)
+        self.visit_i32(i32::try_from(v).map_err(E::custom)?)
     }
 }
 

@@ -81,11 +81,11 @@ impl Visitor<'_> for PlanLevelVisitor {
         formatter.write_str("a valid plan level")
     }
 
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        value.parse().map_err(E::custom)
+        v.parse().map_err(E::custom)
     }
 }
 
