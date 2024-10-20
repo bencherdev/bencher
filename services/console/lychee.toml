@@ -7,6 +7,8 @@ exclude = [
     "localhost:3000",
     "http://localhost:3000*",
     "http://localhost:61016*",
+    "http://127.0.0.1:61016*",
+    "http://host.docker.internal:61016*",
     "https://api.bencher.dev*",
     "https://api.bencher.example.com*",
     "https://discord.gg/yGEsdUh7R4",
@@ -14,10 +16,10 @@ exclude = [
     "https://www.linkedin.com/in/epompeii/",
     "https://www.linkedin.com/company/bencher",
     "https://www.reddit.com/r/bencher",
+    "https://gitlab.com/api/*",
     "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789",
     "https://www.nsa.gov/Cybersecurity/Partnership/National-Cross-Domain-Strategy-Management-Office/",
     "saul@bettercallsaul.com",
-    "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID",
     # TODO figure out why this page 404s
     # "https://bencher.dev/docs/[a-z]{2}/reference/api",
 ]
