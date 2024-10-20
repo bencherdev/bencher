@@ -34,7 +34,7 @@ const AuthHelp = () => {
 								target="_blank"
 								rel="noreferrer"
 							>
-								Open an issue on GitHub
+								Open an issue
 							</a>
 						</h4>
 						<br />
@@ -49,7 +49,6 @@ const AuthHelp = () => {
 
 						<h4 class="title is-4">Email</h4>
 						<h4 class="subtitle is-4">
-							Email us directly at{" "}
 							<a href="mailto:help@bencher.dev">help@bencher.dev</a>
 						</h4>
 						<br />

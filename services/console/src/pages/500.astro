@@ -1,0 +1,19 @@
+---
+import LegalLayout from "../layouts/legal/LegalLayout.astro";
+import Help from "../components/console/help/Help.astro";
+
+interface Props {
+  error: unknown
+}
+const { error } = Astro.props
+---
+
+<LegalLayout
+  title="Server Error"
+  description="Whoops! Server error 🔥"
+  heading="500: Server Error"
+>
+  <p>{error instanceof Error ? error.message : "Unknown error"}</p>
+  <hr />
+  <Help />
+</LegalLayout>
