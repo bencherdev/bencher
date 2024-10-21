@@ -41,6 +41,7 @@ pub fn init_rbac() -> oso::Result<Oso> {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod test {
     use std::collections::HashMap;
+    use std::sync::LazyLock;
 
     use super::*;
     use crate::organization::Permission as OrgPerm;
@@ -48,12 +49,11 @@ mod test {
     use crate::project::Permission as ProjPerm;
     use crate::project::Role as ProjRole;
     use crate::server::Permission as SvrPerm;
-    use once_cell::sync::Lazy;
     use uuid::Uuid;
 
     const OSO_ERROR: &str = "Failed to initialize RBAC";
 
-    static OSO: Lazy<Oso> = Lazy::new(|| init_rbac().expect(OSO_ERROR));
+    static OSO: LazyLock<Oso> = LazyLock::new(|| init_rbac().expect(OSO_ERROR));
 
     #[test]
     #[allow(clippy::too_many_lines)]

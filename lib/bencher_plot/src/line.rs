@@ -1,9 +1,9 @@
+use std::sync::LazyLock;
 use std::{io::Cursor, ops::Range};
 
 use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
 use chrono::{DateTime, Duration, Utc};
 use image::{GenericImageView, ImageBuffer};
-use once_cell::sync::Lazy;
 use ordered_float::OrderedFloat;
 use plotters::{
     coord::types::RangedCoordf64,
@@ -36,7 +36,7 @@ const MAX_LINES: usize = 8;
 
 pub const BENCHER_WORDMARK: &[u8; 4910] = include_bytes!("../wordmark.png");
 #[allow(clippy::expect_used)]
-static WORDMARK_ELEMENT: Lazy<BitMapElement<(i32, i32)>> = Lazy::new(|| {
+static WORDMARK_ELEMENT: LazyLock<BitMapElement<(i32, i32)>> = LazyLock::new(|| {
     let wordmark_cursor = Cursor::new(BENCHER_WORDMARK);
     let wordmark_image =
         image::load(wordmark_cursor, image::ImageFormat::Png).expect("Failed to load wordmark");
@@ -413,7 +413,7 @@ const TABLEAU_10: [(u8, u8, u8); 10] = [
     (186, 176, 171),
 ];
 #[allow(clippy::expect_used)]
-static TABLEAU_10_RGB: Lazy<[RGBColor; 10]> = Lazy::new(|| {
+static TABLEAU_10_RGB: LazyLock<[RGBColor; 10]> = LazyLock::new(|| {
     TABLEAU_10
         .into_iter()
         .map(|(r, g, b)| RGBColor(r, g, b))
@@ -447,11 +447,12 @@ mod test {
     use crate::LinePlot;
 
     pub const PERF_DOT_JSON: &str = include_str!("../perf.json");
-    static JSON_PERF: Lazy<JsonPerf> =
-        Lazy::new(|| serde_json::from_str(PERF_DOT_JSON).expect("Failed to serialize perf JSON"));
+    static JSON_PERF: LazyLock<JsonPerf> = LazyLock::new(|| {
+        serde_json::from_str(PERF_DOT_JSON).expect("Failed to serialize perf JSON")
+    });
 
     pub const DECIMAL_DOT_JSON: &str = include_str!("../decimal.json");
-    static JSON_PERF_DECIMAL: Lazy<JsonPerf> = Lazy::new(|| {
+    static JSON_PERF_DECIMAL: LazyLock<JsonPerf> = LazyLock::new(|| {
         serde_json::from_str(DECIMAL_DOT_JSON).expect("Failed to serialize perf JSON")
     });
 

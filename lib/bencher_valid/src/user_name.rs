@@ -1,5 +1,6 @@
+use std::sync::LazyLock;
+
 use derive_more::Display;
-use once_cell::sync::Lazy;
 #[cfg(all(feature = "full", not(feature = "lite")))]
 use regex::Regex;
 #[cfg(feature = "lite")]
@@ -18,8 +19,8 @@ use serde::{
 use crate::{is_valid_len, ValidError, REGEX_ERROR};
 
 #[allow(clippy::expect_used)]
-static NAME_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,64}$").expect(REGEX_ERROR));
+static NAME_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,64}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]

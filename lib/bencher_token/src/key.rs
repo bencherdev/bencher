@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use bencher_json::{organization::member::OrganizationRole, Email, Jwt, OrganizationUuid, Secret};
 use chrono::Utc;
@@ -6,12 +7,11 @@ use jsonwebtoken::{
     decode, encode, errors::ErrorKind as JsonWebTokenErrorKind, Algorithm, DecodingKey,
     EncodingKey, Header, TokenData, Validation,
 };
-use once_cell::sync::Lazy;
 
 use crate::{Audience, Claims, InviteClaims, OrgClaims, TokenError};
 
-static HEADER: Lazy<Header> = Lazy::new(Header::default);
-static ALGORITHM: Lazy<Algorithm> = Lazy::new(Algorithm::default);
+static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
+static ALGORITHM: LazyLock<Algorithm> = LazyLock::new(Algorithm::default);
 
 pub struct TokenKey {
     pub issuer: String,
@@ -130,7 +130,7 @@ mod test {
     const BENCHER_DOT_DEV_ISSUER: &str = "bencher.dev";
     const TTL: u32 = u32::MAX;
 
-    static EMAIL: Lazy<Email> = Lazy::new(|| "info@bencher.dev".parse().unwrap());
+    static EMAIL: LazyLock<Email> = LazyLock::new(|| "info@bencher.dev".parse().unwrap());
 
     fn sleep_for_a_second() {
         let second = time::Duration::from_secs(1);

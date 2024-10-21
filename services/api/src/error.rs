@@ -1,8 +1,8 @@
 use std::fmt;
+use std::sync::LazyLock;
 
 use dropshot::HttpError;
 use http::StatusCode;
-use once_cell::sync::Lazy;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy)]
@@ -228,8 +228,8 @@ where
 
 const GITHUB_ISSUE_URL_STR: &str = "https://github.com/bencherdev/bencher/issues/new";
 #[allow(clippy::expect_used)]
-pub static GITHUB_ISSUE_URL: Lazy<url::Url> =
-    Lazy::new(|| GITHUB_ISSUE_URL_STR.parse().expect(GITHUB_ISSUE_URL_STR));
+pub static GITHUB_ISSUE_URL: LazyLock<url::Url> =
+    LazyLock::new(|| GITHUB_ISSUE_URL_STR.parse().expect(GITHUB_ISSUE_URL_STR));
 
 pub fn github_issue_url(title: &str, body: &str) -> url::Url {
     let mut url = GITHUB_ISSUE_URL.clone();

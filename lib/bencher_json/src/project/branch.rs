@@ -1,7 +1,7 @@
 use std::fmt;
+use std::sync::LazyLock;
 
 use bencher_valid::{BranchName, DateTime, GitHash, NameId, Slug};
-use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -14,13 +14,13 @@ pub const START_POINT_MAX_VERSIONS: u32 = 255;
 
 pub const BRANCH_MAIN_STR: &str = "main";
 #[allow(clippy::expect_used)]
-static BRANCH_MAIN: Lazy<BranchName> = Lazy::new(|| {
+static BRANCH_MAIN: LazyLock<BranchName> = LazyLock::new(|| {
     BRANCH_MAIN_STR
         .parse()
         .expect("Failed to parse branch name.")
 });
 #[allow(clippy::expect_used)]
-static BRANCH_MAIN_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
+static BRANCH_MAIN_SLUG: LazyLock<Option<Slug>> = LazyLock::new(|| {
     Some(
         BRANCH_MAIN_STR
             .parse()

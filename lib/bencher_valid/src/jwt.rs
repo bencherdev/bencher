@@ -1,9 +1,10 @@
+use std::sync::LazyLock;
+
 use base64::{
     engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
     Engine,
 };
 use derive_more::Display;
-use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
@@ -21,7 +22,7 @@ use crate::ValidError;
 pub const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
 
 #[allow(clippy::expect_used)]
-pub static TEST_BENCHER_API_TOKEN: Lazy<Jwt> = Lazy::new(|| {
+pub static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
     TEST_BENCHER_API_TOKEN_STR
         .parse()
         .expect("Invalid test JWT")

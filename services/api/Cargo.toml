@@ -39,7 +39,6 @@ diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 http.workspace = true
 jsonwebtoken.workspace = true
-once_cell.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true

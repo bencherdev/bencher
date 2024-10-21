@@ -19,7 +19,6 @@ statrs = "0.17"
 
 [dev-dependencies]
 bencher_logger.workspace = true
-once_cell.workspace = true
 pretty_assertions.workspace = true
 
 [lints]

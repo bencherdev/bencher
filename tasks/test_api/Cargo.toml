@@ -10,7 +10,6 @@ publish = false
 bencher_json = { workspace = true, features = ["lite"] }
 anyhow.workspace = true
 clap.workspace = true
-once_cell.workspace = true
 pretty_assertions.workspace = true
 serde_json.workspace = true
 # Crate

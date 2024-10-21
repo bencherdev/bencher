@@ -12,7 +12,6 @@ lite = ["bencher_json/lite"]
 [dependencies]
 bencher_json.workspace = true
 chrono.workspace = true
-once_cell.workspace = true
 ordered-float.workspace = true
 thiserror.workspace = true
 # Crate

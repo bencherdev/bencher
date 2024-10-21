@@ -1,4 +1,5 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
+
 #[cfg(all(feature = "full", not(feature = "lite")))]
 use regex::Regex;
 #[cfg(feature = "lite")]
@@ -17,7 +18,8 @@ use serde::{
 use crate::{error::REGEX_ERROR, secret::SANITIZED_SECRET, ValidError};
 
 #[allow(clippy::expect_used)]
-static CVC_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[[:digit:]]{3,4}$").expect(REGEX_ERROR));
+static CVC_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^[[:digit:]]{3,4}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]

@@ -1,5 +1,7 @@
 #![cfg(feature = "plus")]
 
+use std::sync::LazyLock;
+
 use bencher_billing::Biller;
 use bencher_github::GitHub;
 use bencher_json::{
@@ -8,7 +10,6 @@ use bencher_json::{
 };
 use bencher_license::Licensor;
 use chrono::NaiveTime;
-use once_cell::sync::Lazy;
 use tokio::runtime::Handle;
 use url::Url;
 
@@ -16,8 +17,8 @@ use crate::context::Indexer;
 
 // Run at 03:07:22 UTC by default (offset 11,242 seconds)
 #[allow(clippy::expect_used)]
-static DEFAULT_STATS_OFFSET: Lazy<NaiveTime> =
-    Lazy::new(|| NaiveTime::from_hms_opt(3, 7, 22).expect("Invalid default stats offset"));
+static DEFAULT_STATS_OFFSET: LazyLock<NaiveTime> =
+    LazyLock::new(|| NaiveTime::from_hms_opt(3, 7, 22).expect("Invalid default stats offset"));
 // Default stats to enabled
 const DEFAULT_STATS_ENABLED: bool = true;
 

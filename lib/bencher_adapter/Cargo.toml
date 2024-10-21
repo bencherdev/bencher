@@ -8,7 +8,6 @@ edition.workspace = true
 # Workspace
 bencher_json = { workspace = true, features = ["full"] }
 literally.workspace = true
-once_cell.workspace = true
 ordered-float.workspace = true
 serde.workspace = true
 serde_json.workspace = true

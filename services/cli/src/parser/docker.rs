@@ -1,9 +1,10 @@
+use std::sync::LazyLock;
+
 use clap::{Parser, ValueEnum};
-use once_cell::sync::Lazy;
 
 use crate::CLI_VERSION;
 
-pub static CLI_VERSION_TAG: Lazy<String> = Lazy::new(|| format!("v{CLI_VERSION}"));
+pub static CLI_VERSION_TAG: LazyLock<String> = LazyLock::new(|| format!("v{CLI_VERSION}"));
 
 #[derive(Parser, Debug)]
 pub struct CliUp {

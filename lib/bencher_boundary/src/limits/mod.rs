@@ -219,11 +219,12 @@ impl MetricsLimits {
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
+    use std::sync::LazyLock;
+
     use bencher_json::{
         project::boundary::BoundaryLimit, Boundary, CdfBoundary, IqrBoundary, PercentageBoundary,
     };
     use bencher_logger::bootstrap_logger;
-    use once_cell::sync::Lazy;
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -235,10 +236,10 @@ mod test {
     const STD_DEV: f64 = 1.0;
     const FREEDOM: f64 = 5.0;
 
-    static NEGATIVE_STATIC_LIMIT: Lazy<Boundary> =
-        Lazy::new(|| (-5.0).try_into().expect("Failed to parse boundary."));
-    static STATIC_LIMIT: Lazy<Boundary> =
-        Lazy::new(|| 5.0.try_into().expect("Failed to parse boundary."));
+    static NEGATIVE_STATIC_LIMIT: LazyLock<Boundary> =
+        LazyLock::new(|| (-5.0).try_into().expect("Failed to parse boundary."));
+    static STATIC_LIMIT: LazyLock<Boundary> =
+        LazyLock::new(|| 5.0.try_into().expect("Failed to parse boundary."));
 
     const STATIC_NEGATIVE_OUTLIER: f64 = -10.0;
     const STATIC_NEGATIVE: f64 = -3.0;
@@ -246,14 +247,14 @@ mod test {
     const STATIC_POSITIVE: f64 = 3.0;
     const STATIC_POSITIVE_OUTLIER: f64 = 10.0;
 
-    static PERCENTAGE: Lazy<PercentageBoundary> = Lazy::new(|| {
+    static PERCENTAGE: LazyLock<PercentageBoundary> = LazyLock::new(|| {
         5.0.try_into()
             .expect("Failed to parse percentage boundary.")
     });
     const PERCENTAGE_NEGATIVE: f64 = -4.0;
     const PERCENTAGE_POSITIVE: f64 = 6.0;
 
-    static PERCENTILE: Lazy<CdfBoundary> = Lazy::new(|| {
+    static PERCENTILE: LazyLock<CdfBoundary> = LazyLock::new(|| {
         0.85.try_into()
             .expect("Failed to parse statistical boundary.")
     });
@@ -282,7 +283,7 @@ mod test {
         q2: 1.0,
         q3: 1.5,
     };
-    static IQR_MULTIPLIER: Lazy<IqrBoundary> = Lazy::new(|| {
+    static IQR_MULTIPLIER: LazyLock<IqrBoundary> = LazyLock::new(|| {
         1.5.try_into()
             .expect("Failed to parse inter-quartile range boundary.")
     });

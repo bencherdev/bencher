@@ -9,7 +9,6 @@ edition.workspace = true
 bencher_json = { workspace = true, features = ["full", "plus"] }
 chrono.workspace = true
 jsonwebtoken = { workspace = true, features = ["use_pem"] }
-once_cell.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true

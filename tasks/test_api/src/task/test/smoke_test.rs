@@ -1,3 +1,4 @@
+use std::sync::LazyLock;
 use std::{
     net::TcpStream,
     process::{Child, Command},
@@ -9,7 +10,6 @@ use bencher_json::{
     JsonApiVersion, Jwt, Url, DEV_BENCHER_API_URL, LOCALHOST_BENCHER_API_URL, PROD_BENCHER_API_URL,
     TEST_BENCHER_API_URL,
 };
-use once_cell::sync::Lazy;
 
 use crate::{
     parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
@@ -18,8 +18,8 @@ use crate::{
 };
 
 const DEV_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
-pub static DEV_BENCHER_API_TOKEN: Lazy<Jwt> =
-    Lazy::new(|| DEV_BENCHER_API_TOKEN_STR.parse().expect("Invalid test JWT"));
+pub static DEV_BENCHER_API_TOKEN: LazyLock<Jwt> =
+    LazyLock::new(|| DEV_BENCHER_API_TOKEN_STR.parse().expect("Invalid test JWT"));
 
 #[derive(Debug)]
 pub struct SmokeTest {

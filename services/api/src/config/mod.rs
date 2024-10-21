@@ -1,3 +1,4 @@
+use std::sync::LazyLock;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     ops::Deref,
@@ -11,7 +12,6 @@ use bencher_json::{
     JsonConfig, BENCHER_API_PORT,
 };
 use bencher_token::DEFAULT_SECRET_KEY;
-use once_cell::sync::Lazy;
 use slog::{error, info, Logger};
 use url::Url;
 
@@ -47,14 +47,14 @@ const DEFAULT_BUSY_TIMEOUT: u32 = 5_000;
 
 const DEFAULT_CONSOLE_URL_STR: &str = "http://localhost:3000";
 #[allow(clippy::panic)]
-static DEFAULT_CONSOLE_URL: Lazy<Url> = Lazy::new(|| {
+static DEFAULT_CONSOLE_URL: LazyLock<Url> = LazyLock::new(|| {
     DEFAULT_CONSOLE_URL_STR.parse().unwrap_or_else(|e| {
         panic!("Failed to parse default console URL \"{DEFAULT_CONSOLE_URL_STR}\": {e}")
     })
 });
 
-static DEFAULT_BIND_ADDRESS: Lazy<SocketAddr> =
-    Lazy::new(|| SocketAddr::new(DEFAULT_IP, BENCHER_API_PORT));
+static DEFAULT_BIND_ADDRESS: LazyLock<SocketAddr> =
+    LazyLock::new(|| SocketAddr::new(DEFAULT_IP, BENCHER_API_PORT));
 
 #[derive(Debug, Clone)]
 pub struct Config(JsonConfig);

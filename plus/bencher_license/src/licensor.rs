@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use bencher_json::organization::plan::JsonLicense;
 use bencher_json::{Entitlements, Jwt, OrganizationUuid, PlanLevel, Secret, BENCHER_URL_STR};
@@ -8,7 +9,6 @@ use jsonwebtoken::{
     errors::{Error as JsonWebTokenError, ErrorKind as JsonWebTokenErrorKind},
     Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
-use once_cell::sync::Lazy;
 
 use crate::{audience::Audience, billing_cycle::BillingCycle, claims::Claims, LicenseError};
 
@@ -20,8 +20,8 @@ pub const PUBLIC_PEM: &str = TEST_PUBLIC_PEM;
 #[cfg(not(debug_assertions))]
 pub const PUBLIC_PEM: &str = LIVE_PUBLIC_PEM;
 
-static ALGORITHM: Lazy<Algorithm> = Lazy::new(|| Algorithm::ES256);
-static HEADER: Lazy<Header> = Lazy::new(|| Header::new(*ALGORITHM));
+static ALGORITHM: LazyLock<Algorithm> = LazyLock::new(|| Algorithm::ES256);
+static HEADER: LazyLock<Header> = LazyLock::new(|| Header::new(*ALGORITHM));
 
 #[derive(Clone)]
 pub enum Licensor {
@@ -228,14 +228,15 @@ fn check_expiration(time: i64) -> Result<(), LicenseError> {
 
 #[cfg(test)]
 mod test {
+    use std::sync::LazyLock;
+
     use bencher_json::{OrganizationUuid, PlanLevel, Secret, BENCHER_URL_STR};
-    use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
 
     use crate::{audience::Audience, licensor::BillingCycle, Licensor};
 
     pub const PRIVATE_PEM: &str = include_str!("./test/private.pem");
-    static PRIVATE_PEM_SECRET: Lazy<Secret> = Lazy::new(|| PRIVATE_PEM.parse().unwrap());
+    static PRIVATE_PEM_SECRET: LazyLock<Secret> = LazyLock::new(|| PRIVATE_PEM.parse().unwrap());
 
     #[test]
     fn test_self_hosted() {

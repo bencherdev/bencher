@@ -1,5 +1,6 @@
+use std::sync::LazyLock;
+
 use bencher_json::Secret;
-use once_cell::sync::Lazy;
 
 mod audience;
 mod claims;
@@ -13,10 +14,10 @@ pub use key::TokenKey;
 
 #[cfg(debug_assertions)]
 #[allow(clippy::expect_used)]
-pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| {
+pub static DEFAULT_SECRET_KEY: LazyLock<Secret> = LazyLock::new(|| {
     "DO_NOT_USE_THIS_IN_PRODUCTION"
         .parse()
         .expect("Invalid secret key")
 });
 #[cfg(not(debug_assertions))]
-pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| uuid::Uuid::new_v4().into());
+pub static DEFAULT_SECRET_KEY: LazyLock<Secret> = LazyLock::new(|| uuid::Uuid::new_v4().into());

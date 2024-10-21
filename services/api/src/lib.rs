@@ -1,7 +1,7 @@
 #![allow(clippy::result_large_err)]
 
 use bencher_json::JsonSpec;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 pub mod config;
 pub mod context;
@@ -18,5 +18,5 @@ pub const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const SPEC_STR: &str = include_str!("../openapi.json");
 #[allow(clippy::expect_used)]
-pub static SPEC: Lazy<JsonSpec> =
-    Lazy::new(|| JsonSpec(SPEC_STR.parse().expect("Failed to parse OpenAPI spec")));
+pub static SPEC: LazyLock<JsonSpec> =
+    LazyLock::new(|| JsonSpec(SPEC_STR.parse().expect("Failed to parse OpenAPI spec")));

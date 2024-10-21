@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
     Index, IqrBoundary, Jwt, Model, ModelTest, NameId, NameIdKind, NonEmpty, PercentageBoundary,
@@ -9,7 +11,6 @@ pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
     LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus,
 };
-use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -82,19 +83,19 @@ pub const BENCHER_URL_STR: &str = LOCALHOST_BENCHER_URL_STR;
 pub const BENCHER_URL_STR: &str = PROD_BENCHER_URL_STR;
 
 #[allow(clippy::panic)]
-pub static BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static BENCHER_URL: LazyLock<url::Url> = LazyLock::new(|| {
     BENCHER_URL_STR
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{BENCHER_URL_STR}\": {e}"))
 });
 #[allow(clippy::panic)]
-pub static DEVEL_BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static DEVEL_BENCHER_URL: LazyLock<url::Url> = LazyLock::new(|| {
     DEVEL_BENCHER_URL_STR
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEVEL_BENCHER_URL_STR}\": {e}"))
 });
 #[allow(clippy::panic)]
-pub static PROD_BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static PROD_BENCHER_URL: LazyLock<url::Url> = LazyLock::new(|| {
     PROD_BENCHER_URL_STR
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_URL_STR}\": {e}"))
@@ -118,31 +119,31 @@ pub const BENCHER_API_URL_STR: &str = LOCALHOST_BENCHER_API_URL_STR;
 pub const BENCHER_API_URL_STR: &str = PROD_BENCHER_API_URL_STR;
 
 #[allow(clippy::panic)]
-pub static BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
     BENCHER_API_URL_STR
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{BENCHER_API_URL_STR}\": {e}"))
 });
 #[allow(clippy::panic)]
-pub static LOCALHOST_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static LOCALHOST_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
     LOCALHOST_BENCHER_API_URL_STR.parse().unwrap_or_else(|e| {
         panic!("Failed to parse endpoint \"{LOCALHOST_BENCHER_API_URL_STR}\": {e}")
     })
 });
 #[allow(clippy::panic)]
-pub static DEV_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static DEV_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
     DEV_BENCHER_API_URL_STR
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEV_BENCHER_API_URL_STR}\": {e}"))
 });
 #[allow(clippy::panic)]
-pub static TEST_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static TEST_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
     TEST_BENCHER_API_URL_STR
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{TEST_BENCHER_API_URL_STR}\": {e}"))
 });
 #[allow(clippy::panic)]
-pub static PROD_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static PROD_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
     PROD_BENCHER_API_URL_STR
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_API_URL_STR}\": {e}"))

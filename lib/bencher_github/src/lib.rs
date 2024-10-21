@@ -1,20 +1,21 @@
+use std::sync::LazyLock;
+
 use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
     basic::BasicClient, reqwest::AsyncHttpClientError, AuthUrl, AuthorizationCode, ClientId,
     ClientSecret, TokenResponse, TokenUrl,
 };
 use octocrab::Octocrab;
-use once_cell::sync::Lazy;
 use serde::Deserialize;
 
 #[allow(clippy::expect_used)]
-static AUTH_URL: Lazy<AuthUrl> = Lazy::new(|| {
+static AUTH_URL: LazyLock<AuthUrl> = LazyLock::new(|| {
     AuthUrl::new("https://github.com/login/oauth/authorize".to_owned())
         .expect("Invalid authorization endpoint URL")
 });
 
 #[allow(clippy::expect_used)]
-static TOKEN_URL: Lazy<TokenUrl> = Lazy::new(|| {
+static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
     TokenUrl::new("https://github.com/login/oauth/access_token".to_owned())
         .expect("Invalid token endpoint URL")
 });

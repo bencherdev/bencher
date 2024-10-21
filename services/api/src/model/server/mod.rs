@@ -1,5 +1,6 @@
 #![cfg(feature = "plus")]
 
+use std::sync::LazyLock;
 use std::{cmp, sync::Arc};
 
 use bencher_json::{DateTime, JsonServer, JsonServerStats, PlanLevel, ServerUuid, BENCHER_API_URL};
@@ -7,7 +8,6 @@ use bencher_license::Licensor;
 use chrono::{Duration, Utc};
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
-use once_cell::sync::Lazy;
 use slog::Logger;
 
 use crate::{
@@ -29,7 +29,7 @@ const SERVER_ID: ServerId = ServerId(1);
 const LICENSE_GRACE_PERIOD: usize = 7;
 
 #[allow(clippy::panic)]
-pub static BENCHER_STATS_API_URL: Lazy<url::Url> = Lazy::new(|| {
+pub static BENCHER_STATS_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
     BENCHER_API_URL
         .clone()
         .join("/v0/server/stats")

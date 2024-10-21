@@ -113,8 +113,9 @@ impl Quartiles {
 #[cfg(test)]
 #[allow(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
+    use std::sync::LazyLock;
+
     use bencher_json::IqrBoundary;
-    use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
 
     use super::Quartiles;
@@ -129,11 +130,11 @@ mod test {
     const DATA_FIVE_CONST: &[f64] = &[1.0, 1.0, 1.0, 1.0, 1.0];
     const DATA_SIX_BI: &[f64] = &[-6.0, -6.0, 1.0, 1.0, 9.0, 9.0];
 
-    static ZERO_BOUNDARY: Lazy<IqrBoundary> = Lazy::new(|| 0.0.try_into().unwrap());
-    static ONE_BOUNDARY: Lazy<IqrBoundary> = Lazy::new(|| 1.0.try_into().unwrap());
-    static TWO_BOUNDARY: Lazy<IqrBoundary> = Lazy::new(|| 2.0.try_into().unwrap());
-    static THREE_BOUNDARY: Lazy<IqrBoundary> = Lazy::new(|| 3.0.try_into().unwrap());
-    static FIVE_BOUNDARY: Lazy<IqrBoundary> = Lazy::new(|| 5.0.try_into().unwrap());
+    static ZERO_BOUNDARY: LazyLock<IqrBoundary> = LazyLock::new(|| 0.0.try_into().unwrap());
+    static ONE_BOUNDARY: LazyLock<IqrBoundary> = LazyLock::new(|| 1.0.try_into().unwrap());
+    static TWO_BOUNDARY: LazyLock<IqrBoundary> = LazyLock::new(|| 2.0.try_into().unwrap());
+    static THREE_BOUNDARY: LazyLock<IqrBoundary> = LazyLock::new(|| 3.0.try_into().unwrap());
+    static FIVE_BOUNDARY: LazyLock<IqrBoundary> = LazyLock::new(|| 5.0.try_into().unwrap());
 
     #[test]
     fn test_quartiles_zero() {

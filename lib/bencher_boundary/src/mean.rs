@@ -51,7 +51,8 @@ fn variance(location: f64, data: &[f64]) -> Option<f64> {
 #[cfg(test)]
 #[allow(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
-    use once_cell::sync::Lazy;
+    use std::sync::LazyLock;
+
     use pretty_assertions::assert_eq;
 
     use crate::mean::variance;
@@ -67,16 +68,16 @@ mod test {
     const DATA_FIVE_NEG: &[f64] = &[-1.0, -2.0, -3.0, -4.0, -5.0];
     const DATA_FIVE_CONST: &[f64] = &[1.0, 1.0, 1.0, 1.0, 1.0];
 
-    static MEAN_ZERO: Lazy<Mean> = Lazy::new(|| Mean { mean: 0.0 });
-    static MEAN_ONE: Lazy<Mean> = Lazy::new(|| Mean { mean: 1.0 });
-    static MEAN_TWO: Lazy<Mean> = Lazy::new(|| Mean { mean: 1.5 });
-    static MEAN_THREE: Lazy<Mean> = Lazy::new(|| Mean { mean: 2.0 });
-    static MEAN_FIVE: Lazy<Mean> = Lazy::new(|| Mean { mean: 3.0 });
+    static MEAN_ZERO: LazyLock<Mean> = LazyLock::new(|| Mean { mean: 0.0 });
+    static MEAN_ONE: LazyLock<Mean> = LazyLock::new(|| Mean { mean: 1.0 });
+    static MEAN_TWO: LazyLock<Mean> = LazyLock::new(|| Mean { mean: 1.5 });
+    static MEAN_THREE: LazyLock<Mean> = LazyLock::new(|| Mean { mean: 2.0 });
+    static MEAN_FIVE: LazyLock<Mean> = LazyLock::new(|| Mean { mean: 3.0 });
 
-    static MEAN_NEG_ONE: Lazy<Mean> = Lazy::new(|| Mean { mean: -1.0 });
-    static MEAN_NEG_TWO: Lazy<Mean> = Lazy::new(|| Mean { mean: -1.5 });
-    static MEAN_NEG_THREE: Lazy<Mean> = Lazy::new(|| Mean { mean: -2.0 });
-    static MEAN_NEG_FIVE: Lazy<Mean> = Lazy::new(|| Mean { mean: -3.0 });
+    static MEAN_NEG_ONE: LazyLock<Mean> = LazyLock::new(|| Mean { mean: -1.0 });
+    static MEAN_NEG_TWO: LazyLock<Mean> = LazyLock::new(|| Mean { mean: -1.5 });
+    static MEAN_NEG_THREE: LazyLock<Mean> = LazyLock::new(|| Mean { mean: -2.0 });
+    static MEAN_NEG_FIVE: LazyLock<Mean> = LazyLock::new(|| Mean { mean: -3.0 });
 
     #[test]
     fn test_mean_zero() {
