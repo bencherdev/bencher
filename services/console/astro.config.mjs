@@ -105,7 +105,10 @@ export default defineConfig({
 		// 	},
 		// }),
 		// https://docs.astro.build/en/guides/integrations-guide/solid-js/
-		solidJs(),
+		solidJs({
+			// https://docs.astro.build/en/guides/integrations-guide/solid-js/#devtools
+			devtools: true,
+		}),
 		// https://docs.sentry.io/platforms/javascript/guides/astro/
 		sentry({
 			dsn: process.env.PUBLIC_SENTRY_DSN,
