@@ -24,6 +24,9 @@
   "[javascript]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": "explicit"
+    },
     // "editor.codeActionsOnSave": {
     //   "source.organizeImports.biome": true
     // }
@@ -31,6 +34,9 @@
   "[typescript]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": "explicit"
+    },
     // "editor.codeActionsOnSave": {
     //   "source.organizeImports.biome": true
     // }
@@ -38,6 +44,9 @@
   "[typescriptreact]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": "explicit"
+    },
     // "editor.codeActionsOnSave": {
     //   "source.organizeImports.biome": true
     // }
