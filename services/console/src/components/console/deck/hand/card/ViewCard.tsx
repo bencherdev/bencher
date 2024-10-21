@@ -45,6 +45,7 @@ const ViewCard = (props: Props) => {
 						}
 					})()}`}
 				>
+					{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
 					<label class="label">{props.card?.label}</label>
 				</div>
 				<div class="field-body">
@@ -144,6 +145,7 @@ const ViewCard = (props: Props) => {
 											}
 											disabled={true}
 										/>
+										{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
 										<label />
 									</Match>
 									<Match when={props.card?.display === Display.SELECT}>

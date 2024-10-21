@@ -25,6 +25,7 @@ const Switch = (props: Props) => {
 				checked={props.value as boolean}
 				disabled={props.config?.disabled as boolean}
 			/>
+			{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
 			<label
 				for={props.config?.label}
 				onMouseDown={(_event) => {

@@ -20,7 +20,6 @@ const PlotsHeader = (props: Props) => {
 		<nav class="level">
 			<div class="level-left">
 				<div class="level-item">
-					{/* biome-ignore lint/complexity/noUselessFragments: non-breaking space */}
 					<h3 class="title is-3">{props.project()?.name ?? <>&nbsp;</>}</h3>
 				</div>
 			</div>

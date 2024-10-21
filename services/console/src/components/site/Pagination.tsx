@@ -22,7 +22,6 @@ const Pagination = (props: {
 	return (
 		<nav
 			class={`pagination is-centered is-rounded ${props.size}`}
-			role="navigation"
 			aria-label="pagination"
 		>
 			<button

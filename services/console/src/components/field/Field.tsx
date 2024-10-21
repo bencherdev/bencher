@@ -204,6 +204,7 @@ const Field = (props: Props) => {
 
 	return (
 		<div class="field">
+			{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
 			{props.label && <label class="label is-medium">{props.label}</label>}
 			{getField()}
 			{shouldValidate() && props.valid === false && (

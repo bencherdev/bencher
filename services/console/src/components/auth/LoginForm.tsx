@@ -10,7 +10,8 @@ const LoginForm = () => {
 			}}
 		>
 			<div class="field">
-				{<label class="label is-medium">Email</label>}
+				{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
+				<label class="label is-medium">Email</label>
 				<Input
 					label="Email"
 					value=""

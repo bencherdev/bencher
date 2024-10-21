@@ -10,11 +10,13 @@ const SignupForm = () => {
 			}}
 		>
 			<div class="field">
-				{<label class="label is-medium">Name</label>}
+				{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
+				<label class="label is-medium">Name</label>
 				<Input value="" valid={null} config={USERNAME} handleField={() => {}} />
 			</div>
 			<div class="field">
-				{<label class="label is-medium">Email</label>}
+				{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
+				<label class="label is-medium">Email</label>
 				<Input value="" valid={null} config={EMAIL} handleField={() => {}} />
 			</div>
 			<br />

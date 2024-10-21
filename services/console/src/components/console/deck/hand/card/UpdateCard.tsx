@@ -183,6 +183,7 @@ const UpdateCard = (props: Props) => {
 		>
 			<div id={props.card?.label} class="field is-horizontal">
 				<div class="field-label is-normal">
+					{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
 					<label class="label">{props.card?.label}</label>
 				</div>
 				<div class="field-body">

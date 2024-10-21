@@ -96,20 +96,18 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 					}}
 				/>
 				{notifyLinkUrl() && notifyLinkText() && (
-					<>
-						<div class="content has-text-centered" style="margin-top: 1rem;">
-							<div class="columns is-centered">
-								<div class="column is-half">
-									<a
-										class="button is-primary is-fullwidth"
-										href={notifyLinkUrl()}
-									>
-										{notifyLinkText()}
-									</a>
-								</div>
+					<div class="content has-text-centered" style="margin-top: 1rem;">
+						<div class="columns is-centered">
+							<div class="column is-half">
+								<a
+									class="button is-primary is-fullwidth"
+									href={notifyLinkUrl()}
+								>
+									{notifyLinkText()}
+								</a>
 							</div>
 						</div>
-					</>
+					</div>
 				)}
 			</div>
 		);
