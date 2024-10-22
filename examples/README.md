@@ -5,7 +5,7 @@
 - 🕳️ Go
   - [go test -bench](go)
 - 🐍 Python
-  - [pytest-benchmark](python)
+  - [pytest-benchmark](python/pytest-benchmark)
 - 🦀 Rust
   - [libtest bench](rust/bench)
   - [Criterion](rust/criterion)

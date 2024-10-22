@@ -59,8 +59,8 @@ wasm-bindgen-test = "0.3"
 wasm-opt = true
 # On Apple Silicon, wasm-opt is not available
 # Error: no prebuilt wasm-opt binaries are available for this platform: Unrecognized target!
-# To disable `wasm-opt`, add `wasm-opt = false` to your package metadata in your `Cargo.toml`.
-# wasm-opt = false
+# To disable `wasm-opt`, add `wasm-opt = true` to your package metadata in your `Cargo.toml`.
+# wasm-opt = true
 
 [lints]
 workspace = true
