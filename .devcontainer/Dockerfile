@@ -26,7 +26,7 @@ RUN sudo npm install -g --save-exact @biomejs/biome@1.9.4
 RUN test $(uname -m) = "aarch64" && sudo npm install -g @esbuild/linux-arm64 @rometools/cli-linux-arm64; true
 
 # Install `lychee` dependencies: https://github.com/lycheeverse/lychee
-RUN sudo apt-get install -y gcc pkg-config libc6-dev libssl-dev
+# RUN sudo apt-get install -y gcc pkg-config libc6-dev libssl-dev
 
 # Install `sqlite3`: https://www.sqlite.org/index.html
 RUN sudo apt-get install -y sqlite3
@@ -49,7 +49,7 @@ RUN rustup target add wasm32-unknown-unknown --toolchain $RUST_VERSION-$(uname -
 RUN cargo install diesel_cli --version 2.2.4 --locked --no-default-features --features sqlite
 RUN cargo install wasm-pack --version 0.12.1 --locked
 RUN cargo install typeshare-cli --version 1.9.2 --locked
-RUN cargo install lychee --version 0.16.1 --locked
+# RUN cargo install lychee --version 0.16.1 --locked
 
 # Install `flyctl`: https://fly.io/docs/getting-started/installing-flyctl/
 RUN curl -L https://fly.io/install.sh | sh

@@ -118,10 +118,9 @@ impl TokenKey {
 
 #[cfg(test)]
 mod test {
-    use std::{thread, time};
+    use std::{sync::LazyLock, thread, time};
 
     use bencher_json::{organization::member::OrganizationRole, Email, OrganizationUuid};
-    use once_cell::sync::Lazy;
 
     use crate::{Audience, DEFAULT_SECRET_KEY};
 
