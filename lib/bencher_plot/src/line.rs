@@ -439,10 +439,9 @@ impl LineData {
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod test {
-    use std::{fs::File, io::Write};
+    use std::{fs::File, io::Write, sync::LazyLock};
 
     use bencher_json::JsonPerf;
-    use once_cell::sync::Lazy;
 
     use crate::LinePlot;
 
