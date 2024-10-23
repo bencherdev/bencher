@@ -1,5 +1,5 @@
 # https://mcr.microsoft.com/v2/vscode/devcontainers/rust/tags/list
-FROM mcr.microsoft.com/vscode/devcontainers/rust:1.0.1-1-bookworm
+FROM mcr.microsoft.com/vscode/devcontainers/rust:1.18.1-1-bookworm
 
 RUN sudo apt-get update
 
@@ -20,13 +20,13 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && \
     sudo apt-get install -y nodejs
 
 # Install `biome`: https://biomejs.dev/guides/getting-started/
-RUN sudo npm install -g --save-exact @biomejs/biome@1.9.4
+RUN sudo npm install -g --save-exact @biomejs/biome@1.7.3
 
 # Install `@esbuild/linux-arm64` and `@rometools/cli-linux-arm64` for `aarch64`
 RUN test $(uname -m) = "aarch64" && sudo npm install -g @esbuild/linux-arm64 @rometools/cli-linux-arm64; true
 
 # Install `lychee` dependencies: https://github.com/lycheeverse/lychee
-# RUN sudo apt-get install -y gcc pkg-config libc6-dev libssl-dev
+RUN sudo apt-get install -y gcc pkg-config libc6-dev libssl-dev
 
 # Install `sqlite3`: https://www.sqlite.org/index.html
 RUN sudo apt-get install -y sqlite3
@@ -43,13 +43,12 @@ ARG RUST_VERSION
 RUN rustup self update
 RUN rustup update
 RUN rustup toolchain install $RUST_VERSION-$(uname -m)-unknown-linux-gnu
-RUN rustup default $RUST_VERSION-$(uname -m)-unknown-linux-gnu
 RUN rustup component add clippy rust-src rustfmt --toolchain $RUST_VERSION-$(uname -m)-unknown-linux-gnu
 RUN rustup target add wasm32-unknown-unknown --toolchain $RUST_VERSION-$(uname -m)-unknown-linux-gnu
-RUN cargo install diesel_cli --version 2.2.4 --locked --no-default-features --features sqlite
+RUN cargo install diesel_cli --version 2.1.1 --locked --no-default-features --features sqlite
 RUN cargo install wasm-pack --version 0.12.1 --locked
 RUN cargo install typeshare-cli --version 1.9.2 --locked
-# RUN cargo install lychee --version 0.16.1 --locked
+# RUN cargo install lychee --version 0.15.0 --locked
 
 # Install `flyctl`: https://fly.io/docs/getting-started/installing-flyctl/
 RUN curl -L https://fly.io/install.sh | sh
