@@ -1,5 +1,5 @@
 # https://mcr.microsoft.com/v2/vscode/devcontainers/rust/tags/list
-FROM mcr.microsoft.com/vscode/devcontainers/rust:1.18.1-1-bookworm
+FROM mcr.microsoft.com/vscode/devcontainers/rust:1.0.18-1-bookworm
 
 RUN sudo apt-get update
 
