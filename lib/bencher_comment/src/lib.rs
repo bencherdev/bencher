@@ -86,10 +86,12 @@ impl ReportComment {
         serde_json::to_string_pretty(&self.json_report)
     }
 
-    pub fn html(&self, require_threshold: bool, id: Option<&str>) -> String {
+    pub fn html(&self, require_threshold: bool, id: Option<&str>, no_header: bool) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
-        self.html_header(html_mut);
+        if !no_header {
+            self.html_header(html_mut);
+        }
         self.html_report_table(html_mut);
         self.html_benchmarks(html_mut, require_threshold);
         self.html_footer(html_mut);
@@ -106,7 +108,7 @@ impl ReportComment {
         )
     }
 
-    fn html_header(&self, html: &mut String) {
+    pub fn html_header(&self, html: &mut String) {
         let url = self.console_url.clone();
         let path = if self.public_links {
             format!(

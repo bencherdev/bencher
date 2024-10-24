@@ -217,7 +217,7 @@ impl Run {
         let report_str = match self.format {
             Format::Human => report_comment.human(),
             Format::Json => report_comment.json().map_err(RunError::SerializeReport)?,
-            Format::Html => report_comment.html(false, None),
+            Format::Html => report_comment.html(false, None, false),
         };
         let newline_prefix = if self.log { "\n" } else { "" };
         cli_println!("{newline_prefix}{report_str}");
