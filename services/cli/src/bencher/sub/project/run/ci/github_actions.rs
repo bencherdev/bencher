@@ -85,7 +85,7 @@ pub enum GitHubError {
     BadPermissions(octocrab::Error),
     #[error("Failed to create GitHub check: {0}")]
     FailedCreatingCheck(octocrab::Error),
-    #[error("No GITHUB_SHA is set")]
+    #[error("No GITHUB_SHA is set {}", docker_env("GITHUB_SHA"))]
     NoSHA,
 }
 
@@ -196,7 +196,7 @@ impl GitHubActions {
             },
             _ => {
                 cli_println!(
-                    "Not running as usual GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Making GitHub Checks instead.\n{}",
+                    "Not running as usual GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Creating a GitHub Check instead.\n{}",
                     docker_env(GITHUB_EVENT_NAME)
                 );
                 self.create_github_check(report_comment, &event_str, &event)
@@ -276,7 +276,7 @@ impl GitHubActions {
             .map_err(GitHubError::Auth)?
             .checks(owner, repo)
             .create_check_run(
-                "bencher",
+                "Bencher Report",
                 std::env::var("GITHUB_SHA").map_err(|_err| GitHubError::NoSHA)?,
             )
             .output(report)
