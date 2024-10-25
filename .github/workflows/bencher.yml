@@ -11,7 +11,7 @@ on:
 env:
   # General
   CARGO_TERM_COLOR: always
-  MOLD_VERSION: 2.4.0
+  MOLD_VERSION: 2.34.1
   GITHUB_REGISTRY: ghcr.io
   DOCKER_HUB_ORGANIZATION: bencherdev
   # API

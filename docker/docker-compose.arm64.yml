@@ -5,7 +5,7 @@ services:
       context: ..
       dockerfile: ./services/api/Dockerfile
       args:
-        MOLD_VERSION: 2.4.0
+        MOLD_VERSION: 2.34.1
         LITESTREAM_VERSION: 0.3.13
         LITESTREAM_ARCH: arm64
     image: bencher-api
