@@ -21,7 +21,7 @@ env:
   FLY_REGISTRY: registry.fly.io
   # CLI
   CLI_BIN_NAME: bencher
-  ZIG_BUILD_VERSION: 0.18.3
+  ZIG_BUILD_VERSION: 0.19.3
   # Use minimum supported glibc version for Rust Tier 1
   # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
   GLIBC_VERSION: 2.17
