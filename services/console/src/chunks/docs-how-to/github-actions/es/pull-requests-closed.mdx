@@ -20,41 +20,29 @@ Este flujo de trabajo archivará la rama del PR usando el comando `bencher archi
    ⚠️ ¡NO ELIMINE ESTA LÍNEA!
    Para manejar PRs de forks, consulte [Pull Requests de Forks][pull requests from forks] más abajo.
    (ej: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Configure [los permisos para el `GITHUB_TOKEN`][github token permissions]
-   a `write` para `pull-requests`.
-   Dependiendo de su configuración de GitHub, esto puede no ser necesario.
-   Pero para todas las organizaciones y repositorios personales 
-   [creados después del 02 de febrero de 2023][github token read only],
-   este es el comportamiento predeterminado.
-   Consulte [la documentación de GitHub][github token permissions security]
-   para una visión completa.
-   (ej: `permissions: pull-requests: write`)
-6. Configure el tipo de máquina en la cual el job se ejecutará.
+5. Configure el tipo de máquina en la cual el job se ejecutará.
    Consulte la [documentación de `runs-on` de GitHub Actions][github actions runs-on]
    para una visión completa.
    (ej: `runs-on: ubuntu-latest`)
-7. Realice el checkout del código fuente de la rama del PR.
+6. Realice el checkout del código fuente de la rama del PR.
    (ej: `uses: actions/checkout@v4`)
-8. Instale el CLI de Bencher usando [el GitHub Action][bencher cli github action].
+7. Instale el CLI de Bencher usando [el GitHub Action][bencher cli github action].
    (ej: `uses: bencherdev/bencher@main`)
-9. Use el subcomando CLI `bencher archive` para archivar la rama del PR.
+8. Use el subcomando CLI `bencher archive` para archivar la rama del PR.
    (ej: `bencher archive`)
-10. Configure la opción `--project` al slug del proyecto.
+9.  Configure la opción `--project` al slug del proyecto.
     Consulte [los documentos de `--project`][project option] para más detalles.
     (ej: `--project save-walter-white-1234abcd`)
-11. Configure la opción `--token` al secreto **Repository** `BENCHER_API_TOKEN`.
+10. Configure la opción `--token` al secreto **Repository** `BENCHER_API_TOKEN`.
     Consulte [los documentos de `--token`][token option] para más detalles.
     (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-12. Configure la opción `--branch` al nombre de la rama del PR
+11. Configure la opción `--branch` al nombre de la rama del PR
     utilizando [el contexto `github` de GitHub Actions][github actions context].
     (ej: `--branch '${{ github.head_ref }}'`)
 
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
-[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context

@@ -11,24 +11,27 @@ Una piedra angular de [Benchmarking Continuo Estadístico][statistical continuou
 2. Ejecutar en eventos de `push` a la rama `main`. Consulta la [documentación `on` de GitHub Actions][github actions on] y la [documentación de `push` de GitHub Actions][github actions push] para una visión completa. (ej: `on: push: branches: main`)
 3. Crear un `job` de GitHub Actions.
    (ej: `jobs: benchmark_base_branch`)
-4. Establecer el tipo de máquina en la que se ejecutará el job.
+4. Establece [los permisos para el `GITHUB_TOKEN`][github token permissions]
+   a `write` para `checks`.
+   (ej: `permissions: checks: write`)
+5. Establecer el tipo de máquina en la que se ejecutará el job.
    Consulta la [documentación `runs-on` de GitHub Actions][github actions runs-on] para una visión completa.
    (ej: `runs-on: ubuntu-latest`)
-5. Revisa tu código fuente de la rama base.
+6. Revisa tu código fuente de la rama base.
    (ej: `uses: actions/checkout@v4`)
-6. Instala la CLI de Bencher usando [la Acción de GitHub][bencher cli github action].
+7. Instala la CLI de Bencher usando [la Acción de GitHub][bencher cli github action].
    (ej: `uses: bencherdev/bencher@main`)
-7. Usa el subcomando <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> de la CLI para ejecutar tus benchmarks de la rama `main`. Consulta [el subcomando `bencher run` de la CLI][bencher run] para una visión completa.
+8. Usa el subcomando <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> de la CLI para ejecutar tus benchmarks de la rama `main`. Consulta [el subcomando `bencher run` de la CLI][bencher run] para una visión completa.
    (ej: `bencher run`)
-8. Establece la opción `--project` al slug del Proyecto. Consulta [la documentación de `--project`][project option] para más detalles.
+9. Establece la opción `--project` al slug del Proyecto. Consulta [la documentación de `--project`][project option] para más detalles.
    (ej: `--project save-walter-white-1234abcd`)
-9. Establece la opción `--token` al secreto de **Repositorio** `BENCHER_API_TOKEN`. Consulta [la documentación de `--token`][token option] para más detalles.
+10. Establece la opción `--token` al secreto de **Repositorio** `BENCHER_API_TOKEN`. Consulta [la documentación de `--token`][token option] para más detalles.
    (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-10. Establece la opción `--branch` al nombre de la Rama base. Consulta [la documentación de `--branch`][branch option] para una visión completa.
+11. Establece la opción `--branch` al nombre de la Rama base. Consulta [la documentación de `--branch`][branch option] para una visión completa.
    (ej: `--branch main`)
-11. Establece la opción `--testbed` al nombre del Testbed. Esto debería probablemente coincidir con la máquina seleccionada en `runs-on`. Consulta [la documentación de `--testbed`][testbed option] para más detalles.
+12. Establece la opción `--testbed` al nombre del Testbed. Esto debería probablemente coincidir con la máquina seleccionada en `runs-on`. Consulta [la documentación de `--testbed`][testbed option] para más detalles.
     (ej: `--testbed ubuntu-latest`)
-12. Establece el Umbral para la Rama `main`, Testbed `ubuntu-latest` y la Medida `latency`:
+13. Establece el Umbral para la Rama `main`, Testbed `ubuntu-latest` y la Medida `latency`:
     1. Establece la opción `--threshold-measure` a la Medida incorporada `latency` que genera <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Consulta [la documentación de `--threshold-measure`][threshold measure option] para más detalles.
     (ej: `--threshold-measure latency`)
     2. Establece la opción `--threshold-test` a una prueba t de Student (`t_test`). Consulta [la documentación de `--threshold-test`][threshold test option] para una visión completa.
@@ -39,23 +42,24 @@ Una piedra angular de [Benchmarking Continuo Estadístico][statistical continuou
     (ej: `--threshold-upper-boundary 0.99`)
     5. Establece la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo. Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una visión completa.
     (ej: `--thresholds-reset`)
-13. Establece la bandera `--err` para que el comando falle si se genera una Alerta. Consulta [la documentación de `--err`][alert err] para una visión completa.
+14. Establece la bandera `--err` para que el comando falle si se genera una Alerta. Consulta [la documentación de `--err`][alert err] para una visión completa.
    (ej: `--err`)
-14. Establece la opción `--adapter` al Formato JSON de Métricas de Bencher (`json`) que genera <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
+15. Establece la opción `--adapter` al Formato JSON de Métricas de Bencher (`json`) que genera <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
    (ej: `--adapter json`)
-15. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como un comentario de Checks de GitHub usando
+16. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como un comentario de Checks de GitHub usando
     [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
     Consulta [la documentación de `--github-actions`][github actions option] para más detalles.
     (ej: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-16. Especifica los argumentos del comando del benchmark.
+17. Especifica los argumentos del comando del benchmark.
    Consulta [comando de benchmark][command argument] para una visión completa.
    (ej: `bencher mock`)
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[github actions on]: https://docs.github.com/es/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/es/webhooks/webhook-events-and-payloads#push
+[github token permissions]: https://docs.github.com/es/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github actions runs-on]: https://docs.github.com/es/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+[github token]: https://docs.github.com/es/actions/security-guides/automatic-token-authentication
 
 [statistical continuous benchmarking]: /es/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /es/docs/explanation/bencher-run/

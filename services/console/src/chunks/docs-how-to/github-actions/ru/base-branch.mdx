@@ -16,32 +16,35 @@ import BaseBranchCode from "../base-branch-code.mdx";
    (например, `on: push: branches: main`)
 3. Создайте `job` для GitHub Actions.
    (например, `jobs: benchmark_base_branch`)
-4. Установите тип машины, на которой будет выполняться задание.
+4. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
+   на `write` для `checks`.
+   (например: `permissions: checks: write`)
+5. Установите тип машины, на которой будет выполняться задание.
    См. [документацию о `runs-on` для GitHub Actions][github actions runs-on]
    для получения подробной информации.
    (например, `runs-on: ubuntu-latest`)
-5. Получите исходный код вашей основной ветки.
+6. Получите исходный код вашей основной ветки.
    (например, `uses: actions/checkout@v4`)
-6. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
+7. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
    (например, `uses: bencherdev/bencher@main`)
-7. Используйте подкaманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+8. Используйте подкaманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
    для запуска бенчмарков вашей ветки `main`.
    См. [подкaманды CLI `bencher run`][bencher run] для получения полной информации.
    (например, `bencher run`)
-8. Установите опцию `--project` на шифр проекта.
+9. Установите опцию `--project` на шифр проекта.
    См. [документацию о `--project`][project option] для получения более подробной информации.
    (например, `--project save-walter-white-1234abcd`)
-9. Установите опцию `--token` на секрет **Repositorий** `BENCHER_API_TOKEN`.
+10. Установите опцию `--token` на секрет **Repositorий** `BENCHER_API_TOKEN`.
    См. [документацию о `--token`][token option] для получения более подробной информации.
    (например, `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-10. Установите опцию `--branch` на имя основной ветки.
+11. Установите опцию `--branch` на имя основной ветки.
     См. [документацию о `--branch`][branch option] для получения полной информации.
     (например, `--branch main`)
-11. Установите опцию `--testbed` на имя Testbed.
+12. Установите опцию `--testbed` на имя Testbed.
     Это, вероятно, должно соответствовать машине, выбранной в `runs-on`.
     См. [документацию о `--tested`][testbed option] для получения более подробной информации.
     (например, `--testbed ubuntu-latest`)
-12. Установите порог для ветки `main`, тестового стенда `ubuntu-latest` и измерения `latency`:
+13. Установите порог для ветки `main`, тестового стенда `ubuntu-latest` и измерения `latency`:
     1. Установите опцию `--threshold-measure` на встроенное измерение `latency`, которое создается <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     См. [документацию о `--threshold-measure`][threshold measure option] для получения более подробной информации.
     (например, `--threshold-measure latency`)
@@ -57,25 +60,26 @@ import BaseBranchCode from "../base-branch-code.mdx";
     5. Установите флаг `--thresholds-reset`, чтобы только указанное пороговое значение было активным.
     См. [документацию о `--thresholds-reset`][thresholds reset] для получения полной информации.
     (например, `--thresholds-reset`)
-13. Установите флаг `--err`, чтобы команда завершалась с ошибкой, если будет сформировано оповещение.
+14. Установите флаг `--err`, чтобы команда завершалась с ошибкой, если будет сформировано оповещение.
     См. [документацию о `--err`][alert err] для получения полной информации.
     (например, `--err`)
-14. Установите опцию `--adapter` на [формат метрик Bencher в формате JSON (`json`)][bmf], который сгенерирован <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+15. Установите опцию `--adapter` на [формат метрик Bencher в формате JSON (`json`)][bmf], который сгенерирован <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     См. [Адаптеры для бенчмарк-харнесов][adapter json] для получения полной информации.
     (например, `--adapter json`)
-15. Установите опцию `--github-actions` на токен аутентификации API GitHub, чтобы отправить результаты в виде комментария GitHub Checks, используя
+16. Установите опцию `--github-actions` на токен аутентификации API GitHub, чтобы отправить результаты в виде комментария GitHub Checks, используя
     [переменную окружения `GITHUB_TOKEN` для GitHub Actions][github token].
     См. [документацию о `--github-actions`][github actions option] для получения более подробной информации.
     (например, `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-16. Укажите аргументы для команды бенчмарков.
+17. Укажите аргументы для команды бенчмарков.
     См. [документацию о команде бенчмарков][command argument] для получения полной информации.
     (например, `bencher mock`)
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[github actions on]: https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/ru/webhooks/webhook-events-and-payloads#push
+[github token permissions]: https://docs.github.com/ru/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github actions runs-on]: https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+[github token]: https://docs.github.com/ru/actions/security-guides/automatic-token-authentication
 
 [statistical continuous benchmarking]: /ru/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /ru/docs/explanation/bencher-run/

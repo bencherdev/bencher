@@ -16,40 +16,28 @@ import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
    (например, `on: pull_request: types: [closed]`)
 3. Создайте `job` для GitHub Actions.
    (например, `jobs: archive_pr_branch`)
-4. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
-   на `write` для `pull-requests`.
-   В зависимости от ваших настроек GitHub, это может быть не обязательным.
-   Но для всех организаций и личных репозиториев,
-   [созданных после 02 февраля 2023][github token read only],
-   это стандартное поведение.
-   См. [документацию GitHub][github token permissions security]
-   для полного обзора.
-   (например, `permissions: pull-requests: write`)
-5. Установите тип машины, на которой будет выполняться задание.
+4. Установите тип машины, на которой будет выполняться задание.
    См. [документацию по `runs-on` для GitHub Actions][github actions runs-on]
    для полного обзора.
    (например, `runs-on: ubuntu-latest`)
-6. Выполните checkout исходного кода ветки PR.
+5. Выполните checkout исходного кода ветки PR.
    (например, `uses: actions/checkout@v4`)
-7. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
+6. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
    (например, `uses: bencherdev/bencher@main`)
-8. Используйте подкоманду CLI `bencher archive` для архивирования ветки PR.
+7. Используйте подкоманду CLI `bencher archive` для архивирования ветки PR.
    (например, `bencher archive`)
-9.  Установите параметр `--project` на слаг проекта.
+8.  Установите параметр `--project` на слаг проекта.
     См. [документацию по `--project`][project option] для получения дополнительных сведений.
     (например, `--project save-walter-white-1234abcd`)
-10. Установите параметр `--token` на секрет **Repository** `BENCHER_API_TOKEN`.
+9.  Установите параметр `--token` на секрет **Repository** `BENCHER_API_TOKEN`.
     См. [документацию по `--token`][token option] для получения дополнительных сведений.
     (например, `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-11. Установите параметр `--branch` на имя ветки PR
+10. Установите параметр `--branch` на имя ветки PR
     используя [контекст `github` в GitHub Actions][github actions context].
     (например, `--branch '${{ github.head_ref }}'`)
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
-[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context

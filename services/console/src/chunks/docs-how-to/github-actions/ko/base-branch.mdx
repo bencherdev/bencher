@@ -14,30 +14,33 @@ import BaseBranchCode from "../base-branch-code.mdx";
    (예: `on: push: branches: main`)
 3. GitHub Actions `job`을 생성하세요.
    (예: `jobs: benchmark_base_branch`)
-4. 작업이 실행될 머신의 유형을 설정하세요.
+4. [`GITHUB_TOKEN`의 권한을 설정하십시오][github token permissions]
+   `checks`에 대해 `write`로 설정합니다.
+   (예: `permissions: checks: write`)
+5. 작업이 실행될 머신의 유형을 설정하세요.
    전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참조하세요.
    (예: `runs-on: ubuntu-latest`)
-5. 기본 브랜치 소스 코드를 체크아웃하세요.
+6. 기본 브랜치 소스 코드를 체크아웃하세요.
    (예: `uses: actions/checkout@v4`)
-6. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치하세요.
+7. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치하세요.
    (예: `uses: bencherdev/bencher@main`)
-7. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브 커맨드를 사용하여 `main` 브랜치 벤치마크를 실행하세요.
+8. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브 커맨드를 사용하여 `main` 브랜치 벤치마크를 실행하세요.
    전체 개요는 [`bencher run` CLI 서브 커맨드][bencher run]를 참조하세요.
    (예: `bencher run`)
-8. `--project` 옵션을 프로젝트 슬러그로 설정하세요.
+9. `--project` 옵션을 프로젝트 슬러그로 설정하세요.
    자세한 내용은 [`--project` 문서][project option]를 참조하세요.
    (예: `--project save-walter-white-1234abcd`)
-9. `--token` 옵션을 `BENCHER_API_TOKEN` **레포지토리** 비밀로 설정하세요.
+10. `--token` 옵션을 `BENCHER_API_TOKEN` **레포지토리** 비밀로 설정하세요.
    자세한 내용은 [`--token` 문서][token option]를 참조하세요.
    (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-10. `--branch` 옵션을 기본 브랜치 이름으로 설정하세요.
+11. `--branch` 옵션을 기본 브랜치 이름으로 설정하세요.
    전체 개요는 [`--branch` 문서][branch option]를 참조하세요.
    (예: `--branch main`)
-11. `--testbed` 옵션을 테스트베드 이름으로 설정하세요.
+12. `--testbed` 옵션을 테스트베드 이름으로 설정하세요.
     이는 아마도 `runs-on`에 선택된 머신과 일치해야 합니다.
     자세한 내용은 [`--tested` 문서][testbed option]를 참조하세요.
     (예: `--testbed ubuntu-latest`)
-12. `main` 브랜치, `ubuntu-latest` 테스트베드, `latency` 측정을 위한 임계값을 설정하세요:
+13. `main` 브랜치, `ubuntu-latest` 테스트베드, `latency` 측정을 위한 임계값을 설정하세요:
     1. `--threshold-measure` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 기본 `latency` 측정값으로 설정하세요.
        자세한 내용은 [`--threshold-measure` 문서][threshold measure option]를 참조하세요.
        (예: `--threshold-measure latency`)
@@ -53,24 +56,25 @@ import BaseBranchCode from "../base-branch-code.mdx";
     5. `--thresholds-reset` 플래그를 설정하여 지정된 임계값만 활성 상태가 되도록 하세요.
        전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하세요.
        (예: `--thresholds-reset`)
-13. 알림이 생성되면 명령을 실패하도록 `--err` 플래그를 설정하세요.
+14. 알림이 생성되면 명령을 실패하도록 `--err` 플래그를 설정하세요.
    전체 개요는 [`--err` 문서][alert err]를 참조하세요.
    (예: `--err`)
-14. [Bencher Metric Format JSON (`json`)][bmf]에 대해 `--adapter` 옵션을 설정하세요. 이 형식은 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성됩니다.
+15. [Bencher Metric Format JSON (`json`)][bmf]에 대해 `--adapter` 옵션을 설정하세요. 이 형식은 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성됩니다.
    전체 개요는 [벤치마크 하니스 어댑터][adapter json]를 참조하세요.
    (예: `--adapter json`)
-15. GitHub Checks 댓글로 결과를 게시하기 위해 [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 GitHub API 인증 토큰을 `--github-actions` 옵션에 설정하세요.
+16. GitHub Checks 댓글로 결과를 게시하기 위해 [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 GitHub API 인증 토큰을 `--github-actions` 옵션에 설정하세요.
     자세한 내용은 [`--github-actions` 문서][github actions option]를 참조하세요.
     (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-16. 벤치마크 명령 인수를 지정하세요.
+17. 벤치마크 명령 인수를 지정하세요.
    전체 개요는 [벤치마크 명령][command argument]를 참조하세요.
    (예: `bencher mock`)
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[github actions on]: https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/ko/webhooks/webhook-events-and-payloads#push
+[github token permissions]: https://docs.github.com/ko/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github actions runs-on]: https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+[github token]: https://docs.github.com/ko/actions/security-guides/automatic-token-authentication
 
 [statistical continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /ko/docs/explanation/bencher-run/

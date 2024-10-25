@@ -16,40 +16,28 @@ Ce workflow archivera la branche de PR du fork en utilisant la commande `bencher
    (ex : `on: pull_request: types: [closed]`)
 3. Créez un `job` GitHub Actions.
    (ex : `jobs: archive_pr_branch`)
-4. Configurez [les permissions pour le `GITHUB_TOKEN`][github token permissions]
-   à `write` pour `pull-requests`.
-   Selon vos paramètres GitHub, cela peut ne pas être nécessaire.
-   Mais pour toutes les organisations et dépôts personnels
-   [créés après le 02 février 2023][github token read only],
-   c'est le comportement par défaut.
-   Consultez [la documentation GitHub][github token permissions security]
-   pour un aperçu complet.
-   (ex : `permissions: pull-requests: write`)
-5. Définissez le type de machine sur laquelle le job s'exécutera.
+4. Définissez le type de machine sur laquelle le job s'exécutera.
    Consultez la [documentation `runs-on` de GitHub Actions][github actions runs-on]
    pour un aperçu complet.
    (ex : `runs-on: ubuntu-latest`)
-6. Récupérez le code source de la branche PR.
+5. Récupérez le code source de la branche PR.
    (ex : `uses: actions/checkout@v4`)
-7. Installez le CLI Bencher en utilisant [l'Action GitHub][bencher cli github action].
+6. Installez le CLI Bencher en utilisant [l'Action GitHub][bencher cli github action].
    (ex : `uses: bencherdev/bencher@main`)
-8. Utilisez la sous-commande `bencher archive` CLI pour archiver la branche PR.
+7. Utilisez la sous-commande `bencher archive` CLI pour archiver la branche PR.
    (ex : `bencher archive`)
-9.  Définissez l'option `--project` sur le slug du projet.
+8.  Définissez l'option `--project` sur le slug du projet.
     Consultez [la documentation `--project`][project option] pour plus de détails.
     (ex : `--project save-walter-white-1234abcd`)
-10. Configurez l'option `--token` sur le secret **Repository** `BENCHER_API_TOKEN`.
+9.  Configurez l'option `--token` sur le secret **Repository** `BENCHER_API_TOKEN`.
     Consultez [la documentation `--token`][token option] pour plus de détails.
     (ex : `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-11. Configurez l'option `--branch` sur le nom de la branche PR
+10. Configurez l'option `--branch` sur le nom de la branche PR
     en utilisant [le contexte `github` de GitHub Actions][github actions context].
     (ex : `--branch '${{ github.head_ref }}'`)
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
-[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context

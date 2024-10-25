@@ -6,8 +6,6 @@ on:
 jobs:
   archive_fork_pr_branch:
     name: Archive closed fork PR branch with Bencher
-    permissions:
-      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

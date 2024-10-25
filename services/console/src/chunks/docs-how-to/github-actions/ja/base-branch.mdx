@@ -14,30 +14,33 @@ import BaseBranchCode from "../base-branch-code.mdx";
    （例: `on: push: branches: main`）
 3. GitHub Actionsの`job`を作成します。
    （例: `jobs: benchmark_base_branch`）
-4. ジョブを実行するマシンのタイプを設定します。
+4. `GITHUB_TOKEN`の[権限を設定します][github token permissions]
+   `checks`に対して`write`を設定してください。
+   （例：`permissions: checks: write`）
+5. ジョブを実行するマシンのタイプを設定します。
    詳細については、[GitHub Actionsの`runs-on`ドキュメント][github actions runs-on]を参照してください。
    （例: `runs-on: ubuntu-latest`）
-5. ベースブランチのソースコードをチェックアウトします。
+6. ベースブランチのソースコードをチェックアウトします。
    （例: `uses: actions/checkout@v4`）
-6. [GitHub Action][bencher cli github action]を使用してBencher CLIをインストールします。
+7. [GitHub Action][bencher cli github action]を使用してBencher CLIをインストールします。
    （例: `uses: bencherdev/bencher@main`）
-7. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して`main`ブランチのベンチマークを実行します。
+8. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して`main`ブランチのベンチマークを実行します。
    詳細については、[`bencher run` CLIサブコマンド][bencher run]を参照してください。
    （例: `bencher run`）
-8. `--project`オプションをプロジェクトスラッグに設定します。
+9. `--project`オプションをプロジェクトスラッグに設定します。
    詳細については、[`--project` ドキュメント][project option]を参照してください。
    （例: `--project save-walter-white-1234abcd`）
-9. `--token`オプションを`BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
+10. `--token`オプションを`BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
    詳細については、[`--token` ドキュメント][token option]を参照してください。
    （例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`）
-10. `--branch`オプションをベースブランチ名に設定します。
+11. `--branch`オプションをベースブランチ名に設定します。
     詳細については、[`--branch` ドキュメント][branch option]を参照してください。
     （例: `--branch main`）
-11. `--testbed`オプションをテストベッド名に設定します。
+12. `--testbed`オプションをテストベッド名に設定します。
     これは、`runs-on`で選択されたマシンと一致する必要があります。
     詳細については、[`--testbed` ドキュメント][testbed option]を参照してください。
     （例: `--testbed ubuntu-latest`）
-12. `main`ブランチ、`ubuntu-latest`テストベッド、`latency`測定のしきい値を設定します：
+13. `main`ブランチ、`ubuntu-latest`テストベッド、`latency`測定のしきい値を設定します：
     1. `--threshold-measure`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される組み込みの`latency`測定に設定します。
     詳細については、[`--threshold-measure` ドキュメント][threshold measure option]を参照してください。
     （例: `--threshold-measure latency`）
@@ -53,24 +56,25 @@ import BaseBranchCode from "../base-branch-code.mdx";
     5. 指定されたしきい値のみをアクティブにするために`--thresholds-reset`フラグを設定します。
     詳細については、[`--thresholds-reset` ドキュメント][thresholds reset]を参照してください。
     （例: `--thresholds-reset`）
-13. 警告が生成された場合にコマンドを失敗させるように`--err`フラグを設定します。
+14. 警告が生成された場合にコマンドを失敗させるように`--err`フラグを設定します。
     詳細については、[`--err` ドキュメント][alert err]を参照してください。
     （例: `--err`）
-14. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される[Bencher Metric Format JSON（`json`）][bmf]を`--adapter`オプションに設定します。
+15. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される[Bencher Metric Format JSON（`json`）][bmf]を`--adapter`オプションに設定します。
     詳細については、[ベンチマークハーネスアダプタ][adapter json]を参照してください。
     （例: `--adapter json`）
-15. 結果をGitHub Checksコメントとして投稿するために、[GitHub Actions `GITHUB_TOKEN` 環境変数][github token]を使用して、`--github-actions`オプションをGitHub API認証トークンに設定します。
+16. 結果をGitHub Checksコメントとして投稿するために、[GitHub Actions `GITHUB_TOKEN` 環境変数][github token]を使用して、`--github-actions`オプションをGitHub API認証トークンに設定します。
     詳細については、[`--github-actions` ドキュメント][github actions option]を参照してください。
     （例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
-16. ベンチマークコマンド引数を指定します。
+17. ベンチマークコマンド引数を指定します。
     詳細については、[ベンチマークコマンド][command argument]を参照してください。
     （例: `bencher mock`）
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[github actions on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/ja/webhooks/webhook-events-and-payloads#push
+[github token permissions]: https://docs.github.com/ja/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github actions runs-on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+[github token]: https://docs.github.com/ja/actions/security-guides/automatic-token-authentication
 
 [statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /ja/docs/explanation/bencher-run/

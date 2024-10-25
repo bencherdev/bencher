@@ -16,37 +16,27 @@ PR이 닫힌 후 포크 PR 브랜치를 정리하려면,
    (예: `on: pull_request: types: [closed]`)
 3. GitHub Actions `job`을 생성합니다.
    (예: `jobs: archive_pr_branch`)
-4. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여
-   `pull-requests`에 대해 `write`로 설정합니다.
-   GitHub 설정에 따라 필요하지 않을 수 있습니다.
-   그러나 2023년 2월 2일 이후 [생성된 모든 조직 및 개인 저장소][github token read only]의 경우,
-   이것이 기본 동작입니다.
-   전체 개요는 [GitHub 문서][github token permissions security]를 참조하세요.
-   (예: `permissions: pull-requests: write`)
-5. 작업이 실행될 머신 유형을 설정하세요.
+4. 작업이 실행될 머신 유형을 설정하세요.
    전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참고하세요.
    (예: `runs-on: ubuntu-latest`)
-6. PR 브랜치 소스 코드를 체크아웃합니다.
+5. PR 브랜치 소스 코드를 체크아웃합니다.
    (예: `uses: actions/checkout@v4`)
-7. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+6. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
    (예: `uses: bencherdev/bencher@main`)
-8. `bencher archive` CLI 하위 명령을 사용하여 PR 브랜치를 아카이브합니다.
+7. `bencher archive` CLI 하위 명령을 사용하여 PR 브랜치를 아카이브합니다.
    (예: `bencher archive`)
-9.  `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+8.  `--project` 옵션을 프로젝트 슬러그로 설정합니다.
     자세한 내용은 [`--project` 문서][project option]를 참조하세요.
     (예: `--project save-walter-white-1234abcd`)
-10. `--token` 옵션을 `BENCHER_API_TOKEN` **저장소** 비밀로 설정합니다.
+9.  `--token` 옵션을 `BENCHER_API_TOKEN` **저장소** 비밀로 설정합니다.
     자세한 내용은 [`--token` 문서][token option]를 참고하세요.
     (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-11. [GitHub Actions `github` 컨텍스트][github actions context]를 사용하여 PR 브랜치 이름으로
+10. [GitHub Actions `github` 컨텍스트][github actions context]를 사용하여 PR 브랜치 이름으로
     `--branch` 옵션을 설정합니다.
     (예: `--branch '${{ github.head_ref }}'`)
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
-[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
