@@ -53,6 +53,6 @@
 		"rehype-autolink-headings": "^7.1.0",
 		"rehype-slug": "^6.0.0",
 		"sass": "^1.77.8",
-		"vitest": "^1.5.0"
+		"vitest": "^2.1.4"
 	}
 }
