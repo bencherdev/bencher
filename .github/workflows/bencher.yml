@@ -21,6 +21,7 @@ env:
   FLY_REGISTRY: registry.fly.io
   # CLI
   CLI_BIN_NAME: bencher
+  ZIG_VERSION: 0.13.0
   ZIG_BUILD_VERSION: 0.19.3
   # Use minimum supported glibc version for Rust Tier 1
   # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
@@ -601,8 +602,10 @@ jobs:
       # Install
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
-      - uses: goto-bus-stop/setup-zig@v2
+      - uses: mlugg/setup-zig@v1
         if: startsWith(matrix.build, 'linux')
+        with:
+          version: ${{ env.ZIG_VERSION }}
       - name: Install zigbuild
         if: startsWith(matrix.build, 'linux')
         run: cargo install --version ${{ env.ZIG_BUILD_VERSION }} --locked --force cargo-zigbuild
