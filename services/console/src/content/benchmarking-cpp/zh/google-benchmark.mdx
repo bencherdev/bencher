@@ -1,0 +1,114 @@
+---
+title: "pytest-benchmark"
+description: "使用 pytest-benchmark 对 Python 代码进行基准测试的分步指南"
+heading: "如何使用 pytest-benchmark 对 Python 代码进行基准测试"
+published: "2024-10-09T16:30:00Z"
+modified: "2024-10-09T16:30:00Z"
+sortOrder: 1
+---
+
+import Benchmarking from "../../../chunks/benchmarking/zh/benchmarking.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/zh/fizz-buzz-rules.mdx";
+import FizzBuzzPython from "../../../chunks/benchmarking-python/zh/fizz-buzz-python.mdx";
+import StepByStepPython from "../../../chunks/benchmarking-python/zh/step-by-step-python.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/zh/micro-vs-macro.mdx";
+import BenchmarkingPython from "../../../chunks/benchmarking-python/zh/benchmarking-python.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-python/pytest-benchmark/zh/fizz-buzz-refactor.mdx";
+import BenchmarkingFizzBuzz from "../../../chunks/benchmarking-python/pytest-benchmark/zh/benchmarking-fizz-buzz.mdx";
+import FizzBuzzFibonacciPython from "../../../chunks/benchmarking-python/zh/fizz-buzz-fibonacci-python.mdx";
+import PlayGameCode from "../../../chunks/benchmarking-python/pytest-benchmark/play-game-code.mdx";
+import BenchmarkingFizzBuzzFibonacci from "../../../chunks/benchmarking-python/pytest-benchmark/zh/benchmarking-fizz-buzz-fibonacci.mdx";
+import FizzBuzzFibonacciOpenPython from "../../../chunks/benchmarking-python/zh/fizz-buzz-fibonacci-open-python.mdx";
+import FizzBuzzFibonacciOpenCode from "../../../chunks/benchmarking-python/fizz-buzz-fibonacci-open-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/zh/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/zh/on-fire.mdx";
+import TestGameOnFireCode from "../../../chunks/benchmarking-python/pytest-benchmark/test-game-on-fire-code.mdx";
+import PytestGameOnFireOutputStart from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output-start.mdx";
+import PytestGameOnFireOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-python/pytest-benchmark/zh/fizz-buzz-fibonacci-fix.mdx";
+import PytestGameFixOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/zh/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-python/pytest-benchmark/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/zh/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
+
+<Benchmarking />
+
+<FizzBuzzPython />
+
+<StepByStepPython />
+
+<MicroVsMacro />
+
+<BenchmarkingPython />
+
+两者都由 [Bencher支持](/zh/docs/explanation/adapters/)。 那么为什么选择 `pytest-benchmark`？
+`pytest-benchmark` 能与 `pytest` 无缝集成，
+而 `pytest` 是 Python 生态系统中的事实标准单元测试工具。
+我建议使用 `pytest-benchmark` 来基准测试代码延迟，
+尤其是如果你已经在使用 `pytest`。
+也就是说，`pytest-benchmark` 非常适合测量挂钟时间。
+
+<FizzBuzzRefactor />
+
+<BenchmarkingFizzBuzz />
+
+<FizzBuzzFibonacciPython>
+  <PlayGameCode />
+</FizzBuzzFibonacciPython>
+
+<BenchmarkingFizzBuzzFibonacci />
+
+<FizzBuzzFibonacciOpenPython>
+    <FizzBuzzFibonacciOpenCode />
+</FizzBuzzFibonacciOpenPython>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<TestGameOnFireCode />
+
+- 针对数字一百（`100`）的游戏进行微基准测试 `test_game_100`
+- 针对数字一百万（`1_000_000`）的游戏进行微基准测试 `test_game_1_000_000`
+
+当我运行它时，我得到了这个结果：
+
+<PytestGameOnFireOutputStart />
+
+等等……等一下……
+
+<PytestGameOnFireOutput />
+
+什么！`15.8470 us` x `1,000` 应该是 `15,847.0 us` 而不是 `571,684.6334 us` 🤯
+尽管我的斐波那契数列代码在功能上是正确的，但其中肯定存在性能问题。
+
+<FizzBuzzFibonacciFix />
+
+现在让我们重新运行这些基准测试，看看我们的表现如何：
+
+<PytestGameFixOutput />
+
+哇哦！我们的 `test_game` 基准测试又恢复到了原始的 FizzBuzz 水平附近。
+我希望我能记得当时的确切得分。不过已经是三周前的事了。
+我的终端历史记录无法追溯到那么久。
+而 `pytest-benchmark` 仅在我们要求时才存储其结果。
+但我认为它接近了！
+
+`test_game_100` 基准测试下降了近 50 倍到 `322.0815 ns`。
+`test_game_1_000_000` 基准测试下降了超过 500,000 倍！从 `571,684,633.4 ns` 到 `753.1445 ns`！
+
+> 🐰 至少我们在性能问题进入生产环境之前抓住了它……哦，对了。算了...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="如何使用 pytest-benchmark 对 Rust 进行基准测试" />
+
+<BencherFooter />

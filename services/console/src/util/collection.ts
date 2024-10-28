@@ -12,6 +12,7 @@ enum Collection {
 	api_users = "api-users",
 	api_server = "api-server",
 	// Learn
+	benchmarking_cpp = "benchmarking-cpp",
 	benchmarking_python = "benchmarking-python",
 	benchmarking_rust = "benchmarking-rust",
 	case_study = "case-study",
@@ -47,6 +48,8 @@ export const collectionPath = (collection: Collection) => {
 			return "users";
 		case Collection.api_server:
 			return "server";
+		case Collection.benchmarking_cpp:
+			return "benchmarking/cpp";
 		case Collection.benchmarking_python:
 			return "benchmarking/python";
 		case Collection.benchmarking_rust:

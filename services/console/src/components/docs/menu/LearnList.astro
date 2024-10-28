@@ -8,6 +8,9 @@ interface Props {
 }
 
 // Learn
+const benchmarkingCppCollection = await getLangCollection(
+	Collection.benchmarking_cpp,
+);
 const benchmarkingPythonCollection = await getLangCollection(
 	Collection.benchmarking_python,
 );
@@ -24,6 +27,11 @@ const { lang } = Astro.props;
   {
     label: benchmarking(lang),
     sections: [
+    {
+        section: "C++",
+        collection: Collection.benchmarking_cpp,
+        content: benchmarkingCppCollection,
+      },
       {
         section: "Python",
         collection: Collection.benchmarking_python,

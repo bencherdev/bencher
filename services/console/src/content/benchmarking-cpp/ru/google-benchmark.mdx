@@ -1,0 +1,104 @@
+---
+title: "pytest-benchmark"
+description: "Пошаговое руководство по тестированию производительности Python кода с помощью pytest-benchmark"
+heading: "Как тестировать производительность Python кода с pytest-benchmark"
+published: "2024-10-09T16:30:00Z"
+modified: "2024-10-09T16:30:00Z"
+sortOrder: 1
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ru/benchmarking.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ru/fizz-buzz-rules.mdx";
+import FizzBuzzPython from "../../../chunks/benchmarking-python/ru/fizz-buzz-python.mdx";
+import StepByStepPython from "../../../chunks/benchmarking-python/ru/step-by-step-python.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ru/micro-vs-macro.mdx";
+import BenchmarkingPython from "../../../chunks/benchmarking-python/ru/benchmarking-python.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-python/pytest-benchmark/ru/fizz-buzz-refactor.mdx";
+import BenchmarkingFizzBuzz from "../../../chunks/benchmarking-python/pytest-benchmark/ru/benchmarking-fizz-buzz.mdx";
+import FizzBuzzFibonacciPython from "../../../chunks/benchmarking-python/ru/fizz-buzz-fibonacci-python.mdx";
+import PlayGameCode from "../../../chunks/benchmarking-python/pytest-benchmark/play-game-code.mdx";
+import BenchmarkingFizzBuzzFibonacci from "../../../chunks/benchmarking-python/pytest-benchmark/ru/benchmarking-fizz-buzz-fibonacci.mdx";
+import FizzBuzzFibonacciOpenPython from "../../../chunks/benchmarking-python/ru/fizz-buzz-fibonacci-open-python.mdx";
+import FizzBuzzFibonacciOpenCode from "../../../chunks/benchmarking-python/fizz-buzz-fibonacci-open-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/ru/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ru/on-fire.mdx";
+import TestGameOnFireCode from "../../../chunks/benchmarking-python/pytest-benchmark/test-game-on-fire-code.mdx";
+import PytestGameOnFireOutputStart from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output-start.mdx";
+import PytestGameOnFireOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-python/pytest-benchmark/ru/fizz-buzz-fibonacci-fix.mdx";
+import PytestGameFixOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ru/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-python/pytest-benchmark/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ru/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ru/bencher-footer.mdx";
+
+<Benchmarking />
+
+<FizzBuzzPython />
+
+<StepByStepPython />
+
+<MicroVsMacro />
+
+<BenchmarkingPython />
+
+Обе [поддерживаются Bencher](/ru/docs/explanation/adapters/). Так почему же выбрать `pytest-benchmark`? `pytest-benchmark` бесшовно интегрируется с `pytest`, который является фактическим стандартом для юнит-тестирования в экосистеме Python. Я бы предложил использовать `pytest-benchmark` для тестирования задержки вашего кода, особенно если вы уже используете `pytest`. То есть, `pytest-benchmark` отлично подходит для измерения времени на стеночных часах.
+
+<FizzBuzzRefactor />
+
+<BenchmarkingFizzBuzz />
+
+<FizzBuzzFibonacciPython>
+  <PlayGameCode />
+</FizzBuzzFibonacciPython>
+
+<BenchmarkingFizzBuzzFibonacci />
+
+<FizzBuzzFibonacciOpenPython>
+    <FizzBuzzFibonacciOpenCode />
+</FizzBuzzFibonacciOpenPython>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<TestGameOnFireCode />
+
+- Микротест производительности `test_game_100` для игры с числом сто (`100`)
+- Микротест производительности `test_game_1_000_000` для игры с числом один миллион (`1_000_000`)
+
+Когда я его запустил, получилось следующее:
+
+<PytestGameOnFireOutputStart />
+
+Ждите... ждите...
+
+<PytestGameOnFireOutput />
+
+Что! `15.8470 us` x `1,000` должно быть `15,847.0 us`, а не `571,684.6334 us` 🤯
+Хотя моя функция для последовательности Фибоначчи работает корректно, где-то там, должно быть, есть ошибка производительности.
+
+<FizzBuzzFibonacciFix />
+
+Давайте теперь снова запустим эти тесты и посмотрим, как у нас дела:
+
+<PytestGameFixOutput />
+
+О, вау! Наш тест производительности `test_game` вернулся почти к тому, что было у оригинального FizzBuzz. Жаль, не могу точно вспомнить, каким был этот результат. Но это было три недели назад. История в терминале не идет так далеко. И `pytest-benchmark` сохраняет свои результаты только тогда, когда мы об этом просим. Но я думаю, что близко!
+
+Тест производительности `test_game_100` упал почти в 50 раз до `322.0815 ns`. И тест производительности `test_game_1_000_000` уменьшился более чем в 500,000 раз! С `571,684,633.4 ns` до `753.1445 ns`!
+
+> 🐰 Ну, по крайней мере, мы поймали эту ошибку производительности до того, как она попала в продакшн... о, точно. Неважно...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Как тестировать производительность Rust с pytest-benchmark" />
+
+<BencherFooter />

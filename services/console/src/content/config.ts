@@ -54,6 +54,7 @@ export const collections = {
 	api_users: swagger,
 	api_server: swagger,
 	// learn
+	benchmarking_cpp: page,
 	benchmarking_python: page,
 	benchmarking_rust: page,
 	case_study: page,
