@@ -28,7 +28,7 @@
 		"@astrojs/node": "^8.2.5",
 		"@astrojs/partytown": "^2.0.4",
 		"@astrojs/sitemap": "^3.1.2",
-		"@astrojs/solid-js": "^4.1.0",
+		"@astrojs/solid-js": "^4.2.0",
 		"@observablehq/plot": "^0.6.13",
 		"@sentry/astro": "^8.15.0",
 		"@solid-primitives/resize-observer": "^2.0.26",
@@ -42,6 +42,7 @@
 		"htl": "^0.3.1",
 		"mermaid": "^11.3.0",
 		"slugify": "^1.6.6",
+		"solid-devtools": "^0.30.1",
 		"solid-js": "^1.9.3",
 		"typescript": "^5.6.3",
 		"vite-plugin-wasm-pack": "^0.1.12"
