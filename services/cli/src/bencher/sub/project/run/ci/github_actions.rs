@@ -1,5 +1,9 @@
 use bencher_comment::ReportComment;
-use octocrab::{models::CommentId, Octocrab};
+use octocrab::{
+    models::{checks::CheckRun, CommentId},
+    params::checks::{CheckRunConclusion, CheckRunOutput},
+    Octocrab,
+};
 
 use crate::cli_println_quietable;
 
@@ -79,6 +83,10 @@ pub enum GitHubError {
     UpdateComment(octocrab::Error),
     #[error("GitHub Actions token (`GITHUB_TOKEN`) does not have `write` permissions for `pull-requests`.\n{help}\nError: {0}", help = PERMISSIONS_HELP)]
     BadPermissions(octocrab::Error),
+    #[error("Failed to create GitHub check: {0}")]
+    FailedCreatingCheck(octocrab::Error),
+    #[error("No GITHUB_SHA is set {}", docker_env("GITHUB_SHA"))]
+    NoSHA,
 }
 
 // https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
@@ -189,9 +197,11 @@ impl GitHubActions {
             _ => {
                 cli_println_quietable!(
                     log,
-                    "Not running as an expected GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Skipping CI integration.\n{}",
+                    "Not running as usual GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Creating a GitHub Check instead.\n{}",
                     docker_env(GITHUB_EVENT_NAME)
                 );
+                self.create_github_check(report_comment, &event_str, &event)
+                    .await?;
                 return Ok(());
             },
         };
@@ -243,6 +253,43 @@ impl GitHubActions {
         }
 
         Ok(())
+    }
+
+    async fn create_github_check(
+        &self,
+        report_comment: &ReportComment,
+        event_str: &str,
+        event: &serde_json::Value,
+    ) -> Result<CheckRun, GitHubError> {
+        let full_name = repository_full_name(event_str, event)?;
+        let (owner, repo) = split_full_name(full_name)?;
+
+        let report = CheckRunOutput {
+            title: String::new(),
+            summary: report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref()),
+            text: None,
+            annotations: Vec::new(),
+            images: Vec::new(),
+        };
+        Octocrab::builder()
+            .user_access_token(self.token.clone())
+            .build()
+            .map_err(GitHubError::Auth)?
+            .checks(owner, repo)
+            .create_check_run(
+                "Bencher Report",
+                std::env::var("GITHUB_SHA").map_err(|_err| GitHubError::NoSHA)?,
+            )
+            .output(report)
+            .conclusion(if report_comment.has_alert() {
+                // TODO: action required
+                CheckRunConclusion::Failure
+            } else {
+                CheckRunConclusion::Success
+            })
+            .send()
+            .await
+            .map_err(GitHubError::FailedCreatingCheck)
     }
 }
 
