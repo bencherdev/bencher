@@ -5,7 +5,7 @@ use octocrab::{
     Octocrab,
 };
 
-use crate::{cli_println, cli_println_quietable};
+use crate::cli_println_quietable;
 
 const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
@@ -195,7 +195,8 @@ impl GitHubActions {
                 self.ci_number.ok_or(GitHubError::NoWorkflowRunPRNumber)?
             },
             _ => {
-                cli_println!(
+                cli_println_quietable!(
+                    log,
                     "Not running as usual GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Creating a GitHub Check instead.\n{}",
                     docker_env(GITHUB_EVENT_NAME)
                 );
