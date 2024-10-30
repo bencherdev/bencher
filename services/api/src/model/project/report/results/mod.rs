@@ -80,7 +80,7 @@ impl ReportResults {
         let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
             .map_err(|e| {
                 bad_request_error(format!(
-                    "Failed to convert results with adapter ({adapter} | {settings:?}): {e}"
+                    "Failed to convert results with adapter ({adapter} | {settings:?}): {e}\n\nAre you sure {adapter} is the right adapter?\nRead more about adapters here: https://bencher.dev/docs/explanation/adapters/"
                 ))
             })?;
 
