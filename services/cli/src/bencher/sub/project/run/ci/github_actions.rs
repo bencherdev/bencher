@@ -10,10 +10,10 @@ use crate::cli_println_quietable;
 const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
 const GITHUB_EVENT_NAME: &str = "GITHUB_EVENT_NAME";
+const GITHUB_SHA: &str = "GITHUB_SHA";
 
 const PULL_REQUEST: &str = "pull_request";
 const PULL_REQUEST_TARGET: &str = "pull_request_target";
-const WORKFLOW_RUN: &str = "workflow_run";
 
 const FULL_NAME: &str = "full_name";
 
@@ -61,10 +61,6 @@ pub enum GitHubError {
     NoPRNumber(String, String),
     #[error("GitHub Action event ({1}) PR number is invalid: {0}")]
     BadPRNumber(String, String),
-    #[error(
-        "GitHub Action for workflow run must explicitly set PR number (ex: `--ci-number 123`)"
-    )]
-    NoWorkflowRunPRNumber,
     #[error("GitHub Action event repository is missing: {0}")]
     NoRepository(String),
     #[error("GitHub Action event repository full name is missing: {0}")]
@@ -83,10 +79,11 @@ pub enum GitHubError {
     UpdateComment(octocrab::Error),
     #[error("GitHub Actions token (`GITHUB_TOKEN`) does not have `write` permissions for `pull-requests`.\n{help}\nError: {0}", help = PERMISSIONS_HELP)]
     BadPermissions(octocrab::Error),
+
+    #[error("Failed to get GitHub SHA\n{}", docker_env(GITHUB_SHA))]
+    NoSha,
     #[error("Failed to create GitHub check: {0}")]
-    FailedCreatingCheck(octocrab::Error),
-    #[error("No GITHUB_SHA is set {}", docker_env("GITHUB_SHA"))]
-    NoSHA,
+    CreateCheck(octocrab::Error),
 }
 
 // https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
@@ -118,7 +115,7 @@ impl GitHubActions {
 
         let (event_str, event) = github_event()?;
 
-        if let Some(PULL_REQUEST) = std::env::var(GITHUB_EVENT_NAME).ok().as_deref() {
+        if let Ok(PULL_REQUEST) = std::env::var(GITHUB_EVENT_NAME).as_deref() {
             let head = event
                 .get("pull_request")
                 .ok_or_else(|| GitHubError::NoPullRequest(event_str.clone()))?
@@ -169,41 +166,29 @@ impl GitHubActions {
 
         let (event_str, event) = github_event()?;
 
-        // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
-        let issue_number = match std::env::var(GITHUB_EVENT_NAME).ok().as_deref() {
+        let issue_number = if let Some(issue_number) = self.ci_number {
+            issue_number
+        } else if let Ok(event_name @ (PULL_REQUEST | PULL_REQUEST_TARGET)) =
+            // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
+            std::env::var(GITHUB_EVENT_NAME).as_deref()
+        {
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
-            Some(event_name @ (PULL_REQUEST | PULL_REQUEST_TARGET)) => {
-                // https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-                if let Some(issue_number) = self.ci_number {
-                    issue_number
-                } else {
-                    event
-                        .get("number")
-                        .ok_or_else(|| {
-                            GitHubError::NoPRNumber(event_str.clone(), event_name.into())
-                        })?
-                        .as_u64()
-                        .ok_or_else(|| {
-                            GitHubError::BadPRNumber(event_str.clone(), event_name.into())
-                        })?
-                }
-            },
-            // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
-            Some(WORKFLOW_RUN) => {
-                // https://docs.github.com/en/webhooks/webhook-events-and-payloads#workflow_run
-                self.ci_number.ok_or(GitHubError::NoWorkflowRunPRNumber)?
-            },
-            _ => {
-                cli_println_quietable!(
-                    log,
-                    "Not running as usual GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Creating a GitHub Check instead.\n{}",
-                    docker_env(GITHUB_EVENT_NAME)
-                );
-                self.create_github_check(report_comment, &event_str, &event)
-                    .await?;
-                return Ok(());
-            },
+            // https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+            event
+                .get("number")
+                .ok_or_else(|| GitHubError::NoPRNumber(event_str.clone(), event_name.into()))?
+                .as_u64()
+                .ok_or_else(|| GitHubError::BadPRNumber(event_str.clone(), event_name.into()))?
+        } else {
+            cli_println_quietable!(
+                        log,
+                        "Not running as a GitHub Action pull request event (`pull_request` or `pull_request_target`) and the `--ci-number` option was not set. Creating a GitHub Check instead.\n{}",
+                        docker_env(GITHUB_EVENT_NAME)
+                    );
+            self.create_github_check(report_comment, &event_str, &event)
+                .await?;
+            return Ok(());
         };
 
         let full_name = repository_full_name(&event_str, &event)?;
@@ -263,6 +248,9 @@ impl GitHubActions {
     ) -> Result<CheckRun, GitHubError> {
         let full_name = repository_full_name(event_str, event)?;
         let (owner, repo) = split_full_name(full_name)?;
+        let Ok(head_sha) = std::env::var(GITHUB_SHA) else {
+            return Err(GitHubError::NoSha);
+        };
 
         let report = CheckRunOutput {
             title: String::new(),
@@ -276,32 +264,28 @@ impl GitHubActions {
             .build()
             .map_err(GitHubError::Auth)?
             .checks(owner, repo)
-            .create_check_run(
-                "Bencher Report",
-                std::env::var("GITHUB_SHA").map_err(|_err| GitHubError::NoSHA)?,
-            )
+            .create_check_run("Bencher Report", head_sha)
             .output(report)
             .conclusion(if report_comment.has_alert() {
-                // TODO: action required
                 CheckRunConclusion::Failure
             } else {
                 CheckRunConclusion::Success
             })
             .send()
             .await
-            .map_err(GitHubError::FailedCreatingCheck)
+            .map_err(GitHubError::CreateCheck)
     }
 }
 
 // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
 // Always set to `true` when GitHub Actions is running the workflow. You can use this variable to differentiate when tests are being run locally or by GitHub Actions.
 fn is_github_actions() -> bool {
-    std::env::var(GITHUB_ACTIONS).ok().as_deref() == Some("true")
+    std::env::var(GITHUB_ACTIONS).as_deref() == Ok("true")
 }
 
 fn github_event() -> Result<(String, serde_json::Value), GitHubError> {
     // The path to the file on the runner that contains the full event webhook payload. For example, /github/workflow/event.json.
-    let Some(github_event_path) = std::env::var(GITHUB_EVENT_PATH).ok() else {
+    let Ok(github_event_path) = std::env::var(GITHUB_EVENT_PATH) else {
         return Err(GitHubError::NoEventPath);
     };
     let event_str = std::fs::read_to_string(&github_event_path)
