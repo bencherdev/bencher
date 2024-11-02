@@ -2,13 +2,12 @@
 def fizz_buzz_fibonacci(n):
     if is_fibonacci_number(n):
         return "Fibonacci"
+    elif n % 15 == 0:
+        return "FizzBuzz"
+    elif n % 3 == 0:
+        return "Fizz"
+    elif n % 5 == 0:
+        return "Buzz"
     else:
-        if n % 15 == 0:
-            return "FizzBuzz"
-        elif n % 3 == 0:
-            return "Fizz"
-        elif n % 5 == 0:
-            return "Buzz"
-        else:
-            return str(n)
+        return str(n)
 ```

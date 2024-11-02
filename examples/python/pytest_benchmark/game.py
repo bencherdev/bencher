@@ -37,15 +37,14 @@ def play_game_v2(n, should_print):
 def fizz_buzz_fibonacci_v2(n):
     if is_fibonacci_number_v2(n):
         return "Fibonacci"
+    elif n % 15 == 0:
+        return "FizzBuzz"
+    elif n % 3 == 0:
+        return "Fizz"
+    elif n % 5 == 0:
+        return "Buzz"
     else:
-        if n % 15 == 0:
-            return "FizzBuzz"
-        elif n % 3 == 0:
-            return "Fizz"
-        elif n % 5 == 0:
-            return "Buzz"
-        else:
-            return str(n)
+        return str(n)
 
 def is_fibonacci_number_v2(n):
     for i in range(n + 1):
