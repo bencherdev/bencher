@@ -3,12 +3,9 @@ import CdBenchmark from "../cd-benchmark.mdx";
 import CmakeMakeDirectory from "../cmake-make-directory.mdx"
 import CmakeCmake from "../cmake-cmake.mdx";
 import CmakeRelease from "../cmake-release.mdx";
-
-
-import TestGameCode from "../test-game-code.mdx";
-import PipenvShellOutput from "../../pipenv-shell-output.mdx";
-import PipenvInstallOutput from "../pipenv-install-output.mdx";
-import PytestGameOutput from "../pytest-game-output.mdx";
+import CdBack from "../cd-back.mdx";
+import BenchmarkGameCode from "../benchmark-game-code.mdx";
+import BenchmarkGameOutput from "../benchmark-game-output.mdx";
 
 ## Benchmarking FizzBuzz
 
@@ -34,26 +31,26 @@ Finally, build the library:
 
 <CmakeRelease />
 
-<TestGameCode />
+Return back to the parent directory:
 
-- Create a function named `test_game` that takes in a `pytest-benchmark` `benchmark` fixture.
-- Create a `run_game` function that iterate from `1` to `100` inclusively.
-  - For each number, call `play_game`, with `should_print` set to `False`.
-- Pass the `run_game` function the the `benchmark` runner.
+<CdBack />
 
-Now we need to configure our project to run our benchmarks.
+Now let's create a new file name `benchmark_game.cpp`:
 
-Create a new virtual environment with `pipenv`:
+<BenchmarkGameCode />
 
-<PipenvShellOutput />
+- Import the function definitions from `play_game.h`.
+- Import the Google `benchmark` library header.
+- Create a function named `BENCHMARK_game` that takes in a reference to `benchmark::State`.
+- Iterate over the `benchmark::State` object.
+- For each iteration, iterate from `1` to `100` inclusively.
+  - Call `play_game` with the current number and `should_print` set to `false`.
+- Pass the `BENCHMARK_game` function the the `BENCHMARK` runner.
+- Run the benchmark with `BENCHMARK_MAIN`.
 
-Install `pytest-benchmark` inside of that new `pipenv` environment:
+Now we're ready to benchmark our code, run:
 
-<PipenvInstallOutput />
-
-Now we're ready to benchmark our code, run `pytest game.py`:
-
-<PytestGameOutput />
+<BenchmarkGameOutput />
 
 > 🐰 Lettuce turnip the beet! We've got our first benchmark metrics!
 

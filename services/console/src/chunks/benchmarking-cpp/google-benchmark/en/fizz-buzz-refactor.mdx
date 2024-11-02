@@ -5,8 +5,8 @@ import PlayGameCode from "../../play-game-code.mdx";
 ## Refactor FizzBuzz
 
 In order to test our FizzBuzz application,
-we need to decouple our logic from our program's main function.
-Benchmark harnesses can't benchmark the main function.
+we need to decouple our logic from our program's `main` function.
+Benchmark harnesses can't benchmark the `main` function.
 In order to do this, we need to make a few changes.
 
 Let's refactor our FizzBuzz logic into a couple of functions
@@ -21,8 +21,8 @@ Now, let's create a header file named `play_game.h` and add the `play_game` func
 
 <FizzBuzzHeaderCode />
 
-Then update the main program in `game.cpp` to use the function definition from the header file:
+Then update the `main` function in `game.cpp` to use the `play_game` function definition from the header file:
 
 <PlayGameCode />
 
-The main function for our program iterates through the numbers `1` to `100` inclusive and calls `play_game` for each number, with `should_print` set to `true`.
+The `main` function for our program iterates through the numbers `1` to `100` inclusive and calls `play_game` for each number, with `should_print` set to `true`.
