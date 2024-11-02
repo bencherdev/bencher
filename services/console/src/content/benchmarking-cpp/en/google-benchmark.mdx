@@ -11,10 +11,10 @@ import Benchmarking from "../../../chunks/benchmarking/en/benchmarking.mdx";
 import FizzBuzzRules from "../../../chunks/benchmarking/en/fizz-buzz-rules.mdx";
 import FizzBuzzCpp from "../../../chunks/benchmarking-cpp/en/fizz-buzz-cpp.mdx";
 import StepByStepCpp from "../../../chunks/benchmarking-cpp/en/step-by-step-cpp.mdx";
-
-
 import MicroVsMacro from "../../../chunks/benchmarking/en/micro-vs-macro.mdx";
-import BenchmarkingPython from "../../../chunks/benchmarking-python/en/benchmarking-python.mdx";
+import BenchmarkingCpp from "../../../chunks/benchmarking-cpp/en/benchmarking-cpp.mdx";
+
+
 import FizzBuzzRefactor from "../../../chunks/benchmarking-python/pytest-benchmark/en/fizz-buzz-refactor.mdx";
 import BenchmarkingFizzBuzz from "../../../chunks/benchmarking-python/pytest-benchmark/en/benchmarking-fizz-buzz.mdx";
 import FizzBuzzFibonacciPython from "../../../chunks/benchmarking-python/en/fizz-buzz-fibonacci-python.mdx";
@@ -43,15 +43,15 @@ import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 
 <MicroVsMacro />
 
-<BenchmarkingPython />
+<BenchmarkingCpp />
 
 Both are [support by Bencher](/docs/explanation/adapters/).
-So why choose `pytest-benchmark`?
-`pytest-benchmark` integrates seamlessly with `pytest`,
-which is the de facto standard unit test harness in the Python ecosystem.
-I would suggest using `pytest-benchmark` for benchmarking your code's latency,
-especially if you are already using `pytest`.
-That is, `pytest-benchmark` is great for measuring wall clock time.
+So why choose Google Benchmark?
+Google Benchmark integrates seamlessly with GoogleTest,
+which is the de facto standard unit test harness in the C++ ecosystem.
+I would suggest using Google Benchmark for benchmarking your code's latency,
+especially if you are already using GoogleTest.
+That is, Google Benchmark is great for measuring wall clock time.
 
 <FizzBuzzRefactor />
 
