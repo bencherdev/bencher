@@ -1,31 +1,20 @@
+#include "play_game.h"
 #include <benchmark/benchmark.h>
 #include <iostream>
 
-void FizzBuzz()
-{
-    for (int i = 1; i <= 100; i++)
-    {
-        if ((i % 15) == 0)
-            std::cout << "FizzBuzz\n";
-        else if ((i % 3) == 0)
-            std::cout << "Fizz\n";
-        else if ((i % 5) == 0)
-            std::cout << "Buzz\n";
-        else
-            std::cout << i << "\n";
-    }
-}
-
-static void BM_FizzBuzz(benchmark::State &state)
+static void BENCHMARK_play_game(benchmark::State &state)
 {
     for (auto _ : state)
     {
-        FizzBuzz();
+        for (int i = 1; i <= 100; i++)
+        {
+            play_game(i, true);
+        }
     }
 }
 
 // Register the function as a benchmark
-BENCHMARK(BM_FizzBuzz);
+BENCHMARK(BENCHMARK_play_game);
 
 // Run the benchmark
 BENCHMARK_MAIN();
