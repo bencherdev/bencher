@@ -1,0 +1,22 @@
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## Refactor FizzBuzz
+
+In order to test our FizzBuzz application,
+we need to decouple our logic from our program's main function.
+Benchmark harnesses can't benchmark the main function.
+In order to do this, we need to make few changes.
+
+Let's refactor our FizzBuzz logic into a couple of function:
+
+<FizzBuzzRefactorCode />
+
+- `play_game`: Takes in an integer `n`, calls `fizz_buzz` with that number, and if `should_print` is `true` print the result.
+- `fizz_buzz`: Takes in an integer `n` and performs the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result as a string.
+
+Then update then main function to look like this:
+
+<PlayGameCode />
+
+The main function for our program iterates through the numbers `1` to `100` inclusive and calls `play_game` for each number, with `should_print` set to `true`.
