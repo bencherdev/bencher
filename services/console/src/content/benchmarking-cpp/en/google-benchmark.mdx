@@ -20,17 +20,18 @@ import PlayGameCode from "../../../chunks/benchmarking-cpp/google-benchmark/play
 import BenchmarkingFizzBuzzFibonacci from "../../../chunks/benchmarking-cpp/google-benchmark/en/benchmarking-fizz-buzz-fibonacci.mdx";
 import FizzBuzzFibonacciOpenCpp from "../../../chunks/benchmarking-cpp/google-benchmark/en/fizz-buzz-fibonacci-open-cpp.mdx";
 import FizzBuzzFibonacciOpenCode from "../../../chunks/benchmarking-cpp/fizz-buzz-fibonacci-open-code.mdx";
-
-
-
-
 import TheEnd from "../../../chunks/benchmarking/en/the-end.mdx";
 import OnFire from "../../../chunks/benchmarking/en/on-fire.mdx";
-import TestGameOnFireCode from "../../../chunks/benchmarking-python/pytest-benchmark/test-game-on-fire-code.mdx";
-import PytestGameOnFireOutputStart from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output-start.mdx";
-import PytestGameOnFireOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output.mdx";
-import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-python/pytest-benchmark/en/fizz-buzz-fibonacci-fix.mdx";
-import PytestGameFixOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-fix-output.mdx";
+import TestGameOnFireCode from "../../../chunks/benchmarking-cpp/google-benchmark/benchmark-game-on-fire-code.mdx";
+import BenchmarkGameOnFireOutputStart from "../../../chunks/benchmarking-cpp/google-benchmark/benchmark-game-on-fire-output-start.mdx";
+import BenchmarkGameOnFireOutput from "../../../chunks/benchmarking-cpp/google-benchmark/benchmark-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-cpp/google-benchmark/en/fizz-buzz-fibonacci-fix.mdx";
+import BenchmarkGameFixOutput from "../../../chunks/benchmarking-cpp/google-benchmark/benchmark-game-fix-output.mdx";
+
+
+
+
+
 import CatchInCi from "../../../chunks/benchmarking/en/catch-in-ci.mdx";
 import CatchInCiOutput from "../../../chunks/benchmarking-python/pytest-benchmark/catch-in-ci-output.mdx";
 import CatchInCiPlot from "../../../chunks/benchmarking/en/catch-in-ci-plot.mdx";
@@ -77,34 +78,33 @@ That is, Google Benchmark is great for measuring wall clock time.
 
 <TestGameOnFireCode />
 
-- A micro-benchmark `test_game_100` for playing the game with the number one hundred (`100`)
-- A micro-benchmark `test_game_1_000_000` for playing the game with the number one million (`1_000_000`)
+- A micro-benchmark `BENCHMARK_game_100` for playing the game with the number one hundred (`100`)
+- A micro-benchmark `BENCHMARK_game_1_000_000` for playing the game with the number one million (`1_000_000`)
 
 When I ran it, I got this:
 
-<PytestGameOnFireOutputStart />
+<BenchmarkGameOnFireOutputStart />
 
 Wait for it... wait for it...
 
-<PytestGameOnFireOutput />
+<BenchmarkGameOnFireOutput />
 
-What! `15.8470 us` x `1,000` should be `15,847.0 us` not `571,684.6334 us` 🤯
+What! `1,249 ns` x `10,000` should be `12,490,000 ns` not `110,879,642 ns` 🤯
 Even though I got my Fibonacci sequence code functionally correct, I must have a performance bug in there somewhere.
 
 <FizzBuzzFibonacciFix />
 
 Now lets rerun those benchmarks and see how we did:
 
-<PytestGameFixOutput />
+<BenchmarkGameFixOutput />
 
-Oh, wow! Our `test_game` benchmark is back down to around where it was for the original FizzBuzz.
+Oh, wow! Our `BENCHMARK_game` benchmark is back down to around where it was for the original FizzBuzz.
 I wish I could remember exactly what that score was. It's been three weeks though.
-My terminal history doesn't go back that far.
-And `pytest-benchmark` only stores its results when we ask it to.
+My terminal history doesn't go back that far, and Google Benchmark doesn't store its results.
 But I think it's close!
 
-The `test_game_100` benchmark is down nearly 50x to `322.0815 ns`.
-And the `test_game_1_000_000` benchmark is down more than 500,000x! `571,684,633.4 ns` to `753.1445 ns`!
+The `BENCHMARK_game_100` benchmark is down nearly 50x to `34.4 ns`.
+And the `BENCHMARK_game_1_000_000` benchmark is down more than 1,500,000x! `110,879,642 ns` to `61.6 ns`!
 
 > 🐰 Hey, at least we caught this performance bug before it made it to production... oh, right. Nevermind...
 
@@ -114,6 +114,6 @@ And the `test_game_1_000_000` benchmark is down more than 500,000x! `571,684,633
 
 <CatchInCiPlot />
 
-<CatchInCiPlotRustBench title="How to Benchmark Rust with pytest-benchmark" />
+<CatchInCiPlotRustBench title="How to Benchmark C++ with Google Benchmark" />
 
 <BencherFooter />

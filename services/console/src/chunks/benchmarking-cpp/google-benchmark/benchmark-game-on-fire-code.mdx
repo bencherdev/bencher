@@ -1,18 +1,4 @@
-#include "play_game.h"
-#include <benchmark/benchmark.h>
-#include <iostream>
-
-static void BENCHMARK_game(benchmark::State &state)
-{
-    for (auto _ : state)
-    {
-        for (int i = 1; i <= 100; i++)
-        {
-            play_game(i, false);
-        }
-    }
-}
-
+```cpp title="benchmark_game.cpp"
 static void BENCHMARK_game_100(benchmark::State &state)
 {
     for (auto _ : state)
@@ -29,8 +15,6 @@ static void BENCHMARK_game_1_000_000(benchmark::State &state)
     }
 }
 
-BENCHMARK(BENCHMARK_game);
 BENCHMARK(BENCHMARK_game_100);
 BENCHMARK(BENCHMARK_game_1_000_000);
-
-BENCHMARK_MAIN();
+```

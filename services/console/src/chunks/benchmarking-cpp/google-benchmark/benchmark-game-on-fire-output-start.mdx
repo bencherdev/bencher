@@ -1,0 +1,16 @@
+```
+$ g++ -std=c++11 -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread play_game.cpp benchmark_game.cpp -o benchmark_game && ./benchmark_game
+2023-11-04T03:00:00-04:00
+Running ./benchmark_game
+Run on (8 X 24 MHz CPU s)
+CPU Caches:
+  L1 Data 64 KiB
+  L1 Instruction 128 KiB
+  L2 Unified 4096 KiB (x8)
+Load Average: 4.98, 5.75, 4.96
+-------------------------------------------------------------------
+Benchmark                         Time             CPU   Iterations
+-------------------------------------------------------------------
+BENCHMARK_game                75547 ns        59280 ns        12560
+BENCHMARK_game_100             1249 ns         1243 ns       564689
+```
