@@ -1,0 +1,16 @@
+import FizzBuzzRules from "../../benchmarking/zh/fizz-buzz-rules.mdx";
+import FizzBuzzCode from "../fizz-buzz-code.mdx";
+
+## 用 C++ 编写 FizzBuzz
+
+<FizzBuzzRules />
+
+<FizzBuzzCode />
+
+- 从 `1` 遍历到 `100`，每次迭代后递增。
+- 对于每个数字，计算模（除法后的余数）。
+- 如果余数为 `0`，则该数字是给定因子的倍数：
+  - 如果 `15` 的余数为 `0`，则打印 `FizzBuzz`。
+  - 如果 `3` 的余数为 `0`，则打印 `Fizz`。
+  - 如果 `5` 的余数为 `0`，则打印 `Buzz`。
+- 否则，只需打印数字。

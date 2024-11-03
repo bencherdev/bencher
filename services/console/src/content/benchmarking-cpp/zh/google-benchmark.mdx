@@ -1,68 +1,66 @@
 ---
-title: "pytest-benchmark"
-description: "使用 pytest-benchmark 对 Python 代码进行基准测试的分步指南"
-heading: "如何使用 pytest-benchmark 对 Python 代码进行基准测试"
-published: "2024-10-09T16:30:00Z"
-modified: "2024-11-03T08:45:00Z"
+title: "Google Benchmark"
+description: "逐步指南：如何使用 Google Benchmark 对 C++ 代码进行基准测试"
+heading: "如何使用 Google Benchmark 对 C++ 代码进行基准测试"
+published: "2024-11-03T16:30:00Z"
+modified: "2024-11-03T16:30:00Z"
 sortOrder: 1
 ---
 
 import Benchmarking from "../../../chunks/benchmarking/zh/benchmarking.mdx";
 import FizzBuzzRules from "../../../chunks/benchmarking/zh/fizz-buzz-rules.mdx";
-import FizzBuzzPython from "../../../chunks/benchmarking-python/zh/fizz-buzz-python.mdx";
-import StepByStepPython from "../../../chunks/benchmarking-python/zh/step-by-step-python.mdx";
+import FizzBuzzCpp from "../../../chunks/benchmarking-cpp/zh/fizz-buzz-cpp.mdx";
+import StepByStepCpp from "../../../chunks/benchmarking-cpp/zh/step-by-step-cpp.mdx";
 import MicroVsMacro from "../../../chunks/benchmarking/zh/micro-vs-macro.mdx";
-import BenchmarkingPython from "../../../chunks/benchmarking-python/zh/benchmarking-python.mdx";
-import FizzBuzzRefactor from "../../../chunks/benchmarking-python/pytest-benchmark/zh/fizz-buzz-refactor.mdx";
-import BenchmarkingFizzBuzz from "../../../chunks/benchmarking-python/pytest-benchmark/zh/benchmarking-fizz-buzz.mdx";
-import FizzBuzzFibonacciPython from "../../../chunks/benchmarking-python/zh/fizz-buzz-fibonacci-python.mdx";
-import PlayGameCode from "../../../chunks/benchmarking-python/pytest-benchmark/play-game-code.mdx";
-import BenchmarkingFizzBuzzFibonacci from "../../../chunks/benchmarking-python/pytest-benchmark/zh/benchmarking-fizz-buzz-fibonacci.mdx";
-import FizzBuzzFibonacciOpenPython from "../../../chunks/benchmarking-python/zh/fizz-buzz-fibonacci-open-python.mdx";
-import FizzBuzzFibonacciOpenCode from "../../../chunks/benchmarking-python/fizz-buzz-fibonacci-open-code.mdx";
+import BenchmarkingCpp from "../../../chunks/benchmarking-cpp/zh/benchmarking-cpp.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-cpp/google-benchmark/zh/fizz-buzz-refactor.mdx";
+import BenchmarkingFizzBuzz from "../../../chunks/benchmarking-cpp/google-benchmark/zh/benchmarking-fizz-buzz.mdx";
+import FizzBuzzFibonacciCpp from "../../../chunks/benchmarking-cpp/zh/fizz-buzz-fibonacci-cpp.mdx";
+import PlayGameCode from "../../../chunks/benchmarking-cpp/google-benchmark/play-game-code.mdx";
+import BenchmarkingFizzBuzzFibonacci from "../../../chunks/benchmarking-cpp/google-benchmark/zh/benchmarking-fizz-buzz-fibonacci.mdx";
+import FizzBuzzFibonacciOpenCpp from "../../../chunks/benchmarking-cpp/google-benchmark/zh/fizz-buzz-fibonacci-open-cpp.mdx";
+import FizzBuzzFibonacciOpenCode from "../../../chunks/benchmarking-cpp/fizz-buzz-fibonacci-open-code.mdx";
 import TheEnd from "../../../chunks/benchmarking/zh/the-end.mdx";
 import OnFire from "../../../chunks/benchmarking/zh/on-fire.mdx";
-import TestGameOnFireCode from "../../../chunks/benchmarking-python/pytest-benchmark/test-game-on-fire-code.mdx";
-import PytestGameOnFireOutputStart from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output-start.mdx";
-import PytestGameOnFireOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-on-fire-output.mdx";
-import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-python/pytest-benchmark/zh/fizz-buzz-fibonacci-fix.mdx";
-import PytestGameFixOutput from "../../../chunks/benchmarking-python/pytest-benchmark/pytest-game-fix-output.mdx";
+import TestGameOnFireCode from "../../../chunks/benchmarking-cpp/google-benchmark/benchmark-game-on-fire-code.mdx";
+import BenchmarkGameOnFireOutputStart from "../../../chunks/benchmarking-cpp/google-benchmark/benchmark-game-on-fire-output-start.mdx";
+import BenchmarkGameOnFireOutput from "../../../chunks/benchmarking-cpp/google-benchmark/benchmark-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFix from "../../../chunks/benchmarking-cpp/google-benchmark/zh/fizz-buzz-fibonacci-fix.mdx";
+import BenchmarkGameFixOutput from "../../../chunks/benchmarking-cpp/google-benchmark/benchmark-game-fix-output.mdx";
 import CatchInCi from "../../../chunks/benchmarking/zh/catch-in-ci.mdx";
-import CatchInCiOutput from "../../../chunks/benchmarking-python/pytest-benchmark/catch-in-ci-output.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-cpp/google-benchmark/catch-in-ci-output.mdx";
 import CatchInCiPlot from "../../../chunks/benchmarking/zh/catch-in-ci-plot.mdx";
 import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
 import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
 
 <Benchmarking />
 
-<FizzBuzzPython />
+<FizzBuzzCpp />
 
-<StepByStepPython />
+<StepByStepCpp />
 
 <MicroVsMacro />
 
-<BenchmarkingPython />
+<BenchmarkingCpp />
 
-两者都由 [Bencher支持](/zh/docs/explanation/adapters/)。 那么为什么选择 `pytest-benchmark`？
-`pytest-benchmark` 能与 `pytest` 无缝集成，
-而 `pytest` 是 Python 生态系统中的事实标准单元测试工具。
-我建议使用 `pytest-benchmark` 来基准测试代码延迟，
-尤其是如果你已经在使用 `pytest`。
-也就是说，`pytest-benchmark` 非常适合测量挂钟时间。
+两者都得到 [Bencher 的支持](/zh/docs/explanation/adapters/)。那么为什么选择 Google Benchmark？
+Google Benchmark 无缝集成到 GoogleTest 中，而 GoogleTest 是 C++ 生态系统的事实标准单元测试框架。
+我建议使用 Google Benchmark 来评估代码的延迟，特别是当你已经使用 GoogleTest 时。
+也就是说，Google Benchmark 非常适合测量挂钟时间。
 
 <FizzBuzzRefactor />
 
 <BenchmarkingFizzBuzz />
 
-<FizzBuzzFibonacciPython>
+<FizzBuzzFibonacciCpp>
   <PlayGameCode />
-</FizzBuzzFibonacciPython>
+</FizzBuzzFibonacciCpp>
 
 <BenchmarkingFizzBuzzFibonacci />
 
-<FizzBuzzFibonacciOpenPython>
+<FizzBuzzFibonacciOpenCpp>
     <FizzBuzzFibonacciOpenCode />
-</FizzBuzzFibonacciOpenPython>
+</FizzBuzzFibonacciOpenCpp>
 
 <TheEnd />
 
@@ -72,36 +70,35 @@ import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
 
 <TestGameOnFireCode />
 
-- 针对数字一百（`100`）的游戏进行微基准测试 `test_game_100`
-- 针对数字一百万（`1_000_000`）的游戏进行微基准测试 `test_game_1_000_000`
+- 微基准测试 `BENCHMARK_game_100` 用于玩数字一百（`100`）的游戏
+- 微基准测试 `BENCHMARK_game_1_000_000` 用于玩数字一百万（`1_000_000`）的游戏
 
 当我运行它时，我得到了这个结果：
 
-<PytestGameOnFireOutputStart />
+<BenchmarkGameOnFireOutputStart />
 
-等等……等一下……
+等一下……再等一下……
 
-<PytestGameOnFireOutput />
+<BenchmarkGameOnFireOutput />
 
-什么！`15.8470 us` x `1,000` 应该是 `15,847.0 us` 而不是 `571,684.6334 us` 🤯
-尽管我的斐波那契数列代码在功能上是正确的，但其中肯定存在性能问题。
+什么！`1,249 ns` x `10,000` 应该是 `12,490,000 ns` 而不是 `110,879,642 ns` 🤯
+尽管我的斐波那契序列代码功能上是正确的，但里面一定有性能问题。
 
 <FizzBuzzFibonacciFix />
 
-现在让我们重新运行这些基准测试，看看我们的表现如何：
+现在让我们重新运行这些基准测试，看看我们做得怎么样：
 
-<PytestGameFixOutput />
+<BenchmarkGameFixOutput />
 
-哇哦！我们的 `test_game` 基准测试又恢复到了原始的 FizzBuzz 水平附近。
-我希望我能记得当时的确切得分。不过已经是三周前的事了。
-我的终端历史记录无法追溯到那么久。
-而 `pytest-benchmark` 仅在我们要求时才存储其结果。
-但我认为它接近了！
+哦，哇！我们的 `BENCHMARK_game` 基准回到了原始 FizzBuzz 大概的位置。
+如果我能记住那个得分是多少就好了，然而已经过去三周了。
+我的终端历史记录没有那么长，而 Google Benchmark 也不存储它的结果。
+不过我觉得差不多了！
 
-`test_game_100` 基准测试下降了近 50 倍到 `322.0815 ns`。
-`test_game_1_000_000` 基准测试下降了超过 500,000 倍！从 `571,684,633.4 ns` 到 `753.1445 ns`！
+`BENCHMARK_game_100` 基准测试几乎降低了 50 倍到 `34.4 ns`。
+而 `BENCHMARK_game_1_000_000` 基准测试则降低了超过 1,500,000 倍！从 `110,879,642 ns` 到 `61.6 ns`！
 
-> 🐰 至少我们在性能问题进入生产环境之前抓住了它……哦，对了。算了...
+> 🐰 至少我们在它上线前抓到了这个性能问题……哦，对了。算了……
 
 <CatchInCi />
 
@@ -109,6 +106,6 @@ import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
 
 <CatchInCiPlot />
 
-<CatchInCiPlotRustBench title="如何使用 pytest-benchmark 对 Rust 进行基准测试" />
+<CatchInCiPlotRustBench title="如何使用 Google Benchmark 对 C++ 进行基准测试" />
 
 <BencherFooter />

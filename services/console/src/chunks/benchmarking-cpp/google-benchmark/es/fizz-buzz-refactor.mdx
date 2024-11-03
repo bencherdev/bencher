@@ -1,0 +1,24 @@
+import FizzBuzzHeaderCode from "../../fizz-buzz-header-code.mdx";
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## Refactorizar FizzBuzz
+
+Para probar nuestra aplicación FizzBuzz, necesitamos desacoplar nuestra lógica de la función `main` de nuestro programa. Los entornos de prueba de rendimiento no pueden evaluar la función `main`. Para lograr esto, necesitamos hacer algunos cambios.
+
+Vamos a refactorizar nuestra lógica de FizzBuzz en un par de funciones dentro de un nuevo archivo llamado `play_game.cpp`:
+
+<FizzBuzzRefactorCode />
+
+- `fizz_buzz`: Toma un número entero `n` y realiza la lógica de `Fizz`, `Buzz`, `FizzBuzz` o número, devolviendo el resultado como una cadena.
+- `play_game`: Toma un número entero `n`, llama a `fizz_buzz` con ese número, y si `should_print` es `true`, imprime el resultado.
+
+Ahora, vamos a crear un archivo de encabezado llamado `play_game.h` y agregarle la declaración de la función `play_game`:
+
+<FizzBuzzHeaderCode />
+
+Luego actualiza la función `main` en `game.cpp` para usar la definición de la función `play_game` desde el archivo de encabezado:
+
+<PlayGameCode />
+
+La función `main` de nuestro programa itera a través de los números del `1` al `100` inclusive y llama a `play_game` para cada número, con `should_print` configurado en `true`.

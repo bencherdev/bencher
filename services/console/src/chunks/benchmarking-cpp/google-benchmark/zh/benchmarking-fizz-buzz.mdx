@@ -1,0 +1,58 @@
+import GitClone from "../git-clone.mdx";
+import CdBenchmark from "../cd-benchmark.mdx";
+import CmakeMakeDirectory from "../cmake-make-directory.mdx"
+import CmakeCmake from "../cmake-cmake.mdx";
+import CmakeRelease from "../cmake-release.mdx";
+import CdBack from "../cd-back.mdx";
+import BenchmarkGameCode from "../benchmark-game-code.mdx";
+import BenchmarkGameOutput from "../benchmark-game-output.mdx";
+
+## 基准测试 FizzBuzz
+
+为了对我们的代码进行基准测试，我们需要首先安装 Google Benchmark。
+
+克隆库：
+
+<GitClone />
+
+进入新克隆的目录：
+
+<CdBenchmark />
+
+使用 `cmake` 创建一个用于放置构建输出的构建目录：
+
+<CmakeMakeDirectory />
+
+使用 `cmake` 生成构建系统文件并下载任何依赖项：
+
+<CmakeCmake />
+
+最后，构建库：
+
+<CmakeRelease />
+
+返回到父目录：
+
+<CdBack />
+
+现在让我们创建一个名为 `benchmark_game.cpp` 的新文件：
+
+<BenchmarkGameCode />
+
+- 从 `play_game.h` 导入函数定义。
+- 导入 Google `benchmark` 库头文件。
+- 创建一个名为 `BENCHMARK_game` 的函数，该函数接收 `benchmark::State` 的引用。
+- 迭代 `benchmark::State` 对象。
+- 对于每次迭代，遍历从 `1` 到 `100` 的值（包括 `100`）。
+  - 以当前数字调用 `play_game`，并将 `should_print` 设置为 `false`。
+- 将 `BENCHMARK_game` 函数传递给 `BENCHMARK` 运行器。
+- 使用 `BENCHMARK_MAIN` 运行基准测试。
+
+现在我们准备好对我们的代码进行基准测试了：
+
+<BenchmarkGameOutput />
+
+> 🐰 萝卜快马加鞭！我们得到了第一个基准测试指标！
+
+最后，我们可以休息一下疲惫的开发者大脑……
+开玩笑的，我们的用户想要一个新功能！

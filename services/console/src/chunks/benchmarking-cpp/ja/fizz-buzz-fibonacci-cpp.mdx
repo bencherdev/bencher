@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/ja/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## C++でFizzBuzzFibonacciを作成する
+
+私たちの主要業績評価指標（KPI）が低下しているので、プロダクトマネージャー（PM）が新機能を追加したいと考えています。多くのブレインストーミングと多数のユーザーインタビューの結果、古き良きFizzBuzzでは不十分であると決定されました。最近の子供たちは新しいゲーム、FizzBuzzFibonacciを求めています。
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- 整数を受け取り、真偽値を返す関数 `is_fibonacci_number` を作成します。
+- すべての数値 `0` から与えられた数値 `n` まで（含む）を反復します。
+- フィボナッチ数列を `0` と `1` を `previous` と `current` の数として始めます。
+- `current` の数が現在の反復 `i` より小さい間、繰り返します。
+- `previous` と `current` の数を加算して `next` の数を得ます。
+- `previous` の数を `current` の数に更新します。
+- `current` の数を `next` の数に更新します。
+- `current` が指定された数 `n` 以上になったら、ループを抜けます。
+- `current` の数が指定された数 `n` と等しいか確認し、もしそうなら `true` を返します。
+- そうでない場合は、`false` を返します。
+
+次に、`fizz_buzz` 関数を更新する必要があります：
+
+<FizzBuzzFibonacciCode />
+
+- `fizz_buzz` 関数をよりわかりやすくするために `fizz_buzz_fibonacci` に名前を変更します。
+- `is_fibonacci_number` のヘルパー関数を呼び出します。
+- `is_fibonacci_number` の結果が `true` であれば、`Fibonacci` を返します。
+- `is_fibonacci_number` の結果が `false` であれば、同様に `Fizz`、`Buzz`、`FizzBuzz`、または数値ロジックを実行しその結果を返します。
+
+`fizz_buzz` を `fizz_buzz_fibonacci` に名前を変更したため、`play_game` 関数を更新する必要もあります。
+
+{ props.children }
+
+私たちの `main` 関数と `BENCHMARK_game` 関数はそのままで問題ありません。

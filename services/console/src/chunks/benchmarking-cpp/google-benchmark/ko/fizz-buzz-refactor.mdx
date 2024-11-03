@@ -1,0 +1,27 @@
+import FizzBuzzHeaderCode from "../../fizz-buzz-header-code.mdx";
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## FizzBuzz 리팩터링
+
+우리의 FizzBuzz 애플리케이션을 테스트하기 위해서는,
+프로그램의 `main` 함수에서 로직을 분리할 필요가 있습니다.
+벤치마크 하네스는 `main` 함수를 벤치마킹할 수 없습니다.
+이를 위해서는 몇 가지 변경을 해야 합니다.
+
+새로운 파일 `play_game.cpp` 내부에 FizzBuzz 로직을 몇 개의 함수로 리팩터링해 봅시다:
+
+<FizzBuzzRefactorCode />
+
+- `fizz_buzz`: 정수 `n`을 받아 `Fizz`, `Buzz`, `FizzBuzz`, 또는 숫자 로직을 수행하고 결과를 문자열로 반환합니다.
+- `play_game`: 정수 `n`을 받아 `fizz_buzz`를 해당 숫자로 호출하고, `should_print`이 `true`이면 결과를 출력합니다.
+
+이제 `play_game.h`라는 이름의 헤더 파일을 만들고 `play_game` 함수 선언을 추가합시다:
+
+<FizzBuzzHeaderCode />
+
+그런 다음 `game.cpp`의 `main` 함수를 업데이트하여 헤더 파일에서 `play_game` 함수 정의를 사용합니다:
+
+<PlayGameCode />
+
+프로그램의 `main` 함수는 `1`부터 `100`까지의 숫자를 포함하여 각 숫자에 대해 `play_game`을 호출하며, `should_print`은 `true`로 설정됩니다.

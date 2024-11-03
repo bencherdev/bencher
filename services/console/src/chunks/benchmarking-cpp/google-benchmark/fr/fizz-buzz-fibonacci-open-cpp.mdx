@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciOpenRules from "../../../benchmarking/fr/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenOutput from "../fizz-buzz-fibonacci-open-output.mdx";
+import FizzBuzzFibonacciOpenOutputDefault from "../fizz-buzz-fibonacci-open-output-default.mdx";
+
+## Étendre FizzBuzzFibonacci en C++
+
+Notre jeu est un succès ! Les enfants adorent effectivement jouer à FizzBuzzFibonacci.
+À tel point que la direction a entendu parler de cela et souhaite une suite.
+Mais c'est le monde moderne, nous avons besoin de revenus récurrents annuels (ARR) et non d'achats uniques !
+La nouvelle vision pour notre jeu est qu'il soit ouvert, plus de limites entre `1` et `100` (même si elles sont inclusives).
+Non, nous explorons de nouveaux horizons !
+
+<FizzBuzzFibonacciOpenRules />
+
+Pour que notre jeu fonctionne avec n'importe quel nombre, nous devrons accepter un argument en ligne de commande.
+Mettez à jour la fonction `main` pour qu'elle ressemble à ceci :
+
+{ props.children }
+
+- Mettez à jour la fonction `main` pour prendre en compte `argc` et `argv`.
+- Obtenez le premier argument passé à notre jeu et vérifiez s'il s'agit d'un chiffre.
+  - Si c'est le cas, analysez le premier argument comme un entier, `i`.
+  - Jouez à notre jeu avec l'entier `i` nouvellement analysé.
+- Si l'analyse échoue ou qu'aucun argument n'est passé, passez par défaut à une demande d'entrée valide.
+
+Maintenant, nous pouvons jouer à notre jeu avec n'importe quel nombre !
+Recompilez notre exécutable `game` puis
+exécutez l'exécutable suivi d'un entier pour jouer à notre jeu :
+
+<FizzBuzzFibonacciOpenOutput />
+
+Et si nous omettons ou fournissons un nombre invalide :
+
+<FizzBuzzFibonacciOpenOutputDefault />
+
+Wow, ce fut un test exhaustif ! L'intégration continue passe avec succès. Nos patrons sont ravis.
+Expédions-le ! 🚀

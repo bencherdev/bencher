@@ -1,0 +1,21 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## 修复 C++ 中的 FizzBuzzFibonacci
+
+让我们再看看 `is_fibonacci_number` 函数：
+
+<IsFibonacciNumberCode />
+
+现在考虑到性能问题，我意识到有一个不必要的额外循环。 我们可以完全去掉 `for (int i = 0; i <= n; ++i)` 循环，只需将 `current` 值与给定数字 (`n`) 进行比较 🤦
+
+<IsFibonacciNumberFixCode />
+
+- 更新我们的 `is_fibonacci_number` 函数。
+- 初始化斐波那契数列，以 `0` 和 `1` 作为 `previous` 和 `current` 数字。
+- 当 `current` 数字小于给定数字 `n` 时进行迭代。
+- 将 `previous` 和 `current` 数进行相加得到 `next` 数。
+- 将 `previous` 数字更新为 `current` 数字。
+- 将 `current` 数字更新为 `next` 数字。
+- 一旦 `current` 大于等于给定数字 `n`，我们将退出循环。
+- 检查 `current` 数字是否等于给定数字 `n`，并返回该结果。

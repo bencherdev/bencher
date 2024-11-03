@@ -1,0 +1,24 @@
+import FizzBuzzHeaderCode from "../../fizz-buzz-header-code.mdx";
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## FizzBuzzのリファクタリング
+
+FizzBuzzアプリケーションをテストするためには、ロジックをプログラムの`main`関数から分離する必要があります。ベンチマークハーネスは`main`関数をベンチマークできません。これを実現するために、いくつかの変更を行う必要があります。
+
+FizzBuzzのロジックを、新しいファイル`play_game.cpp`内のいくつかの関数にリファクタリングしましょう：
+
+<FizzBuzzRefactorCode />
+
+- `fizz_buzz`: 整数`n`を受け取り、`Fizz`、`Buzz`、`FizzBuzz`、または数値ロジックを実行して結果を文字列として返します。
+- `play_game`: 整数`n`を受け取り、その数を使って`fizz_buzz`を呼び出し、`should_print`が`true`の場合は結果を出力します。
+
+次に、`play_game.h`という名前のヘッダーファイルを作成し、そこに`play_game`関数の宣言を追加します：
+
+<FizzBuzzHeaderCode />
+
+次に、`main`関数を`game.cpp`で更新し、ヘッダーファイルから`play_game`関数定義を使用します：
+
+<PlayGameCode />
+
+プログラムの`main`関数は、1から100までの数値を反復処理し、各数値に対して`play_game`を呼び出し、`should_print`を`true`に設定します。

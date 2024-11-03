@@ -1,0 +1,27 @@
+import FizzBuzzHeaderCode from "../../fizz-buzz-header-code.mdx";
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## 重构 FizzBuzz
+
+为了测试我们的 FizzBuzz 应用程序，
+我们需要将逻辑与程序的 `main` 函数解耦。
+基准测试工具不能对 `main` 函数进行基准测试。
+为此，我们需要进行一些更改。
+
+让我们将 FizzBuzz 逻辑重构到一个名为 `play_game.cpp` 的新文件中的几个函数中：
+
+<FizzBuzzRefactorCode />
+
+- `fizz_buzz`：接收一个整数 `n`，执行实际的 `Fizz`、`Buzz`、`FizzBuzz` 或数字逻辑，并返回结果作为字符串。
+- `play_game`：接收一个整数 `n`，使用该数字调用 `fizz_buzz`，如果 `should_print` 为 `true`，则打印结果。
+
+现在，让我们创建名为 `play_game.h` 的头文件并将 `play_game` 函数声明添加到其中：
+
+<FizzBuzzHeaderCode />
+
+然后更新 `game.cpp` 中的 `main` 函数以使用头文件中的 `play_game` 函数定义：
+
+<PlayGameCode />
+
+我们的程序的 `main` 函数遍历从 `1` 到 `100`（包括 100）并为每个数字调用 `play_game`，将 `should_print` 设置为 `true`。

@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/fr/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## Écrire FizzBuzzFibonacci en C++
+
+Nos indicateurs clés de performance (KPI) sont en baisse, donc notre chef de produit (PM) souhaite que nous ajoutions une nouvelle fonctionnalité. Après de nombreux brainstormings et des interviews d'utilisateurs, il est décidé que le bon vieux FizzBuzz ne suffit plus. Les enfants de nos jours veulent un nouveau jeu, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- Créez une fonction nommée `is_fibonacci_number` qui prend un entier en entrée et retourne un booléen.
+- Itérez pour tous les nombres de `0` jusqu'à notre nombre donné `n` inclus.
+- Initialisez notre séquence de Fibonacci en commençant par `0` et `1` comme nombres `previous` (précédent) et `current` (actuel) respectivement.
+- Itérez tant que le nombre `current` est inférieur à l'itération courante `i`.
+- Ajoutez le nombre `previous` et `current` pour obtenir le nombre `next`.
+- Mettez à jour le nombre `previous` à `current`.
+- Mettez à jour le nombre `current` à `next`.
+- Une fois que `current` est supérieur ou égal au nombre donné `n`, nous sortirons de la boucle.
+- Vérifiez si le nombre `current` est égal au nombre donné `n` et si oui, retournez `true`.
+- Sinon, retournez `false`.
+
+Nous devons maintenant mettre à jour notre fonction `fizz_buzz` :
+
+<FizzBuzzFibonacciCode />
+
+- Renommez la fonction `fizz_buzz` en `fizz_buzz_fibonacci` pour la rendre plus descriptive.
+- Appelez notre fonction auxiliaire `is_fibonacci_number`.
+- Si le résultat de `is_fibonacci_number` est `true`, alors retournez `Fibonacci`.
+- Si le résultat de `is_fibonacci_number` est `false`, alors effectuez la même logique `Fizz`, `Buzz`, `FizzBuzz`, ou nombre en retournant le résultat.
+
+Comme nous avons renommé `fizz_buzz` en `fizz_buzz_fibonacci`, nous devons également mettre à jour notre fonction `play_game` :
+
+{ props.children }
+
+Tant notre fonction `main` que la fonction `BENCHMARK_game` peuvent rester exactement les mêmes.

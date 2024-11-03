@@ -1,0 +1,41 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/pt/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## Escreva FizzBuzzFibonacci em C++
+
+Nossos Indicadores Chave de Performance (KPIs) caíram,
+então nosso Gerente de Produto (PM) quer que adicionemos um novo recurso.
+Após muito brainstorming e várias entrevistas com usuários,
+ficou decidido que o bom e velho FizzBuzz não é suficiente.
+As crianças de hoje querem um novo jogo, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- Crie uma função chamada `is_fibonacci_number` que recebe um inteiro e retorna um booleano.
+- Itere para todos os números de `0` até nosso número dado `n` inclusive.
+- Inicialize nossa sequência de Fibonacci começando com `0` e `1` como os números `anterior` e `atual`, respectivamente.
+- Itere enquanto o número `atual` for menor que a iteração atual `i`.
+- Adicione o número `anterior` e `atual` para obter o número `seguinte`.
+- Atualize o número `anterior` para o número `atual`.
+- Atualize o número `atual` para o número `seguinte`.
+- Assim que `atual` for maior ou igual ao número dado `n`, sairemos do loop.
+- Verifique se o número `atual` é igual ao número dado `n` e, se for, retorne `true`.
+- Caso contrário, retorne `false`.
+
+Agora precisaremos atualizar nossa função `fizz_buzz`:
+
+<FizzBuzzFibonacciCode />
+
+- Renomeie a função `fizz_buzz` para `fizz_buzz_fibonacci` para torná-la mais descritiva.
+- Chame nossa função auxiliar `is_fibonacci_number`.
+- Se o resultado de `is_fibonacci_number` for `true`, então retorne `Fibonacci`.
+- Se o resultado de `is_fibonacci_number` for `false`, então execute a mesma lógica de `Fizz`, `Buzz`, `FizzBuzz` ou número, retornando o resultado.
+
+Como renomeamos `fizz_buzz` para `fizz_buzz_fibonacci`, também precisamos atualizar nossa função `play_game`:
+
+{ props.children }
+
+Tanto nossa função `main` quanto a função `BENCHMARK_game` podem permanecer exatamente iguais.

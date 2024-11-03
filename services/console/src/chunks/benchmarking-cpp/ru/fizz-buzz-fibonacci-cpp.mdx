@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/ru/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## Написание FizzBuzzFibonacci на C++
+
+Наши ключевые показатели эффективности (KPI) снизились, поэтому наш менеджер по продукту (PM) хочет, чтобы мы добавили новую функцию. После множества мозговых штурмов и интервью с пользователями было решено, что старый добрый FizzBuzz не достаточно. Современные дети хотят новую игру, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- Создайте функцию с именем `is_fibonacci_number`, которая принимает целое число и возвращает значение типа `boolean`.
+- Итерируйтесь по всем числам от `0` до нашего заданного числа `n` включительно.
+- Инициализируйте последовательность Фибоначчи, начиная с `0` и `1` в качестве `previous` и `current` чисел соответственно.
+- Продолжайте итерацию, пока `current` число меньше текущей итерации `i`.
+- Добавьте `previous` и `current` числа, чтобы получить следующее число `next`.
+- Обновите `previous` число на `current` число.
+- Обновите `current` число на следующее число `next`.
+- Как только `current` станет больше или равно заданному числу `n`, мы выйдем из цикла.
+- Проверьте, равно ли `current` число заданному числу `n`, и если да, верните `true`.
+- В противном случае верните `false`.
+
+Теперь нам нужно обновить нашу функцию `fizz_buzz`:
+
+<FizzBuzzFibonacciCode />
+
+- Переименуйте функцию `fizz_buzz` в `fizz_buzz_fibonacci`, чтобы сделать ее более описательной.
+- Вызовите нашу вспомогательную функцию `is_fibonacci_number`.
+- Если результат из `is_fibonacci_number` равен `true`, верните `Fibonacci`.
+- Если результат из `is_fibonacci_number` равен `false`, выполните ту же самую логику `Fizz`, `Buzz`, `FizzBuzz` или верните число.
+
+Поскольку мы переименовали `fizz_buzz` в `fizz_buzz_fibonacci`, нам также нужно обновить нашу функцию `play_game`:
+
+{ props.children }
+
+Как основная функция, так и функция `BENCHMARK_game` могут оставаться точно такими же.

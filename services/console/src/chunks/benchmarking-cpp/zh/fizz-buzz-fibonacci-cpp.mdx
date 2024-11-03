@@ -1,0 +1,39 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/zh/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## 用C++编写FizzBuzzFibonacci
+
+我们的关键绩效指标（KPI）下降了，所以我们的产品经理（PM）希望我们添加一个新功能。
+经过大量的头脑风暴和用户访谈，决定经典的FizzBuzz已经不够了。
+如今的孩子们想要一个新游戏，FizzBuzzFibonacci。
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- 创建一个名为`is_fibonacci_number`的函数，该函数接收一个整数并返回一个布尔值。
+- 对从 `0` 到我们给定的数字 `n` 的所有数字进行迭代，包括 `n`。
+- 初始化我们的斐波那契数列，从 `0` 和 `1` 开始，分别作为`previous`和`current`数字。
+- 当`current`数字小于当前迭代的`i`时进行迭代。
+- 将`previous`和`current`数字相加以获得`next`数字。
+- 更新`previous`数字为`current`数字。
+- 更新`current`数字为`next`数字。
+- 一旦`current`大于或等于给定数字`n`，我们将退出循环。
+- 检查`current`数字是否等于给定数字`n`，如果是则返回`true`。
+- 否则，返回`false`。
+
+现在我们需要更新我们的`fizz_buzz`函数：
+
+<FizzBuzzFibonacciCode />
+
+- 将`fizz_buzz`函数重命名为`fizz_buzz_fibonacci`以使其更具描述性。
+- 调用我们的`is_fibonacci_number`辅助函数。
+- 如果`is_fibonacci_number`的结果是`true`则返回`Fibonacci`。
+- 如果`is_fibonacci_number`的结果是`false`，则执行相同的`Fizz`、`Buzz`、`FizzBuzz`或数字逻辑并返回结果。
+
+因为我们将`fizz_buzz`重命名为`fizz_buzz_fibonacci`，我们也需要更新我们的`play_game`函数：
+
+{ props.children }
+
+我们的`main`函数和`BENCHMARK_game`函数可以保持完全不变。

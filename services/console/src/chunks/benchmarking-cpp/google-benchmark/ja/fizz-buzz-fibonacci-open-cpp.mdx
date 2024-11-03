@@ -1,0 +1,36 @@
+import FizzBuzzFibonacciOpenRules from "../../../benchmarking/ja/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenOutput from "../fizz-buzz-fibonacci-open-output.mdx";
+import FizzBuzzFibonacciOpenOutputDefault from "../fizz-buzz-fibonacci-open-output-default.mdx";
+
+## C++ での FizzBuzzFibonacci の拡張
+
+私たちのゲームは大ヒットしています！子供たちは本当に FizzBuzzFibonacci を楽しんでいます。
+そのため、経営陣から続編を求められるほどです。
+しかし、これは現代の世界です。我々は1回きりの購入ではなく、毎年の定期収益（ARR）が必要です！
+我々の新しいビジョンは、ゲームがオープンエンドであることです。`1` と `100` の間の制約にとらわれることはありません（たとえそれが包括的であっても）。
+いいえ、我々は新たなフロンティアへと進んでいます！
+
+<FizzBuzzFibonacciOpenRules />
+
+ゲームをどの数字でもプレイできるようにするためには、コマンドライン引数を受け入れなければなりません。
+`main` 関数を以下のように更新します：
+
+{ props.children }
+
+- `argc` と `argv` を取るように `main` 関数を更新します。
+- ゲームに渡された最初の引数を取得し、それが数字であるかどうかを確認します。
+  - もしそうであれば、最初の引数を整数 `i` としてパースします。
+  - 新しくパースした整数 `i` でゲームをプレイします。
+- パースに失敗するか、引数が渡されていない場合、デフォルトで有効な入力を促します。
+
+これで、どの数字でもゲームをプレイできるようになります！
+`game` 実行ファイルを再コンパイルし、ゲームをプレイするために整数を続けて実行します：
+
+<FizzBuzzFibonacciOpenOutput />
+
+無効な数字を省略または提供した場合：
+
+<FizzBuzzFibonacciOpenOutputDefault />
+
+わあ、これはかなり徹底したテストでした！CI が通過しました。上司たちは大喜びです。
+それではリリースしましょう！🚀

@@ -1,0 +1,58 @@
+import GitClone from "../git-clone.mdx";
+import CdBenchmark from "../cd-benchmark.mdx";
+import CmakeMakeDirectory from "../cmake-make-directory.mdx"
+import CmakeCmake from "../cmake-cmake.mdx";
+import CmakeRelease from "../cmake-release.mdx";
+import CdBack from "../cd-back.mdx";
+import BenchmarkGameCode from "../benchmark-game-code.mdx";
+import BenchmarkGameOutput from "../benchmark-game-output.mdx";
+
+## FizzBuzzのベンチマーク
+
+コードをベンチマークするために、まずGoogle Benchmarkをインストールする必要があります。
+
+ライブラリをクローンします。
+
+<GitClone />
+
+クローンしたばかりのディレクトリに入ります。
+
+<CdBenchmark />
+
+`cmake`を使って、ビルド出力を配置するためのビルドディレクトリを作成します。
+
+<CmakeMakeDirectory />
+
+ビルドシステムファイルを生成し、必要な依存関係をダウンロードするために`cmake`を使用します。
+
+<CmakeCmake />
+
+最後に、ライブラリをビルドします。
+
+<CmakeRelease />
+
+親ディレクトリに戻ります。
+
+<CdBack />
+
+次に、新しいファイル`benchmark_game.cpp`を作成します。
+
+<BenchmarkGameCode />
+
+- `play_game.h`から関数定義をインポートします。
+- Google `benchmark`ライブラリのヘッダをインポートします。
+- `benchmark::State`への参照を受け取る`BENCHMARK_game`関数を作成します。
+- `benchmark::State`オブジェクトを反復処理します。
+- 各イテレーションごとに、`1`から`100`までを含めて反復処理します。
+  - 現在の数値と`should_print`を`false`に設定して`play_game`を呼び出します。
+- `BENCHMARK_game`関数を`BENCHMARK`ランナーに渡します。
+- `BENCHMARK_MAIN`を使用してベンチマークを実行します。
+
+これでコードをベンチマークする準備が整いました。
+
+<BenchmarkGameOutput />
+
+> 🐰 レタスが跳ねる！初めてのベンチマークメトリクスを取得しました！
+
+最後に、我々の疲れた開発者たちの頭を休めることができます…
+冗談です、ユーザーは新しい機能を求めています！

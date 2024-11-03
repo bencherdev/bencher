@@ -1,0 +1,16 @@
+import FizzBuzzRules from "../../benchmarking/ko/fizz-buzz-rules.mdx";
+import FizzBuzzCode from "../fizz-buzz-code.mdx";
+
+## C++로 FizzBuzz 작성하기
+
+<FizzBuzzRules />
+
+<FizzBuzzCode />
+
+- `1`에서 `100`까지 반복하고, 매 반복 후에 증가합니다.
+- 각 숫자에 대해 모듈러스(나머지)를 계산합니다.
+- 나머지가 `0`이면, 해당 숫자는 주어진 인수의 배수입니다:
+  - `15`로 나누었을 때 나머지가 `0`이면 `FizzBuzz`를 출력합니다.
+  - `3`으로 나누었을 때 나머지가 `0`이면 `Fizz`를 출력합니다.
+  - `5`로 나누었을 때 나머지가 `0`이면 `Buzz`를 출력합니다.
+- 그렇지 않으면, 그냥 숫자를 출력합니다.

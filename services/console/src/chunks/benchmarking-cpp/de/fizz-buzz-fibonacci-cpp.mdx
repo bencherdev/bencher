@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/de/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## Schreiben Sie FizzBuzzFibonacci in C++
+
+Unsere Key Performance Indicators (KPIs) sind gesunken, also möchte unser Product Manager (PM), dass wir eine neue Funktion hinzufügen. Nach viel Brainstorming und vielen Benutzerinterviews wurde entschieden, dass das gute alte FizzBuzz nicht genug ist. Die Kinder von heute wollen ein neues Spiel, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- Erstellen Sie eine Funktion namens `is_fibonacci_number`, die eine ganze Zahl entgegennimmt und einen booleschen Wert zurückgibt.
+- Iterieren Sie über alle Zahlen von `0` bis zu unserer gegebenen Zahl `n` einschließlich.
+- Initiieren Sie unsere Fibonacci-Sequenz beginnend mit `0` und `1` als die `vorherige` und `aktuelle` Zahl.
+- Iterieren Sie, während die `aktuelle` Zahl kleiner als die aktuelle Iteration `i` ist.
+- Addieren Sie die `vorherige` und `aktuelle` Zahl, um die `nächste` Zahl zu erhalten.
+- Aktualisieren Sie die `vorherige` Zahl zur `aktuellen` Zahl.
+- Aktualisieren Sie die `aktuelle` Zahl zur `nächsten` Zahl.
+- Sobald `aktuell` größer oder gleich der gegebenen Zahl `n` ist, verlassen wir die Schleife.
+- Prüfen Sie, ob die `aktuelle` Zahl gleich der gegebenen Zahl `n` ist, und wenn ja, geben Sie `true` zurück.
+- Andernfalls geben Sie `false` zurück.
+
+Jetzt müssen wir unsere `fizz_buzz` Funktion aktualisieren:
+
+<FizzBuzzFibonacciCode />
+
+- Benennen Sie die `fizz_buzz` Funktion in `fizz_buzz_fibonacci` um, um sie aussagekräftiger zu machen.
+- Rufen Sie unsere `is_fibonacci_number` Hilfsfunktion auf.
+- Wenn das Ergebnis von `is_fibonacci_number` `true` ist, geben Sie `Fibonacci` zurück.
+- Wenn das Ergebnis von `is_fibonacci_number` `false` ist, führen Sie die gleiche `Fizz`, `Buzz`, `FizzBuzz` oder Zahlenlogik aus und geben das Ergebnis zurück.
+
+Da wir `fizz_buzz` in `fizz_buzz_fibonacci` umbenannt haben, müssen wir auch unsere `play_game` Funktion aktualisieren:
+
+{ props.children }
+
+Sowohl unsere `main` Funktion als auch die `BENCHMARK_game` Funktion können genauso bleiben.

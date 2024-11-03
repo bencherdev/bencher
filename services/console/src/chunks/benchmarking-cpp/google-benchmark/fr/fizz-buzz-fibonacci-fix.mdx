@@ -1,0 +1,23 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## Corriger FizzBuzzFibonacci en C++
+
+Jetons un autre coup d'œil à cette fonction `is_fibonacci_number` :
+
+<IsFibonacciNumberCode />
+
+Maintenant que je pense à la performance, je réalise que j'ai une boucle supplémentaire inutile.
+Nous pouvons complètement supprimer la boucle `for (int i = 0; i <= n; ++i)` et
+juste comparer la valeur `current` au nombre donné (`n`) 🤦
+
+<IsFibonacciNumberFixCode />
+
+- Mettez à jour notre fonction `is_fibonacci_number`.
+- Initialisez notre séquence de Fibonacci en commençant par `0` et `1` comme nombres `previous` et `current` respectivement.
+- Itérez tant que le nombre `current` est inférieur au nombre _donné_ `n`.
+- Ajoutez le nombre `previous` et `current` pour obtenir le nombre `next`.
+- Mettez à jour le nombre `previous` avec le nombre `current`.
+- Mettez à jour le nombre `current` avec le nombre `next`.
+- Une fois que `current` est supérieur ou égal au nombre donné `n`, nous sortirons de la boucle.
+- Vérifiez si le nombre `current` est égal au nombre donné `n` et retournez ce résultat.

@@ -1,0 +1,23 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## C++でのFizzBuzzFibonacciを修正
+
+`is_fibonacci_number` 関数をもう一度見てみましょう：
+
+<IsFibonacciNumberCode />
+
+パフォーマンスを考えてみると、不必要なループがひとつあることに気付きます。
+`for (int i = 0; i <= n; ++i)` ループは完全に取り除いて、
+`current` の値を指定された数（`n`）と比較するだけで済みます 🤦
+
+<IsFibonacciNumberFixCode />
+
+- `is_fibonacci_number` 関数を更新します。
+- `0` と `1` をそれぞれ `previous` と `current` の数字としてフィボナッチ数列を初期化します。
+- `current` の数が指定された数 `n` より小さい間、繰り返し処理を行います。
+- `previous` と `current` の数を足して `next` の数を得ます。
+- `previous` の数を `current` の数に更新します。
+- `current` の数を `next` の数に更新します。
+- `current` が指定された数 `n` 以上になったら、ループを終了します。
+- `current` の数が指定された数 `n` と等しいかどうかを確認し、その結果を返します。

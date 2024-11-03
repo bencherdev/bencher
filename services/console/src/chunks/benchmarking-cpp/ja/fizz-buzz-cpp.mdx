@@ -1,0 +1,16 @@
+import FizzBuzzRules from "../../benchmarking/ja/fizz-buzz-rules.mdx";
+import FizzBuzzCode from "../fizz-buzz-code.mdx";
+
+## C++でFizzBuzzを書く
+
+<FizzBuzzRules />
+
+<FizzBuzzCode />
+
+- `1`から`100`まで繰り返し、各繰り返し後にインクリメントします。
+- 各数値について、剰余（割り算の余り）を計算します。
+- 余りが`0`の場合、その数は指定された因数の倍数です：
+  - `15`の余りが`0`の場合は、`FizzBuzz`を出力します。
+  - `3`の余りが`0`の場合は、`Fizz`を出力します。
+  - `5`の余りが`0`の場合は、`Buzz`を出力します。
+- それ以外の場合は、その数をそのまま出力します。

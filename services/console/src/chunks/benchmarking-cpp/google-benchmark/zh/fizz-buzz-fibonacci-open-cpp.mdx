@@ -1,0 +1,29 @@
+import FizzBuzzFibonacciOpenRules from "../../../benchmarking/zh/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenOutput from "../fizz-buzz-fibonacci-open-output.mdx";
+import FizzBuzzFibonacciOpenOutputDefault from "../fizz-buzz-fibonacci-open-output-default.mdx";
+
+## 在 C++ 中扩展 FizzBuzzFibonacci
+
+我们的游戏大获成功！孩子们确实喜欢玩 FizzBuzzFibonacci。如此一来，高管们希望能有一部续集。但这是现代世界，我们需要年度经常性收入（ARR），而不是一次性购买！我们游戏的新愿景是开放式的，不再局限于“1”和“100”之间（即使它们是包括在内的）。不，我们要走向新天地！
+
+<FizzBuzzFibonacciOpenRules />
+
+为了让我们的游戏适用于任何数字，我们需要接受一个命令行参数。将 `main` 函数更新为如下所示：
+
+{ props.children }
+
+- 更新 `main` 函数以接收 `argc` 和 `argv`。
+- 获取传递给我们游戏的第一个参数，并检查它是否为数字。
+  - 如果是，则将第一个参数解析为整数 `i`。
+  - 使用新解析出的整数 `i` 玩我们的游戏。
+- 如果解析失败或未传入任何参数，则默认提示输入有效的值。
+
+现在我们可以用任何数字玩我们的游戏了！重新编译我们的 `game` 可执行文件，然后运行可执行文件并跟随一个整数以播放我们的游戏：
+
+<FizzBuzzFibonacciOpenOutput />
+
+如果我们省略或提供了无效数字：
+
+<FizzBuzzFibonacciOpenOutputDefault />
+
+哇，那是一次彻底的测试！CI 通过了。我们的老板们感到非常满意。让我们发布它吧！🚀

@@ -1,0 +1,24 @@
+import FizzBuzzHeaderCode from "../../fizz-buzz-header-code.mdx";
+import FizzBuzzRefactorCode from "../../fizz-buzz-refactor-code.mdx";
+import PlayGameCode from "../../play-game-code.mdx";
+
+## Рефакторинг FizzBuzz
+
+Чтобы протестировать наше приложение FizzBuzz, нам нужно отделить нашу логику от функции `main` нашей программы. Бенчмарк-харнессы не могут тестировать функцию `main`. Чтобы сделать это, нам нужно внести несколько изменений.
+
+Давайте рефакторим логику FizzBuzz в пару функций в новом файле с именем `play_game.cpp`:
+
+<FizzBuzzRefactorCode />
+
+- `fizz_buzz`: Принимает целое число `n` и выполняет фактическую логику `Fizz`, `Buzz`, `FizzBuzz` или числа, возвращая результат в виде строки.
+- `play_game`: Принимает целое число `n`, вызывает `fizz_buzz` с этим числом и, если `should_print` равно `true`, печатает результат.
+
+Теперь давайте создадим заголовочный файл `play_game.h` и добавим в него объявление функции `play_game`:
+
+<FizzBuzzHeaderCode />
+
+Затем обновим функцию `main` в `game.cpp`, чтобы использовать определение функции `play_game` из заголовочного файла:
+
+<PlayGameCode />
+
+Функция `main` для нашей программы выполняет итерации по числам от `1` до `100` включительно и вызывает `play_game` для каждого числа с `should_print`, установленным в `true`.

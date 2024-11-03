@@ -1,0 +1,58 @@
+import GitClone from "../git-clone.mdx";
+import CdBenchmark from "../cd-benchmark.mdx";
+import CmakeMakeDirectory from "../cmake-make-directory.mdx"
+import CmakeCmake from "../cmake-cmake.mdx";
+import CmakeRelease from "../cmake-release.mdx";
+import CdBack from "../cd-back.mdx";
+import BenchmarkGameCode from "../benchmark-game-code.mdx";
+import BenchmarkGameOutput from "../benchmark-game-output.mdx";
+
+## Benchmarking FizzBuzz
+
+Um unseren Code zu benchmarken, müssen wir zuerst Google Benchmark installieren.
+
+Klonen Sie die Bibliothek:
+
+<GitClone />
+
+Wechseln Sie in das neu geklonte Verzeichnis:
+
+<CdBenchmark />
+
+Verwenden Sie `cmake`, um ein Verzeichnis für die Erstellung zu erstellen, in das das Build-Output platziert wird:
+
+<CmakeMakeDirectory />
+
+Verwenden Sie `cmake`, um die Build-Systemdateien zu generieren und alle Abhängigkeiten herunterzuladen:
+
+<CmakeCmake />
+
+Endlich die Bibliothek bauen:
+
+<CmakeRelease />
+
+Zurück zum übergeordneten Verzeichnis gehen:
+
+<CdBack />
+
+Erstellen wir nun eine neue Datei namens `benchmark_game.cpp`:
+
+<BenchmarkGameCode />
+
+- Importieren Sie die Funktionsdefinitionen aus `play_game.h`.
+- Importieren Sie den Header der Google `benchmark`-Bibliothek.
+- Erstellen Sie eine Funktion namens `BENCHMARK_game`, die eine Referenz zu `benchmark::State` nimmt.
+- Iterieren Sie über das `benchmark::State`-Objekt.
+- Für jede Iteration von `1` bis `100` (inklusive) iterieren.
+  - Rufen Sie `play_game` mit der aktuellen Nummer und `should_print` auf `false` auf.
+- Übergeben Sie die Funktion `BENCHMARK_game` an den `BENCHMARK` Runner.
+- Führen Sie den Benchmark mit `BENCHMARK_MAIN` aus.
+
+Jetzt sind wir bereit, unseren Code zu benchmarken:
+
+<BenchmarkGameOutput />
+
+> 🐰 Let's make the beet rocken! Wir haben unsere ersten Benchmark-Metriken!
+
+Endlich können wir unsere müden Entwicklerköpfe ausruhen...
+Nur ein Scherz, unsere Benutzer wollen ein neues Feature!

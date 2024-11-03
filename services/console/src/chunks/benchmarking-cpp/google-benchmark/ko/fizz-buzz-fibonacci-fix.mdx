@@ -1,0 +1,23 @@
+import IsFibonacciNumberCode from "../../is-fibonacci-number-code.mdx";
+import IsFibonacciNumberFixCode from "../../is-fibonacci-number-fix-code.mdx";
+
+## C++에서 FizzBuzzFibonacci 수정하기
+
+`is_fibonacci_number` 함수에 대해 다시 살펴보겠습니다:
+
+<IsFibonacciNumberCode />
+
+이제 성능을 생각해보니 불필요한 반복문이 있다는 것을 깨달았습니다.
+`for (int i = 0; i <= n; ++i)` 반복문을 완전히 없애고
+단순히 `current` 값을 주어진 숫자(`n`)와 비교하면 됩니다 🤦
+
+<IsFibonacciNumberFixCode />
+
+- `is_fibonacci_number` 함수를 업데이트합니다.
+- `0`과 `1`로 시작하는 피보나치 수열을 각각 `previous`와 `current`라는 숫자로 초기화합니다.
+- `current` 숫자가 주어진 숫자 `n`보다 작은 동안 반복합니다.
+- `previous`와 `current` 숫자를 더하여 `next` 숫자를 얻습니다.
+- `previous` 숫자를 `current` 숫자로 업데이트합니다.
+- `current` 숫자를 `next` 숫자로 업데이트합니다.
+- `current`가 주어진 숫자 `n`보다 크거나 같아지면 루프를 종료합니다.
+- `current` 숫자가 주어진 숫자 `n`과 같은지 확인하고 그 결과를 반환합니다.

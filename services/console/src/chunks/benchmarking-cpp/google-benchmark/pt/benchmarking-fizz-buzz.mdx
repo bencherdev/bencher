@@ -1,0 +1,58 @@
+import GitClone from "../git-clone.mdx";
+import CdBenchmark from "../cd-benchmark.mdx";
+import CmakeMakeDirectory from "../cmake-make-directory.mdx"
+import CmakeCmake from "../cmake-cmake.mdx";
+import CmakeRelease from "../cmake-release.mdx";
+import CdBack from "../cd-back.mdx";
+import BenchmarkGameCode from "../benchmark-game-code.mdx";
+import BenchmarkGameOutput from "../benchmark-game-output.mdx";
+
+## Medindo Desempenho do FizzBuzz
+
+Para medir o desempenho do nosso código, precisamos primeiro instalar o Google Benchmark.
+
+Clone a biblioteca:
+
+<GitClone />
+
+Entre no diretório recém-clonado:
+
+<CdBenchmark />
+
+Use o `cmake` para criar um diretório de build onde será colocado o resultado do build:
+
+<CmakeMakeDirectory />
+
+Use o `cmake` para gerar os arquivos de sistema de build e baixar quaisquer dependências:
+
+<CmakeCmake />
+
+Finalmente, construa a biblioteca:
+
+<CmakeRelease />
+
+Volte para o diretório pai:
+
+<CdBack />
+
+Agora vamos criar um novo arquivo chamado `benchmark_game.cpp`:
+
+<BenchmarkGameCode />
+
+- Importe as definições de funções de `play_game.h`.
+- Importe o cabeçalho da biblioteca `benchmark` do Google.
+- Crie uma função chamada `BENCHMARK_game` que recebe uma referência para `benchmark::State`.
+- Itere sobre o objeto `benchmark::State`.
+- Para cada iteração, itere de `1` a `100`, inclusivamente.
+  - Chame `play_game` com o número atual e `should_print` definido como `false`.
+- Passe a função `BENCHMARK_game` para o executor `BENCHMARK`.
+- Execute o benchmark com `BENCHMARK_MAIN`.
+
+Agora estamos prontos para medir o desempenho do nosso código:
+
+<BenchmarkGameOutput />
+
+> 🐰 Vamos lá! Temos nossas primeiras métricas de benchmark!
+
+Finalmente, podemos descansar nossas cabeças de desenvolvedor cansadas...
+Brincadeira, nossos usuários querem um novo recurso!

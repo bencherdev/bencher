@@ -1,0 +1,41 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/ko/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberCode from "../is-fibonacci-number-code.mdx";
+import FizzBuzzFibonacciCode from "../fizz-buzz-fibonacci-code.mdx";
+
+## C++로 FizzBuzzFibonacci 작성하기
+
+우리의 주요 성과 지표(KPIs)가 저조하여,
+제품 관리자(PM)는 새로운 기능을 추가하기를 원합니다.
+많은 브레인스토밍과 사용자 인터뷰 끝에,
+기존의 FizzBuzz로는 충분하지 않다는 결론이 났습니다.
+요즘 아이들은 새로운 게임, FizzBuzzFibonacci를 원합니다.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberCode />
+
+- 정수를 입력으로 받아 불리언을 반환하는 `is_fibonacci_number`라는 함수 생성.
+- 주어진 숫자 `n`까지 `0`부터 모든 숫자에 대해 반복합니다.
+- 피보나치 수열을 `0`과 `1`로 시작하여 각각 `previous`와 `current` 숫자로 초기화합니다.
+- `current` 숫자가 현재 반복하는 `i`보다 작을 때까지 반복합니다.
+- `previous`와 `current` 숫자를 더하여 `next` 숫자를 얻습니다.
+- `previous` 숫자를 `current` 숫자로 업데이트합니다.
+- `current` 숫자를 `next` 숫자로 업데이트합니다.
+- `current`가 주어진 숫자 `n`보다 크거나 같아지면 루프를 종료합니다.
+- `current` 숫자가 주어진 숫자 `n`과 같은지 확인하고 그렇다면 `true`를 반환합니다.
+- 그렇지 않으면 `false`를 반환합니다.
+
+이제 `fizz_buzz` 함수를 업데이트할 필요가 있습니다:
+
+<FizzBuzzFibonacciCode />
+
+- 더 설명적인 이름으로 바꾸기 위해 `fizz_buzz` 함수를 `fizz_buzz_fibonacci`로 이름을 변경합니다.
+- `is_fibonacci_number` 헬퍼 함수를 호출합니다.
+- `is_fibonacci_number`의 결과가 `true`이면 `Fibonacci`를 반환합니다.
+- `is_fibonacci_number`의 결과가 `false`이면 동일한 `Fizz`, `Buzz`, `FizzBuzz`, 숫자 논리를 수행하여 결과를 반환합니다.
+
+`fizz_buzz`를 `fizz_buzz_fibonacci`로 이름을 변경했기 때문에 `play_game` 함수도 업데이트해야 합니다:
+
+{ props.children }
+
+`main` 함수와 `BENCHMARK_game` 함수는 그대로 유지할 수 있습니다.
