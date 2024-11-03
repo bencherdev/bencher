@@ -230,7 +230,6 @@ pub fn get_stats(
             schema::report_benchmark::table
                 .inner_join(schema::report::table.inner_join(schema::project::table)),
         )
-        .filter(schema::report::created.ge(this_month))
         .group_by(schema::project::id)
         .select((QueryProject::as_select(), count(schema::metric::id)))
         .load::<(QueryProject, i64)>(conn)
