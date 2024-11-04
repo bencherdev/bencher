@@ -30,7 +30,7 @@ jobs:
           script: |
             let fs = require('fs');
             let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
-            core.exportVariable("PR_HEAD", `${prEvent.number}/merge`);
+            core.exportVariable("PR_HEAD", prEvent.pull_request.head.ref);
             core.exportVariable("PR_BASE", prEvent.pull_request.base.ref);
             core.exportVariable("PR_BASE_SHA", prEvent.pull_request.base.sha);
             core.exportVariable("PR_NUMBER", prEvent.number);
@@ -40,15 +40,15 @@ jobs:
           bencher run \
           --project save-walter-white-1234abcd \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
-          --branch '${{ env.PR_HEAD }}' \
-          --start-point '${{ env.PR_BASE }}' \
-          --start-point-hash '${{ env.PR_BASE_SHA }}' \
+          --branch "$PR_HEAD" \
+          --start-point "$PR_BASE" \
+          --start-point-hash "$PR_BASE_SHA" \
           --start-point-clone-thresholds \
           --start-point-reset \
           --testbed ubuntu-latest \
           --err \
           --adapter json \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --ci-number '${{ env.PR_NUMBER }}' \
+          --ci-number "$PR_NUMBER" \
           --file "$BENCHMARK_RESULTS"
 ```
