@@ -11,6 +11,7 @@ const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
 const GITHUB_EVENT_NAME: &str = "GITHUB_EVENT_NAME";
 const GITHUB_SHA: &str = "GITHUB_SHA";
+const GITHUB_STEP_SUMMARY: &str = "GITHUB_STEP_SUMMARY";
 
 const PULL_REQUEST: &str = "pull_request";
 const PULL_REQUEST_TARGET: &str = "pull_request_target";
@@ -173,8 +174,9 @@ impl GitHubActions {
             return Ok(());
         }
 
-        let (event_str, event) = github_event()?;
+        self.create_job_summary(report_comment);
 
+        let (event_str, event) = github_event()?;
         let issue_number = if let Some(issue_number) = self.ci_number {
             issue_number
         } else if let Ok(event_name @ (PULL_REQUEST | PULL_REQUEST_TARGET)) =
@@ -245,6 +247,12 @@ impl GitHubActions {
         }
 
         Ok(())
+    }
+
+    fn create_job_summary(&self, report_comment: &ReportComment) {
+        let summary = report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref());
+        // https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#adding-a-job-summary
+        std::env::set_var(GITHUB_STEP_SUMMARY, summary);
     }
 
     async fn create_github_check(
