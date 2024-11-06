@@ -157,7 +157,6 @@ impl GitHubActions {
         Ok(())
     }
 
-    #[allow(clippy::too_many_lines)]
     pub async fn run(&self, report_comment: &ReportComment, log: bool) -> Result<(), GitHubError> {
         // Only post to CI if there are thresholds set
         if self.ci_only_thresholds && !report_comment.has_threshold() {
@@ -202,51 +201,8 @@ impl GitHubActions {
                 .await;
         };
 
-        let full_name = repository_full_name(&event_str, &event)?;
-        let (owner, repo) = split_full_name(full_name)?;
-
-        let github_client = Octocrab::builder()
-            .user_access_token(self.token.clone())
-            .build()
-            .map_err(GitHubError::Auth)?;
-
-        // Get the comment ID if it exists
-        let comment_id = get_comment(
-            &github_client,
-            owner,
-            repo,
-            issue_number,
-            &report_comment.bencher_tag(self.ci_id.as_deref()),
-        )
-        .await?;
-
-        // Update or create the comment
-        let issue_handler = github_client.issues(owner, repo);
-        let body = report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref());
-        // Always update the comment if it exists
-        let comment = if let Some(comment_id) = comment_id {
-            issue_handler.update_comment(comment_id, body).await
-        } else {
-            if self.ci_only_on_alert && !report_comment.has_alert() {
-                cli_println_quietable!(log, "No alerts found. Skipping CI integration.");
-                return Ok(());
-            }
-            issue_handler.create_comment(issue_number, body).await
-        };
-        if let Err(e) = comment {
-            return Err(
-                // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-                if is_permissions_error(&e) {
-                    GitHubError::BadCommentPermissions(e)
-                } else if comment_id.is_some() {
-                    GitHubError::UpdateComment(e)
-                } else {
-                    GitHubError::CreateComment(e)
-                },
-            );
-        }
-
-        Ok(())
+        self.create_pull_request_comment(report_comment, log, &event_str, &event, issue_number)
+            .await
     }
 
     fn create_job_summary(&self, report_comment: &ReportComment) {
@@ -289,17 +245,72 @@ impl GitHubActions {
             .send()
             .await;
         if let Err(e) = check {
-            return Err(
+            Err(
                 // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
                 if is_permissions_error(&e) {
                     GitHubError::BadCheckPermissions(e)
                 } else {
                     GitHubError::CreateCheck(e)
                 },
-            );
+            )
+        } else {
+            Ok(())
         }
+    }
 
-        Ok(())
+    pub async fn create_pull_request_comment(
+        &self,
+        report_comment: &ReportComment,
+        log: bool,
+        event_str: &str,
+        event: &serde_json::Value,
+        issue_number: u64,
+    ) -> Result<(), GitHubError> {
+        let full_name = repository_full_name(event_str, event)?;
+        let (owner, repo) = split_full_name(full_name)?;
+
+        let github_client = Octocrab::builder()
+            .user_access_token(self.token.clone())
+            .build()
+            .map_err(GitHubError::Auth)?;
+
+        // Get the comment ID if it exists
+        let comment_id = get_comment(
+            &github_client,
+            owner,
+            repo,
+            issue_number,
+            &report_comment.bencher_tag(self.ci_id.as_deref()),
+        )
+        .await?;
+
+        // Update or create the comment
+        let issue_handler = github_client.issues(owner, repo);
+        let body = report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref());
+        // Always update the comment if it exists
+        let comment = if let Some(comment_id) = comment_id {
+            issue_handler.update_comment(comment_id, body).await
+        } else {
+            if self.ci_only_on_alert && !report_comment.has_alert() {
+                cli_println_quietable!(log, "No alerts found. Skipping CI integration.");
+                return Ok(());
+            }
+            issue_handler.create_comment(issue_number, body).await
+        };
+        if let Err(e) = comment {
+            Err(
+                // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+                if is_permissions_error(&e) {
+                    GitHubError::BadCommentPermissions(e)
+                } else if comment_id.is_some() {
+                    GitHubError::UpdateComment(e)
+                } else {
+                    GitHubError::CreateComment(e)
+                },
+            )
+        } else {
+            Ok(())
+        }
     }
 }
 
