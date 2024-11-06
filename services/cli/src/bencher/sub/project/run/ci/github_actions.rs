@@ -1,6 +1,6 @@
 use bencher_comment::ReportComment;
 use octocrab::{
-    models::{checks::CheckRun, CommentId},
+    models::CommentId,
     params::checks::{CheckRunConclusion, CheckRunOutput},
     Octocrab,
 };
@@ -77,17 +77,26 @@ pub enum GitHubError {
     CreateComment(octocrab::Error),
     #[error("Failed to update GitHub PR comment: {0}")]
     UpdateComment(octocrab::Error),
-    #[error("GitHub Actions token (`GITHUB_TOKEN`) does not have `write` permissions for `pull-requests`.\n{help}\nError: {0}", help = PERMISSIONS_HELP)]
-    BadPermissions(octocrab::Error),
+    #[error(
+        "{}",
+        permissions_help("pull-requests", "pull-requests-from-forks", _0)
+    )]
+    BadCommentPermissions(octocrab::Error),
 
     #[error("Failed to get GitHub SHA\n{}", docker_env(GITHUB_SHA))]
     NoSha,
-    #[error("Failed to create GitHub check: {0}")]
+    #[error("Failed to create GitHub Check: {0}")]
     CreateCheck(octocrab::Error),
+    #[error("{}", permissions_help("checks", "base-branch", _0))]
+    BadCheckPermissions(octocrab::Error),
 }
 
 // https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
-const PERMISSIONS_HELP: &str = "To fix, add `write` permissions to the job: `job: {{ \"permissions\": {{ \"pull-requests\": \"write\" }} }}`\nSee: https://bencher.dev/docs/how-to/github-actions/#pull-requests";
+fn permissions_help(scope: &str, fragment: &str, err: &octocrab::Error) -> String {
+    format!(
+        "GitHub Actions token (`GITHUB_TOKEN`) does not have `write` permissions for `{scope}`.\nTo fix, add `write` permissions to the job: `job: {{ \"permissions\": {{ \"{scope}\": \"write\" }} }}`\nSee: https://bencher.dev/docs/how-to/github-actions/#{fragment}\nError: {err}",
+    )
+}
 
 fn docker_env(env_var: &str) -> String {
     format!(
@@ -186,9 +195,9 @@ impl GitHubActions {
                         "Not running as a GitHub Action pull request event (`pull_request` or `pull_request_target`) and the `--ci-number` option was not set. Creating a GitHub Check instead.\n{}",
                         docker_env(GITHUB_EVENT_NAME)
                     );
-            self.create_github_check(report_comment, &event_str, &event)
-                .await?;
-            return Ok(());
+            return self
+                .create_github_check(report_comment, &event_str, &event)
+                .await;
         };
 
         let full_name = repository_full_name(&event_str, &event)?;
@@ -225,10 +234,8 @@ impl GitHubActions {
         if let Err(e) = comment {
             return Err(
                 // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-                if e.to_string()
-                    .contains("Resource not accessible by integration")
-                {
-                    GitHubError::BadPermissions(e)
+                if is_permissions_error(&e) {
+                    GitHubError::BadCommentPermissions(e)
                 } else if comment_id.is_some() {
                     GitHubError::UpdateComment(e)
                 } else {
@@ -245,7 +252,7 @@ impl GitHubActions {
         report_comment: &ReportComment,
         event_str: &str,
         event: &serde_json::Value,
-    ) -> Result<CheckRun, GitHubError> {
+    ) -> Result<(), GitHubError> {
         let full_name = repository_full_name(event_str, event)?;
         let (owner, repo) = split_full_name(full_name)?;
         let Ok(head_sha) = std::env::var(GITHUB_SHA) else {
@@ -259,7 +266,7 @@ impl GitHubActions {
             annotations: Vec::new(),
             images: Vec::new(),
         };
-        Octocrab::builder()
+        let check = Octocrab::builder()
             .user_access_token(self.token.clone())
             .build()
             .map_err(GitHubError::Auth)?
@@ -272,8 +279,19 @@ impl GitHubActions {
                 CheckRunConclusion::Success
             })
             .send()
-            .await
-            .map_err(GitHubError::CreateCheck)
+            .await;
+        if let Err(e) = check {
+            return Err(
+                // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+                if is_permissions_error(&e) {
+                    GitHubError::BadCheckPermissions(e)
+                } else {
+                    GitHubError::CreateCheck(e)
+                },
+            );
+        }
+
+        Ok(())
     }
 }
 
@@ -359,4 +377,9 @@ pub async fn get_comment(
 
         page += 1;
     }
+}
+
+fn is_permissions_error(err: &octocrab::Error) -> bool {
+    err.to_string()
+        .contains("Resource not accessible by integration")
 }
