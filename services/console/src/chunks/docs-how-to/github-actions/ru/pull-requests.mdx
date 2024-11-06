@@ -1,98 +1,125 @@
 import PullRequestsCode from "../pull-requests-code.mdx";
 import PullRequestsClosed from "./pull-requests-closed.mdx";
 
-## Запросы на вытягивание
+## Pull Requests
 
-Для того чтобы поймать регрессию производительности в запросах на вытягивание, вам нужно будет запускать свои бенчмарки на PR.
-Если вы ожидаете PR только от веток в **том же** репозитории,
-то вы можете просто создать другой рабочий процесс для запуска `on` событий `pull_request` из того же репозитория.
+Чтобы отлавливать регрессии производительности в Pull Requests, вам нужно будет запускать свои тесты производительности на PRs.
+Если вы ожидаете иметь PR только из веток внутри **того же** репозитория,
+тогда вы можете просто создать другой workflow для запуска `on` событий `pull_request` из того же репозитория.
 
 > ⚠️ Это решение работает только если все PR из **того же** репозитория!
-> См. [Запросы на вытягивание из форков][pull requests from forks] ниже.
+> См. [Pull Requests из Fork][pull requests from forks] ниже.
 
 <PullRequestsCode />
 
-1. Создайте файл `workflow` в GitHub Actions.
+1. Создайте файл `workflow` GitHub Actions.
    (пример: `.github/workflows/pr_benchmarks.yml`)
-2. Запускайте на событиях `pull_request`:
-   - `opened` - Создан запрос на вытягивание.
-   - `reopened` - Ранее закрытый запрос на вытягивание был снова открыт.
-   - `edited` - Название или тело запроса на вытягивание изменено, или базовая ветка запроса изменена.
-   - `synchronize` - Голова ветки запроса на вытягивание обновлена.
-   Например, голова ветки обновлена от базовой ветки или в голову ветки добавлены новые коммиты.
+2. Запустите на событиях `pull_request`:
+   - `opened` - Pull request был создан.
+   - `reopened` - Ранее закрытый pull request был переоткрыт.
+   - `edited` - Название или тело pull request было отредактировано, или базовая ветка pull request была изменена.
+   - `synchronize` - Ветка head pull request была обновлена.
+   Например, ветка head была обновлена из базовой ветки или новые коммиты были добавлены в ветку head.
 
-   См. [документацию `on` для GitHub Actions][github actions on]
-   и [документацию `pull_request` для GitHub Actions][github action pull_request] для полного обзора.
+   См. [документацию GitHub Actions `on`][github actions on]
+   и [документацию GitHub Actions `pull_request`][github action pull_request] для полного обзора.
    (пример: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. Создайте `job` в GitHub Actions.
+3. Создайте `job` GitHub Actions.
    (пример: `jobs: benchmark_pr_branch`)
-4. Запускайте на событиях `pull_request`, если и только если запрос на вытягивание из того же репозитория.
+4. Запустите на событиях `pull_request` только в том случае, если pull request из того же репозитория.
    ⚠️ НЕ УДАЛЯЙТЕ ЭТУ СТРОКУ!
-   Для обработки Форк PR см. [Запросы на вытягивание из форков][pull requests from forks] ниже.
+   Для обработки Fork PRs см. [Pull Requests из Fork][pull requests from forks] ниже.
    (пример: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
 5. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
-   для `write` в `pull-requests`.
-   В зависимости от ваших настроек GitHub, это может не требоваться.
-   Но для всех организаций и личных репозиториев
+   на `write` для `pull-requests`.
+   В зависимости от настроек GitHub, это может не требоваться.
+   Но для всех организаций и личных репозиториев,
    [созданных после 02 февраля 2023][github token read only],
-   это поведение по умолчанию.
+   это поведение является поведением по умолчанию.
    См. [документацию GitHub][github token permissions security]
    для полного обзора.
    (пример: `permissions: pull-requests: write`)
-6. Установите тип машины, на которой будет выполняться работа.
-   См. [документацию `runs-on` для GitHub Actions][github actions runs-on]
+6. Установите тип машины, на которой будет выполняться job.
+   См. [документацию GitHub Actions `runs-on`][github actions runs-on]
    для полного обзора.
    (пример: `runs-on: ubuntu-latest`)
-7. Выполните checkout исходного кода ветки PR.
+7. Проверьте исходный код ветки PR.
    (пример: `uses: actions/checkout@v4`)
-8. Установите Bencher CLI, используя [действие GitHub Action][bencher cli github action].
+8. Установите Bencher CLI с использованием [GitHub Action][bencher cli github action].
    (пример: `uses: bencherdev/bencher@main`)
-9. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
-   для запуска ваших бенчмарков ветки запроса на вытягивание.
-   См. [подкоманду CLI `bencher run`][bencher run] для полного обзора.
+9. Используйте <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> CLI подкоманду
+   для запуска тестов производительности ветки pull request.
+   См. [подкоманду `bencher run` CLI][bencher run] для полного обзора.
    (пример: `bencher run`)
-10. Установите опцию `--project` для слага проекта.
-    См. [документацию `--project`][project option] для более подробной информации.
+10. Установите опцию `--project` на идентификатор проекта.
+    См. [документацию `--project`][project option] для подробностей.
     (пример: `--project save-walter-white-1234abcd`)
-11. Установите опцию `--token` для **секрета репозитория** `BENCHER_API_TOKEN`.
-    См. [документацию `--token`][token option] для более подробной информации.
+11. Установите опцию `--token` на **секрет** репозитория `BENCHER_API_TOKEN`.
+    См. [документацию `--token`][token option] для подробностей.
     (пример: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-12. Установите опцию `--branch` для имени ветки PR
-    с использованием [контекста `github` в GitHub Actions][github actions context].
+12. Установите опцию `--branch` на имя ветки PR
+    используя [переменную окружения `GITHUB_HEAD_REF` по умолчанию GitHub Actions][github default environment variables].
     См. [документацию `--branch`][branch option] для полного обзора.
     (пример: `--branch "$GITHUB_HEAD_REF"`)
 13. Установите начальную точку для ветки PR:
-    1. Установите опцию `--start-point` для начальной точки ветки PR
-    с использованием [контекста `github` в GitHub Actions][github actions context].
+    1. Установите опцию `--start-point` на стартовую точку ветки PR
+    используя [переменную окружения `GITHUB_BASE_REF` по умолчанию GitHub Actions][github default environment variables].
     См. [документацию `--start-point`][start point] для полного обзора.
     (пример: `--start-point "$GITHUB_BASE_REF"`)
-    2. Установите опцию `--start-point-hash` для хеша `git` начальной точки ветки PR
-    с использованием [события `pull_request` в GitHub Actions][github action pull_request].
+    2. Установите опцию `--start-point-hash` на `git` хеш стартовой точки ветки PR
+    используя [событие `pull_request` GitHub Actions][github action pull_request].
     См. [документацию `--start-point-hash`][start point hash] для полного обзора.
     (пример: `--start-point-hash '${{ github.event.pull_request.base.sha }}'`)
-    3. Установите флаг `--start-point-clone-thresholds` для клонирования Порогов из начальной точки.
+    3. Установите флаг `--start-point-clone-thresholds`, чтобы клонировать пороги из стартовой точки.
     См. [документацию `--start-point-clone-thresholds`][start point clone thresholds] для полного обзора.
     (пример: `--start-point-clone-thresholds`)
-    4. Установите флаг `--start-point-reset` для постоянного сброса ветки PR к начальной точке.
-    Это предотвратит дрейф данных бенчмарка.
+    4. Установите флаг `--start-point-reset`, чтобы всегда сбрасывать ветку PR в стартовую точку.
+    Это предотвратит дрейф данных тестов производительности.
     См. [документацию `--start-point-reset`][start point reset] для полного обзора.
     (пример: `--start-point-reset`)
-14. Установите опцию `--testbed` для имени тестовой базы.
-    Это должно, вероятно, соответствовать машине, выбранной в `runs-on`.
-    См. [документацию `--tested`][testbed option] для более подробной информации.
+14. Установите опцию `--testbed` на имя Testbed.
+    Это, вероятно, должно совпадать с машиной, выбранной в `runs-on`.
+    См. [документацию `--testbed`][testbed option] для подробностей.
     (пример: `--testbed ubuntu-latest`)
-15. Установите флаг `--err` для провала команды, если сгенерировано предупреждение.
+15. Установите флаг `--err`, чтобы команда завершалась неудачей, если генерируется предупреждение.
    См. [документацию `--err`][alert err] для полного обзора.
    (пример: `--err`)
 16. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
-   См. [адаптеры для тестов производительности][adapter json] для полного обзора.
+   См. [адаптеры тестовых сред][adapter json] для полного обзора.
    (пример: `--adapter json`)
-17. Установите опцию `--github-actions` на токен аутентификации API GitHub для публикации результатов в виде комментария к запросу на вытягивание, используя
-    [переменную окружения `GITHUB_TOKEN` в GitHub Actions][github token].
-    См. [документацию `--github-actions`][github actions option] для более подробной информации.
+17. Установите опцию `--github-actions` на токен аутентификации API GitHub для публикации результатов как комментарий к Pull Request с использованием
+    [переменной окружения `GITHUB_TOKEN`][github token].
+    См. [документацию `--github-actions`][github actions option] для подробностей.
     (пример: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. Укажите аргументы команды для бенчмарка.
-    См. [документацию команды для бенчмарка][command argument] для полного обзора.
+18. Укажите аргументы команды теста производительности.
+    См. [команду теста производительности][command argument] для полного обзора.
     (пример: `bencher mock`)
 
 <PullRequestsClosed />
+
+[github actions on]: https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/ru/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/ru/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/ru/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github default environment variables]: https://docs.github.com/ru/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
+[github token]: https://docs.github.com/ru/actions/security-guides/automatic-token-authentication
+
+[bencher run]: /ru/docs/explanation/bencher-run/
+[project option]: /ru/docs/explanation/bencher-run/#--project-project
+[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[branch option]: /ru/docs/explanation/branch-selection/#--branch-branch
+[start point]: /ru/docs/explanation/branch-selection/#--start-point-branch
+[start point hash]: /ru/docs/explanation/branch-selection/#--start-point-hash-hash
+[start point clone thresholds]: /ru/docs/explanation/branch-selection/#--start-point-clone-thresholds
+[start point reset]: /ru/docs/explanation/branch-selection/#--start-point-reset
+[testbed option]: /ru/docs/explanation/bencher-run/#--testbed-testbed
+[alert err]: /ru/docs/explanation/thresholds/#--err
+[bmf]: /ru/docs/reference/bencher-metric-format/
+[adapter json]: /ru/docs/explanation/adapters/#-json
+[github actions option]: /ru/docs/explanation/bencher-run/#--github-actions-github_token
+[command argument]: /ru/docs/explanation/bencher-run/#benchmark-command
+
+[pull requests from forks]: #pull-requests-from-forks

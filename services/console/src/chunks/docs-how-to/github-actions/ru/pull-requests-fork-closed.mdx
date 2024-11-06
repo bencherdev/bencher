@@ -1,46 +1,41 @@
 import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 
-Чтобы очистить ветку форка PR после закрытия его PR,
-вы можете создать отдельный рабочий процесс, который будет запускаться `on` событиях `pull_request` с типом `closed`.
-Этот рабочий процесс заархивирует ветку форка PR с помощью команды `bencher archive`.
+Чтобы очистить ветку PR форка после закрытия её PR, вы можете создать отдельный рабочий процесс, который будет запускаться на события `pull_request_target` с типом `closed`. Этот рабочий процесс заархивирует ветку PR форка с помощью команды `bencher archive`.
 
 <PullRequestsForkClosedCode />
 
 1. Создайте файл `workflow` для GitHub Actions.
    (например, `.github/workflows/fork_pr_benchmarks_closed.yml`)
-2. Запускается на событиях `pull_request`:
-   - `closed` - Запрос на слияние был закрыт.
+2. Запускайте на событиях `pull_request_target`:
+   - `closed` - Пул-реквест был закрыт.
 
-   Ознакомьтесь с [документацией по `on` для GitHub Actions][github actions on]
-   и [документацией по `pull_request` в GitHub Actions][github action pull_request] для полного обзора.
-   (например, `on: pull_request: types: [closed]`)
-3. Создайте `job` для GitHub Actions.
+   См. [документацию по GitHub Actions `on`][github actions on] и [документацию по GitHub Actions `pull_request_target`][github action pull_request_target] для полного обзора.
+   (например, `on: pull_request_target: types: [closed]`)
+3. Создайте задание `job` для GitHub Actions.
    (например, `jobs: archive_pr_branch`)
-4. Установите тип машины, на которой будет выполняться задание.
-   См. [документацию по `runs-on` для GitHub Actions][github actions runs-on]
-   для полного обзора.
+4. Установите тип машины, на которой будет выполнено задание.
+   См. [документацию по GitHub Actions `runs-on`][github actions runs-on] для полного обзора.
    (например, `runs-on: ubuntu-latest`)
-5. Выполните checkout исходного кода ветки PR.
+5. Выполните проверку исходного кода ветки PR.
    (например, `uses: actions/checkout@v4`)
-6. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
+6. Установите Bencher CLI, используя [действие GitHub Action][bencher cli github action].
    (например, `uses: bencherdev/bencher@main`)
 7. Используйте подкоманду CLI `bencher archive` для архивирования ветки PR.
    (например, `bencher archive`)
-8.  Установите параметр `--project` на слаг проекта.
-    См. [документацию по `--project`][project option] для получения дополнительных сведений.
+8. Установите опцию `--project` на идентификатор проекта.
+    Подробнее см. в [документации по `--project`][project option].
     (например, `--project save-walter-white-1234abcd`)
-9.  Установите параметр `--token` на секрет **Repository** `BENCHER_API_TOKEN`.
-    См. [документацию по `--token`][token option] для получения дополнительных сведений.
+9. Установите опцию `--token` на секрет репозитория **`BENCHER_API_TOKEN`**.
+    Подробнее см. в [документации по `--token`][token option].
     (например, `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-10. Установите параметр `--branch` на имя ветки PR
-    используя [контекст `github` в GitHub Actions][github actions context].
+10. Установите опцию `--branch` на имя ветки PR, используя [переменную среды по умолчанию `GITHUB_HEAD_REF` для GitHub Actions][github default environment variables].
     (например, `--branch "$GITHUB_HEAD_REF"`)
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[github actions on]: https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request_target]: https://docs.github.com/ru/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request_target
+[github actions runs-on]: https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github default environment variables]: https://docs.github.com/ru/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /ru/docs/explanation/bencher-run/#--project-project
 [token option]: /ru/docs/explanation/bencher-run/#--token-token

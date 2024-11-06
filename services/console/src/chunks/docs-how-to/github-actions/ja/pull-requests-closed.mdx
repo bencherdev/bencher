@@ -1,38 +1,38 @@
 import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
 
-GitHubのPRがクローズされた後にPRブランチをクリーンアップするためには、`on` `pull_request` イベントの `closed` タイプを使用して実行する別のワークフローを作成できます。このワークフローは、`bencher archive` コマンドを使用してPRブランチをアーカイブします。
+PRがクローズされた後にPRブランチをクリーンアップするためには、`closed`タイプの`pull_request`イベントで実行される別のワークフローを作成できます。このワークフローは`bencher archive`コマンドを使用してPRブランチをアーカイブします。
 
 <PullRequestsClosedCode />
 
 1. GitHub Actionsの`workflow`ファイルを作成します。
    (例: `.github/workflows/pr_benchmarks_closed.yml`)
-2. `pull_request`イベントで実行します:
+2. `pull_request`イベントで実行:
    - `closed` - プルリクエストがクローズされた。
 
-   詳細は[GitHub Actionsの`on`ドキュメント][github actions on]および[GitHub Actionsの`pull_request`ドキュメント][github action pull_request]を参照してください。
+   完全な概要については[GitHub Actionsの`on`ドキュメント][github actions on]と[GitHub Actionsの`pull_request`ドキュメント][github action pull_request]をご覧ください。
    (例: `on: pull_request: types: [closed]`)
 3. GitHub Actionsの`job`を作成します。
    (例: `jobs: archive_pr_branch`)
-4. プルリクエストが同じリポジトリからの場合にのみ`pull_request`イベントを実行します。
+4. プルリクエストが同じリポジトリからのものである場合にのみ、`pull_request`イベントで実行します。
    ⚠️ この行を削除しないでください！
-   フォークからのPRを処理する方法については、以下の[フォークからのプルリクエスト][pull requests from forks]を参照してください。
+   Fork PRの処理については、以下の[フォークからのプルリクエスト][pull requests from forks]を参照してください。
    (例: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. ジョブが実行されるマシンのタイプを設定します。
-   詳細は[GitHub Actionsの`runs-on`ドキュメント][github actions runs-on]を参照してください。
+5. ジョブを実行するマシンのタイプを設定します。
+   完全な概要については[GitHub Actionsの`runs-on`ドキュメント][github actions runs-on]をご覧ください。
    (例: `runs-on: ubuntu-latest`)
 6. PRブランチのソースコードをチェックアウトします。
    (例: `uses: actions/checkout@v4`)
-7. Bencher CLIを[GitHub Actionを使用して][bencher cli github action]インストールします。
+7. [GitHub Action][bencher cli github action]を使用してBencher CLIをインストールします。
    (例: `uses: bencherdev/bencher@main`)
 8. `bencher archive` CLIサブコマンドを使用してPRブランチをアーカイブします。
    (例: `bencher archive`)
-9.  プロジェクトスラッグに`--project`オプションを設定します。
-    詳細は[`--project`のドキュメント][project option]を参照してください。
-    (例: `--project save-walter-white-1234abcd`)
+9. `--project`オプションをプロジェクトスラッグに設定します。
+   詳細は[プロジェクトの`--project`ドキュメント][project option]を参照してください。
+   (例: `--project save-walter-white-1234abcd`)
 10. `--token`オプションを`BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
-    詳細は[`--token`のドキュメント][token option]を参照してください。
+    詳細は[トークンの`--token`ドキュメント][token option]を参照してください。
     (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-11. GitHub Actionsの`github`コンテキストを使用して、PRブランチ名に`--branch`オプションを設定します。
+11. [GitHub Actionsの`GITHUB_HEAD_REF`デフォルト環境変数][github default environment variables]を使用して、PRブランチ名を`--branch`オプションに設定します。
     (例: `--branch "$GITHUB_HEAD_REF"`)
 
 
@@ -40,7 +40,7 @@ GitHubのPRがクローズされた後にPRブランチをクリーンアップ�
 [github action pull_request]: https://docs.github.com/ja/webhooks/webhook-events-and-payloads#pull_request
 [github actions runs-on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/ja/actions/learn-github-actions/contexts#github-context
+[github default environment variables]: https://docs.github.com/ja/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
 [token option]: /ja/docs/explanation/bencher-run/#--token-token

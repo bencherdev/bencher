@@ -1,86 +1,85 @@
 import PullRequestsCode from "../pull-requests-code.mdx";
 import PullRequestsClosed from "./pull-requests-closed.mdx";
 
-## 拉取请求
+## Pull Requests
 
 为了在拉取请求中捕获性能回归，您需要在 PR 上运行基准测试。
-如果您只期望从**相同**的存储库中有分支创建的 PR，那么您可以简单地创建另一个工作流来运行来自相同存储库的 `pull_request` 事件。
+如果您只期望从**同一个**仓库的分支中获得拉取请求，那么您可以简单地创建另一个工作流来在同一仓库的 `pull_request` 事件上运行。
 
-> ⚠️ 这个解决方案仅在所有 PR 都来自**相同**的存储库时有效！
-> 请参阅下面的[来自 Fork 的拉取请求][pull requests from forks]。
+> ⚠️ 此解决方案仅适用于所有 PR 来自**同一个**仓库的情况！
+> 请参见下面的[来自 Fork 的拉取请求][pull requests from forks]。
 
 <PullRequestsCode />
 
 1. 创建一个 GitHub Actions `workflow` 文件。
-   (例如：`.github/workflows/pr_benchmarks.yml`)
+   （例如：`.github/workflows/pr_benchmarks.yml`）
 2. 在 `pull_request` 事件上运行：
    - `opened` - 创建了一个拉取请求。
-   - `reopened` - 重新打开了一个之前关闭的拉取请求。
-   - `edited` - 拉取请求的标题或正文被编辑，或拉取请求的基分支被更改。
-   - `synchronize` - 拉取请求的头部分支被更新。例如，头部分支从基分支更新过来或新的提交被推送到头部分支。
+   - `reopened` - 重新打开了一个先前关闭的拉取请求。
+   - `edited` - 编辑了拉取请求的标题或正文，或更改了拉取请求的基分支。
+   - `synchronize` - 更新了拉取请求的头分支。
+   例如，头分支是从基分支更新的，或新的提交被推送到头分支。
 
-   查看 [GitHub Actions `on` 文档][github actions on] 和 [GitHub Actions `pull_request` 文档][github action pull_request] 的完整概述。
-   (例如：`on: pull_request: types: [opened, reopened, edited, synchronize]`)
+   查看 [GitHub Actions `on` 文档][github actions on] 和 [GitHub Actions `pull_request` 文档][github action pull_request] 以获取完整概览。
+   （例如：`on: pull_request: types: [opened, reopened, edited, synchronize]`）
 3. 创建一个 GitHub Actions `job`。
-   (例如：`jobs: benchmark_pr_branch`)
-4. 仅当拉取请求来自相同存储库时，在 `pull_request` 事件上运行。
-   ⚠️ 请勿删除此行！
-   若要处理 Fork PR 请参阅下面的[来自 Fork 的拉取请求][pull requests from forks]。
-   (例如：`if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. 将 [`GITHUB_TOKEN` 的权限][github token permissions] 设置为对 `pull-requests` 有 `write` 权限。
-   根据您的 GitHub 设置，这可能不是必需的。但对于所有在 2023 年 2 月 2 日之后创建的组织和个人仓库，
-   这是默认行为。
-   查看 [GitHub 文档][github token permissions security] 的完整概述。
-   (例如：`permissions: pull-requests: write`)
-6. 设置作业运行的机器类型。
-   查看 [GitHub Actions `runs-on` 文档][github actions runs-on] 的完整概述。
-   (例如：`runs-on: ubuntu-latest`)
-7. 签出 PR 分支的源代码。
-   (例如：`uses: actions/checkout@v4`)
+   （例如：`jobs: benchmark_pr_branch`）
+4. 如果且仅当拉取请求来自同一仓库时，在 `pull_request` 事件上运行。
+   ⚠️ 不要删除此行！
+   处理 Fork PR 请参见下面的[来自 Fork 的拉取请求][pull requests from forks]。
+   （例如：`if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`）
+5. 将 [`GITHUB_TOKEN` 的权限][github token permissions] 设置为 `write` 以用于 `pull-requests`。
+   依赖于您的 GitHub 设置，这可能不是必需的。
+   但对于 2023 年 2 月 2 日之后创建的所有组织和个人仓库，这是默认行为。
+   查看 [GitHub 文档][github token permissions security] 以获取完整概览。
+   （例如：`permissions: pull-requests: write`）
+6. 设置运行作业的机器类型。
+   查看 [GitHub Actions `runs-on` 文档][github actions runs-on] 以获取完整概览。
+   （例如：`runs-on: ubuntu-latest`）
+7. 检出 PR 分支的源代码。
+   （例如：`uses: actions/checkout@v4`）
 8. 使用 [GitHub Action][bencher cli github action] 安装 Bencher CLI。
-   (例如：`uses: bencherdev/bencher@main`)
-9. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令来运行您的拉取请求分支基准测试。
-   查看 [`bencher run` CLI 子命令][bencher run] 的完整概述。
-   (例如：`bencher run`)
-10. 设置 `--project` 选项为项目 slug。
-    查看 [`--project` 文档][project option] 以了解更多详细信息。
-    (例如：`--project save-walter-white-1234abcd`)
-11. 设置 `--token` 选项为 `BENCHER_API_TOKEN` **存储库**秘密。
-    查看 [`--token` 文档][token option] 以了解更多详细信息。
-    (例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-12. 使用 [GitHub Actions `github` 上下文][github actions context] 设置 `--branch` 选项为 PR 分支名。
-    查看 [`--branch` 文档][branch option] 的完整概述。
-    (例如：`--branch "$GITHUB_HEAD_REF"`)
-13. 设置 PR 分支的起始点：
-    1. 使用 [GitHub Actions `github` 上下文][github actions context] 设置 `--start-point` 选项为 PR 分支起始点。
-       查看 [`--start-point` 文档][start point] 的完整概述。
-       (例如：`--start-point "$GITHUB_BASE_REF"`)
-    2. 使用 [GitHub Actions `pull_request` 事件][github action pull_request] 设置 `--start-point-hash` 选项为 PR 分支起始点 `git` 哈希。
-       查看 [`--start-point-hash` 文档][start point hash] 的完整概述。
-       (例如：`--start-point-hash '${{ github.event.pull_request.base.sha }}'`)
-    3. 设置 `--start-point-clone-thresholds` 标志以从起始点克隆阈值。
-       查看 [`--start-point-clone-thresholds` 文档][start point clone thresholds] 的完整概述。
-       (例如：`--start-point-clone-thresholds`)
-    4. 设置 `--start-point-reset` 标志以始终将 PR 分支重置为起始点。
-       这将防止基准数据漂移。
-       查看 [`--start-point-reset` 文档][start point reset] 的完整概述。
-       (例如：`--start-point-reset`)
-14. 将 `--testbed` 选项设置为测试床名称。
-    这可能应与 `runs-on` 中选择的机器匹配。
-    查看 [`--tested` 文档][testbed option] 以了解更多详细信息。
-    (例如：`--testbed ubuntu-latest`)
+   （例如：`uses: bencherdev/bencher@main`）
+9. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令运行您的拉取请求分支基准测试。
+   查看 [`bencher run` CLI 子命令][bencher run] 以获取完整概览。
+   （例如：`bencher run`）
+10. 将 `--project` 选项设置为项目 slug。
+    查看 [`--project` 文档][project option] 以获取详细信息。
+    （例如：`--project save-walter-white-1234abcd`）
+11. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **仓库**密钥。
+    查看 [`--token` 文档][token option] 以获取详细信息。
+    （例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`）
+12. 使用 [GitHub Actions `GITHUB_HEAD_REF` 默认环境变量][github default environment variables] 设置 `--branch` 选项为 PR 分支名称。
+    查看 [`--branch` 文档][branch option] 以获取完整概览。
+    （例如：`--branch "$GITHUB_HEAD_REF"`）
+13. 设置 PR 分支的起点：
+    1. 使用 [GitHub Actions `GITHUB_BASE_REF` 默认环境变量][github default environment variables] 将 `--start-point` 选项设置为 PR 分支起点。
+    查看 [`--start-point` 文档][start point] 以获取完整概览。
+    （例如：`--start-point "$GITHUB_BASE_REF"`）
+    2. 使用 [GitHub Actions `pull_request` 事件][github action pull_request] 将 `--start-point-hash` 选项设置为 PR 分支起点的 `git` hash。
+    查看 [`--start-point-hash` 文档][start point hash] 以获取完整概览。
+    （例如：`--start-point-hash '${{ github.event.pull_request.base.sha }}'`）
+    3. 设置 `--start-point-clone-thresholds` 标志以从起点克隆阈值。
+    查看 [`--start-point-clone-thresholds` 文档][start point clone thresholds] 以获取完整概览。
+    （例如：`--start-point-clone-thresholds`）
+    4. 设置 `--start-point-reset` 标志以始终重置 PR 分支到起点。这将防止基准测试数据漂移。
+    查看 [`--start-point-reset` 文档][start point reset] 以获取完整概览。
+    （例如：`--start-point-reset`）
+14. 将 `--testbed` 选项设置为 Testbed 名称。此名称应与 `runs-on` 中选择的机器匹配。
+    查看 [`--tested` 文档][testbed option] 以获取更多详细信息。
+    （例如：`--testbed ubuntu-latest`）
 15. 设置 `--err` 标志以在生成警报时使命令失败。
-    查看 [`--err` 文档][alert err] 的完整概述。
-    (例如：`--err`)
-16. 将 `--adapter` 选项设置为由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 [Bencher Metric Format JSON (`json`)][bmf]。
-    查看 [基准测试工具适配器][adapter json] 的完整概述。
-    (例如：`--adapter json`)
-17. 设置 `--github-actions` 选项为 GitHub API 认证令牌，以通过 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将结果作为评论发布在撼取请求中。
-    查看 [--github-actions 文档][github actions option] 以了解更多详细信息。
-    (例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+   查看 [`--err` 文档][alert err] 以获取完整概览。
+   （例如：`--err`）
+16. 将 `--adapter` 选项设置为 [由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 Bencher Metric Format JSON (`json`)][bmf]。
+   查看 [基准测试适配器][adapter json] 以获取完整概览。
+   （例如：`--adapter json`）
+17. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以便将结果作为评论发布在拉取请求上。
+    查看 [`--github-actions` 文档][github actions option] 以获取更多详细信息。
+    （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
 18. 指定基准测试命令参数。
-    查看 [基准测试命令][command argument] 的完整概述。
-    (例如：`bencher mock`)
+    查看 [基准测试命令][command argument] 以获取完整概览。
+    （例如：`bencher mock`）
 
 <PullRequestsClosed />
 
@@ -91,7 +90,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 [github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github default environment variables]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 [github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 
 [bencher run]: /zh/docs/explanation/bencher-run/

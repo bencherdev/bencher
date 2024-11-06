@@ -1,47 +1,50 @@
 import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
 
-要在 PR 关闭后清理 PR 分支，
-您可以创建一个单独的工作流，以 `on` `pull_request` 事件（类型为 `closed`）运行。
-该工作流将使用 `bencher archive` 命令存档 PR 分支。
+为了在 PR 关闭后清理 PR 分支，
+您可以创建一个独立的工作流，在 `pull_request` 事件中运行 `on`，其类型为 `closed`。
+这个工作流将使用 `bencher archive` 命令来归档 PR 分支。
 
 <PullRequestsClosedCode />
 
 1. 创建一个 GitHub Actions `workflow` 文件。
-   （例如：`.github/workflows/pr_benchmarks_closed.yml`）
-2. 在 `pull_request` 事件上运行：
-   - `closed` - 拉取请求已关闭。
+   (例如：`.github/workflows/pr_benchmarks_closed.yml`)
+2. 运行于 `pull_request` 事件：
+   - `closed` - 一个拉取请求已关闭。
 
-   有关完整概述，请参见 [GitHub Actions `on` 文档][github actions on] 和 [GitHub Actions `pull_request` 文档][github action pull_request]。
-   （例如：`on: pull_request: types: [closed]`）
+   查看 [GitHub Actions `on` 文档][github actions on]
+   和 [GitHub Actions `pull_request` 文档][github action pull_request] 以获取完整概述。
+   (例如：`on: pull_request: types: [closed]`)
 3. 创建一个 GitHub Actions `job`。
-   （例如：`jobs: archive_pr_branch`）
-4. 在且仅在拉取请求来自同一存储库时，运行在 `pull_request` 事件上。
-   ⚠️ 不要删除这一行！
-   处理 Fork PR 请参阅下文的 [Forks 的 Pull Requests][pull requests from forks]。
-   （例如：`if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`）
-5. 设置作业运行的机器类型。
-   有关完整概述，请参见 [GitHub Actions `runs-on` 文档][github actions runs-on]。
-   （例如：`runs-on: ubuntu-latest`）
-6. 检出 PR 分支的源代码。
-   （例如：`uses: actions/checkout@v4`）
+   (例如：`jobs: archive_pr_branch`)
+4. 仅当且仅当拉取请求来自同一存储库时才在 `pull_request` 事件上运行。
+   ⚠️ 切勿移除此行！
+   处理 Fork PR 请参见下面的 [来自 Fork 的自动请求][pull requests from forks]。
+   (例如：`if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. 设置作业运行所需的机器类型。
+   参见 [GitHub Actions `runs-on` 文档][github actions runs-on]
+   以获取完整概述。
+   (例如：`runs-on: ubuntu-latest`)
+6. 签出 PR 分支源代码。
+   (例如：`uses: actions/checkout@v4`)
 7. 使用 [GitHub Action][bencher cli github action] 安装 Bencher CLI。
-   （例如：`uses: bencherdev/bencher@main`）
-8. 使用 `bencher archive` CLI 子命令存档 PR 分支。
-   （例如：`bencher archive`）
-9.  将 `--project` 选项设置为项目标识符。
-    有关更多详细信息，请参阅 [`--project` 文档][project option]。
-    （例如：`--project save-walter-white-1234abcd`）
-10. 将 `--token` 选项设置为 **仓库** 密钥 `BENCHER_API_TOKEN`。
-    有关更多详细信息，请参阅 [`--token` 文档][token option]。
-    （例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`）
-11. 使用 [GitHub Actions `github` 上下文][github actions context] 将 `--branch` 选项设置为 PR 分支名。
-    （例如：`--branch "$GITHUB_HEAD_REF"`）
+   (例如：`uses: bencherdev/bencher@main`)
+8. 使用 `bencher archive` CLI 子命令归档 PR 分支。
+   (例如：`bencher archive`)
+9. 设置 `--project` 选项为项目的 slug。
+    查看 [`--project` 文档][project option] 以获取更多详细信息。
+    (例如：`--project save-walter-white-1234abcd`)
+10. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **存储库**密钥。
+    查看 [`--token` 文档][token option] 以获取更多详细信息。
+    (例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+11. 使用 [GitHub Actions `GITHUB_HEAD_REF` 默认环境变量][github default environment variables] 将 `--branch` 选项设置为 PR 分支名称。
+    (例如：`--branch "$GITHUB_HEAD_REF"`)
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+
+[github actions on]: https://docs.github.com/zh/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/zh/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/zh/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github default environment variables]: https://docs.github.com/zh/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
 [token option]: /zh/docs/explanation/bencher-run/#--token-token

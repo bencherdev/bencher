@@ -1,45 +1,44 @@
 import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 
-PR이 닫힌 후 포크 PR 브랜치를 정리하려면,
-`closed` 타입의 `pull_request` 이벤트를 실행하는 별도의 워크플로를 만들어야 합니다.
-이 워크플로는 `bencher archive` 명령을 사용하여 포크 PR 브랜치를 아카이브합니다.
+포크 PR 브랜치를 PR이 종료된 후 정리하려면,
+`pull_request_target` 이벤트 중 `closed` 타입으로 실행되는 별도의 워크플로를 생성할 수 있습니다.
+이 워크플로는 `bencher archive` 명령어를 사용하여 포크 PR 브랜치를 아카이브합니다.
 
 <PullRequestsForkClosedCode />
 
 1. GitHub Actions `workflow` 파일을 생성합니다.
    (예: `.github/workflows/fork_pr_benchmarks_closed.yml`)
-2. `pull_request` 이벤트에서 실행합니다:
-   - `closed` - 풀 리퀘스트가 닫혔습니다.
+2. `pull_request_target` 이벤트에서 실행하십시오:
+   - `closed` - 풀 리퀘스트가 종료되었습니다.
 
-   전체 개요는 [GitHub Actions `on` 문서][github actions on]와
-   [GitHub Actions `pull_request` 문서][github action pull_request]를 참조하세요.
-   (예: `on: pull_request: types: [closed]`)
+   전체 개요는 [GitHub Actions `on` 문서][github actions on]
+   및 [GitHub Actions `pull_request_target` 문서][github action pull_request_target]를 참조하십시오.
+   (예: `on: pull_request_target: types: [closed]`)
 3. GitHub Actions `job`을 생성합니다.
    (예: `jobs: archive_pr_branch`)
-4. 작업이 실행될 머신 유형을 설정하세요.
-   전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참고하세요.
+4. 작업이 실행될 머신 유형을 설정하십시오.
+   전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참조하십시오.
    (예: `runs-on: ubuntu-latest`)
 5. PR 브랜치 소스 코드를 체크아웃합니다.
    (예: `uses: actions/checkout@v4`)
 6. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
    (예: `uses: bencherdev/bencher@main`)
-7. `bencher archive` CLI 하위 명령을 사용하여 PR 브랜치를 아카이브합니다.
+7. PR 브랜치를 아카이브하기 위해 `bencher archive` CLI 서브커맨드를 사용합니다.
    (예: `bencher archive`)
-8.  `--project` 옵션을 프로젝트 슬러그로 설정합니다.
-    자세한 내용은 [`--project` 문서][project option]를 참조하세요.
-    (예: `--project save-walter-white-1234abcd`)
-9.  `--token` 옵션을 `BENCHER_API_TOKEN` **저장소** 비밀로 설정합니다.
-    자세한 내용은 [`--token` 문서][token option]를 참고하세요.
-    (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-10. [GitHub Actions `github` 컨텍스트][github actions context]를 사용하여 PR 브랜치 이름으로
-    `--branch` 옵션을 설정합니다.
+8. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+   자세한 사항은 [ `--project` 문서][project option]를 참조하십시오.
+   (예: `--project save-walter-white-1234abcd`)
+9. `--token` 옵션을 `BENCHER_API_TOKEN` **저장소** 시크릿으로 설정합니다.
+   자세한 사항은 [ `--token` 문서][token option]를 참조하십시오.
+   (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
     (예: `--branch "$GITHUB_HEAD_REF"`)
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[github actions on]: https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request_target]: https://docs.github.com/ko/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request_target
+[github actions runs-on]: https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github default environment variables]: https://docs.github.com/ko/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
 [token option]: /ko/docs/explanation/bencher-run/#--token-token

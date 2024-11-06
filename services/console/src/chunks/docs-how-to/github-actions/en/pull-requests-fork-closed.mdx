@@ -1,19 +1,19 @@
 import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 
 To clean up the fork PR branch after its PR is closed,
-you can create a separate workflow to run `on` `pull_request` events with the `closed` type.
+you can create a separate workflow to run `on` `pull_request_target` events with the `closed` type.
 This workflow will archive the fork PR branch using the `bencher archive` command.
 
 <PullRequestsForkClosedCode />
 
 1. Create a GitHub Actions `workflow` file.
    (ex: `.github/workflows/fork_pr_benchmarks_closed.yml`)
-2. Run on `pull_request` events:
+2. Run on `pull_request_target` events:
    - `closed` - A pull request was closed.
 
    See the [GitHub Actions `on` documentation][github actions on]
-   and [GitHub Actions `pull_request` documentation][github action pull_request] for a full overview.
-   (ex: `on: pull_request: types: [closed]`)
+   and [GitHub Actions `pull_request_target` documentation][github action pull_request_target] for a full overview.
+   (ex: `on: pull_request_target: types: [closed]`)
 3. Create a GitHub Actions `job`.
    (ex: `jobs: archive_pr_branch`)
 4. Set the type of machine the job will run on.
@@ -37,7 +37,7 @@ This workflow will archive the fork PR branch using the `bencher archive` comman
     (ex: `--branch "$GITHUB_HEAD_REF"`)
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github action pull_request_target]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request_target
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github default environment variables]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables

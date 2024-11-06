@@ -1,27 +1,27 @@
 import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
 
-Pour nettoyer la branche de PR après la fermeture de sa PR,
-vous pouvez créer un workflow séparé pour s'exécuter `on` des événements `pull_request` avec le type `closed`.
-Ce workflow archivera la branche de la PR en utilisant la commande `bencher archive`.
+Pour nettoyer la branche PR après la fermeture de la PR,
+vous pouvez créer un flux de travail séparé pour s'exécuter `on` des événements `pull_request` avec le type `closed`.
+Ce flux de travail archivera la branche PR en utilisant la commande `bencher archive`.
 
 <PullRequestsClosedCode />
 
 1. Créez un fichier `workflow` GitHub Actions.
    (ex: `.github/workflows/pr_benchmarks_closed.yml`)
-2. S'exécuter sur les événements `pull_request`:
+2. Exécutez sur les événements `pull_request` :
    - `closed` - Une pull request a été fermée.
 
-   Voir la [documentation GitHub Actions `on`][github actions on]
+   Consultez la [documentation GitHub Actions `on`][github actions on]
    et la [documentation GitHub Actions `pull_request`][github action pull_request] pour un aperçu complet.
    (ex: `on: pull_request: types: [closed]`)
 3. Créez un `job` GitHub Actions.
    (ex: `jobs: archive_pr_branch`)
-4. S'exécuter sur les événements `pull_request` uniquement si la pull request provient du même dépôt.
-   ⚠️ NE SUPPRIMEZ PAS CETTE LIGNE !
-   Pour le traitement des PRs provenant de Forks, voir [Pull Requests depuis les Forks][pull requests from forks] ci-dessous.
+4. Exécutez sur les événements `pull_request` uniquement si la pull request provient du même dépôt.
+   ⚠️ NE PAS SUPPRIMER CETTE LIGNE !
+   Pour gérer les PRs de fork, voir [Pull Requests de Forks][pull requests from forks] ci-dessous.
    (ex: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
 5. Définissez le type de machine sur lequel le job s'exécutera.
-   Voir la [documentation GitHub Actions `runs-on`][github actions runs-on]
+   Voir la [documentation `runs-on` GitHub Actions][github actions runs-on]
    pour un aperçu complet.
    (ex: `runs-on: ubuntu-latest`)
 6. Validez le code source de la branche PR.
@@ -30,22 +30,22 @@ Ce workflow archivera la branche de la PR en utilisant la commande `bencher arch
    (ex: `uses: bencherdev/bencher@main`)
 8. Utilisez la sous-commande CLI `bencher archive` pour archiver la branche PR.
    (ex: `bencher archive`)
-9.  Définissez l'option `--project` sur le slug du Projet.
-    Voir [les docs `--project`][project option] pour plus de détails.
+9. Configurez l'option `--project` sur le slug du projet.
+    Consultez les [documents `--project`][project option] pour plus de détails.
     (ex: `--project save-walter-white-1234abcd`)
-10. Définissez l'option `--token` sur le secret du **dépôt** `BENCHER_API_TOKEN`.
-    Voir [les docs `--token`][token option] pour plus de détails.
+10. Configurez l'option `--token` avec le secret du **Dépôt** `BENCHER_API_TOKEN`.
+    Consultez les [documents `--token`][token option] pour plus de détails.
     (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-11. Définissez l'option `--branch` sur le nom de la branche PR
-    en utilisant [le contexte `github` des GitHub Actions][github actions context].
+11. Configurez l'option `--branch` sur le nom de la branche PR
+    en utilisant [la variable d'environnement par défaut `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
     (ex: `--branch "$GITHUB_HEAD_REF"`)
 
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[github actions on]: https://docs.github.com/fr/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/fr/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/fr/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github default environment variables]: https://docs.github.com/fr/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /fr/docs/explanation/bencher-run/#--project-project
 [token option]: /fr/docs/explanation/bencher-run/#--token-token

@@ -3,109 +3,109 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 
 ## Pull Requests
 
-Para detectar regresión de rendimiento en Pull Requests, necesitarás ejecutar tus pruebas comparativas en PRs.
-Si solo esperas tener PRs de ramas dentro del **mismo** repositorio
+Para detectar regresiones de rendimiento en las Pull Requests, necesitarás ejecutar tus benchmarks en las PRs.
+Si solo esperas tener PRs desde ramas dentro del **mismo** repositorio,
 entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` eventos de `pull_request` desde el mismo repositorio.
 
-> ⚠️ ¡Esta solución solo funciona si todos los PRs son del **mismo** repositorio!
-> Ve [Pull Requests desde Forks][pull requests from forks] más abajo.
+> ⚠️ ¡Esta solución solo funciona si todas las PRs son del **mismo** repositorio!
+> Consulta [Pull Requests desde Forks][pull requests from forks] a continuación.
 
 <PullRequestsCode />
 
 1. Crea un archivo de `workflow` de GitHub Actions.
    (ej: `.github/workflows/pr_benchmarks.yml`)
 2. Ejecuta en eventos de `pull_request`:
-   - `opened` - Se ha creado un pull request.
-   - `reopened` - Un pull request previamente cerrado fue reabierto.
-   - `edited` - El título o cuerpo de un pull request fue editado, o la rama base de un pull request fue cambiada.
-   - `synchronize` - La rama principal de un pull request fue actualizada.
-   Por ejemplo, la rama principal fue actualizada desde la rama base o se empujaron nuevos commits a la rama principal.
+   - `opened` - Se creó una pull request.
+   - `reopened` - Se reabrió una pull request previamente cerrada.
+   - `edited` - Se editó el título o el cuerpo de una pull request, o se cambió la rama base de una pull request.
+   - `synchronize` - Se actualizó la rama de encabezado de una pull request.
+   Por ejemplo, se actualizó la rama de encabezado desde la rama base o se hicieron nuevos commits a la rama de encabezado.
 
-   Consulta la [documentación de `on` de GitHub Actions][github actions on]
-   y la [documentación de `pull_request` de GitHub Actions][github action pull_request] para una visión completa.
+   Revisa la documentación de [GitHub Actions `on`][github actions on]
+   y la documentación de [GitHub Actions `pull_request`][github action pull_request] para una visión completa.
    (ej: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
 3. Crea un `job` de GitHub Actions.
    (ej: `jobs: benchmark_pr_branch`)
-4. Ejecuta en eventos de `pull_request` si y solo si el pull request es del mismo repositorio.
+4. Ejecuta en eventos de `pull_request` si y solo si la pull request es del mismo repositorio.
    ⚠️ ¡NO ELIMINES ESTA LÍNEA!
-   Para manejar PRs de Forks ve [Pull Requests desde Forks][pull requests from forks] más abajo.
+   Para manejar PRs de Forks, consulta [Pull Requests desde Forks][pull requests from forks] a continuación.
    (ej: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Asigna [los permisos para el `GITHUB_TOKEN`][github token permissions]
+5. Establece [los permisos para el `GITHUB_TOKEN`][github token permissions]
    a `write` para `pull-requests`.
-   Dependiendo de tus configuraciones de GitHub, esto podría no ser requerido.
-   Pero para todas las organizaciones y repositorios personales
+   Dependiendo de tu configuración de GitHub, esto puede no ser necesario.
+   Pero para todas las organizaciones y repos personales
    [creados después del 02 de febrero de 2023][github token read only],
    este es el comportamiento predeterminado.
    Consulta [la documentación de GitHub][github token permissions security]
    para una visión completa.
    (ej: `permissions: pull-requests: write`)
-6. Establece el tipo de máquina en el que el trabajo se ejecutará.
-   Consulta la [documentación de `runs-on` de GitHub Actions][github actions runs-on]
+6. Establece el tipo de máquina en la que se ejecutará el trabajo.
+   Consulta la documentación de [GitHub Actions `runs-on`][github actions runs-on]
    para una visión completa.
    (ej: `runs-on: ubuntu-latest`)
-7. Revisa el código fuente de la rama del PR.
+7. Clona el código fuente de la rama PR.
    (ej: `uses: actions/checkout@v4`)
-8. Instala el Bencher CLI usando [la acción de GitHub][bencher cli github action].
+8. Instala el Bencher CLI usando [la GitHub Action][bencher cli github action].
    (ej: `uses: bencherdev/bencher@main`)
-9. Usa el subcomando de la CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> 
-   para ejecutar tus pruebas comparativas de la rama del pull request.
-   Consulta el [subcomando`bencher run` de la CLI][bencher run] para una visión completa.
+9. Usa la subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   para ejecutar tus benchmarks de la rama de la pull request.
+   Consulta [la subcomando CLI `bencher run`][bencher run] para una visión completa.
    (ej: `bencher run`)
 10. Establece la opción `--project` al slug del Proyecto.
-    Consulta [la documentación de la opción `--project`][project option] para más detalles.
+    Consulta [los documentos de `--project`][project option] para más detalles.
     (ej: `--project save-walter-white-1234abcd`)
-11. Establece la opción `--token` al secreto del **Repositorio** `BENCHER_API_TOKEN`.
-    Consulta [la documentación de la opción `--token`][token option] para más detalles.
+11. Establece la opción `--token` al secreto **Repository** `BENCHER_API_TOKEN`.
+    Consulta [los documentos de `--token`][token option] para más detalles.
     (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-12. Establece la opción `--branch` al nombre de la rama del PR
-    usando [el contexto de `github` de GitHub Actions][github actions context].
-    Consulta [la documentación de la opción `--branch`][branch option] para una visión completa.
+12. Establece la opción `--branch` al nombre de la rama PR
+    usando [la variable de entorno predeterminada `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
+    Consulta [los documentos de `--branch`][branch option] para una visión completa.
     (ej: `--branch "$GITHUB_HEAD_REF"`)
-13. Establece el Punto de Inicio para la Rama del PR:
-    1. Establece la opción `--start-point` al punto de inicio de la Rama del PR
-    usando [el contexto de `github` de GitHub Actions][github actions context].
-    Consulta [la documentación de la opción `--start-point`][start point] para una visión completa.
+13. Establece el Punto de Inicio para la Rama PR:
+    1. Establece la opción `--start-point` al punto de inicio de la Rama PR
+    usando [la variable de entorno predeterminada `GITHUB_BASE_REF` de GitHub Actions][github default environment variables].
+    Consulta [los documentos de `--start-point`][start point] para una visión completa.
     (ej: `--start-point "$GITHUB_BASE_REF"`)
-    2. Establece la opción `--start-point-hash` al hash `git` del punto de inicio de la Rama del PR
+    2. Establece la opción `--start-point-hash` al hash `git` del punto de inicio de la Rama PR
     usando [el evento `pull_request` de GitHub Actions][github action pull_request].
-    Consulta [la documentación de la opción `--start-point-hash`][start point hash] para una visión completa.
+    Consulta [los documentos de `--start-point-hash`][start point hash] para una visión completa.
     (ej: `--start-point-hash '${{ github.event.pull_request.base.sha }}'`)
-    3. Establece el indicador `--start-point-clone-thresholds` para clonar los Umbrales desde el punto de inicio.
-    Consulta [la documentación de la opción `--start-point-clone-thresholds`][start point clone thresholds] para una visión completa.
+    3. Establece la bandera `--start-point-clone-thresholds` para clonar los Umbrales desde el punto de inicio.
+    Consulta [los documentos de `--start-point-clone-thresholds`][start point clone thresholds] para una visión completa.
     (ej: `--start-point-clone-thresholds`)
-    4. Establece el indicador `--start-point-reset` para siempre restablecer la Rama del PR al punto de inicio.
-    Esto evitará la deriva de datos de referencias.
-    Consulta [la documentación de la opción `--start-point-reset`][start point reset] para una visión completa.
+    4. Establece la bandera `--start-point-reset` para siempre restablecer la Rama PR al punto de inicio.
+    Esto evitará la deriva de datos de benchmark.
+    Consulta [los documentos de `--start-point-reset`][start point reset] para una visión completa.
     (ej: `--start-point-reset`)
-14. Establece la opción `--testbed` al nombre del Banco de Pruebas.
-    Esto probablemente debe coincidir con la máquina seleccionada en `runs-on`.
-    Consulta [la documentación de la opción `--testbed`][testbed option] para más detalles.
+14. Establece la opción `--testbed` al nombre del Testbed.
+    Esto debería coincidir con la máquina seleccionada en `runs-on`.
+    Consulta [los documentos de `--tested`][testbed option] para más detalles.
     (ej: `--testbed ubuntu-latest`)
-15. Establece el indicador `--err` para que el comando falle si se genera una Alerta.
-   Consulta [la documentación de la opción `--err`][alert err] para una visión completa.
+15. Establece la bandera `--err` para fallar el comando si se genera una Alerta.
+   Consulta [los documentos de `--err`][alert err] para una visión completa.
    (ej: `--err`)
-16. Configura la opción `--adapter` a [Formato Métrico de Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
-   Consulta [los adaptadores del marco de referencia][adapter json] para una visión completa.
+16. Establece la opción `--adapter` al [Formato de Métrica Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
    (ej: `--adapter json`)
-17. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como comentario en el Pull Request usando
+17. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como un comentario en la Pull Request usando
     [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
-    Consulta [la documentación de la opción `--github-actions`][github actions option] para más detalles.
+    Consulta [los documentos de `--github-actions`][github actions option] para más detalles.
     (ej: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. Especifica los argumentos del comando de referencia.
-    Consulta [comando de referencia][command argument] para una visión completa.
+18. Especifica los argumentos del comando de benchmark.
+    Consulta [comando de benchmark][command argument] para una visión completa.
     (ej: `bencher mock`)
 
 <PullRequestsClosed />
 
-[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
-[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github actions on]: https://docs.github.com/es/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/es/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/es/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
 [github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
-[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[github token permissions security]: https://docs.github.com/es/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/es/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
-[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+[github default environment variables]: https://docs.github.com/es/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
+[github token]: https://docs.github.com/es/actions/security-guides/automatic-token-authentication
 
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
