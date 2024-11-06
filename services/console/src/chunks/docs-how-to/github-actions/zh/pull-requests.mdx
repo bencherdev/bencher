@@ -50,11 +50,11 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
     (例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 12. 使用 [GitHub Actions `github` 上下文][github actions context] 设置 `--branch` 选项为 PR 分支名。
     查看 [`--branch` 文档][branch option] 的完整概述。
-    (例如：`--branch '${{ github.head_ref }}'`)
+    (例如：`--branch "$GITHUB_HEAD_REF"`)
 13. 设置 PR 分支的起始点：
     1. 使用 [GitHub Actions `github` 上下文][github actions context] 设置 `--start-point` 选项为 PR 分支起始点。
        查看 [`--start-point` 文档][start point] 的完整概述。
-       (例如：`--start-point '${{ github.base_ref }}'`)
+       (例如：`--start-point "$GITHUB_BASE_REF"`)
     2. 使用 [GitHub Actions `pull_request` 事件][github action pull_request] 设置 `--start-point-hash` 选项为 PR 分支起始点 `git` 哈希。
        查看 [`--start-point-hash` 文档][start point hash] 的完整概述。
        (例如：`--start-point-hash '${{ github.event.pull_request.base.sha }}'`)

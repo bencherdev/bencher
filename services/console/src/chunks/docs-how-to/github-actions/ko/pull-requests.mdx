@@ -53,11 +53,11 @@ Pull Request에서 성능 회귀를 포착하기 위해서는 PR에서 벤치마
     (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 12. [GitHub Actions `github` 컨텍스트][github actions context]를 사용하여 PR 분기 이름으로 `--branch` 옵션을 설정합니다.
     전체 개요는 [the `--branch` 문서][branch option]를 참조하십시오.
-    (예: `--branch '${{ github.head_ref }}'`)
+    (예: `--branch "$GITHUB_HEAD_REF"`)
 13. PR 분기의 시작점을 설정합니다:
     1. [GitHub Actions `github` 컨텍스트][github actions context]를 사용하여 PR 분기 시작점에 `--start-point` 옵션을 설정합니다.
     전체 개요는 [the `--start-point` 문서][start point]를 참조하십시오.
-    (예: `--start-point '${{ github.base_ref }}'`)
+    (예: `--start-point "$GITHUB_BASE_REF"`)
     2. [GitHub Actions `pull_request` 이벤트][github action pull_request]를 사용하여 PR 분기 시작점 `git` 해시에 `--start-point-hash` 옵션을 설정합니다.
     전체 개요는 [the `--start-point-hash` 문서][start point hash]를 참조하십시오.
     (예: `--start-point-hash '${{ github.event.pull_request.base.sha }}'`)

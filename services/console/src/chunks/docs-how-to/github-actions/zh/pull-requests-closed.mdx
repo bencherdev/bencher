@@ -35,7 +35,7 @@ import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
     有关更多详细信息，请参阅 [`--token` 文档][token option]。
     （例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`）
 11. 使用 [GitHub Actions `github` 上下文][github actions context] 将 `--branch` 选项设置为 PR 分支名。
-    （例如：`--branch '${{ github.head_ref }}'`）
+    （例如：`--branch "$GITHUB_HEAD_REF"`）
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request

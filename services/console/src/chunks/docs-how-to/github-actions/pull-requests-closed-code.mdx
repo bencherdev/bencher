@@ -17,5 +17,5 @@ jobs:
           bencher archive \
           --project save-walter-white-1234abcd \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
-          --branch '${{ github.head_ref }}'
+          --branch "$GITHUB_HEAD_REF"
 ```

@@ -60,12 +60,12 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
 12. Establece la opción `--branch` al nombre de la rama del PR
     usando [el contexto de `github` de GitHub Actions][github actions context].
     Consulta [la documentación de la opción `--branch`][branch option] para una visión completa.
-    (ej: `--branch '${{ github.head_ref }}'`)
+    (ej: `--branch "$GITHUB_HEAD_REF"`)
 13. Establece el Punto de Inicio para la Rama del PR:
     1. Establece la opción `--start-point` al punto de inicio de la Rama del PR
     usando [el contexto de `github` de GitHub Actions][github actions context].
     Consulta [la documentación de la opción `--start-point`][start point] para una visión completa.
-    (ej: `--start-point '${{ github.base_ref }}'`)
+    (ej: `--start-point "$GITHUB_BASE_REF"`)
     2. Establece la opción `--start-point-hash` al hash `git` del punto de inicio de la Rama del PR
     usando [el evento `pull_request` de GitHub Actions][github action pull_request].
     Consulta [la documentación de la opción `--start-point-hash`][start point hash] para una visión completa.

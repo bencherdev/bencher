@@ -59,12 +59,12 @@ können Sie einfach einen weiteren Workflow erstellen, um `on`-`pull_request`-Er
 12. Setzen Sie die `--branch`-Option auf den PR-Branch-Namen
     mithilfe des [GitHub Actions `github` Kontexts][github actions context].
     Siehe [die `--branch`-Dokumentation][branch option] für einen vollständigen Überblick.
-    (z. B.: `--branch '${{ github.head_ref }}'`)
+    (z. B.: `--branch "$GITHUB_HEAD_REF"`)
 13. Setzen Sie den Startpunkt für den PR-Branch:
     1. Setzen Sie die `--start-point`-Option auf den Startpunkt des PR-Branches
     mithilfe des [GitHub Actions `github` Kontexts][github actions context].
     Siehe [die `--start-point`-Dokumentation][start point] für einen vollständigen Überblick.
-    (z. B.: `--start-point '${{ github.base_ref }}'`)
+    (z. B.: `--start-point "$GITHUB_BASE_REF"`)
     2. Setzen Sie die `--start-point-hash`-Option auf den `git`-Hash des Startpunkts des PR-Branches
     mithilfe des [GitHub Actions `pull_request` Ereignisses][github action pull_request].
     Siehe [die `--start-point-hash`-Dokumentation][start point hash] für einen vollständigen Überblick.

@@ -36,7 +36,7 @@ PR이 닫힌 후 해당 브랜치를 정리하기 위해서,
     (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 11. [GitHub Actions `github` 컨텍스트][github actions context]를 사용하여
    PR 브랜치 이름을 `--branch` 옵션으로 설정하세요.
-    (예: `--branch '${{ github.head_ref }}'`)
+    (예: `--branch "$GITHUB_HEAD_REF"`)
 
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on

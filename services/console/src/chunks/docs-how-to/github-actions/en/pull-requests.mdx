@@ -58,14 +58,14 @@ then you can simply create another workflow to run `on` `pull_request` events fr
     See [the `--token` docs][token option] for more details.
     (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 12. Set the `--branch` option to the PR branch name
-    using [the GitHub Actions `github` context][github actions context].
+    using [the GitHub Actions `GITHUB_HEAD_REF` default environment variable][github default environment variables].
     See [the `--branch` docs][branch option] for a full overview.
-    (ex: `--branch '${{ github.head_ref }}'`)
+    (ex: `--branch "$GITHUB_HEAD_REF"`)
 13. Set the Start Point for the PR Branch:
     1. Set the `--start-point` option to the PR Branch start point
-    using [the GitHub Actions `github` context][github actions context].
+    using [the GitHub Actions `GITHUB_BASE_REF` default environment variable][github default environment variables].
     See [the `--start-point` docs][start point] for a full overview.
-    (ex: `--start-point '${{ github.base_ref }}'`)
+    (ex: `--start-point "$GITHUB_BASE_REF"`)
     2. Set the `--start-point-hash` option to the PR Branch start point `git` hash
     using [the GitHub Actions `pull_request` event][github action pull_request].
     See [the `--start-point-hash` docs][start point hash] for a full overview.
@@ -104,7 +104,7 @@ then you can simply create another workflow to run `on` `pull_request` events fr
 [github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github default environment variables]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 [github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 
 [bencher run]: /docs/explanation/bencher-run/

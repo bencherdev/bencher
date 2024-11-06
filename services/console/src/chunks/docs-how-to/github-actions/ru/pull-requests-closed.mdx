@@ -38,7 +38,7 @@ import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
     (например, `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 11. Установите опцию `--branch` на имя ветки PR
     используя [контекст `github` GitHub Actions][github actions context].
-    (например, `--branch '${{ github.head_ref }}'`)
+    (например, `--branch "$GITHUB_HEAD_REF"`)
 
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on

@@ -37,15 +37,15 @@ This workflow will archive the PR branch using the `bencher archive` command.
     See [the `--token` docs][token option] for more details.
     (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 11. Set the `--branch` option to the PR branch name
-    using [the GitHub Actions `github` context][github actions context].
-    (ex: `--branch '${{ github.head_ref }}'`)
+    using [the GitHub Actions `GITHUB_HEAD_REF` default environment variable][github default environment variables].
+    (ex: `--branch "$GITHUB_HEAD_REF"`)
 
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
 [github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
-[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github default environment variables]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /docs/explanation/bencher-run/#--project-project
 [token option]: /docs/explanation/bencher-run/#--token-token

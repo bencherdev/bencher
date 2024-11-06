@@ -60,12 +60,12 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 12. Установите опцию `--branch` для имени ветки PR
     с использованием [контекста `github` в GitHub Actions][github actions context].
     См. [документацию `--branch`][branch option] для полного обзора.
-    (пример: `--branch '${{ github.head_ref }}'`)
+    (пример: `--branch "$GITHUB_HEAD_REF"`)
 13. Установите начальную точку для ветки PR:
     1. Установите опцию `--start-point` для начальной точки ветки PR
     с использованием [контекста `github` в GitHub Actions][github actions context].
     См. [документацию `--start-point`][start point] для полного обзора.
-    (пример: `--start-point '${{ github.base_ref }}'`)
+    (пример: `--start-point "$GITHUB_BASE_REF"`)
     2. Установите опцию `--start-point-hash` для хеша `git` начальной точки ветки PR
     с использованием [события `pull_request` в GitHub Actions][github action pull_request].
     См. [документацию `--start-point-hash`][start point hash] для полного обзора.

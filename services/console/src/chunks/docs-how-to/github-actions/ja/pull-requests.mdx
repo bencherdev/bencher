@@ -55,12 +55,12 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 12. `--branch`オプションをPRブランチ名に設定し
     [GitHub Actionsの`github`コンテキスト][github actions context]を使用します。
     詳細は[こちらの`--branch`ドキュメント][branch option]を参照してください。
-    (例: `--branch '${{ github.head_ref }}'`)
+    (例: `--branch "$GITHUB_HEAD_REF"`)
 13. PRブランチの開始ポイントを設定します:
     1. `--start-point`オプションをPRブランチの開始ポイントに設定し
     [GitHub Actionsの`github`コンテキスト][github actions context]を使用します。
     詳細は[こちらの`--start-point`ドキュメント][start point]を参照してください。
-    (例: `--start-point '${{ github.base_ref }}'`)
+    (例: `--start-point "$GITHUB_BASE_REF"`)
     2. `--start-point-hash`オプションをPRブランチの開始ポイント`git`ハッシュに設定し
     [GitHub Actionsの`pull_request`イベント][github action pull_request]を使用します。
     詳細は[こちらの`--start-point-hash`ドキュメント][start point hash]を参照してください。

@@ -60,12 +60,12 @@ então pode simplesmente criar outro fluxo de trabalho para rodar eventos `on` `
 12. Defina a opção `--branch` para o nome do branch do PR
     usando [o contexto `github` do GitHub Actions][github actions context].
     Veja [a documentação `--branch`][branch option] para uma visão geral completa.
-    (ex: `--branch '${{ github.head_ref }}'`)
+    (ex: `--branch "$GITHUB_HEAD_REF"`)
 13. Defina o Ponto Inicial para o Branch do PR:
     1. Defina a opção `--start-point` para o ponto inicial do Branch do PR
     usando [o contexto `github` do GitHub Actions][github actions context].
     Veja [a documentação `--start-point`][start point] para uma visão geral completa.
-    (ex: `--start-point '${{ github.base_ref }}'`)
+    (ex: `--start-point "$GITHUB_BASE_REF"`)
     2. Defina a opção `--start-point-hash` para o `git` hash do ponto inicial do Branch do PR
     usando [o evento `pull_request` do GitHub Actions][github action pull_request].
     Veja [a documentação `--start-point-hash`][start point hash] para uma visão geral completa.

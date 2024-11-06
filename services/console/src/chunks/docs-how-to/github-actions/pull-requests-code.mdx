@@ -19,8 +19,8 @@ jobs:
           bencher run \
           --project save-walter-white-1234abcd \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
-          --branch '${{ github.head_ref }}' \
-          --start-point '${{ github.base_ref }}' \
+          --branch "$GITHUB_HEAD_REF" \
+          --start-point "$GITHUB_BASE_REF" \
           --start-point-hash '${{ github.event.pull_request.base.sha }}' \
           --start-point-clone-thresholds \
           --start-point-reset \

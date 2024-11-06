@@ -30,7 +30,7 @@ import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
     詳細は[`--token` ドキュメント][token option]を参照してください。
     (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 10. [GitHub Actions `github` コンテキスト][github actions context]を使用してPRブランチ名を`--branch` オプションに設定します。
-    (例: `--branch '${{ github.head_ref }}'`)
+    (例: `--branch "$GITHUB_HEAD_REF"`)
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request

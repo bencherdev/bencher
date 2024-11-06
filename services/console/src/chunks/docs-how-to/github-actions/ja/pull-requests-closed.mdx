@@ -33,7 +33,7 @@ GitHubのPRがクローズされた後にPRブランチをクリーンアップ�
     詳細は[`--token`のドキュメント][token option]を参照してください。
     (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 11. GitHub Actionsの`github`コンテキストを使用して、PRブランチ名に`--branch`オプションを設定します。
-    (例: `--branch '${{ github.head_ref }}'`)
+    (例: `--branch "$GITHUB_HEAD_REF"`)
 
 
 [github actions on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#on

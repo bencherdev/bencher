@@ -38,7 +38,7 @@ Este fluxo de trabalho arquivará a branch do PR usando o comando `bencher archi
     (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 11. Defina a opção `--branch` para o nome da branch do PR
     usando [o contexto `github` do GitHub Actions][github actions context].
-    (ex: `--branch '${{ github.head_ref }}'`)
+    (ex: `--branch "$GITHUB_HEAD_REF"`)
 
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on

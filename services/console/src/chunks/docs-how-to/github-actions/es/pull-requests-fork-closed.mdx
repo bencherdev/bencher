@@ -34,7 +34,7 @@ Este flujo de trabajo archivará la rama del PR bifurcado utilizando el comando 
     (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 10. Establezca la opción `--branch` en el nombre de la rama del PR
     utilizando [el contexto `github` de GitHub Actions][github actions context].
-    (ej: `--branch '${{ github.head_ref }}'`)
+    (ej: `--branch "$GITHUB_HEAD_REF"`)
 
 [github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 [github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
