@@ -2,13 +2,19 @@
 
 <br />
 
-Optionnel : Définir le jeton d'authentification de l'API GitHub (par exemple `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-Lorsque cette option est définie et que `bencher run` est utilisé dans GitHub Actions dans le cadre d'une demande de tirage,
-alors les résultats seront ajoutés à la demande de tirage en tant que commentaire.
-Sinon, les résultats seront ajoutés au commit en tant que commentaire de vérification GitHub.
-La façon la plus pratique de le faire est la [variable d'environnement `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+Optionnel : Définissez le jeton d'authentification de l'API GitHub.
+La manière la plus pratique de le faire est d'utiliser la [variable d'environnement `GITHUB_TOKEN` des GitHub Actions][github token] (c'est-à-dire `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+Lorsque cette option est définie et que `bencher run` est utilisé dans les GitHub Actions dans le cadre d'une pull request,
+les résultats seront alors ajoutés à la pull request en tant que commentaire.
+Cela nécessite que le jeton ait [le scope `pull-requests` avec les permissions `write`][github token permissions].
+Sinon, les résultats seront ajoutés au commit en tant que vérification GitHub.
+Cela nécessite que le jeton ait [le scope `checks` avec les permissions `write`][github token permissions].
+Dans les deux cas, les résultats seront également ajoutés au résumé du travail.
 
-> 🐰 Si vous exécutez à l'intérieur d'un conteneur Docker dans GitHub Action, vous devrez passer les variables d'environnement suivantes et monter le chemin spécifié par `GITHUB_EVENT_PATH`:
+[github token]: https://docs.github.com/fr/actions/security-guides/automatic-token-authentication
+[github token permissions]: https://docs.github.com/fr/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+
+> 🐰 Si vous exécutez à l'intérieur d'un conteneur Docker dans une action GitHub, vous devrez transmettre les variables d'environnement suivantes et monter le chemin spécifié par `GITHUB_EVENT_PATH` :
 > - `GITHUB_ACTIONS`
 > - `GITHUB_EVENT_NAME`
 > - `GITHUB_EVENT_PATH`

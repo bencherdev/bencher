@@ -158,12 +158,6 @@ impl GitHubActions {
     }
 
     pub async fn run(&self, report_comment: &ReportComment, log: bool) -> Result<(), GitHubError> {
-        // Only post to CI if there are thresholds set
-        if self.ci_only_thresholds && !report_comment.has_threshold() {
-            cli_println_quietable!(log, "No thresholds set. Skipping CI integration.");
-            return Ok(());
-        }
-
         if !is_github_actions() {
             cli_println_quietable!(
                 log,
@@ -173,7 +167,15 @@ impl GitHubActions {
             return Ok(());
         }
 
+        // Creating a job summary is not considered "posting" to CI,
+        // so it is done regardless of the `ci_only_thresholds` option.
         self.create_job_summary(report_comment);
+
+        // Only post to CI if there are thresholds set
+        if self.ci_only_thresholds && !report_comment.has_threshold() {
+            cli_println_quietable!(log, "No thresholds set. Skipping CI integration.");
+            return Ok(());
+        }
 
         let (event_str, event) = github_event()?;
         let issue_number = if let Some(issue_number) = self.ci_number {

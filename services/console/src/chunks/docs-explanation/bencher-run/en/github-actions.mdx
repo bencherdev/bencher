@@ -2,11 +2,17 @@
 
 <br />
 
-Optional: Set the GitHub API authentication token (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+Optional: Set the GitHub API authentication token.
+The most convenient way to do this is the [GitHub Actions `GITHUB_TOKEN` environment variable][github token] (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
 When this option is set and `bencher run` is used in GitHub Actions as a part of a pull request,
 then the results will be added to the pull request as a comment.
-Otherwise, the results will be added to the commit as a GitHub Check comment.
-The most convenient way to do this is the [GitHub Actions `GITHUB_TOKEN` environment variable](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+This requires the token to have [the `pull-requests` scope with `write` permissions][github token permissions].
+Otherwise, the results will be added to the commit as a GitHub Check.
+This requires the token to have [the `checks` scope with `write` permissions][github token permissions].
+In either case, the results will also be added to the job summary.
+
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+[github token permissions]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
 
 > 🐰 If you are running inside of a Docker container within GitHub Action, you will need to pass in the following environment variables and mount the path specified by `GITHUB_EVENT_PATH`:
 > - `GITHUB_ACTIONS`

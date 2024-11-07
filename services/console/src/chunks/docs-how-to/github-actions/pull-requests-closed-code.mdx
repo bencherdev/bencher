@@ -6,7 +6,7 @@ on:
 jobs:
   archive_pr_branch:
     name: Archive closed PR branch with Bencher
-     # DO NOT REMOVE: For handling Fork PRs see Pull Requests from Forks
+    # DO NOT REMOVE: For handling Fork PRs see Pull Requests from Forks
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:

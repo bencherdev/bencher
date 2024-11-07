@@ -2,13 +2,19 @@
 
 <br />
 
-Opcional: Defina o token de autenticação da API do GitHub (ou seja, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-Quando esta opção é configurada e `bencher run` é utilizado no GitHub Actions como parte de um pull request,
+Opcional: Defina o token de autenticação da API do GitHub.
+A maneira mais conveniente de fazer isso é usando a [variável de ambiente `GITHUB_TOKEN` do GitHub Actions][github token] (ou seja, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+Quando esta opção é definida e `bencher run` é usado no GitHub Actions como parte de um pull request,
 os resultados serão adicionados ao pull request como um comentário.
-Caso contrário, os resultados serão adicionados ao commit como um comentário de Verificação do GitHub.
-A maneira mais conveniente de fazer isso é a [variável de ambiente `GITHUB_TOKEN` do GitHub Actions](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+Isso requer que o token tenha [o escopo de `pull-requests` com permissões de `write`][github token permissions].
+Caso contrário, os resultados serão adicionados ao commit como uma Verificação do GitHub.
+Isso requer que o token tenha [o escopo de `checks` com permissões de `write`][github token permissions].
+Em ambos os casos, os resultados também serão adicionados ao resumo do trabalho.
 
-> 🐰 Se você estiver executando dentro de um contêiner Docker no GitHub Action, será necessário passar as seguintes variáveis de ambiente e montar o caminho especificado por `GITHUB_EVENT_PATH`:
+[github token]: https://docs.github.com/pt/actions/security-guides/automatic-token-authentication
+[github token permissions]: https://docs.github.com/pt/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+
+> 🐰 Se você estiver executando dentro de um contêiner Docker no GitHub Action, precisará passar as seguintes variáveis de ambiente e montar o caminho especificado por `GITHUB_EVENT_PATH`:
 > - `GITHUB_ACTIONS`
 > - `GITHUB_EVENT_NAME`
 > - `GITHUB_EVENT_PATH`

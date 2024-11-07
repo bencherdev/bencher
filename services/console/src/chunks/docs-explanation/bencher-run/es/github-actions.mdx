@@ -2,13 +2,19 @@
 
 <br />
 
-Opcional: Establece el token de autenticación de la API de GitHub (es decir, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+Opcional: Establezca el token de autenticación de la API de GitHub.
+La forma más conveniente de hacer esto es la [variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token] (es decir, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
 Cuando esta opción está configurada y `bencher run` se utiliza en GitHub Actions como parte de una solicitud de extracción,
 los resultados se agregarán a la solicitud de extracción como un comentario.
-De lo contrario, los resultados se agregarán al commit como un comentario de verificación de GitHub.
-La forma más conveniente de hacer esto es mediante la [variable de entorno `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+Esto requiere que el token tenga [el alcance `pull-requests` con permisos de `escritura`][github token permissions].
+De lo contrario, los resultados se agregarán al commit como una Verificación de GitHub.
+Esto requiere que el token tenga [el alcance `checks` con permisos de `escritura`][github token permissions].
+En cualquier caso, los resultados también se agregarán al resumen del trabajo.
 
-> 🐰 Si estás ejecutando dentro de un contenedor Docker en una Acción de GitHub, necesitarás pasar las siguientes variables de entorno y montar la ruta especificada por `GITHUB_EVENT_PATH`:
+[github token]: https://docs.github.com/es/actions/security-guides/automatic-token-authentication
+[github token permissions]: https://docs.github.com/es/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+
+> 🐰 Si está ejecutando dentro de un contenedor Docker dentro de una GitHub Action, necesitará pasar las siguientes variables de entorno y montar la ruta especificada por `GITHUB_EVENT_PATH`:
 > - `GITHUB_ACTIONS`
 > - `GITHUB_EVENT_NAME`
 > - `GITHUB_EVENT_PATH`
