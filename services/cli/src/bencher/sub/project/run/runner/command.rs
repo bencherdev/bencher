@@ -1,5 +1,6 @@
 use std::{fmt, process::Stdio};
 
+use chrono::Utc;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 use super::{flag::Flag, output::Output, shell::Shell};
@@ -50,6 +51,7 @@ impl Command {
     }
 
     pub async fn run(&self, log: bool) -> Result<Output, RunError> {
+        let start_time = Utc::now();
         let mut child = match self {
             Self::Shell {
                 shell,
@@ -115,6 +117,8 @@ impl Command {
         });
 
         let (status, stdout, stderr) = tokio::join!(child.wait(), stdout, stderr);
+        let end_time = Utc::now();
+
         let status = status.map_err(|err| RunError::RunCommand {
             command: self.clone(),
             err,
@@ -128,10 +132,26 @@ impl Command {
             err,
         })?;
 
+        // Calculate the duration of the command.
+        // I think seconds are the most reasonable unit of time for this.
+        // Two decimal places of sub-second precision should be enough.
+        // If not, then users should be using a benchmark instead.
+        let duration = end_time
+            .timestamp_nanos_opt()
+            .and_then(|end_time| end_time.checked_sub(start_time.timestamp_nanos_opt()?))
+            .and_then(|d| {
+                #[allow(clippy::cast_precision_loss)]
+                format!("{:.2}", (d as f64) / 1_000_000_000.0)
+                    .parse::<f64>()
+                    .ok()
+            })
+            .unwrap_or_default();
+
         Ok(Output {
             status: status.into(),
             stdout,
             stderr,
+            duration,
             result: None,
         })
     }

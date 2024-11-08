@@ -4,6 +4,7 @@ use std::fmt;
 
 use crate::parser::project::run::CliRunCommand;
 
+mod build_time;
 pub mod command;
 mod file_path;
 mod file_size;
@@ -12,6 +13,7 @@ pub mod output;
 mod pipe;
 mod shell;
 
+use build_time::BuildTime;
 use command::Command;
 use file_path::FilePath;
 use file_size::FileSize;
@@ -23,9 +25,9 @@ use super::RunError;
 #[derive(Debug, Clone)]
 pub enum Runner {
     Pipe(Pipe),
-    Command(Command),
+    Command(Command, Option<BuildTime>),
     CommandToFile(Command, FilePath),
-    CommandToFileSize(Command, FileSize),
+    CommandToFileSize(Command, Option<BuildTime>, FileSize),
     File(FilePath),
     FileSize(FileSize),
 }
@@ -49,12 +51,13 @@ impl TryFrom<CliRunCommand> for Runner {
                 }
                 Command::new_exec(program, arguments)
             };
+            let build_time = cmd.build_time.then_some(BuildTime);
             Ok(if let Some(file_path) = cmd.file {
                 Self::CommandToFile(command, FilePath::new(file_path))
             } else if let Some(file_paths) = cmd.file_size {
-                Self::CommandToFileSize(command, FileSize::new(file_paths))
+                Self::CommandToFileSize(command, build_time, FileSize::new(file_paths))
             } else {
-                Self::Command(command)
+                Self::Command(command, build_time)
             })
         } else if let Some(file_path) = cmd.file {
             Ok(Self::File(FilePath::new(file_path)))
@@ -72,12 +75,28 @@ impl fmt::Display for Runner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Pipe(pipe) => write!(f, "{pipe}"),
-            Self::Command(command) => write!(f, "{command}"),
+            Self::Command(command, build_time) => write!(
+                f,
+                "{command}{build_time}",
+                build_time = if build_time.is_some() {
+                    " (build time)"
+                } else {
+                    ""
+                }
+            ),
             Self::CommandToFile(command, file_path) => {
                 write!(f, "{command} > {file_path}")
             },
-            Self::CommandToFileSize(command, file_path) => {
-                write!(f, "{command} > {file_path} (size)")
+            Self::CommandToFileSize(command, build_time, file_path) => {
+                write!(
+                    f,
+                    "{command}{build_time} > {file_path} (size)",
+                    build_time = if build_time.is_some() {
+                        " (build time)"
+                    } else {
+                        ""
+                    }
+                )
             },
             Self::File(file_path) => write!(f, "{file_path}"),
             Self::FileSize(file_path) => write!(f, "{file_path} (size)"),
@@ -89,17 +108,15 @@ impl Runner {
     pub async fn run(&self, log: bool) -> Result<Output, RunError> {
         Ok(match self {
             Self::Pipe(pipe) => pipe.output(),
-            Self::Command(command) => command.run(log).await?,
+            Self::Command(command, build_time) => command.run(log).await?,
             Self::CommandToFile(command, file_path) => {
                 let mut output = command.run(log).await?;
-                let results = file_path.get_results()?;
-                output.result = Some(results);
+                output.file_path(file_path)?;
                 output
             },
-            Self::CommandToFileSize(command, file_size) => {
+            Self::CommandToFileSize(command, build_time, file_size) => {
                 let mut output = command.run(log).await?;
-                let results = file_size.get_results()?;
-                output.result = Some(results);
+                output.file_size(file_size)?;
                 output
             },
             Self::File(file_path) => {

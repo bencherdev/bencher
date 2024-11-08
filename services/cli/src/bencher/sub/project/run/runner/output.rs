@@ -1,10 +1,15 @@
 use std::fmt;
 
+use crate::RunError;
+
+use super::{file_path::FilePath, file_size::FileSize};
+
 #[derive(Debug, Clone, Default)]
 pub struct Output {
     pub status: ExitStatus,
     pub stdout: String,
     pub stderr: String,
+    pub duration: f64,
     pub result: Option<String>,
 }
 
@@ -39,6 +44,23 @@ impl fmt::Display for ExitStatus {
 }
 
 impl Output {
+    pub fn build_time(&mut self) -> Result<(), RunError> {
+        // TODO turn the duration into BMF JSON
+        Ok(())
+    }
+
+    pub fn file_path(&mut self, file_path: &FilePath) -> Result<(), RunError> {
+        let results = file_path.get_results()?;
+        self.result = Some(results);
+        Ok(())
+    }
+
+    pub fn file_size(&mut self, file_size: &FileSize) -> Result<(), RunError> {
+        let results = file_size.get_results()?;
+        self.result = Some(results);
+        Ok(())
+    }
+
     pub fn is_success(&self) -> bool {
         self.status.is_success()
     }

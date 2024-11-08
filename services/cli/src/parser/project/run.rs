@@ -179,6 +179,10 @@ pub struct CliRunThresholds {
 
 #[derive(Args, Debug)]
 pub struct CliRunCommand {
+    /// Track the build time of the benchmark command
+    #[clap(long, requires = "command", conflicts_with = "file")]
+    pub build_time: bool,
+
     /// Benchmark command output file path
     #[clap(long, conflicts_with = "file_size")]
     pub file: Option<Utf8PathBuf>,

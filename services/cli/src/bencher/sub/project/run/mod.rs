@@ -159,7 +159,7 @@ impl Run {
             if output.is_success() {
                 results.push(output.result());
             } else if self.allow_failure {
-                cli_eprintln_quietable!(self.log, "Skipping failure:\n{}", output);
+                cli_eprintln_quietable!(self.log, "Skipping failure:\n{output}");
             } else {
                 return Err(RunError::ExitStatus {
                     runner: Box::new(self.runner.clone()),
