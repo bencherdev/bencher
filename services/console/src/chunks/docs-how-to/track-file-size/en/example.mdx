@@ -30,6 +30,11 @@ it will be automatically created for your Project.
 The File Size Measure object contains a [Metric][metric]
 with the file size `value` in bytes, `42.0`.
 
+The File Size will always be a whole byte increment.
+That is, it will _never_ have a decimal like `42.5`.
+However, BMF JSON needs to support a wide range of possible values,
+so it uses floats instead of integers.
+
 [json adapter]: /docs/explanation/adapters/#-json
 [bencher run]: /docs/explanation/bencher-run/#benchmark-command
 

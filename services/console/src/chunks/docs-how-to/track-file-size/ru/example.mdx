@@ -29,6 +29,11 @@ import JsonExample from "../json-example.mdx";
 Объект измерения размера файла содержит [Metric][metric]
 с размером файла `value` в байтах, `42.0`.
 
+Размер файла всегда будет целым числом в байтах.
+То есть, он _никогда_ не будет дробным, например `42.5`.
+Тем не менее, BMF JSON должен поддерживать широкий диапазон возможных значений,
+поэтому он использует числа с плавающей точкой вместо целых чисел.
+
 [json adapter]: /ru/docs/explanation/adapters/#-json
 [bencher run]: /ru/docs/explanation/bencher-run/#benchmark-command
 

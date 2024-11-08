@@ -12,6 +12,10 @@
 
 在此示例中，键 `my_binary` 是二进制文件名。它被用作 [Benchmark][benchmark] 的名称。`my_binary` 对象包含 `file-size` 键。`file-size` 是内置文件大小 [Measure][measure] 的别名。文件大小 Measure 默认不为所有项目创建。然而，当你使用文件大小 Measure 时，它将自动为你的项目创建。文件大小 Measure 对象包含有文件大小 `value`（以字节为单位，`42.0`）的 [Metric][metric]。
 
+文件大小总是以整字节增量计算。
+也就是说，它 _绝不会_ 有像 `42.5` 这样的十进制数。
+但是，BMF JSON 需要支持各种可能的值，所以它使用浮点数而不是整数。
+
 [json adapter]: /zh/docs/explanation/adapters/#-json
 [bencher run]: /zh/docs/explanation/bencher-run/#benchmark-command
 

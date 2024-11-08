@@ -25,6 +25,10 @@ import JsonExample from "../json-example.mdx";
 しかし、ファイルサイズ Measure を使用すると、プロジェクトに対して自動的に作成されます。
 ファイルサイズ Measure オブジェクトには、ファイルサイズ `value` をバイト単位で持つ [Metric][metric]が含まれます、`42.0`。
 
+ファイルサイズは常にバイト単位で計算されます。
+つまり、小数点以下の値（例：`42.5`）は_決して_含まれません。
+しかし、BMF JSONは幅広い値をサポートする必要があるため、整数ではなく浮動小数点数を使用します。
+
 [json adapter]: /ja/docs/explanation/adapters/#-json
 [bencher run]: /ja/docs/explanation/bencher-run/#benchmark-command
 

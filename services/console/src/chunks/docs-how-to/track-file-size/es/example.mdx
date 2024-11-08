@@ -30,6 +30,11 @@ se creará automáticamente para tu Proyecto.
 El objeto de la Medida de Tamaño de Archivo contiene una [Métrica][metric]
 con el `valor` del tamaño de archivo en bytes, `42.0`.
 
+El tamaño del archivo siempre será un incremento completo de byte.
+Es decir, _nunca_ tendrá un decimal como `42.5`.
+Sin embargo, BMF JSON necesita soportar una amplia gama de valores posibles,
+por lo que utiliza flotantes en lugar de enteros.
+
 [json adapter]: /es/docs/explanation/adapters/#-json
 [bencher run]: /es/docs/explanation/bencher-run/#benchmark-command
 

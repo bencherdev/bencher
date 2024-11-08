@@ -26,6 +26,10 @@ import JsonExample from "../json-example.mdx";
 해당 Measure는 프로젝트에 자동으로 생성됩니다.
 파일 크기 Measure 객체에는 파일 크기 `value`를 바이트 단위로 담은 [Metric][metric]이 포함되어 있으며, 이 경우 `42.0`입니다.
 
+파일 크기는 항상 전체 바이트 단위 증가로 표시됩니다.
+즉, `42.5`와 같은 소수점 단위는 _절대_ 없습니다.
+하지만, BMF JSON은 광범위한 값 범위를 지원해야 하기 때문에, 정수 대신 부동 소수를 사용합니다.
+
 [json adapter]: /ko/docs/explanation/adapters/#-json
 [bencher run]: /ko/docs/explanation/bencher-run/#benchmark-command
 

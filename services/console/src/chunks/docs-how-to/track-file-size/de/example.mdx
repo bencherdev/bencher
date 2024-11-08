@@ -29,6 +29,11 @@ wird sie automatisch für Ihr Projekt erstellt.
 Das Dateigrößenmessungsobjekt enthält eine [Metrik][metric]
 mit dem Dateigrößen-`value` in Bytes, `42.0`.
 
+Die Dateigröße wird immer in ganzen Byte-Schritten angegeben.
+Das heißt, sie wird _niemals_ eine Dezimalstelle wie `42.5` haben.
+Da BMF JSON jedoch eine breite Palette möglicher Werte unterstützen muss,
+verwendet es Gleitkommazahlen anstelle von Ganzzahlen.
+
 [json adapter]: /de/docs/explanation/adapters/#-json
 [bencher run]: /de/docs/explanation/bencher-run/#benchmark-command
 

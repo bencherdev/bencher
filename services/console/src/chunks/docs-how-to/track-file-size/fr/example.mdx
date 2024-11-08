@@ -30,6 +30,11 @@ elle sera automatiquement créée pour votre Projet.
 L'objet Mesure de Taille de Fichier contient un [Métrique][metric]
 avec la `valeur` de taille de fichier en octets, `42.0`.
 
+La taille du fichier sera toujours un nombre entier de bytes.
+C'est-à-dire qu'elle _n'aura jamais_ de décimale comme `42.5`.
+Cependant, le JSON BMF doit supporter une large gamme de valeurs possibles,
+il utilise donc des flottants au lieu d'entiers.
+
 [json adapter]: /fr/docs/explanation/adapters/#-json
 [bencher run]: /fr/docs/explanation/bencher-run/#benchmark-command
 
