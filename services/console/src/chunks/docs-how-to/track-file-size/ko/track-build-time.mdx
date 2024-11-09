@@ -1,0 +1,19 @@
+import BuildTime from "../build-time.mdx";
+import BuildTimeJson from "../build-time-json.mdx";
+
+## 빌드 시간 추적
+
+배포물의 파일 크기를 추적하는 것 외에도, [빌드 시간을 추적][track build time]할 수 있습니다.
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
+은 파일 크기와 빌드 시간을 모두 추적할 수 있습니다.
+
+이 명령어를 사용하여 `my_binary`의 바이너리 크기와 컴파일 시간을 모두 추적할 수 있습니다:
+
+<BuildTime />
+
+빌드 스크립트가 완료되는 데 `87.0`초가 걸렸다면,
+생성된 BMF JSON은 다음과 같을 것입니다:
+
+<BuildTimeJson />
+
+[track build time]: /ko/docs/how-to/track-build-time/

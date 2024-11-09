@@ -1,0 +1,19 @@
+import BuildTime from "../build-time.mdx";
+import BuildTimeJson from "../build-time-json.mdx";
+
+## 跟踪构建时间
+
+除了跟踪文件大小之外，您可能还想要[跟踪交付物的构建时间][track build time]。
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
+支持同时跟踪文件大小和构建时间。
+
+您可以使用以下命令跟踪 `my_binary` 的二进制大小和编译时间：
+
+<BuildTime />
+
+如果您的构建脚本花了 `87.0` 秒完成，
+生成的 BMF JSON 将如下所示：
+
+<BuildTimeJson />
+
+[track build time]: /zh/docs/how-to/track-build-time/

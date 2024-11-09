@@ -1,0 +1,18 @@
+import BuildTime from "../build-time.mdx";
+import BuildTimeJson from "../build-time-json.mdx";
+
+## ビルド時間のトラッキング
+
+成果物のファイルサイズをトラッキングすることに加えて、[ビルド時間をトラッキングする][track build time]こともできます。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>
+は、ファイルサイズとビルド時間の両方をトラッキングすることをサポートしています。
+
+次のコマンドを使用することで、`my_binary` のバイナリサイズとコンパイル時間の両方をトラッキングできます。
+
+<BuildTime />
+
+ビルドスクリプトの完了に `87.0` 秒かかった場合、生成されるBMF JSONは次のようになります。
+
+<BuildTimeJson />
+
+[track build time]: /ja/docs/how-to/track-build-time/

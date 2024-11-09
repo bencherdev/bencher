@@ -1,0 +1,20 @@
+import BuildTime from "../build-time.mdx";
+import BuildTimeJson from "../build-time-json.mdx";
+
+## Buildzeit verfolgen
+
+Sie möchten möglicherweise [die Buildzeit verfolgen][track build time] Ihrer Liefergegenstände,
+zusätzlich zur Verfolgung ihrer Dateigröße.
+<code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+unterstützt sowohl die Verfolgung von Dateigrößen als auch von Buildzeiten.
+
+Sie könnten sowohl die Binärgröße als auch die Kompilierzeit für `my_binary` mit diesem Befehl verfolgen:
+
+<BuildTime />
+
+Wenn Ihr Build-Skript `87,0` Sekunden benötigte, um abzuschließen,
+würde das generierte BMF JSON so aussehen:
+
+<BuildTimeJson />
+
+[track build time]: /de/docs/how-to/track-build-time/

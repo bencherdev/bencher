@@ -1,0 +1,19 @@
+import BuildTime from "../build-time.mdx";
+import BuildTimeJson from "../build-time-json.mdx";
+
+## Acompanhar Tempo de Compilação
+
+Você pode querer [acompanhar o tempo de compilação][track build time] de seus entregáveis, além de acompanhar o tamanho de seus arquivos. 
+<code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+suporta o acompanhamento tanto dos tamanhos dos arquivos quanto dos tempos de compilação.
+
+Você poderia acompanhar tanto o tamanho binário quanto o tempo de compilação para `my_binary` com este comando:
+
+<BuildTime />
+
+Se o seu script de compilação levou `87.0` segundos para ser concluído, 
+o JSON BMF gerado ficaria assim:
+
+<BuildTimeJson />
+
+[track build time]: /pt/docs/how-to/track-build-time/

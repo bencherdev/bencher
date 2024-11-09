@@ -1,0 +1,19 @@
+import BuildTime from "../build-time.mdx";
+import BuildTimeJson from "../build-time-json.mdx";
+
+## Отслеживание времени сборки
+
+Вы можете захотеть [отслеживать время сборки][track build time] ваших сборок наряду с отслеживанием их размера файлов.
+<code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+поддерживает отслеживание как размеров файлов, так и времени сборки.
+
+Вы можете отслеживать как размер бинарного файла, так и время компиляции для `my_binary` с помощью этой команды:
+
+<BuildTime />
+
+Если ваш скрипт сборки занял `87,0` секунд для завершения,
+сгенерированный BMF JSON будет выглядеть следующим образом:
+
+<BuildTimeJson />
+
+[track build time]: /ru/docs/how-to/track-build-time/
