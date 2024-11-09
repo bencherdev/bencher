@@ -1,0 +1,14 @@
+import BuildTime from "../build-time.mdx";
+
+### ⏱️ ビルド時間
+
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用して、`--build-time` フラグを指定することで、成果物のビルド時間（すなわちコンパイル時間）を追跡できます。内部的には、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> は結果を [Bencher Metric Format (BMF) JSON][bmf] として出力します。したがって、明示的に [the `json` adapter][json] を使用することが推奨されます。詳細については、[ビルド時間を追跡する方法][build time] を参照してください。
+
+`build-time` 測定値（すなわち `秒 (s)`）が収集されます。ビルド時間の値（すなわち `value`）のみが利用可能です。`lower_value` や `upper_value` は収集されません。`build-time` 測定値はすべてのプロジェクトにデフォルトで作成されるわけではありません。しかし、`--build-time` フラグを使用する場合、この測定値は自動的にプロジェクトに作成されます。
+
+<BuildTime />
+
+[json]: #-json
+
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[build time]: /ja/docs/how-to/track-build-time/

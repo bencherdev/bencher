@@ -1,0 +1,14 @@
+import BuildTime from "../build-time.mdx";
+
+### ⏱️ Temps de Compilation
+
+La sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> peut être utilisée pour suivre le temps de compilation (c'est-à-dire le temps de construction) de vos livrables avec le drapeau `--build-time`. En coulisse, <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> génère les résultats sous forme de JSON [Bencher Metric Format (BMF)][bmf]. Il est donc conseillé d'utiliser explicitement [l'adaptateur `json`][json]. Pour plus de détails, voir [comment suivre le temps de compilation][build time].
+
+La Mesure `build-time` (à savoir `secondes (s)`) est collectée. Seule la valeur du temps de compilation (c'est-à-dire `value`) est disponible. Ni `lower_value` ni `upper_value` ne sont collectés. La Mesure `build-time` n'est pas créée par défaut pour tous les Projets. Cependant, lorsque vous utilisez le drapeau `--build-time`, cette Mesure sera automatiquement créée pour votre Projet.
+
+<BuildTime />
+
+[json]: #-json
+
+[bmf]: /fr/docs/reference/bencher-metric-format/
+[build time]: /fr/docs/how-to/track-build-time/

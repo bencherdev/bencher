@@ -1,0 +1,23 @@
+import BuildTime from "../build-time.mdx";
+
+### ⏱️ Buildzeit
+
+Der <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Subbefehl
+kann mit dem `--build-time`-Flag verwendet werden, um die Buildzeit (d. h. Kompilierzeit) Ihrer Auslieferungen zu verfolgen.
+Im Hintergrund gibt <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+die Ergebnisse als [Bencher Metric Format (BMF) JSON][bmf] aus.
+Es ist daher gute Praxis, den [JSON-Adapter][json] explizit zu verwenden.
+Weitere Details finden Sie unter [wie man die Buildzeit verfolgt][build time].
+
+Die `build-time`-Messung (d. h. `Sekunden (s)`) wird erfasst.
+Nur der Buildzeitwert (d. h. `value`) ist verfügbar.
+Weder `lower_value` noch `upper_value` werden erfasst.
+Die `build-time`-Messung wird nicht standardmäßig für alle Projekte erstellt.
+Wenn Sie jedoch das `--build-time`-Flag verwenden, wird diese Messung automatisch für Ihr Projekt erstellt.
+
+<BuildTime />
+
+[json]: #-json
+
+[bmf]: /de/docs/reference/bencher-metric-format/
+[build time]: /de/docs/how-to/track-build-time/

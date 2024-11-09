@@ -1,0 +1,14 @@
+import BuildTime from "../build-time.mdx";
+
+### ⏱️ 构建时间
+
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令可以用于使用 `--build-time` 标志来跟踪交付物的构建时间（即编译时间）。在底层，<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 将结果输出为 [Bencher Metric Format (BMF) JSON][bmf]。因此，明确使用 [the `json` adapter][json] 是一种良好的实践。更多详情请参见[如何跟踪构建时间][build time]。
+
+`build-time` 度量（即 `seconds (s)`）被收集。只有构建时间的值（即 `value`）是可用的。`lower_value` 和 `upper_value` 都不被收集。`build-time` 度量并非默认为所有项目创建。然而，当你使用 `--build-time` 标志时，这个度量将会自动为你的项目创建。
+
+<BuildTime />
+
+[json]: #-json
+
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[build time]: /zh/docs/how-to/track-build-time/

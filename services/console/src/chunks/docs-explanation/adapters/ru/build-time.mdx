@@ -1,0 +1,23 @@
+import BuildTime from "../build-time.mdx";
+
+### ⏱️ Build Time
+
+Команда <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> CLI
+может быть использована для отслеживания времени сборки (то есть времени компиляции) ваших сборок с помощью флага `--build-time`.
+Под капотом, <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+выводит результаты в формате [Bencher Metric Format (BMF) JSON][bmf].
+Поэтому хорошей практикой будет явное использование [адаптера `json`][json].
+Для получения дополнительной информации смотрите [как отслеживать время сборки][build time].
+
+Собирается измерение `build-time` (то есть `seconds (s)`).
+Доступно только значение времени сборки (то есть `value`).
+Ни `lower_value`, ни `upper_value` не собираются.
+Измерение `build-time` не создается по умолчанию для всех Проектов.
+Однако, когда вы используете флаг `--build-time`, это измерение будет автоматически создано для вашего Проекта.
+
+<BuildTime />
+
+[json]: #-json
+
+[bmf]: /ru/docs/reference/bencher-metric-format/
+[build time]: /ru/docs/how-to/track-build-time/
