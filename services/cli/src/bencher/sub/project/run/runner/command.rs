@@ -3,6 +3,9 @@ use std::{fmt, process::Stdio};
 use chrono::Utc;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
+use super::build_time::{BuildCommand, BuildTime};
+use super::file_path::FilePath;
+use super::file_size::FileSize;
 use super::{flag::Flag, output::Output, shell::Shell};
 use crate::{bencher::sub::RunError, parser::project::run::CliRunShell};
 use crate::{cli_eprintln_quietable, cli_println_quietable};
@@ -50,7 +53,17 @@ impl Command {
         Self::Exec { program, arguments }
     }
 
-    pub async fn run(&self, log: bool) -> Result<Output, RunError> {
+    pub async fn run(
+        &self,
+        log: bool,
+        build_time: Option<BuildTime>,
+    ) -> Result<CommandOutput, RunError> {
+        let (output, duration) = self.run_inner(log).await?;
+        let build_command = build_time.map(|bt| bt.command(self.to_string(), duration));
+        Ok(CommandOutput::new(build_command, output))
+    }
+
+    async fn run_inner(&self, log: bool) -> Result<(Output, f64), RunError> {
         let start_time = Utc::now();
         let mut child = match self {
             Self::Shell {
@@ -147,12 +160,53 @@ impl Command {
             })
             .unwrap_or_default();
 
-        Ok(Output {
-            status: status.into(),
-            stdout,
-            stderr,
+        Ok((
+            Output {
+                status: status.into(),
+                stdout,
+                stderr,
+                result: None,
+            },
             duration,
-            result: None,
-        })
+        ))
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct CommandOutput {
+    build_command: Option<BuildCommand>,
+    output: Output,
+}
+
+impl CommandOutput {
+    pub fn new(build_command: Option<BuildCommand>, output: Output) -> Self {
+        Self {
+            build_command,
+            output,
+        }
+    }
+
+    pub fn build(mut self) -> Result<Output, RunError> {
+        if let Some(build_command) = self.build_command {
+            let results = build_command.get_results()?;
+            self.output.result = Some(results);
+        }
+        Ok(self.output)
+    }
+
+    pub fn build_with_file_path(mut self, file_path: &FilePath) -> Result<Output, RunError> {
+        debug_assert!(
+            self.build_command.is_none(),
+            "Build command should not be set for file path"
+        );
+        let results = file_path.get_results()?;
+        self.output.result = Some(results);
+        Ok(self.output)
+    }
+
+    pub fn build_with_file_size(mut self, file_size: &FileSize) -> Result<Output, RunError> {
+        let results = file_size.get_results(self.build_command.as_ref())?;
+        self.output.result = Some(results);
+        Ok(self.output)
     }
 }

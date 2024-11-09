@@ -14,7 +14,7 @@ mod pipe;
 mod shell;
 
 use build_time::BuildTime;
-use command::Command;
+use command::{Command, CommandOutput};
 use file_path::FilePath;
 use file_size::FileSize;
 use output::Output;
@@ -106,33 +106,19 @@ impl fmt::Display for Runner {
 
 impl Runner {
     pub async fn run(&self, log: bool) -> Result<Output, RunError> {
-        Ok(match self {
-            Self::Pipe(pipe) => pipe.output(),
-            Self::Command(command, build_time) => command.run(log).await?,
-            Self::CommandToFile(command, file_path) => {
-                let mut output = command.run(log).await?;
-                output.file_path(file_path)?;
-                output
-            },
-            Self::CommandToFileSize(command, build_time, file_size) => {
-                let mut output = command.run(log).await?;
-                output.file_size(file_size)?;
-                output
-            },
-            Self::File(file_path) => {
-                let results = file_path.get_results()?;
-                Output {
-                    result: Some(results),
-                    ..Default::default()
-                }
-            },
-            Self::FileSize(file_size) => {
-                let results = file_size.get_results()?;
-                Output {
-                    result: Some(results),
-                    ..Default::default()
-                }
-            },
-        })
+        match self {
+            Self::Pipe(pipe) => Ok(pipe.output()),
+            Self::Command(command, build_time) => command.run(log, *build_time).await?.build(),
+            Self::CommandToFile(command, file_path) => command
+                .run(log, None)
+                .await?
+                .build_with_file_path(file_path),
+            Self::CommandToFileSize(command, build_time, file_size) => command
+                .run(log, *build_time)
+                .await?
+                .build_with_file_size(file_size),
+            Self::File(file_path) => CommandOutput::default().build_with_file_path(file_path),
+            Self::FileSize(file_size) => CommandOutput::default().build_with_file_size(file_size),
+        }
     }
 }

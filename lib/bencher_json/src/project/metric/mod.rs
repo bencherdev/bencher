@@ -27,6 +27,8 @@ pub type JsonMetricsMap = HashMap<MeasureNameId, JsonNewMetric>;
 #[typeshare::typeshare]
 pub type MeasureNameId = NameId;
 
+pub type MetricResults = Vec<(BenchmarkName, Vec<(MeasureNameId, JsonNewMetric)>)>;
+
 #[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -37,7 +39,7 @@ pub struct JsonNewMetric {
 }
 
 impl JsonNewMetric {
-    pub fn results(results: Vec<(BenchmarkName, Vec<(MeasureNameId, Self)>)>) -> JsonResultsMap {
+    pub fn results(results: MetricResults) -> JsonResultsMap {
         results
             .into_iter()
             .map(|(benchmark_name, measure_metrics)| {

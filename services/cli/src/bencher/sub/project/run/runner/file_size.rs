@@ -1,12 +1,17 @@
 use std::fmt;
 
 use bencher_json::{
-    project::measure::built_in::{self, BuiltInMeasure},
+    project::{
+        measure::built_in::{self, BuiltInMeasure},
+        metric::MetricResults,
+    },
     JsonNewMetric,
 };
 use camino::Utf8PathBuf;
 
 use crate::RunError;
+
+use super::build_time::BuildCommand;
 
 #[derive(Debug, Clone)]
 pub struct FileSize(Vec<Utf8PathBuf>);
@@ -30,8 +35,17 @@ impl FileSize {
         Self(file_paths)
     }
 
-    pub fn get_results(&self) -> Result<String, RunError> {
-        let mut results = Vec::with_capacity(self.0.len());
+    pub fn get_results(&self, build_command: Option<&BuildCommand>) -> Result<String, RunError> {
+        let mut metric_results = self.to_metric_results()?;
+        if let Some(build_command) = build_command {
+            metric_results.extend(build_command.to_metric_results()?);
+        }
+        let results = JsonNewMetric::results(metric_results);
+        serde_json::to_string(&results).map_err(RunError::SerializeFileSize)
+    }
+
+    fn to_metric_results(&self) -> Result<MetricResults, RunError> {
+        let mut metric_results = Vec::with_capacity(self.0.len());
         for file_path in &self.0 {
             let file_name = file_path
                 .file_name()
@@ -43,7 +57,7 @@ impl FileSize {
                 .map(|m| m.len())
                 .map_err(RunError::OutputFileSize)? as f64)
                 .into();
-            results.push((
+            metric_results.push((
                 file_name,
                 vec![(
                     built_in::file_size::FileSize::name_id(),
@@ -54,7 +68,6 @@ impl FileSize {
                 )],
             ));
         }
-        let results = JsonNewMetric::results(results);
-        serde_json::to_string(&results).map_err(RunError::SerializeFileSize)
+        Ok(metric_results)
     }
 }

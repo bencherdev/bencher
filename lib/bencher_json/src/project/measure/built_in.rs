@@ -129,6 +129,10 @@ pub mod iai_callgrind {
     }
 }
 
+pub mod build_time {
+    create_measure!(BuildTime, "Build Time", "build-time", "seconds (s)");
+}
+
 pub mod file_size {
     create_measure!(FileSize, "File Size", "file-size", "bytes (B)");
 }
