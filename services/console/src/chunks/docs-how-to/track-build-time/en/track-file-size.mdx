@@ -1,0 +1,22 @@
+import FileSize from "../file-size.mdx";
+import FileSizeJson from "../file-size-json.mdx";
+
+## Track File Size
+
+You may want to [track the file size][track file size] of your deliverables,
+in addition to tracking how long it takes to build them.
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+supports tracking both build times and file sizes.
+
+If the output of your `./my_build_script.sh` build script
+was a binary at the path `./path/to/my_binary`,
+then you could track both the compile time and the binary size with this command:
+
+<FileSize />
+
+If `my_binary` had a size of `42` bytes,
+the generated BMF JSON would look like this:
+
+<FileSizeJson />
+
+[track file size]: /docs/how-to/track-file-size/

@@ -1,0 +1,50 @@
+import ShellExample from "../shell-example.mdx";
+import ShellJsonExample from "../shell-json-example.mdx";
+import ExecExample from "../exec-example.mdx";
+import ExecJsonExample from "../exec-json-example.mdx";
+
+If you had a script located at `./my_build_script.sh` that built your binary,
+then you could track the build time of this binary with
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+and [the `json` adapter][json adapter].
+The `--build-time` flag requires [a benchmark command][bencher run].
+
+<ShellExample />
+
+The generated BMF JSON would look like this,
+if your build script took `87.0` seconds to complete:
+
+<ShellJsonExample />
+
+Note that the [Benchmark][benchmark] name is `/bin/sh -c ./my_build_script.sh`.
+This is because our command is only a single argument, so
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+defaults to the shell form for execution.
+Alternatively, if you would like to force the use of the exec form,
+you can either provide multiple arguments or use the `--exec` flag.
+
+<ExecExample />
+
+If this exec form build took `86.98` seconds,
+then the generated BMF JSON would look like this:
+
+<ExecJsonExample />
+
+Now, the [Benchmark][benchmark] name is simply `./my_build_script.sh`.
+The `./my_build_script.sh` object contains the `build-time` key.
+`build-time` is the slug for the built-in Build Time [Measure][measure].
+The Build Time Measure is not created by default for all Projects.
+However, when you use the Build Time Measure,
+it will be automatically created for your Project.
+The Build Time Measure object contains a [Metric][metric]
+with the build time `value` in seconds, `87.0` and `86.98` in our examples.
+
+The Build Time will always be rounded to the nearest two decimal places.
+That is, it will _never_ be a long decimal like `42.666666`.
+
+[json adapter]: /docs/explanation/adapters/#-json
+[bencher run]: /docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /docs/explanation/benchmarking/#benchmark
+[measure]: /docs/explanation/benchmarking/#measure
+[metric]: /docs/explanation/benchmarking/#metrics

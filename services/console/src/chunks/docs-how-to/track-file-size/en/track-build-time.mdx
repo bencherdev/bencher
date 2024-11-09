@@ -1,0 +1,20 @@
+import BuildTime from "../build-time.mdx";
+import BuildTimeJson from "../build-time-json.mdx";
+
+## Track Build Time
+
+You may want to [track the build time][track build time] of your deliverables,
+in addition to tracking their file size.
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+supports tracking both file sizes and build times.
+
+You could track both the binary size and the compile time for `my_binary` with this command:
+
+<BuildTime />
+
+If your build script took `87.0` seconds to complete,
+the generated BMF JSON would look like this:
+
+<BuildTimeJson />
+
+[track build time]: /docs/how-to/track-build-time/
