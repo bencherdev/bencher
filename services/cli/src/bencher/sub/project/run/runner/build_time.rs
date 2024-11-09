@@ -34,7 +34,7 @@ impl BuildCommand {
         Ok(vec![(
             self.name.parse().map_err(RunError::CommandName)?,
             vec![(
-                built_in::build_time::BuildTime::name_id(),
+                built_in::json::BuildTime::name_id(),
                 JsonNewMetric {
                     value: self.duration.into(),
                     ..Default::default()

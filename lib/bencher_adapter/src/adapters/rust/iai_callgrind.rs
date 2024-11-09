@@ -1,9 +1,6 @@
 use bencher_json::{
     project::{
-        measure::built_in::{
-            iai_callgrind::{callgrind_tool, dhat_tool},
-            BuiltInMeasure,
-        },
+        measure::built_in::{iai_callgrind, BuiltInMeasure},
         report::JsonAverage,
     },
     BenchmarkName, JsonNewMetric,
@@ -97,13 +94,13 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
         preceded(
             opt(tool_name_line("CALLGRIND")),
             tuple((
-                metric_line(callgrind_tool::Instructions::NAME_STR),
-                metric_line(callgrind_tool::L1Hits::NAME_STR),
-                metric_line(callgrind_tool::L2Hits::NAME_STR),
-                metric_line(callgrind_tool::RamHits::NAME_STR),
-                metric_line(callgrind_tool::TotalReadWrite::NAME_STR),
-                metric_line(callgrind_tool::EstimatedCycles::NAME_STR),
-                opt(metric_line(callgrind_tool::GlobalBusEvents::NAME_STR)),
+                metric_line(iai_callgrind::Instructions::NAME_STR),
+                metric_line(iai_callgrind::L1Hits::NAME_STR),
+                metric_line(iai_callgrind::L2Hits::NAME_STR),
+                metric_line(iai_callgrind::RamHits::NAME_STR),
+                metric_line(iai_callgrind::TotalReadWrite::NAME_STR),
+                metric_line(iai_callgrind::EstimatedCycles::NAME_STR),
+                opt(metric_line(iai_callgrind::GlobalBusEvents::NAME_STR)),
             )),
         ),
         |(
@@ -136,14 +133,14 @@ fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCa
         preceded(
             opt(tool_name_line("DHAT")),
             tuple((
-                metric_line(dhat_tool::TotalBytes::NAME_STR),
-                metric_line(dhat_tool::TotalBlocks::NAME_STR),
-                metric_line(dhat_tool::AtTGmaxBytes::NAME_STR),
-                metric_line(dhat_tool::AtTGmaxBlocks::NAME_STR),
-                metric_line(dhat_tool::AtTEndBytes::NAME_STR),
-                metric_line(dhat_tool::AtTEndBlocks::NAME_STR),
-                metric_line(dhat_tool::ReadsBytes::NAME_STR),
-                metric_line(dhat_tool::WritesBytes::NAME_STR),
+                metric_line(iai_callgrind::TotalBytes::NAME_STR),
+                metric_line(iai_callgrind::TotalBlocks::NAME_STR),
+                metric_line(iai_callgrind::AtTGmaxBytes::NAME_STR),
+                metric_line(iai_callgrind::AtTGmaxBlocks::NAME_STR),
+                metric_line(iai_callgrind::AtTEndBytes::NAME_STR),
+                metric_line(iai_callgrind::AtTEndBlocks::NAME_STR),
+                metric_line(iai_callgrind::ReadsBytes::NAME_STR),
+                metric_line(iai_callgrind::WritesBytes::NAME_STR),
             )),
         ),
         |(
@@ -238,10 +235,7 @@ fn not_line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
 #[cfg(test)]
 pub(crate) mod test_rust_iai_callgrind {
     use crate::{adapters::test_util::convert_file_path, AdapterResults};
-    use bencher_json::project::measure::built_in::{
-        iai_callgrind::{callgrind_tool, dhat_tool},
-        BuiltInMeasure,
-    };
+    use bencher_json::project::measure::built_in::{iai_callgrind, BuiltInMeasure};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -336,28 +330,28 @@ pub(crate) mod test_rust_iai_callgrind {
             let mut expected = HashMap::new();
 
             expected.extend([
-                (callgrind_tool::Instructions::SLUG_STR, 1_734.0),
-                (callgrind_tool::L1Hits::SLUG_STR, 2_359.0),
-                (callgrind_tool::L2Hits::SLUG_STR, 0.0),
-                (callgrind_tool::RamHits::SLUG_STR, 3.0),
-                (callgrind_tool::TotalReadWrite::SLUG_STR, 2_362.0),
-                (callgrind_tool::EstimatedCycles::SLUG_STR, 2_464.0),
+                (iai_callgrind::Instructions::SLUG_STR, 1_734.0),
+                (iai_callgrind::L1Hits::SLUG_STR, 2_359.0),
+                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
+                (iai_callgrind::RamHits::SLUG_STR, 3.0),
+                (iai_callgrind::TotalReadWrite::SLUG_STR, 2_362.0),
+                (iai_callgrind::EstimatedCycles::SLUG_STR, 2_464.0),
             ]);
 
             if optional_metrics.global_bus_events {
-                expected.insert(callgrind_tool::GlobalBusEvents::SLUG_STR, 2.0);
+                expected.insert(iai_callgrind::GlobalBusEvents::SLUG_STR, 2.0);
             }
 
             if optional_metrics.dhat {
                 expected.extend([
-                    (dhat_tool::TotalBytes::SLUG_STR, 29_499.0),
-                    (dhat_tool::TotalBlocks::SLUG_STR, 2_806.0),
-                    (dhat_tool::AtTGmaxBytes::SLUG_STR, 378.0),
-                    (dhat_tool::AtTGmaxBlocks::SLUG_STR, 34.0),
-                    (dhat_tool::AtTEndBytes::SLUG_STR, 0.0),
-                    (dhat_tool::AtTEndBlocks::SLUG_STR, 0.0),
-                    (dhat_tool::ReadsBytes::SLUG_STR, 57_725.0),
-                    (dhat_tool::WritesBytes::SLUG_STR, 73_810.0),
+                    (iai_callgrind::TotalBytes::SLUG_STR, 29_499.0),
+                    (iai_callgrind::TotalBlocks::SLUG_STR, 2_806.0),
+                    (iai_callgrind::AtTGmaxBytes::SLUG_STR, 378.0),
+                    (iai_callgrind::AtTGmaxBlocks::SLUG_STR, 34.0),
+                    (iai_callgrind::AtTEndBytes::SLUG_STR, 0.0),
+                    (iai_callgrind::AtTEndBlocks::SLUG_STR, 0.0),
+                    (iai_callgrind::ReadsBytes::SLUG_STR, 57_725.0),
+                    (iai_callgrind::WritesBytes::SLUG_STR, 73_810.0),
                 ]);
             }
 
@@ -372,28 +366,28 @@ pub(crate) mod test_rust_iai_callgrind {
             let mut expected = HashMap::new();
 
             expected.extend([
-                (callgrind_tool::Instructions::SLUG_STR, 26_214_734.0),
-                (callgrind_tool::L1Hits::SLUG_STR, 35_638_619.0),
-                (callgrind_tool::L2Hits::SLUG_STR, 0.0),
-                (callgrind_tool::RamHits::SLUG_STR, 3.0),
-                (callgrind_tool::TotalReadWrite::SLUG_STR, 35_638_622.0),
-                (callgrind_tool::EstimatedCycles::SLUG_STR, 35_638_724.0),
+                (iai_callgrind::Instructions::SLUG_STR, 26_214_734.0),
+                (iai_callgrind::L1Hits::SLUG_STR, 35_638_619.0),
+                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
+                (iai_callgrind::RamHits::SLUG_STR, 3.0),
+                (iai_callgrind::TotalReadWrite::SLUG_STR, 35_638_622.0),
+                (iai_callgrind::EstimatedCycles::SLUG_STR, 35_638_724.0),
             ]);
 
             if optional_metrics.global_bus_events {
-                expected.insert(callgrind_tool::GlobalBusEvents::SLUG_STR, 10.0);
+                expected.insert(iai_callgrind::GlobalBusEvents::SLUG_STR, 10.0);
             }
 
             if optional_metrics.dhat {
                 expected.extend([
-                    (dhat_tool::TotalBytes::SLUG_STR, 26_294_939.0),
-                    (dhat_tool::TotalBlocks::SLUG_STR, 2_328_086.0),
-                    (dhat_tool::AtTGmaxBytes::SLUG_STR, 933_718.0),
-                    (dhat_tool::AtTGmaxBlocks::SLUG_STR, 18_344.0),
-                    (dhat_tool::AtTEndBytes::SLUG_STR, 0.0),
-                    (dhat_tool::AtTEndBlocks::SLUG_STR, 0.0),
-                    (dhat_tool::ReadsBytes::SLUG_STR, 47_577_425.0),
-                    (dhat_tool::WritesBytes::SLUG_STR, 37_733_810.0),
+                    (iai_callgrind::TotalBytes::SLUG_STR, 26_294_939.0),
+                    (iai_callgrind::TotalBlocks::SLUG_STR, 2_328_086.0),
+                    (iai_callgrind::AtTGmaxBytes::SLUG_STR, 933_718.0),
+                    (iai_callgrind::AtTGmaxBlocks::SLUG_STR, 18_344.0),
+                    (iai_callgrind::AtTEndBytes::SLUG_STR, 0.0),
+                    (iai_callgrind::AtTEndBlocks::SLUG_STR, 0.0),
+                    (iai_callgrind::ReadsBytes::SLUG_STR, 47_577_425.0),
+                    (iai_callgrind::WritesBytes::SLUG_STR, 37_733_810.0),
                 ]);
             }
 

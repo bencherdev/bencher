@@ -60,7 +60,7 @@ impl FileSize {
             metric_results.push((
                 file_name,
                 vec![(
-                    built_in::file_size::FileSize::name_id(),
+                    built_in::json::FileSize::name_id(),
                     JsonNewMetric {
                         value,
                         ..Default::default()

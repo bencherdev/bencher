@@ -89,38 +89,30 @@ impl QueryMeasure {
         // Or recreate default measures if they were previously deleted
         let measure_str = measure.as_ref();
 
-        let measure = if let Some(measure) = built_in::generic::Latency::from_str(measure_str)
-            .or_else(|| built_in::generic::Throughput::from_str(measure_str))
+        let measure = if let Some(measure) = built_in::default::Latency::from_str(measure_str)
+            .or_else(|| built_in::default::Throughput::from_str(measure_str))
+            .or_else(|| built_in::json::BuildTime::from_str(measure_str))
+            .or_else(|| built_in::json::FileSize::from_str(measure_str))
             .or_else(|| built_in::iai::Instructions::from_str(measure_str))
             .or_else(|| built_in::iai::L1Accesses::from_str(measure_str))
             .or_else(|| built_in::iai::L2Accesses::from_str(measure_str))
             .or_else(|| built_in::iai::RamAccesses::from_str(measure_str))
             .or_else(|| built_in::iai::EstimatedCycles::from_str(measure_str))
-            .or_else(|| {
-                built_in::iai_callgrind::callgrind_tool::Instructions::from_str(measure_str)
-            })
-            .or_else(|| built_in::iai_callgrind::callgrind_tool::L1Hits::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::callgrind_tool::L2Hits::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::callgrind_tool::RamHits::from_str(measure_str))
-            .or_else(|| {
-                built_in::iai_callgrind::callgrind_tool::TotalReadWrite::from_str(measure_str)
-            })
-            .or_else(|| {
-                built_in::iai_callgrind::callgrind_tool::EstimatedCycles::from_str(measure_str)
-            })
-            .or_else(|| {
-                built_in::iai_callgrind::callgrind_tool::GlobalBusEvents::from_str(measure_str)
-            })
-            .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBytes::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::TotalBlocks::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTGmaxBytes::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTGmaxBlocks::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBytes::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBlocks::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::ReadsBytes::from_str(measure_str))
-            .or_else(|| built_in::iai_callgrind::dhat_tool::WritesBytes::from_str(measure_str))
-            .or_else(|| built_in::build_time::BuildTime::from_str(measure_str))
-            .or_else(|| built_in::file_size::FileSize::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::Instructions::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::L1Hits::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::L2Hits::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::RamHits::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::TotalReadWrite::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::EstimatedCycles::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::GlobalBusEvents::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::TotalBytes::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::TotalBlocks::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::AtTGmaxBytes::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::AtTGmaxBlocks::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::AtTEndBytes::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::AtTEndBlocks::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::ReadsBytes::from_str(measure_str))
+            .or_else(|| built_in::iai_callgrind::WritesBytes::from_str(measure_str))
         {
             measure
         } else {

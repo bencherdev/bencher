@@ -45,9 +45,8 @@ macro_rules! create_measure {
     };
 }
 
-pub mod generic {
+pub mod default {
     create_measure!(Latency, "Latency", "latency", "nanoseconds (ns)");
-
     create_measure!(
         Throughput,
         "Throughput",
@@ -56,15 +55,16 @@ pub mod generic {
     );
 }
 
+pub mod json {
+    create_measure!(BuildTime, "Build Time", "build-time", "seconds (s)");
+    create_measure!(FileSize, "File Size", "file-size", "bytes (B)");
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
-
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");
-
     create_measure!(L2Accesses, "L2 Accesses", "l2-accesses", "accesses");
-
     create_measure!(RamAccesses, "RAM Accesses", "ram-accesses", "accesses");
-
     create_measure!(
         EstimatedCycles,
         "Estimated Cycles",
@@ -74,65 +74,42 @@ pub mod iai {
 }
 
 pub mod iai_callgrind {
-    pub mod callgrind_tool {
-        create_measure!(Instructions, "Instructions", "instructions", "instructions");
+    // Callgrind
+    create_measure!(Instructions, "Instructions", "instructions", "instructions");
+    create_measure!(L1Hits, "L1 Hits", "l1-hits", "hits");
+    create_measure!(L2Hits, "L2 Hits", "l2-hits", "hits");
+    create_measure!(RamHits, "RAM Hits", "ram-hits", "hits");
+    create_measure!(
+        TotalReadWrite,
+        "Total read+write",
+        "total-read-write",
+        "reads/writes"
+    );
+    create_measure!(
+        EstimatedCycles,
+        "Estimated Cycles",
+        "estimated-cycles",
+        "cycles"
+    );
 
-        create_measure!(L1Hits, "L1 Hits", "l1-hits", "hits");
-
-        create_measure!(L2Hits, "L2 Hits", "l2-hits", "hits");
-
-        create_measure!(RamHits, "RAM Hits", "ram-hits", "hits");
-
-        create_measure!(
-            TotalReadWrite,
-            "Total read+write",
-            "total-read-write",
-            "reads/writes"
-        );
-
-        create_measure!(
-            EstimatedCycles,
-            "Estimated Cycles",
-            "estimated-cycles",
-            "cycles"
-        );
-
-        create_measure!(GlobalBusEvents, "Ge", "global-bus-events", "events");
-    }
-
-    pub mod dhat_tool {
-        create_measure!(TotalBytes, "Total bytes", "total-bytes", "bytes (B)");
-
-        create_measure!(TotalBlocks, "Total blocks", "total-blocks", "blocks");
-
-        create_measure!(
-            AtTGmaxBytes,
-            "At t-gmax bytes",
-            "at-t-gmax-bytes",
-            "bytes (B)"
-        );
-
-        create_measure!(
-            AtTGmaxBlocks,
-            "At t-gmax blocks",
-            "at-t-gmax-blocks",
-            "blocks"
-        );
-
-        create_measure!(AtTEndBytes, "At t-end bytes", "at-t-end-bytes", "bytes (B)");
-
-        create_measure!(AtTEndBlocks, "At t-end blocks", "at-t-end-blocks", "blocks");
-
-        create_measure!(ReadsBytes, "Reads bytes", "reads-bytes", "bytes (B)");
-
-        create_measure!(WritesBytes, "Writes bytes", "writes-bytes", "bytes (B)");
-    }
-}
-
-pub mod build_time {
-    create_measure!(BuildTime, "Build Time", "build-time", "seconds (s)");
-}
-
-pub mod file_size {
-    create_measure!(FileSize, "File Size", "file-size", "bytes (B)");
+    // DHAT
+    create_measure!(GlobalBusEvents, "Ge", "global-bus-events", "events");
+    create_measure!(TotalBytes, "Total bytes", "total-bytes", "bytes (B)");
+    create_measure!(TotalBlocks, "Total blocks", "total-blocks", "blocks");
+    create_measure!(
+        AtTGmaxBytes,
+        "At t-gmax bytes",
+        "at-t-gmax-bytes",
+        "bytes (B)"
+    );
+    create_measure!(
+        AtTGmaxBlocks,
+        "At t-gmax blocks",
+        "at-t-gmax-blocks",
+        "blocks"
+    );
+    create_measure!(AtTEndBytes, "At t-end bytes", "at-t-end-bytes", "bytes (B)");
+    create_measure!(AtTEndBlocks, "At t-end blocks", "at-t-end-blocks", "blocks");
+    create_measure!(ReadsBytes, "Reads bytes", "reads-bytes", "bytes (B)");
+    create_measure!(WritesBytes, "Writes bytes", "writes-bytes", "bytes (B)");
 }

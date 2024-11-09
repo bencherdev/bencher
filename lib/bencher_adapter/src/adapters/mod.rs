@@ -26,7 +26,7 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 pub(crate) mod test_util {
     use bencher_json::project::{
         measure::built_in::{
-            generic::{Latency, Throughput},
+            default::{Latency, Throughput},
             BuiltInMeasure,
         },
         report::JsonAverage,
