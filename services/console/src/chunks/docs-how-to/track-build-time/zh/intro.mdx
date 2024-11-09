@@ -1,0 +1,10 @@
+Bencher 开箱即支持[最流行的基准测试工具][adapters]。
+不过有时候，你可能想要测量构建可交付成果本身所需的时间，比如可执行文件的编译时间。
+幸运的是，Bencher 也支持跟踪构建时间。
+跟踪构建时间的最简单方法是使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令并加上 `--build-time` 标志。
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 的内部底层会以 [Bencher Metric Format (BMF) JSON][bmf] 格式输出结果。
+因此，明确使用 [the `json` adapter][json adapter] 是一个好的实践。
+
+[adapters]: /zh/docs/explanation/adapters/
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[json adapter]: /zh/docs/explanation/adapters/#-json

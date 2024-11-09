@@ -1,0 +1,14 @@
+Bencher поддерживает [наиболее популярные тестовые фреймворки][adapters] из коробки.
+Тем не менее, иногда необходимо измерить, сколько времени занимает сборка ваших продуктов,
+например, время компиляции исполняемого файла.
+К счастью, Bencher также поддерживает отслеживание времени сборки.
+Самый простой способ отслеживать время сборки — использовать
+<code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> подкоманду CLI
+с флагом `--build-time`.
+Под капотом, <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+выводит результаты в формате [Bencher Metric Format (BMF) JSON][bmf].
+Поэтому стоит явно использовать [адаптер `json`][json adapter].
+
+[adapters]: /ru/docs/explanation/adapters/
+[bmf]: /ru/docs/reference/bencher-metric-format/
+[json adapter]: /ru/docs/explanation/adapters/#-json

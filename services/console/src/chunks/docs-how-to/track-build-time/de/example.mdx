@@ -1,0 +1,50 @@
+import ShellExample from "../shell-example.mdx";
+import ShellJsonExample from "../shell-json-example.mdx";
+import ExecExample from "../exec-example.mdx";
+import ExecJsonExample from "../exec-json-example.mdx";
+
+Wenn Sie ein Skript unter `./my_build_script.sh` hätten, das Ihr Binary baut,
+könnten Sie die Bauzeit dieses Binaries mit
+<code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+und [dem `json` Adapter][json adapter] verfolgen.
+Das `--build-time` Flag erfordert [einen Benchmark-Befehl][bencher run].
+
+<ShellExample />
+
+Das generierte BMF-JSON würde so aussehen,
+wenn Ihr Build-Skript `87,0` Sekunden zur Fertigstellung benötigte:
+
+<ShellJsonExample />
+
+Beachten Sie, dass der [Benchmark][benchmark]-Name `/bin/sh -c ./my_build_script.sh` ist.
+Dies liegt daran, dass unser Befehl nur ein einziges Argument ist, daher
+verwendet <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+standardmäßig die Shell-Form für die Ausführung.
+Alternativ, wenn Sie die Verwendung der Exec-Form erzwingen möchten,
+können Sie entweder mehrere Argumente angeben oder das `--exec` Flag verwenden.
+
+<ExecExample />
+
+Wenn dieser Exec-Form-Build `86,98` Sekunden dauerte,
+würde das generierte BMF-JSON wie folgt aussehen:
+
+<ExecJsonExample />
+
+Jetzt ist der [Benchmark][benchmark]-Name einfach `./my_build_script.sh`.
+Das `./my_build_script.sh` Objekt enthält den `build-time` Schlüssel.
+`build-time` ist das Kürzel für die eingebaute Buildzeit-[Messung][measure].
+Die Buildzeit-Messung wird nicht standardmäßig für alle Projekte erstellt.
+Wenn Sie jedoch die Buildzeit-Messung verwenden,
+wird sie automatisch für Ihr Projekt erstellt.
+Das Buildzeit-Messobjekt enthält eine [Metrik][metric]
+mit dem Bauzeitwert in Sekunden, `87,0` und `86,98` in unseren Beispielen.
+
+Die Bauzeit wird immer auf die nächsten zwei Dezimalstellen gerundet.
+Das heißt, sie wird niemals eine lange Dezimalzahl wie `42,666666` sein.
+
+[json adapter]: /de/docs/explanation/adapters/#-json
+[bencher run]: /de/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /de/docs/explanation/benchmarking/#benchmark
+[measure]: /de/docs/explanation/benchmarking/#measure
+[metric]: /de/docs/explanation/benchmarking/#metrics

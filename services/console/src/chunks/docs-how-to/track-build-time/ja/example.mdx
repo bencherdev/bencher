@@ -1,0 +1,31 @@
+import ShellExample from "../shell-example.mdx";
+import ShellJsonExample from "../shell-json-example.mdx";
+import ExecExample from "../exec-example.mdx";
+import ExecJsonExample from "../exec-json-example.mdx";
+
+もし、バイナリをビルドするスクリプトが `./my_build_script.sh` にある場合、そのバイナリのビルド時間を<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>と[`json`アダプター][json adapter]で追跡することができます。`--build-time`フラグは[ベンチマークコマンド][bencher run]を必要とします。
+
+<ShellExample />
+
+ビルドスクリプトが完了するのに `87.0` 秒かかった場合、生成されるBMF JSONは次のようになります：
+
+<ShellJsonExample />
+
+このときの[ベンチマーク][benchmark]名は `/bin/sh -c ./my_build_script.sh` です。これは、コマンドが単一の引数のみであるため、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>はデフォルトでシェル形式での実行を行うからです。あるいは、exec形式の使用を強制したい場合、複数の引数を提供するか、`--exec` フラグを使用することができます。
+
+<ExecExample />
+
+このexec形式のビルドが `86.98` 秒かかった場合、生成されるBMF JSONは次のようになります：
+
+<ExecJsonExample />
+
+ここでの[ベンチマーク][benchmark]名は単に `./my_build_script.sh` です。`./my_build_script.sh` オブジェクトには `build-time` キーが含まれています。`build-time` は組み込みのビルド時間[メジャー][measure]のスラッグです。ビルド時間メジャーは、すべてのプロジェクトでデフォルトで作成されるわけではありません。しかし、ビルド時間メジャーを使用すると、プロジェクトに自動的に作成されます。ビルド時間メジャーオブジェクトには、ビルド時間の`値`（秒単位）を持つ[メトリック][metric]が含まれており、我々の例では `87.0` と `86.98` です。
+
+ビルド時間は常に小数点以下二桁に丸められます。つまり、`42.666666` のような長い小数になることは_決して_ありません。
+
+[json adapter]: /ja/docs/explanation/adapters/#-json
+[bencher run]: /ja/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+[measure]: /ja/docs/explanation/benchmarking/#measure
+[metric]: /ja/docs/explanation/benchmarking/#metrics

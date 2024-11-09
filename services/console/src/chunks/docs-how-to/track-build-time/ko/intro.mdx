@@ -1,0 +1,5 @@
+Bencher는 [가장 인기 있는 벤치마킹 하네스][adapters]를 기본으로 지원합니다. 그러나 때로는 실행 파일의 컴파일 시간과 같이 결과물을 빌드하는 데 걸리는 시간을 측정하고 싶을 때가 있습니다. 다행히도 Bencher는 빌드 시간 추적을 지원합니다. 빌드 시간을 추적하는 가장 쉬운 방법은 `--build-time` 플래그를 사용하여 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용하는 것입니다. 내부적으로는, <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>이 결과를 [Bencher Metric Format (BMF) JSON][bmf]으로 출력합니다. 따라서 [the `json` adapter][json adapter]을 명시적으로 사용하는 것이 좋은 습관입니다.
+
+[adapters]: /ko/docs/explanation/adapters/
+[bmf]: /ko/docs/reference/bencher-metric-format/
+[json adapter]: /ko/docs/explanation/adapters/#-json

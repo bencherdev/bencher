@@ -1,0 +1,22 @@
+import FileSize from "../file-size.mdx";
+import FileSizeJson from "../file-size-json.mdx";
+
+## Dateigröße verfolgen
+
+Sie möchten möglicherweise [die Dateigröße verfolgen][track file size] Ihrer Liefergegenstände,
+zusätzlich dazu, wie lange es dauert, diese zu bauen.
+<code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+unterstützt sowohl das Verfolgen von Bauzeiten als auch von Dateigrößen.
+
+Wenn die Ausgabe Ihres `./my_build_script.sh` Build-Skripts
+ein Binärprogramm im Pfad `./path/to/my_binary` war,
+könnten Sie sowohl die Compile-Zeit als auch die Größe des Binärprogramms mit diesem Befehl verfolgen:
+
+<FileSize />
+
+Wenn `my_binary` eine Größe von `42` Bytes hätte,
+würde das generierte BMF JSON so aussehen:
+
+<FileSizeJson />
+
+[track file size]: /de/docs/how-to/track-file-size/

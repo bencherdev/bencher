@@ -1,0 +1,50 @@
+import ShellExample from "../shell-example.mdx";
+import ShellJsonExample from "../shell-json-example.mdx";
+import ExecExample from "../exec-example.mdx";
+import ExecJsonExample from "../exec-json-example.mdx";
+
+如果您有一个位于 `./my_build_script.sh` 的脚本来构建您的二进制文件，
+那么您可以使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
+和[`json` 适配器][json adapter]来跟踪此二进制文件的构建时间。
+`--build-time` 标志需要一个[基准命令][bencher run]。
+
+<ShellExample />
+
+生成的 BMF JSON 看起来如下，
+如果您的构建脚本需要 `87.0` 秒来完成：
+
+<ShellJsonExample />
+
+请注意，[基准][benchmark]名称为 `/bin/sh -c ./my_build_script.sh`。
+这是因为我们的命令只是一个单参数，
+所以<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
+默认为 shell 形式执行。
+或者，如果您想强制使用 exec 形式，
+可以提供多个参数或使用 `--exec` 标志。
+
+<ExecExample />
+
+如果这个 exec 形式的构建花了 `86.98` 秒，
+那么生成的 BMF JSON 将如下所示：
+
+<ExecJsonExample />
+
+现在，[基准][benchmark]名称只是 `./my_build_script.sh`。
+`./my_build_script.sh` 对象包含 `build-time` 键。
+`build-time` 是内置构建时间[度量][measure]的 slug。
+构建时间度量不会为所有项目默认创建。
+但是，当您使用构建时间度量时，
+它将为您的项目自动创建。
+构建时间度量对象包含一个[指标][metric]，
+其构建时间 `value` 以秒为单位，
+在我们的示例中是 `87.0` 和 `86.98`。
+
+构建时间将始终四舍五入到最接近的两位小数。
+也就是说，它_永远不会_是像 `42.666666` 这样的长小数。
+
+[json adapter]: /zh/docs/explanation/adapters/#-json
+[bencher run]: /zh/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+[measure]: /zh/docs/explanation/benchmarking/#measure
+[metric]: /zh/docs/explanation/benchmarking/#metrics

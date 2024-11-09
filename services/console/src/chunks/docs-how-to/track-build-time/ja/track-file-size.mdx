@@ -1,0 +1,21 @@
+import FileSize from "../file-size.mdx";
+import FileSizeJson from "../file-size-json.mdx";
+
+## ファイルサイズを追跡する
+
+成果物のビルドにかかる時間を追跡することに加えて、[ファイルサイズを追跡する][track file size] かもしれません。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>
+は、ビルド時間とファイルサイズの両方を追跡することをサポートしています。
+
+`./my_build_script.sh` ビルドスクリプトの出力が
+`./path/to/my_binary` のパスにあるバイナリであった場合、
+次のコマンドでコンパイル時間とバイナリサイズの両方を追跡できます：
+
+<FileSize />
+
+`my_binary` のサイズが `42` バイトの場合、
+生成される BMF JSON は次のようになります：
+
+<FileSizeJson />
+
+[track file size]: /ja/docs/how-to/track-file-size/

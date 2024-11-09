@@ -1,0 +1,50 @@
+import ShellExample from "../shell-example.mdx";
+import ShellJsonExample from "../shell-json-example.mdx";
+import ExecExample from "../exec-example.mdx";
+import ExecJsonExample from "../exec-json-example.mdx";
+
+Si vous aviez un script situé à `./my_build_script.sh` qui construisait votre binaire,
+alors vous pourriez suivre le temps de construction de ce binaire avec
+<code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+et [l'adaptateur `json`][json adapter].
+Le drapeau `--build-time` nécessite [une commande de benchmark][bencher run].
+
+<ShellExample />
+
+Le JSON BMF généré ressemblerait à ceci,
+si votre script de construction prenait `87.0` secondes pour se terminer :
+
+<ShellJsonExample />
+
+Notez que le nom du [Benchmark][benchmark] est `/bin/sh -c ./my_build_script.sh`.
+C'est parce que notre commande est seulement un seul argument, donc
+<code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+par défaut utilise la forme shell pour l'exécution.
+Alternativement, si vous souhaitez forcer l'utilisation de la forme exec,
+vous pouvez soit fournir plusieurs arguments, soit utiliser le drapeau `--exec`.
+
+<ExecExample />
+
+Si cette construction en forme exec prenait `86.98` secondes,
+alors le JSON BMF généré ressemblerait à ceci :
+
+<ExecJsonExample />
+
+Maintenant, le nom du [Benchmark][benchmark] est simplement `./my_build_script.sh`.
+L'objet `./my_build_script.sh` contient la clé `build-time`.
+`build-time` est le slug pour la Mesure de Temps de Construction intégrée [Measure][measure].
+La Mesure de Temps de Construction n'est pas créée par défaut pour tous les Projets.
+Cependant, lorsque vous utilisez la Mesure de Temps de Construction,
+elle sera automatiquement créée pour votre Projet.
+L'objet de la Mesure de Temps de Construction contient un [Métrique][metric]
+avec la valeur du temps de construction en secondes, `87.0` et `86.98` dans nos exemples.
+
+Le Temps de Construction sera toujours arrondi au plus proche deux décimales.
+C'est-à-dire qu'il ne sera _jamais_ un long décimal comme `42.666666`.
+
+[json adapter]: /fr/docs/explanation/adapters/#-json
+[bencher run]: /fr/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /fr/docs/explanation/benchmarking/#benchmark
+[measure]: /fr/docs/explanation/benchmarking/#measure
+[metric]: /fr/docs/explanation/benchmarking/#metrics

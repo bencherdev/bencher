@@ -1,0 +1,14 @@
+Bencher unterstützt [die beliebtesten Benchmarking Harnesses][adapters] direkt.
+Manchmal möchten Sie jedoch messen, wie lange es dauert, Ihre Auslieferungen selbst zu bauen,
+wie zum Beispiel die Kompilierungszeit eines ausführbaren Programms.
+Zum Glück unterstützt Bencher auch die Verfolgung von Bauzeiten.
+Der einfachste Weg, Bauzeiten zu verfolgen, ist die Verwendung des
+<code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>-CLI-Unterbefehls
+mit dem `--build-time`-Flag.
+Im Hintergrund gibt <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+die Ergebnisse als [Bencher Metric Format (BMF) JSON][bmf] aus.
+Daher ist es eine gute Praxis, den [„json“-Adapter][json adapter] explizit zu verwenden.
+
+[adapters]: /de/docs/explanation/adapters/
+[bmf]: /de/docs/reference/bencher-metric-format/
+[json adapter]: /de/docs/explanation/adapters/#-json

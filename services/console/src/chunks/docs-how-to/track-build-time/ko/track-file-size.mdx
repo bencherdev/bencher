@@ -1,0 +1,22 @@
+import FileSize from "../file-size.mdx";
+import FileSizeJson from "../file-size-json.mdx";
+
+## 파일 크기 추적
+
+귀하의 결과물의 [파일 크기를 추적][track file size]하려고 할 수 있습니다,
+이를 빌드하는 데 걸리는 시간을 추적하는 것과 함께.
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
+은(는) 빌드 시간과 파일 크기를 모두 추적할 수 있도록 지원합니다.
+
+귀하의 `./my_build_script.sh` 빌드 스크립트의 출력물이
+경로 `./path/to/my_binary`에 있는 바이너리였다고 가정하면,
+다음 명령어로 컴파일 시간과 바이너리 크기를 모두 추적할 수 있을 것입니다:
+
+<FileSize />
+
+만약 `my_binary`의 크기가 `42` 바이트였다면,
+생성된 BMF JSON은 다음과 같을 것입니다:
+
+<FileSizeJson />
+
+[track file size]: /ko/docs/how-to/track-file-size/

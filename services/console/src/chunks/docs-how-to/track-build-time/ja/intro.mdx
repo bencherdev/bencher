@@ -1,0 +1,5 @@
+Bencherは、[最も人気のあるベンチマークハーネス][adapters]を標準でサポートしています。しかし、実行可能ファイルのコンパイル時間のように、成果物自体をビルドするのにどれくらい時間がかかるかを測定したい場合があります。幸運なことに、Bencherはビルド時間の追跡もサポートしています。ビルド時間を追跡する最も簡単な方法は、`--build-time` フラグを使用して <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用することです。内部では、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> は結果を [Bencher Metric Format (BMF) JSON][bmf] として出力します。そのため、[`json` アダプター][json adapter]を明示的に使用するのは良い慣行です。
+
+[adapters]: /ja/docs/explanation/adapters/
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[json adapter]: /ja/docs/explanation/adapters/#-json

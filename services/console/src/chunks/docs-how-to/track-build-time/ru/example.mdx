@@ -1,0 +1,31 @@
+import ShellExample from "../shell-example.mdx";
+import ShellJsonExample from "../shell-json-example.mdx";
+import ExecExample from "../exec-example.mdx";
+import ExecJsonExample from "../exec-json-example.mdx";
+
+Если у вас есть скрипт, расположенный в `./my_build_script.sh`, который собирает ваш бинарный файл, тогда вы можете отслеживать время сборки этого бинарного файла с помощью <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> и [адаптера `json`][json adapter]. Флаг `--build-time` требует [команду бенчмарка][bencher run].
+
+<ShellExample />
+
+Сгенерированный BMF JSON будет выглядеть так, если ваш скрипт сборки выполняется за `87.0` секунд:
+
+<ShellJsonExample />
+
+Обратите внимание, что имя [Бенчмарка][benchmark] — `/bin/sh -c ./my_build_script.sh`. Это потому что наша команда является только единственным аргументом, поэтому <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> по умолчанию использует форму shell для выполнения. В качестве альтернативы, если вы хотите принудительно использовать форму exec, вы можете либо предоставить несколько аргументов, либо использовать флаг `--exec`.
+
+<ExecExample />
+
+Если это построение в форме exec заняло `86.98` секунд, то сгенерированный BMF JSON будет выглядеть так:
+
+<ExecJsonExample />
+
+Теперь имя [Бенчмарка][benchmark] просто `./my_build_script.sh`. Объект `./my_build_script.sh` содержит ключ `build-time`. `build-time` является слагом для встроенной Меры Времени Сборки [Measure][measure]. Мера Времени Сборки не создается по умолчанию для всех проектов. Однако, когда вы используете Меру Времени Сборки, она будет автоматически создана для вашего проекта. Объект Меры Времени Сборки содержит [Метрику][metric] со значением времени сборки в секундах, `87.0` и `86.98` в наших примерах.
+
+Время сборки всегда будет округлено до ближайших двух десятичных знаков. То есть, оно _никогда_ не будет длинным десятичным, как `42.666666`.
+
+[json adapter]: /ru/docs/explanation/adapters/#-json
+[bencher run]: /ru/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
+[measure]: /ru/docs/explanation/benchmarking/#measure
+[metric]: /ru/docs/explanation/benchmarking/#metrics

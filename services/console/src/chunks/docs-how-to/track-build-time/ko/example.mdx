@@ -1,0 +1,48 @@
+import ShellExample from "../shell-example.mdx";
+import ShellJsonExample from "../shell-json-example.mdx";
+import ExecExample from "../exec-example.mdx";
+import ExecJsonExample from "../exec-json-example.mdx";
+
+당신이 이진 파일을 구축하는 `./my_build_script.sh` 위치에 스크립트를 가지고 있다면,
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
+과 [`json` 어댑터][json adapter]를 사용하여 이진 파일의 빌드 시간을 추적할 수 있습니다.
+`--build-time` 플래그는 [벤치마크 명령어][bencher run]가 필요합니다.
+
+<ShellExample />
+
+당신의 빌드 스크립트가 완료되는 데 `87.0`초가 걸렸다면, 생성된 BMF JSON은 다음과 같이 보일 것입니다:
+
+<ShellJsonExample />
+
+[벤치마크][benchmark] 이름은 `/bin/sh -c ./my_build_script.sh`입니다.
+이는 우리의 명령이 단일 인수이기 때문에
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
+이 기본적으로 쉘 형식으로 실행되기 때문입니다.
+대안으로 exec 형식의 사용을 강제화하려면,
+여러 인수를 제공하거나 `--exec` 플래그를 사용할 수 있습니다.
+
+<ExecExample />
+
+이 exec 형식의 빌드가 `86.98`초가 걸렸다면,
+생성된 BMF JSON은 다음과 같이 보일 것입니다:
+
+<ExecJsonExample />
+
+이제 [벤치마크][benchmark] 이름은 단순히 `./my_build_script.sh`입니다.
+`./my_build_script.sh` 객체에는 `build-time` 키가 포함되어 있습니다.
+`build-time`은 내장된 빌드 시간 [측정][measure]를 위한 슬러그입니다.
+빌드 시간 측정은 모든 프로젝트에 기본적으로 생성되지 않습니다.
+그러나 빌드 시간 측정을 사용하면,
+당신의 프로젝트에 자동으로 생성됩니다.
+빌드 시간 측정 객체는
+초 단위의 빌드 시간 `value`를 가진 [메트릭][metric]을 포함하며, 예시로 `87.0`과 `86.98`이 있습니다.
+
+빌드 시간은 항상 소수점 둘째 자리까지 반올림됩니다.
+즉, `42.666666`과 같은 긴 소수는 _절대_ 되지 않습니다.
+
+[json adapter]: /ko/docs/explanation/adapters/#-json
+[bencher run]: /ko/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+[measure]: /ko/docs/explanation/benchmarking/#measure
+[metric]: /ko/docs/explanation/benchmarking/#metrics

@@ -1,0 +1,5 @@
+Bencher oferece suporte aos [harnesses de benchmark mais populares][adapters] imediatamente. No entanto, às vezes, você deseja medir quanto tempo leva para construir seus próprios entregáveis, como o tempo de compilação de um executável. Por sorte, o Bencher também oferece suporte ao acompanhamento dos tempos de construção. A maneira mais fácil de rastrear os tempos de construção é usar o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> com a opção `--build-time`. Internamente, o <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> gera os resultados como [Bencher Metric Format (BMF) JSON][bmf]. Portanto, é uma boa prática usar explicitamente o [adaptador `json`][json adapter].
+
+[adapters]: /pt/docs/explanation/adapters/
+[bmf]: /pt/docs/reference/bencher-metric-format/
+[json adapter]: /pt/docs/explanation/adapters/#-json

@@ -1,0 +1,31 @@
+import ShellExample from "../shell-example.mdx";
+import ShellJsonExample from "../shell-json-example.mdx";
+import ExecExample from "../exec-example.mdx";
+import ExecJsonExample from "../exec-json-example.mdx";
+
+Si tuvieras un script ubicado en `./my_build_script.sh` que construyera tu binario, entonces podrías rastrear el tiempo de construcción de este binario con <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> y [el adaptador `json`][json adapter]. La opción `--build-time` requiere [un comando de benchmark][bencher run].
+
+<ShellExample />
+
+El JSON BMF generado se vería así, si tu script de construcción tomó `87.0` segundos para completarse:
+
+<ShellJsonExample />
+
+Nota que el nombre del [benchmark][benchmark] es `/bin/sh -c ./my_build_script.sh`. Esto se debe a que nuestro comando es solo un único argumento, por lo que <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> usa por defecto la forma shell para la ejecución. Alternativamente, si te gustaría forzar el uso de la forma exec, puedes proporcionar múltiples argumentos o usar la opción `--exec`.
+
+<ExecExample />
+
+Si esta construcción en forma exec tomó `86.98` segundos, entonces el JSON BMF generado se vería así:
+
+<ExecJsonExample />
+
+Ahora, el nombre del [benchmark][benchmark] es simplemente `./my_build_script.sh`. El objeto `./my_build_script.sh` contiene la clave `build-time`. `build-time` es el identificador para la Medida de Tiempo de Construcción [Measure][measure] incorporada. La Medida de Tiempo de Construcción no se crea por defecto para todos los Proyectos. Sin embargo, cuando usas la Medida de Tiempo de Construcción, será creada automáticamente para tu Proyecto. El objeto de Medida de Tiempo de Construcción contiene un [Métrica][metric] con el `valor` del tiempo de construcción en segundos, `87.0` y `86.98` en nuestros ejemplos.
+
+El Tiempo de Construcción siempre se redondeará a los dos decimales más cercanos. Es decir, _nunca_ será un decimal largo como `42.666666`.
+
+[json adapter]: /es/docs/explanation/adapters/#-json
+[bencher run]: /es/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /es/docs/explanation/benchmarking/#benchmark
+[measure]: /es/docs/explanation/benchmarking/#measure
+[metric]: /es/docs/explanation/benchmarking/#metrics

@@ -1,0 +1,22 @@
+import FileSize from "../file-size.mdx";
+import FileSizeJson from "../file-size-json.mdx";
+
+## Отслеживание размера файла
+
+Вы можете захотеть [отслеживать размер файла][track file size] ваших результатов,
+в дополнение к отслеживанию времени, которое требуется на их сборку.
+<code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+поддерживает отслеживание как времени сборки, так и размеров файлов.
+
+Если результатом вашего скрипта сборки `./my_build_script.sh`
+был бинарный файл по пути `./path/to/my_binary`,
+вы могли бы отслеживать как время компиляции, так и размер бинарного файла с помощью этой команды:
+
+<FileSize />
+
+Если бы `my_binary` имел размер `42` байта,
+сгенерированный BMF JSON выглядел бы так:
+
+<FileSizeJson />
+
+[track file size]: /ru/docs/how-to/track-file-size/

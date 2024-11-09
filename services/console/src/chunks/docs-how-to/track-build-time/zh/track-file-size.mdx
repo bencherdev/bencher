@@ -1,0 +1,20 @@
+import FileSize from "../file-size.mdx";
+import FileSizeJson from "../file-size-json.mdx";
+
+## 跟踪文件大小
+
+您可能希望在跟踪构建所需时间的同时，[跟踪可交付成果的文件大小][track file size]。
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
+支持同时跟踪构建时间和文件大小。
+
+如果您的 `./my_build_script.sh` 构建脚本的输出是一个位于路径 `./path/to/my_binary` 的二进制文件，
+那么可以使用此命令跟踪编译时间和二进制文件的大小：
+
+<FileSize />
+
+如果 `my_binary` 的大小是 `42` 字节，
+生成的 BMF JSON 将如下所示：
+
+<FileSizeJson />
+
+[track file size]: /zh/docs/how-to/track-file-size/

@@ -1,0 +1,16 @@
+import FileSize from "../file-size.mdx";
+import FileSizeJson from "../file-size-json.mdx";
+
+## Seguimiento del Tamaño de Archivo
+
+Es posible que desee [hacer un seguimiento del tamaño del archivo][track file size] de sus entregables, además de seguir cuánto tiempo tardan en compilarse. <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> admite el seguimiento tanto de los tiempos de compilación como de los tamaños de archivo.
+
+Si el resultado de su script de construcción `./my_build_script.sh` era un binario en la ruta `./path/to/my_binary`, entonces podría rastrear tanto el tiempo de compilación como el tamaño del binario con este comando:
+
+<FileSize />
+
+Si `my_binary` tenía un tamaño de `42` bytes, el JSON de BMF generado se vería así:
+
+<FileSizeJson />
+
+[track file size]: /es/docs/how-to/track-file-size/
