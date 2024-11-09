@@ -119,6 +119,7 @@ impl QueryMeasure {
             .or_else(|| built_in::iai_callgrind::dhat_tool::AtTEndBlocks::from_str(measure_str))
             .or_else(|| built_in::iai_callgrind::dhat_tool::ReadsBytes::from_str(measure_str))
             .or_else(|| built_in::iai_callgrind::dhat_tool::WritesBytes::from_str(measure_str))
+            .or_else(|| built_in::build_time::BuildTime::from_str(measure_str))
             .or_else(|| built_in::file_size::FileSize::from_str(measure_str))
         {
             measure
