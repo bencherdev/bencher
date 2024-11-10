@@ -2,15 +2,9 @@
 - How To:
   - How to Import Historical Data
     - Create github-action-benchmark importer `bencher import`
-  - How to set up disaster recovery
 - Explanation:
   - How It Works
-  - `bencher up`
-    - `bencher down`
-    - `bencher logs`
   - Passwordless Auth
-- Reference:
-  - Console Configuration
 
 # Learn
 
@@ -21,19 +15,22 @@
   - How to profile executable size in Rust
     - [cargo-bloat](https://github.com/RazrFalcon/cargo-bloat)
     - https://github.com/rust-lang/backtrace-rs/pull/542
+  - How to track compile times in CI
 - C++
-  - Google
   - Catch2
   - How to track C++ benchmarks in CI
   - How to profile executable size in C++
     - https://github.com/google/bloaty
+  - How to track compile times in CI
 - Python
   - pytest
   - asv
   - How to track Python benchmarks in CI
+  - How to track build times in CI
 - Go
   - go
   - How to track Go benchmarks in CI
+  - How to track compile times in CI
 - Shell
   - hyperfine
   - How to track command line applications benchmarks in CI
@@ -42,12 +39,17 @@
   - How to track C# benchmarks in CI
   - How to profile executable size on Windows
     - https://devblogs.microsoft.com/performance-diagnostics/sizebench-a-new-tool-for-analyzing-windows-binary-size/
+  - How to track compile times in CI
 - Java
   - JMH
   - How to track Java benchmarks in CI
+  - How to track compile times in CI
+- Javascript
+  - How to track build times in CI
 - Ruby
   - Benchmark
   - How to track Ruby benchmarks in CI
+  - How to track build times in CI
 
 ## Benchmarking
 - https://www.researchgate.net/publication/334047447_Pro_NET_Benchmarking_The_Art_of_Performance_Measurement
@@ -90,7 +92,6 @@
 - https://www.neuraldesigner.com/blog/how-to-benchmark-the-performance-of-machine-learning-platforms/
 
 ## Case Study
-- Diesel
 - Rustc Perf
 
 Intention + Obstacle
@@ -160,12 +161,21 @@ https://www.emergetools.com/explore
 - https://linux.die.net/man/1/pahole
 - https://linux.die.net/man/1/readelf
 
+Or instead of binary size could do compile times?
+
 # Daily Code Games
 
 Think Advent of Code meets Wordle
-A daily Shenzhen I/O style puzzle maybe using a more practical instruction set, something like RISC-V.
+A daily Shenzhen I/O style puzzle maybe using a more practical instruction set, something like RISC-V or WASM.
 
 - https://en.m.wikipedia.org/wiki/Shenzhen_I/O
 - https://en.wikipedia.org/wiki/RISC-V
 
-Could also lend itself well to having documentation on RISC-V itself.
+Could also lend itself well to having documentation on instruction set itself.
+
+There could be a leader board. The way that it works would be pretty simple.
+It would use tango style pairwise benchmarking to compare the solutions.
+So basically, you could just implement a sort algorithm where the comparison function is the pairwise benchmark results.
+If WASM is chosen, then it should be pretty simple to safely run the code.
+
+Factorio style daily challenges?
