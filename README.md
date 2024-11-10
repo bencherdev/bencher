@@ -57,6 +57,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions/)
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd/)
   - [Track Custom Benchmarks](https://bencher.dev/docs/how-to/track-custom-benchmarks/)
+  - [Track Build Time](https://bencher.dev/docs/how-to/track-build-time/)
   - [Track File Size](https://bencher.dev/docs/how-to/track-file-size/)
   - [Self-Hosted GitHub App](https://bencher.dev/docs/how-to/github-app/)
 - Explanation
