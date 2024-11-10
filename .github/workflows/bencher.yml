@@ -749,7 +749,7 @@ jobs:
         run: npm run netlify
       - name: Test Links
         continue-on-error: true
-        uses: lycheeverse/lychee-action@v2.0.2
+        uses: lycheeverse/lychee-action@v2.1.0
         with:
           args: --config ./services/console/lychee.toml ./services/console/dist
 
