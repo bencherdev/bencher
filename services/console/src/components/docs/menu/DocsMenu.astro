@@ -46,6 +46,9 @@ const benchmarkingPythonCollection = await getLangCollection(
 const benchmarkingRustCollection = await getLangCollection(
 	Collection.benchmarking_rust,
 );
+const trackInCiRustCollection = await getLangCollection(
+	Collection.track_in_ci_rust,
+);
 const caseStudyCollection = await getLangCollection(Collection.case_study);
 const engineeringCollection = await getLangCollection(Collection.engineering);
 
@@ -109,6 +112,8 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 					benchmarkingPythonCollection[lang]?.length +
 					1 +
 					benchmarkingRustCollection[lang]?.length +
+					1 +
+					trackInCiRustCollection[lang]?.length +
 					1 +
 					caseStudyCollection[lang]?.length +
 					1 +

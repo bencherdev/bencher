@@ -1,5 +1,5 @@
 ---
-import { benchmarking, caseStudy, engineering } from "../../../i18n/ui.ts";
+import { benchmarking, trackInCi, caseStudy, engineering } from "../../../i18n/ui.ts";
 import { getLangCollection, langPath } from "../../../i18n/utils.ts";
 import Collection, { collectionPath } from "../../../util/collection.ts";
 
@@ -16,6 +16,9 @@ const benchmarkingPythonCollection = await getLangCollection(
 );
 const benchmarkingRustCollection = await getLangCollection(
 	Collection.benchmarking_rust,
+);
+const trackInCiRustCollection = await getLangCollection(
+	Collection.track_in_ci_rust,
 );
 const caseStudyCollection = await getLangCollection(Collection.case_study);
 const engineeringCollection = await getLangCollection(Collection.engineering);
@@ -41,6 +44,16 @@ const { lang } = Astro.props;
         section: "Rust",
         collection: Collection.benchmarking_rust,
         content: benchmarkingRustCollection,
+      }
+    ],
+  },
+  {
+    label: trackInCi(lang),
+    sections: [
+      {
+        section: "Rust",
+        collection: Collection.track_in_ci_rust,
+        content: trackInCiRustCollection,
       }
     ],
   },

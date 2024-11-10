@@ -57,6 +57,7 @@ export const collections = {
 	benchmarking_cpp: page,
 	benchmarking_python: page,
 	benchmarking_rust: page,
+	track_in_ci_rust: page,
 	case_study: page,
 	engineering: page,
 	// onboard

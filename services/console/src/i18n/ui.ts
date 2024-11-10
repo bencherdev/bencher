@@ -216,6 +216,29 @@ export const benchmarking = (lang: Language) => {
 	}
 };
 
+export const trackInCi = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Track in CI";
+		case Language.de:
+			return "Nachverfolgen in CI";
+		case Language.es:
+			return "Seguimiento en CI";
+		case Language.fr:
+			return "Suivi dans l'intégration continue (CI)";
+		case Language.ja:
+			return "CIでのトラック";
+		case Language.ko:
+			return "CI에서 추적하기";
+		case Language.pt:
+			return "Rastrear no CI";
+		case Language.ru:
+			return "Отслеживание в CI";
+		case Language.zh:
+			return "在 CI 中跟踪";
+	}
+};
+
 export const caseStudy = (lang: Language) => {
 	switch (lang) {
 		case Language.en:

@@ -15,6 +15,7 @@ enum Collection {
 	benchmarking_cpp = "benchmarking-cpp",
 	benchmarking_python = "benchmarking-python",
 	benchmarking_rust = "benchmarking-rust",
+	track_in_ci_rust = "track-in-ci-rust",
 	case_study = "case-study",
 	engineering = "engineering",
 	// Onboard,
@@ -54,6 +55,8 @@ export const collectionPath = (collection: Collection) => {
 			return "benchmarking/python";
 		case Collection.benchmarking_rust:
 			return "benchmarking/rust";
+		case Collection.track_in_ci_rust:
+			return "track-in-ci/rust";
 		case Collection.case_study:
 			return "case-study";
 		case Collection.engineering:
