@@ -1,0 +1,18 @@
+## Bencher 셀프 호스팅 설정 단계
+
+1. [Bencher 셀프 호스팅 인스턴스][bencher self hosted]를 생성합니다.
+2. Bencher 셀프 호스팅 인스턴스에 계정을 생성합니다.
+3. API 토큰을 생성하고 이를 비밀로 CI에 추가합니다.
+4. [GitHub Actions][github actions] 또는 [GitLab CI/CD][gitlab ci cd]와 같은 CI 작업 흐름을 생성합니다.
+5. CI 작업 흐름에 [Bencher CLI 설치][install bencher cli]를 설치합니다. CLI 버전이 Bencher 셀프 호스팅 인스턴스의 버전과 일치하는지 확인하십시오.
+6. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> 서브 명령어를 사용하여 CI 작업 흐름에서 벤치마크를 실행하고,
+   <a href={props.url}> <code>{props.adapter}</code> 어댑터</a>를 사용하여 [ '--host' 옵션 설정][host option]을 Bencher 셀프 호스팅 인스턴스 URL로 설정합니다.
+
+[bencher self hosted]: /ko/docs/explanation/bencher-self-hosted/
+[bencher sign up]: /auth/signup/
+[console users tokens add]: /console/users/tokens/add
+[github actions]: /ko/docs/how-to/github-actions/
+[gitlab ci cd]: /ko/docs/how-to/gitlab-ci-cd/
+[install bencher cli]: /ko/docs/how-to/install-cli/
+[adapter rust_criterion]: /ko/docs/explanation/adapters/#-rust-criterion
+[host option]: /ko/docs/explanation/bencher-run/#--host-url

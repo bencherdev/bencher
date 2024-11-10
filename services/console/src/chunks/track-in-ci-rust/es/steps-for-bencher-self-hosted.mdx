@@ -1,0 +1,22 @@
+## Pasos para Bencher Self-Hosted
+
+1. Crear una [instancia de Bencher Self-Hosted][bencher self hosted].
+2. Crear una cuenta en tu instancia de Bencher Self-Hosted.
+3. Crear un token de API y añadirlo a tu CI como un secreto.
+4. Crear un flujo de trabajo para tu CI, como [GitHub Actions][github actions] o [GitLab CI/CD][gitlab ci cd].
+5. [Instalar la Bencher CLI][install bencher cli] en tu flujo de trabajo de CI.
+   Asegúrate de que la versión de la CLI coincide con la versión de tu instancia de Bencher Self-Hosted.
+6. Ejecutar tus benchmarks con el
+   <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   subcomando en tu flujo de trabajo de CI utilizando
+   <a href={props.url}>el <code>{props.adapter}</code> adaptador</a>
+   y configurando [la opción `--host`][host option] a la URL de tu instancia de Bencher Self-Hosted.
+
+[bencher self hosted]: /es/docs/explanation/bencher-self-hosted/
+[bencher sign up]: /auth/signup/
+[console users tokens add]: /console/users/tokens/add
+[github actions]: /es/docs/how-to/github-actions/
+[gitlab ci cd]: /es/docs/how-to/gitlab-ci-cd/
+[install bencher cli]: /es/docs/how-to/install-cli/
+[adapter rust_criterion]: /es/docs/explanation/adapters/#-rust-criterion
+[host option]: /es/docs/explanation/bencher-run/#--host-url

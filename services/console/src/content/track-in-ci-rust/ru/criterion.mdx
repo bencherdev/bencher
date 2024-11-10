@@ -1,0 +1,36 @@
+---
+title: "Criterion"
+description: "Пошаговое руководство по отслеживанию бенчмарков Rust Criterion в CI"
+heading: "Как отслеживать бенчмарки Rust Criterion в CI"
+published: "2024-11-09T19:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/criterion/ru/intro.mdx";
+import BencherIntro from "../../../chunks/general/ru/bencher-intro.mdx";
+import StepsForBencherCloud from "../../../chunks/track-in-ci-rust/ru/steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "../../../chunks/track-in-ci-rust/ru/steps-for-bencher-self-hosted.mdx";
+import RustCriterion from "../../../chunks/docs-explanation/adapters/ru/rust-criterion.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro />
+
+## Что такое Bencher?
+
+<BencherIntro />
+
+<StepsForBencherCloud
+  adapter="rust_criterion"
+  url="/ru/docs/explanation/adapters/#-rust-criterion"
+/>
+
+<StepsForBencherSelfHosted
+  adapter="rust_criterion"
+  url="/ru/docs/explanation/adapters/#-rust-criterion"
+/>
+
+<RustCriterion />
+
+<br />
+
+<CallToAction />

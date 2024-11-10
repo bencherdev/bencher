@@ -1,0 +1,22 @@
+## Шаги для Bencher Self-Hosted
+
+1. Создайте [экземпляр Bencher Self-Hosted][bencher self hosted].
+2. Зарегистрируйте аккаунт на вашем экземпляре Bencher Self-Hosted.
+3. Создайте API токен и добавьте его в CI как секрет.
+4. Создайте рабочий процесс для вашего CI, например [GitHub Actions][github actions] или [GitLab CI/CD][gitlab ci cd].
+5. [Установите Bencher CLI][install bencher cli] в ваш CI рабочий процесс.
+   Убедитесь, что версия CLI соответствует версии вашего экземпляра Bencher Self-Hosted.
+6. Запустите ваши бенчмарки с помощью
+   <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+   подкоманды в вашем CI рабочем процессе, используя
+   <a href={props.url}>адаптер <code>{props.adapter}</code></a>
+   и указывая [опцию `--host`][host option] на URL вашего экземпляра Bencher Self-Hosted.
+
+[bencher self hosted]: /ru/docs/explanation/bencher-self-hosted/
+[bencher sign up]: /auth/signup/
+[console users tokens add]: /console/users/tokens/add
+[github actions]: /ru/docs/how-to/github-actions/
+[gitlab ci cd]: /ru/docs/how-to/gitlab-ci-cd/
+[install bencher cli]: /ru/docs/how-to/install-cli/
+[adapter rust_criterion]: /ru/docs/explanation/adapters/#-rust-criterion
+[host option]: /ru/docs/explanation/bencher-run/#--host-url

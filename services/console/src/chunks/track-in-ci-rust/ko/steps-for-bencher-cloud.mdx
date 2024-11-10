@@ -1,0 +1,16 @@
+## Bencher 클라우드를 위한 단계
+
+1. [Bencher 클라우드 계정 생성][bencher sign up].
+2. [API 토큰 생성][console users tokens add] 후, CI에 비밀로 추가합니다.
+3. [GitHub Actions][github actions]이나 [GitLab CI/CD][gitlab ci cd]와 같은 CI를 위한 워크플로우를 만듭니다.
+4. CI 워크플로우에 [Bencher CLI를 설치][install bencher cli]합니다.
+5. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
+   서브커맨드를 사용하여 CI 워크플로우에서 벤치마크를 실행하고
+   <a href={props.url}> <code>{props.adapter}</code> 어댑터</a>를 사용합니다.
+
+[bencher sign up]: /auth/signup/
+[console users tokens add]: /console/users/tokens/add
+[github actions]: /ko/docs/how-to/github-actions/
+[gitlab ci cd]: /ko/docs/how-to/gitlab-ci-cd/
+[install bencher cli]: /ko/docs/how-to/install-cli/
+[adapter rust_criterion]: /ko/docs/explanation/adapters/#-rust-criterion

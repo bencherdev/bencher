@@ -1,0 +1,16 @@
+## Bencher Cloud の手順
+
+1. [Bencher Cloud アカウントを作成する][bencher sign up]。
+2. [API トークンを作成][console users tokens add]し、それを秘密として CI に追加する。
+3. [GitHub Actions][github actions] や [GitLab CI/CD][gitlab ci cd] のような CI のワークフローを作成する。
+4. [Bencher CLI をインストール][install bencher cli]して CI ワークフローに組み込む。
+5. CI ワークフロー内で <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>
+   サブコマンドを使ってベンチマークを実行し、
+   <a href={props.url}> <code>{props.adapter}</code> アダプター</a>を使用する。
+
+[bencher sign up]: /auth/signup/
+[console users tokens add]: /console/users/tokens/add
+[github actions]: /ja/docs/how-to/github-actions/
+[gitlab ci cd]: /ja/docs/how-to/gitlab-ci-cd/
+[install bencher cli]: /ja/docs/how-to/install-cli/
+[adapter rust_criterion]: /ja/docs/explanation/adapters/#-rust-criterion

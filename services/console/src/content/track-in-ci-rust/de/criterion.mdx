@@ -1,0 +1,36 @@
+---
+title: "Criterion"
+description: "Eine Schritt-für-Schritt-Anleitung zur Nachverfolgung von Rust Criterion Benchmarks in CI"
+heading: "So verfolgen Sie Rust Criterion Benchmarks in CI"
+published: "2024-11-09T19:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/criterion/de/intro.mdx";
+import BencherIntro from "../../../chunks/general/de/bencher-intro.mdx";
+import StepsForBencherCloud from "../../../chunks/track-in-ci-rust/de/steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "../../../chunks/track-in-ci-rust/de/steps-for-bencher-self-hosted.mdx";
+import RustCriterion from "../../../chunks/docs-explanation/adapters/de/rust-criterion.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro />
+
+## Was ist Bencher?
+
+<BencherIntro />
+
+<StepsForBencherCloud
+  adapter="rust_criterion"
+  url="/de/docs/explanation/adapters/#-rust-criterion"
+/>
+
+<StepsForBencherSelfHosted
+  adapter="rust_criterion"
+  url="/de/docs/explanation/adapters/#-rust-criterion"
+/>
+
+<RustCriterion />
+
+<br />
+
+<CallToAction />

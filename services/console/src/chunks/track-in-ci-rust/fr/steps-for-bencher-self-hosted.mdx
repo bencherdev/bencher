@@ -1,0 +1,22 @@
+## Étapes pour Bencher Auto-hébergé
+
+1. Créez une [instance Bencher Auto-hébergée][bencher self hosted].
+2. Créez un compte sur votre instance Bencher Auto-hébergée.
+3. Créez un jeton API et ajoutez-le à votre CI en tant que secret.
+4. Créez un workflow pour votre CI, comme [GitHub Actions][github actions] ou [GitLab CI/CD][gitlab ci cd].
+5. [Installez le Bencher CLI][install bencher cli] dans votre workflow CI.
+   Assurez-vous que la version du CLI correspond à la version de votre instance Bencher Auto-hébergée.
+6. Exécutez vos benchmarks avec la
+   <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+   sous-commande dans votre workflow CI en utilisant
+   <a href={props.url}>l'adaptateur <code>{props.adapter}</code></a>
+   et en réglant [l'option `--host`][host option] sur l'URL de votre instance Bencher Auto-hébergée.
+
+[bencher self hosted]: /fr/docs/explanation/bencher-self-hosted/
+[bencher sign up]: /auth/signup/
+[console users tokens add]: /console/users/tokens/add
+[github actions]: /fr/docs/how-to/github-actions/
+[gitlab ci cd]: /fr/docs/how-to/gitlab-ci-cd/
+[install bencher cli]: /fr/docs/how-to/install-cli/
+[adapter rust_criterion]: /fr/docs/explanation/adapters/#-rust-criterion
+[host option]: /fr/docs/explanation/bencher-run/#--host-url

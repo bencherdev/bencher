@@ -1,0 +1,17 @@
+## Passos para o Bencher Cloud
+
+1. [Crie uma conta no Bencher Cloud][bencher sign up].
+2. [Crie um token de API][console users tokens add] e adicione-o ao seu CI como um segredo.
+3. Crie um fluxo de trabalho para o seu CI, como [GitHub Actions][github actions] ou [GitLab CI/CD][gitlab ci cd].
+4. [Instale o Bencher CLI][install bencher cli] no seu fluxo de trabalho CI.
+5. Execute seus benchmarks com o
+   <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+   subcomando no seu fluxo de trabalho CI usando
+   <a href={props.url}>o adaptador <code>{props.adapter}</code></a>.
+
+[bencher sign up]: /auth/signup/
+[console users tokens add]: /console/users/tokens/add
+[github actions]: /pt/docs/how-to/github-actions/
+[gitlab ci cd]: /pt/docs/how-to/gitlab-ci-cd/
+[install bencher cli]: /pt/docs/how-to/install-cli/
+[adapter rust_criterion]: /docs/explanation/adapters/#-rust-criterion
