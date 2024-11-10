@@ -6,6 +6,54 @@ published: "2024-11-09T19:15:00Z"
 sortOrder: 1
 ---
 
+import Intro from "../../../chunks/track-in-ci-rust/criterion/en/intro.mdx";
+import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
+import RustCriterion from "../../../chunks/docs-explanation/adapters/en/rust-criterion.mdx";
+
 import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
+
+<Intro />
+
+## What is Bencher?
+
+<BencherIntro />
+
+## Steps for Bencher Cloud
+
+1. [Create a Bencher Cloud account][bencher sign up].
+2. [Create an API token][console users tokens add] and add it to your CI as a secret.
+3. Create a workflow for your CI, like [GitHub Actions][github actions] or [GitLab CI/CD][gitlab ci cd].
+4. [Install the Bencher CLI][install bencher cli] in your CI workflow.
+5. Run your benchmarks with the
+   <code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+   subcommand in your CI workflow using
+   [the `rust_criterion` adapter][adapter rust_criterion].
+
+## Steps for Bencher Self-Hosted
+
+1. Create a [Bencher Self-Hosted instance][bencher self hosted].
+2. Create an account on your Bencher Self-Hosted instance.
+3. Create an API token and add it to your CI as a secret.
+4. Create a workflow for your CI, like [GitHub Actions][github actions] or [GitLab CI/CD][gitlab ci cd].
+5. [Install the Bencher CLI][install bencher cli] in your CI workflow.
+   Make sure the CLI version matches the version of your Bencher Self-Hosted instance.
+6. Run your benchmarks with the
+   <code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+   subcommand in your CI workflow using
+   [the `rust_criterion` adapter][adapter rust_criterion]
+   and setting [the `--host` option][host option] to your Bencher Self-Hosted instance URL.
+
+<RustCriterion />
+
+
+[bencher sign up]: /auth/signup/
+[console users tokens add]: /console/users/tokens/add
+[github actions]: /docs/how-to/github-actions/
+[gitlab ci cd]: /docs/how-to/gitlab-ci-cd/
+[install bencher cli]: /docs/how-to/install-cli/
+[adapter rust_criterion]: /docs/explanation/adapters/#-rust-criterion
+
+[bencher self hosted]: /docs/explanation/bencher-self-hosted/
+[host option]: /docs/explanation/bencher-run/#--host-url
 
 <BencherFooter />
