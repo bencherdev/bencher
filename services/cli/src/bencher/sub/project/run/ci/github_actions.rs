@@ -5,7 +5,7 @@ use octocrab::{
     Octocrab,
 };
 
-use crate::cli_println_quietable;
+use crate::{cli_eprintln_quietable, cli_println_quietable};
 
 const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
@@ -169,7 +169,7 @@ impl GitHubActions {
 
         // Creating a job summary is not considered "posting" to CI,
         // so it is done regardless of the `ci_only_thresholds` option.
-        self.create_job_summary(report_comment);
+        self.create_job_summary(report_comment, log);
 
         // Only post to CI if there are thresholds set
         if self.ci_only_thresholds && !report_comment.has_threshold() {
@@ -207,11 +207,16 @@ impl GitHubActions {
             .await
     }
 
-    fn create_job_summary(&self, report_comment: &ReportComment) {
+    fn create_job_summary(&self, report_comment: &ReportComment, log: bool) {
         let summary = report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref());
         // https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#adding-a-job-summary
         if let Ok(file_path) = std::env::var(GITHUB_STEP_SUMMARY) {
-            let _ = std::fs::write(file_path, summary);
+            if let Err(err) = std::fs::write(&file_path, summary) {
+                cli_eprintln_quietable!(
+                    log,
+                    "Failed to write GitHub Actions job summary to {file_path}: {err}"
+                );
+            }
         }
     }
 
