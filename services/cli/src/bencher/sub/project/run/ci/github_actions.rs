@@ -210,7 +210,9 @@ impl GitHubActions {
     fn create_job_summary(&self, report_comment: &ReportComment) {
         let summary = report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref());
         // https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#adding-a-job-summary
-        std::env::set_var(GITHUB_STEP_SUMMARY, summary);
+        if let Ok(file_path) = std::env::var(GITHUB_STEP_SUMMARY) {
+            let _ = std::fs::write(file_path, summary);
+        }
     }
 
     async fn create_github_check(
