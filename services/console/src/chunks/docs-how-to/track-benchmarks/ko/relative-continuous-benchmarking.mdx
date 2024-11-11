@@ -43,7 +43,7 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 7. 벤치마크 명령의 인수를 지정합니다. 벤치마크 명령에 대한 전체 개요는 [명령 인수][command argument]를 참조하세요.
    (예: `bencher mock`)
 
-이 명령이 CI에서 처음 실행될 때, 아직 존재하지 않으므로 `feature-branch` Branch가 생성됩니다. 새로운 `feature-branch`에는 시작 지점, 기존 데이터 또는 임계값이 없습니다. 이후의 실행에서는 이전 `feature-branch` [머리][head]가 대체되고 시작 지점, 기존 데이터 또는 임계값 없이 새로운 `feature-branch` [머리][head]가 생성됩니다.
+이 명령이 CI에서 처음 실행될 때, 아직 존재하지 않으므로 `main` Branch가 생성됩니다. 새로운 `main`에는 시작 지점, 기존 데이터 또는 임계값이 없습니다. 이후의 실행에서는 이전 `main` [머리][head]가 대체되고 시작 지점, 기존 데이터 또는 임계값 없이 새로운 `main` [머리][head]가 생성됩니다.
 
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project

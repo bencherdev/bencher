@@ -35,7 +35,7 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 6. 将`--adapter`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的[Bencher Metric Format JSON（`json`）][bmf]。 有关完整概述，请参阅[基准测试适配器][adapter json]。(例如：`--adapter json`)
 7. 指定基准命令参数。有关完整概述，请参阅[基准命令][command argument]。（例如：`bencher mock`）
 
-在 CI 中第一次运行此命令时，将创建`feature-branch`分支，因为它尚不存在。新创建的`feature-branch`将没有起始点、现有数据或阈值。在后续运行中，旧的`feature-branch` [Head][head] 将被替换，并创建新的`feature-branch` [Head][head]，不含起始点、现有数据或阈值。
+在 CI 中第一次运行此命令时，将创建`main`分支，因为它尚不存在。新创建的`main`将没有起始点、现有数据或阈值。在后续运行中，旧的`main` [Head][head] 将被替换，并创建新的`main` [Head][head]，不含起始点、现有数据或阈值。
 
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project

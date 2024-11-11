@@ -35,7 +35,7 @@ Ensuite, nous avons besoin de lancer nos benchmarks sur la branche `main` dans C
 6. Définissez l'option `--adapter` au [Format de Métrique Bencher JSON (`json`)][bmf] généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Voir [un aperçu complet des adaptateurs de harnais de benchmark][adapter json]. (ex : `--adapter json`)
 7. Spécifiez les arguments de la commande de benchmark. Voir [un aperçu complet de la commande de benchmark][command argument]. (ex : `bencher mock`)
 
-La première fois que cette commande est exécutée dans CI, elle créera la Branche `feature-branch` car elle n'existe pas encore. La nouvelle `feature-branch` n'aura _pas_ de point de départ, de données existantes, ni de Seuils. Lors des exécutions subséquentes, l'ancien [Head][head] de la `feature-branch` sera remplacé, et un nouveau [Head][head] de la `feature-branch` sera créé sans point de départ, données existantes, ni Seuils.
+La première fois que cette commande est exécutée dans CI, elle créera la Branche `main` car elle n'existe pas encore. La nouvelle `main` n'aura _pas_ de point de départ, de données existantes, ni de Seuils. Lors des exécutions subséquentes, l'ancien [Head][head] de la `main` sera remplacé, et un nouveau [Head][head] de la `main` sera créé sans point de départ, données existantes, ni Seuils.
 
 [bencher run]: /fr/docs/explanation/bencher-run/
 [project option]: /fr/docs/explanation/bencher-run/#--project-project

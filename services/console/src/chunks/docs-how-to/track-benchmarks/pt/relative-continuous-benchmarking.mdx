@@ -64,10 +64,10 @@ Depois, precisamos executar nossos benchmarks no branch `main` no CI:
     (ex: `bencher mock`)
 
 A primeira vez que este comando for executado no CI,
-ele criará o branch `feature-branch` já que ainda não existe.
-O novo `feature-branch` _não_ terá um ponto de início, dados existentes ou Limiares.
-Nos execuções subsequentes, o [Head][head] antigo do `feature-branch` será substituído
-e um novo [Head][head] para o `feature-branch` será criado sem um ponto de início, dados existentes ou Limiares.
+ele criará o branch `main` já que ainda não existe.
+O novo `main` _não_ terá um ponto de início, dados existentes ou Limiares.
+Nos execuções subsequentes, o [Head][head] antigo do `main` será substituído
+e um novo [Head][head] para o `main` será criado sem um ponto de início, dados existentes ou Limiares.
 
 [bencher run]: /pt/docs/explanation/bencher-run/
 [project option]: /pt/docs/explanation/bencher-run/#--project-project

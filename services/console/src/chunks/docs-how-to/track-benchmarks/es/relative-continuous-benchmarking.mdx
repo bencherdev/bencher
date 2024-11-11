@@ -64,10 +64,10 @@ Luego necesitamos ejecutar nuestros benchmarks en la rama `main` en CI:
    (ej: `bencher mock`)
 
 La primera vez que se ejecuta este comando en CI,
-creará la rama `feature-branch` ya que todavía no existe.
-La nueva `feature-branch` _no_ tendrá un punto de inicio, datos existentes ni Umbrales.
-En ejecuciones posteriores, el antiguo Movimiento [Head][head] de `feature-branch` será reemplazado
-y se creará un nuevo Movimiento [Head][head] para `feature-branch` sin un punto de inicio, datos existentes ni Umbrales.
+creará la rama `main` ya que todavía no existe.
+La nueva `main` _no_ tendrá un punto de inicio, datos existentes ni Umbrales.
+En ejecuciones posteriores, el antiguo Movimiento [Head][head] de `main` será reemplazado
+y se creará un nuevo Movimiento [Head][head] para `main` sin un punto de inicio, datos existentes ni Umbrales.
 
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
