@@ -187,7 +187,7 @@ inherits = "release"
 opt-level = "s"
 
 # https://benw.is/posts/how-i-improved-my-rust-compile-times-by-seventy-five-percent#optimization-level
-[profile.dev]
-opt-level = 1
-[profile.dev.package."*"]
-opt-level = 3
+# [profile.dev]
+# opt-level = 1
+# [profile.dev.package."*"]
+# opt-level = 3
