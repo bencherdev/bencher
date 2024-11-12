@@ -18,6 +18,10 @@ const PULL_REQUEST_TARGET: &str = "pull_request_target";
 
 const FULL_NAME: &str = "full_name";
 
+// https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run
+#[allow(clippy::decimal_literal_representation)]
+const CHECK_MAX_LENGTH: usize = 65_536;
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct GitHubActions {
@@ -231,10 +235,14 @@ impl GitHubActions {
         let Ok(head_sha) = std::env::var(GITHUB_SHA) else {
             return Err(GitHubError::NoSha);
         };
-
+        let summary = report_comment.html_with_max_length(
+            self.ci_only_thresholds,
+            self.ci_id.as_deref(),
+            CHECK_MAX_LENGTH,
+        );
         let report = CheckRunOutput {
             title: String::new(),
-            summary: report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref()),
+            summary,
             text: None,
             annotations: Vec::new(),
             images: Vec::new(),

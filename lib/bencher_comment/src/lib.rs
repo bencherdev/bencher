@@ -87,11 +87,36 @@ impl ReportComment {
     }
 
     pub fn html(&self, require_threshold: bool, id: Option<&str>) -> String {
+        self.html_inner(require_threshold, id, true)
+    }
+
+    pub fn html_with_max_length(
+        &self,
+        require_threshold: bool,
+        id: Option<&str>,
+        max_length: usize,
+    ) -> String {
+        let html = self.html_inner(require_threshold, id, true);
+        if html.len() > max_length {
+            self.html_inner(require_threshold, id, false)
+        } else {
+            html
+        }
+    }
+
+    fn html_inner(
+        &self,
+        require_threshold: bool,
+        id: Option<&str>,
+        include_benchmarks: bool,
+    ) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         self.html_header(html_mut);
         self.html_report_table(html_mut);
-        self.html_benchmarks(html_mut, require_threshold);
+        if include_benchmarks {
+            self.html_benchmarks(html_mut, require_threshold);
+        }
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         self.html_bencher_tag(html_mut, id);
