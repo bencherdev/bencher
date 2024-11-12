@@ -1,85 +1,105 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{btree_map::Entry, BTreeMap, HashSet},
+    ops::{BitOr, BitOrAssign},
     time::Duration,
 };
 
 use bencher_json::{
     project::{
+        alert::AlertStatus,
         boundary::BoundaryLimit,
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
-        threshold::JsonThresholdModel,
+        report::{JsonReportIteration, JsonReportMeasure, JsonReportResult},
     },
-    AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, HeadUuid, JsonBoundary,
-    JsonPerfQuery, JsonReport, MeasureUuid, ModelUuid, ReportUuid, ResourceName, Slug, TestbedUuid,
-    ThresholdUuid,
+    AlertUuid, JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonPerfQuery, JsonReport,
+    ReportUuid, ResourceName, Slug, ThresholdUuid,
 };
+use ordered_float::OrderedFloat;
 use url::Url;
+
+// 30 days
+const DEFAULT_REPORT_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
+
+const EMPTY_CELL: &str = "<td></td>";
 
 pub struct ReportComment {
     console_url: Url,
     project_slug: Slug,
-    json_report: JsonReport,
     public_links: bool,
-    benchmark_urls: BenchmarkUrls,
-    alert_urls: AlertUrls,
+    multiple_iterations: bool,
+    benchmark_count: usize,
+    missing_threshold: HashSet<Measure>,
+    json_report: JsonReport,
     source: String,
 }
 
 impl ReportComment {
     pub fn new(console_url: Url, json_report: JsonReport, source: String) -> Self {
         Self {
-            alert_urls: AlertUrls::new(&console_url, &json_report),
-            benchmark_urls: BenchmarkUrls::new(console_url.clone(), &json_report),
+            console_url,
             project_slug: json_report.project.slug.clone(),
             public_links: json_report.project.visibility.is_public(),
+            multiple_iterations: json_report.results.len() > 1,
+            benchmark_count: json_report.results.iter().map(Vec::len).sum(),
+            missing_threshold: Measure::missing_threshold(&json_report),
             json_report,
-            console_url,
             source,
         }
     }
 
     pub fn human(&self) -> String {
-        let mut comment = String::new();
+        let mut text = String::new();
+        self.human_results_list(&mut text);
+        self.human_alerts_list(&mut text);
+        text
+    }
 
-        comment.push_str("View results:");
-        let multiple_iterations = self.json_report.results.len() > 1;
-        for (iter, benchmark_map) in self.benchmark_urls.0.iter().enumerate() {
-            if multiple_iterations {
-                if iter != 0 {
-                    comment.push('\n');
+    fn human_results_list(&self, text: &mut String) {
+        text.push_str("View results:");
+        for (i, iteration) in self.json_report.results.iter().enumerate() {
+            if self.multiple_iterations {
+                if i != 0 {
+                    text.push('\n');
                 }
-                comment.push_str(&format!("\nIteration {iter}:"));
+                text.push_str(&format!("\nIteration {i}:"));
             }
-            for (benchmark, measure_map) in benchmark_map {
-                for (measure, MeasureData { console_url, .. }) in measure_map {
-                    comment.push_str(&format!(
-                        "\n- {benchmark_name} ({measure_name}): {console_url}",
-                        benchmark_name = benchmark.name,
-                        measure_name = measure.name
+
+            for result in iteration {
+                for report_measure in &result.measures {
+                    text.push_str(&format!(
+                        "\n- {benchmark} ({measure}): {console_url}",
+                        benchmark = result.benchmark.name,
+                        measure = report_measure.measure.name,
+                        console_url = self.perf_url(
+                            &result.benchmark,
+                            &report_measure.measure,
+                            report_measure.boundary.map(Into::into)
+                        )
                     ));
                 }
             }
         }
+    }
 
+    fn human_alerts_list(&self, text: &mut String) {
         if self.json_report.alerts.is_empty() {
-            return comment;
+            return;
         }
 
-        comment.push_str("\n\nView alerts:");
-        for ((iteration, benchmark, measure), AlertData { console_url, .. }) in &self.alert_urls.0 {
-            comment.push_str(&format!(
+        text.push_str("\n\nView alerts:");
+        for alert in &self.json_report.alerts {
+            text.push_str(&format!(
                 "\n- {benchmark_name} ({measure_name}){iter}: {console_url}",
-                benchmark_name = benchmark.name,
-                measure_name = measure.name,
-                iter = if multiple_iterations {
-                    format!(" (Iteration {iteration})")
+                benchmark_name = alert.benchmark.name,
+                measure_name = alert.threshold.measure.name,
+                iter = if self.multiple_iterations {
+                    format!(" (Iteration {iteration})", iteration = alert.iteration)
                 } else {
                     String::new()
-                }
+                },
+                console_url = self.alert_perf_url(alert)
             ));
         }
-
-        comment
     }
 
     pub fn json(&self) -> Result<String, serde_json::Error> {
@@ -123,559 +143,369 @@ impl ReportComment {
         html
     }
 
-    fn utm_query(&self) -> String {
-        format!(
-            "utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
-            source = self.source,
-            project = self.project_slug,
-        )
-    }
-
     fn html_header(&self, html: &mut String) {
-        let url = self.console_url.clone();
-        let path = if self.public_links {
-            format!(
-                "/perf/{}/reports/{}",
-                self.project_slug, self.json_report.uuid
-            )
-        } else {
-            format!(
-                "/console/projects/{}/reports/{}",
-                self.project_slug, self.json_report.uuid
-            )
-        };
-        let report_url = url.join(&path).unwrap_or(url);
         html.push_str(&format!(
-            r#"<h2><a href="{report_url}?{utm}"><img src="https://bencher.dev/favicon.svg" width="24" height="24" alt="🐰" /> Bencher Report</a></h2>"#,
-            utm = self.utm_query(),
+            r#"<h2><a href="{url}"><img src="https://bencher.dev/favicon.svg" width="24" height="24" alt="🐰" /> Bencher Report</a></h2>"#,
+            url = self.resource_url(Resource::Report(self.json_report.uuid)),
         ));
     }
 
     fn html_report_table(&self, html: &mut String) {
         html.push_str("<table>");
-        for (row, name, path) in [
+        for (row, name, url) in [
             (
                 "Branch",
                 self.json_report.branch.name.to_string(),
-                if self.public_links {
-                    format!(
-                        "/perf/{}/branches/{}",
-                        self.project_slug, self.json_report.branch.slug
-                    )
-                } else {
-                    format!(
-                        "/console/projects/{}/branches/{}",
-                        self.project_slug, self.json_report.branch.slug
-                    )
-                },
+                self.resource_url(Resource::Branch(self.json_report.branch.slug.clone())),
             ),
             (
                 "Testbed",
                 self.json_report.testbed.name.to_string(),
-                if self.public_links {
-                    format!(
-                        "/perf/{}/testbeds/{}",
-                        self.project_slug, self.json_report.testbed.slug
-                    )
-                } else {
-                    format!(
-                        "/console/projects/{}/testbeds/{}",
-                        self.project_slug, self.json_report.testbed.slug
-                    )
-                },
+                self.resource_url(Resource::Testbed(self.json_report.testbed.slug.clone())),
             ),
         ] {
-            let url = self.console_url.clone();
-            let url = url.join(&path).unwrap_or(url);
             html.push_str(&format!(
-                r#"<tr><td>{row}</td><td><a href="{url}?{utm}">{name}</a></td></tr>"#,
-                utm = self.utm_query()
+                r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#,
             ));
         }
         html.push_str("</table>");
     }
 
     fn html_benchmarks(&self, html: &mut String, require_threshold: bool) {
-        let no_benchmarks = self.benchmark_urls.0.iter().all(BTreeMap::is_empty);
-        if no_benchmarks {
-            html.push_str("<blockquote><b>⚠️ WARNING:</b> No benchmarks found!</blockquote>");
-            return;
-        }
-        self.html_no_threshold_warning(html);
+        self.html_no_benchmarks(html);
+        self.html_no_threshold(html);
         self.html_alerts(html);
         self.html_benchmark_details(html, require_threshold);
     }
 
-    // Check to see if any measure has a threshold set
-    fn html_no_threshold_warning(&self, html: &mut String) {
-        let mut no_threshold = BTreeSet::new();
-        for benchmark_map in &self.benchmark_urls.0 {
-            for measure_map in benchmark_map.values() {
-                for (measure, MeasureData { boundary, .. }) in measure_map {
-                    if boundary.is_none() {
-                        no_threshold.insert(measure);
-                    }
-                }
-            }
+    fn html_no_benchmarks(&self, html: &mut String) {
+        if self.benchmark_count == 0 {
+            html.push_str("<blockquote><h3>⚠️ WARNING: No benchmarks found!</h3></blockquote>");
         }
+    }
 
-        if no_threshold.is_empty() {
+    fn html_no_threshold(&self, html: &mut String) {
+        if self.benchmark_count == 0 || self.missing_threshold.is_empty() {
             return;
         }
-        let plural_measure = if no_threshold.len() == 1 {
-            "Measure does"
-        } else {
-            "Measures do"
-        };
-        html.push_str(&format!("<blockquote><p><b>⚠️ WARNING:</b> The following {plural_measure} not have a Threshold. Without a Threshold, no Alerts will ever be generated!</p>"));
+
+        html.push_str("<blockquote>");
+        html.push_str("<h3>⚠️ WARNING: No Threshold found!</h3>");
+        html.push_str("<p>Without a Threshold, no Alerts will ever be generated.</p>");
+
         html.push_str("<ul>");
-        for measure in no_threshold {
-            let url = self.console_url.clone();
-            let path = if self.public_links {
-                format!("/perf/{}/measures/{}", self.project_slug, measure.slug)
-            } else {
-                format!(
-                    "/console/projects/{}/measures/{}",
-                    self.project_slug, measure.slug
-                )
-            };
-            let url = url.join(&path).unwrap_or(url);
-            html.push_str(&format!(
-                "<li><a href=\"{url}?{utm}\">{name}</a></li>",
-                utm = self.utm_query(),
-                name = measure.name,
-            ));
+        for Measure { name, slug, units } in &self.missing_threshold {
+            let url = self.resource_url(Resource::Measure(slug.clone()));
+            html.push_str(&format!("<li><a href=\"{url}\">{name} ({units})</a></li>"));
         }
         html.push_str("</ul>");
-        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add?{utm}\">Click here to create a new Threshold</a><br/>", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
-        html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/?{utm}\">the Threshold documentation</a>.<br/>", utm = self.utm_query()));
+
+        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add?{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
+        html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/?{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
         html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds?{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> CLI flag</a>.</p>", utm = self.utm_query()));
         html.push_str("</blockquote>");
     }
 
     fn html_alerts(&self, html: &mut String) {
-        let alerts_len = self.alert_urls.0.len();
-        if alerts_len > 0 {
-            let (alert, limit) = if alerts_len == 1 {
-                ("ALERT", "Limit")
-            } else {
-                ("ALERTS", "Limits")
-            };
-            html.push_str(&format!(
-                "<blockquote><b>🚨 {alerts_len} {alert}:</b> Threshold Boundary {limit} exceeded!</blockquote>",
-            ));
-            self.html_alerts_table(html);
+        if self.json_report.alerts.is_empty() {
+            return;
         }
+        let alerts_len = self.json_report.alerts.len();
+        html.push_str(&format!(
+            "<h3>🚨 {alerts_len} {alert}</h3>",
+            alert = if alerts_len == 1 { "Alert" } else { "Alerts" },
+        ));
+        self.html_alerts_table(html);
     }
 
     fn html_alerts_table(&self, html: &mut String) {
         html.push_str("<table>");
-
-        let multiple_iterations = self.json_report.results.len() > 1;
-        html.push_str(&format!("<thead><tr>{iteration}<th>Benchmark</th><th>Measure<br/>Units</th><th>View</th><th>Benchmark Result<br/>(Result Δ%)</th><th>Lower Boundary<br/>(Limit %)</th><th>Upper Boundary<br/>(Limit %)</th></tr></thead>", iteration = if multiple_iterations {
-            "<th>Iteration</th>"
-        } else {
-            ""
-        }));
-
-        html.push_str("<tbody>");
-        for ((iteration, benchmark, measure), alert) in &self.alert_urls.0 {
-            let Some(measure_data) =
-                self.benchmark_urls
-                    .0
-                    .get(*iteration)
-                    .and_then(|benchmark_map| {
-                        benchmark_map
-                            .get(benchmark)
-                            .and_then(|measure_map| measure_map.get(measure))
-                    })
-            else {
-                continue;
-            };
-
-            html.push_str("<tr>");
-
-            if multiple_iterations {
-                html.push_str(&format!("<td>{iteration}</td>"));
-            }
-
-            // Benchmark
-            let url = self.console_url.clone();
-            let path = if self.public_links {
-                format!("/perf/{}/benchmarks/{}", self.project_slug, benchmark.slug)
-            } else {
-                format!(
-                    "/console/projects/{}/benchmarks/{}",
-                    self.project_slug, benchmark.slug
-                )
-            };
-            let url = url.join(&path).unwrap_or(url);
-            html.push_str(&format!(
-                r#"<td><a href="{url}?{utm}">{name}</a></td>"#,
-                utm = self.utm_query(),
-                name = benchmark.name,
-            ));
-
-            // Measure
-            let url = self.console_url.clone();
-            let path = if self.public_links {
-                format!("/perf/{}/measures/{}", self.project_slug, measure.slug)
-            } else {
-                format!(
-                    "/console/projects/{}/measure/{}",
-                    self.project_slug, measure.slug
-                )
-            };
-            let url = url.join(&path).unwrap_or(url);
-            html.push_str(&format!(
-                r#"<td><a href="{url}?{utm}">{name}<br/>{units}</a></td>"#,
-                utm = self.utm_query(),
-                name = measure.name,
-                units = measure.units,
-            ));
-
-            html.push_str("<td>");
-            // Plot
-            html.push_str(&format!(
-                r#"📈 <a href="{plot}&{utm}">plot</a>"#,
-                plot = if self.public_links {
-                    &measure_data.public_url
-                } else {
-                    &measure_data.console_url
-                },
-                utm = self.utm_query(),
-            ));
-
-            html.push_str("<br/>");
-            // Alert
-            html.push_str(&format!(
-                r#"🚨 <a href="{alert}?{utm}">alert</a>"#,
-                alert = if self.public_links {
-                    &alert.public_url
-                } else {
-                    &alert.console_url
-                },
-                utm = self.utm_query(),
-            ));
-
-            html.push_str("<br/>");
-            // Threshold
-            html.push_str(&format!(
-                r#"🚷 <a href="{threshold}&{utm}">threshold</a>"#,
-                threshold = if self.public_links {
-                    &alert.public_threshold_url
-                } else {
-                    &alert.console_threshold_url
-                },
-                utm = self.utm_query(),
-            ));
-            html.push_str("</td>");
-
-            Self::html_metric_boundary_cells(
-                html,
-                measure_data.value,
-                measure_data.boundary,
-                Some(alert.limit),
-                true,
-            );
-            html.push_str("</tr>");
-        }
-        html.push_str("</tbody>");
+        self.html_alerts_table_header(html);
+        self.html_alerts_table_body(html);
         html.push_str("</table>");
     }
 
+    fn html_alerts_table_header(&self, html: &mut String) {
+        html.push_str("<thead>");
+        html.push_str("<tr>");
+        if self.multiple_iterations {
+            html.push_str("<th>Iteration</th>");
+        }
+        html.push_str("<th>Benchmark</th>");
+        html.push_str("<th>Measure<br />Units</th>");
+        html.push_str("<th>View</th>");
+        html.push_str("<th>Benchmark Result<br />(Result Δ%)</th>");
+        if self.has_lower_boundary_alert() {
+            html.push_str("<th>Lower Boundary<br />(Limit %)</th>");
+        }
+        if self.has_upper_boundary_alert() {
+            html.push_str("<th>Upper Boundary<br />(Limit %)</th>");
+        }
+        html.push_str("</tr>");
+        html.push_str("</thead>");
+    }
+
+    fn html_alerts_table_body(&self, html: &mut String) {
+        html.push_str("<tbody>");
+
+        for alert in &self.json_report.alerts {
+            html.push_str("<tr>");
+            if self.multiple_iterations {
+                html.push_str(&format!("<td>{}</td>", alert.iteration));
+            }
+            html.push_str(&format!(
+                "<td><a href=\"{url}\">{benchmark}</a></td>",
+                url = self.resource_url(Resource::Benchmark(alert.benchmark.slug.clone())),
+                benchmark = alert.benchmark.name,
+            ));
+            html.push_str(&format!(
+                "<td><a href=\"{url}\">{measure}<br />{units}</a></td>",
+                url = self.resource_url(Resource::Measure(alert.threshold.measure.slug.clone())),
+                measure = alert.threshold.measure.name,
+                units = alert.threshold.measure.units,
+            ));
+            self.html_alerts_table_view_cell(html, alert);
+            value_cell(html, alert.metric.value, alert.boundary.baseline, true);
+            if self.has_lower_boundary_alert() {
+                lower_limit_cell(
+                    html,
+                    alert.metric.value,
+                    alert.boundary.lower_limit,
+                    alert.limit == BoundaryLimit::Lower,
+                );
+            }
+            if self.has_upper_boundary_alert() {
+                upper_limit_cell(
+                    html,
+                    alert.metric.value,
+                    alert.boundary.upper_limit,
+                    alert.limit == BoundaryLimit::Upper,
+                );
+            }
+            html.push_str("</tr>");
+        }
+        html.push_str("</tbody>");
+    }
+
+    fn html_alerts_table_view_cell(&self, html: &mut String, alert: &JsonAlert) {
+        html.push_str("<td>");
+        html.push_str(&format!(
+            "📈 <a href=\"{url}\">plot</a>",
+            url = self.alert_perf_url(alert)
+        ));
+        html.push_str("<br />");
+        html.push_str(&format!(
+            "🚨 <a href=\"{url}\">alert ({status})</a>",
+            url = self.resource_url(Resource::Alert(alert.uuid)),
+            status = alert_status(alert),
+        ));
+        html.push_str("<br />");
+        html.push_str(&format!(
+            "🚷 <a href=\"{url}\">threshold</a>",
+            url = self.resource_url(Resource::Threshold(alert.threshold.uuid)),
+        ));
+        html.push_str("</td>");
+    }
+
     fn html_benchmark_details(&self, html: &mut String, require_threshold: bool) {
+        if self.benchmark_count == 0 {
+            return;
+        }
+
         html.push_str("<details><summary>Click to view all benchmark results</summary>");
-        html.push_str("<br/>");
-        for (iteration, benchmark_map) in self.benchmark_urls.0.iter().enumerate() {
-            self.html_benchmarks_table(html, iteration, benchmark_map, require_threshold);
+        html.push_str("<br />");
+        for iteration in &self.json_report.results {
+            self.html_iteration_table(html, iteration, require_threshold);
         }
         html.push_str("</details>");
     }
 
-    fn html_benchmarks_table(
+    fn has_lower_boundary_alert(&self) -> bool {
+        self.has_boundary_alert(BoundaryLimit::Lower)
+    }
+
+    fn has_upper_boundary_alert(&self) -> bool {
+        self.has_boundary_alert(BoundaryLimit::Upper)
+    }
+
+    fn has_boundary_alert(&self, boundary_limit: BoundaryLimit) -> bool {
+        self.json_report
+            .alerts
+            .iter()
+            .any(|alert| alert.limit == boundary_limit)
+    }
+
+    fn html_iteration_table(
         &self,
         html: &mut String,
-        iteration: usize,
-        benchmark_map: &BenchmarkMap,
+        iteration: &JsonReportIteration,
         require_threshold: bool,
     ) {
+        let mbl = boundary_limits_map(iteration, require_threshold);
+
         html.push_str("<table>");
-        self.html_benchmarks_table_header(html, benchmark_map, require_threshold);
-        self.html_benchmarks_table_body(html, iteration, benchmark_map, require_threshold);
+        self.html_iteration_table_header(html, &mbl);
+        self.html_iteration_table_body(html, iteration, &mbl);
         html.push_str("</table>");
     }
 
-    fn html_benchmarks_table_header(
+    fn html_iteration_table_header(
         &self,
         html: &mut String,
-        benchmark_map: &BenchmarkMap,
-        require_threshold: bool,
+        mbl: &BTreeMap<Measure, BoundaryLimits>,
     ) {
-        html.push_str("<thead><tr>");
+        html.push_str("<thead>");
+        html.push_str("<tr>");
         html.push_str("<th>Benchmark</th>");
-
-        let mbl = BoundaryLimits::for_iteration(benchmark_map, require_threshold);
         for (measure, boundary_limits) in mbl {
-            let url = self.console_url.clone();
-            let path = if self.public_links {
-                format!("/perf/{}/measures/{}", self.project_slug, measure.slug)
-            } else {
-                format!(
-                    "/console/projects/{}/measures/{}",
-                    self.project_slug, measure.slug
-                )
-            };
-            let url = url.join(&path).unwrap_or(url);
             html.push_str(&format!(
-                r#"<th><a href="{url}?{utm}">{measure}</a></th>"#,
-                utm = self.utm_query(),
-                measure = &measure.name,
+                "<th><a href=\"{url}\">{measure}</a></th>",
+                url = self.resource_url(Resource::Measure(measure.slug.clone())),
+                measure = measure.name,
             ));
-            Self::html_metric_boundary_header(html, &measure, boundary_limits);
-        }
 
-        html.push_str("</tr></thead>");
+            html.push_str("<th>");
+            if boundary_limits.has_limit() {
+                html.push_str("Benchmark Result<br />");
+            }
+            html.push_str(measure.units.as_ref());
+            if boundary_limits.has_limit() {
+                html.push_str("<br />(Result Δ%)");
+            }
+            html.push_str("</th>");
+
+            if boundary_limits.lower {
+                html.push_str(&format!(
+                    "<th>Lower Boundary<br />{units}<br />(Limit %)</th>",
+                    units = measure.units
+                ));
+            }
+
+            if boundary_limits.upper {
+                html.push_str(&format!(
+                    "<th>Upper Boundary<br />{units}<br />(Limit %)</th>",
+                    units = measure.units
+                ));
+            }
+        }
+        html.push_str("</tr>");
+        html.push_str("</thead>");
     }
 
-    fn html_metric_boundary_header(
-        html: &mut String,
-        measure: &Measure,
-        boundary_limits: BoundaryLimits,
-    ) {
-        let units = &measure.units;
-
-        // If there is a boundary limit then we will show the percentage difference
-        if boundary_limits.lower || boundary_limits.upper {
-            html.push_str(&format!(
-                "<th>Benchmark Result<br/>{units}<br/>(Result Δ%)</th>",
-            ));
-        } else {
-            html.push_str(&format!("<th>{units}</th>",));
-        }
-
-        if boundary_limits.lower {
-            html.push_str(&format!(
-                "<th>Lower Boundary<br/>{units}<br/>(Limit %)</th>"
-            ));
-        }
-        if boundary_limits.upper {
-            html.push_str(&format!(
-                "<th>Upper Boundary<br/>{units}<br/>(Limit %)</th>"
-            ));
-        }
-    }
-
-    #[allow(clippy::too_many_lines)]
-    fn html_benchmarks_table_body(
+    fn html_iteration_table_body(
         &self,
         html: &mut String,
-        iteration: usize,
-        benchmark_map: &BenchmarkMap,
-        require_threshold: bool,
+        iteration: &JsonReportIteration,
+        mbl: &BTreeMap<Measure, BoundaryLimits>,
     ) {
         html.push_str("<tbody>");
-        for (benchmark, measure_map) in benchmark_map {
+        for result in iteration {
             html.push_str("<tr>");
-
-            // Benchmark
-            let url = self.console_url.clone();
-            let path = if self.public_links {
-                format!("/perf/{}/benchmarks/{}", self.project_slug, benchmark.slug)
-            } else {
-                format!(
-                    "/console/projects/{}/benchmarks/{}",
-                    self.project_slug, benchmark.slug
-                )
-            };
-            let url = url.join(&path).unwrap_or(url);
             html.push_str(&format!(
-                r#"<td><a href="{url}?{utm}">{name}</a></td>"#,
-                utm = self.utm_query(),
-                name = benchmark.name,
+                "<td><a href=\"{url}\">{name}</a></td>",
+                url = self.resource_url(Resource::Benchmark(result.benchmark.slug.clone())),
+                name = result.benchmark.name,
             ));
+            for (measure, boundary_limits) in mbl {
+                let report_measure = result
+                    .measures
+                    .iter()
+                    .find(|m| m.measure.slug == measure.slug);
+                let alert = self.find_alert(result, measure);
 
-            for (
-                measure,
-                MeasureData {
-                    public_url,
-                    console_url,
-                    value,
-                    threshold,
-                    boundary,
-                },
-            ) in measure_map
-            {
-                if require_threshold && threshold.is_none() {
-                    continue;
+                if let Some(report_measure) = report_measure {
+                    self.html_iteration_table_view_cell(
+                        html,
+                        result,
+                        report_measure,
+                        *boundary_limits,
+                        alert,
+                    );
+                } else {
+                    html.push_str(EMPTY_CELL);
                 }
-
-                // Plot
-                let plot_url = if self.public_links {
-                    public_url
+                if let Some(report_measure) = report_measure {
+                    value_cell(
+                        html,
+                        report_measure.metric.value,
+                        report_measure.boundary.and_then(|b| b.baseline),
+                        alert.is_some(),
+                    );
                 } else {
-                    console_url
-                };
-
-                // Alert
-                let (alert_url, limit) = if let Some(alert) =
-                    self.alert_urls
-                        .0
-                        .get(&(iteration, benchmark.clone(), measure.clone()))
-                {
-                    let AlertData {
-                        iteration: _,
-                        public_url,
-                        console_url,
-                        public_threshold_url,
-                        console_threshold_url,
-                        limit,
-                    } = alert;
-
-                    (
-                        Some(if self.public_links {
-                            (public_url, public_threshold_url)
-                        } else {
-                            (console_url, console_threshold_url)
-                        }),
-                        Some(*limit),
-                    )
-                } else {
-                    (None, None)
-                };
-
-                let utm = self.utm_query();
-                html.push_str("<td>");
-                html.push_str(&format!(r#"📈 <a href="{plot_url}&{utm}">view plot</a>"#));
-                let row = if let Some((alert_url, threshold_url)) = alert_url {
-                    format!(
-                        r#"<br/>🚨 <a href="{alert_url}?{utm}">view alert</a><br/>🚷 <a href="{threshold_url}&{utm}">view threshold</a>"#,
-                    )
-                } else if let Some(threshold) = threshold {
-                    let url = self.console_url.clone();
-                    let threshold_url = if self.public_links {
-                        let path = format!(
-                            "/perf/{project}/thresholds/{threshold}?model={model}&{utm}",
-                            project = self.project_slug,
-                            threshold = threshold.uuid,
-                            model = threshold.model.uuid,
-                            utm = self.utm_query(),
+                    html.push_str(EMPTY_CELL);
+                }
+                if boundary_limits.lower {
+                    if let Some(report_measure) = report_measure {
+                        lower_limit_cell(
+                            html,
+                            report_measure.metric.value,
+                            report_measure.boundary.and_then(|b| b.lower_limit),
+                            alert.is_some_and(|a| a.limit == BoundaryLimit::Lower),
                         );
-                        url.join(&path)
                     } else {
-                        let path = format!(
-                            "/console/projects/{project}/thresholds/{threshold}?model={model}&{utm}",
-                            project = self.project_slug,
-                            threshold = threshold.uuid,
-                            model = threshold.model.uuid,
-                            utm = self.utm_query(),
-                        );
-                        url.join(&path)
+                        html.push_str(EMPTY_CELL);
                     }
-                    .unwrap_or(url);
-                    format!(r#"<br/>🚷 <a href="{threshold_url}?{utm}">view threshold</a>"#)
-                } else {
-                    "<br/>⚠️ NO THRESHOLD".to_owned()
-                };
-                html.push_str(&row);
-                html.push_str("</td>");
-
-                Self::html_metric_boundary_cells(html, *value, *boundary, limit, false);
+                }
+                if boundary_limits.upper {
+                    if let Some(report_measure) = report_measure {
+                        upper_limit_cell(
+                            html,
+                            report_measure.metric.value,
+                            report_measure.boundary.and_then(|b| b.upper_limit),
+                            alert.is_some_and(|a| a.limit == BoundaryLimit::Upper),
+                        );
+                    } else {
+                        html.push_str(EMPTY_CELL);
+                    }
+                }
             }
             html.push_str("</tr>");
         }
         html.push_str("</tbody>");
     }
 
-    fn html_metric_boundary_cells(
+    fn html_iteration_table_view_cell(
+        &self,
         html: &mut String,
-        value: f64,
-        boundary: Option<Boundary>,
-        limit: Option<BoundaryLimit>,
-        pad: bool,
+        result: &JsonReportResult,
+        report_measure: &JsonReportMeasure,
+        boundary_limits: BoundaryLimits,
+        alert: Option<&JsonAlert>,
     ) {
-        // If there is a boundary with a baseline then show the percentage difference
-        if let Some(Boundary {
-            baseline: Some(baseline),
-            ..
-        }) = boundary
-        {
-            let value_percent = if value.is_normal() && baseline.is_normal() {
-                ((value - baseline) / baseline) * 100.0
-            } else {
-                0.0
-            };
-            let value_plus = if value_percent > 0.0 { "+" } else { "" };
-
-            let bold = limit.is_some();
+        html.push_str("<td>");
+        html.push_str(&format!(
+            "📈 <a href=\"{url}\">view plot</a>",
+            url = self.perf_url(
+                &result.benchmark,
+                &report_measure.measure,
+                Some(boundary_limits)
+            )
+        ));
+        if let Some(alert) = alert {
+            html.push_str("<br />");
             html.push_str(&format!(
-                "<td>{}{}<br/>({value_plus}{}%){}</td>",
-                if bold { "<b>" } else { "" },
-                format_number(value),
-                format_number(value_percent),
-                if bold { "</b>" } else { "" },
+                "🚨 <a href=\"{url}\">view alert ({status})</a>",
+                url = self.resource_url(Resource::Alert(alert.uuid)),
+                status = alert_status(alert),
+            ));
+        }
+        if let Some(threshold) = &report_measure.threshold {
+            html.push_str("<br />");
+            html.push_str(&format!(
+                "🚷 <a href=\"{url}\">view threshold</a>",
+                url = self.resource_url(Resource::Threshold(threshold.uuid)),
             ));
         } else {
-            html.push_str(&format!("<td>{}</td>", format_number(value)));
+            html.push_str("<br />");
+            html.push_str("⚠️ NO THRESHOLD");
         }
-
-        let Some(boundary) = boundary else {
-            return;
-        };
-        if let Some(lower_limit) = boundary.lower_limit {
-            let limit_percent = if value.is_normal() && lower_limit.is_normal() {
-                (lower_limit / value) * 100.0
-            } else {
-                0.0
-            };
-            let bold = matches!(limit, Some(BoundaryLimit::Lower));
-            html.push_str(&format!(
-                "<td>{}{}<br/>({}%){}</td>",
-                if bold { "<b>" } else { "" },
-                format_number(lower_limit),
-                format_number(limit_percent),
-                if bold { "</b>" } else { "" },
-            ));
-        } else if pad {
-            html.push_str("<td></td>");
-        }
-
-        if let Some(upper_limit) = boundary.upper_limit {
-            let limit_percent = if value.is_normal() && upper_limit.is_normal() {
-                (value / upper_limit) * 100.0
-            } else {
-                0.0
-            };
-            let bold = matches!(limit, Some(BoundaryLimit::Upper));
-            html.push_str(&format!(
-                "<td>{}{}<br/>({}%){}</td>",
-                if bold { "<b>" } else { "" },
-                format_number(upper_limit),
-                format_number(limit_percent),
-                if bold { "</b>" } else { "" },
-            ));
-        } else if pad {
-            html.push_str("<td></td>");
-        }
+        html.push_str("</td>");
     }
 
     fn html_footer(&self, html: &mut String) {
-        let url = self.console_url.clone();
-        let path = if self.public_links {
-            format!(
-                "/perf/{}/reports/{}",
-                self.project_slug, self.json_report.uuid
-            )
-        } else {
-            format!(
-                "/console/projects/{}/reports/{}",
-                self.project_slug, self.json_report.uuid
-            )
-        };
-        let url = url.join(&path).unwrap_or(url);
         html.push_str(&format!(
-            r#"<a href="{url}?{utm}">🐰 View full continuous benchmarking report in Bencher</a>"#,
-            utm = self.utm_query()
+            r#"<a href="{url}">🐰 View full continuous benchmarking report in Bencher</a>"#,
+            url = self.resource_url(Resource::Report(self.json_report.uuid)),
         ));
     }
 
@@ -703,10 +533,10 @@ impl ReportComment {
     }
 
     pub fn has_threshold(&self) -> bool {
-        for benchmark_map in &self.benchmark_urls.0 {
-            for measure_map in benchmark_map.values() {
-                for MeasureData { boundary, .. } in measure_map.values() {
-                    if boundary.is_some() {
+        for iteration in &self.json_report.results {
+            for result in iteration {
+                for report_measure in &result.measures {
+                    if report_measure.threshold.is_some() {
                         return true;
                     }
                 }
@@ -718,174 +548,95 @@ impl ReportComment {
     pub fn has_alert(&self) -> bool {
         !self.json_report.alerts.is_empty()
     }
-}
 
-pub struct BenchmarkUrls(Vec<BenchmarkMap>);
-pub type BenchmarkMap = BTreeMap<Benchmark, MeasureMap>;
-pub type MeasureMap = BTreeMap<Measure, MeasureData>;
-
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Benchmark {
-    name: BenchmarkName,
-    slug: Slug,
-}
-
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Measure {
-    name: ResourceName,
-    slug: Slug,
-    units: ResourceName,
-}
-
-#[derive(Clone)]
-pub struct MeasureData {
-    pub public_url: Url,
-    pub console_url: Url,
-    pub value: f64,
-    pub threshold: Option<JsonThresholdModel>,
-    pub boundary: Option<Boundary>,
-}
-
-impl BenchmarkUrls {
-    pub fn new(console_url: Url, json_report: &JsonReport) -> Self {
-        let benchmark_url = BenchmarkUrl::new(
-            console_url,
-            json_report.project.slug.clone(),
-            json_report.uuid,
-            json_report.branch.uuid,
-            json_report.branch.head.uuid,
-            json_report.testbed.uuid,
-            json_report.start_time,
-            json_report.end_time,
-        );
-
-        let mut benchmark_urls = Vec::with_capacity(json_report.results.len());
-
-        for iteration in &json_report.results {
-            let mut benchmark_map = BTreeMap::new();
-            for result in iteration {
-                let benchmark = Benchmark {
-                    name: result.benchmark.name.clone(),
-                    slug: result.benchmark.slug.clone(),
-                };
-
-                let mut measure_map = BTreeMap::new();
-                for report_measure in &result.measures {
-                    let measure = Measure {
-                        name: report_measure.measure.name.clone(),
-                        slug: report_measure.measure.slug.clone(),
-                        units: report_measure.measure.units.clone(),
-                    };
-                    let boundary = report_measure.boundary.map(Into::into);
-
-                    let data = MeasureData {
-                        public_url: benchmark_url.to_public_url(
-                            result.benchmark.uuid,
-                            report_measure.measure.uuid,
-                            boundary,
-                        ),
-                        console_url: benchmark_url.to_console_url(
-                            result.benchmark.uuid,
-                            report_measure.measure.uuid,
-                            boundary,
-                        ),
-                        value: report_measure.metric.value.into(),
-                        threshold: report_measure.threshold.clone(),
-                        boundary,
-                    };
-                    measure_map.insert(measure, data);
-                }
-                benchmark_map.insert(benchmark, measure_map);
-            }
-            benchmark_urls.push(benchmark_map);
-        }
-
-        Self(benchmark_urls)
-    }
-}
-
-struct BenchmarkUrl {
-    console_url: Url,
-    project_slug: Slug,
-    report_uuid: ReportUuid,
-    branch: BranchUuid,
-    head: HeadUuid,
-    testbed: TestbedUuid,
-    start_time: DateTime,
-    end_time: DateTime,
-}
-
-// 30 days
-const DEFAULT_REPORT_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
-
-impl BenchmarkUrl {
-    #[allow(clippy::too_many_arguments)]
-    fn new(
-        console_url: Url,
-        project_slug: Slug,
-        report_uuid: ReportUuid,
-        branch: BranchUuid,
-        head: HeadUuid,
-        testbed: TestbedUuid,
-        start_time: DateTime,
-        end_time: DateTime,
-    ) -> Self {
-        Self {
-            console_url,
-            project_slug,
-            report_uuid,
-            branch,
-            head,
-            testbed,
-            start_time,
-            end_time,
-        }
+    pub fn find_alert(&self, result: &JsonReportResult, measure: &Measure) -> Option<&JsonAlert> {
+        self.json_report.alerts.iter().find(|alert| {
+            alert.benchmark.slug == result.benchmark.slug
+                && alert.threshold.measure.slug == measure.slug
+        })
     }
 
-    fn to_public_url(
-        &self,
-        benchmark: BenchmarkUuid,
-        measure: MeasureUuid,
-        boundary: Option<Boundary>,
-    ) -> Url {
-        self.to_url(benchmark, measure, boundary, true)
-    }
-
-    fn to_console_url(
-        &self,
-        benchmark: BenchmarkUuid,
-        measure: MeasureUuid,
-        boundary: Option<Boundary>,
-    ) -> Url {
-        self.to_url(benchmark, measure, boundary, false)
-    }
-
-    fn to_url(
-        &self,
-        benchmark: BenchmarkUuid,
-        measure: MeasureUuid,
-        boundary: Option<Boundary>,
-        public_links: bool,
-    ) -> Url {
-        let json_perf_query = JsonPerfQuery {
-            branches: vec![self.branch],
-            heads: vec![Some(self.head)],
-            testbeds: vec![self.testbed],
-            benchmarks: vec![benchmark],
-            measures: vec![measure],
-            start_time: Some((self.start_time.into_inner() - DEFAULT_REPORT_HISTORY).into()),
-            end_time: Some(self.end_time),
+    fn resource_url(&self, resource: Resource) -> Url {
+        let url = self.console_url.clone();
+        let path = if self.public_links {
+            format!(
+                "/perf/{project}/{resource_name}/{id}",
+                project = self.project_slug,
+                resource_name = resource.name(),
+                id = resource.into_id()
+            )
+        } else {
+            format!(
+                "/console/projects/{project}/{resource_name}/{id}",
+                project = self.project_slug,
+                resource_name = resource.name(),
+                id = resource.into_id()
+            )
         };
+        let mut url = url.join(&path).unwrap_or(url);
 
+        url.query_pairs_mut()
+            .append_pair("utm_medium", "referral")
+            .append_pair("utm_source", &self.source)
+            .append_pair("utm_content", "comment")
+            .append_pair("utm_campaign", "pr+comments")
+            .append_pair("utm_term", self.project_slug.as_ref());
+
+        url
+    }
+
+    fn utm_query(&self) -> String {
+        format!(
+            "utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
+            source = self.source,
+            project = self.project_slug,
+        )
+    }
+
+    fn alert_perf_url(&self, alert: &JsonAlert) -> Url {
+        self.perf_url(
+            &alert.benchmark,
+            &alert.threshold.measure,
+            Some(BoundaryLimits {
+                lower: alert.limit == BoundaryLimit::Lower,
+                upper: alert.limit == BoundaryLimit::Upper,
+            }),
+        )
+    }
+
+    fn perf_url(
+        &self,
+        benchmark: &JsonBenchmark,
+        measure: &JsonMeasure,
+        boundary_limits: Option<BoundaryLimits>,
+    ) -> Url {
         let mut url = self.console_url.clone();
-        let path = if public_links {
+
+        let path = if self.public_links {
             format!("/perf/{}", self.project_slug)
         } else {
             format!("/console/projects/{}/perf", self.project_slug)
         };
         url.set_path(&path);
-        let mut query_string = boundary.map(Boundary::to_query_string).unwrap_or_default();
-        query_string.push(("report", Some(self.report_uuid.to_string())));
+
+        let json_perf_query = JsonPerfQuery {
+            branches: vec![self.json_report.branch.uuid],
+            heads: vec![Some(self.json_report.branch.head.uuid)],
+            testbeds: vec![self.json_report.testbed.uuid],
+            benchmarks: vec![benchmark.uuid],
+            measures: vec![measure.uuid],
+            start_time: Some(
+                (self.json_report.start_time.into_inner() - DEFAULT_REPORT_HISTORY).into(),
+            ),
+            end_time: Some(self.json_report.end_time),
+        };
+        let mut query_string = vec![("report", Some(self.json_report.uuid.to_string()))];
+        if boundary_limits.is_some_and(|bl| bl.lower) {
+            query_string.push((LOWER_BOUNDARY, Some(true.to_string())));
+        }
+        if boundary_limits.is_some_and(|bl| bl.upper) {
+            query_string.push((UPPER_BOUNDARY, Some(true.to_string())));
+        }
         url.set_query(Some(
             &json_perf_query
                 .to_query_string(&query_string)
@@ -896,194 +647,171 @@ impl BenchmarkUrl {
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct Boundary {
-    baseline: Option<f64>,
-    lower_limit: Option<f64>,
-    upper_limit: Option<f64>,
+enum Resource {
+    Report(ReportUuid),
+    Branch(Slug),
+    Testbed(Slug),
+    Benchmark(Slug),
+    Measure(Slug),
+    Threshold(ThresholdUuid),
+    Alert(AlertUuid),
 }
 
-impl From<JsonBoundary> for Boundary {
-    fn from(json_boundary: JsonBoundary) -> Self {
-        Self {
-            baseline: json_boundary.baseline.map(Into::into),
-            lower_limit: json_boundary.lower_limit.map(Into::into),
-            upper_limit: json_boundary.upper_limit.map(Into::into),
+impl Resource {
+    fn name(&self) -> &'static str {
+        match self {
+            Resource::Report(_) => "reports",
+            Resource::Branch(_) => "branches",
+            Resource::Testbed(_) => "testbeds",
+            Resource::Benchmark(_) => "benchmarks",
+            Resource::Measure(_) => "measures",
+            Resource::Threshold(_) => "thresholds",
+            Resource::Alert(_) => "alerts",
+        }
+    }
+
+    fn into_id(self) -> String {
+        match self {
+            Resource::Report(uuid) => uuid.to_string(),
+            Resource::Branch(slug)
+            | Resource::Testbed(slug)
+            | Resource::Benchmark(slug)
+            | Resource::Measure(slug) => slug.into(),
+            Resource::Threshold(uuid) => uuid.to_string(),
+            Resource::Alert(uuid) => uuid.to_string(),
         }
     }
 }
 
-impl Boundary {
-    fn to_query_string(self) -> Vec<(&'static str, Option<String>)> {
-        let mut query_string = Vec::new();
-        if self.lower_limit.is_some() {
-            query_string.push((LOWER_BOUNDARY, Some(true.to_string())));
-        }
-        if self.upper_limit.is_some() {
-            query_string.push((UPPER_BOUNDARY, Some(true.to_string())));
-        }
-        query_string
-    }
-
-    pub fn is_empty(self) -> bool {
-        self.lower_limit.is_none() && self.upper_limit.is_none()
-    }
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Measure {
+    name: ResourceName,
+    slug: Slug,
+    units: ResourceName,
 }
 
-#[derive(Clone, Copy, Default)]
-pub struct BoundaryLimits {
-    lower: bool,
-    upper: bool,
-}
-
-impl From<Boundary> for BoundaryLimits {
-    fn from(boundary: Boundary) -> Self {
-        Self {
-            lower: boundary.lower_limit.is_some(),
-            upper: boundary.upper_limit.is_some(),
-        }
+impl From<JsonMeasure> for Measure {
+    fn from(json_measure: JsonMeasure) -> Self {
+        let JsonMeasure {
+            name, slug, units, ..
+        } = json_measure;
+        Self { name, slug, units }
     }
 }
 
-impl BoundaryLimits {
-    fn for_iteration(
-        benchmark_map: &BenchmarkMap,
-        require_threshold: bool,
-    ) -> BTreeMap<Measure, Self> {
-        let mut measures = BTreeMap::new();
-        for measure_map in benchmark_map.values() {
-            for (
-                measure,
-                MeasureData {
-                    threshold,
-                    boundary,
-                    ..
-                },
-            ) in measure_map
-            {
-                if require_threshold && threshold.is_none() {
-                    continue;
-                }
-                let boundary_limits = boundary.map(Self::from).unwrap_or_default();
-                measures
-                    .entry(measure.clone())
-                    .and_modify(|bl: &mut Self| {
-                        *bl = bl.union(boundary_limits);
-                    })
-                    .or_insert(boundary_limits);
-            }
-        }
-        measures
-    }
-
-    fn union(self, rhs: Self) -> Self {
-        Self {
-            lower: self.lower || rhs.lower,
-            upper: self.upper || rhs.upper,
-        }
+impl Measure {
+    fn missing_threshold(json_report: &JsonReport) -> HashSet<Measure> {
+        json_report
+            .results
+            .iter()
+            .flat_map(|iteration| {
+                iteration.iter().flat_map(|result| {
+                    result
+                        .measures
+                        .iter()
+                        .filter(|&report_measure| report_measure.threshold.is_none())
+                        .cloned()
+                        .map(|report_measure| Measure::from(report_measure.measure.clone()))
+                })
+            })
+            .collect()
     }
 }
 
-pub struct AlertUrls(BTreeMap<(usize, Benchmark, Measure), AlertData>);
-
-#[derive(Clone)]
-pub struct AlertData {
-    pub iteration: usize,
-    pub public_url: Url,
-    pub console_url: Url,
-    pub public_threshold_url: Url,
-    pub console_threshold_url: Url,
-    pub limit: BoundaryLimit,
+fn alert_status(alert: &JsonAlert) -> &str {
+    match alert.status {
+        AlertStatus::Active => "🔔",
+        AlertStatus::Dismissed | AlertStatus::Silenced => "🔕",
+    }
 }
 
-impl AlertUrls {
-    pub fn new(url: &Url, json_report: &JsonReport) -> Self {
-        let mut urls = BTreeMap::new();
+fn value_cell(
+    html: &mut String,
+    value: OrderedFloat<f64>,
+    baseline: Option<OrderedFloat<f64>>,
+    bold: bool,
+) {
+    fn value_cell_inner(value: OrderedFloat<f64>, baseline: Option<OrderedFloat<f64>>) -> String {
+        let mut cell = format_number(value.into());
 
-        for alert in &json_report.alerts {
-            let iteration = u32::from(alert.iteration) as usize;
-            let benchmark = Benchmark {
-                name: alert.benchmark.name.clone(),
-                slug: alert.benchmark.slug.clone(),
+        if let Some(baseline) = baseline {
+            let percent = if value.is_normal() && baseline.is_normal() {
+                ((value - baseline) / baseline) * 100.0
+            } else {
+                0.0.into()
             };
-            let measure = Measure {
-                name: alert.threshold.measure.name.clone(),
-                slug: alert.threshold.measure.slug.clone(),
-                units: alert.threshold.measure.units.clone(),
-            };
-            let public_url =
-                Self::to_public_url(url.clone(), &json_report.project.slug, alert.uuid);
-            let console_url =
-                Self::to_console_url(url.clone(), &json_report.project.slug, alert.uuid);
-            let public_threshold_url = Self::to_public_threshold_url(
-                url.clone(),
-                &json_report.project.slug,
-                alert.threshold.uuid,
-                // This should never be `None` when an alert is generated
-                if let Some(model) = alert.threshold.model {
-                    model.uuid
-                } else {
-                    continue;
-                },
-            );
-            let console_threshold_url = Self::to_console_threshold_url(
-                url.clone(),
-                &json_report.project.slug,
-                alert.threshold.uuid,
-                // This should never be `None` when an alert is generated
-                if let Some(model) = alert.threshold.model {
-                    model.uuid
-                } else {
-                    continue;
-                },
-            );
-            let data = AlertData {
-                iteration,
-                public_url,
-                console_url,
-                public_threshold_url,
-                console_threshold_url,
-                limit: alert.limit,
-            };
-            urls.insert((iteration, benchmark, measure), data);
+            let plus = if percent > 0.0.into() { "+" } else { "" };
+            let percent = format_number(percent.into());
+            cell.push_str(&format!("<br />({plus}{percent}%)"));
         }
 
-        Self(urls)
+        cell
     }
 
-    fn to_public_url(mut url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
-        url.set_path(&format!("/perf/{project_slug}/alerts/{alert}"));
-        url
+    html.push_str("<td>");
+    if bold {
+        html.push_str(&format!("<b>{}</b>", value_cell_inner(value, baseline)));
+    } else {
+        html.push_str(&value_cell_inner(value, baseline));
+    }
+    html.push_str("</td>");
+}
+
+fn lower_limit_cell(
+    html: &mut String,
+    value: OrderedFloat<f64>,
+    lower_limit: Option<OrderedFloat<f64>>,
+    bold: bool,
+) {
+    let Some(limit) = lower_limit else {
+        html.push_str(EMPTY_CELL);
+        return;
+    };
+
+    let percent = if value.is_normal() && limit.is_normal() {
+        (limit / value) * 100.0
+    } else {
+        0.0.into()
+    };
+
+    limit_cell(html, limit, percent, bold);
+}
+
+fn upper_limit_cell(
+    html: &mut String,
+    value: OrderedFloat<f64>,
+    upper_limit: Option<OrderedFloat<f64>>,
+    bold: bool,
+) {
+    let Some(limit) = upper_limit else {
+        html.push_str(EMPTY_CELL);
+        return;
+    };
+
+    let percent = if value.is_normal() && limit.is_normal() {
+        (value / limit) * 100.0
+    } else {
+        0.0.into()
+    };
+
+    limit_cell(html, limit, percent, bold);
+}
+
+fn limit_cell(html: &mut String, limit: OrderedFloat<f64>, percent: OrderedFloat<f64>, bold: bool) {
+    fn limit_cell_inner(limit: OrderedFloat<f64>, percent: OrderedFloat<f64>) -> String {
+        let mut cell = format_number(limit.into());
+        let percent = format_number(percent.into());
+        cell.push_str(&format!("<br />({percent}%)"));
+        cell
     }
 
-    fn to_console_url(mut url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
-        url.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
-        url
+    html.push_str("<td>");
+    if bold {
+        html.push_str(&format!("<b>{}</b>", limit_cell_inner(limit, percent)));
+    } else {
+        html.push_str(&limit_cell_inner(limit, percent));
     }
-
-    fn to_public_threshold_url(
-        mut url: Url,
-        project_slug: &Slug,
-        threshold: ThresholdUuid,
-        model: ModelUuid,
-    ) -> Url {
-        url.set_path(&format!("/perf/{project_slug}/thresholds/{threshold}"));
-        url.set_query(Some(&format!("model={model}")));
-        url
-    }
-
-    fn to_console_threshold_url(
-        mut url: Url,
-        project_slug: &Slug,
-        threshold: ThresholdUuid,
-        model: ModelUuid,
-    ) -> Url {
-        url.set_path(&format!(
-            "/console/projects/{project_slug}/thresholds/{threshold}"
-        ));
-        url.set_query(Some(&format!("model={model}")));
-        url
-    }
+    html.push_str("</td>");
 }
 
 enum Position {
@@ -1118,4 +846,77 @@ fn format_number(number: f64) -> String {
         number_str.push('-');
     }
     number_str.chars().rev().collect()
+}
+
+#[derive(Clone, Copy)]
+pub struct BoundaryLimits {
+    lower: bool,
+    upper: bool,
+}
+
+impl From<JsonBoundary> for BoundaryLimits {
+    fn from(json_boundary: JsonBoundary) -> Self {
+        Self {
+            lower: json_boundary.lower_limit.is_some(),
+            upper: json_boundary.upper_limit.is_some(),
+        }
+    }
+}
+
+impl BitOr for BoundaryLimits {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        Self {
+            lower: self.lower || rhs.lower,
+            upper: self.upper || rhs.upper,
+        }
+    }
+}
+
+impl BitOrAssign for BoundaryLimits {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
+impl BoundaryLimits {
+    fn has_limit(self) -> bool {
+        self.lower || self.upper
+    }
+}
+
+fn boundary_limits_map(
+    iteration: &JsonReportIteration,
+    require_threshold: bool,
+) -> BTreeMap<Measure, BoundaryLimits> {
+    let mut map = BTreeMap::new();
+    for result in iteration {
+        for report_measure in &result.measures {
+            let measure = Measure::from(report_measure.measure.clone());
+            let boundary_limits = BoundaryLimits {
+                lower: report_measure
+                    .boundary
+                    .and_then(|b| b.lower_limit)
+                    .is_some(),
+                upper: report_measure
+                    .boundary
+                    .and_then(|b| b.upper_limit)
+                    .is_some(),
+            };
+            if require_threshold && !boundary_limits.has_limit() {
+                continue;
+            }
+            match map.entry(measure) {
+                Entry::Occupied(mut entry) => {
+                    let entry = entry.get_mut();
+                    *entry |= boundary_limits;
+                },
+                Entry::Vacant(entry) => {
+                    entry.insert(boundary_limits);
+                },
+            }
+        }
+    }
+    map
 }

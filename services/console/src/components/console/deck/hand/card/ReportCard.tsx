@@ -1,5 +1,15 @@
 import type { Params } from "astro";
 import {
+	type Accessor,
+	For,
+	Match,
+	type Resource,
+	Show,
+	Switch,
+	createMemo,
+} from "solid-js";
+import { perfPath, resourcePath } from "../../../../../config/util";
+import {
 	AlertStatus,
 	BoundaryLimit,
 	type JsonAlert,
@@ -12,18 +22,8 @@ import {
 	type JsonTestbed,
 	type JsonThreshold,
 } from "../../../../../types/bencher";
-import {
-	createMemo,
-	For,
-	Match,
-	Show,
-	Switch,
-	type Accessor,
-	type Resource,
-} from "solid-js";
-import { perfPath, resourcePath } from "../../../../../config/util";
-import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { dateTimeMillis } from "../../../../../util/convert";
+import { BACK_PARAM, encodePath } from "../../../../../util/url";
 
 export interface Props {
 	isConsole?: boolean;
@@ -49,17 +49,66 @@ const ReportCard = (props: Props) => {
 	});
 
 	const measuresMissingThresholds = createMemo(() =>
-		Array.from(missingThresholds(props.value()?.results)),
+		Array.from(missingThreshold(props.value()?.results)),
+	);
+
+	const hasLowerBoundaryAlert = createMemo(() =>
+		props.value()?.alerts?.some((alert) => alert.limit === BoundaryLimit.Lower),
+	);
+	const hasUpperBoundaryAlert = createMemo(() =>
+		props.value()?.alerts?.some((alert) => alert.limit === BoundaryLimit.Upper),
 	);
 
 	return (
 		<div class="columns is-centered" style="margin-top: 1rem">
 			<div class="column is-12">
 				<div class="content">
+					<Show when={!props.value.loading && benchmarkCount() === 0}>
+						<h3 class="title is-3">⚠️ WARNING: No benchmarks found!</h3>
+					</Show>
+					<Show
+						when={
+							benchmarkCount() > 0 && measuresMissingThresholds().length > 0
+						}
+					>
+						<h3 class="title is-3">⚠️ WARNING: No Threshold found!</h3>
+						<p>Without a Threshold, no Alerts will ever be generated.</p>
+						<ul>
+							<For each={measuresMissingThresholds()}>
+								{(measure) => (
+									<li>
+										<a
+											href={`${resourcePath(props.isConsole)}/${
+												props.params?.project
+											}/measures/${measure.slug}?${BACK_PARAM}=${encodePath()}`}
+										>
+											{measure.name} ({measure.units})
+										</a>
+									</li>
+								)}
+							</For>
+						</ul>
+						<Show when={props.isConsole}>
+							<a
+								href={`/console/projects/${
+									props.params?.project
+								}/thresholds/add?${BACK_PARAM}=${encodePath()}`}
+							>
+								Click here to create a new Threshold
+							</a>
+							<br />
+						</Show>
+						<p>
+							For more information, see{" "}
+							<a href="https://bencher.dev/docs/explanation/thresholds/">
+								the Threshold documentation
+							</a>
+						</p>
+					</Show>
 					<Show when={(props.value()?.alerts?.length ?? 0) > 0}>
 						<h3 class="title is-3">
-							🚨 {props.value()?.alerts?.length} Alert
-							{props.value()?.alerts?.length === 1 ? "" : "s"}
+							🚨 {props.value()?.alerts?.length}{" "}
+							{props.value()?.alerts?.length === 1 ? "Alert" : "Alerts"}
 						</h3>
 						<div
 							class="table-container"
@@ -81,41 +130,29 @@ const ReportCard = (props: Props) => {
 											<br />
 											(Result Δ%)
 										</th>
-										<th>
-											Lower Boundary
-											<br />
-											(Limit %)
-										</th>
-										<th>
-											Upper Boundary
-											<br />
-											(Limit %)
-										</th>
+										<Show when={hasLowerBoundaryAlert()}>
+											<th>
+												Lower Boundary
+												<br />
+												(Limit %)
+											</th>
+										</Show>
+										<Show when={hasUpperBoundaryAlert()}>
+											<th>
+												Upper Boundary
+												<br />
+												(Limit %)
+											</th>
+										</Show>
 									</tr>
 								</thead>
 								<tbody>
 									<For each={props.value()?.alerts}>
 										{(alert) => {
-											const value = alert?.metric?.value ?? 0;
-											const baseline = alert?.boundary?.baseline ?? 0;
-											const valuePercent =
-												value > 0 && baseline > 0
-													? ((value - baseline) / baseline) * 100
-													: 0.0;
+											const value = alert?.metric?.value;
+											const baseline = alert?.boundary?.baseline;
 											const lowerLimit = alert?.boundary?.lower_limit;
 											const upperLimit = alert?.boundary?.upper_limit;
-											const lowerLimitPercentage =
-												lowerLimit === undefined
-													? 0
-													: value > 0 && lowerLimit > 0
-														? (lowerLimit / value) * 100
-														: 0.0;
-											const upperLimitPercentage =
-												upperLimit === undefined
-													? 0
-													: value > 0 && upperLimit > 0
-														? (value / upperLimit) * 100
-														: 0.0;
 
 											return (
 												<tr>
@@ -177,53 +214,21 @@ const ReportCard = (props: Props) => {
 															threshold
 														</a>
 													</td>
-													<td>
-														<b>
-															{formatNumber(value)}
-															<br />({valuePercent > 0.0 ? "+" : ""}
-															{formatNumber(valuePercent)}%)
-														</b>
-													</td>
-													<td>
-														{lowerLimit === undefined || lowerLimit === null
-															? ""
-															: (() => {
-																	const lower = (
-																		<>
-																			{formatNumber(lowerLimit)}
-																			<br />(
-																			{formatNumber(lowerLimitPercentage)}
-																			%)
-																		</>
-																	);
-																	return alert?.limit ===
-																		BoundaryLimit.Lower ? (
-																		<b>{lower}</b>
-																	) : (
-																		lower
-																	);
-																})()}
-													</td>
-													<td>
-														{upperLimit === undefined || upperLimit === null
-															? ""
-															: (() => {
-																	const upper = (
-																		<>
-																			{formatNumber(upperLimit)}
-																			<br />(
-																			{formatNumber(upperLimitPercentage)}
-																			%)
-																		</>
-																	);
-																	return alert?.limit ===
-																		BoundaryLimit.Upper ? (
-																		<b>{upper}</b>
-																	) : (
-																		upper
-																	);
-																})()}
-													</td>
+													<ValueCell value={value} baseline={baseline} bold />
+													<Show when={hasLowerBoundaryAlert()}>
+														<LowerLimitCell
+															value={value}
+															lowerLimit={lowerLimit}
+															bold={alert?.limit === BoundaryLimit.Lower}
+														/>
+													</Show>
+													<Show when={hasUpperBoundaryAlert()}>
+														<UpperLimitCell
+															value={value}
+															upperLimit={upperLimit}
+															bold={alert?.limit === BoundaryLimit.Upper}
+														/>
+													</Show>
 												</tr>
 											);
 										}}
@@ -232,52 +237,6 @@ const ReportCard = (props: Props) => {
 							</table>
 						</div>
 						<hr />
-					</Show>
-					<Show when={!props.value.loading && benchmarkCount() === 0}>
-						<h3 class="title is-3">
-							<b>⚠️ WARNING:</b> No benchmarks found!
-						</h3>
-					</Show>
-					<Show
-						when={
-							benchmarkCount() > 0 && measuresMissingThresholds().length > 0
-						}
-					>
-						<h3 class="title is-3">
-							<b>⚠️ WARNING:</b> No Threshold found! Without a Threshold, no
-							Alerts will ever be generated.
-						</h3>
-						<ul>
-							<For each={measuresMissingThresholds()}>
-								{(measure) => (
-									<li>
-										<a
-											href={`${resourcePath(props.isConsole)}/${
-												props.params?.project
-											}/measures/${measure.slug}?${BACK_PARAM}=${encodePath()}`}
-										>
-											{measure.name} ({measure.units})
-										</a>
-									</li>
-								)}
-							</For>
-						</ul>
-						<Show when={props.isConsole}>
-							<a
-								href={`/console/projects/${
-									props.params?.project
-								}/thresholds/add?${BACK_PARAM}=${encodePath()}`}
-							>
-								Click here to create a new Threshold
-							</a>
-							<br />
-						</Show>
-						<p>
-							For more information, see{" "}
-							<a href="https://bencher.dev/docs/explanation/thresholds/">
-								the Threshold documentation
-							</a>
-						</p>
 					</Show>
 					<For each={props.value()?.results}>
 						{(iteration) => {
@@ -378,29 +337,13 @@ const ReportCard = (props: Props) => {
 																		measure.slug,
 																);
 
-																const value = reportMeasure?.metric?.value ?? 0;
+																const value = reportMeasure?.metric?.value;
 																const baseline =
-																	reportMeasure?.boundary?.baseline ?? 0;
-																const valuePercent =
-																	value > 0 && baseline > 0
-																		? ((value - baseline) / baseline) * 100
-																		: 0.0;
+																	reportMeasure?.boundary?.baseline;
 																const lowerLimit =
 																	reportMeasure?.boundary?.lower_limit;
 																const upperLimit =
 																	reportMeasure?.boundary?.upper_limit;
-																const lowerLimitPercentage =
-																	lowerLimit === undefined
-																		? 0
-																		: value > 0 && lowerLimit > 0
-																			? (lowerLimit / value) * 100
-																			: 0.0;
-																const upperLimitPercentage =
-																	upperLimit === undefined
-																		? 0
-																		: value > 0 && upperLimit > 0
-																			? (value / upperLimit) * 100
-																			: 0.0;
 
 																const alert = props
 																	.value()
@@ -411,30 +354,6 @@ const ReportCard = (props: Props) => {
 																			alert.threshold?.measure?.slug ===
 																				measure?.slug,
 																	);
-
-																const valueCell = (
-																	<>
-																		{formatNumber(value)}
-																		<Show when={reportMeasure?.threshold}>
-																			<br />({valuePercent > 0.0 ? "+" : ""}
-																			{formatNumber(valuePercent)}%)
-																		</Show>
-																	</>
-																);
-																const lowerBoundaryCell = (
-																	<>
-																		{formatNumber(lowerLimit ?? 0)}
-																		<br />({formatNumber(lowerLimitPercentage)}
-																		%)
-																	</>
-																);
-																const upperBoundaryCell = (
-																	<>
-																		{formatNumber(upperLimit ?? 0)}
-																		<br />({formatNumber(upperLimitPercentage)}
-																		%)
-																	</>
-																);
 
 																return (
 																	<>
@@ -501,35 +420,34 @@ const ReportCard = (props: Props) => {
 																				</Match>
 																			</Switch>
 																		</td>
-																		<td>
-																			<Show when={alert} fallback={valueCell}>
-																				<b>{valueCell}</b>
-																			</Show>
-																		</td>
-																		{boundaryLimits.lower && (
-																			<td>
-																				<Show
-																					when={
-																						alert?.limit === BoundaryLimit.Lower
-																					}
-																					fallback={lowerBoundaryCell}
-																				>
-																					<b>{lowerBoundaryCell}</b>
-																				</Show>
-																			</td>
-																		)}
-																		{boundaryLimits.upper && (
-																			<td>
-																				<Show
-																					when={
-																						alert?.limit === BoundaryLimit.Upper
-																					}
-																					fallback={upperBoundaryCell}
-																				>
-																					<b>{upperBoundaryCell}</b>
-																				</Show>
-																			</td>
-																		)}
+																		<Show
+																			when={typeof value === "number"}
+																			fallback={<td />}
+																		>
+																			<ValueCell
+																				value={value as number}
+																				baseline={baseline}
+																				bold={!!alert}
+																			/>
+																		</Show>
+																		<Show when={boundaryLimits.lower}>
+																			<LowerLimitCell
+																				value={value as number}
+																				lowerLimit={lowerLimit}
+																				bold={
+																					alert?.limit === BoundaryLimit.Lower
+																				}
+																			/>
+																		</Show>
+																		<Show when={boundaryLimits.upper}>
+																			<UpperLimitCell
+																				value={value as number}
+																				upperLimit={upperLimit}
+																				bold={
+																					alert?.limit === BoundaryLimit.Upper
+																				}
+																			/>
+																		</Show>
 																	</>
 																);
 															}}
@@ -546,6 +464,122 @@ const ReportCard = (props: Props) => {
 				</div>
 			</div>
 		</div>
+	);
+};
+
+const ValueCell = (props: {
+	value: number;
+	baseline: null | undefined | number;
+	bold: boolean;
+}) => {
+	const ValueCellInner = (props: {
+		value: number;
+		baseline: null | undefined | number;
+	}) => {
+		if (typeof props.value !== "number") {
+			return <></>;
+		}
+
+		const percent =
+			typeof props.baseline === "number"
+				? props.value > 0 && props.baseline > 0
+					? ((props.value - props.baseline) / props.baseline) * 100
+					: 0.0
+				: null;
+
+		return (
+			<>
+				{formatNumber(props.value)}
+				<Show when={percent !== null}>
+					<br />({percent > 0.0 ? "+" : ""}
+					{formatNumber(percent)}%)
+				</Show>
+			</>
+		);
+	};
+
+	return (
+		<td>
+			<Show
+				when={props.bold}
+				fallback={
+					<ValueCellInner value={props.value} baseline={props.baseline} />
+				}
+			>
+				<b>
+					<ValueCellInner value={props.value} baseline={props.baseline} />
+				</b>
+			</Show>
+		</td>
+	);
+};
+
+const LowerLimitCell = (props: {
+	value: number;
+	lowerLimit: null | undefined | number;
+	bold: boolean;
+}) => {
+	if (typeof props.value !== "number" || typeof props.lowerLimit !== "number") {
+		return <td />;
+	}
+
+	const percent =
+		props.value > 0 && props.lowerLimit > 0
+			? (props.lowerLimit / props.value) * 100
+			: 0.0;
+
+	return (
+		<LimitCell limit={props.lowerLimit} percent={percent} bold={props.bold} />
+	);
+};
+
+const UpperLimitCell = (props: {
+	value: number;
+	upperLimit: null | undefined | number;
+	bold: boolean;
+}) => {
+	if (typeof props.value !== "number" || typeof props.upperLimit !== "number") {
+		return <td />;
+	}
+
+	const percent =
+		props.value > 0 && props.upperLimit > 0
+			? (props.value / props.upperLimit) * 100
+			: 0.0;
+
+	return (
+		<LimitCell limit={props.upperLimit} percent={percent} bold={props.bold} />
+	);
+};
+
+const LimitCell = (props: {
+	limit: number;
+	percent: number;
+	bold: boolean;
+}) => {
+	const LimitCellInner = (props: {
+		limit: number;
+		percent: number;
+	}) => (
+		<>
+			{formatNumber(props.limit)}
+			<br />({formatNumber(props.percent)}%)
+		</>
+	);
+
+	return (
+		<td>
+			<Show
+				when={props.bold}
+				fallback={
+					<LimitCellInner limit={props.limit} percent={props.percent} />
+				}
+			>
+				<b>
+					<LimitCellInner limit={props.limit} percent={props.percent} />
+				</b>
+			</Show>
+		</td>
 	);
 };
 
@@ -569,7 +603,7 @@ export const alertPerfUrl = (
 		alert?.limit === BoundaryLimit.Lower,
 		alert?.limit === BoundaryLimit.Upper,
 		alert?.created,
-		alert?.modified,
+		alert?.created,
 	);
 
 const alertUrl = (
@@ -659,7 +693,7 @@ type BoundaryLimits = {
 	upper: boolean;
 };
 
-const missingThresholds = (
+const missingThreshold = (
 	results: undefined | JsonReportResults,
 ): Set<Measure> => {
 	if (!results) {

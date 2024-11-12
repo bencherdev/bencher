@@ -1001,6 +1001,7 @@ name = "bencher_comment"
 version = "0.4.26"
 dependencies = [
  "bencher_json",
+ "ordered-float",
  "serde_json",
  "url",
 ]
