@@ -1,0 +1,39 @@
+---
+title: "Iai"
+description: "A step-by-step guide on how to track Rust Iai benchmarks in CI"
+heading: "How to track Rust Iai benchmarks in CI"
+published: "2024-11-19T07:11:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/en/intro.mdx";
+import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
+import StepsForBencherCloud from "../../../chunks/track-in-ci-rust/en/steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "../../../chunks/track-in-ci-rust/en/steps-for-bencher-self-hosted.mdx";
+import RustIai from "../../../chunks/docs-explanation/adapters/en/rust-iai.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  text="how to benchmark Rust code with Iai"
+  url="/learn/benchmarking/rust/iai/"
+/>
+
+## What is Bencher?
+
+<BencherIntro />
+
+<StepsForBencherCloud
+  adapter="rust_iai"
+  url="/docs/explanation/adapters/#-rust-iai"
+/>
+
+<StepsForBencherSelfHosted
+  adapter="rust_iai"
+  url="/docs/explanation/adapters/#-rust-iai"
+/>
+
+<RustIai />
+
+<br />
+
+<CallToAction />

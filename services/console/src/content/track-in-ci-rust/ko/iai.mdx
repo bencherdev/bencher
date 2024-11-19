@@ -1,0 +1,39 @@
+---
+title: "Iai"
+description: "CI에서 Rust Iai 벤치마크를 추적하는 단계별 가이드"
+heading: "CI에서 Rust Iai 벤치마크 추적 방법"
+published: "2024-11-19T07:11:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/ko/intro.mdx";
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import StepsForBencherCloud from "../../../chunks/track-in-ci-rust/ko/steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "../../../chunks/track-in-ci-rust/ko/steps-for-bencher-self-hosted.mdx";
+import RustIai from "../../../chunks/docs-explanation/adapters/ko/rust-iai.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  text="Iai로 Rust 코드를 벤치마크하는 방법"
+  url="/ko/learn/benchmarking/rust/iai/"
+/>
+
+## 벤처(Bencher)란 무엇인가요?
+
+<BencherIntro />
+
+<StepsForBencherCloud
+  adapter="rust_iai"
+  url="/ko/docs/explanation/adapters/#-rust-iai"
+/>
+
+<StepsForBencherSelfHosted
+  adapter="rust_iai"
+  url="/ko/docs/explanation/adapters/#-rust-iai"
+/>
+
+<RustIai />
+
+<br />
+
+<CallToAction />
