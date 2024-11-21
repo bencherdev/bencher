@@ -1,0 +1,37 @@
+---
+title: "自定义基准测试"
+description: "有关如何在 CI 中跟踪自定义 Rust 基准测试的分步指南"
+heading: "如何在 CI 中跟踪自定义 Rust 基准测试"
+published: "2024-11-21T07:12:00Z"
+sortOrder: 4
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/zh/intro.mdx";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/zh/steps.mdx";
+import JsonInner from "../../../chunks/docs-explanation/adapters/zh/json-inner.mdx";
+import CargoBench from "../../../chunks/track-in-ci-rust/cargo-bench.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  text="如何在 Rust 中构建自定义基准测试框架"
+  url="/zh/learn/benchmarking/rust/custom-harness/"
+  name="自定义"
+/>
+
+## 什么是 Bencher？
+
+<BencherIntro />
+
+<Steps
+  adapter="json"
+  url="/zh/docs/explanation/adapters/#-json"
+/>
+
+<JsonInner>
+  <CargoBench />
+</JsonInner>
+
+<br />
+
+<CallToAction />

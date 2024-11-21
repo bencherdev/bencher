@@ -3,31 +3,27 @@ title: "Iai"
 description: "关于如何在 CI 中跟踪 Rust Iai 基准测试的分步指南"
 heading: "如何在 CI 中跟踪 Rust Iai 基准测试"
 published: "2024-11-19T07:11:00Z"
+modified: "2024-11-21T07:17:00Z"
 sortOrder: 3
 ---
 
 import Intro from "../../../chunks/track-in-ci-rust/zh/intro.mdx";
 import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
-import StepsForBencherCloud from "../../../chunks/track-in-ci-rust/zh/steps-for-bencher-cloud.mdx";
-import StepsForBencherSelfHosted from "../../../chunks/track-in-ci-rust/zh/steps-for-bencher-self-hosted.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/zh/steps.mdx";
 import RustIai from "../../../chunks/docs-explanation/adapters/zh/rust-iai.mdx";
 import CallToAction from "../../../components/landing/CallToAction.astro";
 
 <Intro
   text="如何使用 Iai 基准测试 Rust 代码"
   url="/zh/learn/benchmarking/rust/iai/"
+  name="Iai"
 />
 
 ## 什么是 Bencher？
 
 <BencherIntro />
 
-<StepsForBencherCloud
-  adapter="rust_iai"
-  url="/zh/docs/explanation/adapters/#-rust-iai"
-/>
-
-<StepsForBencherSelfHosted
+<Steps
   adapter="rust_iai"
   url="/zh/docs/explanation/adapters/#-rust-iai"
 />

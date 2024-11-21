@@ -1,0 +1,37 @@
+---
+title: "Benutzerdefinierte Benchmarks"
+description: "Eine Schritt-für-Schritt-Anleitung, wie man benutzerdefinierte Rust-Benchmarks in der CI verfolgt"
+heading: "Wie man benutzerdefinierte Rust-Benchmarks in der CI verfolgt"
+published: "2024-11-21T07:12:00Z"
+sortOrder: 4
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/de/intro.mdx";
+import BencherIntro from "../../../chunks/general/de/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/de/steps.mdx";
+import JsonInner from "../../../chunks/docs-explanation/adapters/de/json-inner.mdx";
+import CargoBench from "../../../chunks/track-in-ci-rust/cargo-bench.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  text="wie man ein benutzerdefiniertes Benchmarking-Harness in Rust aufbaut"
+  url="/de/learn/benchmarking/rust/custom-harness/"
+  name="benutzerdefiniertes"
+/>
+
+## Was ist Bencher?
+
+<BencherIntro />
+
+<Steps
+  adapter="json"
+  url="/de/docs/explanation/adapters/#-json"
+/>
+
+<JsonInner>
+  <CargoBench />
+</JsonInner>
+
+<br />
+
+<CallToAction />

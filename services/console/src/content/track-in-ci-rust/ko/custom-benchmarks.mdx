@@ -1,0 +1,37 @@
+---
+title: "커스텀 벤치마크"
+description: "CI에서 사용자 정의 Rust 벤치마크를 추적하는 단계별 가이드"
+heading: "CI에서 사용자 정의 Rust 벤치마크를 추적하는 방법"
+published: "2024-11-21T07:12:00Z"
+sortOrder: 4
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/ko/intro.mdx";
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/ko/steps.mdx";
+import JsonInner from "../../../chunks/docs-explanation/adapters/ko/json-inner.mdx";
+import CargoBench from "../../../chunks/track-in-ci-rust/cargo-bench.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  text="Rust에서 커스텀 벤치마크 하네스를 구축하는 방법"
+  url="/ko/learn/benchmarking/rust/custom-harness/"
+  name="커스텀"
+/>
+
+## 벤처(Bencher)란 무엇인가요?
+
+<BencherIntro />
+
+<Steps
+  adapter="json"
+  url="/ko/docs/explanation/adapters/#-json"
+/>
+
+<JsonInner>
+  <CargoBench />
+</JsonInner>
+
+<br />
+
+<CallToAction />

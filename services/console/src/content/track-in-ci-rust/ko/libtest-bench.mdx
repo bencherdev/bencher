@@ -3,13 +3,13 @@ title: "libtest 벤치"
 description: "CI에서 Rust libtest 벤치 벤치마크를 추적하는 단계별 가이드"
 heading: "CI에서 Rust libtest 벤치 벤치마크 추적 방법"
 published: "2024-11-19T07:10:00Z"
+modified: "2024-11-21T07:14:00Z"
 sortOrder: 1
 ---
 
 import Intro from "../../../chunks/track-in-ci-rust/ko/intro.mdx";
 import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
-import StepsForBencherCloud from "../../../chunks/track-in-ci-rust/ko/steps-for-bencher-cloud.mdx";
-import StepsForBencherSelfHosted from "../../../chunks/track-in-ci-rust/ko/steps-for-bencher-self-hosted.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/ko/steps.mdx";
 import RustBench from "../../../chunks/docs-explanation/adapters/ko/rust-bench.mdx";
 import CallToAction from "../../../components/landing/CallToAction.astro";
 
@@ -22,14 +22,10 @@ import CallToAction from "../../../components/landing/CallToAction.astro";
 
 <BencherIntro />
 
-<StepsForBencherCloud
+<Steps
   adapter="rust_bench"
   url="/ko/docs/explanation/adapters/#-rust-bench"
-/>
-
-<StepsForBencherSelfHosted
-  adapter="rust_bench"
-  url="/ko/docs/explanation/adapters/#-rust-bench"
+  name="libtest bench"
 />
 
 <RustBench />

@@ -1,0 +1,37 @@
+---
+title: "Benchmarks Personalizados"
+description: "Um guia passo a passo sobre como monitorar benchmarks personalizados em Rust no CI"
+heading: "Como monitorar benchmarks personalizados em Rust no CI"
+published: "2024-11-21T07:12:00Z"
+sortOrder: 4
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/pt/intro.mdx";
+import BencherIntro from "../../../chunks/general/pt/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/pt/steps.mdx";
+import JsonInner from "../../../chunks/docs-explanation/adapters/pt/json-inner.mdx";
+import CargoBench from "../../../chunks/track-in-ci-rust/cargo-bench.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  text="como construir um framework de benchmarks personalizado em Rust"
+  url="/pt/learn/benchmarking/rust/custom-harness/"
+  name="personalizado"
+/>
+
+## O que é o Bencher?
+
+<BencherIntro />
+
+<Steps
+  adapter="json"
+  url="/pt/docs/explanation/adapters/#-json"
+/>
+
+<JsonInner>
+  <CargoBench />
+</JsonInner>
+
+<br />
+
+<CallToAction />

@@ -1,0 +1,37 @@
+---
+title: "Пользовательские бенчмарки"
+description: "Пошаговое руководство по отслеживанию пользовательских бенчмарков Rust в CI"
+heading: "Как отслеживать пользовательские бенчмарки Rust в CI"
+published: "2024-11-21T07:12:00Z"
+sortOrder: 4
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/ru/intro.mdx";
+import BencherIntro from "../../../chunks/general/ru/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/ru/steps.mdx";
+import JsonInner from "../../../chunks/docs-explanation/adapters/ru/json-inner.mdx";
+import CargoBench from "../../../chunks/track-in-ci-rust/cargo-bench.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  text="как создать пользовательский бенчмаркинговый хранилище в Rust"
+  url="/ru/learn/benchmarking/rust/custom-harness/"
+  name="пользовательский"
+/>
+
+## Что такое Bencher?
+
+<BencherIntro />
+
+<Steps
+  adapter="json"
+  url="/ru/docs/explanation/adapters/#-json"
+/>
+
+<JsonInner>
+  <CargoBench />
+</JsonInner>
+
+<br />
+
+<CallToAction />
