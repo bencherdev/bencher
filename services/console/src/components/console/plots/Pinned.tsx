@@ -1,25 +1,25 @@
+import * as Sentry from "@sentry/astro";
+import type { Params } from "astro";
 import {
+	type Accessor,
 	Match,
+	type Resource,
 	Show,
 	Switch,
 	createMemo,
 	createResource,
 	createSignal,
-	type Accessor,
-	type Resource,
 } from "solid-js";
-import type { JsonAuthUser, JsonPlot } from "../../../types/bencher";
-import { plotQueryString } from "./util";
-import DeleteButton from "../deck/hand/DeleteButton";
-import type { Params } from "astro";
-import DeckCard from "../deck/hand/card/DeckCard";
-import { Card, Display } from "../../../config/types";
 import { PLOT_FIELDS } from "../../../config/project/plot";
-import FieldKind from "../../field/kind";
+import { Card, Display } from "../../../config/types";
+import { perfPath } from "../../../config/util";
+import type { JsonAuthUser, JsonPlot } from "../../../types/bencher";
 import { httpGet, httpPatch } from "../../../util/http";
 import Field, { type FieldHandler } from "../../field/Field";
-import * as Sentry from "@sentry/astro";
-import { perfPath } from "../../../config/util";
+import FieldKind from "../../field/kind";
+import DeleteButton from "../deck/hand/DeleteButton";
+import DeckCard from "../deck/hand/card/DeckCard";
+import { plotQueryString } from "./util";
 
 enum PinnedState {
 	Front = "front",
@@ -169,7 +169,6 @@ const PinnedFront = (props: {
 const PinnedPlot = (props: { plot: JsonPlot }) => {
 	return (
 		<iframe
-			loading="lazy"
 			src={`/perf/${props.plot?.project}/embed?embed_logo=false&embed_title=${
 				props.plot?.title ?? ""
 			}&embed_header=false&key=false&${plotQueryString(props.plot)}`}
