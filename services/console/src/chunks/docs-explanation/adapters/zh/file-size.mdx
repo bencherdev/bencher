@@ -1,25 +1,6 @@
+import FileSizeInner from "./file-size-inner.mdx";
 import FileSize from "../file-size.mdx";
 
-### ⚖️ 文件大小
-
-<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令
-可以用来通过`--file-size`选项追踪你的交付物的文件大小（即二进制大小）。
-`--file-size`选项期望一个文件路径，来测量该文件的大小。
-在底层，<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
-将结果输出为[Bencher度量格式（BMF）JSON][bmf]。
-因此，明确使用[the `json` adapter][json]是一个好习惯。
-更多详情参见[如何追踪文件大小][file size]。
-
-收集到的`file-size`度量（即`字节（B）`）。
-只有文件大小值（即`value`）是可用的。
-不收集`lower_value`或`upper_value`。
-默认情况下不会为所有项目创建`file-size`度量。
-然而，当你使用`--file-size`选项时，这个度量会自动为你的项目创建。
-`--file-size` 选项可以使用多次来跟踪多个文件大小。
-
-<FileSize />
-
-[json]: #-json
-
-[bmf]: /zh/docs/reference/bencher-metric-format/
-[file size]: /zh/docs/how-to/track-file-size/
+<FileSizeInner>
+    <FileSize />
+</FileSizeInner>

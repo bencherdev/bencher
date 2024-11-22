@@ -1,25 +1,6 @@
+import FileSizeInner from "./file-size-inner.mdx";
 import FileSize from "../file-size.mdx";
 
-### ⚖️ Tamaño del Archivo
-
-El subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
-puede usarse para rastrear el tamaño del archivo (es decir, tamaño binario) de tus entregables con la opción `--file-size`.
-La opción `--file-size` espera una ruta de archivo al archivo cuyo tamaño será medido.
-Por debajo, <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
-muestra los resultados como[Formato de Métrica de Bencher (BMF) JSON][bmf].
-Por lo tanto, es una buena práctica usar explícitamente [el adaptador `json`][json].
-Para más detalles vea [cómo rastrear el tamaño del archivo][file size].
-
-La Medida `file-size` (es decir, `bytes (B)`) se recopila.
-Solo está disponible el valor del tamaño del archivo (es decir, `value`).
-Ni `lower_value` ni `upper_value` se recopilan.
-La Medida `file-size` no se crea por defecto para todos los Proyectos.
-Sin embargo, cuando usas la opción `--file-size`, esta Medida se creará automáticamente para tu Proyecto.
-La opción `--file-size` se puede usar varias veces para realizar un seguimiento de varios tamaños de archivo.
-
-<FileSize />
-
-[json]: #-json
-
-[bmf]: /es/docs/reference/bencher-metric-format/
-[file size]: /es/docs/how-to/track-file-size/
+<FileSizeInner>
+    <FileSize />
+</FileSizeInner>

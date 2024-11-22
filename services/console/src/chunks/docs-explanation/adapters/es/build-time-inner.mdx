@@ -1,0 +1,21 @@
+### ⏱️ Tiempo de Compilación
+
+El subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+se puede usar para rastrear el tiempo de compilación (es decir, el tiempo de compilación) de tus entregables con la bandera `--build-time`.
+Bajo el capó, <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+muestra los resultados como [Bencher Metric Format (BMF) JSON][bmf].
+Por lo tanto, es una buena práctica usar explícitamente [el adaptador `json`][json].
+Para más detalles, consulta [cómo rastrear el tiempo de compilación][build time].
+
+Se recopila la Medida de `build-time` (es decir, `segundos (s)`).
+Solo está disponible el valor de tiempo de compilación (es decir, `value`).
+Ni `lower_value` ni `upper_value` se recogen.
+La Medida de `build-time` no se crea por defecto para todos los Proyectos.
+Sin embargo, cuando usas la bandera `--build-time`, esta Medida se creará automáticamente para tu Proyecto.
+
+{props.children}
+
+[json]: #-json
+
+[bmf]: /es/docs/reference/bencher-metric-format/
+[build time]: /es/docs/how-to/track-build-time/

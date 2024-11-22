@@ -4,14 +4,10 @@
 2. [Создайте API-токен][console users tokens add] и добавьте его в ваш CI как секрет.
 3. Создайте рабочий процесс для вашего CI, как [GitHub Actions][github actions] или [GitLab CI/CD][gitlab ci cd].
 4. [Установите Bencher CLI][install bencher cli] в вашем рабочем процессе CI.
-5. Запустите ваши тесты производительности с помощью
-   <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
-   подкоманды в вашем рабочем процессе CI, используя
-   <a href={props.url}>адаптер <code>{props.adapter}</code></a>.
+5. {props.step}
 
 [bencher sign up]: /auth/signup/
 [console users tokens add]: /console/users/tokens/add
 [github actions]: /ru/docs/how-to/github-actions/
 [gitlab ci cd]: /ru/docs/how-to/gitlab-ci-cd/
 [install bencher cli]: /ru/docs/how-to/install-cli/
-[adapter rust_criterion]: /ru/docs/explanation/adapters/#-rust-criterion

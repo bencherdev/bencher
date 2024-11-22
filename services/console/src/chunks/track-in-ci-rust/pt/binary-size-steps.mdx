@@ -1,0 +1,10 @@
+import StepsForBencherCloud from "./steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "./steps-for-bencher-self-hosted.mdx";
+
+<StepsForBencherCloud
+  step={<>Compile seu código {props.lang} com o subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> em seu fluxo de trabalho CI usando <a href={props.optionUrl}>a opção <code>--file-size</code></a> definida para o caminho de saída do seu binário juntamente com o <a href={props.adapterUrl}>adaptador <code>json</code></a>.</>}
+/>
+
+<StepsForBencherSelfHosted
+  step={<>Compile seu código {props.lang} com o subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> em seu fluxo de trabalho CI usando <a href={props.optionUrl}>a opção <code>--file-size</code></a> definida para o caminho de saída do seu binário juntamente com o adaptador <a href={props.adapterUrl}><code>json</code></a> e configurando a opção <a href="/pt/docs/explanation/bencher-run/#--host-url"><code>--host</code></a> para a URL de sua instância Bencher Self-Hosted.</>}
+/>

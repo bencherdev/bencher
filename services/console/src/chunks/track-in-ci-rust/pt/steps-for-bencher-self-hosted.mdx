@@ -6,11 +6,7 @@
 4. Crie um fluxo de trabalho para o seu CI, como [GitHub Actions][github actions] ou [GitLab CI/CD][gitlab ci cd].
 5. [Instale o Bencher CLI][install bencher cli] no fluxo de trabalho do seu CI.
    Certifique-se de que a versão do CLI corresponda à versão da sua instância Bencher Self-Hosted.
-6. Execute seus benchmarks com o
-   <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-   subcomando no fluxo de trabalho do seu CI usando
-   <a href={props.url}>o adaptador <code>{props.adapter}</code></a>
-   e configure a [opção `--host`][host option] para a URL da sua instância Bencher Self-Hosted.
+6. {props.step}
 
 [bencher self hosted]: /pt/docs/explanation/bencher-self-hosted/
 [bencher sign up]: /auth/signup/
@@ -18,5 +14,3 @@
 [github actions]: /pt/docs/how-to/github-actions/
 [gitlab ci cd]: /pt/docs/how-to/gitlab-ci-cd/
 [install bencher cli]: /pt/docs/how-to/install-cli/
-[adapter rust_criterion]: /pt/docs/explanation/adapters/#-rust-criterion
-[host option]: /pt/docs/explanation/bencher-run/#--host-url

@@ -4,14 +4,10 @@
 2. [Crea un token de API][console users tokens add] y agrégalo a tu CI como un secreto.
 3. Crea un flujo de trabajo para tu CI, como [GitHub Actions][github actions] o [GitLab CI/CD][gitlab ci cd].
 4. [Instala el Bencher CLI][install bencher cli] en tu flujo de trabajo de CI.
-5. Ejecuta tus benchmarks con el
-   <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
-   subcomando en tu flujo de trabajo de CI usando
-   <a href={props.url}>el adaptador <code>{props.adapter}</code></a>.
+5. {props.step}
 
 [bencher sign up]: /auth/signup/
 [console users tokens add]: /console/users/tokens/add
 [github actions]: /es/docs/how-to/github-actions/
 [gitlab ci cd]: /es/docs/how-to/gitlab-ci-cd/
 [install bencher cli]: /es/docs/how-to/install-cli/
-[adapter rust_criterion]: /es/docs/explanation/adapters/#-rust-criterion

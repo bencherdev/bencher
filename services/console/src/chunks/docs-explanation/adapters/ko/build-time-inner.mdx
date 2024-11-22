@@ -1,0 +1,12 @@
+### ⏱️ 빌드 시간
+
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드는 `--build-time` 플래그와 함께 사용하여, 배포물의 빌드 시간(즉, 컴파일 시간)을 추적할 수 있습니다. 내부적으로 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>은 결과를 [Bencher Metric Format (BMF) JSON][bmf]으로 출력합니다. 따라서 명시적으로 [the `json` adapter][json]을 사용하는 것이 좋습니다. 자세한 내용은 [빌드 시간 추적 방법][build time]을 참조하세요.
+
+`build-time` 측정치(즉, `초 (s)`)는 수집됩니다. 빌드 시간 값(즉, `value`)만 사용할 수 있습니다. `lower_value`나 `upper_value`는 수집되지 않습니다. `build-time` 측정치는 모든 프로젝트에 기본적으로 생성되지 않습니다. 그러나 `--build-time` 플래그를 사용하면 이 측정치는 프로젝트에 자동으로 생성됩니다.
+
+{props.children}
+
+[json]: #-json
+
+[bmf]: /ko/docs/reference/bencher-metric-format/
+[build time]: /ko/docs/how-to/track-build-time/

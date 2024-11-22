@@ -1,0 +1,10 @@
+import StepsForBencherCloud from "./steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "./steps-for-bencher-self-hosted.mdx";
+
+<StepsForBencherCloud
+  step={<>Скомпилируйте ваш {props.lang} код с помощью подкоманды <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> в вашем CI процессе, используя <a href={props.flagUrl}>флаг <code>--build-time</code></a> с <a href={props.adapterUrl}>адаптером <code>json</code></a>.</>}
+/>
+
+<StepsForBencherSelfHosted
+  step={<>Скомпилируйте ваш {props.lang} код с помощью подкоманды <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> в вашем CI процессе, используя <a href={props.flagUrl}>флаг <code>--build-time</code></a> с <a href={props.adapterUrl}>адаптером <code>json</code></a> и установкой <a href="/ru/docs/explanation/bencher-run/#--host-url">опции <code>--host</code></a> на URL вашей локальной инстанции Bencher.</>}
+/>

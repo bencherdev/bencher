@@ -1,0 +1,10 @@
+import StepsForBencherCloud from "./steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "./steps-for-bencher-self-hosted.mdx";
+
+<StepsForBencherCloud
+  step={<>Compile seu código {props.lang} com o subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> em seu fluxo de trabalho de CI usando <a href={props.flagUrl}>a opção <code>--build-time</code></a> com <a href={props.adapterUrl}>o adaptador <code>json</code></a>.</>}
+/>
+
+<StepsForBencherSelfHosted
+  step={<>Compile seu código {props.lang} com o subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> em seu fluxo de trabalho de CI usando <a href={props.flagUrl}>a opção <code>--build-time</code></a> com <a href={props.adapterUrl}>o adaptador <code>json</code></a> e configurando <a href="/pt/docs/explanation/bencher-run/#--host-url">a opção <code>--host</code></a> para a URL da sua instância do Bencher Self-Hosted.</>}
+/>

@@ -1,0 +1,10 @@
+import StepsForBencherCloud from "./steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "./steps-for-bencher-self-hosted.mdx";
+
+<StepsForBencherCloud
+  step={<>{props.lang}コードをコンパイルします。CIワークフローで<a href="/ja/docs/explanation/bencher-run/">bencher run</a>サブコマンドを使用し、<a href={props.flagUrl}><code>--build-time</code>フラグ</a>と<a href={props.adapterUrl}><code>json</code>アダプター</a>を用いてください。</>}
+/>
+
+<StepsForBencherSelfHosted
+  step={<>{props.lang}コードをコンパイルします。CIワークフローで<a href="/ja/docs/explanation/bencher-run/">bencher run</a>サブコマンドを使用し、<a href={props.flagUrl}><code>--build-time</code>フラグ</a>と<a href={props.adapterUrl}><code>json</code>アダプター</a>を用い、<a href="/ja/docs/explanation/bencher-run/#--host-url"><code>--host</code>オプション</a>をBencher Self-HostedインスタンスのURLに設定してください。</>}
+/>

@@ -4,14 +4,10 @@
 2. [创建一个 API 令牌][console users tokens add]，并将其作为机密添加到您的 CI 中。
 3. 为您的 CI 创建一个工作流，例如 [GitHub Actions][github actions] 或 [GitLab CI/CD][gitlab ci cd]。
 4. 在您的 CI 工作流中[安装 Bencher CLI][install bencher cli]。
-5. 在您的 CI 工作流中使用
-   <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
-   子命令运行您的基准测试，使用
-   <a href={props.url}>这个 <code>{props.adapter}</code> 适配器</a>。
+5. {props.step}
 
 [bencher sign up]: /auth/signup/
 [console users tokens add]: /console/users/tokens/add
 [github actions]: /zh/docs/how-to/github-actions/
 [gitlab ci cd]: /zh/docs/how-to/gitlab-ci-cd/
 [install bencher cli]: /zh/docs/how-to/install-cli/
-[adapter rust_criterion]: /zh/docs/explanation/adapters/#-rust-criterion

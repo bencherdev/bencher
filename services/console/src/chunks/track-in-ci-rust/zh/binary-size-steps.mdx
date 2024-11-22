@@ -1,0 +1,10 @@
+import StepsForBencherCloud from "./steps-for-bencher-cloud.mdx";
+import StepsForBencherSelfHosted from "./steps-for-bencher-self-hosted.mdx";
+
+<StepsForBencherCloud
+  step={<>在您的 CI 工作流中，使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 子命令编译您的 {props.lang} 代码，使用 <a href={props.optionUrl}><code>--file-size</code> 选项</a> 设置为二进制文件的输出路径，并与 <a href={props.adapterUrl}> <code>json</code> 适配器</a>一起使用。</>}
+/>
+
+<StepsForBencherSelfHosted
+  step={<>在您的 CI 工作流中，使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 子命令编译您的 {props.lang} 代码，使用 <a href={props.optionUrl}> <code>--file-size</code> 选项</a> 设置为二进制文件的输出路径，配合 <a href={props.adapterUrl}> <code>json</code> 适配器</a> 并设置 <a href="/zh/docs/explanation/bencher-run/#--host-url"> <code>--host</code> 选项</a> 为您的 Bencher 自托管实例 URL。</>}
+/>

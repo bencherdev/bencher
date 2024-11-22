@@ -1,0 +1,36 @@
+---
+title: "바이너리 크기"
+description: "CI에서 Rust 바이너리 크기를 추적하는 방법에 대한 단계별 가이드"
+heading: "CI에서 Rust 바이너리 크기를 추적하는 방법"
+published: "2024-11-22T07:40:00Z"
+sortOrder: 6
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/ko/binary-size-intro.mdx";
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/ko/binary-size-steps.mdx";
+import FileSizeInner from "../../../chunks/docs-explanation/adapters/ko/file-size-inner.mdx";
+import CargoBuild from "../../../chunks/track-in-ci-rust/cargo-build-file-size.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  lang="Rust"
+/>
+
+## 벤처(Bencher)란 무엇인가?
+
+<BencherIntro />
+
+<Steps
+  lang="Rust"
+  optionUrl="/ko/docs/explanation/adapters/#%EF%B8%8F-file-size"
+  adapterUrl="/ko/docs/explanation/adapters/#-json"
+/>
+
+<FileSizeInner>
+  <CargoBuild />
+</FileSizeInner>
+
+<br />
+
+<CallToAction />

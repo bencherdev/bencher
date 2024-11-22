@@ -5,10 +5,7 @@
 3. API トークンを作成し、それをシークレットとして CI に追加します。
 4. [GitHub Actions][github actions] や [GitLab CI/CD][gitlab ci cd] など、CI のワークフローを作成します。
 5. CI ワークフローで [Bencher CLI をインストール][install bencher cli] します。CLI のバージョンが Bencher Self-Hosted インスタンスのバージョンと一致していることを確認してください。
-6. 次のサブコマンドを使用して CI ワークフローでベンチマークを実行します:
-   <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>
-   <a href={props.url}><code>{props.adapter}</code> アダプター</a>を使用して、
-   [ `--host` オプション][host option] を Bencher Self-Hosted インスタンスの URL に設定します。
+6. {props.step}
 
 [bencher self hosted]: /ja/docs/explanation/bencher-self-hosted/
 [bencher sign up]: /auth/signup/
@@ -16,5 +13,3 @@
 [github actions]: /ja/docs/how-to/github-actions/
 [gitlab ci cd]: /ja/docs/how-to/gitlab-ci-cd/
 [install bencher cli]: /ja/docs/how-to/install-cli/
-[adapter rust_criterion]: /ja/docs/explanation/adapters/#-rust-criterion
-[host option]: /ja/docs/explanation/bencher-run/#--host-url

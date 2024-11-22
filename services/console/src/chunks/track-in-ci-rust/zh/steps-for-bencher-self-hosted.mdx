@@ -6,9 +6,7 @@
 4. 为您的 CI 创建一个工作流程，例如 [GitHub Actions][github actions] 或 [GitLab CI/CD][gitlab ci cd]。
 5. 在您的 CI 工作流程中[安装 Bencher CLI][install bencher cli]。
    确保 CLI 版本与您的 Bencher 自托管实例的版本匹配。
-6. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 子命令在您的 CI 工作流程中运行基准测试，
-   使用 <a href={props.url}> <code>{props.adapter}</code> 适配器</a>
-   并设置 [ `--host` 选项][host option] 为您的 Bencher 自托管实例的 URL。
+6. {props.step}
 
 [bencher self hosted]: /zh/docs/explanation/bencher-self-hosted/
 [bencher sign up]: /auth/signup/
@@ -16,5 +14,3 @@
 [github actions]: /zh/docs/how-to/github-actions/
 [gitlab ci cd]: /zh/docs/how-to/gitlab-ci-cd/
 [install bencher cli]: /zh/docs/how-to/install-cli/
-[adapter rust_criterion]: /zh/docs/explanation/adapters/#-rust-criterion
-[host option]: /zh/docs/explanation/bencher-run/#--host-url

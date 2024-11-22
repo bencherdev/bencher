@@ -2,11 +2,9 @@ import StepsForBencherCloud from "./steps-for-bencher-cloud.mdx";
 import StepsForBencherSelfHosted from "./steps-for-bencher-self-hosted.mdx";
 
 <StepsForBencherCloud
-  adapter={props.adapter}
-  url={props.url}
+  step={<>Run your benchmarks with the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> subcommand in your CI workflow using <a href={props.url}>the <code>{props.adapter}</code> adapter</a>.</>}
 />
 
 <StepsForBencherSelfHosted
-  adapter={props.adapter}
-  url={props.url}
+  step={<>Run your benchmarks with the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> subcommand in your CI workflow using <a href={props.url}>the <code>{props.adapter}</code> adapter</a> and setting <a href="/docs/explanation/bencher-run/#--host-url">the <code>--host</code> option</a> to your Bencher Self-Hosted instance URL.</>}
 />

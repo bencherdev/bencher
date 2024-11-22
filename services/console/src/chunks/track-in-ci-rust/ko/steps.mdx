@@ -2,11 +2,9 @@ import StepsForBencherCloud from "./steps-for-bencher-cloud.mdx";
 import StepsForBencherSelfHosted from "./steps-for-bencher-self-hosted.mdx";
 
 <StepsForBencherCloud
-  adapter={props.adapter}
-  url={props.url}
+  step={<><code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> 서브커맨드를 사용하여 CI 워크플로우에서 벤치마크를 실행하고 <a href={props.url}> <code>{props.adapter}</code> 어댑터</a>를 사용합니다.</>}
 />
 
 <StepsForBencherSelfHosted
-  adapter={props.adapter}
-  url={props.url}
+  step={<><code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> 서브 명령어를 사용하여 CI 작업 흐름에서 벤치마크를 실행하고, <a href={props.url}> <code>{props.adapter}</code> 어댑터</a>를 사용하여 <a href="/ko/docs/explanation/bencher-run/#--host-url"><code>--host</code> 옵션 설정</a>을 Bencher 셀프 호스팅 인스턴스 URL로 설정합니다.</>}
 />

@@ -1,23 +1,6 @@
+import BuildTimeInner from "./build-time-inner.mdx";
 import BuildTime from "../build-time.mdx";
 
-### ⏱️ Build Time
-
-O subcomando de CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-pode ser usado para rastrear o tempo de build (ou seja, tempo de compilação) dos seus entregáveis com a flag `--build-time`.
-Nos bastidores, <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-produz os resultados como [Bencher Metric Format (BMF) JSON][bmf].
-Portanto, é uma boa prática usar explicitamente o [adaptador `json`][json].
-Para mais detalhes, veja [como rastrear o tempo de build][build time].
-
-A Medida `build-time` (ou seja, `segundos (s)`) é coletada.
-Apenas o valor do tempo de build (ou seja, `value`) está disponível.
-Nem `lower_value` nem `upper_value` são coletados.
-A Medida `build-time` não é criada por padrão para todos os Projetos.
-No entanto, quando você usa a flag `--build-time`, esta Medida será criada automaticamente para o seu Projeto.
-
-<BuildTime />
-
-[json]: #-json
-
-[bmf]: /pt/docs/reference/bencher-metric-format/
-[build time]: /pt/docs/how-to/track-build-time/
+<BuildTimeInner>
+  <BuildTime />
+</BuildTimeInner>

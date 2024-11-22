@@ -1,0 +1,36 @@
+---
+title: "Размер бинарного файла"
+description: "Пошаговое руководство по отслеживанию размеров бинарных файлов Rust в CI"
+heading: "Как отслеживать размеры бинарных файлов Rust в CI"
+published: "2024-11-22T07:40:00Z"
+sortOrder: 6
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/ru/binary-size-intro.mdx";
+import BencherIntro from "../../../chunks/general/ru/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/ru/binary-size-steps.mdx";
+import FileSizeInner from "../../../chunks/docs-explanation/adapters/ru/file-size-inner.mdx";
+import CargoBuild from "../../../chunks/track-in-ci-rust/cargo-build-file-size.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  lang="Rust"
+/>
+
+## Что такое Bencher?
+
+<BencherIntro />
+
+<Steps
+  lang="Rust"
+  optionUrl="/ru/docs/explanation/adapters/#%EF%B8%8F-file-size"
+  adapterUrl="/ru/docs/explanation/adapters/#-json"
+/>
+
+<FileSizeInner>
+  <CargoBuild />
+</FileSizeInner>
+
+<br />
+
+<CallToAction />

@@ -1,0 +1,36 @@
+---
+title: "Время Компиляции"
+description: "Пошаговое руководство по отслеживанию времени компиляции Rust в CI"
+heading: "Как отслеживать время компиляции Rust в CI"
+published: "2024-11-21T07:30:00Z"
+sortOrder: 5
+---
+
+import Intro from "../../../chunks/track-in-ci-rust/ru/compile-time-intro.mdx";
+import BencherIntro from "../../../chunks/general/ru/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci-rust/ru/compile-time-steps.mdx";
+import BuildTimeInner from "../../../chunks/docs-explanation/adapters/ru/build-time-inner.mdx";
+import CargoBuild from "../../../chunks/track-in-ci-rust/cargo-build-build-time.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+
+<Intro
+  lang="Rust"
+/>
+
+## Что такое Bencher?
+
+<BencherIntro />
+
+<Steps
+  lang="Rust"
+  flagUrl="/ru/docs/explanation/adapters/#%EF%B8%8F-build-time"
+  adapterUrl="/ru/docs/explanation/adapters/#-json"
+/>
+
+<BuildTimeInner>
+  <CargoBuild />
+</BuildTimeInner>
+
+<br />
+
+<CallToAction />
