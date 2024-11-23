@@ -177,6 +177,7 @@ export const DEFAULT_PAGE = 1;
 const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000;
 
 export interface Props {
+	children?: any;
 	apiUrl: string;
 	params: Params;
 	isConsole?: boolean;
@@ -184,11 +185,6 @@ export interface Props {
 	project?: undefined | JsonProject;
 	project_slug: () => string;
 	refresh: () => number;
-	reports_data: Resource<JsonReport>;
-	branches_data: Resource<JsonBranch>;
-	testbeds_data: Resource<JsonTestbed>;
-	benchmarks_data: Resource<JsonBenchmark>;
-	plots_data: Resource<JsonPlot>;
 	report: () => JsonReport | null;
 	measures: () => string[];
 	branches: () => string[];
@@ -231,11 +227,6 @@ export interface Props {
 	testbeds_search: () => string;
 	benchmarks_search: () => string;
 	plots_search: () => string;
-	reports_tab: TabList<JsonReport>;
-	branches_tab: TabList<JsonBranch>;
-	testbeds_tab: TabList<JsonTestbed>;
-	benchmarks_tab: TabList<JsonBenchmark>;
-	plots_tab: TabList<JsonPlot>;
 	handleReportChecked: (index: number) => void;
 	handleBranchChecked: (index: number) => void;
 	handleTestbedChecked: (index: number) => void;
@@ -267,18 +258,6 @@ export interface Props {
 	embed_title: () => string;
 	embed_header: () => boolean;
 	embed_key: () => boolean;
-}
-
-function resourcesToCheckable<T>(
-	resources: { uuid: string }[],
-	params: (undefined | string)[],
-): TabList<T> {
-	return resources.map((resource) => {
-		return {
-			resource: resource as T,
-			checked: params.includes(resource?.uuid),
-		};
-	});
 }
 
 const PerfFrame = (props: Props) => {
@@ -426,16 +405,6 @@ const PerfFrame = (props: Props) => {
 			upper_value={props.upper_value}
 			lower_boundary={props.lower_boundary}
 			upper_boundary={props.upper_boundary}
-			reports_data={props.reports_data}
-			branches_data={props.branches_data}
-			testbeds_data={props.testbeds_data}
-			benchmarks_data={props.benchmarks_data}
-			plots_data={props.plots_data}
-			reports_tab={props.reports_tab}
-			branches_tab={props.branches_tab}
-			testbeds_tab={props.testbeds_tab}
-			benchmarks_tab={props.benchmarks_tab}
-			plots_tab={props.plots_tab}
 			reports_per_page={props.reports_per_page}
 			branches_per_page={props.branches_per_page}
 			testbeds_per_page={props.testbeds_per_page}
@@ -488,7 +457,9 @@ const PerfFrame = (props: Props) => {
 			handleTestbedsSearch={props.handleTestbedsSearch}
 			handleBenchmarksSearch={props.handleBenchmarksSearch}
 			handlePlotsSearch={props.handlePlotsSearch}
-		/>
+		>
+			{props.children}
+		</PerfPlot>
 	);
 };
 

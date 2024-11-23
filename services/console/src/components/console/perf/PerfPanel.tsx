@@ -50,6 +50,7 @@ import PerfFrame from "./PerfFrame";
 import PerfHeader from "./header/PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
+import PlotTab from "./plot/tab/PlotTab";
 
 // Perf query params
 const BRANCHES_PARAM = PerfQueryKey.Branches;
@@ -1208,7 +1209,69 @@ const PerfPanel = (props: Props) => {
 				embed_title={embed_title}
 				embed_header={embed_header}
 				embed_key={embed_key}
-			/>
+			>
+				<Show when={!props.isEmbed}>
+					<PlotTab
+						project_slug={project_slug}
+						theme={theme}
+						isConsole={props.isConsole === true}
+						report={report}
+						branches={branches}
+						testbeds={testbeds}
+						benchmarks={benchmarks}
+						measures={measures}
+						tab={tab}
+						reports_data={reports_data}
+						branches_data={branches_data}
+						testbeds_data={testbeds_data}
+						benchmarks_data={benchmarks_data}
+						plots_data={plots_data}
+						reports_tab={reports_tab}
+						branches_tab={branches_tab}
+						testbeds_tab={testbeds_tab}
+						benchmarks_tab={benchmarks_tab}
+						plots_tab={plots_tab}
+						reports_per_page={reports_per_page}
+						branches_per_page={branches_per_page}
+						testbeds_per_page={testbeds_per_page}
+						benchmarks_per_page={benchmarks_per_page}
+						plots_per_page={plots_per_page}
+						reports_page={reports_page}
+						branches_page={branches_page}
+						testbeds_page={testbeds_page}
+						benchmarks_page={benchmarks_page}
+						plots_page={plots_page}
+						reports_total_count={reportsTotalCount}
+						branches_total_count={branchesTotalCount}
+						testbeds_total_count={testbedsTotalCount}
+						benchmarks_total_count={benchmarksTotalCount}
+						plots_total_count={plotsTotalCount}
+						reports_start_date={reports_start_date}
+						reports_end_date={reports_end_date}
+						branches_search={branches_search}
+						testbeds_search={testbeds_search}
+						benchmarks_search={benchmarks_search}
+						plots_search={plots_search}
+						handleTab={handleTab}
+						handleReportChecked={handleReportChecked}
+						handleBranchChecked={handleBranchChecked}
+						handleTestbedChecked={handleTestbedChecked}
+						handleBenchmarkChecked={handleBenchmarkChecked}
+						handlePlotChecked={handlePlotChecked}
+						handleReportsPage={handleReportsPage}
+						handleBranchesPage={handleBranchesPage}
+						handleTestbedsPage={handleTestbedsPage}
+						handleBenchmarksPage={handleBenchmarksPage}
+						handlePlotsPage={handlePlotsPage}
+						handleReportsStartTime={handleReportsStartTime}
+						handleReportsEndTime={handleReportsEndTime}
+						handleBranchesSearch={handleBranchesSearch}
+						handleTestbedsSearch={handleTestbedsSearch}
+						handleBenchmarksSearch={handleBenchmarksSearch}
+						handlePlotsSearch={handlePlotsSearch}
+					/>
+				</Show>
+			</PerfFrame>
 		</>
 	);
 };
