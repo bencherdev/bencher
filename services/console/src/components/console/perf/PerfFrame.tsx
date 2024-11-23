@@ -46,7 +46,6 @@ import {
 import { useSearchParams } from "../../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../../util/valid";
 import { themeSignal } from "../../navbar/theme/util";
-import PerfFrame from "./PerfFrame";
 import PerfHeader from "./header/PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
@@ -182,6 +181,56 @@ export interface Props {
 	isConsole?: boolean;
 	isEmbed?: boolean;
 	project?: undefined | JsonProject;
+	//
+	project_slug: () => string;
+	setSearchParams: (params: object, options?: object) => void;
+	//
+	report: () => JsonReport | null;
+	measures: () => string[];
+	branches: () => string[];
+	heads: () => string[];
+	testbeds: () => string[];
+	benchmarks: () => string[];
+	plot: () => string | null;
+	start_time: () => string;
+	end_time: () => string;
+	start_date: () => string;
+	end_date: () => string;
+	//
+	tab: () => PerfTab;
+	key: () => boolean;
+	x_axis: () => XAxis;
+	clear: () => boolean;
+	lower_value: () => boolean;
+	upper_value: () => boolean;
+	lower_boundary: () => boolean;
+	upper_boundary: () => boolean;
+	//
+	reports_per_page: () => number;
+	branches_per_page: () => number;
+	testbeds_per_page: () => number;
+	benchmarks_per_page: () => number;
+	plots_per_page: () => number;
+	//
+	reports_page: () => number;
+	branches_page: () => number;
+	testbeds_page: () => number;
+	benchmarks_page: () => number;
+	plots_page: () => number;
+	//
+	reports_start_time: () => string;
+	reports_end_time: () => string;
+	reports_start_date: () => string;
+	reports_end_date: () => string;
+	branches_search: () => string;
+	testbeds_search: () => string;
+	benchmarks_search: () => string;
+	plots_search: () => string;
+	//
+	embed_logo: () => boolean;
+	embed_title: () => string;
+	embed_header: () => boolean;
+	embed_key: () => boolean;
 }
 
 function resourcesToCheckable<T>(
@@ -196,326 +245,29 @@ function resourcesToCheckable<T>(
 	});
 }
 
-const PerfPanel = (props: Props) => {
-	const params = createMemo(() => props.params);
-	const [searchParams, setSearchParams] = useSearchParams();
+const PerfFrame = (props: Props) => {
 	const user = authUser();
 	const theme = themeSignal;
-
-	const [init, setInit] = createSignal(false);
-	// Sanitize all query params
-	createEffect(() => {
-		if (init()) {
-			return;
-		}
-		const initParams: Record<
-			string,
-			undefined | null | boolean | number | string
-		> = {};
-
-		if (typeof searchParams[REPORT_PARAM] !== "string") {
-			initParams[REPORT_PARAM] = null;
-		}
-		if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
-			initParams[BRANCHES_PARAM] = null;
-		}
-		if (!Array.isArray(arrayFromString(searchParams[HEADS_PARAM]))) {
-			initParams[HEADS_PARAM] = null;
-		}
-		if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
-			initParams[TESTBEDS_PARAM] = null;
-		}
-		if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
-			initParams[BENCHMARKS_PARAM] = null;
-		}
-		if (!Array.isArray(arrayFromString(searchParams[MEASURES_PARAM]))) {
-			initParams[MEASURES_PARAM] = null;
-		}
-		if (!timeToDate(searchParams[START_TIME_PARAM])) {
-			initParams[START_TIME_PARAM] = null;
-		}
-		if (!timeToDate(searchParams[END_TIME_PARAM])) {
-			initParams[END_TIME_PARAM] = null;
-		}
-
-		// Sanitize all UI state query params
-		if (!isPerfTab(searchParams[TAB_PARAM])) {
-			initParams[TAB_PARAM] = null;
-		}
-		if (!isBoolParam(searchParams[KEY_PARAM])) {
-			initParams[KEY_PARAM] = DEFAULT_PERF_KEY;
-		}
-		if (isXAxis(searchParams[X_AXIS_PARAM])) {
-			// TODO remove in due time
-			initParams[RANGE_PARAM] = null;
-		} else {
-			initParams[X_AXIS_PARAM] = null;
-		}
-		// TODO remove in due time
-		if (isXAxis(searchParams[RANGE_PARAM])) {
-			if (!initParams[X_AXIS_PARAM]) {
-				initParams[X_AXIS_PARAM] = searchParams[RANGE_PARAM];
-			}
-		} else {
-			initParams[RANGE_PARAM] = null;
-		}
-		if (!isBoolParam(searchParams[CLEAR_PARAM])) {
-			initParams[CLEAR_PARAM] = null;
-		}
-		if (!isBoolParam(searchParams[LOWER_VALUE_PARAM])) {
-			initParams[LOWER_VALUE_PARAM] = null;
-		}
-		if (!isBoolParam(searchParams[UPPER_VALUE_PARAM])) {
-			initParams[UPPER_VALUE_PARAM] = null;
-		}
-		if (!isBoolParam(searchParams[LOWER_BOUNDARY_PARAM])) {
-			initParams[LOWER_BOUNDARY_PARAM] = null;
-		}
-		if (!isBoolParam(searchParams[UPPER_BOUNDARY_PARAM])) {
-			initParams[UPPER_BOUNDARY_PARAM] = null;
-		}
-
-		// Sanitize all pagination query params
-		if (!validU32(searchParams[REPORTS_PER_PAGE_PARAM])) {
-			initParams[REPORTS_PER_PAGE_PARAM] = REPORTS_PER_PAGE;
-		}
-		if (!validU32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
-			initParams[BRANCHES_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-		if (!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
-			initParams[TESTBEDS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-		if (!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
-			initParams[BENCHMARKS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-		if (!validU32(searchParams[PLOTS_PER_PAGE_PARAM])) {
-			initParams[PLOTS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-
-		if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
-			initParams[REPORTS_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (!validU32(searchParams[BRANCHES_PAGE_PARAM])) {
-			initParams[BRANCHES_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (!validU32(searchParams[TESTBEDS_PAGE_PARAM])) {
-			initParams[TESTBEDS_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (!validU32(searchParams[BENCHMARKS_PAGE_PARAM])) {
-			initParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (!validU32(searchParams[PLOTS_PAGE_PARAM])) {
-			initParams[PLOTS_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-
-		if (!timeToDate(searchParams[REPORTS_START_TIME_PARAM])) {
-			initParams[REPORTS_START_TIME_PARAM] = null;
-		}
-		if (!timeToDate(searchParams[REPORTS_END_TIME_PARAM])) {
-			initParams[REPORTS_END_TIME_PARAM] = null;
-		}
-		if (typeof searchParams[BRANCHES_SEARCH_PARAM] !== "string") {
-			initParams[BRANCHES_SEARCH_PARAM] = null;
-		}
-		if (typeof searchParams[TESTBEDS_SEARCH_PARAM] !== "string") {
-			initParams[TESTBEDS_SEARCH_PARAM] = null;
-		}
-		if (typeof searchParams[BENCHMARKS_SEARCH_PARAM] !== "string") {
-			initParams[BENCHMARKS_SEARCH_PARAM] = null;
-		}
-		if (typeof searchParams[PLOTS_SEARCH_PARAM] !== "string") {
-			initParams[PLOTS_SEARCH_PARAM] = null;
-		}
-
-		// Embed params
-		if (typeof searchParams[EMBED_LOGO_PARAM] !== "string") {
-			initParams[EMBED_LOGO_PARAM] = null;
-		}
-		if (typeof searchParams[EMBED_TITLE_PARAM] !== "string") {
-			initParams[EMBED_TITLE_PARAM] = null;
-		}
-		if (!isBoolParam(searchParams[EMBED_HEADER_PARAM])) {
-			initParams[EMBED_HEADER_PARAM] = null;
-		}
-		if (!isBoolParam(searchParams[EMBED_KEY_PARAM])) {
-			initParams[EMBED_KEY_PARAM] = null;
-		}
-
-		if (Object.keys(initParams).length === 0) {
-			setInit(true);
-		} else {
-			setSearchParams(initParams, { replace: true });
-		}
-	});
-
-	// Create marshalized memos of all query params
-	const report = createMemo(() => searchParams[REPORT_PARAM]);
-	const measures = createMemo(() =>
-		arrayFromString(searchParams[MEASURES_PARAM]),
-	);
-	const branches = createMemo(() =>
-		arrayFromString(searchParams[BRANCHES_PARAM]),
-	);
-	const heads = createMemo(() =>
-		sizeArray(branches(), arrayFromString(searchParams[HEADS_PARAM])),
-	);
-	const testbeds = createMemo(() =>
-		arrayFromString(searchParams[TESTBEDS_PARAM]),
-	);
-	const benchmarks = createMemo(() =>
-		arrayFromString(searchParams[BENCHMARKS_PARAM]),
-	);
-	const plot = createMemo(() => searchParams[PLOT_PARAM]);
-
-	// start/end_time is used for the query
-	const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
-	const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
-	// start/end_date is used for the GUI selector
-	const start_date = createMemo(() => timeToDateOnlyIso(start_time()));
-	const end_date = createMemo(() => timeToDateOnlyIso(end_time()));
-
-	const tab = createMemo(() => {
-		// This check is required for the initial load
-		// before the query params have been sanitized
-		const perfTab = searchParams[TAB_PARAM];
-		if (perfTab && isPerfTab(perfTab)) {
-			return perfTab as PerfTab;
-		}
-		return DEFAULT_PERF_TAB;
-	});
-
-	// This check is required for the initial load
-	// before the query params have been sanitized
-	const isBoolParamOrDefault = (param: string, default_value: boolean) => {
-		if (isBoolParam(searchParams[param])) {
-			return searchParams[param] === "true";
-		}
-		return default_value;
-	};
-
-	const key = createMemo(() =>
-		isBoolParamOrDefault(KEY_PARAM, DEFAULT_PERF_KEY),
-	);
-
-	const x_axis = createMemo(() => {
-		// This check is required for the initial load
-		// before the query params have been sanitized
-		const x = searchParams[X_AXIS_PARAM];
-		if (x && isXAxis(x)) {
-			return x as XAxis;
-		}
-		// TODO remove in due time
-		const r = searchParams[RANGE_PARAM];
-		if (r && isXAxis(r)) {
-			return r as XAxis;
-		}
-		return DEFAULT_X_AXIS;
-	});
-
-	// Ironically, a better name for the `clear` param would actually be `dirty`.
-	// It works as a "dirty" bit to indicate that we shouldn't load the first report again.
-	const clear = createMemo(() =>
-		isBoolParamOrDefault(CLEAR_PARAM, DEFAULT_PERF_CLEAR),
-	);
-
-	const lower_value = createMemo(() =>
-		isBoolParamOrDefault(LOWER_VALUE_PARAM, DEFAULT_PERF_END_VALUE),
-	);
-	const upper_value = createMemo(() =>
-		isBoolParamOrDefault(UPPER_VALUE_PARAM, DEFAULT_PERF_END_VALUE),
-	);
-
-	const lower_boundary = createMemo(() =>
-		isBoolParamOrDefault(LOWER_BOUNDARY_PARAM, DEFAULT_PERF_BOUNDARY),
-	);
-	const upper_boundary = createMemo(() =>
-		isBoolParamOrDefault(UPPER_BOUNDARY_PARAM, DEFAULT_PERF_BOUNDARY),
-	);
-
-	// Pagination query params
-	const reports_per_page = createMemo(() =>
-		Number(searchParams[REPORTS_PER_PAGE_PARAM] ?? REPORTS_PER_PAGE),
-	);
-	const branches_per_page = createMemo(() =>
-		Number(searchParams[BRANCHES_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
-	);
-	const testbeds_per_page = createMemo(() =>
-		Number(searchParams[TESTBEDS_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
-	);
-	const benchmarks_per_page = createMemo(() =>
-		Number(searchParams[BENCHMARKS_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
-	);
-	const plots_per_page = createMemo(() =>
-		Number(searchParams[PLOTS_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
-	);
-
-	const reports_page = createMemo(() =>
-		Number(searchParams[REPORTS_PAGE_PARAM] ?? DEFAULT_PAGE),
-	);
-	const branches_page = createMemo(() =>
-		Number(searchParams[BRANCHES_PAGE_PARAM] ?? DEFAULT_PAGE),
-	);
-	const testbeds_page = createMemo(() =>
-		Number(searchParams[TESTBEDS_PAGE_PARAM] ?? DEFAULT_PAGE),
-	);
-	const benchmarks_page = createMemo(() =>
-		Number(searchParams[BENCHMARKS_PAGE_PARAM] ?? DEFAULT_PAGE),
-	);
-	const plots_page = createMemo(() =>
-		Number(searchParams[PLOTS_PAGE_PARAM] ?? DEFAULT_PAGE),
-	);
-
-	const reports_start_time = createMemo(
-		() => searchParams[REPORTS_START_TIME_PARAM],
-	);
-	const reports_start_date = createMemo(() =>
-		timeToDateOnlyIso(reports_start_time()),
-	);
-	const reports_end_time = createMemo(
-		() => searchParams[REPORTS_END_TIME_PARAM],
-	);
-	const reports_end_date = createMemo(() =>
-		timeToDateOnlyIso(reports_end_time()),
-	);
-
-	const branches_search = createMemo(() => searchParams[BRANCHES_SEARCH_PARAM]);
-	const testbeds_search = createMemo(() => searchParams[TESTBEDS_SEARCH_PARAM]);
-	const benchmarks_search = createMemo(
-		() => searchParams[BENCHMARKS_SEARCH_PARAM],
-	);
-	const plots_search = createMemo(() => searchParams[PLOTS_SEARCH_PARAM]);
-
-	// Embed params
-	const embed_logo = createMemo(() =>
-		isBoolParamOrDefault(EMBED_LOGO_PARAM, DEFAULT_EMBED_LOGO),
-	);
-	const embed_title = createMemo(() => searchParams[EMBED_TITLE_PARAM]);
-	const embed_header = createMemo(() =>
-		isBoolParamOrDefault(EMBED_HEADER_PARAM, DEFAULT_EMBED_HEADER),
-	);
-	const embed_key = createMemo(() =>
-		isBoolParamOrDefault(EMBED_KEY_PARAM, DEFAULT_EMBED_KEY),
-	);
 
 	// The perf query sent to the server
 	const perfQuery = createMemo(() => {
 		return {
-			branches: branches(),
-			heads: heads(),
-			testbeds: testbeds(),
-			benchmarks: benchmarks(),
-			measures: measures(),
-			start_time: start_time(),
-			end_time: end_time(),
+			branches: props.branches(),
+			heads: props.heads(),
+			testbeds: props.testbeds(),
+			benchmarks: props.benchmarks(),
+			measures: props.measures(),
+			start_time: props.start_time(),
+			end_time: props.end_time(),
 		} as JsonPerfQuery;
 	});
 
 	const isPlotInit = createMemo(
 		() =>
-			branches().length === 0 ||
-			testbeds().length === 0 ||
-			benchmarks().length === 0 ||
-			measures().length === 0,
+			props.branches().length === 0 ||
+			props.testbeds().length === 0 ||
+			props.benchmarks().length === 0 ||
+			props.measures().length === 0,
 	);
 
 	// Refresh pref query
@@ -524,15 +276,13 @@ const PerfPanel = (props: Props) => {
 		setRefresh(refresh() + 1);
 	};
 
-	const project_slug = createMemo(() => params().project);
 	const projectFetcher = createMemo(() => {
 		return {
-			project_slug: project_slug(),
+			project_slug: props.project_slug(),
 			refresh: refresh(),
 			token: user?.token,
 		};
 	});
-
 	const getProject = async (fetcher: {
 		project_slug: string;
 		refresh: number;
@@ -559,12 +309,11 @@ const PerfPanel = (props: Props) => {
 				return EMPTY_OBJECT;
 			});
 	};
-
 	const [project] = createResource<JsonProject>(projectFetcher, getProject);
 
 	const perfFetcher = createMemo(() => {
 		return {
-			project_slug: project_slug(),
+			project_slug: props.project_slug(),
 			perfQuery: perfQuery(),
 			refresh: refresh(),
 			token: user?.token,
@@ -618,7 +367,6 @@ const PerfPanel = (props: Props) => {
 				return EMPTY_OBJECT;
 			});
 	};
-
 	const [perfData] = createResource<JsonPerf>(perfFetcher, getPerf);
 
 	// Initialize as empty, wait for resources to load
@@ -696,11 +444,11 @@ const PerfPanel = (props: Props) => {
 
 	const reports_fetcher = createMemo(() => {
 		return {
-			project_slug: project_slug(),
-			per_page: reports_per_page(),
-			page: reports_page(),
-			start_time: reports_start_time(),
-			end_time: reports_end_time(),
+			project_slug: props.project_slug(),
+			per_page: props.reports_per_page(),
+			page: props.reports_page(),
+			start_time: props.reports_start_time(),
+			end_time: props.reports_end_time(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -713,18 +461,18 @@ const PerfPanel = (props: Props) => {
 	createEffect(() => {
 		const data = reports_data();
 		if (data) {
-			setReportsTab(resourcesToCheckable(data, [report()]));
+			setReportsTab(resourcesToCheckable(data, [props.report()]));
 		}
 		const first = 0;
 		const first_report = data?.[first];
 		if (
-			!clear() &&
+			!props.clear() &&
 			first_report &&
-			branches().length === 0 &&
-			testbeds().length === 0 &&
-			benchmarks().length === 0 &&
-			measures().length === 0 &&
-			tab() === DEFAULT_PERF_TAB
+			props.branches().length === 0 &&
+			props.testbeds().length === 0 &&
+			props.benchmarks().length === 0 &&
+			props.measures().length === 0 &&
+			props.tab() === DEFAULT_PERF_TAB
 		) {
 			const benchmarks = first_report?.results?.[first]
 				?.map((iteration) => iteration?.benchmark?.uuid)
@@ -733,7 +481,7 @@ const PerfPanel = (props: Props) => {
 				first_report?.results?.[first]?.[first]?.measures?.[first]?.measure
 					?.uuid;
 			const start_time = dateTimeMillis(first_report?.start_time);
-			setSearchParams(
+			props.setSearchParams(
 				{
 					[REPORT_PARAM]: first_report?.uuid,
 					[BRANCHES_PARAM]: first_report?.branch?.uuid,
@@ -761,10 +509,10 @@ const PerfPanel = (props: Props) => {
 
 	const branches_fetcher = createMemo(() => {
 		return {
-			project_slug: project_slug(),
-			per_page: branches_per_page(),
-			page: branches_page(),
-			search: branches_search(),
+			project_slug: props.project_slug(),
+			per_page: props.branches_per_page(),
+			page: props.branches_page(),
+			search: props.branches_search(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -777,16 +525,16 @@ const PerfPanel = (props: Props) => {
 	createEffect(() => {
 		const data = branches_data();
 		if (data) {
-			setBranchesTab(resourcesToCheckable(data, branches()));
+			setBranchesTab(resourcesToCheckable(data, props.branches()));
 		}
 	});
 
 	const testbeds_fetcher = createMemo(() => {
 		return {
-			project_slug: project_slug(),
-			per_page: testbeds_per_page(),
-			page: testbeds_page(),
-			search: testbeds_search(),
+			project_slug: props.project_slug(),
+			per_page: props.testbeds_per_page(),
+			page: props.testbeds_page(),
+			search: props.testbeds_search(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -799,16 +547,16 @@ const PerfPanel = (props: Props) => {
 	createEffect(() => {
 		const data = testbeds_data();
 		if (data) {
-			setTestbedsTab(resourcesToCheckable(data, testbeds()));
+			setTestbedsTab(resourcesToCheckable(data, props.testbeds()));
 		}
 	});
 
 	const benchmarks_fetcher = createMemo(() => {
 		return {
-			project_slug: project_slug(),
-			per_page: benchmarks_per_page(),
-			page: benchmarks_page(),
-			search: benchmarks_search(),
+			project_slug: props.project_slug(),
+			per_page: props.benchmarks_per_page(),
+			page: props.benchmarks_page(),
+			search: props.benchmarks_search(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -823,16 +571,16 @@ const PerfPanel = (props: Props) => {
 	createEffect(() => {
 		const data = benchmarks_data();
 		if (data) {
-			setBenchmarksTab(resourcesToCheckable(data, benchmarks()));
+			setBenchmarksTab(resourcesToCheckable(data, props.benchmarks()));
 		}
 	});
 
 	const plots_fetcher = createMemo(() => {
 		return {
-			project_slug: project_slug(),
-			per_page: plots_per_page(),
-			page: plots_page(),
-			search: plots_search(),
+			project_slug: props.project_slug(),
+			per_page: props.plots_per_page(),
+			page: props.plots_page(),
+			search: props.plots_search(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -845,14 +593,14 @@ const PerfPanel = (props: Props) => {
 	createEffect(() => {
 		const data = plots_data();
 		if (data) {
-			setPlotsTab(resourcesToCheckable(data, [plot()]));
+			setPlotsTab(resourcesToCheckable(data, [props.plot()]));
 		}
 	});
 
 	const handleReportChecked = (index: number) => {
 		const reportUuid = reports_tab?.[index]?.resource?.uuid;
-		setSearchParams({
-			[REPORT_PARAM]: report() === reportUuid ? null : reportUuid,
+		props.setSearchParams({
+			[REPORT_PARAM]: props.report() === reportUuid ? null : reportUuid,
 			[CLEAR_PARAM]: true,
 		});
 	};
@@ -865,7 +613,7 @@ const PerfPanel = (props: Props) => {
 	) => {
 		// Uncheck all
 		if (index === undefined) {
-			setSearchParams({
+			props.setSearchParams({
 				[REPORT_PARAM]: null,
 				[PLOT_PARAM]: null,
 				[param]: null,
@@ -885,7 +633,7 @@ const PerfPanel = (props: Props) => {
 		const [array, i] = checked
 			? removeFromArray(param_array, uuid)
 			: addToArray(param_array, uuid);
-		setSearchParams({
+		props.setSearchParams({
 			[REPORT_PARAM]: null,
 			[PLOT_PARAM]: null,
 			[param]: arrayToString(array),
@@ -898,7 +646,7 @@ const PerfPanel = (props: Props) => {
 			branches_tab,
 			index,
 			BRANCHES_PARAM,
-			branches(),
+			props.branches(),
 			(checked, i) => {
 				if (i === null) {
 					return {};
@@ -917,13 +665,13 @@ const PerfPanel = (props: Props) => {
 		);
 	};
 	const handleTestbedChecked = (index: undefined | number) => {
-		handleChecked(testbeds_tab, index, TESTBEDS_PARAM, testbeds());
+		handleChecked(testbeds_tab, index, TESTBEDS_PARAM, props.testbeds());
 	};
 	const handleBenchmarkChecked = (index: undefined | number) => {
-		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks());
+		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, props.benchmarks());
 	};
 	const handleMeasure = (measure: null | string) => {
-		setSearchParams({
+		props.setSearchParams({
 			[REPORT_PARAM]: null,
 			[MEASURES_PARAM]: measure,
 			[PLOT_PARAM]: null,
@@ -933,7 +681,7 @@ const PerfPanel = (props: Props) => {
 	const handlePlotChecked = (index: number) => {
 		const plot = plots_tab?.[index]?.resource;
 		const now = Date.now();
-		setSearchParams({
+		props.setSearchParams({
 			[REPORT_PARAM]: null,
 			[BRANCHES_PARAM]: plot?.branches?.join(","),
 			[TESTBEDS_PARAM]: plot?.testbeds?.join(","),
@@ -951,22 +699,25 @@ const PerfPanel = (props: Props) => {
 	};
 
 	const handleStartTime = (date: string) =>
-		setSearchParams({
+		props.setSearchParams({
 			[PLOT_PARAM]: null,
 			[START_TIME_PARAM]: dateToTime(date),
 		});
 	const handleEndTime = (date: string) =>
-		setSearchParams({ [PLOT_PARAM]: null, [END_TIME_PARAM]: dateToTime(date) });
+		props.setSearchParams({
+			[PLOT_PARAM]: null,
+			[END_TIME_PARAM]: dateToTime(date),
+		});
 
 	const handleTab = (tab: PerfTab) => {
 		if (isPerfTab(tab)) {
-			setSearchParams({ [TAB_PARAM]: tab });
+			props.setSearchParams({ [TAB_PARAM]: tab });
 		}
 	};
 
 	const handleBool = (param: string, value: boolean) => {
 		if (typeof value === "boolean") {
-			setSearchParams({ [PLOT_PARAM]: null, [param]: value });
+			props.setSearchParams({ [PLOT_PARAM]: null, [param]: value });
 		}
 	};
 
@@ -976,14 +727,14 @@ const PerfPanel = (props: Props) => {
 
 	const handleXAxis = (x_axis: XAxis) => {
 		if (isXAxis(x_axis)) {
-			setSearchParams({ [PLOT_PARAM]: null, [X_AXIS_PARAM]: x_axis });
+			props.setSearchParams({ [PLOT_PARAM]: null, [X_AXIS_PARAM]: x_axis });
 		}
 	};
 
 	const handleClear = (clear: boolean) => {
 		if (typeof clear === "boolean") {
 			if (clear) {
-				setSearchParams({
+				props.setSearchParams({
 					[REPORT_PARAM]: null,
 					[BRANCHES_PARAM]: null,
 					[TESTBEDS_PARAM]: null,
@@ -1021,7 +772,7 @@ const PerfPanel = (props: Props) => {
 					[CLEAR_PARAM]: true,
 				});
 			} else {
-				setSearchParams({ [CLEAR_PARAM]: clear });
+				props.setSearchParams({ [CLEAR_PARAM]: clear });
 			}
 		}
 	};
@@ -1041,29 +792,29 @@ const PerfPanel = (props: Props) => {
 	};
 
 	const handleReportsPage = (page: number) =>
-		setSearchParams({ [REPORTS_PAGE_PARAM]: page });
+		props.setSearchParams({ [REPORTS_PAGE_PARAM]: page });
 	const handleBranchesPage = (page: number) =>
-		setSearchParams({ [BRANCHES_PAGE_PARAM]: page });
+		props.setSearchParams({ [BRANCHES_PAGE_PARAM]: page });
 	const handleTestbedsPage = (page: number) =>
-		setSearchParams({ [TESTBEDS_PAGE_PARAM]: page });
+		props.setSearchParams({ [TESTBEDS_PAGE_PARAM]: page });
 	const handleBenchmarksPage = (page: number) =>
-		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: page });
+		props.setSearchParams({ [BENCHMARKS_PAGE_PARAM]: page });
 	const handlePlotsPage = (page: number) =>
-		setSearchParams({ [PLOTS_PAGE_PARAM]: page });
+		props.setSearchParams({ [PLOTS_PAGE_PARAM]: page });
 
 	const handleReportsStartTime = (date: string) =>
-		setSearchParams({
+		props.setSearchParams({
 			[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
 			[REPORTS_START_TIME_PARAM]: dateToTime(date),
 		});
 	const handleReportsEndTime = (date: string) =>
-		setSearchParams({
+		props.setSearchParams({
 			[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
 			[REPORTS_END_TIME_PARAM]: dateToTime(date),
 		});
 	const handleBranchesSearch = debounce(
 		(search: string) =>
-			setSearchParams({
+			props.setSearchParams({
 				[BRANCHES_PAGE_PARAM]: DEFAULT_PAGE,
 				[BRANCHES_SEARCH_PARAM]: search,
 			}),
@@ -1071,7 +822,7 @@ const PerfPanel = (props: Props) => {
 	);
 	const handleTestbedsSearch = debounce(
 		(search: string) =>
-			setSearchParams({
+			props.setSearchParams({
 				[TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE,
 				[TESTBEDS_SEARCH_PARAM]: search,
 			}),
@@ -1079,7 +830,7 @@ const PerfPanel = (props: Props) => {
 	);
 	const handleBenchmarksSearch = debounce(
 		(search: string) =>
-			setSearchParams({
+			props.setSearchParams({
 				[BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE,
 				[BENCHMARKS_SEARCH_PARAM]: search,
 			}),
@@ -1087,7 +838,7 @@ const PerfPanel = (props: Props) => {
 	);
 	const handlePlotsSearch = debounce(
 		(search: string) =>
-			setSearchParams({
+			props.setSearchParams({
 				[PLOTS_PAGE_PARAM]: DEFAULT_PAGE,
 				[PLOTS_SEARCH_PARAM]: search,
 			}),
@@ -1095,57 +846,119 @@ const PerfPanel = (props: Props) => {
 	);
 
 	return (
-		<PerfFrame
-			apiUrl={props.apiUrl}
-			params={props.params}
-			isConsole={props.isConsole}
-			isEmbed={props.isEmbed}
-			project={props.project}
-			project_slug={project_slug}
-			setSearchParams={setSearchParams}
-			report={report}
-			measures={measures}
-			branches={branches}
-			heads={heads}
-			testbeds={testbeds}
-			benchmarks={benchmarks}
-			plot={plot}
-			start_time={start_time}
-			end_time={end_time}
-			start_date={start_date}
-			end_date={end_date}
-			tab={tab}
-			key={key}
-			x_axis={x_axis}
-			clear={clear}
-			lower_value={lower_value}
-			upper_value={upper_value}
-			lower_boundary={lower_boundary}
-			upper_boundary={upper_boundary}
-			reports_per_page={reports_per_page}
-			branches_per_page={branches_per_page}
-			testbeds_per_page={testbeds_per_page}
-			benchmarks_per_page={benchmarks_per_page}
-			plots_per_page={plots_per_page}
-			reports_page={reports_page}
-			branches_page={branches_page}
-			testbeds_page={testbeds_page}
-			benchmarks_page={benchmarks_page}
-			plots_page={plots_page}
-			reports_start_time={reports_start_time}
-			reports_end_time={reports_end_time}
-			reports_start_date={reports_start_date}
-			reports_end_date={reports_end_date}
-			branches_search={branches_search}
-			testbeds_search={testbeds_search}
-			benchmarks_search={benchmarks_search}
-			plots_search={plots_search}
-			embed_logo={embed_logo}
-			embed_title={embed_title}
-			embed_header={embed_header}
-			embed_key={embed_key}
-		/>
+		<>
+			<Show when={!props.isEmbed}>
+				<PerfHeader
+					isConsole={props.isConsole === true}
+					apiUrl={props.apiUrl}
+					user={user}
+					project={project}
+					isPlotInit={isPlotInit}
+					perfQuery={perfQuery}
+					lower_value={props.lower_value}
+					upper_value={props.upper_value}
+					lower_boundary={props.lower_boundary}
+					upper_boundary={props.upper_boundary}
+					x_axis={props.x_axis}
+					branches={props.branches}
+					testbeds={props.testbeds}
+					benchmarks={props.benchmarks}
+					measures={props.measures}
+					plot={props.plot}
+					handleRefresh={handleRefresh}
+				/>
+			</Show>
+			<PerfPlot
+				apiUrl={props.apiUrl}
+				user={user}
+				project={project}
+				project_slug={props.project_slug}
+				theme={theme}
+				isConsole={props.isConsole === true}
+				isEmbed={props.isEmbed === true}
+				isPlotInit={isPlotInit}
+				report={props.report}
+				measures={props.measures}
+				branches={props.branches}
+				testbeds={props.testbeds}
+				benchmarks={props.benchmarks}
+				start_date={props.start_date}
+				end_date={props.end_date}
+				refresh={refresh}
+				perfData={perfData}
+				tab={props.tab}
+				key={props.key}
+				x_axis={props.x_axis}
+				clear={props.clear}
+				lower_value={props.lower_value}
+				upper_value={props.upper_value}
+				lower_boundary={props.lower_boundary}
+				upper_boundary={props.upper_boundary}
+				reports_data={reports_data}
+				branches_data={branches_data}
+				testbeds_data={testbeds_data}
+				benchmarks_data={benchmarks_data}
+				plots_data={plots_data}
+				reports_tab={reports_tab}
+				branches_tab={branches_tab}
+				testbeds_tab={testbeds_tab}
+				benchmarks_tab={benchmarks_tab}
+				plots_tab={plots_tab}
+				reports_per_page={props.reports_per_page}
+				branches_per_page={props.branches_per_page}
+				testbeds_per_page={props.testbeds_per_page}
+				benchmarks_per_page={props.benchmarks_per_page}
+				plots_per_page={props.plots_per_page}
+				reports_page={props.reports_page}
+				branches_page={props.branches_page}
+				testbeds_page={props.testbeds_page}
+				benchmarks_page={props.benchmarks_page}
+				plots_page={props.plots_page}
+				reports_total_count={reportsTotalCount}
+				branches_total_count={branchesTotalCount}
+				testbeds_total_count={testbedsTotalCount}
+				benchmarks_total_count={benchmarksTotalCount}
+				plots_total_count={plotsTotalCount}
+				reports_start_date={props.reports_start_date}
+				reports_end_date={props.reports_end_date}
+				branches_search={props.branches_search}
+				testbeds_search={props.testbeds_search}
+				benchmarks_search={props.benchmarks_search}
+				plots_search={props.plots_search}
+				embed_logo={props.embed_logo}
+				embed_title={props.embed_title}
+				embed_header={props.embed_header}
+				embed_key={props.embed_key}
+				handleMeasure={handleMeasure}
+				handleStartTime={handleStartTime}
+				handleEndTime={handleEndTime}
+				handleTab={handleTab}
+				handleKey={handleKey}
+				handleXAxis={handleXAxis}
+				handleClear={handleClear}
+				handleLowerValue={handleLowerValue}
+				handleUpperValue={handleUpperValue}
+				handleLowerBoundary={handleLowerBoundary}
+				handleUpperBoundary={handleUpperBoundary}
+				handleReportChecked={handleReportChecked}
+				handleBranchChecked={handleBranchChecked}
+				handleTestbedChecked={handleTestbedChecked}
+				handleBenchmarkChecked={handleBenchmarkChecked}
+				handlePlotChecked={handlePlotChecked}
+				handleReportsPage={handleReportsPage}
+				handleBranchesPage={handleBranchesPage}
+				handleTestbedsPage={handleTestbedsPage}
+				handleBenchmarksPage={handleBenchmarksPage}
+				handlePlotsPage={handlePlotsPage}
+				handleReportsStartTime={handleReportsStartTime}
+				handleReportsEndTime={handleReportsEndTime}
+				handleBranchesSearch={handleBranchesSearch}
+				handleTestbedsSearch={handleTestbedsSearch}
+				handleBenchmarksSearch={handleBenchmarksSearch}
+				handlePlotsSearch={handlePlotsSearch}
+			/>
+		</>
 	);
 };
 
-export default PerfPanel;
+export default PerfFrame;
