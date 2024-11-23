@@ -355,7 +355,7 @@ jobs:
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch "$GITHUB_REF_NAME" \
-          --branch-start-point "$GITHUB_BASE_REF" \
+          --start-point "$GITHUB_BASE_REF" \
           --testbed ubuntu-latest \
           --adapter rust_criterion \
           --err \
