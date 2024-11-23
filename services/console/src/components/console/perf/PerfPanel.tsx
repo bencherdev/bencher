@@ -1102,7 +1102,13 @@ const PerfPanel = (props: Props) => {
 			isEmbed={props.isEmbed}
 			project={props.project}
 			project_slug={project_slug}
+			refresh={refresh}
+			handleRefresh={handleRefresh}
 			reports_data={reports_data}
+			branches_data={branches_data}
+			testbeds_data={testbeds_data}
+			benchmarks_data={benchmarks_data}
+			plots_data={plots_data}
 			report={report}
 			measures={measures}
 			branches={branches}
@@ -1132,6 +1138,11 @@ const PerfPanel = (props: Props) => {
 			testbeds_page={testbeds_page}
 			benchmarks_page={benchmarks_page}
 			plots_page={plots_page}
+			reportsTotalCount={reportsTotalCount}
+			branchesTotalCount={branchesTotalCount}
+			testbedsTotalCount={testbedsTotalCount}
+			benchmarksTotalCount={benchmarksTotalCount}
+			plotsTotalCount={plotsTotalCount}
 			reports_start_time={reports_start_time}
 			reports_end_time={reports_end_time}
 			reports_start_date={reports_start_date}

@@ -183,7 +183,13 @@ export interface Props {
 	isEmbed?: boolean;
 	project?: undefined | JsonProject;
 	project_slug: () => string;
+	refresh: () => number;
+	handleRefresh: () => void;
 	reports_data: Resource<JsonReport>;
+	branches_data: Resource<JsonBranch>;
+	testbeds_data: Resource<JsonTestbed>;
+	benchmarks_data: Resource<JsonBenchmark>;
+	plots_data: Resource<JsonPlot>;
 	report: () => JsonReport | null;
 	measures: () => string[];
 	branches: () => string[];
@@ -213,6 +219,11 @@ export interface Props {
 	testbeds_page: () => number;
 	benchmarks_page: () => number;
 	plots_page: () => number;
+	reportsTotalCount: () => number;
+	branchesTotalCount: () => number;
+	testbedsTotalCount: () => number;
+	benchmarksTotalCount: () => number;
+	plotsTotalCount: () => number;
 	reports_start_time: () => string;
 	reports_end_time: () => string;
 	reports_start_date: () => string;
@@ -296,16 +307,10 @@ const PerfFrame = (props: Props) => {
 			props.measures().length === 0,
 	);
 
-	// Refresh pref query
-	const [refresh, setRefresh] = createSignal(0);
-	const handleRefresh = () => {
-		setRefresh(refresh() + 1);
-	};
-
 	const projectFetcher = createMemo(() => {
 		return {
 			project_slug: props.project_slug(),
-			refresh: refresh(),
+			refresh: props.refresh(),
 			token: user?.token,
 		};
 	});
@@ -341,7 +346,7 @@ const PerfFrame = (props: Props) => {
 		return {
 			project_slug: props.project_slug(),
 			perfQuery: perfQuery(),
-			refresh: refresh(),
+			refresh: props.refresh(),
 			token: user?.token,
 		};
 	});
@@ -395,169 +400,6 @@ const PerfFrame = (props: Props) => {
 	};
 	const [perfData] = createResource<JsonPerf>(perfFetcher, getPerf);
 
-	// Initialize as empty, wait for resources to load
-	const [reports_tab, setReportsTab] = createStore<TabList<JsonReport>>([]);
-	const [branches_tab, setBranchesTab] = createStore<TabList<JsonBranch>>([]);
-	const [testbeds_tab, setTestbedsTab] = createStore<TabList<JsonTestbed>>([]);
-	const [benchmarks_tab, setBenchmarksTab] = createStore<
-		TabList<JsonBenchmark>
-	>([]);
-	const [plots_tab, setPlotsTab] = createStore<TabList<JsonPlot>>([]);
-
-	const [reportsTotalCount, setReportsTotalCount] = createSignal(0);
-	const [branchesTotalCount, setBranchesTotalCount] = createSignal(0);
-	const [testbedsTotalCount, setTestbedsTotalCount] = createSignal(0);
-	const [benchmarksTotalCount, setBenchmarksTotalCount] = createSignal(0);
-	const [plotsTotalCount, setPlotsTotalCount] = createSignal(0);
-
-	// Resource tabs data: Reports, Branches, Testbeds, Benchmarks, Plots
-	async function getPerfTab<T>(
-		perfTab: PerfTab,
-		fetcher: {
-			project_slug: undefined | string;
-			per_page: number;
-			page: number;
-			start_time?: undefined | string;
-			end_time?: undefined | string;
-			search?: undefined | string;
-			refresh: number;
-			token: string;
-		},
-		totalCount: (headers: object) => void,
-	) {
-		const EMPTY_ARRAY: T[] = [];
-		if (!fetcher.project_slug) {
-			return EMPTY_ARRAY;
-		}
-		if (props.isConsole && typeof fetcher.token !== "string") {
-			return EMPTY_ARRAY;
-		}
-		if (props.isEmbed === true) {
-			return EMPTY_ARRAY;
-		}
-		if (!validU32(fetcher.per_page.toString())) {
-			return EMPTY_ARRAY;
-		}
-		if (!validU32(fetcher.page.toString())) {
-			return EMPTY_ARRAY;
-		}
-		const search_params = new URLSearchParams();
-		search_params.set("per_page", fetcher.per_page.toString());
-		search_params.set("page", fetcher.page.toString());
-		if (fetcher.start_time) {
-			search_params.set("start_time", fetcher.start_time);
-		}
-		if (fetcher.end_time) {
-			search_params.set("end_time", fetcher.end_time);
-		}
-		if (fetcher.search) {
-			search_params.set("search", fetcher.search.trim());
-		}
-		const path = `/v0/projects/${
-			fetcher.project_slug
-		}/${perfTab}?${search_params.toString()}`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
-			.then((resp) => {
-				totalCount(resp?.headers);
-				return resp?.data;
-			})
-			.catch((error) => {
-				console.error(error);
-				Sentry.captureException(error);
-				return EMPTY_ARRAY;
-			});
-	}
-
-	const branches_fetcher = createMemo(() => {
-		return {
-			project_slug: props.project_slug(),
-			per_page: props.branches_per_page(),
-			page: props.branches_page(),
-			search: props.branches_search(),
-			refresh: refresh(),
-			token: user?.token,
-		};
-	});
-	const [branches_data] = createResource(branches_fetcher, async (fetcher) =>
-		getPerfTab<JsonBranch>(PerfTab.BRANCHES, fetcher, (headers) =>
-			setBranchesTotalCount(headers?.[X_TOTAL_COUNT]),
-		),
-	);
-	createEffect(() => {
-		const data = branches_data();
-		if (data) {
-			setBranchesTab(resourcesToCheckable(data, props.branches()));
-		}
-	});
-
-	const testbeds_fetcher = createMemo(() => {
-		return {
-			project_slug: props.project_slug(),
-			per_page: props.testbeds_per_page(),
-			page: props.testbeds_page(),
-			search: props.testbeds_search(),
-			refresh: refresh(),
-			token: user?.token,
-		};
-	});
-	const [testbeds_data] = createResource(testbeds_fetcher, async (fetcher) =>
-		getPerfTab<JsonTestbed>(PerfTab.TESTBEDS, fetcher, (headers) =>
-			setTestbedsTotalCount(headers?.[X_TOTAL_COUNT]),
-		),
-	);
-	createEffect(() => {
-		const data = testbeds_data();
-		if (data) {
-			setTestbedsTab(resourcesToCheckable(data, props.testbeds()));
-		}
-	});
-
-	const benchmarks_fetcher = createMemo(() => {
-		return {
-			project_slug: props.project_slug(),
-			per_page: props.benchmarks_per_page(),
-			page: props.benchmarks_page(),
-			search: props.benchmarks_search(),
-			refresh: refresh(),
-			token: user?.token,
-		};
-	});
-	const [benchmarks_data] = createResource(
-		benchmarks_fetcher,
-		async (fetcher) =>
-			getPerfTab<JsonBenchmark>(PerfTab.BENCHMARKS, fetcher, (headers) =>
-				setBenchmarksTotalCount(headers?.[X_TOTAL_COUNT]),
-			),
-	);
-	createEffect(() => {
-		const data = benchmarks_data();
-		if (data) {
-			setBenchmarksTab(resourcesToCheckable(data, props.benchmarks()));
-		}
-	});
-
-	const plots_fetcher = createMemo(() => {
-		return {
-			project_slug: props.project_slug(),
-			per_page: props.plots_per_page(),
-			page: props.plots_page(),
-			search: props.plots_search(),
-			refresh: refresh(),
-			token: user?.token,
-		};
-	});
-	const [plots_data] = createResource(plots_fetcher, async (fetcher) =>
-		getPerfTab<JsonPlot>(PerfTab.PLOTS, fetcher, (headers) =>
-			setPlotsTotalCount(headers?.[X_TOTAL_COUNT]),
-		),
-	);
-	createEffect(() => {
-		const data = plots_data();
-		if (data) {
-			setPlotsTab(resourcesToCheckable(data, [props.plot()]));
-		}
-	});
-
 	return (
 		<>
 			<Show when={!props.isEmbed}>
@@ -578,7 +420,7 @@ const PerfFrame = (props: Props) => {
 					benchmarks={props.benchmarks}
 					measures={props.measures}
 					plot={props.plot}
-					handleRefresh={handleRefresh}
+					handleRefresh={props.handleRefresh}
 				/>
 			</Show>
 			<PerfPlot
@@ -597,7 +439,7 @@ const PerfFrame = (props: Props) => {
 				benchmarks={props.benchmarks}
 				start_date={props.start_date}
 				end_date={props.end_date}
-				refresh={refresh}
+				refresh={props.refresh}
 				perfData={perfData}
 				tab={props.tab}
 				key={props.key}
@@ -608,10 +450,10 @@ const PerfFrame = (props: Props) => {
 				lower_boundary={props.lower_boundary}
 				upper_boundary={props.upper_boundary}
 				reports_data={props.reports_data}
-				branches_data={branches_data}
-				testbeds_data={testbeds_data}
-				benchmarks_data={benchmarks_data}
-				plots_data={plots_data}
+				branches_data={props.branches_data}
+				testbeds_data={props.testbeds_data}
+				benchmarks_data={props.benchmarks_data}
+				plots_data={props.plots_data}
 				reports_tab={props.reports_tab}
 				branches_tab={props.branches_tab}
 				testbeds_tab={props.testbeds_tab}
@@ -627,11 +469,11 @@ const PerfFrame = (props: Props) => {
 				testbeds_page={props.testbeds_page}
 				benchmarks_page={props.benchmarks_page}
 				plots_page={props.plots_page}
-				reports_total_count={reportsTotalCount}
-				branches_total_count={branchesTotalCount}
-				testbeds_total_count={testbedsTotalCount}
-				benchmarks_total_count={benchmarksTotalCount}
-				plots_total_count={plotsTotalCount}
+				reports_total_count={props.reportsTotalCount}
+				branches_total_count={props.branchesTotalCount}
+				testbeds_total_count={props.testbedsTotalCount}
+				benchmarks_total_count={props.benchmarksTotalCount}
+				plots_total_count={props.plotsTotalCount}
 				reports_start_date={props.reports_start_date}
 				reports_end_date={props.reports_end_date}
 				branches_search={props.branches_search}
