@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.82.0-bookworm as wasm-builder
+FROM rust:1.82.0-bookworm AS wasm-builder
 
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
@@ -46,7 +46,7 @@ RUN chmod +x build_wasm.sh
 RUN ./build_wasm.sh
 
 # https://hub.docker.com/_/node
-FROM node:20.11.0-bookworm as builder
+FROM node:20.11.0-bookworm AS builder
 COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 COPY services/cli/templates/output /usr/src/bencher/services/cli/templates/output
 COPY --from=wasm-builder /usr/src/bencher/lib/bencher_valid/pkg /usr/src/bencher/lib/bencher_valid/pkg
@@ -68,7 +68,7 @@ COPY services/console/.env.runtime .env.runtime
 RUN npm run node
 
 # https://hub.docker.com/_/node
-FROM node:20.11.0-bookworm as packager
+FROM node:20.11.0-bookworm AS packager
 COPY --from=builder /usr/src/bencher/services/console/dist /usr/src/bencher/services/console/dist
 COPY --from=builder /usr/src/bencher/services/console/package-lock.json /usr/src/bencher/services/console/package-lock.json
 COPY --from=builder /usr/src/bencher/services/console/package.json /usr/src/bencher/services/console/package.json
