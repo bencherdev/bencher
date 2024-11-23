@@ -7,7 +7,7 @@ members = [
     "tasks/*",
     "xtask",
 ]
-exclude = ["services/benchers"]
+exclude = ["services/benchers", "services/cargo-bencher"]
 resolver = "2"
 
 [workspace.package]

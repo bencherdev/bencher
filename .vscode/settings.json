@@ -79,6 +79,8 @@
   "rust-analyzer.check.command": "clippy",
   "rust-analyzer.linkedProjects": [
     "Cargo.toml",
+    "services/benchers/Cargo.toml",
+    "services/cargo-bencher/Cargo.toml",
   ],
   // "rust-analyzer.check.allTargets": false,
   "biome.lspBin": "./services/console/node_modules/.bin/biome",
