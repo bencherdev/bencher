@@ -2,7 +2,7 @@ use std::process::Command;
 
 fn main() {
     Command::new("cargo")
-        .args(&[
+        .args([
             "install",
             "--git",
             "https://github.com/bencherdev/bencher",

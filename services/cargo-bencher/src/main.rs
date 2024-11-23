@@ -3,7 +3,7 @@ use std::process::Command;
 
 fn main() {
     // Collect all command-line arguments
-    let args: Vec<String> = env::args().skip(1).collect();
+    let args: Vec<String> = env::args().skip(2).collect();
 
     // Run the `bencher` command with the collected arguments
     let status = Command::new("bencher")
