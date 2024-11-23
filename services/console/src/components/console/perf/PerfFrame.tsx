@@ -185,18 +185,15 @@ export interface Props {
 	project?: undefined | JsonProject;
 	project_slug: () => string;
 	refresh: () => number;
-	report: () => JsonReport | null;
-	measures: () => string[];
 	branches: () => string[];
-	heads: () => string[];
+	heads: () => (string | null)[];
 	testbeds: () => string[];
 	benchmarks: () => string[];
-	plot: () => string | null;
+	measures: () => string[];
 	start_time: () => string;
 	end_time: () => string;
 	start_date: () => string;
 	end_date: () => string;
-	tab: () => PerfTab;
 	key: () => boolean;
 	x_axis: () => XAxis;
 	clear: () => boolean;
@@ -204,35 +201,16 @@ export interface Props {
 	upper_value: () => boolean;
 	lower_boundary: () => boolean;
 	upper_boundary: () => boolean;
-	reports_per_page: () => number;
-	branches_per_page: () => number;
-	testbeds_per_page: () => number;
-	benchmarks_per_page: () => number;
-	plots_per_page: () => number;
-	reports_page: () => number;
-	branches_page: () => number;
-	testbeds_page: () => number;
-	benchmarks_page: () => number;
-	plots_page: () => number;
+	embed_logo: () => boolean;
+	embed_title: () => string;
+	embed_header: () => boolean;
+	embed_key: () => boolean;
 	reportsTotalCount: () => number;
 	branchesTotalCount: () => number;
 	testbedsTotalCount: () => number;
 	benchmarksTotalCount: () => number;
 	plotsTotalCount: () => number;
-	reports_start_time: () => string;
-	reports_end_time: () => string;
-	reports_start_date: () => string;
-	reports_end_date: () => string;
-	branches_search: () => string;
-	testbeds_search: () => string;
-	benchmarks_search: () => string;
-	plots_search: () => string;
-	handleReportChecked: (index: number) => void;
-	handleBranchChecked: (index: number) => void;
-	handleTestbedChecked: (index: number) => void;
-	handleBenchmarkChecked: (index: number) => void;
 	handleMeasure: (measure: null | string) => void;
-	handlePlotChecked: (index: number) => void;
 	handleStartTime: (date: string) => void;
 	handleEndTime: (date: string) => void;
 	handleTab: (tab: PerfTab) => void;
@@ -243,21 +221,6 @@ export interface Props {
 	handleUpperValue: (end: boolean) => void;
 	handleLowerBoundary: (boundary: boolean) => void;
 	handleUpperBoundary: (boundary: boolean) => void;
-	handleReportsPage: (page: number) => void;
-	handleBranchesPage: (page: number) => void;
-	handleTestbedsPage: (page: number) => void;
-	handleBenchmarksPage: (page: number) => void;
-	handlePlotsPage: (page: number) => void;
-	handleReportsStartTime: (date: string) => void;
-	handleReportsEndTime: (date: string) => void;
-	handleBranchesSearch: (search: string) => void;
-	handleTestbedsSearch: (search: string) => void;
-	handleBenchmarksSearch: (search: string) => void;
-	handlePlotsSearch: (search: string) => void;
-	embed_logo: () => boolean;
-	embed_title: () => string;
-	embed_header: () => boolean;
-	embed_key: () => boolean;
 }
 
 const PerfFrame = (props: Props) => {
@@ -388,16 +351,14 @@ const PerfFrame = (props: Props) => {
 			isConsole={props.isConsole === true}
 			isEmbed={props.isEmbed === true}
 			isPlotInit={isPlotInit}
-			report={props.report}
-			measures={props.measures}
+			refresh={props.refresh}
+			perfData={perfData}
 			branches={props.branches}
 			testbeds={props.testbeds}
 			benchmarks={props.benchmarks}
+			measures={props.measures}
 			start_date={props.start_date}
 			end_date={props.end_date}
-			refresh={props.refresh}
-			perfData={perfData}
-			tab={props.tab}
 			key={props.key}
 			x_axis={props.x_axis}
 			clear={props.clear}
@@ -405,27 +366,6 @@ const PerfFrame = (props: Props) => {
 			upper_value={props.upper_value}
 			lower_boundary={props.lower_boundary}
 			upper_boundary={props.upper_boundary}
-			reports_per_page={props.reports_per_page}
-			branches_per_page={props.branches_per_page}
-			testbeds_per_page={props.testbeds_per_page}
-			benchmarks_per_page={props.benchmarks_per_page}
-			plots_per_page={props.plots_per_page}
-			reports_page={props.reports_page}
-			branches_page={props.branches_page}
-			testbeds_page={props.testbeds_page}
-			benchmarks_page={props.benchmarks_page}
-			plots_page={props.plots_page}
-			reports_total_count={props.reportsTotalCount}
-			branches_total_count={props.branchesTotalCount}
-			testbeds_total_count={props.testbedsTotalCount}
-			benchmarks_total_count={props.benchmarksTotalCount}
-			plots_total_count={props.plotsTotalCount}
-			reports_start_date={props.reports_start_date}
-			reports_end_date={props.reports_end_date}
-			branches_search={props.branches_search}
-			testbeds_search={props.testbeds_search}
-			benchmarks_search={props.benchmarks_search}
-			plots_search={props.plots_search}
 			embed_logo={props.embed_logo}
 			embed_title={props.embed_title}
 			embed_header={props.embed_header}
@@ -441,22 +381,6 @@ const PerfFrame = (props: Props) => {
 			handleUpperValue={props.handleUpperValue}
 			handleLowerBoundary={props.handleLowerBoundary}
 			handleUpperBoundary={props.handleUpperBoundary}
-			handleReportChecked={props.handleReportChecked}
-			handleBranchChecked={props.handleBranchChecked}
-			handleTestbedChecked={props.handleTestbedChecked}
-			handleBenchmarkChecked={props.handleBenchmarkChecked}
-			handlePlotChecked={props.handlePlotChecked}
-			handleReportsPage={props.handleReportsPage}
-			handleBranchesPage={props.handleBranchesPage}
-			handleTestbedsPage={props.handleTestbedsPage}
-			handleBenchmarksPage={props.handleBenchmarksPage}
-			handlePlotsPage={props.handlePlotsPage}
-			handleReportsStartTime={props.handleReportsStartTime}
-			handleReportsEndTime={props.handleReportsEndTime}
-			handleBranchesSearch={props.handleBranchesSearch}
-			handleTestbedsSearch={props.handleTestbedsSearch}
-			handleBenchmarksSearch={props.handleBenchmarksSearch}
-			handlePlotsSearch={props.handlePlotsSearch}
 		>
 			{props.children}
 		</PerfPlot>

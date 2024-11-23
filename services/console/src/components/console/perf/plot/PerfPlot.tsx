@@ -2,20 +2,14 @@ import {
 	type Accessor,
 	Match,
 	type Resource,
-	Show,
 	Switch,
 	createMemo,
 } from "solid-js";
 import type { PerfTab } from "../../../../config/types";
 import type {
 	JsonAuthUser,
-	JsonBenchmark,
-	JsonBranch,
 	JsonPerf,
-	JsonPlot,
 	JsonProject,
-	JsonReport,
-	JsonTestbed,
 	XAxis,
 } from "../../../../types/bencher";
 import { type Theme, themeColor } from "../../../navbar/theme/theme";
@@ -33,16 +27,14 @@ export interface Props {
 	isConsole: boolean;
 	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
-	report: Accessor<undefined | string>;
-	measures: Accessor<string[]>;
+	refresh: () => void;
+	perfData: Resource<JsonPerf>;
 	branches: Accessor<string[]>;
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
+	measures: Accessor<string[]>;
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
-	refresh: () => void;
-	perfData: Resource<JsonPerf>;
-	tab: Accessor<PerfTab>;
 	key: Accessor<boolean>;
 	x_axis: Accessor<XAxis>;
 	clear: Accessor<boolean>;
@@ -50,27 +42,6 @@ export interface Props {
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
-	reports_per_page: Accessor<number>;
-	branches_per_page: Accessor<number>;
-	testbeds_per_page: Accessor<number>;
-	benchmarks_per_page: Accessor<number>;
-	plots_per_page: Accessor<number>;
-	reports_page: Accessor<number>;
-	branches_page: Accessor<number>;
-	testbeds_page: Accessor<number>;
-	benchmarks_page: Accessor<number>;
-	plots_page: Accessor<number>;
-	reports_total_count: Accessor<number>;
-	branches_total_count: Accessor<number>;
-	testbeds_total_count: Accessor<number>;
-	benchmarks_total_count: Accessor<number>;
-	plots_total_count: Accessor<number>;
-	reports_start_date: Accessor<undefined | string>;
-	reports_end_date: Accessor<undefined | string>;
-	branches_search: Accessor<undefined | string>;
-	testbeds_search: Accessor<undefined | string>;
-	benchmarks_search: Accessor<undefined | string>;
-	plots_search: Accessor<undefined | string>;
 	embed_logo: Accessor<boolean>;
 	embed_title: Accessor<undefined | string>;
 	embed_header: Accessor<boolean>;
@@ -86,22 +57,6 @@ export interface Props {
 	handleUpperValue: (upper_value: boolean) => void;
 	handleLowerBoundary: (lower_boundary: boolean) => void;
 	handleUpperBoundary: (upper_boundary: boolean) => void;
-	handleReportChecked: (index: number) => void;
-	handleBranchChecked: (index: undefined | number) => void;
-	handleTestbedChecked: (index: undefined | number) => void;
-	handleBenchmarkChecked: (index: undefined | number) => void;
-	handlePlotChecked: (index: number) => void;
-	handleReportsPage: (reports_page: number) => void;
-	handleBranchesPage: (branches_page: number) => void;
-	handleTestbedsPage: (testbeds_page: number) => void;
-	handleBenchmarksPage: (benchmarks_page: number) => void;
-	handlePlotsPage: (plots_page: number) => void;
-	handleReportsStartTime: (start_time: string) => void;
-	handleReportsEndTime: (end_time: string) => void;
-	handleBranchesSearch: (branches_search: string) => void;
-	handleTestbedsSearch: (testbeds_search: string) => void;
-	handleBenchmarksSearch: (benchmarks_search: string) => void;
-	handlePlotsSearch: (plots_search: string) => void;
 }
 
 const PerfPlot = (props: Props) => {
