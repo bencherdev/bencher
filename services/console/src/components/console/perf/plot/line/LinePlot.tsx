@@ -30,6 +30,7 @@ const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/perf/siren.png";
 export interface Props {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
+	plotId: string | undefined;
 	perfData: Resource<JsonPerf>;
 	x_axis: Accessor<XAxis>;
 	lower_value: Accessor<boolean>;
@@ -112,6 +113,7 @@ const LinePlot = (props: Props) => {
 
 	const [isPlotted, setIsPlotted] = createSignal(false);
 	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
+	const plotId = createMemo(() => props.plotId ?? "line-plot");
 
 	const [x_axis, setRange] = createSignal(props.x_axis());
 	const [lower_value, setLowerValue] = createSignal(props.lower_value());
@@ -125,8 +127,9 @@ const LinePlot = (props: Props) => {
 
 	createEffect(() => {
 		if (isPlotted()) {
+			const plotIdEscaped = CSS.escape(plotId());
 			const y_axis = document.querySelector(
-				"svg [aria-label='y-axis tick label']",
+				`#${plotIdEscaped} svg [aria-label='y-axis tick label']`,
 			);
 			if (!y_axis) {
 				return;
@@ -410,7 +413,7 @@ const LinePlot = (props: Props) => {
 		if (metrics_found) {
 			return (
 				<>
-					<div>
+					<div id={plotId()}>
 						{addTooltips(
 							Plot.plot({
 								x: {

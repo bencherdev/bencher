@@ -25,11 +25,12 @@ import type { Theme } from "../../navbar/theme/theme";
 import PerfPlot from "./plot/PerfPlot";
 
 export interface Props {
-	children?: any;
+	children?: any | undefined;
 	apiUrl: string;
 	user: JsonAuthUser;
 	isConsole?: boolean;
 	isEmbed?: boolean;
+	plotId?: string;
 	theme: Accessor<Theme>;
 	project?: Resource<JsonProject>;
 	project_slug: Accessor<string | undefined>;
@@ -135,6 +136,7 @@ const PerfFrame = (props: Props) => {
 			theme={props.theme}
 			isConsole={props.isConsole === true}
 			isEmbed={props.isEmbed === true}
+			plotId={props.plotId}
 			measuresIsEmpty={props.measuresIsEmpty}
 			branchesIsEmpty={props.branchesIsEmpty}
 			testbedsIsEmpty={props.testbedsIsEmpty}

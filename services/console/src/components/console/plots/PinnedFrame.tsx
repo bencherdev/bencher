@@ -89,6 +89,7 @@ const PinnedFrame = (props: Props) => {
 				user={props.user}
 				isConsole={props.isConsole}
 				isEmbed={true}
+				plotId={props.plot?.uuid}
 				theme={theme}
 				project_slug={props.project_slug}
 				measuresIsEmpty={measuresIsEmpty}

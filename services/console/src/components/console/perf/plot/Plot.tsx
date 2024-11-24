@@ -16,6 +16,7 @@ export interface Props {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	isEmbed: boolean;
+	plotId: string | undefined;
 	x_axis: Accessor<XAxis>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -69,6 +70,7 @@ const Plot = (props: Props) => {
 				<LinePlot
 					theme={props.theme}
 					isConsole={props.isConsole}
+					plotId={props.plotId}
 					perfData={props.perfData}
 					x_axis={props.x_axis}
 					lower_value={props.lower_value}

@@ -26,6 +26,7 @@ export interface Props {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	isEmbed: boolean;
+	plotId: string | undefined;
 	measuresIsEmpty: Accessor<boolean>;
 	branchesIsEmpty: Accessor<boolean>;
 	testbedsIsEmpty: Accessor<boolean>;
@@ -106,6 +107,7 @@ const PerfPlot = (props: Props) => {
 									theme={props.theme}
 									isConsole={props.isConsole}
 									isEmbed={props.isEmbed}
+									plotId={props.plotId}
 									x_axis={props.x_axis}
 									lower_value={props.lower_value}
 									upper_value={props.upper_value}
