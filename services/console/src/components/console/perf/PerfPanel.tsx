@@ -511,12 +511,16 @@ const PerfPanel = (props: Props) => {
 		} as JsonPerfQuery;
 	});
 
+	const branchesIsEmpty = createMemo(() => branches().length === 0);
+	const testbedsIsEmpty = createMemo(() => testbeds().length === 0);
+	const benchmarksIsEmpty = createMemo(() => benchmarks().length === 0);
+	const measuresIsEmpty = createMemo(() => measures().length === 0);
 	const isPlotInit = createMemo(
 		() =>
-			branches().length === 0 ||
-			testbeds().length === 0 ||
-			benchmarks().length === 0 ||
-			measures().length === 0,
+			branchesIsEmpty() ||
+			testbedsIsEmpty() ||
+			benchmarksIsEmpty() ||
+			measuresIsEmpty(),
 	);
 
 	// Refresh pref query
@@ -562,65 +566,6 @@ const PerfPanel = (props: Props) => {
 	};
 
 	const [project] = createResource<JsonProject>(projectFetcher, getProject);
-
-	const perfFetcher = createMemo(() => {
-		return {
-			project_slug: project_slug(),
-			perfQuery: perfQuery(),
-			refresh: refresh(),
-			token: user?.token,
-		};
-	});
-	const getPerf = async (fetcher: {
-		project_slug: string;
-		perfQuery: JsonPerfQuery;
-		refresh: number;
-		token: string;
-	}) => {
-		const EMPTY_OBJECT = {};
-		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
-		if (
-			(props.isConsole && typeof fetcher.token !== "string") ||
-			isPlotInit() ||
-			!fetcher.project_slug ||
-			fetcher.project_slug === "undefined"
-		) {
-			return EMPTY_OBJECT;
-		}
-
-		const searchParams = new URLSearchParams();
-		for (const [key, value] of Object.entries(fetcher.perfQuery)) {
-			if (value) {
-				searchParams.set(key, value.toString());
-			}
-		}
-		const path = `/v0/projects/${
-			fetcher.project_slug
-		}/perf?${searchParams.toString()}`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
-			.then((resp) => resp?.data)
-			.catch((error) => {
-				console.error(error);
-				Sentry.captureException(error);
-				// If the URL is exactly 2000 characters, then it may have been truncated by the browser.
-				// There isn't much that we can do other than notify the user.
-				if (window.location.href.length === 2000) {
-					pageNotify(
-						NotifyKind.ERROR,
-						"This URL is exactly 2,000 characters. It may have been truncated by your web browser. Please, try opening the original link in a different web browser.",
-						{ [NOTIFY_TIMEOUT_PARAM]: MAX_NOTIFY_TIMEOUT },
-					);
-				} else {
-					pageNotify(
-						NotifyKind.ERROR,
-						"Lettuce romaine calm! Failed to get perf. Please, try again.",
-					);
-				}
-				return EMPTY_OBJECT;
-			});
-	};
-
-	const [perfData] = createResource<JsonPerf>(perfFetcher, getPerf);
 
 	// Initialize as empty, wait for resources to load
 	const [reports_tab, setReportsTab] = createStore<TabList<JsonReport>>([]);
@@ -1120,21 +1065,25 @@ const PerfPanel = (props: Props) => {
 			</Show>
 			<PerfFrame
 				apiUrl={props.apiUrl}
+				user={user}
 				params={props.params}
 				isConsole={props.isConsole}
 				isEmbed={props.isEmbed}
-				project={props.project}
+				theme={theme}
+				project={project}
 				project_slug={project_slug}
+				measuresIsEmpty={measuresIsEmpty}
+				branchesIsEmpty={branchesIsEmpty}
+				testbedsIsEmpty={testbedsIsEmpty}
+				benchmarksIsEmpty={benchmarksIsEmpty}
+				isPlotInit={isPlotInit}
+				perfQuery={perfQuery}
 				refresh={refresh}
 				reports_data={reports_data}
 				branches_data={branches_data}
 				testbeds_data={testbeds_data}
 				benchmarks_data={benchmarks_data}
 				plots_data={plots_data}
-				branches={branches}
-				heads={heads}
-				testbeds={testbeds}
-				benchmarks={benchmarks}
 				measures={measures}
 				start_time={start_time}
 				end_time={end_time}

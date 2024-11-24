@@ -3,10 +3,10 @@ import { PerfTab } from "../../../../config/types";
 import { BENCHER_MEASURE_ID } from "./util";
 
 export interface Props {
-	measures: Accessor<string[]>;
-	branches: Accessor<string[]>;
-	testbeds: Accessor<string[]>;
-	benchmarks: Accessor<string[]>;
+	measuresIsEmpty: Accessor<boolean>;
+	branchesIsEmpty: Accessor<boolean>;
+	testbedsIsEmpty: Accessor<boolean>;
+	benchmarksIsEmpty: Accessor<boolean>;
 	handleTab: (tab: PerfTab) => void;
 }
 
@@ -17,7 +17,7 @@ const PlotInit = (props: Props) => {
 				<li class="checkbox">
 					<input
 						type="checkbox"
-						checked={props.measures().length > 0}
+						checked={!props.measuresIsEmpty()}
 						disabled={true}
 					/>
 					Select a <a href={`#${BENCHER_MEASURE_ID}`}>Measure</a>
@@ -26,7 +26,7 @@ const PlotInit = (props: Props) => {
 				<li class="checkbox">
 					<input
 						type="checkbox"
-						checked={props.branches().length > 0}
+						checked={!props.branchesIsEmpty()}
 						disabled={true}
 					/>
 					Select at least one{" "}
@@ -44,7 +44,7 @@ const PlotInit = (props: Props) => {
 				<li class="checkbox">
 					<input
 						type="checkbox"
-						checked={props.testbeds().length > 0}
+						checked={!props.testbedsIsEmpty()}
 						disabled={true}
 					/>
 					Select at least one{" "}
@@ -62,7 +62,7 @@ const PlotInit = (props: Props) => {
 				<li class="checkbox">
 					<input
 						type="checkbox"
-						checked={props.benchmarks().length > 0}
+						checked={!props.benchmarksIsEmpty()}
 						disabled={true}
 					/>
 					Select at least one{" "}

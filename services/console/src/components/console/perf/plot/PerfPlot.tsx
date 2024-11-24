@@ -26,12 +26,13 @@ export interface Props {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	isEmbed: boolean;
+	measuresIsEmpty: Accessor<boolean>;
+	branchesIsEmpty: Accessor<boolean>;
+	testbedsIsEmpty: Accessor<boolean>;
+	benchmarksIsEmpty: Accessor<boolean>;
 	isPlotInit: Accessor<boolean>;
 	refresh: () => void;
 	perfData: Resource<JsonPerf>;
-	branches: Accessor<string[]>;
-	testbeds: Accessor<string[]>;
-	benchmarks: Accessor<string[]>;
 	measures: Accessor<string[]>;
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
@@ -126,10 +127,10 @@ const PerfPlot = (props: Props) => {
 							</Match>
 							<Match when={props.isPlotInit()}>
 								<PlotInit
-									measures={props.measures}
-									branches={props.branches}
-									testbeds={props.testbeds}
-									benchmarks={props.benchmarks}
+									measuresIsEmpty={props.measuresIsEmpty}
+									branchesIsEmpty={props.branchesIsEmpty}
+									testbedsIsEmpty={props.testbedsIsEmpty}
+									benchmarksIsEmpty={props.benchmarksIsEmpty}
 									handleTab={props.handleTab}
 								/>
 							</Match>

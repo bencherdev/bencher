@@ -3,10 +3,11 @@ import {
 	type Resource,
 	Show,
 	createEffect,
-	createSignal,
-	createResource,
 	createMemo,
+	createResource,
+	createSignal,
 } from "solid-js";
+import { resourcePath } from "../../../../config/util";
 import {
 	type JsonAuthUser,
 	type JsonPerfQuery,
@@ -14,11 +15,10 @@ import {
 	Visibility,
 	type XAxis,
 } from "../../../../types/bencher";
-import { setPageTitle } from "../../../../util/resource";
-import ShareModal from "./ShareModal";
-import PinModal from "./PinModal";
 import { isAllowedProjectManage } from "../../../../util/auth";
-import { resourcePath } from "../../../../config/util";
+import { setPageTitle } from "../../../../util/resource";
+import PinModal from "./PinModal";
+import ShareModal from "./ShareModal";
 
 export interface Props {
 	isConsole: boolean;
