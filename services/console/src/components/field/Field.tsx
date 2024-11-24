@@ -1,21 +1,21 @@
-import Input, { type InputConfig, type InputValue } from "./kinds/Input";
+import type { Params } from "astro";
+import { validIndex, validModel, validWindow } from "../../util/valid";
+import FieldKind from "./kind";
 import Checkbox, {
 	type CheckboxConfig,
 	type CheckboxValue,
 } from "./kinds/Checkbox";
-import Switch, { type SwitchConfig, type SwitchValue } from "./kinds/Switch";
-import Select, { type SelectConfig, type SelectValue } from "./kinds/Select";
-import FieldKind from "./kind";
-import Radio, { type RadioConfig, type RadioValue } from "./kinds/Radio";
-import type { Params } from "astro";
+import Input, { type InputConfig, type InputValue } from "./kinds/Input";
 import Model from "./kinds/Model";
-import { validModel, validIndex, validWindow } from "../../util/valid";
-import type { SearchConfig, SearchValue } from "./kinds/Search";
-import Search from "./kinds/Search";
 import type { PlotRankConfig, PlotRankValue } from "./kinds/PlotRank";
 import PlotRank from "./kinds/PlotRank";
 import type { PlotWindowConfig, PlotWindowValue } from "./kinds/PlotWindow";
 import PlotWindow from "./kinds/PlotWindow";
+import Radio, { type RadioConfig, type RadioValue } from "./kinds/Radio";
+import type { SearchConfig, SearchValue } from "./kinds/Search";
+import Search from "./kinds/Search";
+import Select, { type SelectConfig, type SelectValue } from "./kinds/Select";
+import Switch, { type SwitchConfig, type SwitchValue } from "./kinds/Switch";
 
 export type FieldValue =
 	| SwitchValue
@@ -91,7 +91,11 @@ const Field = (props: Props) => {
 				props.handleField(props.fieldKey, value, true);
 				break;
 			case FieldKind.PLOT_WINDOW:
-				props.handleField(props.fieldKey, value, validWindow(value));
+				props.handleField(
+					props.fieldKey,
+					value,
+					validWindow((value ?? 0) * 1_000),
+				);
 				break;
 			case FieldKind.PLOT_RANK:
 				props.handleField(props.fieldKey, value, validIndex(value));
