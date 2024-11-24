@@ -370,7 +370,7 @@ const PinnedRank = (props: {
 			<Field
 				kind={FieldKind.PLOT_RANK}
 				fieldKey="rank"
-				label="Move Location"
+				label="Move Plot"
 				value={rank()}
 				valid={valid()}
 				config={{

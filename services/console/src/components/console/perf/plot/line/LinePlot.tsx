@@ -289,7 +289,8 @@ const LinePlot = (props: Props) => {
 					fill: color,
 					title: (datum) =>
 						to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
-					href: (datum) => dotUrl(project_slug, props.isConsole, datum),
+					href: (datum) =>
+						dotUrl(project_slug, props.isConsole, props.plotId, datum),
 					target: "_top",
 				}),
 			);
@@ -350,7 +351,12 @@ const LinePlot = (props: Props) => {
 				warn_arrays.push(
 					Plot.image(
 						skipped_lower_data,
-						warning_image(x_axis_kind, project_slug, props.isConsole),
+						warning_image(
+							x_axis_kind,
+							project_slug,
+							props.isConsole,
+							props.plotId,
+						),
 					),
 				);
 			}
@@ -393,6 +399,7 @@ const LinePlot = (props: Props) => {
 						project_slug,
 						result,
 						props.isConsole,
+						props.plotId,
 					),
 				),
 			);
@@ -405,6 +412,7 @@ const LinePlot = (props: Props) => {
 						project_slug,
 						result,
 						props.isConsole,
+						props.plotId,
 					),
 				),
 			);
@@ -535,6 +543,7 @@ const boundary_dot = (
 	project_slug: string,
 	result: object,
 	isConsole: boolean,
+	plotId: string | undefined,
 ) => {
 	return {
 		x: x_axis,
@@ -547,7 +556,7 @@ const boundary_dot = (
 		fillOpacity: 0.666,
 		title: (datum) =>
 			limit_title(limit, result, datum, "\nClick to view Threshold"),
-		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
+		href: (datum) => thresholdUrl(project_slug, isConsole, plotId, datum),
 		target: "_top",
 	};
 };
@@ -556,6 +565,7 @@ const warning_image = (
 	x_axis: string,
 	project_slug: string,
 	isConsole: boolean,
+	plotId: string | undefined,
 ) => {
 	return {
 		x: x_axis,
@@ -564,24 +574,30 @@ const warning_image = (
 		width: 18,
 		title: (_datum) =>
 			"Boundary Limit was not calculated.\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)\nClick to view Threshold",
-		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
+		href: (datum) => thresholdUrl(project_slug, isConsole, plotId, datum),
 		target: "_top",
 	};
 };
 
-const dotUrl = (project_slug: string, isConsole: boolean, datum: object) =>
+const dotUrl = (
+	project_slug: string,
+	isConsole: boolean,
+	plotId: string | undefined,
+	datum: object,
+) =>
 	`${resourcePath(isConsole)}/${project_slug}/metrics/${
 		datum.metric
-	}?${BACK_PARAM}=${encodePath()}`;
+	}?${BACK_PARAM}=${encodePath(plotId)}`;
 
 const thresholdUrl = (
 	project_slug: string,
 	isConsole: boolean,
+	plotId: string | undefined,
 	datum: object,
 ) =>
 	`${resourcePath(isConsole)}/${project_slug}/thresholds/${
 		datum.threshold?.uuid
-	}?model=${datum.threshold?.model?.uuid}&${BACK_PARAM}=${encodePath()}`;
+	}?model=${datum.threshold?.model?.uuid}&${BACK_PARAM}=${encodePath(plotId)}`;
 
 const alert_image = (
 	x_axis: string,
@@ -589,6 +605,7 @@ const alert_image = (
 	project_slug: string,
 	result: object,
 	isConsole: boolean,
+	plotId: string | undefined,
 ) => {
 	return {
 		x: x_axis,
@@ -600,7 +617,7 @@ const alert_image = (
 		href: (datum) =>
 			`${resourcePath(isConsole)}/${project_slug}/alerts/${
 				datum.alert?.uuid
-			}?${BACK_PARAM}=${encodePath()}`,
+			}?${BACK_PARAM}=${encodePath(plotId)}`,
 		target: "_top",
 	};
 };

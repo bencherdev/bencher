@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/astro";
 /// Nearly all of this code is ripped from solid-js-router
 /// https://github.com/solidjs/solid-router
 /// However, since the underlying router is not being used
@@ -12,7 +13,6 @@ import {
 	untrack,
 } from "solid-js";
 import { decodeBase64, encodeBase64 } from "./convert";
-import * as Sentry from "@sentry/astro";
 
 export type Params = Record<string, string>;
 export declare type SetParams = Record<
@@ -280,17 +280,19 @@ export const pathname = createMemo(() => useLocation().pathname);
 
 export const BACK_PARAM = "back";
 
-export const encodePath = createMemo(() => {
+export const encodePath = (fragment?: string | undefined) => {
 	try {
 		const location = useLocation();
-		const back = encodeBase64(`${location.pathname}${location.search}`);
+		const back = encodeBase64(
+			`${location.pathname}${fragment ? `#${fragment}` : ""}${location.search}`,
+		);
 		return back;
 	} catch (e) {
 		console.error(e);
 		Sentry.captureException(e);
 		return "L2hlbHA=";
 	}
-});
+};
 
 export const decodePath = (fallback: string) => {
 	try {
