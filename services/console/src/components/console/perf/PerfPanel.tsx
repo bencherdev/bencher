@@ -13,7 +13,6 @@ import { PerfTab, isPerfTab, isXAxis } from "../../../config/types";
 import {
 	type JsonBenchmark,
 	type JsonBranch,
-	type JsonPerf,
 	type JsonPerfQuery,
 	type JsonPlot,
 	type JsonProject,
@@ -37,18 +36,11 @@ import {
 	timeToDateOnlyIso,
 } from "../../../util/convert";
 import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
-import {
-	MAX_NOTIFY_TIMEOUT,
-	NOTIFY_TIMEOUT_PARAM,
-	NotifyKind,
-	pageNotify,
-} from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../../util/valid";
 import { themeSignal } from "../../navbar/theme/util";
 import PerfFrame from "./PerfFrame";
 import PerfHeader from "./header/PerfHeader";
-import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
 import PlotTab from "./plot/tab/PlotTab";
 
@@ -1066,7 +1058,6 @@ const PerfPanel = (props: Props) => {
 			<PerfFrame
 				apiUrl={props.apiUrl}
 				user={user}
-				params={props.params}
 				isConsole={props.isConsole}
 				isEmbed={props.isEmbed}
 				theme={theme}
@@ -1079,11 +1070,6 @@ const PerfPanel = (props: Props) => {
 				isPlotInit={isPlotInit}
 				perfQuery={perfQuery}
 				refresh={refresh}
-				reports_data={reports_data}
-				branches_data={branches_data}
-				testbeds_data={testbeds_data}
-				benchmarks_data={benchmarks_data}
-				plots_data={plots_data}
 				measures={measures}
 				start_time={start_time}
 				end_time={end_time}
@@ -1096,6 +1082,10 @@ const PerfPanel = (props: Props) => {
 				upper_value={upper_value}
 				lower_boundary={lower_boundary}
 				upper_boundary={upper_boundary}
+				embed_logo={embed_logo}
+				embed_title={embed_title}
+				embed_header={embed_header}
+				embed_key={embed_key}
 				handleMeasure={handleMeasure}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}
@@ -1107,10 +1097,6 @@ const PerfPanel = (props: Props) => {
 				handleUpperValue={handleUpperValue}
 				handleLowerBoundary={handleLowerBoundary}
 				handleUpperBoundary={handleUpperBoundary}
-				embed_logo={embed_logo}
-				embed_title={embed_title}
-				embed_header={embed_header}
-				embed_key={embed_key}
 			>
 				<Show when={!props.isEmbed}>
 					<PlotTab
