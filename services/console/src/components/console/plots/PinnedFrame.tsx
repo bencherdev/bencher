@@ -1,4 +1,11 @@
-import { type Accessor, createMemo } from "solid-js";
+import {
+	type Accessor,
+	Show,
+	createMemo,
+	createSignal,
+	onCleanup,
+	onMount,
+} from "solid-js";
 import type { PerfTab } from "../../../config/types";
 import {
 	type JsonAuthUser,
@@ -20,6 +27,27 @@ export interface Props {
 }
 
 const PinnedFrame = (props: Props) => {
+	const plotId = props.plot?.uuid;
+
+	const [isVisible, setIsVisible] = createSignal(false);
+
+	const handleIntersection = (entries) => {
+		const [entry] = entries;
+		// Set to true if the element is visible,
+		// but do not set to false if it is no longer visible
+		if (!isVisible() && entry.isIntersecting) {
+			setIsVisible(entry.isIntersecting);
+		}
+	};
+
+	onMount(() => {
+		const observer = new IntersectionObserver(handleIntersection);
+		const target = document.getElementById(plotId);
+		if (target) observer.observe(target);
+
+		onCleanup(() => observer.disconnect());
+	});
+
 	const theme = themeSignal;
 
 	const branchesIsEmpty = createMemo(
@@ -83,50 +111,76 @@ const PinnedFrame = (props: Props) => {
 	const handleVoid = (_void: string | PerfTab | boolean | XAxis | null) => {};
 
 	return (
-		<div id={props.plot?.uuid}>
-			<PerfFrame
-				apiUrl={props.apiUrl}
-				user={props.user}
-				isConsole={props.isConsole}
-				isEmbed={true}
-				plotId={props.plot?.uuid}
-				theme={theme}
-				project_slug={props.project_slug}
-				measuresIsEmpty={measuresIsEmpty}
-				branchesIsEmpty={branchesIsEmpty}
-				testbedsIsEmpty={testbedsIsEmpty}
-				benchmarksIsEmpty={benchmarksIsEmpty}
-				isPlotInit={isPlotInit}
-				perfQuery={perfQuery}
-				refresh={refresh}
-				measures={measures}
-				start_date={start_date}
-				end_date={end_date}
-				key={key}
-				x_axis={x_axis}
-				clear={clear}
-				lower_value={lower_value}
-				upper_value={upper_value}
-				lower_boundary={lower_boundary}
-				upper_boundary={upper_boundary}
-				embed_logo={embed_logo}
-				embed_title={embed_title}
-				embed_header={embed_header}
-				embed_key={embed_key}
-				handleMeasure={handleVoid}
-				handleStartTime={handleVoid}
-				handleEndTime={handleVoid}
-				handleTab={handleVoid}
-				handleKey={handleVoid}
-				handleXAxis={handleVoid}
-				handleClear={handleVoid}
-				handleLowerValue={handleVoid}
-				handleUpperValue={handleVoid}
-				handleLowerBoundary={handleVoid}
-				handleUpperBoundary={handleVoid}
+		<div id={plotId}>
+			<Show
+				when={isVisible()}
+				fallback={
+					<div class="columns">
+						<div class="column">
+							<nav class="panel">
+								<nav class="panel-heading columns is-vcentered">
+									<div class="column">
+										&nbsp;
+										<br />
+										&nbsp;
+									</div>
+								</nav>
+								<div class="panel-block">
+									<progress
+										class="progress is-primary"
+										style="margin-top: 8rem; margin-bottom: 16rem;"
+										max="100"
+									/>
+								</div>
+							</nav>
+						</div>
+					</div>
+				}
 			>
-				{props.children}
-			</PerfFrame>
+				<PerfFrame
+					apiUrl={props.apiUrl}
+					user={props.user}
+					isConsole={props.isConsole}
+					isEmbed={true}
+					plotId={plotId}
+					theme={theme}
+					project_slug={props.project_slug}
+					measuresIsEmpty={measuresIsEmpty}
+					branchesIsEmpty={branchesIsEmpty}
+					testbedsIsEmpty={testbedsIsEmpty}
+					benchmarksIsEmpty={benchmarksIsEmpty}
+					isPlotInit={isPlotInit}
+					perfQuery={perfQuery}
+					refresh={refresh}
+					measures={measures}
+					start_date={start_date}
+					end_date={end_date}
+					key={key}
+					x_axis={x_axis}
+					clear={clear}
+					lower_value={lower_value}
+					upper_value={upper_value}
+					lower_boundary={lower_boundary}
+					upper_boundary={upper_boundary}
+					embed_logo={embed_logo}
+					embed_title={embed_title}
+					embed_header={embed_header}
+					embed_key={embed_key}
+					handleMeasure={handleVoid}
+					handleStartTime={handleVoid}
+					handleEndTime={handleVoid}
+					handleTab={handleVoid}
+					handleKey={handleVoid}
+					handleXAxis={handleVoid}
+					handleClear={handleVoid}
+					handleLowerValue={handleVoid}
+					handleUpperValue={handleVoid}
+					handleLowerBoundary={handleVoid}
+					handleUpperBoundary={handleVoid}
+				>
+					{props.children}
+				</PerfFrame>
+			</Show>
 		</div>
 	);
 };
