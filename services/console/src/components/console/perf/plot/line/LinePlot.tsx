@@ -113,7 +113,9 @@ const LinePlot = (props: Props) => {
 
 	const [isPlotted, setIsPlotted] = createSignal(false);
 	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
-	const plotId = createMemo(() => props.plotId ?? "line-plot");
+	const plotId = createMemo(() =>
+		props.plotId ? `plot-${props.plotId}` : "plot",
+	);
 
 	const [x_axis, setRange] = createSignal(props.x_axis());
 	const [lower_value, setLowerValue] = createSignal(props.lower_value());
