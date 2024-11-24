@@ -21,7 +21,7 @@ export interface Props {
 	children: Element | undefined;
 	apiUrl: string;
 	user: JsonAuthUser;
-	project: Resource<JsonProject>;
+	project: Resource<JsonProject> | undefined;
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;

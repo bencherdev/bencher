@@ -1071,8 +1071,6 @@ const PerfPanel = (props: Props) => {
 				perfQuery={perfQuery}
 				refresh={refresh}
 				measures={measures}
-				start_time={start_time}
-				end_time={end_time}
 				start_date={start_date}
 				end_date={end_date}
 				key={key}

@@ -19,6 +19,7 @@ import Field, { type FieldHandler } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import DeleteButton from "../deck/hand/DeleteButton";
 import DeckCard from "../deck/hand/card/DeckCard";
+import PinnedPerf from "./PinnedPerf";
 import { plotQueryString } from "./util";
 
 enum PinnedState {
@@ -147,7 +148,13 @@ const PinnedFront = (props: {
 }) => {
 	return (
 		<>
-			<PinnedPlot plot={props.plot} />
+			<PinnedPlot
+				isConsole={props.isConsole}
+				apiUrl={props.apiUrl}
+				user={props.user}
+				project_slug={props.project_slug}
+				plot={props.plot}
+			/>
 			<PinnedButtons
 				isConsole={props.isConsole}
 				apiUrl={props.apiUrl}
@@ -166,15 +173,20 @@ const PinnedFront = (props: {
 	);
 };
 
-const PinnedPlot = (props: { plot: JsonPlot }) => {
+const PinnedPlot = (props: {
+	isConsole: boolean;
+	apiUrl: string;
+	user: JsonAuthUser;
+	project_slug: Accessor<undefined | string>;
+	plot: JsonPlot;
+}) => {
 	return (
-		<iframe
-			src={`/perf/${props.plot?.project}/embed?embed_logo=false&embed_title=${
-				props.plot?.title ?? ""
-			}&embed_header=false&key=false&${plotQueryString(props.plot)}`}
-			title={props.plot?.title ?? "Perf Plot"}
-			width="100%"
-			height="600px"
+		<PinnedPerf
+			isConsole={props.isConsole}
+			apiUrl={props.apiUrl}
+			user={props.user}
+			project_slug={props.project_slug}
+			plot={props.plot}
 		/>
 	);
 };

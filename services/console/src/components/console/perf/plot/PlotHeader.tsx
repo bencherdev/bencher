@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/astro";
 import {
 	type Accessor,
 	For,
@@ -8,25 +9,24 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
+import { resourcePath } from "../../../../config/util";
 import {
-	XAxis,
 	type JsonAuthUser,
 	type JsonMeasure,
 	type JsonProject,
+	XAxis,
 } from "../../../../types/bencher";
 import { httpGet } from "../../../../util/http";
-import { BENCHER_MEASURE_ID } from "./util";
 import { BACK_PARAM, encodePath } from "../../../../util/url";
 import { type Theme, themeWordmark } from "../../../navbar/theme/theme";
-import * as Sentry from "@sentry/astro";
-import { resourcePath } from "../../../../config/util";
+import { BENCHER_MEASURE_ID } from "./util";
 
 const BENCHER_MEASURE = "--bencher-measure--";
 
 export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
-	project: Resource<JsonProject>;
+	project: Resource<JsonProject> | undefined;
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;
@@ -196,7 +196,7 @@ const EmbedPlotHeader = (props: Props) => {
 		const location = window.location;
 		return `${location.protocol}//${location.hostname}${
 			location.port ? `:${location.port}` : ""
-		}/perf/${props.project()?.slug}/${location.search}`;
+		}/perf/${props.project_slug() ?? props.project?.()?.slug}/${location.search}`;
 	});
 
 	const logo = createMemo(() => {
@@ -223,7 +223,7 @@ const EmbedPlotHeader = (props: Props) => {
 			default:
 				return (
 					<h1 class="title is-3" style="word-break: break-word;">
-						{embedTitle ?? props.project()?.name}
+						{embedTitle ?? props.project?.()?.name ?? "Bencher Project"}
 					</h1>
 				);
 		}

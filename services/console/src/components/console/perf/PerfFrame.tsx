@@ -31,7 +31,7 @@ export interface Props {
 	isConsole?: boolean;
 	isEmbed?: boolean;
 	theme: Accessor<Theme>;
-	project: Resource<JsonProject>;
+	project?: Resource<JsonProject>;
 	project_slug: Accessor<string | undefined>;
 	measuresIsEmpty: Accessor<boolean>;
 	branchesIsEmpty: Accessor<boolean>;
@@ -41,8 +41,6 @@ export interface Props {
 	perfQuery: Accessor<JsonPerfQuery>;
 	refresh: Accessor<number>;
 	measures: Accessor<string[]>;
-	start_time: Accessor<string | undefined>;
-	end_time: Accessor<string | undefined>;
 	start_date: Accessor<string | undefined>;
 	end_date: Accessor<string | undefined>;
 	key: Accessor<boolean>;
