@@ -19,7 +19,7 @@ import Field, { type FieldHandler } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import DeleteButton from "../deck/hand/DeleteButton";
 import DeckCard from "../deck/hand/card/DeckCard";
-import PinnedPerf from "./PinnedPerf";
+import PinnedFrame from "./PinnedFrame";
 import { plotQueryString } from "./util";
 
 enum PinnedState {
@@ -148,7 +148,7 @@ const PinnedFront = (props: {
 }) => {
 	return (
 		<>
-			<PinnedPlot
+			<PinnedFrame
 				isConsole={props.isConsole}
 				apiUrl={props.apiUrl}
 				user={props.user}
@@ -170,24 +170,6 @@ const PinnedFront = (props: {
 				handleState={props.handleState}
 			/>
 		</>
-	);
-};
-
-const PinnedPlot = (props: {
-	isConsole: boolean;
-	apiUrl: string;
-	user: JsonAuthUser;
-	project_slug: Accessor<undefined | string>;
-	plot: JsonPlot;
-}) => {
-	return (
-		<PinnedPerf
-			isConsole={props.isConsole}
-			apiUrl={props.apiUrl}
-			user={props.user}
-			project_slug={props.project_slug}
-			plot={props.plot}
-		/>
 	);
 };
 

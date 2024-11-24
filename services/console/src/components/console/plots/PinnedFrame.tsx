@@ -1,6 +1,7 @@
 import { type Accessor, createMemo } from "solid-js";
 import type { PerfTab } from "../../../config/types";
 import {
+	type JsonAuthUser,
 	type JsonPerfQuery,
 	type JsonPlot,
 	XAxis,
@@ -17,7 +18,7 @@ export interface Props {
 	plot: JsonPlot;
 }
 
-const PinnedPerf = (props: Props) => {
+const PinnedFrame = (props: Props) => {
 	const theme = themeSignal;
 
 	const measuresIsEmpty = createMemo(() => false);
@@ -67,47 +68,49 @@ const PinnedPerf = (props: Props) => {
 	const handleVoid = (_void: string | PerfTab | boolean | XAxis | null) => {};
 
 	return (
-		<PerfFrame
-			apiUrl={props.apiUrl}
-			user={props.user}
-			isConsole={props.isConsole}
-			isEmbed={true}
-			theme={theme}
-			project_slug={props.project_slug}
-			measuresIsEmpty={measuresIsEmpty}
-			branchesIsEmpty={branchesIsEmpty}
-			testbedsIsEmpty={testbedsIsEmpty}
-			benchmarksIsEmpty={benchmarksIsEmpty}
-			isPlotInit={isPlotInit}
-			perfQuery={perfQuery}
-			refresh={refresh}
-			measures={measures}
-			start_date={start_date}
-			end_date={end_date}
-			key={key}
-			x_axis={x_axis}
-			clear={clear}
-			lower_value={lower_value}
-			upper_value={upper_value}
-			lower_boundary={lower_boundary}
-			upper_boundary={upper_boundary}
-			embed_logo={embed_logo}
-			embed_title={embed_title}
-			embed_header={embed_header}
-			embed_key={embed_key}
-			handleMeasure={handleVoid}
-			handleStartTime={handleVoid}
-			handleEndTime={handleVoid}
-			handleTab={handleVoid}
-			handleKey={handleVoid}
-			handleXAxis={handleVoid}
-			handleClear={handleVoid}
-			handleLowerValue={handleVoid}
-			handleUpperValue={handleVoid}
-			handleLowerBoundary={handleVoid}
-			handleUpperBoundary={handleVoid}
-		/>
+		<div id={`plot-${props.plot?.uuid}`}>
+			<PerfFrame
+				apiUrl={props.apiUrl}
+				user={props.user}
+				isConsole={props.isConsole}
+				isEmbed={true}
+				theme={theme}
+				project_slug={props.project_slug}
+				measuresIsEmpty={measuresIsEmpty}
+				branchesIsEmpty={branchesIsEmpty}
+				testbedsIsEmpty={testbedsIsEmpty}
+				benchmarksIsEmpty={benchmarksIsEmpty}
+				isPlotInit={isPlotInit}
+				perfQuery={perfQuery}
+				refresh={refresh}
+				measures={measures}
+				start_date={start_date}
+				end_date={end_date}
+				key={key}
+				x_axis={x_axis}
+				clear={clear}
+				lower_value={lower_value}
+				upper_value={upper_value}
+				lower_boundary={lower_boundary}
+				upper_boundary={upper_boundary}
+				embed_logo={embed_logo}
+				embed_title={embed_title}
+				embed_header={embed_header}
+				embed_key={embed_key}
+				handleMeasure={handleVoid}
+				handleStartTime={handleVoid}
+				handleEndTime={handleVoid}
+				handleTab={handleVoid}
+				handleKey={handleVoid}
+				handleXAxis={handleVoid}
+				handleClear={handleVoid}
+				handleLowerValue={handleVoid}
+				handleUpperValue={handleVoid}
+				handleLowerBoundary={handleVoid}
+				handleUpperBoundary={handleVoid}
+			/>
+		</div>
 	);
 };
 
-export default PinnedPerf;
+export default PinnedFrame;
