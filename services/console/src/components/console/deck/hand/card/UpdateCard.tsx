@@ -1,20 +1,20 @@
-import { createSignal, type Accessor } from "solid-js";
-import type { JsonAuthUser } from "../../../../../types/bencher";
-import type CardConfig from "./CardConfig";
-import type { PosterFieldConfig } from "../../../poster/Poster";
-import FieldKind from "../../../../field/kind";
-import type { FieldValue } from "../../../../field/Field";
-import Field from "../../../../field/Field";
-import { createStore } from "solid-js/store";
-import { validJwt } from "../../../../../util/valid";
-import { httpPatch } from "../../../../../util/http";
+import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
+import { type Accessor, createSignal } from "solid-js";
+import { createStore } from "solid-js/store";
+import type { JsonAuthUser } from "../../../../../types/bencher";
+import { httpPatch } from "../../../../../util/http";
 import {
 	NotifyKind,
 	navigateNotify,
 	pageNotify,
 } from "../../../../../util/notify";
-import * as Sentry from "@sentry/astro";
+import { validJwt } from "../../../../../util/valid";
+import type { FieldValue } from "../../../../field/Field";
+import Field from "../../../../field/Field";
+import FieldKind from "../../../../field/kind";
+import type { PosterFieldConfig } from "../../../poster/Poster";
+import type CardConfig from "./CardConfig";
 
 export interface Props {
 	apiUrl: string;
@@ -88,6 +88,7 @@ const UpdateCard = (props: Props) => {
 					data[key] = value?.selected;
 					break;
 				case FieldKind.NUMBER:
+				case FieldKind.PLOT_WINDOW:
 					if (form?.[key]?.nullable && !value && value !== null) {
 						continue;
 					}
