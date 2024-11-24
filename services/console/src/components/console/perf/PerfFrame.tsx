@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/astro";
-import type { Params } from "astro";
 import {
 	type Accessor,
 	type Resource,
@@ -25,7 +24,7 @@ import type { Theme } from "../../navbar/theme/theme";
 import PerfPlot from "./plot/PerfPlot";
 
 export interface Props {
-	children?: any | undefined;
+	children?: Element | undefined;
 	apiUrl: string;
 	user: JsonAuthUser;
 	isConsole?: boolean;

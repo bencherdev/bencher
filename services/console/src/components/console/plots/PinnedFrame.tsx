@@ -11,7 +11,7 @@ import { themeSignal } from "../../navbar/theme/util";
 import PerfFrame from "../perf/PerfFrame";
 
 export interface Props {
-	children?: any;
+	children?: Element;
 	isConsole: boolean;
 	apiUrl: string;
 	user: JsonAuthUser;
