@@ -78,7 +78,7 @@ if (hasPerfImage(Astro.url)) {
       project={jsonProject}
       isEmbed={true}
     >
-      <nav slot="fallback" class="panel" >
+      <div slot="fallback" class="panel">
         <nav class="panel-heading columns is-vcentered">
             <div class="column">
                 &nbsp;
@@ -91,7 +91,7 @@ if (hasPerfImage(Astro.url)) {
                 max="100"
             />
         </div>
-      </nav>
+      </div>
     </PerfPanel>}
     <div slot="footer"></div>
 </BaseLayout>

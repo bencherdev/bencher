@@ -67,7 +67,7 @@ const PerfPlot = (props: Props) => {
 	return (
 		<div class="columns">
 			<div class="column">
-				<nav class={`panel ${themeClass()}`}>
+				<div class={`panel ${themeClass()}`}>
 					<PlotHeader
 						apiUrl={props.apiUrl}
 						user={props.user}
@@ -139,7 +139,7 @@ const PerfPlot = (props: Props) => {
 						</Switch>
 					</div>
 					{props.children}
-				</nav>
+				</div>
 			</div>
 		</div>
 	);

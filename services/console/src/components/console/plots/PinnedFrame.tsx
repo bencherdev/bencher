@@ -16,6 +16,7 @@ import {
 import { timeToDateOnlyIso } from "../../../util/convert";
 import { themeSignal } from "../../navbar/theme/util";
 import PerfFrame from "../perf/PerfFrame";
+import FallbackPlot from "./FallbackPlot";
 
 export interface Props {
 	children?: Element;
@@ -112,31 +113,7 @@ const PinnedFrame = (props: Props) => {
 
 	return (
 		<div id={plotId}>
-			<Show
-				when={isVisible()}
-				fallback={
-					<div class="columns">
-						<div class="column">
-							<nav class="panel">
-								<nav class="panel-heading columns is-vcentered">
-									<div class="column">
-										&nbsp;
-										<br />
-										&nbsp;
-									</div>
-								</nav>
-								<div class="panel-block">
-									<progress
-										class="progress is-primary"
-										style="margin-top: 8rem; margin-bottom: 16rem;"
-										max="100"
-									/>
-								</div>
-							</nav>
-						</div>
-					</div>
-				}
-			>
+			<Show when={isVisible()} fallback={<FallbackPlot />}>
 				<PerfFrame
 					apiUrl={props.apiUrl}
 					user={props.user}

@@ -1,7 +1,22 @@
 const FallbackPlot = () => {
 	return (
-		<div class="box" style="height: 600px;">
-			&nbsp;
+		<div>
+			<div class="columns">
+				<div class="column is-11">
+					<div class="panel">
+						<nav class="panel-heading columns is-vcentered">
+							<div class="column">&nbsp;</div>
+						</nav>
+						<div class="panel-block">
+							<progress
+								class="progress is-primary"
+								style="margin-top: 8rem; margin-bottom: 16rem;"
+								max="100"
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 	);
 };
