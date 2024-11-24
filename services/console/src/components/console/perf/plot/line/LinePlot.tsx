@@ -1,25 +1,25 @@
 import * as Plot from "@observablehq/plot";
+import type { ScaleType } from "@observablehq/plot";
 import * as d3 from "d3";
 import {
 	type Accessor,
 	type Resource,
 	createEffect,
-	createSignal,
 	createMemo,
+	createSignal,
 } from "solid-js";
+import { resourcePath } from "../../../../../config/util";
 import {
 	AlertStatus,
-	BoundaryLimit,
-	XAxis,
 	type Boundary,
+	BoundaryLimit,
 	type JsonPerf,
 	type JsonPerfAlert,
+	XAxis,
 } from "../../../../../types/bencher";
-import { addTooltips } from "./tooltip";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { Theme } from "../../../../navbar/theme/theme";
-import type { ScaleType } from "@observablehq/plot";
-import { resourcePath } from "../../../../../config/util";
+import { addTooltips } from "./tooltip";
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
@@ -285,10 +285,7 @@ const LinePlot = (props: Props) => {
 					title: (datum) =>
 						to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
 					href: (datum) => dotUrl(project_slug, props.isConsole, datum),
-					// TODO Set these to open in a fresh page
-					// This will require setting the `back` query parameter to the plot page
-					// with the proper URL fragment for the specific plot
-					// target: "_top",
+					target: "_top",
 				}),
 			);
 
@@ -546,6 +543,7 @@ const boundary_dot = (
 		title: (datum) =>
 			limit_title(limit, result, datum, "\nClick to view Threshold"),
 		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
+		target: "_top",
 	};
 };
 
@@ -562,10 +560,7 @@ const warning_image = (
 		title: (_datum) =>
 			"Boundary Limit was not calculated.\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)\nClick to view Threshold",
 		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
-		// TODO Set these to open in a fresh page
-		// This will require setting the `back` query parameter to the plot page
-		// with the proper URL fragment for the specific plot
-		// target: "_top",
+		target: "_top",
 	};
 };
 
@@ -601,10 +596,7 @@ const alert_image = (
 			`${resourcePath(isConsole)}/${project_slug}/alerts/${
 				datum.alert?.uuid
 			}?${BACK_PARAM}=${encodePath()}`,
-		// TODO Set these to open in a fresh page
-		// This will require setting the `back` query parameter to the plot page
-		// with the proper URL fragment for the specific plot
-		// target: "_top",
+		target: "_top",
 	};
 };
 
