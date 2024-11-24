@@ -11,6 +11,7 @@ import { themeSignal } from "../../navbar/theme/util";
 import PerfFrame from "../perf/PerfFrame";
 
 export interface Props {
+	children?: any;
 	isConsole: boolean;
 	apiUrl: string;
 	user: JsonAuthUser;
@@ -21,11 +22,25 @@ export interface Props {
 const PinnedFrame = (props: Props) => {
 	const theme = themeSignal;
 
-	const measuresIsEmpty = createMemo(() => false);
-	const branchesIsEmpty = createMemo(() => false);
-	const testbedsIsEmpty = createMemo(() => false);
-	const benchmarksIsEmpty = createMemo(() => false);
-	const isPlotInit = createMemo(() => false);
+	const branchesIsEmpty = createMemo(
+		() => (props.plot?.branches?.length ?? 0) === 0,
+	);
+	const testbedsIsEmpty = createMemo(
+		() => (props.plot?.testbeds?.length ?? 0) === 0,
+	);
+	const benchmarksIsEmpty = createMemo(
+		() => (props.plot?.benchmarks?.length ?? 0) === 0,
+	);
+	const measuresIsEmpty = createMemo(
+		() => (props.plot?.measures?.length ?? 0) === 0,
+	);
+	const isPlotInit = createMemo(
+		() =>
+			branchesIsEmpty() ||
+			testbedsIsEmpty() ||
+			benchmarksIsEmpty() ||
+			measuresIsEmpty(),
+	);
 
 	const start_time = createMemo(() =>
 		(Date.now() - (props.plot?.window ?? 0) * 1_000).toString(),
@@ -68,7 +83,7 @@ const PinnedFrame = (props: Props) => {
 	const handleVoid = (_void: string | PerfTab | boolean | XAxis | null) => {};
 
 	return (
-		<div id={`plot-${props.plot?.uuid}`}>
+		<div id={props.plot?.uuid}>
 			<PerfFrame
 				apiUrl={props.apiUrl}
 				user={props.user}
@@ -108,7 +123,9 @@ const PinnedFrame = (props: Props) => {
 				handleUpperValue={handleVoid}
 				handleLowerBoundary={handleVoid}
 				handleUpperBoundary={handleVoid}
-			/>
+			>
+				{props.children}
+			</PerfFrame>
 		</div>
 	);
 };

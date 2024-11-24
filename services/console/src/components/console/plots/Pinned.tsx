@@ -82,94 +82,61 @@ const Pinned = (props: {
 	const [plot] = createResource<JsonPlot>(plotFetcher, getPlot);
 
 	return (
-		<div id={props.plot?.uuid} class="box">
-			<PinnedFront
-				isConsole={props.isConsole}
-				apiUrl={props.apiUrl}
-				user={props.user}
-				project_slug={props.project_slug}
-				isAllowedEdit={props.isAllowedEdit}
-				plot={plot()}
-				index={props.index}
-				total={props.total}
-				movePlot={props.movePlot}
-				search={props.search}
-				state={state}
-				handleState={setState}
-			/>
-			<Switch>
-				<Match when={state() === PinnedState.Rank}>
-					<PinnedRank
-						apiUrl={props.apiUrl}
-						params={props.params}
-						user={props.user}
-						isAllowedEdit={props.isAllowedEdit}
-						plot={plot()}
-						index={props.index}
-						total={props.total}
-						movePlot={props.movePlot}
-						handleState={setState}
-					/>
-				</Match>
-				<Match when={state() === PinnedState.Settings}>
-					<PinnedSetting
-						isConsole={props.isConsole}
-						apiUrl={props.apiUrl}
-						params={props.params}
-						user={props.user}
-						isAllowedEdit={props.isAllowedEdit}
-						isAllowedDelete={props.isAllowedDelete}
-						plot={plot()}
-						index={props.index}
-						removePlot={props.removePlot}
-						refresh={handleRefresh}
-						handleState={setState}
-						handleRefresh={handleRefresh}
-					/>
-				</Match>
-			</Switch>
-		</div>
-	);
-};
-
-const PinnedFront = (props: {
-	isConsole: boolean;
-	apiUrl: string;
-	user: JsonAuthUser;
-	project_slug: Accessor<undefined | string>;
-	isAllowedEdit: Resource<boolean>;
-	plot: JsonPlot;
-	index: Accessor<number>;
-	total: Accessor<number>;
-	movePlot: (from: number, to: number) => void;
-	search: Accessor<undefined | string>;
-	state: Accessor<PinnedState>;
-	handleState: (state: PinnedState) => void;
-}) => {
-	return (
-		<>
-			<PinnedFrame
-				isConsole={props.isConsole}
-				apiUrl={props.apiUrl}
-				user={props.user}
-				project_slug={props.project_slug}
-				plot={props.plot}
-			/>
-			<PinnedButtons
-				isConsole={props.isConsole}
-				apiUrl={props.apiUrl}
-				user={props.user}
-				project_slug={props.project_slug}
-				isAllowedEdit={props.isAllowedEdit}
-				plot={props.plot}
-				index={props.index}
-				total={props.total}
-				movePlot={props.movePlot}
-				search={props.search}
-				state={props.state}
-				handleState={props.handleState}
-			/>
-		</>
+		<PinnedFrame
+			isConsole={props.isConsole}
+			apiUrl={props.apiUrl}
+			user={props.user}
+			project_slug={props.project_slug}
+			plot={props.plot}
+		>
+			<div class="box">
+				<PinnedButtons
+					isConsole={props.isConsole}
+					apiUrl={props.apiUrl}
+					user={props.user}
+					project_slug={props.project_slug}
+					isAllowedEdit={props.isAllowedEdit}
+					plot={plot()}
+					index={props.index}
+					total={props.total}
+					movePlot={props.movePlot}
+					search={props.search}
+					state={state}
+					handleState={setState}
+				/>
+				<Switch>
+					<Match when={state() === PinnedState.Rank}>
+						<PinnedRank
+							apiUrl={props.apiUrl}
+							params={props.params}
+							user={props.user}
+							isAllowedEdit={props.isAllowedEdit}
+							plot={plot()}
+							index={props.index}
+							total={props.total}
+							movePlot={props.movePlot}
+							handleState={setState}
+						/>
+					</Match>
+					<Match when={state() === PinnedState.Settings}>
+						<PinnedSetting
+							isConsole={props.isConsole}
+							apiUrl={props.apiUrl}
+							params={props.params}
+							user={props.user}
+							isAllowedEdit={props.isAllowedEdit}
+							isAllowedDelete={props.isAllowedDelete}
+							plot={plot()}
+							index={props.index}
+							removePlot={props.removePlot}
+							refresh={handleRefresh}
+							handleState={setState}
+							handleRefresh={handleRefresh}
+						/>
+					</Match>
+				</Switch>
+			</div>
+		</PinnedFrame>
 	);
 };
 

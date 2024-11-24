@@ -2,15 +2,15 @@ import { createElementSize } from "@solid-primitives/resize-observer";
 import {
 	type Accessor,
 	type Resource,
+	Show,
 	createMemo,
 	createResource,
-	Show,
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { JsonPerf, XAxis } from "../../../../types/bencher";
-import LinePlot from "./line/LinePlot";
-import PlotKey from "./key/PlotKey";
 import type { Theme } from "../../../navbar/theme/theme";
+import PlotKey from "./key/PlotKey";
+import LinePlot from "./line/LinePlot";
 
 export interface Props {
 	theme: Accessor<Theme>;
