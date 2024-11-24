@@ -68,3 +68,12 @@ export const themeWordmark = (theme: Theme) => {
 			return BENCHER_WORDMARK_DARK;
 	}
 };
+
+export const themeBackground = (theme: Theme) => {
+	switch (theme) {
+		case Theme.Light:
+			return "has-background-white";
+		case Theme.Dark:
+			return "has-background-black";
+	}
+};

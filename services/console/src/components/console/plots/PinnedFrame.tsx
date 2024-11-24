@@ -25,6 +25,7 @@ export interface Props {
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
 	plot: JsonPlot;
+	logo?: boolean;
 }
 
 const PinnedFrame = (props: Props) => {
@@ -104,7 +105,7 @@ const PinnedFrame = (props: Props) => {
 	const lower_boundary = createMemo(() => props.plot?.lower_boundary ?? false);
 	const upper_boundary = createMemo(() => props.plot?.upper_boundary ?? false);
 
-	const embed_logo = createMemo(() => false);
+	const embed_logo = createMemo(() => props.logo === true);
 	const embed_title = createMemo(() => props.plot?.title ?? "");
 	const embed_header = createMemo(() => false);
 	const embed_key = createMemo(() => false);
