@@ -72,9 +72,11 @@ const PinnedFrame = (props: Props) => {
 			measuresIsEmpty(),
 	);
 
-	const start_time = createMemo(() =>
-		(Date.now() - (props.plot?.window ?? 0) * 1_000).toString(),
-	);
+	const start_time = createMemo(() => {
+		const now = Date.now();
+		const windowMillis = (props.plot?.window ?? 0) * 1_000;
+		return (windowMillis > now ? 0 : now - windowMillis).toString();
+	});
 	const end_time = createMemo(() => Date.now().toString());
 
 	const perfQuery = createMemo(() => {

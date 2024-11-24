@@ -91,11 +91,7 @@ const Field = (props: Props) => {
 				props.handleField(props.fieldKey, value, true);
 				break;
 			case FieldKind.PLOT_WINDOW:
-				props.handleField(
-					props.fieldKey,
-					value,
-					validWindow((value ?? 0) * 1_000),
-				);
+				props.handleField(props.fieldKey, value, validWindow(value));
 				break;
 			case FieldKind.PLOT_RANK:
 				props.handleField(props.fieldKey, value, validIndex(value));
