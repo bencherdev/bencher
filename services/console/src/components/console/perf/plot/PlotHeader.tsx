@@ -196,7 +196,7 @@ const EmbedPlotHeader = (props: Props) => {
 		const location = window.location;
 		return `${location.protocol}//${location.hostname}${
 			location.port ? `:${location.port}` : ""
-		}/perf/${props.project_slug() ?? props.project?.()?.slug}/${location.search}`;
+		}/perf/${props.project?.()?.slug ?? props.project_slug()}/${location.search}`;
 	});
 
 	const logo = createMemo(() => {
