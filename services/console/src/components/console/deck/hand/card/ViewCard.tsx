@@ -1,19 +1,19 @@
+import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
 import { Match, Show, Switch, createMemo, createResource } from "solid-js";
 import { Display } from "../../../../../config/types";
-import type CardConfig from "./CardConfig";
-import { authUser } from "../../../../../util/auth";
-import { httpGet } from "../../../../../util/http";
+import { fmtDateTime, resourcePath } from "../../../../../config/util";
 import {
 	Adapter,
-	ModelTest,
 	type JsonBranch,
 	type JsonProject,
+	ModelTest,
 } from "../../../../../types/bencher";
+import { authUser } from "../../../../../util/auth";
+import { httpGet } from "../../../../../util/http";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
-import * as Sentry from "@sentry/astro";
-import { fmtDateTime, resourcePath } from "../../../../../config/util";
 import { testFragment } from "../../../../field/kinds/Model";
+import type CardConfig from "./CardConfig";
 
 export interface Props {
 	isConsole?: boolean;
@@ -306,10 +306,7 @@ const GitHashCard = (props: Props) => {
 		const url = project()?.url;
 		if (url && isGitHubRepoUrl(url)) {
 			return (
-				<a
-					href={`${url.endsWith("/") ? url : `${url}/`}commit/${props.value}`}
-					target="_top"
-				>
+				<a href={`${url.endsWith("/") ? url : `${url}/`}commit/${props.value}`}>
 					{props.value as string}
 				</a>
 			);
