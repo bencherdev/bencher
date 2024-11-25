@@ -1,15 +1,19 @@
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
+import * as Sentry from "@sentry/astro";
+import { debounce } from "@solid-primitives/scheduled";
 import type { Params } from "astro";
-import type { JsonPlot, JsonProject } from "../../../types/bencher";
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
+	type Accessor,
 	For,
 	Show,
 	createEffect,
 	createMemo,
 	createResource,
-	type Accessor,
+	createSignal,
 } from "solid-js";
-import { setPageTitle } from "../../../util/resource";
+import { createStore } from "solid-js/store";
+import { perfPath } from "../../../config/util";
+import type { JsonPlot, JsonProject } from "../../../types/bencher";
 import {
 	authUser,
 	isAllowedProjectCreate,
@@ -17,15 +21,12 @@ import {
 	isAllowedProjectEdit,
 } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
-import Pinned from "./Pinned";
-import { DEBOUNCE_DELAY, validJwt } from "../../../util/valid";
-import { createStore } from "solid-js/store";
+import { setPageTitle } from "../../../util/resource";
 import { useSearchParams } from "../../../util/url";
-import PlotsHeader from "./PlotsHeader";
-import { debounce } from "@solid-primitives/scheduled";
+import { DEBOUNCE_DELAY, validJwt } from "../../../util/valid";
 import FallbackPlots from "./FallbackPlots";
-import * as Sentry from "@sentry/astro";
-import { perfPath } from "../../../config/util";
+import Pinned from "./Pinned";
+import PlotsHeader from "./PlotsHeader";
 
 const SEARCH_PARAM = "search";
 const MAX_PLOTS = 64;
@@ -139,11 +140,13 @@ const PlotsPanel = (props: Props) => {
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				setPlots(resp?.data as JsonPlot[]);
+				handlePlotsInit();
 				return resp?.data as JsonPlot[];
 			})
 			.catch((error) => {
 				console.error(error);
 				Sentry.captureException(error);
+				handlePlotsInit();
 				return EMPTY_ARRAY;
 			});
 	};
@@ -151,8 +154,21 @@ const PlotsPanel = (props: Props) => {
 		plotsFetcher,
 		getPlots,
 	);
+	const handleRefresh = () => {
+		refetch();
+		setPlotsInit(false);
+	};
+
 	const [plots, setPlots] = createStore<JsonPlot[]>([]);
 	const plotsLength = createMemo(() => plots?.length);
+	const [plotsInit, setPlotsInit] = createSignal(false);
+	const handlePlotsInit = () => {
+		// This lets the plots have a chance to start to render
+		// to prevent the "flashing" of the view-only component
+		setTimeout(() => {
+			setPlotsInit(true);
+		}, 1);
+	};
 
 	const movePlot = (from: number, to: number) => {
 		const newPlots = [...plots];
@@ -210,10 +226,10 @@ const PlotsPanel = (props: Props) => {
 				project={project}
 				search={search}
 				isAllowedCreate={isAllowedCreate}
-				handleRefresh={refetch}
+				handleRefresh={handleRefresh}
 				handleSearch={handleSearch}
 			/>
-			<Show when={projectPlots.loading}>
+			<Show when={projectPlots.loading || !plotsInit()}>
 				<FallbackPlots />
 			</Show>
 			<div class="columns is-multiline is-vcentered">
@@ -249,7 +265,12 @@ const PlotsPanel = (props: Props) => {
 					</div>
 				</Show>
 				<Show
-					when={(!props.isConsole || !isAllowedCreate()) && plotsLength() === 0}
+					when={
+						(!props.isConsole || !isAllowedCreate()) &&
+						!projectPlots.loading &&
+						plotsInit() &&
+						plotsLength() === 0
+					}
 				>
 					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
 						<div class="box">

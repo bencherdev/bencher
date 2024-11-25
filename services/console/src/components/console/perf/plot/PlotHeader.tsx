@@ -140,53 +140,55 @@ const FullPlotHeader = (props: Props) => {
 	};
 
 	return (
-		<nav class="panel-heading columns is-vcentered">
-			<div class="column">
-				<div class="level is-mobile" style="margin-bottom: 0.5rem;">
-					<div class="level-left">
-						<div class="level-item">
-							<p id={BENCHER_MEASURE_ID} class="level-item">
-								Measure
-							</p>
-							<Show when={measure() && measure()?.uuid !== BENCHER_MEASURE}>
-								<a
-									class="level-item button is-small is-rounded"
-									style="margin-left: 1rem;"
-									title={`${props.isConsole ? "Manage" : "View"} ${
-										measure()?.name
-									}`}
-									href={`
+		<nav class="panel-heading">
+			<div class="columns is-vcentered">
+				<div class="column">
+					<div class="level is-mobile" style="margin-bottom: 0.5rem;">
+						<div class="level-left">
+							<div class="level-item">
+								<p id={BENCHER_MEASURE_ID} class="level-item">
+									Measure
+								</p>
+								<Show when={measure() && measure()?.uuid !== BENCHER_MEASURE}>
+									<a
+										class="level-item button is-small is-rounded"
+										style="margin-left: 1rem;"
+										title={`${props.isConsole ? "Manage" : "View"} ${
+											measure()?.name
+										}`}
+										href={`
 										${resourcePath(
 											props.isConsole,
 										)}/${props.project_slug()}/measures/${
 											measure()?.slug
 										}?${BACK_PARAM}=${encodePath()}`}
-								>
-									<small>{props.isConsole ? "Manage" : "View"}</small>
-								</a>
-							</Show>
+									>
+										<small>{props.isConsole ? "Manage" : "View"}</small>
+									</a>
+								</Show>
+							</div>
 						</div>
 					</div>
+					<select
+						class="card-header-title level-item"
+						style="color: black;"
+						title="Select Measure"
+						onInput={(e) => handleInput(e.currentTarget.value)}
+					>
+						<For each={measures() ?? []}>
+							{(measure: { name: string; uuid: string }) => (
+								<option
+									value={measure.uuid}
+									selected={measure.uuid === selected()}
+								>
+									{measure.name}
+								</option>
+							)}
+						</For>
+					</select>
 				</div>
-				<select
-					class="card-header-title level-item"
-					style="color: black;"
-					title="Select Measure"
-					onInput={(e) => handleInput(e.currentTarget.value)}
-				>
-					<For each={measures() ?? []}>
-						{(measure: { name: string; uuid: string }) => (
-							<option
-								value={measure.uuid}
-								selected={measure.uuid === selected()}
-							>
-								{measure.name}
-							</option>
-						)}
-					</For>
-				</select>
+				<SharedPlot {...props} />
 			</div>
-			<SharedPlot {...props} />
 		</nav>
 	);
 };

@@ -4,16 +4,16 @@ const FallbackPlots = () => {
 	return (
 		<div class="columns is-multiline is-vcentered">
 			<div class="column is-11-tablet is-12-desktop is-6-widescreen">
-				<FallbackPlot spaced={true} />
+				<FallbackPlot />
 			</div>
 			<div class="column is-11-tablet is-12-desktop is-6-widescreen">
-				<FallbackPlot spaced={true} />
+				<FallbackPlot />
 			</div>
 			<div class="column is-11-tablet is-12-desktop is-6-widescreen">
-				<FallbackPlot spaced={true} />
+				<FallbackPlot />
 			</div>
 			<div class="column is-11-tablet is-12-desktop is-6-widescreen">
-				<FallbackPlot spaced={true} />
+				<FallbackPlot />
 			</div>
 		</div>
 	);
