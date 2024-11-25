@@ -5,11 +5,9 @@ import PerfLayout from "../../../../layouts/perf/PerfLayout.astro";
 import Tetris from "../../../../components/site/Tetris.astro";
 import { fetchSSR } from "../../../../components/perf/util";
 import * as Sentry from "@sentry/astro";
-import PinnedPlot from "../../../../components/console/plots/PinnedPlot";
-import FallbackPlot from "../../../../components/console/plots/FallbackPlot";
 import type { JsonProject } from "../../../../types/bencher";
 import PlotsPanel from "../../../../components/console/plots/PlotsPanel";
-import FallbackPlots from "../../../../components/console/plots/FallbackPlots";
+import FallbackPlotsPanel from "../../../../components/console/plots/FallbackPlotsPanel";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -75,16 +73,7 @@ if (params.project && params.project !== "undefined") {
     apiUrl={BENCHER_API_URL}
     params={params}
   >
-    <div slot="fallback">
-      <nav class="level">
-        <div class="level-left">
-          <div class="level-item">
-            <h3 class="title is-3">&nbsp;</h3>
-          </div>
-        </div>
-      </nav>
-      <FallbackPlots />
-    </div>
+    <FallbackPlotsPanel  slot="fallback" />
   </PlotsPanel>
 </div>
 </section>

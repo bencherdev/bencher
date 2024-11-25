@@ -1,8 +1,8 @@
-const FallbackPlot = () => {
+const FallbackPlot = (props: { spaced?: boolean }) => {
 	return (
 		<div>
 			<div class="columns">
-				<div class="column is-11">
+				<div class={`column${props.spaced ? " is-11" : ""}`}>
 					<div class="panel">
 						<nav class="panel-heading columns is-vcentered">
 							<div class="column">&nbsp;</div>
