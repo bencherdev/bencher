@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { createMemo, createResource } from "solid-js";
 import type { JsonPlot } from "../../../types/bencher";
 import {
@@ -9,6 +10,7 @@ import {
 } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
+import { validJwt } from "../../../util/valid";
 import Pinned from "./Pinned";
 
 export interface Props {
@@ -18,17 +20,30 @@ export interface Props {
 }
 
 const PinnedPlot = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
+
 	const user = authUser();
 
 	const project_slug = createMemo(() => props.params?.project);
 	const plotFetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			token: user?.token,
 		};
 	});
 	const getPlot = async (fetcher: {
+		bencher_valid: InitOutput;
 		token: string;
 	}) => {
+		const EMPTY_OBJECT = {};
+		if (!fetcher.bencher_valid) {
+			return EMPTY_OBJECT;
+		}
+		if (fetcher.token && !validJwt(fetcher.token)) {
+			return EMPTY_OBJECT;
+		}
 		const path = `/v0/projects/${props.params?.project}/plots/${props.params?.plot}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
