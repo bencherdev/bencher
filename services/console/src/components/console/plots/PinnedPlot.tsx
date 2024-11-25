@@ -1,15 +1,15 @@
+import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import Pinned from "./Pinned";
+import { createMemo, createResource } from "solid-js";
+import type { JsonPlot } from "../../../types/bencher";
 import {
 	authUser,
 	isAllowedProjectDelete,
 	isAllowedProjectEdit,
 } from "../../../util/auth";
-import { createMemo, createResource } from "solid-js";
 import { httpGet } from "../../../util/http";
-import type { JsonPlot } from "../../../types/bencher";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
-import * as Sentry from "@sentry/astro";
+import Pinned from "./Pinned";
 
 export interface Props {
 	isConsole: boolean;

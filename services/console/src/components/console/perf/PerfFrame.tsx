@@ -103,7 +103,9 @@ const PerfFrame = (props: Props) => {
 			fetcher.project_slug
 		}/perf?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
-			.then((resp) => resp?.data)
+			.then((resp) => {
+				return resp?.data;
+			})
 			.catch((error) => {
 				console.error(error);
 				Sentry.captureException(error);

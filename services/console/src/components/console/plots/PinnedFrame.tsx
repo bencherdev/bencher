@@ -29,7 +29,7 @@ export interface Props {
 }
 
 const PinnedFrame = (props: Props) => {
-	const plotId = props.plot?.uuid;
+	const plotId = createMemo(() => props.plot?.uuid);
 
 	const [isVisible, setIsVisible] = createSignal(false);
 
@@ -43,11 +43,18 @@ const PinnedFrame = (props: Props) => {
 	};
 
 	onMount(() => {
-		const observer = new IntersectionObserver(handleIntersection);
-		const target = document.getElementById(plotId);
-		if (target) observer.observe(target);
-
-		onCleanup(() => observer.disconnect());
+		const setupObserver = () => {
+			const observer = new IntersectionObserver(handleIntersection);
+			const target = document.getElementById(plotId());
+			if (target) {
+				observer.observe(target);
+				onCleanup(() => observer.disconnect());
+			} else {
+				// Retry if the target is not found
+				setTimeout(setupObserver, 1);
+			}
+		};
+		setupObserver();
 	});
 
 	const theme = themeSignal;
@@ -75,6 +82,8 @@ const PinnedFrame = (props: Props) => {
 	const start_time = createMemo(() => {
 		const now = Date.now();
 		const windowMillis = (props.plot?.window ?? 0) * 1_000;
+		// start_time needs to be positive,
+		// so if the window is too large, just start from the unix epoch
 		return (windowMillis > now ? 0 : now - windowMillis).toString();
 	});
 	const end_time = createMemo(() => Date.now().toString());
@@ -115,14 +124,14 @@ const PinnedFrame = (props: Props) => {
 	const handleVoid = (_void: string | PerfTab | boolean | XAxis | null) => {};
 
 	return (
-		<div id={plotId}>
+		<div id={plotId()}>
 			<Show when={isVisible()} fallback={<FallbackPlot />}>
 				<PerfFrame
 					apiUrl={props.apiUrl}
 					user={props.user}
 					isConsole={props.isConsole}
 					isEmbed={true}
-					plotId={plotId}
+					plotId={plotId()}
 					theme={theme}
 					project_slug={props.project_slug}
 					measuresIsEmpty={measuresIsEmpty}
