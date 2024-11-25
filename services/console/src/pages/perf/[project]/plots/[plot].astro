@@ -24,7 +24,7 @@ if (params.project && params.project !== "undefined") {
 		}/plots/${params.plot}`;
 		const resp = await fetchSSR(url);
 		json = await resp.json();
-		if (json?.uuid) {
+		if (json?.title) {
 			title = `${json?.title}`;
 			description = `View ${json?.title} continuous benchmarking plot on Bencher`;
 		} else {
