@@ -11,7 +11,7 @@ use dropshot::HttpError;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::forbidden_error,
+    error::{forbidden_error, resource_not_found_error, BencherResource},
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
     util::{
@@ -54,10 +54,22 @@ impl QueryOrganization {
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, HttpError> {
+        // Do not leak information about organizations.
+        // Always return the same error.
+        Self::is_allowed_resource_id_inner(conn, rbac, organization, auth_user, permission).map_err(
+            |_e| resource_not_found_error(BencherResource::Organization, organization, permission),
+        )
+    }
+
+    fn is_allowed_resource_id_inner(
+        conn: &mut DbConnection,
+        rbac: &Rbac,
+        organization: &ResourceId,
+        auth_user: &AuthUser,
+        permission: bencher_rbac::organization::Permission,
+    ) -> Result<Self, HttpError> {
         let query_organization = Self::from_resource_id(conn, organization)?;
-        rbac.is_allowed_organization(auth_user, permission, &query_organization)
-            .map_err(forbidden_error)?;
-        Ok(query_organization)
+        query_organization.allowed(rbac, auth_user, permission)
     }
 
     pub fn is_allowed_id(
@@ -67,10 +79,35 @@ impl QueryOrganization {
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, HttpError> {
+        // Do not leak information about organizations.
+        // Always return the same error.
+        Self::is_allowed_id_inner(conn, rbac, organization_id, auth_user, permission).map_err(
+            |_e| {
+                resource_not_found_error(BencherResource::Organization, organization_id, permission)
+            },
+        )
+    }
+
+    fn is_allowed_id_inner(
+        conn: &mut DbConnection,
+        rbac: &Rbac,
+        organization_id: OrganizationId,
+        auth_user: &AuthUser,
+        permission: bencher_rbac::organization::Permission,
+    ) -> Result<Self, HttpError> {
         let query_organization = Self::get(conn, organization_id)?;
-        rbac.is_allowed_organization(auth_user, permission, &query_organization)
+        query_organization.allowed(rbac, auth_user, permission)
+    }
+
+    fn allowed(
+        self,
+        rbac: &Rbac,
+        auth_user: &AuthUser,
+        permission: bencher_rbac::organization::Permission,
+    ) -> Result<Self, HttpError> {
+        rbac.is_allowed_organization(auth_user, permission, &self)
             .map_err(forbidden_error)?;
-        Ok(query_organization)
+        Ok(self)
     }
 
     pub fn into_json(self) -> JsonOrganization {

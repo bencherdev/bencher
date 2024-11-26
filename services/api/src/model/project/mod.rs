@@ -10,7 +10,10 @@ use dropshot::HttpError;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::{assert_parentage, forbidden_error, unauthorized_error, BencherResource},
+    error::{
+        assert_parentage, forbidden_error, resource_not_found_error, unauthorized_error,
+        BencherResource,
+    },
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
     util::{
@@ -20,7 +23,7 @@ use crate::{
     },
 };
 
-use super::{organization::OrganizationId, user::auth::BEARER_TOKEN_FORMAT};
+use super::organization::OrganizationId;
 
 pub mod benchmark;
 pub mod branch;
@@ -80,6 +83,19 @@ impl QueryProject {
         auth_user: &AuthUser,
         permission: Permission,
     ) -> Result<Self, HttpError> {
+        // Do not leak information about private projects.
+        // Always return the same error.
+        Self::is_allowed_inner(conn, rbac, project, auth_user, permission)
+            .map_err(|_e| resource_not_found_error(BencherResource::Project, project, permission))
+    }
+
+    fn is_allowed_inner(
+        conn: &mut DbConnection,
+        rbac: &Rbac,
+        project: &ResourceId,
+        auth_user: &AuthUser,
+        permission: Permission,
+    ) -> Result<Self, HttpError> {
         let query_project = Self::from_resource_id(conn, project)?;
         rbac.is_allowed_project(auth_user, permission, &query_project)
             .map_err(forbidden_error)?;
@@ -87,6 +103,19 @@ impl QueryProject {
     }
 
     pub fn is_allowed_public(
+        conn: &mut DbConnection,
+        rbac: &Rbac,
+        project: &ResourceId,
+        auth_user: Option<&AuthUser>,
+    ) -> Result<Self, HttpError> {
+        // Do not leak information about private projects.
+        // Always return the same error.
+        Self::is_allowed_public_inner(conn, rbac, project, auth_user).map_err(|_e| {
+            resource_not_found_error(BencherResource::Project, project, Permission::View)
+        })
+    }
+
+    fn is_allowed_public_inner(
         conn: &mut DbConnection,
         rbac: &Rbac,
         project: &ResourceId,
@@ -104,9 +133,7 @@ impl QueryProject {
                 .map_err(forbidden_error)?;
             Ok(query_project)
         } else {
-            Err(unauthorized_error(format!(
-                "Project ({query_project:?}) is not public and requires authentication.\n{BEARER_TOKEN_FORMAT}",
-            )))
+            Err(unauthorized_error(project))
         }
     }
 

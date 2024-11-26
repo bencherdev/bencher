@@ -20,14 +20,12 @@ use oso::{PolarValue, ToPolar};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection, Rbac},
-    error::{bad_request_error, forbidden_error},
+    error::{bad_request_error, forbidden_error, BEARER_TOKEN_FORMAT},
     model::{organization::OrganizationId, project::ProjectId},
     schema,
 };
 
 use super::{QueryUser, UserId};
-
-pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token.";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {

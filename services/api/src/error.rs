@@ -5,6 +5,8 @@ use dropshot::HttpError;
 use http::StatusCode;
 use thiserror::Error;
 
+pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token.";
+
 #[derive(Debug, Clone, Copy)]
 pub enum BencherResource {
     Organization,
@@ -134,7 +136,9 @@ where
     V: fmt::Debug,
     E: fmt::Display,
 {
-    not_found_error(format!("{resource} ({value:?}) not found: {error}",))
+    not_found_error(
+        format!("{resource} ({value:?}) not found: {error}\n{resource} may be private and require authentication or it may not exist.\n{BEARER_TOKEN_FORMAT}"),
+    )
 }
 
 pub fn resource_conflict_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
