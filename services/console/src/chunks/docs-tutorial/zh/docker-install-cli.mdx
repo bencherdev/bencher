@@ -1,0 +1,35 @@
+import CliUnixScriptVersion from "../../general/cli-unix-script-version.mdx";
+import CliWindowsScriptVersion from "../../general/cli-windows-script-version.mdx";
+import QSCliVersionOutput from "../qs-cli-version-output.mdx";
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+## 安装 `bencher` CLI
+
+### Linux, Mac 和 Unix
+对于 Linux、Mac 和其他类似 Unix 的系统，在终端中运行以下命令，并将 `BENCHER_VERSION` 设置为一个最新的版本，例如 <code>{BENCHER_VERSION}</code>：
+
+<CliUnixScriptVersion />
+
+### Windows
+对于 Windows 系统，在 _PowerShell_ 终端中运行以下命令，并将 `BENCHER_VERSION` 设置为一个最新的版本，例如 <code>{BENCHER_VERSION}</code>：
+
+<CliWindowsScriptVersion />
+
+<br />
+
+> 🐰 如果你遇到错误提示 `running scripts is disabled on this system`：
+> - `以管理员身份运行` 打开 PowerShell
+> - 运行：`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - 输入：`Y`
+> - 重新运行此脚本
+
+有关更多安装选项，请参见[如何安装 `bencher` CLI](/zh/docs/how-to/install-cli)。
+
+现在，让我们测试一下是否安装了 `bencher` CLI。
+
+运行：`bencher --version`
+
+你应该看到：
+
+<QSCliVersionOutput />

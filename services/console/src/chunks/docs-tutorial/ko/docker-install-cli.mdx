@@ -1,0 +1,35 @@
+import CliUnixScriptVersion from "../../general/cli-unix-script-version.mdx";
+import CliWindowsScriptVersion from "../../general/cli-windows-script-version.mdx";
+import QSCliVersionOutput from "../qs-cli-version-output.mdx";
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+## `bencher` CLI 설치
+
+### Linux, Mac, 및 Unix
+Linux, Mac 및 기타 유닉스 계열 시스템에서 터미널에서 다음을 실행하세요. `BENCHER_VERSION`은 <code>{BENCHER_VERSION}</code>과 같은 최근 버전으로 설정합니다:
+
+<CliUnixScriptVersion />
+
+### Windows
+Windows 시스템에서는 _PowerShell_ 터미널에서 다음을 실행하세요. `BENCHER_VERSION`은 <code>{BENCHER_VERSION}</code>과 같은 최근 버전으로 설정합니다:
+
+<CliWindowsScriptVersion />
+
+<br />
+
+> 🐰 `running scripts is disabled on this system`이라는 오류가 발생하면:
+> - `관리자 권한으로 실행`하여 `Powershell 열기`
+> - 실행: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - 엔터: `Y`
+> - 이 스크립트를 다시 실행
+
+추가 설치 옵션은 [`bencher` CLI 설치 방법](/ko/docs/how-to/install-cli)을 참조하세요.
+
+이제 `bencher` CLI가 설치되었는지 테스트해봅시다.
+
+실행: `bencher --version`
+
+다음과 같은 결과가 표시되어야 합니다:
+
+<QSCliVersionOutput />

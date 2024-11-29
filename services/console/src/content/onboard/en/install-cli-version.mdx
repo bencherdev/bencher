@@ -14,20 +14,16 @@ import { BENCHER_VERSION } from "../../../util/ext";
 <h3>Linux, Mac, & Unix</h3>
 For Linux, Mac, and other Unix-like systems run the following in your terminal:
 
-<code>
-<pre>
-export BENCHER_VERSION={BENCHER_VERSION}; curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
-</pre>
-</code>
+```sh
+export BENCHER_VERSION=0.4.28; curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+```
 
 <h3>Windows</h3>
 For Windows systems run the following in a _PowerShell_ terminal:
 
-<code>
-<pre>
-$env:BENCHER_VERSION={BENCHER_VERSION}; irm https://bencher.dev/download/install-cli.ps1 | iex
-</pre>
-</code>
+```powershell
+$env:BENCHER_VERSION="0.4.28"; irm https://bencher.dev/download/install-cli.ps1 | iex
+```
 
 <br />
 

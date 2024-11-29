@@ -179,3 +179,5 @@ So basically, you could just implement a sort algorithm where the comparison fun
 If WASM is chosen, then it should be pretty simple to safely run the code.
 
 Factorio style daily challenges?
+
+Or just an advent of code leader board: https://codspeed.io/advent

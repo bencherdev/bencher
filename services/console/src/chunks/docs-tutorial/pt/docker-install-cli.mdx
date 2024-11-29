@@ -1,0 +1,37 @@
+import CliUnixScriptVersion from "../../general/cli-unix-script-version.mdx";
+import CliWindowsScriptVersion from "../../general/cli-windows-script-version.mdx";
+import QSCliVersionOutput from "../qs-cli-version-output.mdx";
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+## Instalar a CLI `bencher`
+
+### Linux, Mac e Unix
+Para Linux, Mac e outros sistemas similares ao Unix, execute o seguinte no seu terminal,
+com `BENCHER_VERSION` definido para uma versão recente como <code>{BENCHER_VERSION}</code>:
+
+<CliUnixScriptVersion />
+
+### Windows
+Para sistemas Windows, execute o seguinte em um terminal _PowerShell_,
+com `BENCHER_VERSION` definido para uma versão recente como <code>{BENCHER_VERSION}</code>:
+
+<CliWindowsScriptVersion />
+
+<br />
+
+> 🐰 Se você receber um erro que diz `running scripts is disabled on this system`:
+> - `Abra o Powershell` com `Executar como Administrador`
+> - Execute: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - Digite: `Y`
+> - Execute novamente este script
+
+Para opções adicionais de instalação, veja [como instalar a CLI `bencher`](/pt/docs/how-to/install-cli).
+
+Agora, vamos testar se temos a CLI `bencher` instalada.
+
+Execute: `bencher --version`
+
+Você deve ver:
+
+<QSCliVersionOutput />
