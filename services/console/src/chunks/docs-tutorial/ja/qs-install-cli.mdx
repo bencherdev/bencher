@@ -1,9 +1,27 @@
-import CliInstallScripts from "../../general/ja/cli-install-scripts.mdx";
+import CliUnixScript from "../../general/cli-unix-script.mdx";
+import CliWindowsScript from "../../general/cli-windows-script.mdx";
 import QSCliVersionOutput from "../qs-cli-version-output.mdx";
 
 ## `bencher` CLIのインストール
 
-<CliInstallScripts />
+### Linux、Mac、およびUnix
+Linux、Mac、およびその他のUnix系システムでは、ターミナルで以下を実行します：
+
+<CliUnixScript />
+
+### Windows
+Windowsシステムでは、以下のように_PowerShell_ターミナルで実行します：
+
+<CliWindowsScript />
+
+<br />
+
+> 🐰 `このシステムではスクリプトの実行が無効化されています`というエラーが表示される場合：
+> - `管理者として実行`で`Powershellを開く`
+> - 以下を実行： `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - 次に入力：`Y`
+> - このスクリプトを再実行
+
 
 追加のインストールオプションについては、[`bencher` CLIのインストール方法](/ja/docs/how-to/install-cli)を参照してください。
 

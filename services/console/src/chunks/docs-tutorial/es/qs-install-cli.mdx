@@ -1,9 +1,26 @@
-import CliInstallScripts from "../../general/es/cli-install-scripts.mdx";
+import CliUnixScript from "../../general/cli-unix-script.mdx";
+import CliWindowsScript from "../../general/cli-windows-script.mdx";
 import QSCliVersionOutput from "../qs-cli-version-output.mdx";
 
 ## Instala `bencher` CLI
 
-<CliInstallScripts />
+### Linux, Mac, & Unix
+Para Linux, Mac y otros sistemas similares a Unix, ejecuta lo siguiente en tu terminal:
+
+<CliUnixScript />
+
+### Windows
+Para los sistemas Windows, ejecuta lo siguiente en una terminal _PowerShell_:
+
+<CliWindowsScript />
+
+<br />
+
+> 🐰 Si obtienes un error que dice `running scripts is disabled on this system`:
+> - `Abre Powershell` con `Ejecutar como Administrador`
+> - Ejecuta: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - Introduce: `Y`
+> - Vuelve a ejecutar este script
 
 Para opciones de instalación adicionales, consulta [cómo instalar `bencher` CLI](/es/docs/how-to/install-cli).
 

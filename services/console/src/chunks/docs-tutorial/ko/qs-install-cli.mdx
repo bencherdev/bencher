@@ -1,9 +1,26 @@
-import CliInstallScripts from "../../general/ko/cli-install-scripts.mdx";
+import CliUnixScript from "../../general/cli-unix-script.mdx";
+import CliWindowsScript from "../../general/cli-windows-script.mdx";
 import QSCliVersionOutput from "../qs-cli-version-output.mdx";
 
 ## `bencher` CLI 설치하기
 
-<CliInstallScripts />
+### Linux, Mac, & Unix
+Linux, Mac, 그리고 Unix-like 시스템은 터미널에서 다음을 실행하세요:
+
+<CliUnixScript />
+
+### Windows
+Windows 시스템에서는 _PowerShell_ 터미널에서 다음을 실행하세요:
+
+<CliWindowsScript />
+
+<br />
+
+> 🐰 만약 `running scripts is disabled on this system`이라는 오류 메세지가 나타나면:
+> - `관리자 권한으로 Powershell 열기`
+> - Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - Enter: `Y`
+> - 이 스크립트를 다시 실행하세요
 
 추가 설치 옵션은 [`bencher` CLI 설치 방법](/ko/docs/how-to/install-cli)에서 확인하실 수 있습니다.
 
