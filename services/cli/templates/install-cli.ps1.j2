@@ -31,17 +31,18 @@ Print help
 
 #>
 
+$app_name = 'bencher'
+$app_version = if ($env:BENCHER_VERSION) { $env:BENCHER_VERSION } else { '{{ app_version }}' }
+
 param (
     [Parameter(HelpMessage = "The URL of the directory where artifacts can be fetched from")]
-    [string]$ArtifactDownloadUrl = 'https://bencher.dev/download/{{ app_version }}',
+    [string]$ArtifactDownloadUrl = "https://bencher.dev/download/$app_version",
     [Parameter(HelpMessage = "Don't add the install directory to PATH")]
     [switch]$NoModifyPath,
     [Parameter(HelpMessage = "Print Help")]
     [switch]$Help
 )
 
-$app_name = 'bencher'
-$app_version = '{{ app_version }}'
 
 function Install-Binary($install_args) {
   if ($Help) {
