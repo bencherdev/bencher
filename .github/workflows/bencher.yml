@@ -68,6 +68,8 @@ jobs:
           - os: ubuntu-latest
             source: script-gen
           - os: ubuntu-latest
+            source: script-gen-version
+          - os: ubuntu-latest
             source: cargo-main
           - os: ubuntu-latest
             source: cargo-devel
@@ -81,6 +83,8 @@ jobs:
           - os: macos-latest
             source: script-gen
           - os: macos-latest
+            source: script-gen-version
+          - os: macos-latest
             source: cargo-main
           - os: macos-latest
             source: cargo-devel
@@ -93,6 +97,8 @@ jobs:
             source: script-cloud
           - os: windows-latest
             source: script-gen
+          - os: windows-latest
+            source: script-gen-version
           - os: windows-latest
             source: cargo-main
           - os: windows-latest
@@ -112,13 +118,19 @@ jobs:
         if: matrix.source == 'script-cloud' && matrix.os == 'windows-latest'
         run: irm https://bencher.dev/download/install-cli.ps1 | iex
       - uses: actions/checkout@v4
-        if: matrix.source == 'script-gen'
+        if: matrix.source == 'script-gen' || matrix.source == 'script-gen-version'
       - name: Unix CLI Install Script
         if: matrix.source == 'script-gen' && matrix.os != 'windows-latest'
         run: cat services/cli/templates/output/install-cli.sh | sh
+      - name: Unix CLI Install Script Version
+        if: matrix.source == 'script-gen-version' && matrix.os != 'windows-latest'
+        run: export BENCHER_VERSION=0.4.27; cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script
         if: matrix.source == 'script-gen' && matrix.os == 'windows-latest'
         run: gc -Raw services/cli/templates/output/install-cli.ps1 | iex
+      - name: Windows CLI Install Script Version
+        if: matrix.source == 'script-gen-version' && matrix.os == 'windows-latest'
+        run: $env:BENCHER_VERSION="0.4.27"; gc -Raw services/cli/templates/output/install-cli.ps1 | iex
       - name: Cargo CLI Install main
         if: matrix.source == 'cargo-main'
         run: cargo install --git https://github.com/bencherdev/bencher --branch main --locked bencher_cli

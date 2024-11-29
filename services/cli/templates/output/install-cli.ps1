@@ -20,6 +20,9 @@ If you get an error that says "running scripts is disabled on this system":
 - Enter: `Y`
 - Rerun this script
 
+.PARAMETER AppVersion
+The version of the application to install
+
 .PARAMETER ArtifactDownloadUrl
 The URL of the directory where artifacts can be fetched from
 
@@ -31,18 +34,18 @@ Print help
 
 #>
 
-$app_name = 'bencher'
-$app_version = if ($env:BENCHER_VERSION) { $env:BENCHER_VERSION } else { '0.4.28' }
-
 param (
-    [Parameter(HelpMessage = "The URL of the directory where artifacts can be fetched from")]
-    [string]$ArtifactDownloadUrl = "https://bencher.dev/download/$app_version",
-    [Parameter(HelpMessage = "Don't add the install directory to PATH")]
-    [switch]$NoModifyPath,
-    [Parameter(HelpMessage = "Print Help")]
-    [switch]$Help
+  [Parameter(HelpMessage = "The version of the application to install")]
+  [string]$AppVersion = $(if ($env:BENCHER_VERSION) { $env:BENCHER_VERSION } else { '0.4.28' }),
+  [Parameter(HelpMessage = "The URL of the directory where artifacts can be fetched from")]
+  [string]$ArtifactDownloadUrl = "https://bencher.dev/download/$(if ($env:BENCHER_VERSION) { $env:BENCHER_VERSION } else { '0.4.28' })",
+  [Parameter(HelpMessage = "Don't add the install directory to PATH")]
+  [switch]$NoModifyPath,
+  [Parameter(HelpMessage = "Print Help")]
+  [switch]$Help
 )
 
+$app_name = 'bencher'
 
 function Install-Binary($install_args) {
   if ($Help) {
@@ -54,13 +57,13 @@ function Install-Binary($install_args) {
 
   $platforms = @{
     "x86_64-pc-windows-msvc" = @{
-      "artifact_name" = "$app_name-v$app_version-windows-x86-64.exe"
+      "artifact_name" = "$app_name-v$AppVersion-windows-x86-64.exe"
       "zip_ext" = ""
       "bins" = "bencher"
       "bin" = "bencher"
     }
     "aarch64-pc-windows-msvc" = @{
-      "artifact_name" = "$app_name-v$app_version-windows-arm-64.exe"
+      "artifact_name" = "$app_name-v$AppVersion-windows-arm-64.exe"
       "zip_ext" = ""
       "bins" = "bencher"
       "bin" = "bencher"
@@ -139,7 +142,7 @@ https://github.com/bencherdev/bencher/issues
 
   # Download and unpack!
   $url = "$download_url/$artifact_name"
-  Write-Information "Downloading Bencher CLI ($app_name $app_version)"
+  Write-Information "Downloading Bencher CLI ($app_name $AppVersion)"
   Write-Verbose "  From: $url"
   Write-Verbose "  To:   $dir_path"
   $wc = New-Object Net.Webclient
