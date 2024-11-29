@@ -16,8 +16,8 @@ fi
 set -u
 
 APP_NAME=bencher
-APP_VERSION="0.4.28"
-ARTIFACT_DOWNLOAD_URL="${INSTALLER_DOWNLOAD_URL:-https://bencher.dev/download/0.4.28}"
+APP_VERSION="${BENCHER_VERSION:-0.4.28}"
+ARTIFACT_DOWNLOAD_URL="${INSTALLER_DOWNLOAD_URL:-https://bencher.dev/download/$APP_VERSION}"
 PRINT_VERBOSE=${INSTALLER_PRINT_VERBOSE:-0}
 PRINT_QUIET=${INSTALLER_PRINT_QUIET:-0}
 NO_MODIFY_PATH=${INSTALLER_NO_MODIFY_PATH:-0}
@@ -33,7 +33,7 @@ usage() {
     cat <<EOF
 install-cli.sh
 
-Bencher CLI v0.4.28 Installer
+Bencher CLI v$APP_VERSION Installer
 
 This script detects what platform you're on and fetches an appropriate archive from https://bencher.dev.
 It then unpacks the binaries and installs them to \$CARGO_HOME/bin (\$HOME/.cargo/bin).
