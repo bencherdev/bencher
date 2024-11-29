@@ -55,7 +55,7 @@ function Install-Binary($install_args) {
   $platforms = @{
   {%- for artifact in artifacts %}
     "{{ artifact.target_triple }}" = @{
-      "artifact_name" = "{{ artifact.name }}"
+      "artifact_name" = "$app_name-v$app_version-{{ artifact.os_arch }}.exe"
       "zip_ext" = "{{ artifact.zip_style }}"
       "bins" = {% for bin in artifact.binaries -%}
         "{{ bin }}"{{ ", " if not loop.last else "" }}

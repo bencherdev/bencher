@@ -16,7 +16,9 @@ const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const collection = Collection.onboard;
 const cloudPage = await getEntry(collection, "en/install-cli");
 const selfHostedPage = await getEntry(collection, "en/install-cli-version");
-const { Content } = isBencherCloud() ? await cloudPage.render() : await selfHostedPage.render();
+const { Content } = isBencherCloud()
+	? await cloudPage.render()
+	: await selfHostedPage.render();
 ---
 
 <BaseLayout

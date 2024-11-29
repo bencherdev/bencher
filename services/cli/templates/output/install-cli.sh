@@ -127,25 +127,25 @@ download_binary_and_run_installer() {
     # Lookup what to download/unpack based on platform
     case "$_arch" in 
         "x86_64-unknown-linux-gnu")
-            _artifact_name="bencher-v0.4.28-linux-x86-64"
+            _artifact_name="$APP_NAME-v${APP_VERSION}-linux-x86-64"
             _zip_ext=""
             _bins="bencher"
             _bin="bencher"
             ;;
         "aarch64-unknown-linux-gnu")
-            _artifact_name="bencher-v0.4.28-linux-arm-64"
+            _artifact_name="$APP_NAME-v${APP_VERSION}-linux-arm-64"
             _zip_ext=""
             _bins="bencher"
             _bin="bencher"
             ;;
         "x86_64-apple-darwin")
-            _artifact_name="bencher-v0.4.28-macos-x86-64"
+            _artifact_name="$APP_NAME-v${APP_VERSION}-macos-x86-64"
             _zip_ext=""
             _bins="bencher"
             _bin="bencher"
             ;;
         "aarch64-apple-darwin")
-            _artifact_name="bencher-v0.4.28-macos-arm-64"
+            _artifact_name="$APP_NAME-v${APP_VERSION}-macos-arm-64"
             _zip_ext=""
             _bins="bencher"
             _bin="bencher"

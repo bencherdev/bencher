@@ -127,7 +127,7 @@ download_binary_and_run_installer() {
     # Lookup what to download/unpack based on platform
     case "$_arch" in {% for artifact in artifacts %}
         "{{ artifact.target_triple }}")
-            _artifact_name="{{ artifact.name }}"
+            _artifact_name="$APP_NAME-v${APP_VERSION}-{{ artifact.os_arch }}"
             _zip_ext="{{ artifact.zip_style }}"
             _bins="{% for bin in artifact.binaries %}{{ bin }}{{ " " if not loop.last else "" }}{% endfor %}"
             _bin="{{ artifact.binaries[0] }}"

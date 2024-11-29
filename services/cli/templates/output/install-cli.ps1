@@ -54,13 +54,13 @@ function Install-Binary($install_args) {
 
   $platforms = @{
     "x86_64-pc-windows-msvc" = @{
-      "artifact_name" = "bencher-v0.4.28-windows-x86-64.exe"
+      "artifact_name" = "$app_name-v$app_version-windows-x86-64.exe"
       "zip_ext" = ""
       "bins" = "bencher"
       "bin" = "bencher"
     }
     "aarch64-pc-windows-msvc" = @{
-      "artifact_name" = "bencher-v0.4.28-windows-arm-64.exe"
+      "artifact_name" = "$app_name-v$app_version-windows-arm-64.exe"
       "zip_ext" = ""
       "bins" = "bencher"
       "bin" = "bencher"

@@ -105,12 +105,9 @@ const SH_ARTIFACTS: &[(&str, &str)] = &[
     ("aarch64-apple-darwin", "macos-arm-64"),
 ];
 const PS1_ARTIFACTS: &[(&str, &str)] = &[
-    ("x86_64-pc-windows-msvc", "windows-x86-64.exe"),
-    ("aarch64-pc-windows-msvc", "windows-arm-64.exe"),
+    ("x86_64-pc-windows-msvc", "windows-x86-64"),
+    ("aarch64-pc-windows-msvc", "windows-arm-64"),
 ];
-fn artifact_name(os_arch: &str) -> String {
-    format!("bencher-v{API_VERSION}-{os_arch}")
-}
 const BENCHER_BIN: &str = "bencher";
 
 impl TemplateKind {
@@ -131,8 +128,8 @@ impl TemplateKind {
 
     fn as_artifact(&(target_triple, os_arch): &(&str, &str)) -> TemplateArtifact {
         TemplateArtifact {
-            name: artifact_name(os_arch),
-            target_triple: (target_triple).to_owned(),
+            target_triple: target_triple.to_owned(),
+            os_arch: os_arch.to_owned(),
             binaries: vec![BENCHER_BIN.to_owned()],
             zip_style: ZipStyle::TempDir,
         }
@@ -159,10 +156,10 @@ impl TemplateContext {
 
 #[derive(Debug, Serialize)]
 pub struct TemplateArtifact {
-    /// The name of the artifact
-    name: String,
     /// The targets the artifact supports
     target_triple: TargetTriple,
+    /// The OS architecture
+    os_arch: String,
     /// The binaries the artifact contains (name, assumed at root)
     binaries: Vec<String>,
     /// The style of zip this is
