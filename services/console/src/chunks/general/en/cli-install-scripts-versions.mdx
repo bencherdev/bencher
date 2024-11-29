@@ -1,0 +1,26 @@
+import CliUnixScript from "../cli-unix-script.mdx";
+import CliUnixScriptVersion from "../cli-unix-script-version.mdx";
+import CliWindowsScript from "../cli-windows-script.mdx";
+import CliWindowsScriptVersion from "../cli-windows-script-version.mdx";
+
+### Linux, Mac, & Unix
+For Linux, Mac, and other Unix-like systems run the following in your terminal:
+
+<CliUnixScript />
+
+<CliUnixScriptVersion />
+
+### Windows
+For Windows systems run the following in a _PowerShell_ terminal:
+
+<CliWindowsScript />
+
+<CliWindowsScriptVersion />
+
+<br />
+
+> 🐰 If you get an error that says `running scripts is disabled on this system`:
+> - `Open Powershell` with `Run as Administrator`
+> - Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - Enter: `Y`
+> - Rerun this script

@@ -1,0 +1,38 @@
+import CliUnixScript from "../../../general/cli-unix-script.mdx";
+import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliWindowsScript from "../../../general/cli-windows-script.mdx";
+import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+
+### Linux, Mac 和 Unix
+对于 Linux、Mac 和其他类 Unix 系统，请在终端中运行以下命令：
+
+<CliUnixScript />
+
+有一个可选的 `BENCHER_VERSION` 环境变量可以指定要使用的 Bencher CLI 的确切版本。
+否则，它将默认使用最新的 CLI 版本。
+如果且仅当使用 [Bencher *自托管*][bencher self hosted] 时指定一个确切版本。
+如果使用 Bencher *云*，则__不要__指定确切版本，因为仍存在偶尔的不兼容更改。
+
+<CliUnixScriptVersion />
+
+### Windows
+对于 Windows 系统，请在 _PowerShell_ 终端中运行以下命令：
+
+<CliWindowsScript />
+
+有一个可选的 `BENCHER_VERSION` 环境变量可以指定要使用的 Bencher CLI 的确切版本。
+否则，它将默认使用最新的 CLI 版本。
+如果且仅当使用 [Bencher *自托管*][bencher self hosted] 时指定一个确切版本。
+如果使用 Bencher *云*，则__不要__指定确切版本，因为仍然存在偶尔的不兼容更改。
+
+<CliWindowsScriptVersion />
+
+<br />
+
+> 🐰 如果出现错误提示 `该系统上禁用了运行脚本`：
+> - 以 `管理员身份运行` `打开 PowerShell`
+> - 运行：`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - 输入：`Y`
+> - 重新运行此脚本
+
+[bencher self hosted]: /zh/docs/explanation/bencher-self-hosted/

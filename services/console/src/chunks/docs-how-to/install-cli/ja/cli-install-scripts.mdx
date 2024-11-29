@@ -1,0 +1,38 @@
+import CliUnixScript from "../../../general/cli-unix-script.mdx";
+import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliWindowsScript from "../../../general/cli-windows-script.mdx";
+import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+
+### Linux、Mac、およびUnix
+Linux、Mac、および他のUnixライクなシステムの場合は、以下を端末で実行してください：
+
+<CliUnixScript />
+
+`BENCHER_VERSION` 環境変数を使って、使用するBencher CLIの正確なバージョンを指定することができます。
+そうでない場合は、デフォルトで最新のCLIバージョンが使用されます。
+[ベンチャー *セルフホステッド*][bencher self hosted] を使用している場合にのみ、正確なバージョンを指定してください。
+ベンチャー *クラウド* を使用している場合は、まだ時折致命的な変更があるため、正確なバージョンを指定しないでください。
+
+<CliUnixScriptVersion />
+
+### Windows
+Windowsシステムでは、_PowerShell_ ターミナルで以下を実行してください：
+
+<CliWindowsScript />
+
+`BENCHER_VERSION` 環境変数を使って、使用するBencher CLIの正確なバージョンを指定することができます。
+そうでない場合は、デフォルトで最新のCLIバージョンが使用されます。
+[ベンチャー *セルフホステッド*][bencher self hosted] を使用している場合にのみ、正確なバージョンを指定してください。
+ベンチャー *クラウド* を使用している場合は、まだ時折致命的な変更があるため、正確なバージョンを指定しないでください。
+
+<CliWindowsScriptVersion />
+
+<br />
+
+> 🐰 `running scripts is disabled on this system` というエラーが発生した場合：
+> - `管理者として実行`で`Powershellを開く`
+> - 実行: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - 入力: `Y`
+> - このスクリプトを再実行
+
+[bencher self hosted]: /ja/docs/explanation/bencher-self-hosted/

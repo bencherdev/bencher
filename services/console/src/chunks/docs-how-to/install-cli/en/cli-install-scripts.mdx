@@ -1,0 +1,38 @@
+import CliUnixScript from "../../../general/cli-unix-script.mdx";
+import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliWindowsScript from "../../../general/cli-windows-script.mdx";
+import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+
+### Linux, Mac, & Unix
+For Linux, Mac, and other Unix-like systems run the following in your terminal:
+
+<CliUnixScript />
+
+There is an optional `BENCHER_VERSION` environment variable to specify an exact version of the Bencher CLI to use.
+Otherwise, it will default to using the latest CLI version.
+Specify an exact version if and only if using [Bencher *Self-Hosted*][bencher self hosted].
+Do __not__ specify an exact version if using Bencher *Cloud* as there are still occasional breaking changes.
+
+<CliUnixScriptVersion />
+
+### Windows
+For Windows systems run the following in a _PowerShell_ terminal:
+
+<CliWindowsScript />
+
+There is an optional `BENCHER_VERSION` environment variable to specify an exact version of the Bencher CLI to use.
+Otherwise, it will default to using the latest CLI version.
+Specify an exact version if and only if using [Bencher *Self-Hosted*][bencher self hosted].
+Do __not__ specify an exact version if using Bencher *Cloud* as there are still occasional breaking changes.
+
+<CliWindowsScriptVersion />
+
+<br />
+
+> 🐰 If you get an error that says `running scripts is disabled on this system`:
+> - `Open Powershell` with `Run as Administrator`
+> - Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - Enter: `Y`
+> - Rerun this script
+
+[bencher self hosted]: /docs/explanation/bencher-self-hosted/

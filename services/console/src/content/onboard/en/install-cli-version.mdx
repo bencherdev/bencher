@@ -7,21 +7,27 @@ modified: "2024-11-29T07:01:00Z"
 sortOrder: 1
 ---
 
+import { BENCHER_VERSION } from "../../../util/ext";
+
 <h2>Install CLI</h2>
 
 <h3>Linux, Mac, & Unix</h3>
 For Linux, Mac, and other Unix-like systems run the following in your terminal:
 
-```sh
-curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
-```
+<code>
+<pre>
+BENCHER_VERSION={BENCHER_VERSION} curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+</pre>
+</code>
 
 <h3>Windows</h3>
 For Windows systems run the following in a _PowerShell_ terminal:
 
-```powershell
-irm https://bencher.dev/download/install-cli.ps1 | iex
-```
+<code>
+<pre>
+$env:BENCHER_VERSION={BENCHER_VERSION}; irm https://bencher.dev/download/install-cli.ps1 | iex
+</pre>
+</code>
 
 <br />
 
