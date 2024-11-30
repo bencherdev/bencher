@@ -1,38 +1,54 @@
 import CliUnixScript from "../../../general/cli-unix-script.mdx";
 import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliUnixSelfHosted from "../cli-unix-script-self-hosted.mdx";
 import CliWindowsScript from "../../../general/cli-windows-script.mdx";
 import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+import CliWindowsSelfHosted from "../cli-windows-script-self-hosted.mdx";
 
-### Linux, Mac, & Unix
-Linux, Mac, 및 다른 유닉스 계열 시스템에서는 터미널에서 다음 명령을 실행하세요:
+### Linux, Mac 및 Unix
+Linux, Mac 및 기타 Unix와 유사한 시스템에서는 터미널에서 다음을 실행하십시오:
 
 <CliUnixScript />
 
-Bencher CLI의 정확한 버전을 지정하기 위한 선택적 `BENCHER_VERSION` 환경 변수가 있습니다.
+필수는 아니지만 `BENCHER_VERSION` 환경 변수를 사용하여 구체적인 벤처 CLI 버전을 지정할 수 있습니다.
 그렇지 않으면 기본적으로 최신 CLI 버전을 사용하게 됩니다.
-[Bencher *Self-Hosted*를][bencher self hosted] 사용하는 경우에만 정확한 버전을 지정하세요.
-Bencher *Cloud*를 사용하는 경우에는 여전히 가끔 깨지는 변경사항이 있기 때문에 정확한 버전을 지정하지 마세요.
+구체적인 버전을 지정해야 하는 경우는 오직 [벤처 *자체 호스팅*][bencher self hosted]을 사용하는 경우에 한합니다.
+벤처 *클라우드*를 사용하는 경우에는 여전히 가끔 호환되지 않는 변경 사항이 발생할 수 있으므로 구체적인 버전을 지정하지 __마십시오__.
 
 <CliUnixScriptVersion />
 
+또한, Bencher 자체 호스팅 사용자는 자신이 호스팅하는 인스턴스에서 설치 스크립트를 사용할 수 있으며,
+이 방법은 Bencher 자체 호스팅 인스턴스를 업그레이드할 때 CI 설정에서의 코드 변경을 요구하지 않는다는 추가적인 이점이 있습니다.
+예를 들어, Bencher 자체 호스팅 콘솔이 `https://bencher.example.com`에서 실행 중인 경우,
+다음과 같이 실행할 수 있습니다:
+
+<CliUnixSelfHosted />
+
 ### Windows
-Windows 시스템에서는 _PowerShell_ 터미널에서 다음 명령을 실행하세요:
+Windows 시스템에서는 _PowerShell_ 터미널에서 다음을 실행하십시오:
 
 <CliWindowsScript />
 
-Bencher CLI의 정확한 버전을 지정하기 위한 선택적 `BENCHER_VERSION` 환경 변수가 있습니다.
+필수는 아니지만 `BENCHER_VERSION` 환경 변수를 사용하여 구체적인 벤처 CLI 버전을 지정할 수 있습니다.
 그렇지 않으면 기본적으로 최신 CLI 버전을 사용하게 됩니다.
-[Bencher *Self-Hosted*를][bencher self hosted] 사용하는 경우에만 정확한 버전을 지정하세요.
-Bencher *Cloud*를 사용하는 경우에는 여전히 가끔 깨지는 변경사항이 있기 때문에 정확한 버전을 지정하지 마세요.
+구체적인 버전을 지정해야 하는 경우는 오직 [벤처 *자체 호스팅*][bencher self hosted]을 사용하는 경우에 한합니다.
+벤처 *클라우드*를 사용하는 경우에는 여전히 가끔 호환되지 않는 변경 사항이 발생할 수 있으므로 구체적인 버전을 지정하지 __마십시오__.
 
 <CliWindowsScriptVersion />
 
+또한, Bencher 자체 호스팅 사용자는 자신이 호스팅하는 인스턴스에서 설치 스크립트를 사용할 수 있으며,
+이 방법은 Bencher 자체 호스팅 인스턴스를 업그레이드할 때 CI 설정에서의 코드 변경을 요구하지 않는다는 추가적인 이점이 있습니다.
+예를 들어, Bencher 자체 호스팅 콘솔이 `https://bencher.example.com`에서 실행 중인 경우,
+다음과 같이 실행할 수 있습니다:
+
+<CliWindowsSelfHosted />
+
 <br />
 
-> 🐰 `running scripts is disabled on this system`라는 오류가 발생하면:
+> 🐰 `running scripts is disabled on this system`이라는 오류가 발생하면:
 > - `관리자 권한으로 실행`하여 `Powershell 열기`
 > - 실행: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
 > - 입력: `Y`
-> - 이 스크립트를 다시 실행하세요.
+> - 이 스크립트를 다시 실행하십시오
 
 [bencher self hosted]: /ko/docs/explanation/bencher-self-hosted/

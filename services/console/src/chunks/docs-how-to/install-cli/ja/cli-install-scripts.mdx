@@ -1,38 +1,56 @@
 import CliUnixScript from "../../../general/cli-unix-script.mdx";
 import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliUnixSelfHosted from "../cli-unix-script-self-hosted.mdx";
 import CliWindowsScript from "../../../general/cli-windows-script.mdx";
 import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+import CliWindowsSelfHosted from "../cli-windows-script-self-hosted.mdx";
 
 ### Linux、Mac、およびUnix
-Linux、Mac、および他のUnixライクなシステムの場合は、以下を端末で実行してください：
+Linux、Mac、および他のUnix系システムでは、以下のコマンドをターミナルで実行してください:
 
 <CliUnixScript />
 
-`BENCHER_VERSION` 環境変数を使って、使用するBencher CLIの正確なバージョンを指定することができます。
-そうでない場合は、デフォルトで最新のCLIバージョンが使用されます。
-[ベンチャー *セルフホステッド*][bencher self hosted] を使用している場合にのみ、正確なバージョンを指定してください。
-ベンチャー *クラウド* を使用している場合は、まだ時折致命的な変更があるため、正確なバージョンを指定しないでください。
+`BENCHER_VERSION`という環境変数をオプションで指定すると、Bencher CLIの特定のバージョンを使用することができます。
+指定しない場合は、最新のCLIバージョンがデフォルトで使用されます。
+特定のバージョンを指定するのは、[Bencher *Self-Hosted*][bencher self hosted]を使用する場合に限ります。
+Bencher *Cloud*を使用する場合には、稀に互換性が破られる変更があるため、特定バージョンを指定しないでください。
 
 <CliUnixScriptVersion />
 
+別の方法として、Bencher Self-Hostedユーザーは、自身のセルフホスト環境からインストールスクリプトを使用することができ、
+常に正しいバージョンの`bencher` CLIをインストールすることができます。
+これには、Bencher Self-Hostedインスタンスをアップグレードする際にCI設定を変更する必要がないという追加の利点があります。
+例えば、あなたのBencher Self-Hostedコンソールが`https://bencher.example.com`で実行されている場合、
+以下を実行できます:
+
+<CliUnixSelfHosted />
+
 ### Windows
-Windowsシステムでは、_PowerShell_ ターミナルで以下を実行してください：
+Windowsシステムでは、_PowerShell_ターミナルで以下のコマンドを実行してください:
 
 <CliWindowsScript />
 
-`BENCHER_VERSION` 環境変数を使って、使用するBencher CLIの正確なバージョンを指定することができます。
-そうでない場合は、デフォルトで最新のCLIバージョンが使用されます。
-[ベンチャー *セルフホステッド*][bencher self hosted] を使用している場合にのみ、正確なバージョンを指定してください。
-ベンチャー *クラウド* を使用している場合は、まだ時折致命的な変更があるため、正確なバージョンを指定しないでください。
+`BENCHER_VERSION`という環境変数をオプションで指定すると、Bencher CLIの特定のバージョンを使用することができます。
+指定しない場合は、最新のCLIバージョンがデフォルトで使用されます。
+特定のバージョンを指定するのは、[Bencher *Self-Hosted*][bencher self hosted]を使用する場合に限ります。
+Bencher *Cloud*を使用する場合には、稀に互換性が破られる変更があるため、特定バージョンを指定しないでください。
 
 <CliWindowsScriptVersion />
 
+別の方法として、Bencher Self-Hostedユーザーは、自身のセルフホスト環境からインストールスクリプトを使用することができ、
+常に正しいバージョンの`bencher` CLIをインストールすることができます。
+これには、Bencher Self-Hostedインスタンスをアップグレードする際にCI設定を変更する必要がないという追加の利点があります。
+例えば、あなたのBencher Self-Hostedコンソールが`https://bencher.example.com`で実行されている場合、
+以下を実行できます:
+
+<CliWindowsSelfHosted />
+
 <br />
 
-> 🐰 `running scripts is disabled on this system` というエラーが発生した場合：
-> - `管理者として実行`で`Powershellを開く`
-> - 実行: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
-> - 入力: `Y`
+> 🐰 `このシステムでのスクリプトの実行が無効になっています`というエラーが表示された場合:
+> - `管理者として実行`を選んで`Powershell`を開く
+> - 以下を実行: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - `Y`を入力
 > - このスクリプトを再実行
 
 [bencher self hosted]: /ja/docs/explanation/bencher-self-hosted/

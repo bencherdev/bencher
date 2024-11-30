@@ -1,36 +1,54 @@
 import CliUnixScript from "../../../general/cli-unix-script.mdx";
 import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliUnixSelfHosted from "../cli-unix-script-self-hosted.mdx";
 import CliWindowsScript from "../../../general/cli-windows-script.mdx";
 import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+import CliWindowsSelfHosted from "../cli-windows-script-self-hosted.mdx";
 
-### Linux, Mac 和 Unix
-对于 Linux、Mac 和其他类 Unix 系统，请在终端中运行以下命令：
+### Linux, Mac, 和 Unix
+对于 Linux、Mac 和其他类 Unix 系统，在终端中运行以下命令：
 
 <CliUnixScript />
 
-有一个可选的 `BENCHER_VERSION` 环境变量可以指定要使用的 Bencher CLI 的确切版本。
-否则，它将默认使用最新的 CLI 版本。
-如果且仅当使用 [Bencher *自托管*][bencher self hosted] 时指定一个确切版本。
-如果使用 Bencher *云*，则__不要__指定确切版本，因为仍存在偶尔的不兼容更改。
+可以选择使用环境变量 `BENCHER_VERSION` 来指定要使用的 Bencher CLI 的确切版本。
+否则，将默认使用最新的 CLI 版本。
+仅在使用 [Bencher *自托管*][bencher self hosted] 时，才指定确切版本。
+如果使用 Bencher *云*，请勿指定确切版本，因为仍然会有偶尔的重大变更。
 
 <CliUnixScriptVersion />
 
+或者，Bencher 自托管用户可以使用他们自己自托管实例中的安装脚本
+以确保始终安装正确版本的 `bencher` CLI。
+这还有一个附加好处，即在升级 Bencher 自托管实例时无需更改 CI 配置的代码。
+例如，如果您的 Bencher 自托管控制台运行在 `https://bencher.example.com`，
+可以运行以下命令：
+
+<CliUnixSelfHosted />
+
 ### Windows
-对于 Windows 系统，请在 _PowerShell_ 终端中运行以下命令：
+对于 Windows 系统，在 _PowerShell_ 终端中运行以下命令：
 
 <CliWindowsScript />
 
-有一个可选的 `BENCHER_VERSION` 环境变量可以指定要使用的 Bencher CLI 的确切版本。
-否则，它将默认使用最新的 CLI 版本。
-如果且仅当使用 [Bencher *自托管*][bencher self hosted] 时指定一个确切版本。
-如果使用 Bencher *云*，则__不要__指定确切版本，因为仍然存在偶尔的不兼容更改。
+可以选择使用环境变量 `BENCHER_VERSION` 来指定要使用的 Bencher CLI 的确切版本。
+否则，将默认使用最新的 CLI 版本。
+仅在使用 [Bencher *自托管*][bencher self hosted] 时，才指定确切版本。
+如果使用 Bencher *云*，请勿指定确切版本，因为仍然会有偶尔的重大变更。
 
 <CliWindowsScriptVersion />
 
+或者，Bencher 自托管用户可以使用他们自己自托管实例中的安装脚本
+以确保始终安装正确版本的 `bencher` CLI。
+这还有一个附加好处，即在升级 Bencher 自托管实例时无需更改 CI 配置的代码。
+例如，如果您的 Bencher 自托管控制台运行在 `https://bencher.example.com`，
+可以运行以下命令：
+
+<CliWindowsSelfHosted />
+
 <br />
 
-> 🐰 如果出现错误提示 `该系统上禁用了运行脚本`：
-> - 以 `管理员身份运行` `打开 PowerShell`
+> 🐰 如果您收到 `running scripts is disabled on this system` 的错误：
+> - `以管理员身份运行` 打开 Powershell
 > - 运行：`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
 > - 输入：`Y`
 > - 重新运行此脚本

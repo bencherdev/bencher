@@ -1,7 +1,9 @@
 import CliUnixScript from "../../../general/cli-unix-script.mdx";
 import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliUnixSelfHosted from "../cli-unix-script-self-hosted.mdx";
 import CliWindowsScript from "../../../general/cli-windows-script.mdx";
 import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+import CliWindowsSelfHosted from "../cli-windows-script-self-hosted.mdx";
 
 ### Linux, Mac, & Unix
 For Linux, Mac, and other Unix-like systems run the following in your terminal:
@@ -15,6 +17,14 @@ Do __not__ specify an exact version if using Bencher *Cloud* as there are still 
 
 <CliUnixScriptVersion />
 
+Alternatively, Bencher Self-Hosted users can use the install script from their own self-hosted instance
+to make sure they are always installing the correct version of the `bencher` CLI.
+This has the added benefit of not requiring a code change to your CI configuration when upgrading your Bencher Self-Hosted instance.
+For example, if your Bencher Self-Hosted console is running at `https://bencher.example.com`,
+you could run the following:
+
+<CliUnixSelfHosted />
+
 ### Windows
 For Windows systems run the following in a _PowerShell_ terminal:
 
@@ -26,6 +36,14 @@ Specify an exact version if and only if using [Bencher *Self-Hosted*][bencher se
 Do __not__ specify an exact version if using Bencher *Cloud* as there are still occasional breaking changes.
 
 <CliWindowsScriptVersion />
+
+Alternatively, Bencher Self-Hosted users can use the install script from their own self-hosted instance
+to make sure they are always installing the correct version of the `bencher` CLI.
+This has the added benefit of not requiring a code change to your CI configuration when upgrading your Bencher Self-Hosted instance.
+For example, if your Bencher Self-Hosted console is running at `https://bencher.example.com`,
+you could run the following:
+
+<CliWindowsSelfHosted />
 
 <br />
 

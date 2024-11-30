@@ -1,38 +1,56 @@
 import CliUnixScript from "../../../general/cli-unix-script.mdx";
 import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliUnixSelfHosted from "../cli-unix-script-self-hosted.mdx";
 import CliWindowsScript from "../../../general/cli-windows-script.mdx";
 import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+import CliWindowsSelfHosted from "../cli-windows-script-self-hosted.mdx";
 
-### Linux, Mac, y Unix
-Para Linux, Mac y otros sistemas similares a Unix, ejecuta lo siguiente en tu terminal:
+### Linux, Mac y Unix
+Para Linux, Mac y otros sistemas similares a Unix, ejecute lo siguiente en su terminal:
 
 <CliUnixScript />
 
-Hay una variable de entorno opcional `BENCHER_VERSION` para especificar una versión exacta del CLI de Bencher a utilizar.
-De lo contrario, se usará por defecto la última versión del CLI.
-Especifica una versión exacta solamente si estás utilizando [Bencher *Self-Hosted*][bencher self hosted].
-No __especifiques__ una versión exacta si usas Bencher *Cloud*, ya que todavía hay cambios de ruptura ocasionales.
+Existe una variable de entorno opcional `BENCHER_VERSION` para especificar una versión exacta del CLI de Bencher a utilizar.
+De lo contrario, utilizará por defecto la última versión del CLI.
+Especificar una versión exacta solo si está utilizando [Bencher *Autohospedado*][bencher self hosted].
+No especifique una versión exacta si está utilizando Bencher *Cloud* ya que todavía hay cambios importantes ocasionales.
 
 <CliUnixScriptVersion />
 
+Alternativamente, los usuarios de Bencher Autohospedado pueden usar el script de instalación desde su propia instancia autohospedada
+para asegurarse de que siempre están instalando la versión correcta del CLI de `bencher`.
+Esto tiene el beneficio adicional de no requerir un cambio de código en la configuración de su CI al actualizar su instancia de Bencher Autohospedado.
+Por ejemplo, si su consola de Bencher Autohospedado está funcionando en `https://bencher.example.com`,
+podría ejecutar lo siguiente:
+
+<CliUnixSelfHosted />
+
 ### Windows
-Para sistemas Windows ejecuta lo siguiente en una terminal _PowerShell_:
+Para sistemas Windows, ejecute lo siguiente en un terminal _PowerShell_:
 
 <CliWindowsScript />
 
-Hay una variable de entorno opcional `BENCHER_VERSION` para especificar una versión exacta del CLI de Bencher a utilizar.
-De lo contrario, se usará por defecto la última versión del CLI.
-Especifica una versión exacta solamente si estás utilizando [Bencher *Self-Hosted*][bencher self hosted].
-No __especifiques__ una versión exacta si usas Bencher *Cloud*, ya que todavía hay cambios de ruptura ocasionales.
+Existe una variable de entorno opcional `BENCHER_VERSION` para especificar una versión exacta del CLI de Bencher a utilizar.
+De lo contrario, utilizará por defecto la última versión del CLI.
+Especificar una versión exacta solo si está utilizando [Bencher *Autohospedado*][bencher self hosted].
+No especifique una versión exacta si está utilizando Bencher *Cloud* ya que todavía hay cambios importantes ocasionales.
 
 <CliWindowsScriptVersion />
 
+Alternativamente, los usuarios de Bencher Autohospedado pueden usar el script de instalación desde su propia instancia autohospedada
+para asegurarse de que siempre están instalando la versión correcta del CLI de `bencher`.
+Esto tiene el beneficio adicional de no requerir un cambio de código en la configuración de su CI al actualizar su instancia de Bencher Autohospedado.
+Por ejemplo, si su consola de Bencher Autohospedado está funcionando en `https://bencher.example.com`,
+podría ejecutar lo siguiente:
+
+<CliWindowsSelfHosted />
+
 <br />
 
-> 🐰 Si obtienes un error que dice `running scripts is disabled on this system`:
-> - `Abre Powershell` con `Ejecutar como Administrador`
-> - Ejecuta: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
-> - Introduce: `Y`
-> - Vuelve a ejecutar este script
+> 🐰 Si recibe un error que dice `running scripts is disabled on this system`:
+> - `Abra Powershell` con `Ejecutar como Administrador`
+> - Ejecute: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - Ingrese: `Y`
+> - Vuelva a ejecutar este script
 
 [bencher self hosted]: /es/docs/explanation/bencher-self-hosted/

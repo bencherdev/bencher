@@ -1,38 +1,56 @@
 import CliUnixScript from "../../../general/cli-unix-script.mdx";
 import CliUnixScriptVersion from "../../../general/cli-unix-script-version.mdx";
+import CliUnixSelfHosted from "../cli-unix-script-self-hosted.mdx";
 import CliWindowsScript from "../../../general/cli-windows-script.mdx";
 import CliWindowsScriptVersion from "../../../general/cli-windows-script-version.mdx";
+import CliWindowsSelfHosted from "../cli-windows-script-self-hosted.mdx";
 
 ### Linux, Mac, & Unix
 Pour Linux, Mac et autres systèmes de type Unix, exécutez ce qui suit dans votre terminal :
 
 <CliUnixScript />
 
-Il existe une variable d'environnement optionnelle `BENCHER_VERSION` pour spécifier une version exacte du CLI de Bencher à utiliser.
-Sinon, la version la plus récente du CLI sera utilisée par défaut.
-Spécifiez une version exacte si et seulement si vous utilisez [Bencher *Self-Hosted*][bencher self hosted].
-Ne spécifiez __pas__ de version exacte si vous utilisez Bencher *Cloud*, car il y a encore des changements majeurs occasionnels.
+Il existe une variable d'environnement `BENCHER_VERSION` optionnelle pour spécifier une version exacte de Bencher CLI à utiliser.
+Sinon, elle utilisera par défaut la dernière version du CLI.
+Spécifiez une version exacte uniquement si vous utilisez [Bencher *Self-Hosted*][bencher self hosted].
+Ne __spécifiez pas__ de version exacte si vous utilisez Bencher *Cloud* car il y a encore des changements de rupture occasionnels.
 
 <CliUnixScriptVersion />
+
+Alternativement, les utilisateurs de Bencher Self-Hosted peuvent utiliser le script d'installation de leur propre instance auto-hébergée
+pour s'assurer qu'ils installent toujours la version correcte du CLI `bencher`.
+Cela présente l'avantage supplémentaire de ne pas nécessiter de changement de code dans votre configuration CI lors de la mise à niveau de votre instance Bencher Self-Hosted.
+Par exemple, si votre console Bencher Self-Hosted fonctionne à `https://bencher.example.com`,
+vous pourriez exécuter ce qui suit :
+
+<CliUnixSelfHosted />
 
 ### Windows
 Pour les systèmes Windows, exécutez ce qui suit dans un terminal _PowerShell_ :
 
 <CliWindowsScript />
 
-Il existe une variable d'environnement optionnelle `BENCHER_VERSION` pour spécifier une version exacte du CLI de Bencher à utiliser.
-Sinon, la version la plus récente du CLI sera utilisée par défaut.
-Spécifiez une version exacte si et seulement si vous utilisez [Bencher *Self-Hosted*][bencher self hosted].
-Ne spécifiez __pas__ de version exacte si vous utilisez Bencher *Cloud*, car il y a encore des changements majeurs occasionnels.
+Il existe une variable d'environnement `BENCHER_VERSION` optionnelle pour spécifier une version exacte de Bencher CLI à utiliser.
+Sinon, elle utilisera par défaut la dernière version du CLI.
+Spécifiez une version exacte uniquement si vous utilisez [Bencher *Self-Hosted*][bencher self hosted].
+Ne __spécifiez pas__ de version exacte si vous utilisez Bencher *Cloud* car il y a encore des changements de rupture occasionnels.
 
 <CliWindowsScriptVersion />
 
+Alternativement, les utilisateurs de Bencher Self-Hosted peuvent utiliser le script d'installation de leur propre instance auto-hébergée
+pour s'assurer qu'ils installent toujours la version correcte du CLI `bencher`.
+Cela présente l'avantage supplémentaire de ne pas nécessiter de changement de code dans votre configuration CI lors de la mise à niveau de votre instance Bencher Self-Hosted.
+Par exemple, si votre console Bencher Self-Hosted fonctionne à `https://bencher.example.com`,
+vous pourriez exécuter ce qui suit :
+
+<CliWindowsSelfHosted />
+
 <br />
 
-> 🐰 Si vous obtenez une erreur indiquant que `running scripts is disabled on this system` :
+> 🐰 Si vous obtenez une erreur indiquant que `l'exécution de scripts est désactivée sur ce système` :
 > - `Ouvrez Powershell` avec `Exécuter en tant qu'administrateur`
 > - Exécutez : `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
-> - Entrez : `Y`
+> - Tapez : `O`
 > - Réexécutez ce script
 
 [bencher self hosted]: /fr/docs/explanation/bencher-self-hosted/
