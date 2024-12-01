@@ -1,5 +1,5 @@
 // import node from "@astrojs/node";
-import netlify from "@astrojs/netlify";
+// import netlify from "@astrojs/netlify";
 import mdx from "@astrojs/mdx";
 // import partytown from "@astrojs/partytown";
 import sitemap from "@astrojs/sitemap";
@@ -25,7 +25,7 @@ export default defineConfig({
 		assets: "assets",
 	},
 	// DO NOT REMOVE OR MODIFY: This line is used by adapter.js
-	adapter: netlify(),
+	adapter: undefined,
 	// Do not use any trailing slashes in the paths below
 	redirects: {
 		"/docs/how-to/quick-start": "/docs/tutorial/quick-start",
