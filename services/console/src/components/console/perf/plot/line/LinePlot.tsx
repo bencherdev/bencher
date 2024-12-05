@@ -4,6 +4,7 @@ import * as d3 from "d3";
 import {
 	type Accessor,
 	type Resource,
+	Show,
 	createEffect,
 	createMemo,
 	createSignal,
@@ -39,6 +40,83 @@ export interface Props {
 	upper_boundary: Accessor<boolean>;
 	perfActive: boolean[];
 	width: Accessor<number>;
+}
+
+const LinePlot = (props: Props) => {
+	const [isPlotted, setIsPlotted] = createSignal(false);
+	const handleIsPlotted = () => setIsPlotted(true);
+	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
+	const tagId = createMemo(() =>
+		props.plotId ? `plot-${props.plotId}` : "plot",
+	);
+
+	const [x_axis, setRange] = createSignal(props.x_axis());
+	const [lower_value, setLowerValue] = createSignal(props.lower_value());
+	const [upper_value, setUpperValue] = createSignal(props.upper_value());
+	const [lower_boundary, setLowerBoundary] = createSignal(
+		props.lower_boundary(),
+	);
+	const [upper_boundary, setUpperBoundary] = createSignal(
+		props.upper_boundary(),
+	);
+
+	createEffect(() => {
+		if (isPlotted()) {
+			const tagIdEscaped = CSS.escape(tagId());
+			const y_axis = document.querySelector(
+				`#${tagIdEscaped} svg [aria-label='y-axis tick label']`,
+			);
+			if (!y_axis) {
+				return;
+			}
+			const width = y_axis.getBoundingClientRect().width;
+			set_y_label_area_size(width * 1.12);
+		}
+		// If any of these change, it is possible for the y-axis labels to change.
+		// Therefore, we need to recalculate the plot's `marginLeft` to make sure the new y-axis labels fits.
+		if (props.x_axis() !== x_axis()) {
+			setRange(props.x_axis());
+			setIsPlotted(false);
+		} else if (props.lower_value() !== lower_value()) {
+			setLowerValue(props.lower_value());
+			setIsPlotted(false);
+		} else if (props.upper_value() !== upper_value()) {
+			setUpperValue(props.upper_value());
+			setIsPlotted(false);
+		} else if (props.lower_boundary() !== lower_boundary()) {
+			setLowerBoundary(props.lower_boundary());
+			setIsPlotted(false);
+		} else if (props.upper_boundary() !== upper_boundary()) {
+			setUpperBoundary(props.upper_boundary());
+			setIsPlotted(false);
+		}
+	});
+
+	return (
+		<LinePlotInner
+			{...props}
+			tagId={tagId}
+			handleIsPlotted={handleIsPlotted}
+			y_label_area_size={y_label_area_size}
+		/>
+	);
+};
+
+export interface PropsInner {
+	theme: Accessor<Theme>;
+	isConsole: boolean;
+	plotId: string | undefined;
+	perfData: Resource<JsonPerf>;
+	x_axis: Accessor<XAxis>;
+	lower_value: Accessor<boolean>;
+	upper_value: Accessor<boolean>;
+	lower_boundary: Accessor<boolean>;
+	upper_boundary: Accessor<boolean>;
+	perfActive: boolean[];
+	width: Accessor<number>;
+	tagId: Accessor<string>;
+	handleIsPlotted: () => void;
+	y_label_area_size: () => number;
 }
 
 const value_end_position_key = (limit: BoundaryLimit) => {
@@ -95,382 +173,334 @@ const boundary_skipped = (
 	limit: undefined | number,
 ) => boundary && !limit;
 
-const LinePlot = (props: Props) => {
-	const hoverStyles = createMemo(() => {
-		switch (props.theme()) {
-			case Theme.Light:
-				return {
-					fill: "white",
-					stroke: "grey",
-				};
-			case Theme.Dark:
-				return {
-					fill: "black",
-					stroke: "white",
-				};
+const hover_styles = (theme: Theme) => {
+	switch (theme) {
+		case Theme.Light:
+			return {
+				fill: "white",
+				stroke: "grey",
+			};
+		case Theme.Dark:
+			return {
+				fill: "black",
+				stroke: "white",
+			};
+	}
+};
+
+const LinePlotInner = (props: PropsInner) => {
+	const hoverStyles = createMemo(() => hover_styles(props.theme()));
+
+	const json_perf = props.perfData();
+	// console.log(json_perf);
+
+	if (
+		typeof json_perf !== "object" ||
+		json_perf === undefined ||
+		json_perf === null ||
+		!Array.isArray(json_perf.results)
+	) {
+		return;
+	}
+
+	const units = get_units(json_perf);
+	const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
+		props.x_axis(),
+	);
+
+	const plot_arrays = [];
+	const warn_arrays = [];
+	const alert_arrays = [];
+	let metrics_found = false;
+	const colors = d3.schemeTableau10;
+	const project_slug = json_perf.project.slug;
+	for (const [index, result] of json_perf.results.entries()) {
+		const perf_metrics = result.metrics;
+		if (!(Array.isArray(perf_metrics) && props.perfActive[index])) {
+			continue;
 		}
-	});
 
-	const [isPlotted, setIsPlotted] = createSignal(false);
-	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
-	const plotId = createMemo(() =>
-		props.plotId ? `plot-${props.plotId}` : "plot",
-	);
+		const line_data = [];
+		const lower_alert_data = [];
+		const upper_alert_data = [];
+		const boundary_data = [];
+		const skipped_lower_data = [];
+		const skipped_upper_data = [];
+		// biome-ignore lint/complexity/noForEach: <explanation>
+		perf_metrics.forEach((perf_metric) => {
+			const datum = {
+				report: perf_metric.report,
+				metric: perf_metric.metric?.uuid,
+				value: perf_metric.metric?.value,
+				lower_value: perf_metric.metric?.lower_value,
+				upper_value: perf_metric.metric?.upper_value,
+				date_time: new Date(perf_metric.start_time),
+				number: perf_metric.version?.number,
+				hash: perf_metric.version?.hash,
+				iteration: perf_metric.iteration,
+				lower_limit: perf_metric.boundary?.lower_limit,
+				upper_limit: perf_metric.boundary?.upper_limit,
+			};
+			line_data.push(datum);
 
-	const [x_axis, setRange] = createSignal(props.x_axis());
-	const [lower_value, setLowerValue] = createSignal(props.lower_value());
-	const [upper_value, setUpperValue] = createSignal(props.upper_value());
-	const [lower_boundary, setLowerBoundary] = createSignal(
-		props.lower_boundary(),
-	);
-	const [upper_boundary, setUpperBoundary] = createSignal(
-		props.upper_boundary(),
-	);
-
-	createEffect(() => {
-		if (isPlotted()) {
-			const plotIdEscaped = CSS.escape(plotId());
-			const y_axis = document.querySelector(
-				`#${plotIdEscaped} svg [aria-label='y-axis tick label']`,
-			);
-			if (!y_axis) {
-				return;
+			const limit_datum = {
+				date_time: datum.date_time,
+				number: datum.number,
+				hash: datum.hash,
+				iteration: datum.iteration,
+				lower_limit: datum.lower_limit,
+				upper_limit: datum.upper_limit,
+				threshold: perf_metric.threshold,
+			};
+			if (perf_metric.alert && is_active(perf_metric.alert)) {
+				switch (perf_metric.alert?.limit) {
+					case BoundaryLimit.Lower:
+						lower_alert_data.push({
+							...limit_datum,
+							alert: perf_metric.alert,
+						});
+						break;
+					case BoundaryLimit.Upper:
+						upper_alert_data.push({
+							...limit_datum,
+							alert: perf_metric.alert,
+						});
+						break;
+				}
+			} else {
+				boundary_data.push(limit_datum);
 			}
-			const width = y_axis.getBoundingClientRect().width;
-			set_y_label_area_size(width * 1.12);
-		}
-		// If any of these change, it is possible for the y-axis labels to change.
-		// Therefore, we need to recalculate the plot's `marginLeft` to make sure the new y-axis labels fits.
-		if (props.x_axis() !== x_axis()) {
-			setRange(props.x_axis());
-			setIsPlotted(false);
-		} else if (props.lower_value() !== lower_value()) {
-			setLowerValue(props.lower_value());
-			setIsPlotted(false);
-		} else if (props.upper_value() !== upper_value()) {
-			setUpperValue(props.upper_value());
-			setIsPlotted(false);
-		} else if (props.lower_boundary() !== lower_boundary()) {
-			setLowerBoundary(props.lower_boundary());
-			setIsPlotted(false);
-		} else if (props.upper_boundary() !== upper_boundary()) {
-			setUpperBoundary(props.upper_boundary());
-			setIsPlotted(false);
-		}
-	});
 
-	const plotted = () => {
-		const json_perf = props.perfData();
-		// console.log(json_perf);
-
-		if (
-			typeof json_perf !== "object" ||
-			json_perf === undefined ||
-			json_perf === null ||
-			!Array.isArray(json_perf.results)
-		) {
-			return;
-		}
-
-		const units = get_units(json_perf);
-		const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
-			props.x_axis(),
-		);
-
-		const plot_arrays = [];
-		const warn_arrays = [];
-		const alert_arrays = [];
-		let metrics_found = false;
-		const colors = d3.schemeTableau10;
-		const project_slug = json_perf.project.slug;
-		for (const [index, result] of json_perf.results.entries()) {
-			const perf_metrics = result.metrics;
-			if (!(Array.isArray(perf_metrics) && props.perfActive[index])) {
-				continue;
-			}
-
-			const line_data = [];
-			const lower_alert_data = [];
-			const upper_alert_data = [];
-			const boundary_data = [];
-			const skipped_lower_data = [];
-			const skipped_upper_data = [];
-			// biome-ignore lint/complexity/noForEach: <explanation>
-			perf_metrics.forEach((perf_metric) => {
-				const datum = {
-					report: perf_metric.report,
-					metric: perf_metric.metric?.uuid,
-					value: perf_metric.metric?.value,
-					lower_value: perf_metric.metric?.lower_value,
-					upper_value: perf_metric.metric?.upper_value,
-					date_time: new Date(perf_metric.start_time),
-					number: perf_metric.version?.number,
-					hash: perf_metric.version?.hash,
-					iteration: perf_metric.iteration,
-					lower_limit: perf_metric.boundary?.lower_limit,
-					upper_limit: perf_metric.boundary?.upper_limit,
-				};
-				line_data.push(datum);
-
-				const limit_datum = {
+			if (
+				boundary_skipped(
+					perf_metric.threshold?.model?.lower_boundary,
+					perf_metric.boundary?.lower_limit,
+				)
+			) {
+				skipped_lower_data.push({
 					date_time: datum.date_time,
 					number: datum.number,
-					hash: datum.hash,
-					iteration: datum.iteration,
-					lower_limit: datum.lower_limit,
-					upper_limit: datum.upper_limit,
+					y: perf_metric.metric?.value * 0.9,
 					threshold: perf_metric.threshold,
-				};
-				if (perf_metric.alert && is_active(perf_metric.alert)) {
-					switch (perf_metric.alert?.limit) {
-						case BoundaryLimit.Lower:
-							lower_alert_data.push({
-								...limit_datum,
-								alert: perf_metric.alert,
-							});
-							break;
-						case BoundaryLimit.Upper:
-							upper_alert_data.push({
-								...limit_datum,
-								alert: perf_metric.alert,
-							});
-							break;
-					}
-				} else {
-					boundary_data.push(limit_datum);
-				}
+				});
+			}
+			if (
+				boundary_skipped(
+					perf_metric.threshold?.model?.upper_boundary,
+					perf_metric.boundary?.upper_limit,
+				)
+			) {
+				skipped_upper_data.push({
+					date_time: datum.date_time,
+					number: datum.number,
+					y: perf_metric.metric?.value * 1.1,
+					threshold: perf_metric.threshold,
+				});
+			}
 
-				if (
-					boundary_skipped(
-						perf_metric.threshold?.model?.lower_boundary,
-						perf_metric.boundary?.lower_limit,
-					)
-				) {
-					skipped_lower_data.push({
-						date_time: datum.date_time,
-						number: datum.number,
-						y: perf_metric.metric?.value * 0.9,
-						threshold: perf_metric.threshold,
-					});
-				}
-				if (
-					boundary_skipped(
-						perf_metric.threshold?.model?.upper_boundary,
-						perf_metric.boundary?.upper_limit,
-					)
-				) {
-					skipped_upper_data.push({
-						date_time: datum.date_time,
-						number: datum.number,
-						y: perf_metric.metric?.value * 1.1,
-						threshold: perf_metric.threshold,
-					});
-				}
+			metrics_found = true;
+		});
 
-				metrics_found = true;
-			});
+		const color = colors[index % 10] ?? "7f7f7f";
+		// Line
+		plot_arrays.push(
+			Plot.line(line_data, {
+				x: x_axis_kind,
+				y: "value",
+				stroke: color,
+			}),
+		);
+		// Dots
+		plot_arrays.push(
+			Plot.dot(line_data, {
+				x: x_axis_kind,
+				y: "value",
+				symbol: "circle",
+				stroke: color,
+				fill: color,
+				title: (datum) =>
+					to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
+				href: (datum) =>
+					dotUrl(project_slug, props.isConsole, props.plotId, datum),
+				target: "_top",
+			}),
+		);
 
-			const color = colors[index % 10] ?? "7f7f7f";
-			// Line
+		// Lower Value
+		if (props.lower_value()) {
 			plot_arrays.push(
-				Plot.line(line_data, {
-					x: x_axis_kind,
-					y: "value",
-					stroke: color,
-				}),
+				Plot.line(
+					line_data,
+					value_end_line(x_axis_kind, BoundaryLimit.Lower, color),
+				),
 			);
-			// Dots
 			plot_arrays.push(
-				Plot.dot(line_data, {
-					x: x_axis_kind,
-					y: "value",
-					symbol: "circle",
-					stroke: color,
-					fill: color,
-					title: (datum) =>
-						to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
-					href: (datum) =>
-						dotUrl(project_slug, props.isConsole, props.plotId, datum),
-					target: "_top",
-				}),
+				Plot.dot(
+					line_data,
+					value_end_dot(x_axis_kind, BoundaryLimit.Lower, color, result),
+				),
 			);
+		}
 
-			// Lower Value
-			if (props.lower_value()) {
-				plot_arrays.push(
-					Plot.line(
-						line_data,
-						value_end_line(x_axis_kind, BoundaryLimit.Lower, color),
-					),
-				);
-				plot_arrays.push(
-					Plot.dot(
-						line_data,
-						value_end_dot(x_axis_kind, BoundaryLimit.Lower, color, result),
-					),
-				);
-			}
+		// Upper Value
+		if (props.upper_value()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					value_end_line(x_axis_kind, BoundaryLimit.Upper, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					line_data,
+					value_end_dot(x_axis_kind, BoundaryLimit.Upper, color, result),
+				),
+			);
+		}
 
-			// Upper Value
-			if (props.upper_value()) {
-				plot_arrays.push(
-					Plot.line(
-						line_data,
-						value_end_line(x_axis_kind, BoundaryLimit.Upper, color),
-					),
-				);
-				plot_arrays.push(
-					Plot.dot(
-						line_data,
-						value_end_dot(x_axis_kind, BoundaryLimit.Upper, color, result),
-					),
-				);
-			}
-
-			// Lower Boundary
-			if (props.lower_boundary()) {
-				plot_arrays.push(
-					Plot.line(
-						line_data,
-						boundary_line(x_axis_kind, BoundaryLimit.Lower, color),
-					),
-				);
-				plot_arrays.push(
-					Plot.dot(
-						boundary_data,
-						boundary_dot(
-							x_axis_kind,
-							BoundaryLimit.Lower,
-							color,
-							project_slug,
-							result,
-							props.isConsole,
-						),
-					),
-				);
-				warn_arrays.push(
-					Plot.image(
-						skipped_lower_data,
-						warning_image(
-							x_axis_kind,
-							project_slug,
-							props.isConsole,
-							props.plotId,
-						),
-					),
-				);
-			}
-
-			// Upper Boundary
-			if (props.upper_boundary()) {
-				plot_arrays.push(
-					Plot.line(
-						line_data,
-						boundary_line(x_axis_kind, BoundaryLimit.Upper, color),
-					),
-				);
-				plot_arrays.push(
-					Plot.dot(
-						boundary_data,
-						boundary_dot(
-							x_axis_kind,
-							BoundaryLimit.Upper,
-							color,
-							project_slug,
-							result,
-							props.isConsole,
-						),
-					),
-				);
-				warn_arrays.push(
-					Plot.image(
-						skipped_upper_data,
-						warning_image(x_axis_kind, project_slug, props.isConsole),
-					),
-				);
-			}
-
-			alert_arrays.push(
-				Plot.image(
-					lower_alert_data,
-					alert_image(
+		// Lower Boundary
+		if (props.lower_boundary()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					boundary_line(x_axis_kind, BoundaryLimit.Lower, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					boundary_data,
+					boundary_dot(
 						x_axis_kind,
 						BoundaryLimit.Lower,
+						color,
 						project_slug,
 						result,
+						props.isConsole,
+					),
+				),
+			);
+			warn_arrays.push(
+				Plot.image(
+					skipped_lower_data,
+					warning_image(
+						x_axis_kind,
+						project_slug,
 						props.isConsole,
 						props.plotId,
 					),
 				),
 			);
-			alert_arrays.push(
-				Plot.image(
-					upper_alert_data,
-					alert_image(
+		}
+
+		// Upper Boundary
+		if (props.upper_boundary()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					boundary_line(x_axis_kind, BoundaryLimit.Upper, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					boundary_data,
+					boundary_dot(
 						x_axis_kind,
 						BoundaryLimit.Upper,
+						color,
 						project_slug,
 						result,
 						props.isConsole,
-						props.plotId,
 					),
 				),
 			);
-		}
-		// This allows the alert images to appear on top of the plot lines.
-		plot_arrays.push(...warn_arrays, ...alert_arrays);
-
-		if (metrics_found) {
-			return (
-				<>
-					<div id={plotId()}>
-						{addTooltips(
-							Plot.plot({
-								x: {
-									type: x_axis_scale_type,
-									grid: true,
-									label: `${x_axis_label} ➡`,
-									labelOffset: 36,
-								},
-								y: {
-									grid: true,
-									label: `↑ ${units}`,
-								},
-								marks: plot_arrays,
-								width: props.width(),
-								nice: true,
-								// https://github.com/observablehq/plot/blob/main/README.md#layout-options
-								// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
-								marginLeft: y_label_area_size(),
-							}),
-							{
-								stroke: "gray",
-								opacity: 0.75,
-								"stroke-width": "3px",
-								fill: "gray",
-							},
-							hoverStyles(),
-						)}
-					</div>
-					{setIsPlotted(true)}
-				</>
+			warn_arrays.push(
+				Plot.image(
+					skipped_upper_data,
+					warning_image(x_axis_kind, project_slug, props.isConsole),
+				),
 			);
 		}
-		return (
-			<section class="section">
-				<div class="container">
-					<div class="content">
-						<div>
-							<h3 class="title is-3">No data found</h3>
-							<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
+
+		alert_arrays.push(
+			Plot.image(
+				lower_alert_data,
+				alert_image(
+					x_axis_kind,
+					BoundaryLimit.Lower,
+					project_slug,
+					result,
+					props.isConsole,
+					props.plotId,
+				),
+			),
+		);
+		alert_arrays.push(
+			Plot.image(
+				upper_alert_data,
+				alert_image(
+					x_axis_kind,
+					BoundaryLimit.Upper,
+					project_slug,
+					result,
+					props.isConsole,
+					props.plotId,
+				),
+			),
+		);
+	}
+	// This allows the alert images to appear on top of the plot lines.
+	plot_arrays.push(...warn_arrays, ...alert_arrays);
+
+	return (
+		<Show
+			when={metrics_found}
+			fallback={
+				<section class="section">
+					<div class="container">
+						<div class="content">
+							<div>
+								<h3 class="title is-3">No data found</h3>
+								<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
+							</div>
 						</div>
 					</div>
+				</section>
+			}
+		>
+			<>
+				<div id={props.tagId()}>
+					{addTooltips(
+						Plot.plot({
+							x: {
+								type: x_axis_scale_type,
+								grid: true,
+								label: `${x_axis_label} ➡`,
+								labelOffset: 36,
+							},
+							y: {
+								grid: true,
+								label: `↑ ${units}`,
+							},
+							marks: plot_arrays,
+							width: props.width(),
+							nice: true,
+							// https://github.com/observablehq/plot/blob/main/README.md#layout-options
+							// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
+							marginLeft: props.y_label_area_size(),
+						}),
+						{
+							stroke: "gray",
+							opacity: 0.75,
+							"stroke-width": "3px",
+							fill: "gray",
+						},
+						hoverStyles(),
+					)}
 				</div>
-			</section>
-		);
-	};
-
-	return <>{plotted()}</>;
+				{props.handleIsPlotted()}
+			</>
+		</Show>
+	);
 };
 
 const to_title = (prefix, result, datum, suffix) =>
