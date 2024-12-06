@@ -7,10 +7,10 @@ import type {
 	JsonProject,
 } from "../../../../types/bencher";
 import { apiUrl } from "../../../../util/http";
+import { useSearchParams } from "../../../../util/url";
+import { DEBOUNCE_DELAY } from "../../../../util/valid";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import { DEBOUNCE_DELAY } from "../../../../util/valid";
-import { useSearchParams } from "../../../../util/url";
 import {
 	EMBED_TITLE_PARAM,
 	PERF_PLOT_EMBED_PARAMS,
@@ -92,6 +92,12 @@ const ShareModal = (props: Props) => {
 		if (img_title) {
 			newParams.set(EMBED_TITLE_PARAM, img_title);
 		}
+		// "utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
+		newParams.set("utm_medium", "embed");
+		newParams.set("utm_source", "bencher");
+		newParams.set("utm_content", "iframe");
+		newParams.set("utm_campaign", "perf+embed");
+		newParams.set("utm_term", props.project()?.slug ?? "");
 		return newParams.toString();
 	});
 
