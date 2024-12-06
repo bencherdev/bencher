@@ -1,3 +1,5 @@
+import PerfImg from "../perf-img.mdx";
+
 Le Benchmarking Continu est une pratique de développement logiciel où les membres d'une équipe évaluent leur travail fréquemment,
 en général, chaque personne fait cela au moins une fois par jour - ce qui conduit à plusieurs benchmarks par jour.
 Chaque benchmark est vérifié par une construction automatisée pour détecter les régressions de performances le plus rapidement possible.
@@ -31,9 +33,11 @@ Ou simplement embrasser le chaos ! Le benchmarking continu n'a pas besoin d'êt
 Oui, réduire la volatilité et donc le bruit dans votre environnement de benchmarking continu vous permettra de détecter des régressions de performance de plus en plus fines.
 Cependant, ne laissez pas la perfection être l'ennemie du bien ici !
 
-<div style="text-align: center;">
-<a href="https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&title=Embrace+the+Chaos%21" title="Embrace the Chaos!" alt="Embrace the Chaos! for Bencher - Bencher" width="1024" height="768" /></a>
-</div>
+<PerfImg
+    query_title="Adoptez+le+Chaos%21"
+    title="Adoptez le Chaos!"
+    alt="Adoptez le Chaos! pour Bencher - Bencher"
+/>
 
 Vous pourriez regarder ce graphique et penser, "Waouh, c'est fou !" Mais demandez-vous, votre processus de développement actuel peut-il détecter une régression de performance de deux ou même dix fois avant qu'elle n'affecte vos utilisateurs ? Probablement pas ! Maintenant, _ça_, c'est fou !
 

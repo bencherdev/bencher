@@ -1,3 +1,5 @@
+import PerfImg from "../perf-img.mdx";
+
 継続的なベンチマーキングは、チームの一員が頻繁に彼らの仕事をベンチマーキングするソフトウェア開発の実践です。通常、各人が少なくとも日に一回ベンチマーキングを行います。これにより一日に複数回のベンチマーキングが行われます。各ベンチマークは自動化されたビルドによって検証され、できるだけ早くパフォーマンスの低下を検出します。多くのチームは、このアプローチによってパフォーマンスの低下が大幅に減少し、チームがパフォーマンスの高いソフトウェアをより迅速に開発できるようになると感じています。
 
 今や、ソフトウェア業界のすべての人が継続的インテグレーション（CI）について理解しています。基本的なレベルで、CIはソフトウェアの機能回帰が生産に入る前にこれを検出し、防止することについてです。同様に、継続的ベンチマーキング（CB）は、ソフトウェアの_パフォーマンス_回帰が生産に入る前にこれを検出し、防止することについてです。コード変更ごとにCIでユニットテストが実行される理由と同じように、コード変更ごとにCBでパフォーマンステストを実行するべきです。事実、このアナロジーはとても適切で、このセクションの最初の段落はただ[Martin Fowlerの2006年の継続的インテグレーションへの紹介](https://martinfowler.com/articles/continuousIntegration.html)のMad Libs版に過ぎません。
@@ -17,9 +19,11 @@
 
 あるいは、単純にカオスを愛してください！継続的ベンチマーキングは完璧である必要はありません。 はい、継続的ベンチマーキング環境での変動性を減らすことにより、ノイズを減らせば、より細かくパフォーマンスの低下を検出することができます。しかし、ここでは完璧さが良さの敵になることはないでしょう！
 
-<div style="text-align: center;">
-<a href="https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&title=Embrace+the+Chaos%21" title="Embrace the Chaos!" alt="Embrace the Chaos! for Bencher - Bencher" width="1024" height="768" /></a>
-</div>
+<PerfImg
+    query_title="Embrace+the+Chaos%21"
+    title="混沌を受け入れよ！"
+    alt="混沌を受け入れよ！Bencher のイメージ - Bencher"
+/>
 
 このグラフを見て、「ワオ、それは狂っている！」と思うかもしれません。しかし自問してみてください、現在の開発プロセスは、ユーザーに影響を与える前に、2倍、あるいは10倍のパフォーマンス低下を検出できますか？多分できないでしょう！それこそ_が_狂っていることです！
 

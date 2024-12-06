@@ -1,3 +1,5 @@
+import PerfImg from "../perf-img.mdx";
+
 持续基准测试是一种软件开发实践，团队成员频繁地对他们的工作进行基准测试，通常每个人至少每天进行一次测试 - 导致每天有多次基准测试。每个基准测试都由自动构建验证以尽快检测性能退化。许多团队发现这种方法可以显著减少性能退化，并使团队能更快地开发出高性能的软件。
 
 到现在为止，软件行业的每个人都知道持续集成(CI)。在基础层面上，CI是在软件特性退化进入生产环节之前检测和防止它们的手段。同样，持续基准测试(CB)是在软件性能退化进入生产环节前检测和防止这些退化的手段。出于与每次代码更改都在CI中运行单元测试的同样原因，每次代码更改都应在CB中进行性能测试。事实上，这个类比如此恰当，以至于本节的第一段就是[马丁·福勒 2006年关于持续集成的引言](https://martinfowler.com/articles/continuousIntegration.html)的填空版。
@@ -17,9 +19,11 @@
 
 或者简单地接受混沌！持续基准测试不需要完美。没错，减少你的持续基准测试环境的波动性，从而减少噪声会让你检测到更精细的性能退化。然而，不要让完美成为这里的敌人！
 
-<div style="text-align: center;">
-<a href="https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&title=Embrace+the+Chaos%21" title="Embrace the Chaos!" alt="Embrace the Chaos! for Bencher - Bencher" width="1024" height="768" /></a>
-</div>
+<PerfImg
+    query_title="Embrace+the+Chaos%21"
+    title="拥抱混乱！"
+    alt="拥抱混乱！用于 Bencher - Bencher"
+/>
 
 你可能会看这个图并想，"哇，这太疯狂了！"但问问自己，你当前的开发流程能在影响到你的用户之前检测到两倍甚至十倍的性能退化吗？可能不能！现在_这个_才疯狂！
 

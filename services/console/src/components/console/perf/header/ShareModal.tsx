@@ -45,6 +45,11 @@ const ShareModal = (props: Props) => {
 				newParams.set(key, value);
 			}
 		}
+		newParams.set("utm_medium", "share");
+		newParams.set("utm_source", "bencher");
+		newParams.set("utm_content", "img");
+		newParams.set("utm_campaign", "perf+img");
+		newParams.set("utm_term", props.project()?.slug ?? "");
 		return newParams.toString();
 	});
 
@@ -92,8 +97,7 @@ const ShareModal = (props: Props) => {
 		if (img_title) {
 			newParams.set(EMBED_TITLE_PARAM, img_title);
 		}
-		// "utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
-		newParams.set("utm_medium", "embed");
+		newParams.set("utm_medium", "share");
 		newParams.set("utm_source", "bencher");
 		newParams.set("utm_content", "iframe");
 		newParams.set("utm_campaign", "perf+embed");
