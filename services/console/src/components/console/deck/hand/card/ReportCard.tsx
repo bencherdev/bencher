@@ -718,7 +718,7 @@ const missingThreshold = (
 	return new Set(measuresMap.values());
 };
 
-const boundaryLimitsMap = (
+export const boundaryLimitsMap = (
 	iteration: JsonReportIteration,
 ): Map<string, BoundaryLimits> => {
 	const map = new Map<string, BoundaryLimits>();

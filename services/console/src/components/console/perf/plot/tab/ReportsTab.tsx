@@ -1,17 +1,19 @@
-import { type Accessor, For, Show, Switch, Match, createMemo } from "solid-js";
+import { type Accessor, For, Match, Show, Switch, createMemo } from "solid-js";
+import { ALERT_ICON } from "../../../../../config/project/alerts";
+import { BENCHMARK_ICON } from "../../../../../config/project/benchmarks";
+import { BRANCH_ICON } from "../../../../../config/project/branches";
+import { MEASURE_ICON } from "../../../../../config/project/measures";
+import { TESTBED_ICON } from "../../../../../config/project/testbeds";
 import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime, resourcePath } from "../../../../../config/util";
 import type { JsonReport } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
-import { BRANCH_ICON } from "../../../../../config/project/branches";
-import { TESTBED_ICON } from "../../../../../config/project/testbeds";
-import { BENCHMARK_ICON } from "../../../../../config/project/benchmarks";
-import { MEASURE_ICON } from "../../../../../config/project/measures";
-import { ALERT_ICON } from "../../../../../config/project/alerts";
-import type { TabElement, TabList } from "./PlotTab";
 import DateRange from "../../../../field/kinds/DateRange";
-import { themeText, type Theme } from "../../../../navbar/theme/theme";
-import ReportCard from "../../../deck/hand/card/ReportCard";
+import { type Theme, themeText } from "../../../../navbar/theme/theme";
+import ReportCard, {
+	boundaryLimitsMap,
+} from "../../../deck/hand/card/ReportCard";
+import type { TabElement, TabList } from "./PlotTab";
 
 const ReportsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -167,7 +169,7 @@ const ReportRow = (props: {
 									}
 									const plural =
 										benchmarkCount.length > 1 ||
-										benchmarkCount.filter((count) => count > 1).length > 0;
+										benchmarkCount.some((count) => count > 1);
 									return `${benchmarkCount.join(" + ")} benchmark${
 										plural ? "s" : ""
 									}`;
@@ -176,27 +178,16 @@ const ReportRow = (props: {
 							<ReportDimension
 								icon={MEASURE_ICON}
 								name={(() => {
-									const counts = report?.results?.map((iteration) =>
-										iteration?.reduce((acc, result) => {
-											const c = result?.measures?.length ?? 0;
-											if (!acc.has(c)) {
-												acc.add(c);
-											}
-											return acc;
-										}, new Set<number>()),
+									const measureCount = report?.results?.map(
+										(iteration) => boundaryLimitsMap(iteration).size,
 									);
-									if (counts.length === 0) {
+									if (measureCount.length === 0) {
 										return "0 measures";
 									}
 									const plural =
-										counts.length > 1 ||
-										counts.some(
-											(count) =>
-												count.size > 1 || Array.from(count).some((c) => c > 1),
-										);
-									return `${counts
-										.map((iteration) => Array.from(iteration).join(" || "))
-										.join(" + ")} measure${plural ? "s" : ""}`;
+										measureCount.length > 1 ||
+										measureCount.some((count) => count > 1);
+									return `${measureCount.join(" + ")} measure${plural ? "s" : ""}`;
 								})()}
 							/>
 							<Show when={report?.alerts?.length > 0}>
