@@ -1,8 +1,9 @@
-import { Match, Show, Switch, type Accessor, type Resource } from "solid-js";
 import type { Params } from "astro";
+import { type Accessor, Match, type Resource, Switch } from "solid-js";
+import { perfPath } from "../../../config/util";
+import type { JsonProject } from "../../../types/bencher";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
-import type { JsonProject } from "../../../types/bencher";
 
 export interface Props {
 	isConsole: boolean;
@@ -74,6 +75,18 @@ const PlotsHeader = (props: Props) => {
 						</Match>
 					</Switch>
 				</p>
+				<div class="level-item">
+					<a
+						class="button is-fullwidth"
+						title={`View ${props.project()?.name} Perf`}
+						href={perfPath(props.isConsole, props.project()?.slug)}
+					>
+						<span class="icon">
+							<i class="fas fa-chart-line" />
+						</span>
+						<span>Perf</span>
+					</a>
+				</div>
 				<p class="level-item">
 					<button
 						class="button"
