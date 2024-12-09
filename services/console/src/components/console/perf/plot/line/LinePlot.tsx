@@ -92,32 +92,61 @@ const LinePlot = (props: Props) => {
 		}
 	});
 
+	const linePlot = createMemo(() => line_plot(props) ?? {
+		metrics_found: false,
+	});
+
 	return (
-		<LinePlotInner
-			{...props}
-			tagId={tagId}
-			handleIsPlotted={handleIsPlotted}
-			y_label_area_size={y_label_area_size}
-		/>
+		<Show
+			when={linePlot().metrics_found}
+			fallback={
+				<section class="section">
+					<div class="container">
+						<div class="content">
+							<div>
+								<h3 class="title is-3">No data found</h3>
+								<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
+							</div>
+						</div>
+					</div>
+				</section>
+			}
+		>
+			<>
+				<div id={tagId()}>
+					{addTooltips(
+						Plot.plot({
+							x: {
+								type: linePlot().x_axis_scale_type,
+								grid: true,
+								label: `${linePlot().x_axis_label} ➡`,
+								labelOffset: 36,
+							},
+							y: {
+								grid: true,
+								label: `↑ ${linePlot().units}`,
+							},
+							marks: linePlot().plot_arrays,
+							width: props.width(),
+							nice: true,
+							// https://github.com/observablehq/plot/blob/main/README.md#layout-options
+							// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
+							marginLeft: y_label_area_size(),
+						}),
+						{
+							stroke: "gray",
+							opacity: 0.75,
+							"stroke-width": "3px",
+							fill: "gray",
+						},
+						linePlot().hoverStyles,
+					)}
+				</div>
+				{handleIsPlotted()}
+			</>
+		</Show>
 	);
 };
-
-export interface PropsInner {
-	theme: Accessor<Theme>;
-	isConsole: boolean;
-	plotId: string | undefined;
-	perfData: Resource<JsonPerf>;
-	x_axis: Accessor<XAxis>;
-	lower_value: Accessor<boolean>;
-	upper_value: Accessor<boolean>;
-	lower_boundary: Accessor<boolean>;
-	upper_boundary: Accessor<boolean>;
-	perfActive: boolean[];
-	width: Accessor<number>;
-	tagId: Accessor<string>;
-	handleIsPlotted: () => void;
-	y_label_area_size: () => number;
-}
 
 const value_end_position_key = (limit: BoundaryLimit) => {
 	switch (limit) {
@@ -188,7 +217,7 @@ const hover_styles = (theme: Theme) => {
 	}
 };
 
-const LinePlotInner = (props: PropsInner) => {
+const line_plot = (props: Props) => {
 	const hoverStyles = createMemo(() => hover_styles(props.theme()));
 
 	const json_perf = props.perfData();
@@ -451,56 +480,14 @@ const LinePlotInner = (props: PropsInner) => {
 	// This allows the alert images to appear on top of the plot lines.
 	plot_arrays.push(...warn_arrays, ...alert_arrays);
 
-	return (
-		<Show
-			when={metrics_found}
-			fallback={
-				<section class="section">
-					<div class="container">
-						<div class="content">
-							<div>
-								<h3 class="title is-3">No data found</h3>
-								<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
-							</div>
-						</div>
-					</div>
-				</section>
-			}
-		>
-			<>
-				<div id={props.tagId()}>
-					{addTooltips(
-						Plot.plot({
-							x: {
-								type: x_axis_scale_type,
-								grid: true,
-								label: `${x_axis_label} ➡`,
-								labelOffset: 36,
-							},
-							y: {
-								grid: true,
-								label: `↑ ${units}`,
-							},
-							marks: plot_arrays,
-							width: props.width(),
-							nice: true,
-							// https://github.com/observablehq/plot/blob/main/README.md#layout-options
-							// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
-							marginLeft: props.y_label_area_size(),
-						}),
-						{
-							stroke: "gray",
-							opacity: 0.75,
-							"stroke-width": "3px",
-							fill: "gray",
-						},
-						hoverStyles(),
-					)}
-				</div>
-				{props.handleIsPlotted()}
-			</>
-		</Show>
-	);
+	return {
+		metrics_found,
+		x_axis_scale_type,
+		x_axis_label,
+		units,
+		plot_arrays,
+		hoverStyles: hoverStyles(),
+	};
 };
 
 const to_title = (prefix, result, datum, suffix) =>
