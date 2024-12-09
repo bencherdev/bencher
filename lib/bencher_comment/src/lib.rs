@@ -200,9 +200,9 @@ impl ReportComment {
         }
         html.push_str("</ul>");
 
-        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add?{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
-        html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/?{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
-        html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds?{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> CLI flag</a>.</p>", utm = self.utm_query()));
+        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
+        html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
+        html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> CLI flag</a>.</p>", utm = self.utm_query()));
         html.push_str("</blockquote>");
     }
 
@@ -556,6 +556,16 @@ impl ReportComment {
         })
     }
 
+    #[cfg_attr(not(feature = "plus"), allow(clippy::unused_self))]
+    fn is_bencher_cloud(&self) -> bool {
+        #[cfg(feature = "plus")]
+        {
+            bencher_json::is_bencher_cloud(&self.console_url)
+        }
+        #[cfg(not(feature = "plus"))]
+        false
+    }
+
     fn resource_url(&self, resource: Resource) -> Url {
         let url = self.console_url.clone();
         let path = if self.public_links {
@@ -575,22 +585,28 @@ impl ReportComment {
         };
         let mut url = url.join(&path).unwrap_or(url);
 
-        url.query_pairs_mut()
-            .append_pair("utm_medium", "referral")
-            .append_pair("utm_source", &self.source)
-            .append_pair("utm_content", "comment")
-            .append_pair("utm_campaign", "pr+comments")
-            .append_pair("utm_term", self.project_slug.as_ref());
+        if self.is_bencher_cloud() {
+            url.query_pairs_mut()
+                .append_pair("utm_medium", "referral")
+                .append_pair("utm_source", &self.source)
+                .append_pair("utm_content", "comment")
+                .append_pair("utm_campaign", "pr+comments")
+                .append_pair("utm_term", self.project_slug.as_ref());
+        }
 
         url
     }
 
     fn utm_query(&self) -> String {
-        format!(
-            "utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
+        if self.is_bencher_cloud() {
+            format!(
+            "?utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
             source = self.source,
             project = self.project_slug,
         )
+        } else {
+            String::new()
+        }
     }
 
     fn alert_perf_url(&self, alert: &JsonAlert) -> Url {

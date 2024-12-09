@@ -6,6 +6,7 @@ import type {
 	JsonPerfQuery,
 	JsonProject,
 } from "../../../../types/bencher";
+import { isBencherCloud } from "../../../../util/ext";
 import { apiUrl } from "../../../../util/http";
 import { useSearchParams } from "../../../../util/url";
 import { DEBOUNCE_DELAY } from "../../../../util/valid";
@@ -45,11 +46,15 @@ const ShareModal = (props: Props) => {
 				newParams.set(key, value);
 			}
 		}
-		newParams.set("utm_medium", "share");
-		newParams.set("utm_source", "bencher");
-		newParams.set("utm_content", "img");
-		newParams.set("utm_campaign", "perf+img");
-		newParams.set("utm_term", props.project()?.slug ?? "");
+
+		if (isBencherCloud()) {
+			newParams.set("utm_medium", "share");
+			newParams.set("utm_source", "bencher");
+			newParams.set("utm_content", "img");
+			newParams.set("utm_campaign", "perf+img");
+			newParams.set("utm_term", props.project()?.slug ?? "");
+		}
+
 		return newParams.toString();
 	});
 
@@ -97,11 +102,15 @@ const ShareModal = (props: Props) => {
 		if (img_title) {
 			newParams.set(EMBED_TITLE_PARAM, img_title);
 		}
-		newParams.set("utm_medium", "share");
-		newParams.set("utm_source", "bencher");
-		newParams.set("utm_content", "iframe");
-		newParams.set("utm_campaign", "perf+embed");
-		newParams.set("utm_term", props.project()?.slug ?? "");
+
+		if (isBencherCloud()) {
+			newParams.set("utm_medium", "share");
+			newParams.set("utm_source", "bencher");
+			newParams.set("utm_content", "iframe");
+			newParams.set("utm_campaign", "perf+embed");
+			newParams.set("utm_term", props.project()?.slug ?? "");
+		}
+
 		return newParams.toString();
 	});
 

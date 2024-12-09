@@ -102,7 +102,12 @@ pub static PROD_BENCHER_URL: LazyLock<url::Url> = LazyLock::new(|| {
 });
 #[cfg(feature = "plus")]
 pub fn is_bencher_cloud(url: &url::Url) -> bool {
-    *url == *BENCHER_URL || *url == *DEVEL_BENCHER_URL || *url == *PROD_BENCHER_URL
+    // In production for Bencher Cloud, we will match against `BENCHER_URL`.
+    *url == *BENCHER_URL
+    // In the CI smoke tests, we will match against `DEVEL_BENCHER_URL`.
+    || *url == *DEVEL_BENCHER_URL
+    // When testing the production config locally, we will match against `PROD_BENCHER_URL`.
+    || *url == *PROD_BENCHER_URL
 }
 
 // Dynamic and/or Private Ports (49152-65535)
