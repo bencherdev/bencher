@@ -130,7 +130,7 @@ const LinePlot = (props: Props) => {
 								grid: true,
 								label: `↑ ${linePlot().units}`,
 							},
-							marks: linePlot().plot_arrays,
+							marks: linePlot().marks,
 							width: props.width(),
 							nice: true,
 							// https://github.com/observablehq/plot/blob/main/README.md#layout-options
@@ -241,13 +241,7 @@ const line_plot = (props: Props) => {
 		props.x_axis(),
 	);
 
-	const plot_arrays = [];
-	const warn_arrays = [];
-	const alert_arrays = [];
 	let metrics_found = false;
-	const colors = d3.schemeTableau10;
-	const project_slug = json_perf.project.slug;
-
 	const all_data = json_perf.results.map((result, index) => {
 		const data = perf_result(result, index, props.perfActive);
 		if ((data?.line_data?.length ?? 0) > 0) {
@@ -260,176 +254,23 @@ const line_plot = (props: Props) => {
 	// (Add your scaling logic here if needed)
 
 	// Proceed with plotting
-	all_data.forEach((data) => {
-		const {
-			index,
-			result,
-			line_data,
-			lower_alert_data,
-			upper_alert_data,
-			boundary_data,
-			skipped_lower_data,
-			skipped_upper_data,
-		} = data;
-
-		const color = colors[index % 10] ?? "7f7f7f";
-
-		// Line
-		plot_arrays.push(
-			Plot.line(line_data, {
-				x: x_axis_kind,
-				y: "value",
-				stroke: color,
-			}),
-		);
-		// Dots
-		plot_arrays.push(
-			Plot.dot(line_data, {
-				x: x_axis_kind,
-				y: "value",
-				symbol: "circle",
-				stroke: color,
-				fill: color,
-				title: (datum) =>
-					to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
-				href: (datum) =>
-					dotUrl(project_slug, props.isConsole, props.plotId, datum),
-				target: "_top",
-			}),
-		);
-
-		// Lower Value
-		if (props.lower_value()) {
-			plot_arrays.push(
-				Plot.line(
-					line_data,
-					value_end_line(x_axis_kind, BoundaryLimit.Lower, color),
-				),
-			);
-			plot_arrays.push(
-				Plot.dot(
-					line_data,
-					value_end_dot(x_axis_kind, BoundaryLimit.Lower, color, result),
-				),
-			);
-		}
-
-		// Upper Value
-		if (props.upper_value()) {
-			plot_arrays.push(
-				Plot.line(
-					line_data,
-					value_end_line(x_axis_kind, BoundaryLimit.Upper, color),
-				),
-			);
-			plot_arrays.push(
-				Plot.dot(
-					line_data,
-					value_end_dot(x_axis_kind, BoundaryLimit.Upper, color, result),
-				),
-			);
-		}
-
-		// Lower Boundary
-		if (props.lower_boundary()) {
-			plot_arrays.push(
-				Plot.line(
-					line_data,
-					boundary_line(x_axis_kind, BoundaryLimit.Lower, color),
-				),
-			);
-			plot_arrays.push(
-				Plot.dot(
-					boundary_data,
-					boundary_dot(
-						x_axis_kind,
-						BoundaryLimit.Lower,
-						color,
-						project_slug,
-						result,
-						props.isConsole,
-					),
-				),
-			);
-			warn_arrays.push(
-				Plot.image(
-					skipped_lower_data,
-					warning_image(
-						x_axis_kind,
-						project_slug,
-						props.isConsole,
-						props.plotId,
-					),
-				),
-			);
-		}
-
-		// Upper Boundary
-		if (props.upper_boundary()) {
-			plot_arrays.push(
-				Plot.line(
-					line_data,
-					boundary_line(x_axis_kind, BoundaryLimit.Upper, color),
-				),
-			);
-			plot_arrays.push(
-				Plot.dot(
-					boundary_data,
-					boundary_dot(
-						x_axis_kind,
-						BoundaryLimit.Upper,
-						color,
-						project_slug,
-						result,
-						props.isConsole,
-					),
-				),
-			);
-			warn_arrays.push(
-				Plot.image(
-					skipped_upper_data,
-					warning_image(x_axis_kind, project_slug, props.isConsole),
-				),
-			);
-		}
-
-		alert_arrays.push(
-			Plot.image(
-				lower_alert_data,
-				alert_image(
-					x_axis_kind,
-					BoundaryLimit.Lower,
-					project_slug,
-					result,
-					props.isConsole,
-					props.plotId,
-				),
-			),
-		);
-		alert_arrays.push(
-			Plot.image(
-				upper_alert_data,
-				alert_image(
-					x_axis_kind,
-					BoundaryLimit.Upper,
-					project_slug,
-					result,
-					props.isConsole,
-					props.plotId,
-				),
-			),
-		);
+	const marks = plot_marks(all_data, {
+		project_slug: json_perf.project.slug,
+		isConsole: props.isConsole,
+		plotId: props.plotId,
+		lower_value: props.lower_value,
+		upper_value: props.upper_value,
+		lower_boundary: props.lower_boundary,
+		upper_boundary: props.upper_boundary,
+		x_axis_kind,
 	});
-
-	// This allows the alert images to appear on top of the plot lines.
-	plot_arrays.push(...warn_arrays, ...alert_arrays);
 
 	return {
 		metrics_found,
 		x_axis_scale_type,
 		x_axis_label,
 		units,
-		plot_arrays,
+		marks,
 		hoverStyles: hoverStyles(),
 	};
 };
@@ -533,6 +374,192 @@ const perf_result = (
 		skipped_lower_data,
 		skipped_upper_data,
 	};
+};
+
+const plot_marks = (
+	all_data,
+	props: {
+		project_slug: string;
+		isConsole: boolean;
+		plotId: string | undefined;
+		lower_value: Accessor<boolean>;
+		upper_value: Accessor<boolean>;
+		lower_boundary: Accessor<boolean>;
+		upper_boundary: Accessor<boolean>;
+		x_axis_kind: string;
+	},
+) => {
+	const plot_arrays = [];
+	const warn_arrays = [];
+	const alert_arrays = [];
+
+	const colors = d3.schemeTableau10;
+
+	for (const data of all_data) {
+		const {
+			index,
+			result,
+			line_data,
+			lower_alert_data,
+			upper_alert_data,
+			boundary_data,
+			skipped_lower_data,
+			skipped_upper_data,
+		} = data;
+
+		const color = colors[index % 10] ?? "7f7f7f";
+
+		// Line
+		plot_arrays.push(
+			Plot.line(line_data, {
+				x: props.x_axis_kind,
+				y: "value",
+				stroke: color,
+			}),
+		);
+		// Dots
+		plot_arrays.push(
+			Plot.dot(line_data, {
+				x: props.x_axis_kind,
+				y: "value",
+				symbol: "circle",
+				stroke: color,
+				fill: color,
+				title: (datum) =>
+					to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
+				href: (datum) =>
+					dotUrl(props.project_slug, props.isConsole, props.plotId, datum),
+				target: "_top",
+			}),
+		);
+
+		// Lower Value
+		if (props.lower_value()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					value_end_line(props.x_axis_kind, BoundaryLimit.Lower, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					line_data,
+					value_end_dot(props.x_axis_kind, BoundaryLimit.Lower, color, result),
+				),
+			);
+		}
+
+		// Upper Value
+		if (props.upper_value()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					value_end_line(props.x_axis_kind, BoundaryLimit.Upper, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					line_data,
+					value_end_dot(props.x_axis_kind, BoundaryLimit.Upper, color, result),
+				),
+			);
+		}
+
+		// Lower Boundary
+		if (props.lower_boundary()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					boundary_line(props.x_axis_kind, BoundaryLimit.Lower, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					boundary_data,
+					boundary_dot(
+						props.x_axis_kind,
+						BoundaryLimit.Lower,
+						color,
+						props.project_slug,
+						result,
+						props.isConsole,
+					),
+				),
+			);
+			warn_arrays.push(
+				Plot.image(
+					skipped_lower_data,
+					warning_image(
+						props.x_axis_kind,
+						props.project_slug,
+						props.isConsole,
+						props.plotId,
+					),
+				),
+			);
+		}
+
+		// Upper Boundary
+		if (props.upper_boundary()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					boundary_line(props.x_axis_kind, BoundaryLimit.Upper, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					boundary_data,
+					boundary_dot(
+						props.x_axis_kind,
+						BoundaryLimit.Upper,
+						color,
+						props.project_slug,
+						result,
+						props.isConsole,
+					),
+				),
+			);
+			warn_arrays.push(
+				Plot.image(
+					skipped_upper_data,
+					warning_image(props.x_axis_kind, props.project_slug, props.isConsole),
+				),
+			);
+		}
+
+		alert_arrays.push(
+			Plot.image(
+				lower_alert_data,
+				alert_image(
+					props.x_axis_kind,
+					BoundaryLimit.Lower,
+					props.project_slug,
+					result,
+					props.isConsole,
+					props.plotId,
+				),
+			),
+		);
+		alert_arrays.push(
+			Plot.image(
+				upper_alert_data,
+				alert_image(
+					props.x_axis_kind,
+					BoundaryLimit.Upper,
+					props.project_slug,
+					result,
+					props.isConsole,
+					props.plotId,
+				),
+			),
+		);
+	}
+
+	// This allows the alert images to appear on top of the plot lines.
+	plot_arrays.push(...warn_arrays, ...alert_arrays);
+
+	return plot_arrays;
 };
 
 const old_line_plot = (props: Props) => {
