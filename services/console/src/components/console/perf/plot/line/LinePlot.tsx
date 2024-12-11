@@ -16,6 +16,7 @@ import {
 	BoundaryLimit,
 	type JsonPerf,
 	type JsonPerfAlert,
+	type JsonPerfMetrics,
 	XAxis,
 } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
@@ -92,9 +93,12 @@ const LinePlot = (props: Props) => {
 		}
 	});
 
-	const linePlot = createMemo(() => line_plot(props) ?? {
-		metrics_found: false,
-	});
+	const linePlot = createMemo(
+		() =>
+			line_plot(props) ?? {
+				metrics_found: false,
+			},
+	);
 
 	return (
 		<Show
@@ -218,6 +222,320 @@ const hover_styles = (theme: Theme) => {
 };
 
 const line_plot = (props: Props) => {
+	const hoverStyles = createMemo(() => hover_styles(props.theme()));
+
+	const json_perf = props.perfData();
+	// console.log(json_perf);
+
+	if (
+		typeof json_perf !== "object" ||
+		json_perf === undefined ||
+		json_perf === null ||
+		!Array.isArray(json_perf.results)
+	) {
+		return;
+	}
+
+	const units = get_units(json_perf);
+	const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
+		props.x_axis(),
+	);
+
+	const plot_arrays = [];
+	const warn_arrays = [];
+	const alert_arrays = [];
+	let metrics_found = false;
+	const colors = d3.schemeTableau10;
+	const project_slug = json_perf.project.slug;
+
+	const all_data = json_perf.results.map((result, index) => {
+		const data = perf_result(result, index, props.perfActive);
+		if ((data?.line_data?.length ?? 0) > 0) {
+			metrics_found = true;
+		}
+		return data;
+	});
+
+	// Evaluate if scaling is needed
+	// (Add your scaling logic here if needed)
+
+	// Proceed with plotting
+	all_data.forEach((data) => {
+		const {
+			index,
+			result,
+			line_data,
+			lower_alert_data,
+			upper_alert_data,
+			boundary_data,
+			skipped_lower_data,
+			skipped_upper_data,
+		} = data;
+
+		const color = colors[index % 10] ?? "7f7f7f";
+
+		// Line
+		plot_arrays.push(
+			Plot.line(line_data, {
+				x: x_axis_kind,
+				y: "value",
+				stroke: color,
+			}),
+		);
+		// Dots
+		plot_arrays.push(
+			Plot.dot(line_data, {
+				x: x_axis_kind,
+				y: "value",
+				symbol: "circle",
+				stroke: color,
+				fill: color,
+				title: (datum) =>
+					to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
+				href: (datum) =>
+					dotUrl(project_slug, props.isConsole, props.plotId, datum),
+				target: "_top",
+			}),
+		);
+
+		// Lower Value
+		if (props.lower_value()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					value_end_line(x_axis_kind, BoundaryLimit.Lower, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					line_data,
+					value_end_dot(x_axis_kind, BoundaryLimit.Lower, color, result),
+				),
+			);
+		}
+
+		// Upper Value
+		if (props.upper_value()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					value_end_line(x_axis_kind, BoundaryLimit.Upper, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					line_data,
+					value_end_dot(x_axis_kind, BoundaryLimit.Upper, color, result),
+				),
+			);
+		}
+
+		// Lower Boundary
+		if (props.lower_boundary()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					boundary_line(x_axis_kind, BoundaryLimit.Lower, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					boundary_data,
+					boundary_dot(
+						x_axis_kind,
+						BoundaryLimit.Lower,
+						color,
+						project_slug,
+						result,
+						props.isConsole,
+					),
+				),
+			);
+			warn_arrays.push(
+				Plot.image(
+					skipped_lower_data,
+					warning_image(
+						x_axis_kind,
+						project_slug,
+						props.isConsole,
+						props.plotId,
+					),
+				),
+			);
+		}
+
+		// Upper Boundary
+		if (props.upper_boundary()) {
+			plot_arrays.push(
+				Plot.line(
+					line_data,
+					boundary_line(x_axis_kind, BoundaryLimit.Upper, color),
+				),
+			);
+			plot_arrays.push(
+				Plot.dot(
+					boundary_data,
+					boundary_dot(
+						x_axis_kind,
+						BoundaryLimit.Upper,
+						color,
+						project_slug,
+						result,
+						props.isConsole,
+					),
+				),
+			);
+			warn_arrays.push(
+				Plot.image(
+					skipped_upper_data,
+					warning_image(x_axis_kind, project_slug, props.isConsole),
+				),
+			);
+		}
+
+		alert_arrays.push(
+			Plot.image(
+				lower_alert_data,
+				alert_image(
+					x_axis_kind,
+					BoundaryLimit.Lower,
+					project_slug,
+					result,
+					props.isConsole,
+					props.plotId,
+				),
+			),
+		);
+		alert_arrays.push(
+			Plot.image(
+				upper_alert_data,
+				alert_image(
+					x_axis_kind,
+					BoundaryLimit.Upper,
+					project_slug,
+					result,
+					props.isConsole,
+					props.plotId,
+				),
+			),
+		);
+	});
+
+	// This allows the alert images to appear on top of the plot lines.
+	plot_arrays.push(...warn_arrays, ...alert_arrays);
+
+	return {
+		metrics_found,
+		x_axis_scale_type,
+		x_axis_label,
+		units,
+		plot_arrays,
+		hoverStyles: hoverStyles(),
+	};
+};
+
+const perf_result = (
+	result: JsonPerfMetrics,
+	index: number,
+	perfActive: boolean[],
+) => {
+	const perf_metrics = result.metrics;
+	if (!(Array.isArray(perf_metrics) && perfActive[index])) {
+		return null;
+	}
+
+	const line_data = [];
+	const lower_alert_data = [];
+	const upper_alert_data = [];
+	const boundary_data = [];
+	const skipped_lower_data = [];
+	const skipped_upper_data = [];
+
+	for (const perf_metric of perf_metrics) {
+		const datum = {
+			report: perf_metric.report,
+			metric: perf_metric.metric?.uuid,
+			value: perf_metric.metric?.value,
+			lower_value: perf_metric.metric?.lower_value,
+			upper_value: perf_metric.metric?.upper_value,
+			date_time: new Date(perf_metric.start_time),
+			number: perf_metric.version?.number,
+			hash: perf_metric.version?.hash,
+			iteration: perf_metric.iteration,
+			lower_limit: perf_metric.boundary?.lower_limit,
+			upper_limit: perf_metric.boundary?.upper_limit,
+		};
+		line_data.push(datum);
+
+		const limit_datum = {
+			date_time: datum.date_time,
+			number: datum.number,
+			hash: datum.hash,
+			iteration: datum.iteration,
+			lower_limit: datum.lower_limit,
+			upper_limit: datum.upper_limit,
+			threshold: perf_metric.threshold,
+		};
+		if (perf_metric.alert && is_active(perf_metric.alert)) {
+			switch (perf_metric.alert?.limit) {
+				case BoundaryLimit.Lower:
+					lower_alert_data.push({
+						...limit_datum,
+						alert: perf_metric.alert,
+					});
+					break;
+				case BoundaryLimit.Upper:
+					upper_alert_data.push({
+						...limit_datum,
+						alert: perf_metric.alert,
+					});
+					break;
+			}
+		} else {
+			boundary_data.push(limit_datum);
+		}
+
+		if (
+			boundary_skipped(
+				perf_metric.threshold?.model?.lower_boundary,
+				perf_metric.boundary?.lower_limit,
+			)
+		) {
+			skipped_lower_data.push({
+				date_time: datum.date_time,
+				number: datum.number,
+				y: perf_metric.metric?.value * 0.9,
+				threshold: perf_metric.threshold,
+			});
+		}
+		if (
+			boundary_skipped(
+				perf_metric.threshold?.model?.upper_boundary,
+				perf_metric.boundary?.upper_limit,
+			)
+		) {
+			skipped_upper_data.push({
+				date_time: datum.date_time,
+				number: datum.number,
+				y: perf_metric.metric?.value * 1.1,
+				threshold: perf_metric.threshold,
+			});
+		}
+	}
+
+	return {
+		index,
+		result,
+		line_data,
+		lower_alert_data,
+		upper_alert_data,
+		boundary_data,
+		skipped_lower_data,
+		skipped_upper_data,
+	};
+};
+
+const old_line_plot = (props: Props) => {
 	const hoverStyles = createMemo(() => hover_styles(props.theme()));
 
 	const json_perf = props.perfData();
