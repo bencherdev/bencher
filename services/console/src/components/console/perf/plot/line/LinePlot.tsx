@@ -163,7 +163,7 @@ const line_plot = (props: Props) => {
 	}
 
 	let metrics_found = false;
-	const plot_data = json_perf.results.map((result, index) => {
+	const raw_data = json_perf.results.map((result, index) => {
 		const data = perf_result(result, index, props.perfActive);
 		if ((data?.line_data?.length ?? 0) > 0) {
 			metrics_found = true;
@@ -171,12 +171,13 @@ const line_plot = (props: Props) => {
 		return data;
 	});
 
-	const units = get_units(json_perf);
+	const raw_units = get_units(json_perf);
 	const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
 		props.x_axis(),
 	);
+	const [data, units] = scale_data(raw_data, raw_units);
 
-	const marks = plot_marks(plot_data, {
+	const marks = plot_marks(data, {
 		project_slug: json_perf.project.slug,
 		isConsole: props.isConsole,
 		plotId: props.plotId,
@@ -213,6 +214,28 @@ const get_x_axis = (x_axis: XAxis): [string, ScaleType, string] => {
 			return ["number", "point", "Branch Version Number"];
 	}
 };
+
+const scale_data = (raw_data, raw_units) => {
+	return [raw_data, raw_units];
+};
+
+enum Time {
+	Nanos = 1,
+	Micros = 1_000,
+	Millis = 1_000_000,
+	Seconds = 1_000_000_000,
+	Minutes = 60_000_000_000,
+	Hours = 3_600_000_000_000,
+}
+
+enum OneE3 {
+	One = 1,
+	Three = 1_000,
+	Siz = 1_000_000,
+	Nine = 1_000_000_000,
+	Twelve = 1_000_000_000_000,
+	Fifteen = 1_000_000_000_000_000,
+}
 
 const hover_styles = (theme: Theme) => {
 	switch (theme) {
@@ -341,7 +364,7 @@ const boundary_skipped = (
 ) => boundary && !limit;
 
 const plot_marks = (
-	all_data,
+	plot_data,
 	props: {
 		project_slug: string;
 		isConsole: boolean;
@@ -359,7 +382,7 @@ const plot_marks = (
 
 	const colors = d3.schemeTableau10;
 
-	for (const data of all_data) {
+	for (const data of plot_data) {
 		const {
 			index,
 			result,
