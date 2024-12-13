@@ -271,7 +271,6 @@ const scale_data = (
 			),
 		MAX,
 	);
-	console.log(min);
 
 	const scale = (() => {
 		if (raw_units === "nanoseconds (ns)") {
@@ -292,34 +291,23 @@ const scale_data = (
 			}
 			return Time.Nanos;
 		}
-		if (min > OneE3.Fifteen) {
-			return OneE3.Fifteen;
+		if (min > OneE.Fifteen) {
+			return OneE.Fifteen;
 		}
-		if (min > OneE3.Twelve) {
-			return OneE3.Twelve;
+		if (min > OneE.Twelve) {
+			return OneE.Twelve;
 		}
-		if (min > OneE3.Nine) {
-			return OneE3.Nine;
+		if (min > OneE.Nine) {
+			return OneE.Nine;
 		}
-		if (min > OneE3.Six) {
-			return OneE3.Six;
+		if (min > OneE.Six) {
+			return OneE.Six;
 		}
-		if (min > OneE3.Three) {
-			return OneE3.Three;
+		if (min > OneE.Three) {
+			return OneE.Three;
 		}
-		return OneE3.One;
+		return OneE.One;
 	})();
-
-	// return {
-	// 	index,
-	// 	result,
-	// 	line_data,
-	// 	lower_alert_data,
-	// 	upper_alert_data,
-	// 	boundary_data,
-	// 	skipped_lower_data,
-	// 	skipped_upper_data,
-	// };
 
 	const scaled_data = raw_data.map((data) => {
 		data.line_data = data.line_data?.map((datum) => {
@@ -376,7 +364,40 @@ const scale_data = (
 		return data;
 	});
 
-	return [scaled_data, raw_units];
+	const scaled_units = (() => {
+		if (raw_units === "nanoseconds (ns)") {
+			switch (scale) {
+				case Time.Nanos:
+					return raw_units;
+				case Time.Micros:
+					return "microseconds (μs)";
+				case Time.Millis:
+					return "milliseconds (ms)";
+				case Time.Seconds:
+					return "seconds (s)";
+				case Time.Minutes:
+					return "minutes (m)";
+				case Time.Hours:
+					return "hours (h)";
+			}
+		}
+		switch (scale) {
+			case OneE.One:
+				return raw_units;
+			case OneE.Three:
+				return `1e3 x ${raw_units}`;
+			case OneE.Six:
+				return `1e6 x ${raw_units}`;
+			case OneE.Nine:
+				return `1e9 x ${raw_units}`;
+			case OneE.Twelve:
+				return `1e12 x ${raw_units}`;
+			case OneE.Fifteen:
+				return `1e15 x ${raw_units}`;
+		}
+	})();
+
+	return [scaled_data, scaled_units];
 };
 
 enum Time {
@@ -388,7 +409,7 @@ enum Time {
 	Hours = 3_600_000_000_000,
 }
 
-enum OneE3 {
+enum OneE {
 	One = 1,
 	Three = 1_000,
 	Six = 1_000_000,
