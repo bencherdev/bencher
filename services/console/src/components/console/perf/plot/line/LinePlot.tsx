@@ -324,25 +324,45 @@ const scale_data = (
 	const scaled_data = raw_data.map((data) => {
 		data.line_data = data.line_data?.map((datum) => {
 			datum.value = datum.value / scale;
-			datum.lower_value = datum.lower_value / scale;
-			datum.upper_value = datum.upper_value / scale;
-			datum.lower_limit = datum.lower_limit / scale;
-			datum.upper_limit = datum.upper_limit / scale;
+			if (datum.lower_value !== undefined && datum.lower_value !== null) {
+				datum.lower_value = datum.lower_value / scale;
+			}
+			if (datum.upper_value !== undefined && datum.upper_value !== null) {
+				datum.upper_value = datum.upper_value / scale;
+			}
+			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
+				datum.lower_limit = datum.lower_limit / scale;
+			}
+			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
+				datum.upper_limit = datum.upper_limit / scale;
+			}
 			return datum;
 		});
 		data.lower_alert_data = data.lower_alert_data?.map((datum) => {
-			datum.lower_limit = datum.lower_limit / scale;
-			datum.upper_limit = datum.upper_limit / scale;
+			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
+				datum.lower_limit = datum.lower_limit / scale;
+			}
+			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
+				datum.upper_limit = datum.upper_limit / scale;
+			}
 			return datum;
 		});
 		data.upper_alert_data = data.upper_alert_data?.map((datum) => {
-			datum.lower_limit = datum.lower_limit / scale;
-			datum.upper_limit = datum.upper_limit / scale;
+			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
+				datum.lower_limit = datum.lower_limit / scale;
+			}
+			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
+				datum.upper_limit = datum.upper_limit / scale;
+			}
 			return datum;
 		});
 		data.boundary_data = data.boundary_data?.map((datum) => {
-			datum.lower_limit = datum.lower_limit / scale;
-			datum.upper_limit = datum.upper_limit / scale;
+			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
+				datum.lower_limit = datum.lower_limit / scale;
+			}
+			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
+				datum.upper_limit = datum.upper_limit / scale;
+			}
 			return datum;
 		});
 		data.skipped_lower_data = data.skipped_lower_data?.map((datum) => {
@@ -567,7 +587,7 @@ const plot_marks = (
 				fill: color,
 				title: (datum) =>
 					to_title(
-						`${datum?.raw?.value}`,
+						`${prettyPrintNumber(datum?.raw?.value)}`,
 						result,
 						datum,
 						"\nClick to view Metric",
@@ -858,7 +878,7 @@ const alert_image = (
 
 const value_end_title = (limit: BoundaryLimit, result, datum, suffix) =>
 	to_title(
-		`${position_label(limit)} Value: ${datum?.raw?.[value_end_position_key(limit)]}`,
+		`${position_label(limit)} Value: ${prettyPrintNumber(datum?.raw?.[value_end_position_key(limit)])}`,
 		result,
 		datum,
 		suffix,
@@ -866,7 +886,7 @@ const value_end_title = (limit: BoundaryLimit, result, datum, suffix) =>
 
 const limit_title = (limit: BoundaryLimit, result, datum, suffix) =>
 	to_title(
-		`${position_label(limit)} Limit: ${datum?.raw?.[boundary_position_key(limit)]}`,
+		`${position_label(limit)} Limit: ${prettyPrintNumber(datum?.raw?.[boundary_position_key(limit)])}`,
 		result,
 		datum,
 		suffix,
@@ -898,5 +918,12 @@ const position_label = (limit: BoundaryLimit) => {
 			return "Upper";
 	}
 };
+
+function prettyPrintNumber(float: number | undefined) {
+	return float?.toLocaleString("en-US", {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+}
 
 export default LinePlot;
