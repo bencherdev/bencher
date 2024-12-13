@@ -175,7 +175,12 @@ const line_plot = (props: Props) => {
 	const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
 		props.x_axis(),
 	);
-	const [data, units] = scale_data(raw_data, raw_units);
+	const [data, units] = scale_data(raw_data, raw_units, {
+		lower_value: props.lower_value,
+		upper_value: props.upper_value,
+		lower_boundary: props.lower_boundary,
+		upper_boundary: props.upper_boundary,
+	});
 
 	const marks = plot_marks(data, {
 		project_slug: json_perf.project.slug,
@@ -215,7 +220,52 @@ const get_x_axis = (x_axis: XAxis): [string, ScaleType, string] => {
 	}
 };
 
-const scale_data = (raw_data, raw_units) => {
+const scale_data = (
+	raw_data: object[],
+	raw_units: string,
+	props: {
+		lower_value: Accessor<boolean>;
+		upper_value: Accessor<boolean>;
+		lower_boundary: Accessor<boolean>;
+		upper_boundary: Accessor<boolean>;
+	},
+) => {
+	const MAX = Number.MAX_SAFE_INTEGER;
+	const min = raw_data.reduce(
+		(min, data) =>
+			Math.min(
+				min,
+				// The primary metric series
+				Math.min(...data.line_data.map((datum) => datum.value ?? MAX)),
+				// The lower value series, if active
+				props.lower_value()
+					? Math.min(...data.line_data.map((datum) => datum.lower_value ?? MAX))
+					: MAX,
+				// The upper value series, if active
+				props.upper_value()
+					? Math.min(...data.line_data.map((datum) => datum.upper_value ?? MAX))
+					: MAX,
+				// The lower boundary series, if active
+				props.lower_boundary()
+					? Math.min(...data.line_data.map((datum) => datum.lower_limit ?? MAX))
+					: MAX,
+				// The upper boundary series, if active
+				props.upper_boundary()
+					? Math.min(...data.line_data.map((datum) => datum.upper_limit ?? MAX))
+					: MAX,
+				// The lower alert series
+				Math.min(
+					...data.lower_alert_data.map((datum) => datum.lower_limit ?? MAX),
+				),
+				// The upper alert series
+				Math.min(
+					...data.upper_alert_data.map((datum) => datum.upper_limit ?? MAX),
+				),
+			),
+		MAX,
+	);
+	console.log(min);
+
 	return [raw_data, raw_units];
 };
 
