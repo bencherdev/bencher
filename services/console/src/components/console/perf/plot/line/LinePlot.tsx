@@ -356,7 +356,7 @@ const scale_data = (
 		return data;
 	});
 
-	return [raw_data, raw_units];
+	return [scaled_data, raw_units];
 };
 
 enum Time {
@@ -422,6 +422,14 @@ const perf_result = (
 			iteration: perf_metric.iteration,
 			lower_limit: perf_metric.boundary?.lower_limit,
 			upper_limit: perf_metric.boundary?.upper_limit,
+			// These values do not get scaled and are used by the tooltip
+			raw: {
+				value: perf_metric.metric?.value,
+				lower_value: perf_metric.metric?.lower_value,
+				upper_value: perf_metric.metric?.upper_value,
+				lower_limit: perf_metric.boundary?.lower_limit,
+				upper_limit: perf_metric.boundary?.upper_limit,
+			},
 		};
 		line_data.push(datum);
 
@@ -433,6 +441,11 @@ const perf_result = (
 			lower_limit: datum.lower_limit,
 			upper_limit: datum.upper_limit,
 			threshold: perf_metric.threshold,
+			// These values do not get scaled and are used by the tooltip
+			raw: {
+				lower_limit: datum.lower_limit,
+				upper_limit: datum.upper_limit,
+			},
 		};
 		if (perf_metric.alert && is_active(perf_metric.alert)) {
 			switch (perf_metric.alert?.limit) {
@@ -553,7 +566,12 @@ const plot_marks = (
 				stroke: color,
 				fill: color,
 				title: (datum) =>
-					to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
+					to_title(
+						`${datum?.raw?.value}`,
+						result,
+						datum,
+						"\nClick to view Metric",
+					),
 				href: (datum) =>
 					dotUrl(props.project_slug, props.isConsole, props.plotId, datum),
 				target: "_top",
@@ -840,7 +858,7 @@ const alert_image = (
 
 const value_end_title = (limit: BoundaryLimit, result, datum, suffix) =>
 	to_title(
-		`${position_label(limit)} Value: ${datum[value_end_position_key(limit)]}`,
+		`${position_label(limit)} Value: ${datum?.raw?.[value_end_position_key(limit)]}`,
 		result,
 		datum,
 		suffix,
@@ -848,7 +866,7 @@ const value_end_title = (limit: BoundaryLimit, result, datum, suffix) =>
 
 const limit_title = (limit: BoundaryLimit, result, datum, suffix) =>
 	to_title(
-		`${position_label(limit)} Limit: ${datum[boundary_position_key(limit)]}`,
+		`${position_label(limit)} Limit: ${datum?.raw?.[boundary_position_key(limit)]}`,
 		result,
 		datum,
 		suffix,
