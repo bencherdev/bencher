@@ -231,6 +231,7 @@ const scale_data = (
 	},
 ) => {
 	const MAX = Number.MAX_SAFE_INTEGER;
+
 	const min = raw_data.reduce(
 		(min, data) =>
 			Math.min(
@@ -247,11 +248,17 @@ const scale_data = (
 					: MAX,
 				// The lower boundary series, if active
 				props.lower_boundary()
-					? Math.min(...data.line_data.map((datum) => datum.lower_limit ?? MAX))
+					? Math.min(
+							...data.line_data.map((datum) => datum.lower_limit ?? MAX),
+							...data.skipped_lower_data.map((datum) => datum.y ?? MAX),
+						)
 					: MAX,
 				// The upper boundary series, if active
 				props.upper_boundary()
-					? Math.min(...data.line_data.map((datum) => datum.upper_limit ?? MAX))
+					? Math.min(
+							...data.line_data.map((datum) => datum.upper_limit ?? MAX),
+							...data.skipped_upper_data.map((datum) => datum.y ?? MAX),
+						)
 					: MAX,
 				// The lower alert series
 				Math.min(
@@ -265,6 +272,89 @@ const scale_data = (
 		MAX,
 	);
 	console.log(min);
+
+	const scale = (() => {
+		if (raw_units === "nanoseconds (ns)") {
+			if (min > Time.Hours) {
+				return Time.Hours;
+			}
+			if (min > Time.Minutes) {
+				return Time.Minutes;
+			}
+			if (min > Time.Seconds) {
+				return Time.Seconds;
+			}
+			if (min > Time.Millis) {
+				return Time.Millis;
+			}
+			if (min > Time.Micros) {
+				return Time.Micros;
+			}
+			return Time.Nanos;
+		}
+		if (min > OneE3.Fifteen) {
+			return OneE3.Fifteen;
+		}
+		if (min > OneE3.Twelve) {
+			return OneE3.Twelve;
+		}
+		if (min > OneE3.Nine) {
+			return OneE3.Nine;
+		}
+		if (min > OneE3.Six) {
+			return OneE3.Six;
+		}
+		if (min > OneE3.Three) {
+			return OneE3.Three;
+		}
+		return OneE3.One;
+	})();
+
+	// return {
+	// 	index,
+	// 	result,
+	// 	line_data,
+	// 	lower_alert_data,
+	// 	upper_alert_data,
+	// 	boundary_data,
+	// 	skipped_lower_data,
+	// 	skipped_upper_data,
+	// };
+
+	const scaled_data = raw_data.map((data) => {
+		data.line_data = data.line_data?.map((datum) => {
+			datum.value = datum.value / scale;
+			datum.lower_value = datum.lower_value / scale;
+			datum.upper_value = datum.upper_value / scale;
+			datum.lower_limit = datum.lower_limit / scale;
+			datum.upper_limit = datum.upper_limit / scale;
+			return datum;
+		});
+		data.lower_alert_data = data.lower_alert_data?.map((datum) => {
+			datum.lower_limit = datum.lower_limit / scale;
+			datum.upper_limit = datum.upper_limit / scale;
+			return datum;
+		});
+		data.upper_alert_data = data.upper_alert_data?.map((datum) => {
+			datum.lower_limit = datum.lower_limit / scale;
+			datum.upper_limit = datum.upper_limit / scale;
+			return datum;
+		});
+		data.boundary_data = data.boundary_data?.map((datum) => {
+			datum.lower_limit = datum.lower_limit / scale;
+			datum.upper_limit = datum.upper_limit / scale;
+			return datum;
+		});
+		data.skipped_lower_data = data.skipped_lower_data?.map((datum) => {
+			datum.y = datum.y / scale;
+			return datum;
+		});
+		data.skipped_upper_data = data.skipped_upper_data?.map((datum) => {
+			datum.y = datum.y / scale;
+			return datum;
+		});
+		return data;
+	});
 
 	return [raw_data, raw_units];
 };
@@ -281,7 +371,7 @@ enum Time {
 enum OneE3 {
 	One = 1,
 	Three = 1_000,
-	Siz = 1_000_000,
+	Six = 1_000_000,
 	Nine = 1_000_000_000,
 	Twelve = 1_000_000_000_000,
 	Fifteen = 1_000_000_000_000_000,
