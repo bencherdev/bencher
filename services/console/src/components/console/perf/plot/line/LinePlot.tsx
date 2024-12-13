@@ -220,6 +220,145 @@ const get_x_axis = (x_axis: XAxis): [string, ScaleType, string] => {
 	}
 };
 
+const hover_styles = (theme: Theme) => {
+	switch (theme) {
+		case Theme.Light:
+			return {
+				fill: "white",
+				stroke: "grey",
+			};
+		case Theme.Dark:
+			return {
+				fill: "black",
+				stroke: "white",
+			};
+	}
+};
+
+const perf_result = (
+	result: JsonPerfMetrics,
+	index: number,
+	perfActive: boolean[],
+) => {
+	const perf_metrics = result.metrics;
+	if (!(Array.isArray(perf_metrics) && perfActive[index])) {
+		return null;
+	}
+
+	const line_data = [];
+	const lower_alert_data = [];
+	const upper_alert_data = [];
+	const boundary_data = [];
+	const skipped_lower_data = [];
+	const skipped_upper_data = [];
+
+	for (const perf_metric of perf_metrics) {
+		const datum = {
+			report: perf_metric.report,
+			metric: perf_metric.metric?.uuid,
+			value: perf_metric.metric?.value,
+			lower_value: perf_metric.metric?.lower_value,
+			upper_value: perf_metric.metric?.upper_value,
+			date_time: new Date(perf_metric.start_time),
+			number: perf_metric.version?.number,
+			hash: perf_metric.version?.hash,
+			iteration: perf_metric.iteration,
+			lower_limit: perf_metric.boundary?.lower_limit,
+			upper_limit: perf_metric.boundary?.upper_limit,
+			// These values do not get scaled and are used by the tooltip
+			raw: {
+				value: perf_metric.metric?.value,
+				lower_value: perf_metric.metric?.lower_value,
+				upper_value: perf_metric.metric?.upper_value,
+				lower_limit: perf_metric.boundary?.lower_limit,
+				upper_limit: perf_metric.boundary?.upper_limit,
+			},
+		};
+		line_data.push(datum);
+
+		const limit_datum = {
+			date_time: datum.date_time,
+			number: datum.number,
+			hash: datum.hash,
+			iteration: datum.iteration,
+			lower_limit: datum.lower_limit,
+			upper_limit: datum.upper_limit,
+			threshold: perf_metric.threshold,
+			// These values do not get scaled and are used by the tooltip
+			raw: {
+				lower_limit: datum.lower_limit,
+				upper_limit: datum.upper_limit,
+			},
+		};
+		if (perf_metric.alert && is_active(perf_metric.alert)) {
+			switch (perf_metric.alert?.limit) {
+				case BoundaryLimit.Lower:
+					lower_alert_data.push({
+						...limit_datum,
+						alert: perf_metric.alert,
+					});
+					break;
+				case BoundaryLimit.Upper:
+					upper_alert_data.push({
+						...limit_datum,
+						alert: perf_metric.alert,
+					});
+					break;
+			}
+		} else {
+			boundary_data.push(limit_datum);
+		}
+
+		if (
+			boundary_skipped(
+				perf_metric.threshold?.model?.lower_boundary,
+				perf_metric.boundary?.lower_limit,
+			)
+		) {
+			skipped_lower_data.push({
+				date_time: datum.date_time,
+				number: datum.number,
+				y: perf_metric.metric?.value * 0.9,
+				threshold: perf_metric.threshold,
+			});
+		}
+		if (
+			boundary_skipped(
+				perf_metric.threshold?.model?.upper_boundary,
+				perf_metric.boundary?.upper_limit,
+			)
+		) {
+			skipped_upper_data.push({
+				date_time: datum.date_time,
+				number: datum.number,
+				y: perf_metric.metric?.value * 1.1,
+				threshold: perf_metric.threshold,
+			});
+		}
+	}
+
+	return {
+		index,
+		result,
+		line_data,
+		lower_alert_data,
+		upper_alert_data,
+		boundary_data,
+		skipped_lower_data,
+		skipped_upper_data,
+	};
+};
+
+const is_active = (alert: JsonPerfAlert) =>
+	alert?.status && alert.status === AlertStatus.Active;
+
+// A boundary is skipped if it is defined but its limit undefined
+// This indicates that the the boundary limit could not be calculated for the metric
+const boundary_skipped = (
+	boundary: undefined | Boundary,
+	limit: undefined | number,
+) => boundary && !limit;
+
 const scale_data = (
 	raw_data: object[],
 	raw_units: string,
@@ -417,145 +556,6 @@ enum OneE {
 	Twelve = 1_000_000_000_000,
 	Fifteen = 1_000_000_000_000_000,
 }
-
-const hover_styles = (theme: Theme) => {
-	switch (theme) {
-		case Theme.Light:
-			return {
-				fill: "white",
-				stroke: "grey",
-			};
-		case Theme.Dark:
-			return {
-				fill: "black",
-				stroke: "white",
-			};
-	}
-};
-
-const perf_result = (
-	result: JsonPerfMetrics,
-	index: number,
-	perfActive: boolean[],
-) => {
-	const perf_metrics = result.metrics;
-	if (!(Array.isArray(perf_metrics) && perfActive[index])) {
-		return null;
-	}
-
-	const line_data = [];
-	const lower_alert_data = [];
-	const upper_alert_data = [];
-	const boundary_data = [];
-	const skipped_lower_data = [];
-	const skipped_upper_data = [];
-
-	for (const perf_metric of perf_metrics) {
-		const datum = {
-			report: perf_metric.report,
-			metric: perf_metric.metric?.uuid,
-			value: perf_metric.metric?.value,
-			lower_value: perf_metric.metric?.lower_value,
-			upper_value: perf_metric.metric?.upper_value,
-			date_time: new Date(perf_metric.start_time),
-			number: perf_metric.version?.number,
-			hash: perf_metric.version?.hash,
-			iteration: perf_metric.iteration,
-			lower_limit: perf_metric.boundary?.lower_limit,
-			upper_limit: perf_metric.boundary?.upper_limit,
-			// These values do not get scaled and are used by the tooltip
-			raw: {
-				value: perf_metric.metric?.value,
-				lower_value: perf_metric.metric?.lower_value,
-				upper_value: perf_metric.metric?.upper_value,
-				lower_limit: perf_metric.boundary?.lower_limit,
-				upper_limit: perf_metric.boundary?.upper_limit,
-			},
-		};
-		line_data.push(datum);
-
-		const limit_datum = {
-			date_time: datum.date_time,
-			number: datum.number,
-			hash: datum.hash,
-			iteration: datum.iteration,
-			lower_limit: datum.lower_limit,
-			upper_limit: datum.upper_limit,
-			threshold: perf_metric.threshold,
-			// These values do not get scaled and are used by the tooltip
-			raw: {
-				lower_limit: datum.lower_limit,
-				upper_limit: datum.upper_limit,
-			},
-		};
-		if (perf_metric.alert && is_active(perf_metric.alert)) {
-			switch (perf_metric.alert?.limit) {
-				case BoundaryLimit.Lower:
-					lower_alert_data.push({
-						...limit_datum,
-						alert: perf_metric.alert,
-					});
-					break;
-				case BoundaryLimit.Upper:
-					upper_alert_data.push({
-						...limit_datum,
-						alert: perf_metric.alert,
-					});
-					break;
-			}
-		} else {
-			boundary_data.push(limit_datum);
-		}
-
-		if (
-			boundary_skipped(
-				perf_metric.threshold?.model?.lower_boundary,
-				perf_metric.boundary?.lower_limit,
-			)
-		) {
-			skipped_lower_data.push({
-				date_time: datum.date_time,
-				number: datum.number,
-				y: perf_metric.metric?.value * 0.9,
-				threshold: perf_metric.threshold,
-			});
-		}
-		if (
-			boundary_skipped(
-				perf_metric.threshold?.model?.upper_boundary,
-				perf_metric.boundary?.upper_limit,
-			)
-		) {
-			skipped_upper_data.push({
-				date_time: datum.date_time,
-				number: datum.number,
-				y: perf_metric.metric?.value * 1.1,
-				threshold: perf_metric.threshold,
-			});
-		}
-	}
-
-	return {
-		index,
-		result,
-		line_data,
-		lower_alert_data,
-		upper_alert_data,
-		boundary_data,
-		skipped_lower_data,
-		skipped_upper_data,
-	};
-};
-
-const is_active = (alert: JsonPerfAlert) =>
-	alert?.status && alert.status === AlertStatus.Active;
-
-// A boundary is skipped if it is defined but its limit undefined
-// This indicates that the the boundary limit could not be calculated for the metric
-const boundary_skipped = (
-	boundary: undefined | Boundary,
-	limit: undefined | number,
-) => boundary && !limit;
 
 const plot_marks = (
 	plot_data,
