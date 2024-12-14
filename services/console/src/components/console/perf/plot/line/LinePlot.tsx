@@ -371,10 +371,9 @@ const scale_data = (
 ) => {
 	const MAX = Number.MAX_SAFE_INTEGER;
 
-	const min = raw_data.reduce(
-		(min, data) =>
+	const min = Math.min(
+		...raw_data.map((data) =>
 			Math.min(
-				min,
 				// The primary metric series
 				Math.min(...data.line_data.map((datum) => datum.value ?? MAX)),
 				// The lower value series, if active
@@ -408,12 +407,12 @@ const scale_data = (
 					...data.upper_alert_data.map((datum) => datum.upper_limit ?? MAX),
 				),
 			),
-		MAX,
+		),
 	);
 
 	const scale = (() => {
 		if (raw_units === "nanoseconds (ns)") {
-			if (min > Time.Hours) {
+			if (min > Number(Time.Hours)) {
 				return Time.Hours;
 			}
 			if (min > Time.Minutes) {
