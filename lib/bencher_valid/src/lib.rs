@@ -19,6 +19,7 @@ mod resource_id;
 mod resource_name;
 mod secret;
 mod slug;
+mod units;
 mod url;
 mod user_name;
 
@@ -50,6 +51,7 @@ pub use plus::{
 pub use resource_id::{ResourceId, ResourceIdKind};
 pub use resource_name::ResourceName;
 pub use secret::Secret;
+pub use units::{BYTES, NANOSECONDS, SECONDS};
 pub use user_name::UserName;
 
 const MAX_LEN: usize = 64;

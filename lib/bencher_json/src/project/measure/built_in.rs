@@ -34,7 +34,7 @@ pub trait BuiltInMeasure {
 }
 
 macro_rules! create_measure {
-    ($id:ident, $name:literal, $slug:literal, $units:literal) => {
+    ($id:ident, $name:literal, $slug:literal, $units:expr) => {
         pub struct $id;
 
         impl crate::project::measure::built_in::BuiltInMeasure for $id {
@@ -46,7 +46,9 @@ macro_rules! create_measure {
 }
 
 pub mod default {
-    create_measure!(Latency, "Latency", "latency", "nanoseconds (ns)");
+    use bencher_valid::NANOSECONDS;
+
+    create_measure!(Latency, "Latency", "latency", NANOSECONDS);
     create_measure!(
         Throughput,
         "Throughput",
@@ -56,8 +58,10 @@ pub mod default {
 }
 
 pub mod json {
-    create_measure!(BuildTime, "Build Time", "build-time", "seconds (s)");
-    create_measure!(FileSize, "File Size", "file-size", "bytes (B)");
+    use bencher_valid::{BYTES, SECONDS};
+
+    create_measure!(BuildTime, "Build Time", "build-time", SECONDS);
+    create_measure!(FileSize, "File Size", "file-size", BYTES);
 }
 
 pub mod iai {
@@ -74,6 +78,8 @@ pub mod iai {
 }
 
 pub mod iai_callgrind {
+    use bencher_valid::BYTES;
+
     // Callgrind
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Hits, "L1 Hits", "l1-hits", "hits");
@@ -94,22 +100,17 @@ pub mod iai_callgrind {
 
     // DHAT
     create_measure!(GlobalBusEvents, "Ge", "global-bus-events", "events");
-    create_measure!(TotalBytes, "Total bytes", "total-bytes", "bytes (B)");
+    create_measure!(TotalBytes, "Total bytes", "total-bytes", BYTES);
     create_measure!(TotalBlocks, "Total blocks", "total-blocks", "blocks");
-    create_measure!(
-        AtTGmaxBytes,
-        "At t-gmax bytes",
-        "at-t-gmax-bytes",
-        "bytes (B)"
-    );
+    create_measure!(AtTGmaxBytes, "At t-gmax bytes", "at-t-gmax-bytes", BYTES);
     create_measure!(
         AtTGmaxBlocks,
         "At t-gmax blocks",
         "at-t-gmax-blocks",
         "blocks"
     );
-    create_measure!(AtTEndBytes, "At t-end bytes", "at-t-end-bytes", "bytes (B)");
+    create_measure!(AtTEndBytes, "At t-end bytes", "at-t-end-bytes", BYTES);
     create_measure!(AtTEndBlocks, "At t-end blocks", "at-t-end-blocks", "blocks");
-    create_measure!(ReadsBytes, "Reads bytes", "reads-bytes", "bytes (B)");
-    create_measure!(WritesBytes, "Writes bytes", "writes-bytes", "bytes (B)");
+    create_measure!(ReadsBytes, "Reads bytes", "reads-bytes", BYTES);
+    create_measure!(WritesBytes, "Writes bytes", "writes-bytes", BYTES);
 }
