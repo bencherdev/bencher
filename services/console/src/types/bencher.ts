@@ -771,12 +771,3 @@ export enum PlotKey {
 	XAxis = "x_axis",
 }
 
-export enum TimeUnits {
-	Nanos = "1",
-	Micros = "1000",
-	Millis = "1000000",
-	Seconds = "1000000000",
-	Minutes = "60000000000",
-	Hours = "3600000000000",
-}
-

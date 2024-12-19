@@ -51,7 +51,7 @@ pub use plus::{
 pub use resource_id::{ResourceId, ResourceIdKind};
 pub use resource_name::ResourceName;
 pub use secret::Secret;
-pub use units::{BYTES, NANOSECONDS, SECONDS};
+pub use units::{scale_factor, scale_units, BYTES, NANOSECONDS, SECONDS};
 pub use user_name::UserName;
 
 const MAX_LEN: usize = 64;
