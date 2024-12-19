@@ -3,8 +3,8 @@ use std::sync::LazyLock;
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
     Index, IqrBoundary, Jwt, Model, ModelTest, NameId, NameIdKind, NonEmpty, PercentageBoundary,
-    ResourceId, ResourceIdKind, ResourceName, SampleSize, Sanitize, Secret, Slug, Url, UserName,
-    ValidError, Window,
+    ResourceId, ResourceIdKind, ResourceName, SampleSize, Sanitize, Secret, Slug, Units, Url,
+    UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{

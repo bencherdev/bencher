@@ -20,7 +20,7 @@ import {
 	type JsonPerfMetrics,
 	XAxis,
 } from "../../../../../types/bencher";
-import { prettyPrintNumber } from "../../../../../util/convert";
+import { prettyPrintFloat } from "../../../../../util/convert";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { Theme } from "../../../../navbar/theme/theme";
 import { addTooltips } from "./tooltip";
@@ -547,7 +547,7 @@ const plot_marks = (
 				fill: color,
 				title: (datum) =>
 					to_title(
-						`${prettyPrintNumber(datum?.raw?.value)}`,
+						`${prettyPrintFloat(datum?.raw?.value)}`,
 						result,
 						datum,
 						"\nClick to view Metric",
@@ -838,7 +838,7 @@ const alert_image = (
 
 const value_end_title = (limit: BoundaryLimit, result, datum, suffix) =>
 	to_title(
-		`${position_label(limit)} Value: ${prettyPrintNumber(datum?.raw?.[value_end_position_key(limit)])}`,
+		`${position_label(limit)} Value: ${prettyPrintFloat(datum?.raw?.[value_end_position_key(limit)])}`,
 		result,
 		datum,
 		suffix,
@@ -846,7 +846,7 @@ const value_end_title = (limit: BoundaryLimit, result, datum, suffix) =>
 
 const limit_title = (limit: BoundaryLimit, result, datum, suffix) =>
 	to_title(
-		`${position_label(limit)} Limit: ${prettyPrintNumber(datum?.raw?.[boundary_position_key(limit)])}`,
+		`${position_label(limit)} Limit: ${prettyPrintFloat(datum?.raw?.[boundary_position_key(limit)])}`,
 		result,
 		datum,
 		suffix,

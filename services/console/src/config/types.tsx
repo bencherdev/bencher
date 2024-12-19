@@ -136,6 +136,7 @@ export enum Card {
 
 export enum Display {
 	RAW = "raw",
+	FLOAT = "float",
 	DATE_TIME = "date_time",
 	REPORT = "report",
 	BRANCH = "branch",

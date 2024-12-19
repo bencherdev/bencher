@@ -1,8 +1,8 @@
 import type { Params } from "astro";
+import { PubResourceKind } from "../../components/perf/util";
+import { isAllowedProjectEdit } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
-import { isAllowedProjectEdit } from "../../util/auth";
-import { PubResourceKind } from "../../components/perf/util";
 
 export const ALERT_ICON = "fas fa-bell";
 
@@ -134,7 +134,7 @@ const alertsConfig = {
 					kind: Card.NESTED_FIELD,
 					label: "Metric",
 					keys: ["metric", "value"],
-					display: Display.RAW,
+					display: Display.FLOAT,
 				},
 				{
 					kind: Card.NESTED_FIELD,
@@ -146,19 +146,19 @@ const alertsConfig = {
 					kind: Card.NESTED_FIELD,
 					label: "Boundary Baseline",
 					keys: ["boundary", "baseline"],
-					display: Display.RAW,
+					display: Display.FLOAT,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Lower Boundary Limit",
 					keys: ["boundary", "lower_limit"],
-					display: Display.RAW,
+					display: Display.FLOAT,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Upper Boundary Limit",
 					keys: ["boundary", "upper_limit"],
-					display: Display.RAW,
+					display: Display.FLOAT,
 				},
 				{
 					kind: Card.FIELD,

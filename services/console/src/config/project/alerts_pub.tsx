@@ -1,6 +1,6 @@
 import type { Params } from "astro";
-import { Button, Card, Display } from "../types";
 import { PubResourceKind } from "../../components/perf/util";
+import { Button, Card, Display } from "../types";
 
 const alertsPubConfig = {
 	resource: PubResourceKind.Alert,
@@ -64,7 +64,7 @@ const alertsPubConfig = {
 				kind: Card.NESTED_FIELD,
 				label: "Metric",
 				keys: ["metric", "value"],
-				display: Display.RAW,
+				display: Display.FLOAT,
 			},
 			{
 				kind: Card.NESTED_FIELD,
@@ -76,19 +76,19 @@ const alertsPubConfig = {
 				kind: Card.NESTED_FIELD,
 				label: "Boundary Baseline",
 				keys: ["boundary", "baseline"],
-				display: Display.RAW,
+				display: Display.FLOAT,
 			},
 			{
 				kind: Card.NESTED_FIELD,
 				label: "Lower Boundary Limit",
 				keys: ["boundary", "lower_limit"],
-				display: Display.RAW,
+				display: Display.FLOAT,
 			},
 			{
 				kind: Card.NESTED_FIELD,
 				label: "Upper Boundary Limit",
 				keys: ["boundary", "upper_limit"],
-				display: Display.RAW,
+				display: Display.FLOAT,
 			},
 			{
 				kind: Card.FIELD,

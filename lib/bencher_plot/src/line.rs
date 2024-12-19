@@ -1,6 +1,7 @@
 use std::sync::LazyLock;
 use std::{io::Cursor, ops::Range};
 
+use bencher_json::Units;
 use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
 use chrono::{DateTime, Duration, Utc};
 use image::{GenericImageView, ImageBuffer};
@@ -224,6 +225,9 @@ struct LineData {
 
 impl PerfData {
     fn new(json_perf: &JsonPerf) -> Option<PerfData> {
+        // There needs to be at least one measure
+        let json_measure = json_perf.results.first().map(|result| &result.measure)?;
+
         let mut min_x = None;
         let mut max_x = None;
         let mut min_y = None;
@@ -264,16 +268,28 @@ impl PerfData {
                     dimensions,
                 }
             })
-            .collect();
+            .collect::<Vec<LineData>>();
 
         if let (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) = (min_x, max_x, min_y, max_y) {
             let x_time = max_x - min_x < Duration::days(X_LABELS);
-            let y_desc = json_perf
-                .results
-                .first()
-                .map_or("Measure: unitless".to_owned(), |result| {
-                    result.measure.to_string()
-                });
+            let units = Units::new(*min_y, json_measure.units.clone());
+            let factor = units.scale_factor();
+            let min_y = min_y / factor;
+            let max_y = max_y / factor;
+            let y_desc = format!("{}: {}", json_measure.name, units.scale_units());
+
+            let lines = lines
+                .into_iter()
+                .map(|line| LineData {
+                    data: line
+                        .data
+                        .into_iter()
+                        .map(|(x, y)| (x, y / factor))
+                        .collect(),
+                    ..line
+                })
+                .collect();
+
             Some(PerfData {
                 lines,
                 x: (min_x, max_x),

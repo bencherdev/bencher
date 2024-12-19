@@ -22,7 +22,7 @@ import {
 	type JsonTestbed,
 	type JsonThreshold,
 } from "../../../../../types/bencher";
-import { dateTimeMillis } from "../../../../../util/convert";
+import { dateTimeMillis, prettyPrintFloat } from "../../../../../util/convert";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 
 export interface Props {
@@ -489,10 +489,10 @@ const ValueCell = (props: {
 
 		return (
 			<>
-				{formatNumber(props.value)}
+				{prettyPrintFloat(props.value)}
 				<Show when={percent !== null}>
 					<br />({percent > 0.0 ? "+" : ""}
-					{formatNumber(percent)}%)
+					{prettyPrintFloat(percent)}%)
 				</Show>
 			</>
 		);
@@ -562,8 +562,8 @@ const LimitCell = (props: {
 		percent: number;
 	}) => (
 		<>
-			{formatNumber(props.limit)}
-			<br />({formatNumber(props.percent)}%)
+			{prettyPrintFloat(props.limit)}
+			<br />({prettyPrintFloat(props.percent)}%)
 		</>
 	);
 
@@ -750,50 +750,6 @@ const union = (lhs: BoundaryLimits, rhs: BoundaryLimits): BoundaryLimits => {
 		lower: lhs.lower || rhs.lower,
 		upper: lhs.upper || rhs.upper,
 	};
-};
-
-// biome-ignore lint/style/useEnumInitializers: variants
-enum Position {
-	Whole,
-	Point,
-	Decimal,
-}
-
-const formatNumber = (number: number): string => {
-	let numberStr = "";
-	let position = Position.Decimal;
-	const formattedNumber = Math.abs(number).toFixed(2);
-	const isNegative = number < 0;
-
-	for (let i = formattedNumber.length - 1; i >= 0; i--) {
-		const c = formattedNumber[i];
-		switch (position) {
-			case Position.Whole:
-				if (
-					(formattedNumber.length - 1 - i) % 3 === 0 &&
-					i !== formattedNumber.length - 1
-				) {
-					numberStr = `,${numberStr}`;
-				}
-				position = Position.Whole;
-				break;
-			case Position.Point:
-				position = Position.Whole;
-				break;
-			case Position.Decimal:
-				if (c === ".") {
-					position = Position.Point;
-				}
-				break;
-		}
-		numberStr = c + numberStr;
-	}
-
-	if (isNegative) {
-		numberStr = `-${numberStr}`;
-	}
-
-	return numberStr;
 };
 
 export default ReportCard;

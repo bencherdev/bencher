@@ -1,9 +1,34 @@
+use ordered_float::OrderedFloat;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
+
+use crate::ResourceName;
 
 pub const NANOSECONDS: &str = "nanoseconds (ns)";
 pub const SECONDS: &str = "seconds (s)";
 pub const BYTES: &str = "bytes (B)";
+
+#[derive(Debug, Clone)]
+pub struct Units {
+    scale: Scale,
+    units: ResourceName,
+}
+
+impl Units {
+    pub fn new(min: f64, units: ResourceName) -> Self {
+        let scale = Scale::new(min, units.as_ref());
+        Self { scale, units }
+    }
+
+    #[allow(clippy::cast_precision_loss)]
+    pub fn scale_factor(&self) -> OrderedFloat<f64> {
+        OrderedFloat::from(self.scale.factor() as f64)
+    }
+
+    pub fn scale_units(&self) -> String {
+        self.scale.units(self.units.as_ref())
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 enum Scale {
@@ -53,7 +78,7 @@ impl Scale {
         }
     }
 
-    fn as_u64(&self) -> u64 {
+    fn factor(&self) -> u64 {
         match self {
             Scale::Nanos(scale) => *scale as u64,
             Scale::Secs(scale) => *scale as u64,
@@ -189,11 +214,13 @@ impl ScaleOneE {
     }
 }
 
+#[allow(dead_code)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn scale_factor(min: f64, units: &str) -> u64 {
-    Scale::new(min, units).as_u64()
+    Scale::new(min, units).factor()
 }
 
+#[allow(dead_code)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn scale_units(min: f64, units: &str) -> String {
     Scale::new(min, units).units(units)

@@ -10,6 +10,7 @@ import {
 	ModelTest,
 } from "../../../../../types/bencher";
 import { authUser } from "../../../../../util/auth";
+import { prettyPrintFloat } from "../../../../../util/convert";
 import { httpGet } from "../../../../../util/http";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { testFragment } from "../../../../field/kinds/Model";
@@ -36,6 +37,7 @@ const ViewCard = (props: Props) => {
 					class={`field-label${(() => {
 						switch (props.card?.display) {
 							case Display.RAW:
+							case Display.FLOAT:
 							case Display.DATE_TIME:
 							case Display.SWITCH:
 							case Display.SELECT:
@@ -127,6 +129,14 @@ const ViewCard = (props: Props) => {
 										>
 											View Threshold
 										</a>
+									</Match>
+									<Match when={props.card?.display === Display.FLOAT}>
+										<input
+											class="input is-static"
+											type="text"
+											value={prettyPrintFloat(props.value)}
+											readonly
+										/>
 									</Match>
 									<Match when={props.card?.display === Display.DATE_TIME}>
 										<input
