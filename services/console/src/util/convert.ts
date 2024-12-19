@@ -164,3 +164,10 @@ export const bytesToBase64 = (bytes) => {
 
 export const encodeBase64 = (str) =>
 	bytesToBase64(new TextEncoder().encode(str));
+
+export const prettyPrintNumber = (float: number | undefined) => {
+	return float?.toLocaleString("en-US", {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+};

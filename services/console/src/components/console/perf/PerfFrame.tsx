@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/astro";
+import bencher_valid_init from "bencher_valid";
 import {
 	type Accessor,
 	type Resource,
@@ -20,6 +21,7 @@ import {
 	NotifyKind,
 	pageNotify,
 } from "../../../util/notify";
+import { validJwt } from "../../../util/valid";
 import type { Theme } from "../../navbar/theme/theme";
 import PerfPlot from "./plot/PerfPlot";
 
@@ -68,8 +70,13 @@ export interface Props {
 }
 
 const PerfFrame = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
+
 	const perfFetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: props.project_slug(),
 			perfQuery: props.perfQuery(),
 			refresh: props.refresh(),
@@ -83,9 +90,13 @@ const PerfFrame = (props: Props) => {
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
+		if (!bencher_valid()) {
+			return EMPTY_OBJECT;
+		}
+
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (
-			(props.isConsole && typeof fetcher.token !== "string") ||
+			(props.isConsole && !validJwt(fetcher.token)) ||
 			props.isPlotInit() ||
 			!fetcher.project_slug ||
 			fetcher.project_slug === "undefined"

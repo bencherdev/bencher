@@ -1,5 +1,6 @@
 import * as Plot from "@observablehq/plot";
 import type { ScaleType } from "@observablehq/plot";
+import { scale_factor, scale_units } from "bencher_valid";
 import * as d3 from "d3";
 import {
 	type Accessor,
@@ -19,6 +20,7 @@ import {
 	type JsonPerfMetrics,
 	XAxis,
 } from "../../../../../types/bencher";
+import { prettyPrintNumber } from "../../../../../util/convert";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { Theme } from "../../../../navbar/theme/theme";
 import { addTooltips } from "./tooltip";
@@ -410,151 +412,89 @@ const scale_data = (
 		),
 	);
 
-	const scale = (() => {
-		if (raw_units === "nanoseconds (ns)") {
-			if (min > Number(Time.Hours)) {
-				return Time.Hours;
-			}
-			if (min > Time.Minutes) {
-				return Time.Minutes;
-			}
-			if (min > Time.Seconds) {
-				return Time.Seconds;
-			}
-			if (min > Time.Millis) {
-				return Time.Millis;
-			}
-			if (min > Time.Micros) {
-				return Time.Micros;
-			}
-			return Time.Nanos;
-		}
-		if (min > OneE.Fifteen) {
-			return OneE.Fifteen;
-		}
-		if (min > OneE.Twelve) {
-			return OneE.Twelve;
-		}
-		if (min > OneE.Nine) {
-			return OneE.Nine;
-		}
-		if (min > OneE.Six) {
-			return OneE.Six;
-		}
-		if (min > OneE.Three) {
-			return OneE.Three;
-		}
-		return OneE.One;
-	})();
-
+	const factor = scale(min, raw_units);
+	if (factor === null) {
+		return [raw_data, raw_units];
+	}
 	const scaled_data = raw_data.map((data) => {
 		data.line_data = data.line_data?.map((datum) => {
-			datum.value = datum.value / scale;
+			datum.value = datum.value / factor;
 			if (datum.lower_value !== undefined && datum.lower_value !== null) {
-				datum.lower_value = datum.lower_value / scale;
+				datum.lower_value = datum.lower_value / factor;
 			}
 			if (datum.upper_value !== undefined && datum.upper_value !== null) {
-				datum.upper_value = datum.upper_value / scale;
+				datum.upper_value = datum.upper_value / factor;
 			}
 			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
-				datum.lower_limit = datum.lower_limit / scale;
+				datum.lower_limit = datum.lower_limit / factor;
 			}
 			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
-				datum.upper_limit = datum.upper_limit / scale;
+				datum.upper_limit = datum.upper_limit / factor;
 			}
 			return datum;
 		});
 		data.lower_alert_data = data.lower_alert_data?.map((datum) => {
 			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
-				datum.lower_limit = datum.lower_limit / scale;
+				datum.lower_limit = datum.lower_limit / factor;
 			}
 			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
-				datum.upper_limit = datum.upper_limit / scale;
+				datum.upper_limit = datum.upper_limit / factor;
 			}
 			return datum;
 		});
 		data.upper_alert_data = data.upper_alert_data?.map((datum) => {
 			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
-				datum.lower_limit = datum.lower_limit / scale;
+				datum.lower_limit = datum.lower_limit / factor;
 			}
 			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
-				datum.upper_limit = datum.upper_limit / scale;
+				datum.upper_limit = datum.upper_limit / factor;
 			}
 			return datum;
 		});
 		data.boundary_data = data.boundary_data?.map((datum) => {
 			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
-				datum.lower_limit = datum.lower_limit / scale;
+				datum.lower_limit = datum.lower_limit / factor;
 			}
 			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
-				datum.upper_limit = datum.upper_limit / scale;
+				datum.upper_limit = datum.upper_limit / factor;
 			}
 			return datum;
 		});
 		data.skipped_lower_data = data.skipped_lower_data?.map((datum) => {
-			datum.y = datum.y / scale;
+			datum.y = datum.y / factor;
 			return datum;
 		});
 		data.skipped_upper_data = data.skipped_upper_data?.map((datum) => {
-			datum.y = datum.y / scale;
+			datum.y = datum.y / factor;
 			return datum;
 		});
 		return data;
 	});
-
-	const scaled_units = (() => {
-		if (raw_units === "nanoseconds (ns)") {
-			switch (scale) {
-				case Time.Nanos:
-					return raw_units;
-				case Time.Micros:
-					return "microseconds (μs)";
-				case Time.Millis:
-					return "milliseconds (ms)";
-				case Time.Seconds:
-					return "seconds (s)";
-				case Time.Minutes:
-					return "minutes (m)";
-				case Time.Hours:
-					return "hours (h)";
-			}
-		}
-		switch (scale) {
-			case OneE.One:
-				return raw_units;
-			case OneE.Three:
-				return `1e3 x ${raw_units}`;
-			case OneE.Six:
-				return `1e6 x ${raw_units}`;
-			case OneE.Nine:
-				return `1e9 x ${raw_units}`;
-			case OneE.Twelve:
-				return `1e12 x ${raw_units}`;
-			case OneE.Fifteen:
-				return `1e15 x ${raw_units}`;
-		}
-	})();
+	const scaled_units = scale_units(min ?? 0, raw_units ?? "");
 
 	return [scaled_data, scaled_units];
 };
 
-enum Time {
-	Nanos = 1,
-	Micros = 1_000,
-	Millis = 1_000_000,
-	Seconds = 1_000_000_000,
-	Minutes = 60_000_000_000,
-	Hours = 3_600_000_000_000,
-}
-
-enum OneE {
-	One = 1,
-	Three = 1_000,
-	Six = 1_000_000,
-	Nine = 1_000_000_000,
-	Twelve = 1_000_000_000_000,
-	Fifteen = 1_000_000_000_000_000,
-}
+const scale = (min: number, raw_units: string) => {
+	if (typeof min === "number" && typeof raw_units === "string") {
+		try {
+			const factor = Number(scale_factor(min, raw_units));
+			if (Number.isNaN(factor)) {
+				console.error("Conversion to number failed:", factor);
+			} else {
+				return factor;
+			}
+		} catch (error) {
+			console.error(
+				"Failed to convert scale factor to number:",
+				min,
+				raw_units,
+				error,
+			);
+		}
+	}
+	return null;
+};
 
 const plot_marks = (
 	plot_data,
@@ -938,12 +878,5 @@ const position_label = (limit: BoundaryLimit) => {
 			return "Upper";
 	}
 };
-
-function prettyPrintNumber(float: number | undefined) {
-	return float?.toLocaleString("en-US", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
 
 export default LinePlot;
