@@ -639,9 +639,9 @@ impl ReportComment {
             &alert.benchmark,
             &alert.threshold.measure,
             Some(BoundaryLimits {
-                min: 1.0.into(),
                 lower: alert.limit == BoundaryLimit::Lower,
                 upper: alert.limit == BoundaryLimit::Upper,
+                ..Default::default()
             }),
         )
     }
@@ -920,12 +920,22 @@ pub struct BoundaryLimits {
     upper: bool,
 }
 
+impl Default for BoundaryLimits {
+    fn default() -> Self {
+        Self {
+            min: 1.0.into(),
+            lower: false,
+            upper: false,
+        }
+    }
+}
+
 impl From<JsonBoundary> for BoundaryLimits {
     fn from(json_boundary: JsonBoundary) -> Self {
         Self {
-            min: 1.0.into(),
             lower: json_boundary.lower_limit.is_some(),
             upper: json_boundary.upper_limit.is_some(),
+            ..Default::default()
         }
     }
 }
