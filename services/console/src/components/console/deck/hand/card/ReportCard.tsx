@@ -161,11 +161,11 @@ const ReportCard = (props: Props) => {
 												lowerLimit ?? MAX,
 												upperLimit ?? MAX,
 											);
-											const units = scale_units(
+											const factor = scale_factor(
 												min,
 												alert?.threshold?.measure?.units,
 											);
-											const factor = scale_factor(
+											const units = scale_units(
 												min,
 												alert?.threshold?.measure?.units,
 											);

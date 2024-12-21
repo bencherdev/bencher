@@ -12,7 +12,7 @@ use bencher_json::{
         report::{JsonReportIteration, JsonReportMeasure, JsonReportResult},
     },
     AlertUuid, JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonPerfQuery, JsonReport,
-    ReportUuid, ResourceName, Slug, ThresholdUuid,
+    ReportUuid, ResourceName, Slug, ThresholdUuid, Units,
 };
 use ordered_float::OrderedFloat;
 use url::Url;
@@ -249,6 +249,18 @@ impl ReportComment {
         html.push_str("<tbody>");
 
         for alert in &self.json_report.alerts {
+            let (factor, units) = {
+                let mut min = alert.metric.value;
+                if let Some(lower_limit) = alert.boundary.lower_limit {
+                    min = min.min(lower_limit);
+                }
+                if let Some(upper_limit) = alert.boundary.upper_limit {
+                    min = min.min(upper_limit);
+                }
+                let units = Units::new(min.into(), alert.threshold.measure.units.clone());
+                (units.scale_factor(), units.scale_units())
+            };
+
             html.push_str("<tr>");
             if self.multiple_iterations {
                 html.push_str(&format!("<td>{}</td>", alert.iteration));
@@ -262,15 +274,21 @@ impl ReportComment {
                 "<td><a href=\"{url}\">{measure}<br />{units}</a></td>",
                 url = self.resource_url(Resource::Measure(alert.threshold.measure.slug.clone())),
                 measure = alert.threshold.measure.name,
-                units = alert.threshold.measure.units,
             ));
             self.html_alerts_table_view_cell(html, alert);
-            value_cell(html, alert.metric.value, alert.boundary.baseline, true);
+            value_cell(
+                html,
+                alert.metric.value,
+                alert.boundary.baseline,
+                factor,
+                true,
+            );
             if self.has_lower_boundary_alert() {
                 lower_limit_cell(
                     html,
                     alert.metric.value,
                     alert.boundary.lower_limit,
+                    factor,
                     alert.limit == BoundaryLimit::Lower,
                 );
             }
@@ -279,6 +297,7 @@ impl ReportComment {
                     html,
                     alert.metric.value,
                     alert.boundary.upper_limit,
+                    factor,
                     alert.limit == BoundaryLimit::Upper,
                 );
             }
@@ -358,6 +377,8 @@ impl ReportComment {
         html.push_str("<tr>");
         html.push_str("<th>Benchmark</th>");
         for (measure, boundary_limits) in mbl {
+            let units = Units::new(boundary_limits.min.into(), measure.units.clone()).scale_units();
+
             html.push_str(&format!(
                 "<th><a href=\"{url}\">{measure}</a></th>",
                 url = self.resource_url(Resource::Measure(measure.slug.clone())),
@@ -376,15 +397,13 @@ impl ReportComment {
 
             if boundary_limits.lower {
                 html.push_str(&format!(
-                    "<th>Lower Boundary<br />{units}<br />(Limit %)</th>",
-                    units = measure.units
+                    "<th>Lower Boundary<br />{units}<br />(Limit %)</th>"
                 ));
             }
 
             if boundary_limits.upper {
                 html.push_str(&format!(
-                    "<th>Upper Boundary<br />{units}<br />(Limit %)</th>",
-                    units = measure.units
+                    "<th>Upper Boundary<br />{units}<br />(Limit %)</th>"
                 ));
             }
         }
@@ -407,6 +426,9 @@ impl ReportComment {
                 name = result.benchmark.name,
             ));
             for (measure, boundary_limits) in mbl {
+                let factor =
+                    Units::new(boundary_limits.min.into(), measure.units.clone()).scale_factor();
+
                 let report_measure = result
                     .measures
                     .iter()
@@ -429,6 +451,7 @@ impl ReportComment {
                         html,
                         report_measure.metric.value,
                         report_measure.boundary.and_then(|b| b.baseline),
+                        factor,
                         alert.is_some(),
                     );
                 } else {
@@ -440,6 +463,7 @@ impl ReportComment {
                             html,
                             report_measure.metric.value,
                             report_measure.boundary.and_then(|b| b.lower_limit),
+                            factor,
                             alert.is_some_and(|a| a.limit == BoundaryLimit::Lower),
                         );
                     } else {
@@ -452,6 +476,7 @@ impl ReportComment {
                             html,
                             report_measure.metric.value,
                             report_measure.boundary.and_then(|b| b.upper_limit),
+                            factor,
                             alert.is_some_and(|a| a.limit == BoundaryLimit::Upper),
                         );
                     } else {
@@ -614,6 +639,7 @@ impl ReportComment {
             &alert.benchmark,
             &alert.threshold.measure,
             Some(BoundaryLimits {
+                min: 1.0.into(),
                 lower: alert.limit == BoundaryLimit::Lower,
                 upper: alert.limit == BoundaryLimit::Upper,
             }),
@@ -745,10 +771,15 @@ fn value_cell(
     html: &mut String,
     value: OrderedFloat<f64>,
     baseline: Option<OrderedFloat<f64>>,
+    factor: OrderedFloat<f64>,
     bold: bool,
 ) {
-    fn value_cell_inner(value: OrderedFloat<f64>, baseline: Option<OrderedFloat<f64>>) -> String {
-        let mut cell = format_number(value.into());
+    fn value_cell_inner(
+        value: OrderedFloat<f64>,
+        baseline: Option<OrderedFloat<f64>>,
+        factor: OrderedFloat<f64>,
+    ) -> String {
+        let mut cell = format_number((value / factor).into());
 
         if let Some(baseline) = baseline {
             let percent = if value.is_normal() && baseline.is_normal() {
@@ -766,9 +797,12 @@ fn value_cell(
 
     html.push_str("<td>");
     if bold {
-        html.push_str(&format!("<b>{}</b>", value_cell_inner(value, baseline)));
+        html.push_str(&format!(
+            "<b>{}</b>",
+            value_cell_inner(value, baseline, factor)
+        ));
     } else {
-        html.push_str(&value_cell_inner(value, baseline));
+        html.push_str(&value_cell_inner(value, baseline, factor));
     }
     html.push_str("</td>");
 }
@@ -777,6 +811,7 @@ fn lower_limit_cell(
     html: &mut String,
     value: OrderedFloat<f64>,
     lower_limit: Option<OrderedFloat<f64>>,
+    factor: OrderedFloat<f64>,
     bold: bool,
 ) {
     let Some(limit) = lower_limit else {
@@ -790,13 +825,14 @@ fn lower_limit_cell(
         0.0.into()
     };
 
-    limit_cell(html, limit, percent, bold);
+    limit_cell(html, limit, percent, factor, bold);
 }
 
 fn upper_limit_cell(
     html: &mut String,
     value: OrderedFloat<f64>,
     upper_limit: Option<OrderedFloat<f64>>,
+    factor: OrderedFloat<f64>,
     bold: bool,
 ) {
     let Some(limit) = upper_limit else {
@@ -810,12 +846,22 @@ fn upper_limit_cell(
         0.0.into()
     };
 
-    limit_cell(html, limit, percent, bold);
+    limit_cell(html, limit, percent, factor, bold);
 }
 
-fn limit_cell(html: &mut String, limit: OrderedFloat<f64>, percent: OrderedFloat<f64>, bold: bool) {
-    fn limit_cell_inner(limit: OrderedFloat<f64>, percent: OrderedFloat<f64>) -> String {
-        let mut cell = format_number(limit.into());
+fn limit_cell(
+    html: &mut String,
+    limit: OrderedFloat<f64>,
+    percent: OrderedFloat<f64>,
+    factor: OrderedFloat<f64>,
+    bold: bool,
+) {
+    fn limit_cell_inner(
+        limit: OrderedFloat<f64>,
+        percent: OrderedFloat<f64>,
+        factor: OrderedFloat<f64>,
+    ) -> String {
+        let mut cell = format_number((limit / factor).into());
         let percent = format_number(percent.into());
         cell.push_str(&format!("<br />({percent}%)"));
         cell
@@ -823,9 +869,12 @@ fn limit_cell(html: &mut String, limit: OrderedFloat<f64>, percent: OrderedFloat
 
     html.push_str("<td>");
     if bold {
-        html.push_str(&format!("<b>{}</b>", limit_cell_inner(limit, percent)));
+        html.push_str(&format!(
+            "<b>{}</b>",
+            limit_cell_inner(limit, percent, factor)
+        ));
     } else {
-        html.push_str(&limit_cell_inner(limit, percent));
+        html.push_str(&limit_cell_inner(limit, percent, factor));
     }
     html.push_str("</td>");
 }
@@ -866,6 +915,7 @@ fn format_number(number: f64) -> String {
 
 #[derive(Clone, Copy)]
 pub struct BoundaryLimits {
+    min: OrderedFloat<f64>,
     lower: bool,
     upper: bool,
 }
@@ -873,6 +923,7 @@ pub struct BoundaryLimits {
 impl From<JsonBoundary> for BoundaryLimits {
     fn from(json_boundary: JsonBoundary) -> Self {
         Self {
+            min: 1.0.into(),
             lower: json_boundary.lower_limit.is_some(),
             upper: json_boundary.upper_limit.is_some(),
         }
@@ -884,6 +935,7 @@ impl BitOr for BoundaryLimits {
 
     fn bitor(self, rhs: Self) -> Self {
         Self {
+            min: self.min.min(rhs.min),
             lower: self.lower || rhs.lower,
             upper: self.upper || rhs.upper,
         }
@@ -910,16 +962,25 @@ fn boundary_limits_map(
     for result in iteration {
         for report_measure in &result.measures {
             let measure = Measure::from(report_measure.measure.clone());
-            let boundary_limits = BoundaryLimits {
-                lower: report_measure
-                    .boundary
-                    .and_then(|b| b.lower_limit)
-                    .is_some(),
-                upper: report_measure
-                    .boundary
-                    .and_then(|b| b.upper_limit)
-                    .is_some(),
+            let min = {
+                let mut min = report_measure.metric.value;
+                if let Some(lower_limit) = report_measure.boundary.and_then(|b| b.lower_limit) {
+                    min = min.min(lower_limit);
+                }
+                if let Some(upper_limit) = report_measure.boundary.and_then(|b| b.upper_limit) {
+                    min = min.min(upper_limit);
+                }
+                min
             };
+            let lower = report_measure
+                .boundary
+                .and_then(|b| b.lower_limit)
+                .is_some();
+            let upper = report_measure
+                .boundary
+                .and_then(|b| b.upper_limit)
+                .is_some();
+            let boundary_limits = BoundaryLimits { min, lower, upper };
             if require_threshold && !boundary_limits.has_limit() {
                 continue;
             }
