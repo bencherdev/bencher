@@ -164,14 +164,13 @@ const line_plot = (props: Props) => {
 		};
 	}
 
-	let metrics_found = false;
-	const raw_data = json_perf.results.map((result, index) => {
-		const data = perf_result(result, index, props.perfActive);
-		if ((data?.line_data?.length ?? 0) > 0) {
-			metrics_found = true;
-		}
-		return data;
-	});
+	const raw_data = json_perf.results
+		.map((result, index) => perf_result(result, index, props.perfActive))
+		.filter((data) => data);
+	const metrics_found = raw_data.reduce(
+		(acc, data) => acc || (data?.line_data?.length ?? 0) > 0,
+		false,
+	);
 
 	const raw_units = get_units(json_perf);
 	const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
@@ -377,36 +376,50 @@ const scale_data = (
 		...raw_data.map((data) =>
 			Math.min(
 				// The primary metric series
-				Math.min(...data.line_data.map((datum) => datum.value ?? MAX)),
+				Math.min(
+					...(data.line_data?.map((datum) => datum.value ?? MAX) ?? MAX),
+				),
 				// The lower value series, if active
 				props.lower_value()
-					? Math.min(...data.line_data.map((datum) => datum.lower_value ?? MAX))
+					? Math.min(
+							...(data.line_data?.map((datum) => datum.lower_value ?? MAX) ??
+								MAX),
+						)
 					: MAX,
 				// The upper value series, if active
 				props.upper_value()
-					? Math.min(...data.line_data.map((datum) => datum.upper_value ?? MAX))
+					? Math.min(
+							...(data.line_data?.map((datum) => datum.upper_value ?? MAX) ??
+								MAX),
+						)
 					: MAX,
 				// The lower boundary series, if active
 				props.lower_boundary()
 					? Math.min(
-							...data.line_data.map((datum) => datum.lower_limit ?? MAX),
-							...data.skipped_lower_data.map((datum) => datum.y ?? MAX),
+							...(data.line_data?.map((datum) => datum.lower_limit ?? MAX) ??
+								MAX),
+							...(data.skipped_lower_data?.map((datum) => datum.y ?? MAX) ??
+								MAX),
 						)
 					: MAX,
 				// The upper boundary series, if active
 				props.upper_boundary()
 					? Math.min(
-							...data.line_data.map((datum) => datum.upper_limit ?? MAX),
-							...data.skipped_upper_data.map((datum) => datum.y ?? MAX),
+							...(data.line_data?.map((datum) => datum.upper_limit ?? MAX) ??
+								MAX),
+							...(data.skipped_upper_data?.map((datum) => datum.y ?? MAX) ??
+								MAX),
 						)
 					: MAX,
 				// The lower alert series
 				Math.min(
-					...data.lower_alert_data.map((datum) => datum.lower_limit ?? MAX),
+					...(data.lower_alert_data?.map((datum) => datum.lower_limit ?? MAX) ??
+						MAX),
 				),
 				// The upper alert series
 				Math.min(
-					...data.upper_alert_data.map((datum) => datum.upper_limit ?? MAX),
+					...(data.upper_alert_data?.map((datum) => datum.upper_limit ?? MAX) ??
+						MAX),
 				),
 			),
 		),
