@@ -316,7 +316,7 @@ Otherwise, it will default to using the latest CLI version.
 ```yaml
 - uses: bencherdev/bencher@main
   with:
-    version: 0.4.30
+    version: 0.4.31
 ```
 
 Specify an exact version if using [Bencher _Self-Hosted_](https://bencher.dev/docs/explanation/bencher-self-hosted/).
