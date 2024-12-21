@@ -39,7 +39,7 @@ jobs:
   # Bencher CLI GitHub Action
   build_github_action:
     name: Build GitHub Action
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Install Bencher CLI GitHub Action Dependencies
@@ -59,49 +59,49 @@ jobs:
       matrix:
         include:
           # Linux
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             source: action-main
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             source: action-devel
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             source: script-cloud
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             source: script-gen
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             source: script-gen-version
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             source: cargo-main
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             source: cargo-devel
           # MacOS
-          - os: macos-latest
+          - os: macos-14
             source: action-main
-          - os: macos-latest
+          - os: macos-14
             source: action-devel
-          - os: macos-latest
+          - os: macos-14
             source: script-cloud
-          - os: macos-latest
+          - os: macos-14
             source: script-gen
-          - os: macos-latest
+          - os: macos-14
             source: script-gen-version
-          - os: macos-latest
+          - os: macos-14
             source: cargo-main
-          - os: macos-latest
+          - os: macos-14
             source: cargo-devel
           # Windows
-          - os: windows-latest
+          - os: windows-2022
             source: action-main
-          - os: windows-latest
+          - os: windows-2022
             source: action-devel
-          - os: windows-latest
+          - os: windows-2022
             source: script-cloud
-          - os: windows-latest
+          - os: windows-2022
             source: script-gen
-          - os: windows-latest
+          - os: windows-2022
             source: script-gen-version
-          - os: windows-latest
+          - os: windows-2022
             source: cargo-main
-          - os: windows-latest
+          - os: windows-2022
             source: cargo-devel
     runs-on: ${{ matrix.os }}
     # This is expected to fail when tagging a new release
@@ -112,24 +112,24 @@ jobs:
       - uses: bencherdev/bencher@devel
         if: matrix.source == 'action-devel'
       - name: Unix CLI Download Install Script
-        if: matrix.source == 'script-cloud' && matrix.os != 'windows-latest'
+        if: matrix.source == 'script-cloud' && matrix.os != 'windows-2022'
         run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
       - name: Windows CLI Download Install Script
-        if: matrix.source == 'script-cloud' && matrix.os == 'windows-latest'
+        if: matrix.source == 'script-cloud' && matrix.os == 'windows-2022'
         run: irm https://bencher.dev/download/install-cli.ps1 | iex
       - uses: actions/checkout@v4
         if: matrix.source == 'script-gen' || matrix.source == 'script-gen-version'
       - name: Unix CLI Install Script
-        if: matrix.source == 'script-gen' && matrix.os != 'windows-latest'
+        if: matrix.source == 'script-gen' && matrix.os != 'windows-2022'
         run: cat services/cli/templates/output/install-cli.sh | sh
       - name: Unix CLI Install Script Version
-        if: matrix.source == 'script-gen-version' && matrix.os != 'windows-latest'
+        if: matrix.source == 'script-gen-version' && matrix.os != 'windows-2022'
         run: export BENCHER_VERSION=0.4.27; cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script
-        if: matrix.source == 'script-gen' && matrix.os == 'windows-latest'
+        if: matrix.source == 'script-gen' && matrix.os == 'windows-2022'
         run: gc -Raw services/cli/templates/output/install-cli.ps1 | iex
       - name: Windows CLI Install Script Version
-        if: matrix.source == 'script-gen-version' && matrix.os == 'windows-latest'
+        if: matrix.source == 'script-gen-version' && matrix.os == 'windows-2022'
         run: $env:BENCHER_VERSION="0.4.27"; gc -Raw services/cli/templates/output/install-cli.ps1 | iex
       - name: Cargo CLI Install main
         if: matrix.source == 'cargo-main'
@@ -143,7 +143,7 @@ jobs:
   # Pretty Rust
   cargo_fmt:
     name: Cargo Format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Add fmt
@@ -153,7 +153,7 @@ jobs:
 
   cargo_clippy:
     name: Cargo Clippy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -176,7 +176,7 @@ jobs:
 
   check_generated:
     name: Check Generated
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
@@ -199,7 +199,7 @@ jobs:
   cargo_test:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
@@ -228,7 +228,7 @@ jobs:
   cargo_test_pr:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
     name: Cargo Test PR
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
@@ -246,7 +246,7 @@ jobs:
   # API Smoke Test
   api_smoke_test:
     name: API Smoke Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: jlumbroso/free-disk-space@main
         with:
@@ -274,14 +274,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-          - os: macos-latest
-          - os: windows-latest
+          - os: ubuntu-22.04
+          - os: macos-14
+          - os: windows-2022
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
@@ -293,11 +293,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
           # https://github.com/actions/runner-images/issues/17#issuecomment-614726536
-          # - os: macos-latest
+          # - os: macos-14
           # https://github.com/orgs/community/discussions/25491#discussioncomment-3248089
-          # - os: windows-latest
+          # - os: windows-2022
     runs-on: ${{ matrix.os }}
     steps:
       - uses: jlumbroso/free-disk-space@main
@@ -305,7 +305,7 @@ jobs:
           large-packages: false
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
@@ -314,7 +314,7 @@ jobs:
   # Cargo Check (Minus)
   cargo_check_api_minus:
     name: Cargo Check API (Minus)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
@@ -326,7 +326,7 @@ jobs:
 
   cargo_check_cli_minus:
     name: Cargo Check CLI (Minus)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
@@ -340,7 +340,7 @@ jobs:
   cargo_bench:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Bench
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # This will fail whenever Bencher Cloud is down
     # or there are any breaking changes to the report format
     continue-on-error: true
@@ -368,7 +368,7 @@ jobs:
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch "$GITHUB_REF_NAME" \
           --start-point "$GITHUB_BASE_REF" \
-          --testbed ubuntu-latest \
+          --testbed ubuntu-22.04 \
           --adapter rust_criterion \
           --err \
           --github-actions ${{ secrets.GITHUB_TOKEN }} \
@@ -378,7 +378,7 @@ jobs:
   cargo_audit:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -399,7 +399,7 @@ jobs:
   # Cargo Unused Deps
   cargo_udeps:
     name: Cargo Unused Deps
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@v4
@@ -432,7 +432,7 @@ jobs:
   # Pretty JS
   npx_biome_format:
     name: Biome Format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Biome format Action
@@ -448,7 +448,7 @@ jobs:
 
   npx_biome_lint:
     name: Biome Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Biome check Action
@@ -465,7 +465,7 @@ jobs:
   # UI WASM
   build_bencher_valid_wasm:
     name: Build `bencher_valid` WASM
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features plus,wasm"
     steps:
@@ -498,7 +498,7 @@ jobs:
 
   test_bencher_valid_wasm:
     name: Test `bencher_valid` WASM
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -522,7 +522,7 @@ jobs:
   # NPM Test
   npx_vitest:
     name: vitest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -542,7 +542,7 @@ jobs:
   # https://www.kenmuse.com/blog/implementing-docker-layer-caching-in-github-actions/
   build_api_docker:
     name: Build API Docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -589,24 +589,24 @@ jobs:
         include:
           # Linux
           - build: linux-x86-64
-            os: ubuntu-latest
+            os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
           - build: linux-arm-64
-            os: ubuntu-latest
+            os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
           # MacOS
           - build: macos-x86-64
-            os: macos-latest
+            os: macos-14
             target: x86_64-apple-darwin
           - build: macos-arm-64
-            os: macos-latest
+            os: macos-14
             target: aarch64-apple-darwin
           # Windows
           - build: windows-x86-64
-            os: windows-latest
+            os: windows-2022
             target: x86_64-pc-windows-msvc
           - build: windows-arm-64
-            os: windows-latest
+            os: windows-2022
             target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
@@ -665,11 +665,11 @@ jobs:
         include:
           # Linux
           - build: linux-x86-64
-            os: ubuntu-latest
+            os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             arch: amd64
           - build: linux-arm-64
-            os: ubuntu-latest
+            os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             arch: arm64
     runs-on: ${{ matrix.os }}
@@ -710,7 +710,7 @@ jobs:
 
   build_console_docker:
     name: Build Console Docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -747,7 +747,7 @@ jobs:
   build_console:
     if: (!startsWith(github.ref, 'refs/tags/'))
     name: Build Console UI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -769,7 +769,7 @@ jobs:
   deploy_api_fly_dev:
     if: github.ref == 'refs/heads/devel'
     name: Deploy API to Fly.io Dev
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - build_api_docker
       - build_console
@@ -807,7 +807,7 @@ jobs:
   deploy_api_fly_test:
     if: github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel'
     name: Deploy API to Fly.io Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build_api_docker
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -834,7 +834,7 @@ jobs:
   backup_database:
     if: github.ref == 'refs/heads/cloud'
     name: Backup Database
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # This will fail whenever Bencher Cloud is down
     continue-on-error: true
     timeout-minutes: 5
@@ -881,7 +881,7 @@ jobs:
 
   deploy_api_fly:
     name: Deploy API to Fly.io Prod
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - deploy_api_fly_test
       - backup_database
@@ -917,7 +917,7 @@ jobs:
   # UI Netlify
   deploy_console_netlify_dev:
     name: Deploy Console UI to Netlify Dev
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: deploy_api_fly_dev
     steps:
       - uses: actions/checkout@v4
@@ -951,7 +951,7 @@ jobs:
 
   deploy_console_netlify:
     name: Deploy Console UI to Netlify Prod
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: deploy_api_fly
     steps:
       - uses: actions/checkout@v4
@@ -988,7 +988,7 @@ jobs:
   release_bencher:
     if: startsWith(github.ref, 'refs/tags/')
     name: Release Bencher
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       # Lint
       - cargo_fmt
@@ -1138,7 +1138,7 @@ jobs:
   build_dev_container:
     if: github.ref == 'refs/heads/devel'
     name: Build dev container
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
