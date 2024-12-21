@@ -23,6 +23,7 @@ import {
 	type JsonThreshold,
 } from "../../../../../types/bencher";
 import { dateTimeMillis, prettyPrintFloat } from "../../../../../util/convert";
+import { scale_factor, scale_units } from "../../../../../util/scale";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 
 export interface Props {
@@ -154,6 +155,21 @@ const ReportCard = (props: Props) => {
 											const lowerLimit = alert?.boundary?.lower_limit;
 											const upperLimit = alert?.boundary?.upper_limit;
 
+											const MAX = Number.MAX_SAFE_INTEGER;
+											const min = Math.min(
+												value,
+												lowerLimit ?? MAX,
+												upperLimit ?? MAX,
+											);
+											const units = scale_units(
+												min,
+												alert?.threshold?.measure?.units,
+											);
+											const factor = scale_factor(
+												min,
+												alert?.threshold?.measure?.units,
+											);
+
 											return (
 												<tr>
 													{multipleIterations() && <td>{alert?.iteration}</td>}
@@ -178,7 +194,7 @@ const ReportCard = (props: Props) => {
 														>
 															{alert?.threshold?.measure?.name}
 															<br />
-															{alert?.threshold?.measure?.units}
+															{units}
 														</a>
 													</td>
 													<td>
@@ -214,11 +230,17 @@ const ReportCard = (props: Props) => {
 															threshold
 														</a>
 													</td>
-													<ValueCell value={value} baseline={baseline} bold />
+													<ValueCell
+														value={value}
+														baseline={baseline}
+														factor={factor}
+														bold
+													/>
 													<Show when={hasLowerBoundaryAlert()}>
 														<LowerLimitCell
 															value={value}
 															lowerLimit={lowerLimit}
+															factor={factor}
 															bold={alert?.limit === BoundaryLimit.Lower}
 														/>
 													</Show>
@@ -226,6 +248,7 @@ const ReportCard = (props: Props) => {
 														<UpperLimitCell
 															value={value}
 															upperLimit={upperLimit}
+															factor={factor}
 															bold={alert?.limit === BoundaryLimit.Upper}
 														/>
 													</Show>
@@ -257,6 +280,12 @@ const ReportCard = (props: Props) => {
 													{(entry) => {
 														const measure = JSON.parse(entry[0]);
 														const boundaryLimits = entry[1];
+
+														const units = scale_units(
+															boundaryLimits.min,
+															measure.units,
+														);
+
 														return (
 															<>
 																<th>
@@ -278,7 +307,7 @@ const ReportCard = (props: Props) => {
 																			<br />
 																		</>
 																	)}
-																	{measure?.units}
+																	{units}
 																	{(boundaryLimits.lower ||
 																		boundaryLimits.upper) && (
 																		<>
@@ -291,7 +320,7 @@ const ReportCard = (props: Props) => {
 																	<th>
 																		Lower Boundary
 																		<br />
-																		{measure?.units}
+																		{units}
 																		<br />
 																		(Limit %)
 																	</th>
@@ -300,7 +329,7 @@ const ReportCard = (props: Props) => {
 																	<th>
 																		Upper Boundary
 																		<br />
-																		{measure?.units}
+																		{units}
 																		<br />
 																		(Limit %)
 																	</th>
@@ -330,6 +359,11 @@ const ReportCard = (props: Props) => {
 															{(entry) => {
 																const measure = JSON.parse(entry[0]);
 																const boundaryLimits = entry[1];
+
+																const factor = scale_factor(
+																	boundaryLimits.min,
+																	measure.units,
+																);
 
 																const reportMeasure = result.measures.find(
 																	(report_measure) =>
@@ -427,6 +461,7 @@ const ReportCard = (props: Props) => {
 																			<ValueCell
 																				value={value as number}
 																				baseline={baseline}
+																				factor={factor}
 																				bold={!!alert}
 																			/>
 																		</Show>
@@ -434,6 +469,7 @@ const ReportCard = (props: Props) => {
 																			<LowerLimitCell
 																				value={value as number}
 																				lowerLimit={lowerLimit}
+																				factor={factor}
 																				bold={
 																					alert?.limit === BoundaryLimit.Lower
 																				}
@@ -443,6 +479,7 @@ const ReportCard = (props: Props) => {
 																			<UpperLimitCell
 																				value={value as number}
 																				upperLimit={upperLimit}
+																				factor={factor}
 																				bold={
 																					alert?.limit === BoundaryLimit.Upper
 																				}
@@ -470,11 +507,13 @@ const ReportCard = (props: Props) => {
 const ValueCell = (props: {
 	value: number;
 	baseline: null | undefined | number;
+	factor: number;
 	bold: boolean;
 }) => {
 	const ValueCellInner = (props: {
 		value: number;
 		baseline: null | undefined | number;
+		factor: number;
 	}) => {
 		if (typeof props.value !== "number") {
 			return <></>;
@@ -489,7 +528,7 @@ const ValueCell = (props: {
 
 		return (
 			<>
-				{prettyPrintFloat(props.value)}
+				{prettyPrintFloat(props.value / props.factor)}
 				<Show when={percent !== null}>
 					<br />({percent > 0.0 ? "+" : ""}
 					{prettyPrintFloat(percent)}%)
@@ -503,11 +542,19 @@ const ValueCell = (props: {
 			<Show
 				when={props.bold}
 				fallback={
-					<ValueCellInner value={props.value} baseline={props.baseline} />
+					<ValueCellInner
+						value={props.value}
+						baseline={props.baseline}
+						factor={props.factor}
+					/>
 				}
 			>
 				<b>
-					<ValueCellInner value={props.value} baseline={props.baseline} />
+					<ValueCellInner
+						value={props.value}
+						baseline={props.baseline}
+						factor={props.factor}
+					/>
 				</b>
 			</Show>
 		</td>
@@ -517,9 +564,14 @@ const ValueCell = (props: {
 const LowerLimitCell = (props: {
 	value: number;
 	lowerLimit: null | undefined | number;
+	factor: number;
 	bold: boolean;
 }) => {
-	if (typeof props.value !== "number" || typeof props.lowerLimit !== "number") {
+	if (
+		typeof props.value !== "number" ||
+		typeof props.lowerLimit !== "number" ||
+		typeof props.factor !== "number"
+	) {
 		return <td />;
 	}
 
@@ -529,16 +581,26 @@ const LowerLimitCell = (props: {
 			: 0.0;
 
 	return (
-		<LimitCell limit={props.lowerLimit} percent={percent} bold={props.bold} />
+		<LimitCell
+			limit={props.lowerLimit}
+			percent={percent}
+			factor={props.factor}
+			bold={props.bold}
+		/>
 	);
 };
 
 const UpperLimitCell = (props: {
 	value: number;
 	upperLimit: null | undefined | number;
+	factor: number;
 	bold: boolean;
 }) => {
-	if (typeof props.value !== "number" || typeof props.upperLimit !== "number") {
+	if (
+		typeof props.value !== "number" ||
+		typeof props.upperLimit !== "number" ||
+		typeof props.factor !== "number"
+	) {
 		return <td />;
 	}
 
@@ -548,21 +610,28 @@ const UpperLimitCell = (props: {
 			: 0.0;
 
 	return (
-		<LimitCell limit={props.upperLimit} percent={percent} bold={props.bold} />
+		<LimitCell
+			limit={props.upperLimit}
+			percent={percent}
+			factor={props.factor}
+			bold={props.bold}
+		/>
 	);
 };
 
 const LimitCell = (props: {
 	limit: number;
 	percent: number;
+	factor: number;
 	bold: boolean;
 }) => {
 	const LimitCellInner = (props: {
 		limit: number;
 		percent: number;
+		factor: number;
 	}) => (
 		<>
-			{prettyPrintFloat(props.limit)}
+			{prettyPrintFloat(props.limit / props.factor)}
 			<br />({prettyPrintFloat(props.percent)}%)
 		</>
 	);
@@ -572,11 +641,19 @@ const LimitCell = (props: {
 			<Show
 				when={props.bold}
 				fallback={
-					<LimitCellInner limit={props.limit} percent={props.percent} />
+					<LimitCellInner
+						limit={props.limit}
+						percent={props.percent}
+						factor={props.factor}
+					/>
 				}
 			>
 				<b>
-					<LimitCellInner limit={props.limit} percent={props.percent} />
+					<LimitCellInner
+						limit={props.limit}
+						percent={props.percent}
+						factor={props.factor}
+					/>
 				</b>
 			</Show>
 		</td>
@@ -689,6 +766,7 @@ type Measure = {
 };
 
 type BoundaryLimits = {
+	min: number;
 	lower: boolean;
 	upper: boolean;
 };
@@ -721,6 +799,8 @@ const missingThreshold = (
 export const boundaryLimitsMap = (
 	iteration: JsonReportIteration,
 ): Map<string, BoundaryLimits> => {
+	const MAX = Number.MAX_SAFE_INTEGER;
+
 	const map = new Map<string, BoundaryLimits>();
 	for (const result of iteration) {
 		for (const report_measure of result.measures) {
@@ -730,6 +810,11 @@ export const boundaryLimitsMap = (
 				units: report_measure.measure?.units,
 			};
 			const boundaryLimits = {
+				min: Math.min(
+					report_measure.metric?.value ?? MAX,
+					report_measure.boundary?.lower_limit ?? MAX,
+					report_measure.boundary?.upper_limit ?? MAX,
+				),
 				lower: typeof report_measure.boundary?.lower_limit === "number",
 				upper: typeof report_measure.boundary?.upper_limit === "number",
 			};
@@ -747,6 +832,7 @@ export const boundaryLimitsMap = (
 
 const union = (lhs: BoundaryLimits, rhs: BoundaryLimits): BoundaryLimits => {
 	return {
+		min: Math.min(lhs.min, rhs.min),
 		lower: lhs.lower || rhs.lower,
 		upper: lhs.upper || rhs.upper,
 	};

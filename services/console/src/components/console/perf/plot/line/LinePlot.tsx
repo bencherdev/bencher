@@ -1,6 +1,5 @@
 import * as Plot from "@observablehq/plot";
 import type { ScaleType } from "@observablehq/plot";
-import { scale_factor, scale_units } from "bencher_valid";
 import * as d3 from "d3";
 import {
 	type Accessor,
@@ -21,6 +20,7 @@ import {
 	XAxis,
 } from "../../../../../types/bencher";
 import { prettyPrintFloat } from "../../../../../util/convert";
+import { scale_factor, scale_units } from "../../../../../util/scale";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { Theme } from "../../../../navbar/theme/theme";
 import { addTooltips } from "./tooltip";
@@ -412,10 +412,7 @@ const scale_data = (
 		),
 	);
 
-	const factor = scale(min, raw_units);
-	if (factor === null) {
-		return [raw_data, raw_units];
-	}
+	const factor = scale_factor(min, raw_units);
 	const scaled_data = raw_data.map((data) => {
 		data.line_data = data.line_data?.map((datum) => {
 			datum.value = datum.value / factor;
@@ -470,30 +467,9 @@ const scale_data = (
 		});
 		return data;
 	});
-	const scaled_units = scale_units(min ?? 0, raw_units ?? "");
+	const scaled_units = scale_units(min, raw_units);
 
 	return [scaled_data, scaled_units];
-};
-
-const scale = (min: number, raw_units: string) => {
-	if (typeof min === "number" && typeof raw_units === "string") {
-		try {
-			const factor = Number(scale_factor(min, raw_units));
-			if (Number.isNaN(factor)) {
-				console.error("Conversion to number failed:", factor);
-			} else {
-				return factor;
-			}
-		} catch (error) {
-			console.error(
-				"Failed to convert scale factor to number:",
-				min,
-				raw_units,
-				error,
-			);
-		}
-	}
-	return null;
 };
 
 const plot_marks = (
