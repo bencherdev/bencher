@@ -6,6 +6,8 @@ use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
 use chrono::{DateTime, Duration, Utc};
 use image::{GenericImageView, ImageBuffer};
 use ordered_float::OrderedFloat;
+use plotters::coord::Shift;
+use plotters::prelude::DrawingArea;
 use plotters::{
     coord::types::RangedCoordf64,
     prelude::{
@@ -65,139 +67,9 @@ impl LinePlot {
         Self::default()
     }
 
-    #[allow(clippy::too_many_lines, clippy::items_after_statements)]
     pub fn draw(&self, title: Option<&str>, json_perf: &JsonPerf) -> Result<Vec<u8>, PlotError> {
         let mut plot_buffer = vec![0; BUFFER_SIZE];
-
-        // Use a closure that gets immediately executed here
-        // This provides early return control flow and avoids the lifetime complexity
-        || -> Result<(), PlotError> {
-            let root_area = BitMapBackend::with_buffer(&mut plot_buffer, (self.width, self.height))
-                .into_drawing_area();
-            root_area.fill(&WHITE)?;
-
-            // Bencher Wordmark
-            root_area.draw(&*WORDMARK_ELEMENT)?;
-
-            // Split header and plot areas
-            let (header, plot_area) = root_area.split_vertically(TITLE_HEIGHT);
-
-            // Adaptive title sizing
-            let title = title.unwrap_or(json_perf.project.name.as_ref());
-            let title_len = title.len();
-            let size = if title_len > MAX_TITLE_LEN {
-                let diff = title_len - MAX_TITLE_LEN;
-                std::cmp::max(TITLE_HEIGHT - u32::try_from(diff)?, 12)
-            } else {
-                TITLE_HEIGHT
-            };
-            header.titled(title, (FontFamily::Monospace, size))?;
-
-            // Marshal the perf data into a plot-able form
-            let perf_data = PerfData::new(json_perf);
-
-            let Some(perf_data) = perf_data else {
-                // Return an informative message if there is no perf data found
-                let _chart_context = ChartBuilder::on(&plot_area)
-                    .margin_top(TITLE_HEIGHT)
-                    .caption(
-                        format!("No Data Found: {}", Utc::now().format(DATE_TIME_FMT)),
-                        (FontFamily::Monospace, 32),
-                    )
-                    .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
-
-                return root_area.present().map_err(Into::into);
-            };
-
-            let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
-
-            let mut chart_context = ChartBuilder::on(&plot_area)
-                .x_label_area_size(40)
-                .y_label_area_size(perf_data.y_label_area_size()?)
-                .margin_left(8)
-                .margin_right(32)
-                .margin_bottom(8)
-                .build_cartesian_2d(perf_data.x_range(), perf_data.y_range())?;
-
-            chart_context
-                .configure_mesh()
-                .axis_desc_style((FontFamily::Monospace, 20))
-                .x_desc("Benchmark Date and Time")
-                .x_labels(usize::try_from(X_LABELS)?)
-                .x_label_style((FontFamily::Monospace, 16))
-                .x_label_formatter(&|x| perf_data.x_label_fmt(x))
-                .y_desc(&perf_data.y_desc)
-                .y_labels(Y_LABELS)
-                .y_label_style((FontFamily::Monospace, 12))
-                .y_label_formatter(&|&y| PerfData::y_label_fmt(y))
-                .max_light_lines(4)
-                .draw()?;
-
-            const KEY_LEFT_MARGIN: usize = 48;
-            const BOX_GAP: usize = 12;
-            let lines_len = perf_data.lines.len();
-            let (box_x_left, box_width, box_gap) = if lines_len > 3 {
-                const MIN_GAP: usize = 4;
-                let extra_lines = lines_len - 4;
-                let box_x_left = std::cmp::max(MIN_GAP, KEY_LEFT_MARGIN - (extra_lines * 8));
-                let box_gap = std::cmp::max(MIN_GAP, BOX_GAP - extra_lines);
-                let box_gaps = lines_len * box_gap;
-                #[allow(clippy::integer_division)]
-                let width = (usize::try_from(IMG_WIDTH)? - box_x_left - box_gaps) / lines_len;
-                (box_x_left, width, box_gap)
-            } else {
-                (KEY_LEFT_MARGIN, 256, BOX_GAP)
-            };
-
-            const BOX_HEIGHT: i32 = 24;
-            const TEXT_START: i32 = BOX_HEIGHT + 4;
-            let max_text_end = i32::try_from(KEY_HEIGHT)? - TEXT_START - 48;
-            let text_width = u32::try_from(box_width)?;
-            let (mut box_x_left, box_width, box_gap) = (
-                i32::try_from(box_x_left)?,
-                i32::try_from(box_width)?,
-                i32::try_from(box_gap)?,
-            );
-
-            for LineData {
-                data,
-                color,
-                dimensions,
-            } in perf_data.lines
-            {
-                let _series = chart_context.draw_series(
-                    LineSeries::new(data.into_iter().map(|(x, y)| (x, y.into())), color.filled())
-                        .point_size(2),
-                )?;
-
-                let box_x_right = box_x_left + box_width;
-
-                let points = [(box_x_left, 0), (box_x_right, BOX_HEIGHT)];
-                let shape_style = ShapeStyle::from(color).filled();
-                let rectangle = Rectangle::new(points, shape_style);
-                key_area.draw(&rectangle)?;
-
-                let mut font = 16;
-                let text = loop {
-                    let text = MultiLineText::from_str(
-                        dimensions.as_str(),
-                        (box_x_left, TEXT_START),
-                        (FontFamily::Monospace, font),
-                        text_width,
-                    );
-                    let (_, text_height) = text.estimate_dimension().map_err(PlotError::Font)?;
-                    if text_height < max_text_end || font == 8 {
-                        break text;
-                    }
-                    font -= 1;
-                };
-                key_area.draw(&text)?;
-
-                box_x_left = box_x_right + box_gap;
-            }
-
-            root_area.present().map_err(Into::into)
-        }()?;
+        self.draw_inner(title, json_perf, &mut plot_buffer)?;
 
         let image_buffer: ImageBuffer<image::Rgb<u8>, Vec<u8>> =
             ImageBuffer::from_vec(self.width, self.height, plot_buffer)
@@ -207,7 +79,132 @@ impl LinePlot {
 
         Ok(image_cursor.into_inner())
     }
+
+    fn draw_inner(
+        &self,
+        title: Option<&str>,
+        json_perf: &JsonPerf,
+        plot_buffer: &mut [u8],
+    ) -> Result<(), PlotError> {
+        let root_area =
+            BitMapBackend::with_buffer(plot_buffer, (self.width, self.height)).into_drawing_area();
+        let (header, plot_area) = Self::split_header(&root_area)?;
+        Self::header(title, json_perf, &header)?;
+        // Marshal the perf data into a plot-able form
+        let perf_data = PerfData::new(json_perf);
+
+        let Some(perf_data) = perf_data else {
+            return Self::no_data_found(&root_area, &plot_area);
+        };
+
+        let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
+
+        let mut chart_context = ChartBuilder::on(&plot_area)
+            .x_label_area_size(40)
+            .y_label_area_size(perf_data.y_label_area_size()?)
+            .margin_left(8)
+            .margin_right(32)
+            .margin_bottom(8)
+            .build_cartesian_2d(perf_data.x_range(), perf_data.y_range())?;
+
+        chart_context
+            .configure_mesh()
+            .axis_desc_style((FontFamily::Monospace, 20))
+            .x_desc("Benchmark Date and Time")
+            .x_labels(usize::try_from(X_LABELS)?)
+            .x_label_style((FontFamily::Monospace, 16))
+            .x_label_formatter(&|x| perf_data.x_label_fmt(x))
+            .y_desc(&perf_data.y_desc)
+            .y_labels(Y_LABELS)
+            .y_label_style((FontFamily::Monospace, 12))
+            .y_label_formatter(&|&y| PerfData::y_label_fmt(y))
+            .max_light_lines(4)
+            .draw()?;
+
+        let plot_box = perf_data.plot_box()?;
+        let mut box_x_left = plot_box.x_left;
+        for LineData {
+            data,
+            color,
+            dimensions,
+        } in perf_data.lines
+        {
+            let _series = chart_context.draw_series(
+                LineSeries::new(data.into_iter().map(|(x, y)| (x, y.into())), color.filled())
+                    .point_size(2),
+            )?;
+
+            let box_x_right = box_x_left + plot_box.width;
+
+            let points = [(box_x_left, 0), (box_x_right, plot_box.height)];
+            let shape_style = ShapeStyle::from(color).filled();
+            let rectangle = Rectangle::new(points, shape_style);
+            key_area.draw(&rectangle)?;
+
+            let mut font = 16;
+            let text = loop {
+                let text = MultiLineText::from_str(
+                    dimensions.as_str(),
+                    (box_x_left, plot_box.text_start),
+                    (FontFamily::Monospace, font),
+                    plot_box.text_width,
+                );
+                let (_, text_height) = text.estimate_dimension().map_err(PlotError::Font)?;
+                if text_height < plot_box.text_end || font == 8 {
+                    break text;
+                }
+                font -= 1;
+            };
+            key_area.draw(&text)?;
+
+            box_x_left = box_x_right + plot_box.gap;
+        }
+
+        root_area.present().map_err(Into::into)
+    }
+
+    fn split_header<'b>(
+        root_area: &DrawingArea<BitMapBackend<'b>, Shift>,
+    ) -> Result<(Area<'b>, Area<'b>), PlotError> {
+        root_area.fill(&WHITE)?;
+        // Bencher Wordmark
+        root_area.draw(&*WORDMARK_ELEMENT)?;
+        Ok(root_area.split_vertically(TITLE_HEIGHT))
+    }
+
+    fn header(
+        title: Option<&str>,
+        json_perf: &JsonPerf,
+        header: &Area<'_>,
+    ) -> Result<(), PlotError> {
+        // Adaptive title sizing
+        let title = title.unwrap_or(json_perf.project.name.as_ref());
+        let title_len = title.len();
+        let size = if title_len > MAX_TITLE_LEN {
+            let diff = title_len - MAX_TITLE_LEN;
+            std::cmp::max(TITLE_HEIGHT - u32::try_from(diff)?, 12)
+        } else {
+            TITLE_HEIGHT
+        };
+        header.titled(title, (FontFamily::Monospace, size))?;
+        Ok(())
+    }
+
+    fn no_data_found(root_area: &Area<'_>, plot_area: &Area<'_>) -> Result<(), PlotError> {
+        // Return an informative message if there is no perf data found
+        let _chart_context = ChartBuilder::on(plot_area)
+            .margin_top(TITLE_HEIGHT)
+            .caption(
+                format!("No Data Found: {}", Utc::now().format(DATE_TIME_FMT)),
+                (FontFamily::Monospace, 32),
+            )
+            .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
+
+        root_area.present().map_err(Into::into)
+    }
 }
+
+type Area<'b> = DrawingArea<BitMapBackend<'b>, Shift>;
 
 struct PerfData {
     lines: Vec<LineData>,
@@ -402,6 +399,50 @@ impl PerfData {
             .collect::<Vec<_>>()
             .join(",")
     }
+
+    fn plot_box(&self) -> Result<PlotBox, PlotError> {
+        const KEY_LEFT_MARGIN: usize = 48;
+        const BOX_GAP: usize = 12;
+        const BOX_HEIGHT: i32 = 24;
+        const TEXT_START: i32 = BOX_HEIGHT + 4;
+
+        let lines_len = self.lines.len();
+        let (box_x_left, box_width, box_gap) = if lines_len > 3 {
+            const MIN_GAP: usize = 4;
+            let extra_lines = lines_len - 4;
+            let box_x_left = std::cmp::max(MIN_GAP, KEY_LEFT_MARGIN - (extra_lines * 8));
+            let box_gap = std::cmp::max(MIN_GAP, BOX_GAP - extra_lines);
+            let box_gaps = lines_len * box_gap;
+            #[allow(clippy::integer_division)]
+            let width = (usize::try_from(IMG_WIDTH)? - box_x_left - box_gaps) / lines_len;
+            (box_x_left, width, box_gap)
+        } else {
+            (KEY_LEFT_MARGIN, 256, BOX_GAP)
+        };
+
+        let text_end = i32::try_from(KEY_HEIGHT)? - TEXT_START - 48;
+        let text_width = u32::try_from(box_width)?;
+
+        Ok(PlotBox {
+            x_left: i32::try_from(box_x_left)?,
+            width: i32::try_from(box_width)?,
+            height: BOX_HEIGHT,
+            gap: i32::try_from(box_gap)?,
+            text_start: TEXT_START,
+            text_end,
+            text_width,
+        })
+    }
+}
+
+struct PlotBox {
+    x_left: i32,
+    width: i32,
+    height: i32,
+    gap: i32,
+    text_start: i32,
+    text_end: i32,
+    text_width: u32,
 }
 
 // https://observablehq.com/@d3/color-schemes
