@@ -779,7 +779,7 @@ fn value_cell(
         baseline: Option<OrderedFloat<f64>>,
         factor: OrderedFloat<f64>,
     ) -> String {
-        let mut cell = format_number((value / factor).into());
+        let mut cell = Units::format_number((value / factor).into());
 
         if let Some(baseline) = baseline {
             let percent = if value.is_normal() && baseline.is_normal() {
@@ -788,7 +788,7 @@ fn value_cell(
                 0.0.into()
             };
             let plus = if percent > 0.0.into() { "+" } else { "" };
-            let percent = format_number(percent.into());
+            let percent = Units::format_number(percent.into());
             cell.push_str(&format!("<br />({plus}{percent}%)"));
         }
 
@@ -861,8 +861,8 @@ fn limit_cell(
         percent: OrderedFloat<f64>,
         factor: OrderedFloat<f64>,
     ) -> String {
-        let mut cell = format_number((limit / factor).into());
-        let percent = format_number(percent.into());
+        let mut cell = Units::format_number((limit / factor).into());
+        let percent = Units::format_number(percent.into());
         cell.push_str(&format!("<br />({percent}%)"));
         cell
     }
@@ -877,40 +877,6 @@ fn limit_cell(
         html.push_str(&limit_cell_inner(limit, percent, factor));
     }
     html.push_str("</td>");
-}
-
-enum Position {
-    Whole(usize),
-    Point,
-    Decimal,
-}
-
-fn format_number(number: f64) -> String {
-    let mut number_str = String::new();
-    let mut position = Position::Decimal;
-    for c in format!("{:.2}", number.abs()).chars().rev() {
-        match position {
-            Position::Whole(place) => {
-                if place % 3 == 0 {
-                    number_str.push(',');
-                }
-                position = Position::Whole(place + 1);
-            },
-            Position::Point => {
-                position = Position::Whole(1);
-            },
-            Position::Decimal => {
-                if c == '.' {
-                    position = Position::Point;
-                }
-            },
-        }
-        number_str.push(c);
-    }
-    if number < 0.0 {
-        number_str.push('-');
-    }
-    number_str.chars().rev().collect()
 }
 
 #[derive(Clone, Copy)]

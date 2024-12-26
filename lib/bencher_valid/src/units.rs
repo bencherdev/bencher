@@ -28,6 +28,10 @@ impl Units {
     pub fn scale_units(&self) -> String {
         self.scale.units(self.units.as_ref())
     }
+
+    pub fn format_number(number: f64) -> String {
+        format_number(number)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -224,4 +228,38 @@ pub fn scale_factor(min: f64, units: &str) -> u64 {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn scale_units(min: f64, units: &str) -> String {
     Scale::new(min, units).units(units)
+}
+
+enum Position {
+    Whole(usize),
+    Point,
+    Decimal,
+}
+
+fn format_number(number: f64) -> String {
+    let mut number_str = String::new();
+    let mut position = Position::Decimal;
+    for c in format!("{:.2}", number.abs()).chars().rev() {
+        match position {
+            Position::Whole(place) => {
+                if place % 3 == 0 {
+                    number_str.push(',');
+                }
+                position = Position::Whole(place + 1);
+            },
+            Position::Point => {
+                position = Position::Whole(1);
+            },
+            Position::Decimal => {
+                if c == '.' {
+                    position = Position::Point;
+                }
+            },
+        }
+        number_str.push(c);
+    }
+    if number < 0.0 {
+        number_str.push('-');
+    }
+    number_str.chars().rev().collect()
 }
