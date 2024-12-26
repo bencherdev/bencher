@@ -389,7 +389,7 @@ impl ReportComment {
             if boundary_limits.has_limit() {
                 html.push_str("Benchmark Result<br />");
             }
-            html.push_str(measure.units.as_ref());
+            html.push_str(units.as_ref());
             if boundary_limits.has_limit() {
                 html.push_str("<br />(Result Δ%)");
             }
