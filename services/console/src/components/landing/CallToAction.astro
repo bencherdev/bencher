@@ -1,78 +1,77 @@
 ---
 import { defaultLang, Language } from "../../i18n/ui";
 
-
 const { lang } = Astro.props;
 
 const language = lang ?? defaultLang;
 
 const title = (lang: Language) => {
-  switch (lang) {
-    case Language.de:
-      return "Verfolgen Sie Ihre Benchmarks in CI";
-    case Language.en:
-      return "Track your benchmarks in CI";
-    case Language.es:
-      return "Realiza un seguimiento de tus benchmarks en CI";
-    case Language.fr:
-      return "Suivez vos benchmarks dans CI";
-    case Language.ja:
-      return "CIでベンチマークを追跡する";
-    case Language.ko:
-      return "CI에서 벤치마크를 추적하다";
-    case Language.pt:
-      return "Acompanhe seus benchmarks no CI";
-    case Language.ru:
-      return "Отслеживайте свои бенчмарки в CI";
-    case Language.zh:
-      return "在CI中跟踪您的基准";
-  }
+	switch (lang) {
+		case Language.de:
+			return "Verfolgen Sie Ihre Benchmarks in CI";
+		case Language.en:
+			return "Track your benchmarks in CI";
+		case Language.es:
+			return "Realiza un seguimiento de tus benchmarks en CI";
+		case Language.fr:
+			return "Suivez vos benchmarks dans CI";
+		case Language.ja:
+			return "CIでベンチマークを追跡する";
+		case Language.ko:
+			return "CI에서 벤치마크를 추적하다";
+		case Language.pt:
+			return "Acompanhe seus benchmarks no CI";
+		case Language.ru:
+			return "Отслеживайте свои бенчмарки в CI";
+		case Language.zh:
+			return "在CI中跟踪您的基准";
+	}
 };
 
 const description = (lang: Language) => {
-  switch (lang) {
-    case Language.en:
-      return "Have you ever had a performance regression impact your users? Bencher could have prevented that from happening with continuous benchmarking.";
-    case Language.es:
-      return "¿Alguna vez ha tenido una regresión de rendimiento que afecte a sus usuarios? Bencher podría haber evitado que eso sucediera con el benchmarking continuo.";
-    case Language.fr:
-      return "Avez-vous déjà eu une régression de performance impactant vos utilisateurs ? Bencher aurait pu empêcher cela de se produire avec le benchmarking continu.";
-    case Language.de:
-      return "Hatten Sie jemals eine Leistungsregression, die sich auf Ihre Benutzer auswirkte? Bencher hätte dies mit kontinuierlichem Benchmarking verhindern können.";
-    case Language.ja:
-      return "ユーザーに影響を与えるパフォーマンスの回帰が発生したことがありますか？ Bencherは継続的なベンチマークでそれを防ぐことができました。";
-    case Language.ko:
-      return "성능 하락이 사용자에게 영향을 미친 적이 있나요? Bencher는 지속적인 벤치마킹으로 그것을 방지할 수 있었습니다.";
-    case Language.pt:
-      return "Alguma vez teve uma regressão de desempenho que afetou seus usuários? O Bencher poderia ter evitado que isso acontecesse com o benchmarking contínuo.";
-    case Language.ru:
-      return "Когда-либо ли у вас была регрессия производительности, повлиявшая на ваших пользователей? Bencher мог бы предотвратить это с помощью н kontinuierlichem Benchmarking.";
-    case Language.zh:
-      return "您是否曾经遇到过影响用户的性能回归？Bencher可以通过持续的基准测试来防止这种情况发生。";
-  }
+	switch (lang) {
+		case Language.en:
+			return "Have you ever had a performance regression impact your users? Bencher could have prevented that from happening with continuous benchmarking.";
+		case Language.es:
+			return "¿Alguna vez ha tenido una regresión de rendimiento que afecte a sus usuarios? Bencher podría haber evitado que eso sucediera con el benchmarking continuo.";
+		case Language.fr:
+			return "Avez-vous déjà eu une régression de performance impactant vos utilisateurs ? Bencher aurait pu empêcher cela de se produire avec le benchmarking continu.";
+		case Language.de:
+			return "Hatten Sie jemals eine Leistungsregression, die sich auf Ihre Benutzer auswirkte? Bencher hätte dies mit kontinuierlichem Benchmarking verhindern können.";
+		case Language.ja:
+			return "ユーザーに影響を与えるパフォーマンスの回帰が発生したことがありますか？ Bencherは継続的なベンチマークでそれを防ぐことができました。";
+		case Language.ko:
+			return "성능 하락이 사용자에게 영향을 미친 적이 있나요? Bencher는 지속적인 벤치마킹으로 그것을 방지할 수 있었습니다.";
+		case Language.pt:
+			return "Alguma vez teve uma regressão de desempenho que afetou seus usuários? O Bencher poderia ter evitado que isso acontecesse com o benchmarking contínuo.";
+		case Language.ru:
+			return "Когда-либо ли у вас была регрессия производительности, повлиявшая на ваших пользователей? Bencher мог бы предотвратить это с помощью н kontinuierlichem Benchmarking.";
+		case Language.zh:
+			return "您是否曾经遇到过影响用户的性能回归？Bencher可以通过持续的基准测试来防止这种情况发生。";
+	}
 };
 
 const button = (lang: Language) => {
-  switch (lang) {
-    case Language.de:
-    return "Probieren Sie Bencher kostenlos aus";
-    case Language.en:
-      return "Try Bencher for Free";
-    case Language.es:
-      return "Prueba Bencher gratis";
-    case Language.fr:
-      return "Essayez Bencher gratuitement";
-    case Language.ja:
-      return "Bencherを無料でお試しください";
-    case Language.ko:
-      return "Bencher를 무료로 사용해보세요";
-    case Language.pt:
-      return "Experimente o Bencher gratuitamente";
-    case Language.ru:
-      return "Попробуйте Bencher бесплатно";
-    case Language.zh:
-      return "免费试用Bencher";
-  }
+	switch (lang) {
+		case Language.de:
+			return "Probieren Sie Bencher kostenlos aus";
+		case Language.en:
+			return "Try Bencher for Free";
+		case Language.es:
+			return "Prueba Bencher gratis";
+		case Language.fr:
+			return "Essayez Bencher gratuitement";
+		case Language.ja:
+			return "Bencherを無料でお試しください";
+		case Language.ko:
+			return "Bencher를 무료로 사용해보세요";
+		case Language.pt:
+			return "Experimente o Bencher gratuitamente";
+		case Language.ru:
+			return "Попробуйте Bencher бесплатно";
+		case Language.zh:
+			return "免费试用Bencher";
+	}
 };
 ---
 
