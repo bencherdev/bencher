@@ -30,7 +30,11 @@ impl Units {
     }
 
     pub fn format_number(number: f64) -> String {
-        format_number(number)
+        format_number(number, false)
+    }
+
+    pub fn trim_number(number: f64) -> String {
+        format_number(number, true)
     }
 }
 
@@ -236,7 +240,7 @@ enum Position {
     Decimal,
 }
 
-fn format_number(number: f64) -> String {
+fn format_number(number: f64, trim_decimal: bool) -> String {
     let mut number_str = String::new();
     let mut position = Position::Decimal;
     for c in format!("{:.2}", number.abs()).chars().rev() {
@@ -261,5 +265,15 @@ fn format_number(number: f64) -> String {
     if number < 0.0 {
         number_str.push('-');
     }
-    number_str.chars().rev().collect()
+    if trim_decimal && number_str.starts_with("00.") {
+        number_str
+            .chars()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .skip(3)
+            .rev()
+            .collect()
+    } else {
+        number_str.chars().rev().collect()
+    }
 }
