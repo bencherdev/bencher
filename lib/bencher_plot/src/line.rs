@@ -117,7 +117,7 @@ impl LinePlot {
             .y_desc(&perf_data.y_desc)
             .y_labels(Y_LABELS)
             .y_label_style((FontFamily::Monospace, 12))
-            .y_label_formatter(&|&y| Units::trim_number(y))
+            .y_label_formatter(&|&y| Units::format_number(y, perf_data.trim_key_point_decimal()))
             .max_light_lines(4)
             .draw()?;
 
@@ -330,8 +330,19 @@ impl PerfData {
         0.0..0.0
     }
 
+    fn key_points(&self) -> Vec<f64> {
+        RangedCoordf64::from(self.y_range()).key_points(Y_LABELS)
+    }
+
+    fn trim_key_point_decimal(&self) -> bool {
+        !self
+            .key_points()
+            .iter()
+            .any(|y| !format!("{y:.2}").ends_with(".00"))
+    }
+
     fn y_label_area_size(&self) -> Result<u32, PlotError> {
-        let y_range = RangedCoordf64::from(self.y_range()).key_points(Y_LABELS);
+        let y_range = self.key_points();
         let min = y_range.first().copied().unwrap_or_default();
         let max = y_range.last().copied().unwrap_or_default();
         let buffer = if max < 1.0 {
@@ -341,12 +352,12 @@ impl PerfData {
         } else {
             32
         };
-        let y_len = buffer + 6 * std::cmp::max(Self::float_len(min), Self::float_len(max));
+        let y_len = buffer + 6 * std::cmp::max(self.float_len(min), self.float_len(max));
         u32::try_from(y_len).map_err(Into::into)
     }
 
-    fn float_len(y: f64) -> usize {
-        Units::trim_number(y).len()
+    fn float_len(&self, y: f64) -> usize {
+        Units::format_number(y, self.trim_key_point_decimal()).len()
     }
 
     fn plot_box(&self) -> Result<PlotBox, PlotError> {

@@ -29,12 +29,12 @@ impl Units {
         self.scale.units(self.units.as_ref())
     }
 
-    pub fn format_number(number: f64) -> String {
-        format_number(number, false)
+    pub fn format_float(number: f64) -> String {
+        Self::format_number(number, false)
     }
 
-    pub fn trim_number(number: f64) -> String {
-        format_number(number, true)
+    pub fn format_number(number: f64, trim_decimal: bool) -> String {
+        format_number(number, trim_decimal)
     }
 }
 

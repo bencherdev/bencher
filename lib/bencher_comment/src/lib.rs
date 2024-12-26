@@ -779,7 +779,7 @@ fn value_cell(
         baseline: Option<OrderedFloat<f64>>,
         factor: OrderedFloat<f64>,
     ) -> String {
-        let mut cell = Units::format_number((value / factor).into());
+        let mut cell = Units::format_float((value / factor).into());
 
         if let Some(baseline) = baseline {
             let percent = if value.is_normal() && baseline.is_normal() {
@@ -788,7 +788,7 @@ fn value_cell(
                 0.0.into()
             };
             let plus = if percent > 0.0.into() { "+" } else { "" };
-            let percent = Units::format_number(percent.into());
+            let percent = Units::format_float(percent.into());
             cell.push_str(&format!("<br />({plus}{percent}%)"));
         }
 
@@ -861,8 +861,8 @@ fn limit_cell(
         percent: OrderedFloat<f64>,
         factor: OrderedFloat<f64>,
     ) -> String {
-        let mut cell = Units::format_number((limit / factor).into());
-        let percent = Units::format_number(percent.into());
+        let mut cell = Units::format_float((limit / factor).into());
+        let percent = Units::format_float(percent.into());
         cell.push_str(&format!("<br />({percent}%)"));
         cell
     }
