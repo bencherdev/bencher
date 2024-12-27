@@ -183,7 +183,7 @@ const line_plot = (props: Props) => {
 		upper_boundary: props.upper_boundary,
 	});
 
-	const marks = plot_marks(data, {
+	const marks = plot_marks(data, units, {
 		project_slug: json_perf.project.slug,
 		isConsole: props.isConsole,
 		plotId: props.plotId,
@@ -266,14 +266,6 @@ const perf_result = (
 			iteration: perf_metric.iteration,
 			lower_limit: perf_metric.boundary?.lower_limit,
 			upper_limit: perf_metric.boundary?.upper_limit,
-			// These values do not get scaled and are used by the tooltip
-			raw: {
-				value: perf_metric.metric?.value,
-				lower_value: perf_metric.metric?.lower_value,
-				upper_value: perf_metric.metric?.upper_value,
-				lower_limit: perf_metric.boundary?.lower_limit,
-				upper_limit: perf_metric.boundary?.upper_limit,
-			},
 		};
 		line_data.push(datum);
 
@@ -285,11 +277,6 @@ const perf_result = (
 			lower_limit: datum.lower_limit,
 			upper_limit: datum.upper_limit,
 			threshold: perf_metric.threshold,
-			// These values do not get scaled and are used by the tooltip
-			raw: {
-				lower_limit: datum.lower_limit,
-				upper_limit: datum.upper_limit,
-			},
 		};
 		if (perf_metric.alert && is_active(perf_metric.alert)) {
 			switch (perf_metric.alert?.limit) {
@@ -319,6 +306,7 @@ const perf_result = (
 			skipped_lower_data.push({
 				date_time: datum.date_time,
 				number: datum.number,
+				iteration: datum.iteration,
 				y: perf_metric.metric?.value * 0.9,
 				threshold: perf_metric.threshold,
 			});
@@ -332,6 +320,7 @@ const perf_result = (
 			skipped_upper_data.push({
 				date_time: datum.date_time,
 				number: datum.number,
+				iteration: datum.iteration,
 				y: perf_metric.metric?.value * 1.1,
 				threshold: perf_metric.threshold,
 			});
@@ -487,6 +476,7 @@ const scale_data = (
 
 const plot_marks = (
 	plot_data,
+	plot_units: string,
 	props: {
 		project_slug: string;
 		isConsole: boolean;
@@ -536,7 +526,7 @@ const plot_marks = (
 				fill: color,
 				title: (datum) =>
 					to_title(
-						`${prettyPrintFloat(datum?.raw?.value)}`,
+						`${prettyPrintFloat(datum?.value)}\n${plot_units}`,
 						result,
 						datum,
 						"\nClick to view Metric",
@@ -558,7 +548,13 @@ const plot_marks = (
 			plot_arrays.push(
 				Plot.dot(
 					line_data,
-					value_end_dot(props.x_axis_kind, BoundaryLimit.Lower, color, result),
+					value_end_dot(
+						props.x_axis_kind,
+						BoundaryLimit.Lower,
+						color,
+						result,
+						plot_units,
+					),
 				),
 			);
 		}
@@ -574,7 +570,13 @@ const plot_marks = (
 			plot_arrays.push(
 				Plot.dot(
 					line_data,
-					value_end_dot(props.x_axis_kind, BoundaryLimit.Upper, color, result),
+					value_end_dot(
+						props.x_axis_kind,
+						BoundaryLimit.Upper,
+						color,
+						result,
+						plot_units,
+					),
 				),
 			);
 		}
@@ -596,6 +598,7 @@ const plot_marks = (
 						color,
 						props.project_slug,
 						result,
+						plot_units,
 						props.isConsole,
 					),
 				),
@@ -605,7 +608,9 @@ const plot_marks = (
 					skipped_lower_data,
 					warning_image(
 						props.x_axis_kind,
+						BoundaryLimit.Lower,
 						props.project_slug,
+						result,
 						props.isConsole,
 						props.plotId,
 					),
@@ -630,6 +635,7 @@ const plot_marks = (
 						color,
 						props.project_slug,
 						result,
+						plot_units,
 						props.isConsole,
 					),
 				),
@@ -637,7 +643,13 @@ const plot_marks = (
 			warn_arrays.push(
 				Plot.image(
 					skipped_upper_data,
-					warning_image(props.x_axis_kind, props.project_slug, props.isConsole),
+					warning_image(
+						props.x_axis_kind,
+						BoundaryLimit.Upper,
+						props.project_slug,
+						result,
+						props.isConsole,
+					),
 				),
 			);
 		}
@@ -650,6 +662,7 @@ const plot_marks = (
 					BoundaryLimit.Lower,
 					props.project_slug,
 					result,
+					plot_units,
 					props.isConsole,
 					props.plotId,
 				),
@@ -663,6 +676,7 @@ const plot_marks = (
 					BoundaryLimit.Upper,
 					props.project_slug,
 					result,
+					plot_units,
 					props.isConsole,
 					props.plotId,
 				),
@@ -714,6 +728,7 @@ const value_end_dot = (
 	limit: BoundaryLimit,
 	color: string,
 	result: object,
+	units: string,
 ) => {
 	return {
 		x: x_axis,
@@ -724,7 +739,7 @@ const value_end_dot = (
 		strokeOpacity: 0.9,
 		fill: color,
 		fillOpacity: 0.9,
-		title: (datum) => value_end_title(limit, result, datum, ""),
+		title: (datum) => value_end_title(limit, result, datum, units),
 	};
 };
 
@@ -745,6 +760,7 @@ const boundary_dot = (
 	color: string,
 	project_slug: string,
 	result: object,
+	units: string,
 	isConsole: boolean,
 	plotId: string | undefined,
 ) => {
@@ -758,7 +774,7 @@ const boundary_dot = (
 		fill: color,
 		fillOpacity: 0.666,
 		title: (datum) =>
-			limit_title(limit, result, datum, "\nClick to view Threshold"),
+			limit_title(limit, result, datum, units, "\nClick to view Threshold"),
 		href: (datum) => thresholdUrl(project_slug, isConsole, plotId, datum),
 		target: "_top",
 	};
@@ -766,7 +782,9 @@ const boundary_dot = (
 
 const warning_image = (
 	x_axis: string,
+	limit: BoundaryLimit,
 	project_slug: string,
+	result,
 	isConsole: boolean,
 	plotId: string | undefined,
 ) => {
@@ -775,8 +793,13 @@ const warning_image = (
 		y: "y",
 		src: WARNING_URL,
 		width: 18,
-		title: (_datum) =>
-			"Boundary Limit was not calculated.\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)\nClick to view Threshold",
+		title: (datum) =>
+			to_title(
+				`${position_label(limit)} Boundary Limit was not calculated\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)`,
+				result,
+				datum,
+				"\nClick to view Threshold",
+			),
 		href: (datum) => thresholdUrl(project_slug, isConsole, plotId, datum),
 		target: "_top",
 	};
@@ -807,6 +830,7 @@ const alert_image = (
 	limit: BoundaryLimit,
 	project_slug: string,
 	result: object,
+	units: string,
 	isConsole: boolean,
 	plotId: string | undefined,
 ) => {
@@ -816,7 +840,7 @@ const alert_image = (
 		src: SIREN_URL,
 		width: 18,
 		title: (datum) =>
-			limit_title(limit, result, datum, "\nClick to view Alert"),
+			limit_title(limit, result, datum, units, "\nClick to view Alert"),
 		href: (datum) =>
 			`${resourcePath(isConsole)}/${project_slug}/alerts/${
 				datum.alert?.uuid
@@ -825,17 +849,17 @@ const alert_image = (
 	};
 };
 
-const value_end_title = (limit: BoundaryLimit, result, datum, suffix) =>
+const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 	to_title(
-		`${position_label(limit)} Value: ${prettyPrintFloat(datum?.raw?.[value_end_position_key(limit)])}`,
+		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.[value_end_position_key(limit)])}\n${units}`,
 		result,
 		datum,
-		suffix,
+		"",
 	);
 
-const limit_title = (limit: BoundaryLimit, result, datum, suffix) =>
+const limit_title = (limit: BoundaryLimit, result, datum, units, suffix) =>
 	to_title(
-		`${position_label(limit)} Limit: ${prettyPrintFloat(datum?.raw?.[boundary_position_key(limit)])}`,
+		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.[boundary_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		suffix,
