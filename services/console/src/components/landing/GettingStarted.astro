@@ -1,5 +1,7 @@
 ---
 import { Code } from "astro-expressive-code/components";
+import ClientPlatform from "./ClientPlatform";
+import { Platform } from "../../util/platform";
 ---
 
 <section class="section" style="margin-top: 8rem;">
@@ -9,8 +11,12 @@ import { Code } from "astro-expressive-code/components";
 		<br />
 		<div class="columns is-centered is-vcentered">
 			<div class="column is-7">
-				<Code lang="bash" code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh" />
-				<Code lang="powershell" code="irm https://bencher.dev/download/install-cli.ps1 | iex" />
+				<ClientPlatform client:only="solid-js" platform={Platform.Unix}>
+					<Code lang="bash" code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh" />
+				</ClientPlatform>
+				<ClientPlatform client:only="solid-js" platform={Platform.Windows}>
+					<Code lang="powershell" code="irm https://bencher.dev/download/install-cli.ps1 | iex" />
+				</ClientPlatform>
 			</div>
 		</div>
 		<br />

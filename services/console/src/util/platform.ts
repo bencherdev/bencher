@@ -1,12 +1,10 @@
-// https://github.com/rust-lang/rustup/blob/7ccf717e6e1aee46f65cc6fea4132a3f0e37593b/www/rustup.js
-
 export enum Platform {
-	Unknown = "unknown",
-	Windows = "windows",
 	Unix = "unix",
+	Windows = "windows",
 }
 
-export const platform = async () => {
+// https://github.com/rust-lang/rustup/blob/7ccf717e6e1aee46f65cc6fea4132a3f0e37593b/www/rustup.js
+export const getPlatform = async () => {
 	switch (navigator.platform) {
 		case "Win32":
 		case "Win64":
@@ -52,6 +50,7 @@ export const platform = async () => {
 			) {
 				return Platform.Unix;
 			}
-			return Platform.Unknown;
+			// Default to Unix if unknown
+			return Platform.Unix;
 	}
 };
