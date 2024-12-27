@@ -81,20 +81,21 @@ export const PROJECTS: Project[][] = [
 	],
 	[
 		{
+			name: "Servo",
+			about:
+				"The embeddable, independent, memory-safe, modular, parallel web rendering engine",
+			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/servo.svg",
+			slug: "servo",
+			query:
+				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=52e1e9bb-959c-4171-a53d-e06bd694a6c1&heads=3dbe3681-11b1-4e30-b482-4ee72dc0960c&testbeds=d742c702-3842-4108-9d0c-2db74e57599a&measures=678e4118-c8a5-494d-8799-08abc3021cd5&start_time=1734048000000&end_time=1735236203000&lower_boundary=false&upper_boundary=false&clear=true&tab=benchmarks&benchmarks=c4da10d8-9539-4943-95ca-5e08df0cd6f9&benchmarks_search=servo",
+		},
+		{
 			name: "Ratatui",
 			about: "A Rust library for cooking up Terminal User Interfaces (TUIs)",
 			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/ratatui.png",
 			slug: "ratatui-org",
 			query:
 				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=95ce51f3-9a78-41e8-8700-562f11680798&testbeds=0615b230-cbf8-4ea6-8e2e-616c282b102a&measures=b917dd68-60ef-41c6-8ce9-2164eba4f46b&start_time=1720841447000&end_time=1723434422000&clear=true&tab=benchmarks&branches_search=main&benchmarks_search=barchart%2F&benchmarks=5695514c-6501-44a4-9a43-9de69078be9c%2C7bada371-e16a-475b-9424-af842fd2dd70%2Cadb521a6-df19-4ee9-af93-e783b69a4dc0&upper_boundary=false&lower_boundary=false",
-		},
-		{
-			name: "Poolifier",
-			about: "Fast and small Node.js worker_threads and cluster worker pool",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/poolifier.png",
-			slug: "poolifier",
-			query:
-				"key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&branches=977f91aa-2157-4e5b-a4dc-e1d8c3ece8af&testbeds=12203dc4-c6e4-439b-bb2b-a5d4e227e4f5&measures=73517df3-f327-4853-9546-a8b61381b5e2&benchmarks=2515bbd1-81c8-4ab2-8746-135c6fa638b6%2Cf96b89da-378e-42a4-bc16-2034c1e16b3a%2Cdc1c353d-1da9-4940-af1f-d0cbdef98b03%2Cbe79f393-70f3-4a94-b377-f7b80e345461&start_time=1704067200000&benchmarks_search=FixedClusterPool+with+FAIR_SHARE",
 		},
 		{
 			name: "Wire",
