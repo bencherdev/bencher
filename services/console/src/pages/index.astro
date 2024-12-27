@@ -1,6 +1,5 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
@@ -45,11 +44,9 @@ import CallToAction from "../components/landing/CallToAction.astro";
               <div class="column is-one-fourth">
                 <a
                   class="button is-large is-responsive is-fullwidth"
-                  href={BENCHER_CALENDLY_URL}
-                  target="_blank"
-                  rel="noreferrer"
+                  href="/docs/tutorial/quick-start/"
                 >
-                  Schedule a Demo
+                  Learn More
                 </a>
               </div>
 
