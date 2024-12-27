@@ -1,0 +1,25 @@
+---
+import { Code } from "astro-expressive-code/components";
+---
+
+<section class="section" style="margin-top: 8rem;">
+	<div class="content has-text-centered">
+		<h2 class="title is-1">Getting started with Bencher is simple</h2>
+		<br />
+		<br />
+		<div class="columns is-centered is-vcentered">
+			<div class="column is-7">
+				<Code lang="bash" code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh" />
+				<Code lang="powershell" code="irm https://bencher.dev/download/install-cli.ps1 | iex" />
+			</div>
+		</div>
+		<br />
+		<div class="columns is-centered">
+			<div class="column is-one-third">
+				<a class="button is-primary is-large is-responsive is-fullwidth" href="/docs/tutorial/quick-start/">
+					Learn More
+				</a>
+			</div>
+		</div>
+	</div>
+</section>

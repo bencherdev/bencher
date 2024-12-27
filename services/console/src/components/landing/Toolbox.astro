@@ -1,6 +1,4 @@
 ---
-import { Code } from "astro-expressive-code/components";
-
 const LANGUAGES: string[][] = [
 	["devicon-cplusplus-line", "devicon-python-plain"],
 	["devicon-java-plain", "devicon-javascript-plain"],
@@ -32,12 +30,6 @@ const LANGUAGES: string[][] = [
 					</div>
 				</div>
 			))}
-		</div>
-		<div class="columns is-centered is-vcentered">
-			<div class="column is-7">
-				<Code lang="bash" code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh" />
-				<Code lang="powershell" code="irm https://bencher.dev/download/install-cli.ps1 | iex" />
-			</div>
 		</div>
 	</div>
 </section>
