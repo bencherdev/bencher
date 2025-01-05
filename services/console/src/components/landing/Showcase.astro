@@ -5,21 +5,21 @@ import { PROJECTS } from "./projects.ts";
 <section class="section" style="margin-top: 4rem;">
 	<div class="content has-text-centered">
 		<h2 class="title is-1">You are in good company</h2>
-		<br />
-		<div class="columns is-centered is-vcentered">
-			<div class="column">
-				{PROJECTS.map((projects) => (
-					<div class="columns is-centered is-vcentered is-mobile">
-						{projects.map((project) => (
-						<div class="column has-text-centered is-2-tablet">
-							<a href={`https://bencher.dev/perf/${project.slug}?${project.query}`}>
-								<img width="88%" src={project.logo} alt={project.name} />
-							</a>
-						</div>
-						))}
+	</div>
+	<br />
+	<div class="columns is-centered is-vcentered">
+		<div class="column">
+			{PROJECTS.map((projects) => (
+				<div class="columns is-centered is-vcentered is-mobile">
+					{projects.map((project) => (
+					<div class="column has-text-centered is-2-tablet">
+						<a href={`https://bencher.dev/perf/${project.slug}?${project.query}`}>
+							<img width="88%" src={project.logo} alt={project.name} />
+						</a>
 					</div>
-				))}
-			</div>
+					))}
+				</div>
+			))}
 		</div>
 	</div>
 </section>

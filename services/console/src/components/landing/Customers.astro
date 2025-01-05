@@ -3,22 +3,36 @@ import { CUSTOMERS } from "./customers.ts";
 ---
 
 <section class="section" style="margin-top: 4rem;">
-	<div class="content has-text-centered">
-		<div class="columns is-centered is-vcentered">
-			<div class="column">
-				{CUSTOMERS.map((customers) => (
-					<div class="columns is-centered is-vcentered is-mobile">
-						{customers.map((customer) => (
-						<div class="column has-text-centered is-2-tablet">
-							<a href={`https://github.com.dev/${customer.github}`}>
-								<img width="88%" src={customer.icon} alt={customer.name} />
-							</a>
-						</div>
-						))}
-					</div>
-				))}
-			</div>
-		</div>
-	</div>
+    <div class="columns is-centered is-vcentered">
+        <div class="column">
+            {CUSTOMERS.map((customers) => (
+                <div class="columns is-centered is-vcentered is-mobile">
+                    {customers.map((customer) => (
+                    <div class="column is-5">
+                        <div class="box">
+                            <div class="content">
+                                {customer.quote}
+                            </div>
+                            <div class="media">
+                                <div class="media-left">
+                                    <figure class="image is-48x48">
+                                    <img
+                                        src={customer.icon}
+                                        alt={customer.name}
+                                    />
+                                    </figure>
+                                </div>
+                                <div class="media-content">
+                                    <p class="title is-4">{customer.name}</p>
+                                    <p class="subtitle is-6">@{customer.github}</p>
+                                </div>
+                                </div>
+                            </div>
+                    </div>
+                    ))}
+                </div>
+            ))}
+        </div>
+    </div>
 </section>
 
