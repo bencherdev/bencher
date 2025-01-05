@@ -1,0 +1,24 @@
+---
+import { CUSTOMERS } from "./customers.ts";
+---
+
+<section class="section" style="margin-top: 4rem;">
+	<div class="content has-text-centered">
+		<div class="columns is-centered is-vcentered">
+			<div class="column">
+				{CUSTOMERS.map((customers) => (
+					<div class="columns is-centered is-vcentered is-mobile">
+						{customers.map((customer) => (
+						<div class="column has-text-centered is-2-tablet">
+							<a href={`https://github.com.dev/${customer.github}`}>
+								<img width="88%" src={customer.icon} alt={customer.name} />
+							</a>
+						</div>
+						))}
+					</div>
+				))}
+			</div>
+		</div>
+	</div>
+</section>
+
