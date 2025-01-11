@@ -3,20 +3,20 @@ import { BENCHER_GITHUB_URL } from "../../util/ext";
 import { CUSTOMERS } from "./customers.tsx";
 
 const padQuote = (quote: string) => {
-  const MAX = CUSTOMERS.reduce((acc, customers) => {
-    const max = customers.reduce((acc, customer) => {
-      return Math.max(acc, customer.quote.length);
-    }, 0);
-    return Math.max(acc, max);
-  }, 0);
-  const padding = [];
-  const quoteLength = quote.length;
-  if (quoteLength < MAX) {
-    for (let i = 0; i < MAX - quoteLength; i++) {
-      padding.push(null);
-    }
-  }
-  return padding;
+	const MAX = CUSTOMERS.reduce((acc, customers) => {
+		const max = customers.reduce((acc, customer) => {
+			return Math.max(acc, customer.quote.length);
+		}, 0);
+		return Math.max(acc, max);
+	}, 0);
+	const padding = [];
+	const quoteLength = quote.length;
+	if (quoteLength < MAX) {
+		for (let i = 0; i < MAX - quoteLength; i++) {
+			padding.push(null);
+		}
+	}
+	return padding;
 };
 ---
 

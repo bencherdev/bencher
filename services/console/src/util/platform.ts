@@ -29,24 +29,24 @@ export const getPlatform = async () => {
 			return Platform.Unix;
 		default:
 			if (
-				(navigator.appVersion?.indexOf("Win") ?? -1) != -1 ||
-				(navigator.appVersion?.indexOf("Mac") ?? -1) != -1 ||
-				(navigator.appVersion?.indexOf("FreeBSD") ?? -1) != -1
+				(navigator.appVersion?.indexOf("Win") ?? -1) !== -1 ||
+				(navigator.appVersion?.indexOf("Mac") ?? -1) !== -1 ||
+				(navigator.appVersion?.indexOf("FreeBSD") ?? -1) !== -1
 			) {
 				return Platform.Unix;
 			}
 			if (
-				(navigator.oscpu?.indexOf("Win32") ?? -1) != -1 ||
-				(navigator.oscpu?.indexOf("Win64") ?? -1) != -1
+				(navigator.oscpu?.indexOf("Win32") ?? -1) !== -1 ||
+				(navigator.oscpu?.indexOf("Win64") ?? -1) !== -1
 			) {
 				return Platform.Windows;
 			}
 			if (
-				(navigator.oscpu?.indexOf("Mac") ?? -1) != -1 ||
-				(navigator.oscpu?.indexOf("Linux") ?? -1) != -1 ||
-				(navigator.oscpu?.indexOf("FreeBSD") ?? -1) != -1 ||
-				(navigator.oscpu?.indexOf("NetBSD") ?? -1) != -1 ||
-				(navigator.oscpu?.indexOf("SunOS") ?? -1) != -1
+				(navigator.oscpu?.indexOf("Mac") ?? -1) !== -1 ||
+				(navigator.oscpu?.indexOf("Linux") ?? -1) !== -1 ||
+				(navigator.oscpu?.indexOf("FreeBSD") ?? -1) !== -1 ||
+				(navigator.oscpu?.indexOf("NetBSD") ?? -1) !== -1 ||
+				(navigator.oscpu?.indexOf("SunOS") ?? -1) !== -1
 			) {
 				return Platform.Unix;
 			}
