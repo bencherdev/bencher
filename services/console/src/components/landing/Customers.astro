@@ -1,38 +1,71 @@
 ---
-import { CUSTOMERS } from "./customers.ts";
+import { BENCHER_GITHUB_URL } from "../../util/ext";
+import { CUSTOMERS } from "./customers.tsx";
+
+const padQuote = (quote: string) => {
+  const MAX = CUSTOMERS.reduce((acc, customers) => {
+    const max = customers.reduce((acc, customer) => {
+      return Math.max(acc, customer.quote.length);
+    }, 0);
+    return Math.max(acc, max);
+  }, 0);
+  const padding = [];
+  const quoteLength = quote.length;
+  if (quoteLength < MAX) {
+    for (let i = 0; i < MAX - quoteLength; i++) {
+      padding.push(null);
+    }
+  }
+  return padding;
+};
 ---
 
 <section class="section" style="margin-top: 4rem;">
-    <div class="columns is-centered is-vcentered">
-        <div class="column">
-            {CUSTOMERS.map((customers) => (
-                <div class="columns is-centered is-vcentered is-mobile">
-                    {customers.map((customer) => (
-                    <div class="column is-5">
-                        <div class="box">
-                            <div class="content">
-                                {customer.quote}
-                            </div>
-                            <div class="media">
-                                <div class="media-left">
-                                    <figure class="image is-48x48">
-                                    <img
-                                        src={customer.icon}
-                                        alt={customer.name}
-                                    />
-                                    </figure>
-                                </div>
-                                <div class="media-content">
-                                    <p class="title is-4">{customer.name}</p>
-                                    <p class="subtitle is-6">@{customer.github}</p>
-                                </div>
-                                </div>
-                            </div>
-                    </div>
-                    ))}
+  <div class="columns is-centered is-vcentered">
+    <div class="column">
+      {CUSTOMERS.map((customers) => (
+        <div class="columns is-centered">
+          {customers.map((customer) => (
+            <div class="column is-5">
+              <div class="box">
+                <div class="content">
+                  <p style="word-break: break-word;">
+                  {customer.quote}
+                  {padQuote(customer.quote).map(() => (
+                    <>&nbsp;</>
+                  ))}
+                  </p>
                 </div>
-            ))}
+                <div class="media">
+                  <div class="media-left">
+                    <figure class="image is-48x48">
+                      <a
+							          href={BENCHER_GITHUB_URL}
+                        target="_blank"
+                        aria-label="GitHub"
+                        rel="noreferrer"
+						          >
+							          <span class="icon has-text-primary">
+								          <i class="fab fa-github fa-2x" />
+							          </span>
+						          </a>
+                      {/* <img
+                        src={customer.icon}
+                        alt={customer.name}
+                      /> */}
+                    </figure>
+                  </div>
+                  {/* <div class="media-content">
+                      <p class="title is-4">{customer.name}</p>
+                      <a class="subtitle is-6 is-link" href={`https://github.com/${customer.github}`}>@{customer.github}</p>
+                  </div> */}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+      ))}
     </div>
+  </div>
 </section>
 
