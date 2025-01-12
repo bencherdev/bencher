@@ -125,6 +125,7 @@ const LinePlot = (props: Props) => {
 							},
 							y: {
 								grid: true,
+								axis: "left",
 								label: `↑ ${linePlot().units}`,
 							},
 							marks: linePlot().marks,
@@ -686,6 +687,29 @@ const plot_marks = (
 
 	// This allows the alert images to appear on top of the plot lines.
 	plot_arrays.push(...warn_arrays, ...alert_arrays);
+
+	// Multi-axis
+	if (false) {
+		const cars = [
+			{ year: 2012, efficiency: 35.3, sales: 7245000 },
+			{ year: 2013, efficiency: 36.4, sales: 7586000 },
+			{ year: 2014, efficiency: 36.5, sales: 7708000 },
+			{ year: 2015, efficiency: 37.2, sales: 7517000 },
+			{ year: 2016, efficiency: 37.7, sales: 6873000 },
+			{ year: 2017, efficiency: 39.4, sales: 6081000 },
+		];
+		const v1 = (d) => d.sales;
+		const v2 = (d) => d.efficiency;
+		const y2 = d3.scaleLinear(d3.extent(cars, v2), [0, d3.max(cars, v1)]);
+		plot_arrays.push(
+			Plot.axisY(y2.ticks(), {
+				anchor: "right",
+				label: `↑ ${plot_units}`,
+				y: y2,
+				tickFormat: y2.tickFormat(),
+			}),
+		);
+	}
 
 	return plot_arrays;
 };
