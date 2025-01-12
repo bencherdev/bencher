@@ -45,7 +45,7 @@ export interface Props {
 	embed_logo: Accessor<boolean>;
 	embed_title: Accessor<undefined | string>;
 	embed_header: Accessor<boolean>;
-	handleMeasure: (measure: null | string) => void;
+	handleMeasure: (index: number, slug: null | string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 	handleXAxis: (x_axis: XAxis) => void;
@@ -121,7 +121,7 @@ const FullPlotHeader = (props: Props) => {
 					index={0}
 					handleMeasure={props.handleMeasure}
 				/>
-				<Show when={props.measures().length === 1}>
+				<Show when={props.measures().length >= 1}>
 					<MeasureSelect
 						isConsole={props.isConsole}
 						project_slug={props.project_slug}
@@ -144,7 +144,7 @@ const MeasureSelect = (props: {
 	measures: Accessor<string[]>;
 	json_measures: Resource<JsonMeasure[]>;
 	index: number;
-	handleMeasure: (measure: null | string) => void;
+	handleMeasure: (index: number, slug: null | string) => void;
 }) => {
 	console.log(props.measures());
 
@@ -169,9 +169,9 @@ const MeasureSelect = (props: {
 
 	const handleInput = (uuid: string) => {
 		if (uuid === BENCHER_MEASURE) {
-			props.handleMeasure(null);
+			props.handleMeasure(props.index, null);
 		} else {
-			props.handleMeasure(uuid);
+			props.handleMeasure(props.index, uuid);
 		}
 	};
 

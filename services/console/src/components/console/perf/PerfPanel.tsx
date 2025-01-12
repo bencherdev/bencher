@@ -860,10 +860,50 @@ const PerfPanel = (props: Props) => {
 	const handleBenchmarkChecked = (index: undefined | number) => {
 		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks());
 	};
-	const handleMeasure = (measure: null | string) => {
+	const handleMeasure = (index: number, measure: null | string) => {
+		const array = (() => {
+			const m = measures();
+			switch (index) {
+				case 0:
+					switch (m.length) {
+						case 0:
+						case 1:
+							if (measure === null) {
+								return [];
+							}
+							return [measure];
+						default:
+							if (measure === null) {
+								return m.slice(1);
+							}
+							return [measure, ...m.slice(1)];
+					}
+				case 1:
+					switch (m.length) {
+						case 0:
+							if (measure === null) {
+								return [];
+							}
+							return [measure];
+						case 1:
+						case 2:
+							if (measure === null) {
+								return [m[0]];
+							}
+							return [m[0], measure];
+						default:
+							if (measure === null) {
+								return [m[0], ...m.slice(2)];
+							}
+							return [m[0], measure, ...m.slice(2)];
+					}
+				default:
+					return m;
+			}
+		})();
 		setSearchParams({
 			[REPORT_PARAM]: null,
-			[MEASURES_PARAM]: measure,
+			[MEASURES_PARAM]: arrayToString(array),
 			[PLOT_PARAM]: null,
 			[CLEAR_PARAM]: true,
 		});

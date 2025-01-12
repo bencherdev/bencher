@@ -48,7 +48,7 @@ export interface Props {
 	embed_title: Accessor<undefined | string>;
 	embed_header: Accessor<boolean>;
 	embed_key: Accessor<boolean>;
-	handleMeasure: (measure: null | string) => void;
+	handleMeasure: (index: number, slug: null | string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 	handleTab: (tab: PerfTab) => void;
