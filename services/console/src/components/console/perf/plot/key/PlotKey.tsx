@@ -1,6 +1,10 @@
 import * as d3 from "d3";
 import { type Accessor, For, type Resource, Show, createMemo } from "solid-js";
-import type { JsonPerf } from "../../../../../types/bencher";
+import { BENCHMARK_ICON } from "../../../../../config/project/benchmarks";
+import { BRANCH_ICON } from "../../../../../config/project/branches";
+import { MEASURE_ICON } from "../../../../../config/project/measures";
+import { TESTBED_ICON } from "../../../../../config/project/testbeds";
+import type { JsonPerf, JsonPerfMetrics } from "../../../../../types/bencher";
 
 export interface Props {
 	key: Accessor<boolean>;
@@ -43,6 +47,23 @@ const ExpandedKey = (props: {
 	handlePerfActive: (index: number) => void;
 	togglePerfActive: () => void;
 }) => {
+	const dimensions = (resultDimension: (result: JsonPerfMetrics) => string) =>
+		props.perfData()?.results?.reduce((set, result) => {
+			return set.add(resultDimension(result));
+		}, new Set());
+	const branches = createMemo(() =>
+		dimensions((result) => result.branch?.name),
+	);
+	const testbeds = createMemo(() =>
+		dimensions((result) => result.testbed?.name),
+	);
+	const benchmarks = createMemo(() =>
+		dimensions((result) => result.benchmark?.name),
+	);
+	const measures = createMemo(() =>
+		dimensions((result) => result.measure?.name),
+	);
+
 	return (
 		<div class="columns is-centered is-gapless is-multiline">
 			<div class="column is-narrow">
@@ -53,6 +74,48 @@ const ExpandedKey = (props: {
 					togglePerfActive={props.togglePerfActive}
 				/>
 			</div>
+			<Show
+				when={
+					(props.perfData()?.results?.length ?? 0) > 1 &&
+					(branches()?.size === 1 ||
+						testbeds()?.size === 1 ||
+						benchmarks()?.size === 1 ||
+						measures()?.size === 1)
+				}
+			>
+				<div class="column is-3">
+					<div class="columns is-centered">
+						<div class="column is-11">
+							<div class="box">
+								<Show when={branches()?.size === 1}>
+									<KeyResource
+										icon={BRANCH_ICON}
+										name={branches()?.values().next().value}
+									/>
+								</Show>
+								<Show when={testbeds()?.size === 1}>
+									<KeyResource
+										icon={TESTBED_ICON}
+										name={testbeds()?.values().next().value}
+									/>
+								</Show>
+								<Show when={benchmarks()?.size === 1}>
+									<KeyResource
+										icon={BENCHMARK_ICON}
+										name={benchmarks()?.values().next().value}
+									/>
+								</Show>
+								<Show when={measures()?.size === 1}>
+									<KeyResource
+										icon={MEASURE_ICON}
+										name={measures()?.values().next().value}
+									/>
+								</Show>
+							</div>
+						</div>
+					</div>
+				</div>
+			</Show>
 			<For each={props.perfData()?.results}>
 				{(
 					result: {
@@ -69,13 +132,41 @@ const ExpandedKey = (props: {
 							perfActive={props.perfActive}
 							handlePerfActive={props.handlePerfActive}
 						/>
-						<KeyResource icon="fas fa-code-branch" name={result.branch?.name} />
-						<KeyResource icon="fas fa-server" name={result.testbed?.name} />
-						<KeyResource
-							icon="fas fa-tachometer-alt"
-							name={result.benchmark?.name}
-						/>
-						<KeyResource icon="fas fa-shapes" name={result.measure?.name} />
+						<Show
+							when={
+								props.perfData()?.results?.length === 1 ||
+								branches()?.size !== 1
+							}
+						>
+							<KeyResource icon={BRANCH_ICON} name={result.branch?.name} />
+						</Show>
+						<Show
+							when={
+								props.perfData()?.results?.length === 1 ||
+								testbeds()?.size !== 1
+							}
+						>
+							<KeyResource icon={TESTBED_ICON} name={result.testbed?.name} />
+						</Show>
+						<Show
+							when={
+								props.perfData()?.results?.length === 1 ||
+								benchmarks()?.size !== 1
+							}
+						>
+							<KeyResource
+								icon={BENCHMARK_ICON}
+								name={result.benchmark?.name}
+							/>
+						</Show>
+						<Show
+							when={
+								props.perfData()?.results?.length === 1 ||
+								measures()?.size !== 1
+							}
+						>
+							<KeyResource icon={MEASURE_ICON} name={result.measure?.name} />
+						</Show>
 					</div>
 				)}
 			</For>

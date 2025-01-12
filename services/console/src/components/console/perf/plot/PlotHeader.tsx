@@ -146,8 +146,6 @@ const MeasureSelect = (props: {
 	index: number;
 	handleMeasure: (index: number, slug: null | string) => void;
 }) => {
-	console.log(props.measures());
-
 	const measure = createMemo(() =>
 		props
 			.json_measures()
