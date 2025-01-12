@@ -59,6 +59,7 @@ const ExpandedKey = (props: {
 						branch: { name: string };
 						testbed: { name: string };
 						benchmark: { name: string };
+						measure: { name: string };
 					},
 					index,
 				) => (
@@ -74,6 +75,7 @@ const ExpandedKey = (props: {
 							icon="fas fa-tachometer-alt"
 							name={result.benchmark?.name}
 						/>
+						<KeyResource icon="fas fa-shapes" name={result.measure?.name} />
 					</div>
 				)}
 			</For>
