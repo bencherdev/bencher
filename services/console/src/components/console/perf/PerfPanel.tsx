@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/astro";
 import { debounce } from "@solid-primitives/scheduled";
 import type { Params } from "astro";
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	Show,
 	createEffect,
@@ -37,7 +38,7 @@ import {
 } from "../../../util/convert";
 import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
 import { useSearchParams } from "../../../util/url";
-import { DEBOUNCE_DELAY, validU32 } from "../../../util/valid";
+import { DEBOUNCE_DELAY, validJwt, validU32 } from "../../../util/valid";
 import { themeSignal } from "../../navbar/theme/util";
 import PerfFrame from "./PerfFrame";
 import PerfHeader from "./header/PerfHeader";
@@ -190,6 +191,10 @@ function resourcesToCheckable<T>(
 }
 
 const PerfPanel = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
+
 	const params = createMemo(() => props.params);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
@@ -578,6 +583,7 @@ const PerfPanel = (props: Props) => {
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
 		fetcher: {
+			bencher_valid: InitOutput;
 			project_slug: undefined | string;
 			per_page: number;
 			page: number;
@@ -590,21 +596,21 @@ const PerfPanel = (props: Props) => {
 		totalCount: (headers: object) => void,
 	) {
 		const EMPTY_ARRAY: T[] = [];
-		if (!fetcher.project_slug) {
+		if (!fetcher.bencher_valid) {
 			return EMPTY_ARRAY;
 		}
-		if (props.isConsole && typeof fetcher.token !== "string") {
+
+		if (
+			(props.isConsole && !validJwt(fetcher.token)) ||
+			!fetcher.project_slug ||
+			fetcher.project_slug === "undefined" ||
+			props.isEmbed === true ||
+			!validU32(fetcher.per_page.toString()) ||
+			!validU32(fetcher.page.toString())
+		) {
 			return EMPTY_ARRAY;
 		}
-		if (props.isEmbed === true) {
-			return EMPTY_ARRAY;
-		}
-		if (!validU32(fetcher.per_page.toString())) {
-			return EMPTY_ARRAY;
-		}
-		if (!validU32(fetcher.page.toString())) {
-			return EMPTY_ARRAY;
-		}
+
 		const search_params = new URLSearchParams();
 		search_params.set("per_page", fetcher.per_page.toString());
 		search_params.set("page", fetcher.page.toString());
@@ -634,6 +640,7 @@ const PerfPanel = (props: Props) => {
 
 	const reports_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: reports_per_page(),
 			page: reports_page(),
@@ -699,6 +706,7 @@ const PerfPanel = (props: Props) => {
 
 	const branches_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: branches_per_page(),
 			page: branches_page(),
@@ -721,6 +729,7 @@ const PerfPanel = (props: Props) => {
 
 	const testbeds_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: testbeds_per_page(),
 			page: testbeds_page(),
@@ -743,6 +752,7 @@ const PerfPanel = (props: Props) => {
 
 	const benchmarks_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: benchmarks_per_page(),
 			page: benchmarks_page(),
@@ -767,6 +777,7 @@ const PerfPanel = (props: Props) => {
 
 	const plots_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: plots_per_page(),
 			page: plots_page(),

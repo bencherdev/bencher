@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/astro";
-import bencher_valid_init from "bencher_valid";
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	type Accessor,
 	type Resource,
@@ -84,13 +84,14 @@ const PerfFrame = (props: Props) => {
 		};
 	});
 	const getPerf = async (fetcher: {
+		bencher_valid: InitOutput;
 		project_slug: string;
 		perfQuery: JsonPerfQuery;
 		refresh: number;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (!bencher_valid()) {
+		if (!fetcher.bencher_valid) {
 			return EMPTY_OBJECT;
 		}
 
