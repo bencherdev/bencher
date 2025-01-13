@@ -17,6 +17,7 @@ export interface Props {
 	isConsole: boolean;
 	isEmbed: boolean;
 	plotId: string | undefined;
+	measures: Accessor<string[]>;
 	x_axis: Accessor<XAxis>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -72,6 +73,7 @@ const Plot = (props: Props) => {
 					isConsole={props.isConsole}
 					plotId={props.plotId}
 					perfData={props.perfData}
+					measures={props.measures}
 					x_axis={props.x_axis}
 					lower_value={props.lower_value}
 					upper_value={props.upper_value}

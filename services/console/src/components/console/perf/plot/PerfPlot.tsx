@@ -108,6 +108,7 @@ const PerfPlot = (props: Props) => {
 									isConsole={props.isConsole}
 									isEmbed={props.isEmbed}
 									plotId={props.plotId}
+									measures={props.measures}
 									x_axis={props.x_axis}
 									lower_value={props.lower_value}
 									upper_value={props.upper_value}

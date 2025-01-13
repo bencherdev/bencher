@@ -14,6 +14,7 @@ import {
 	AlertStatus,
 	type Boundary,
 	BoundaryLimit,
+	type JsonMeasure,
 	type JsonPerf,
 	type JsonPerfAlert,
 	type JsonPerfMetrics,
@@ -30,12 +31,14 @@ import { addTooltips } from "./tooltip";
 const WARNING_URL =
 	"https://s3.amazonaws.com/public.bencher.dev/perf/warning.png";
 const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/perf/siren.png";
+const DEFAULT_UNITS = "units";
 
 export interface Props {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	plotId: string | undefined;
 	perfData: Resource<JsonPerf>;
+	measures: Accessor<string[]>;
 	x_axis: Accessor<XAxis>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -48,7 +51,10 @@ export interface Props {
 const LinePlot = (props: Props) => {
 	const [isPlotted, setIsPlotted] = createSignal(false);
 	const handleIsPlotted = () => setIsPlotted(true);
-	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
+	const [y_left_label_area_size, set_left_y_label_area_size] =
+		createSignal(512);
+	const [y_right_label_area_size, set_right_y_label_area_size] =
+		createSignal(0);
 	const tagId = createMemo(() =>
 		props.plotId ? `plot-${props.plotId}` : "plot",
 	);
@@ -63,17 +69,25 @@ const LinePlot = (props: Props) => {
 		props.upper_boundary(),
 	);
 
+	const SCALE_FACTOR = 1.12;
 	createEffect(() => {
 		if (isPlotted()) {
 			const tagIdEscaped = CSS.escape(tagId());
-			const y_axis = document.querySelector(
+			const y_axes = document.querySelectorAll(
 				`#${tagIdEscaped} svg [aria-label='y-axis tick label']`,
 			);
-			if (!y_axis) {
+			if (!y_axes) {
 				return;
 			}
-			const width = y_axis.getBoundingClientRect().width;
-			set_y_label_area_size(width * 1.12);
+			const [left_axis, right_axis] = y_axes;
+			if (left_axis !== undefined) {
+				const width = left_axis.getBoundingClientRect().width;
+				set_left_y_label_area_size(width * SCALE_FACTOR);
+			}
+			if (right_axis !== undefined) {
+				const width = right_axis.getBoundingClientRect().width;
+				set_right_y_label_area_size(width * SCALE_FACTOR);
+			}
 		}
 		// If any of these change, it is possible for the y-axis labels to change.
 		// Therefore, we need to recalculate the plot's `marginLeft` to make sure the new y-axis labels fits.
@@ -133,7 +147,8 @@ const LinePlot = (props: Props) => {
 							nice: true,
 							// https://github.com/observablehq/plot/blob/main/README.md#layout-options
 							// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
-							marginLeft: y_label_area_size(),
+							marginLeft: y_left_label_area_size(),
+							marginRight: y_right_label_area_size(),
 						}),
 						{
 							stroke: "gray",
@@ -154,15 +169,24 @@ const line_plot = (props: Props) => {
 	const json_perf = props.perfData();
 	// console.log(json_perf);
 
+	const NOT_FOUND = {
+		metrics_found: false,
+	};
 	if (
 		typeof json_perf !== "object" ||
 		json_perf === undefined ||
 		json_perf === null ||
 		!Array.isArray(json_perf.results)
 	) {
-		return {
-			metrics_found: false,
-		};
+		return NOT_FOUND;
+	}
+
+	const [first_measure, second_measure] = get_measures(
+		json_perf,
+		props.measures,
+	);
+	if (!first_measure) {
+		return NOT_FOUND;
 	}
 
 	const raw_data = json_perf.results
@@ -173,44 +197,60 @@ const line_plot = (props: Props) => {
 		false,
 	);
 
-	const raw_units = get_units(json_perf);
-	const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
-		props.x_axis(),
-	);
-	const [data, units] = scale_data(raw_data, raw_units, {
+	// If there is a second measure, then there needs to be a deep clone of the raw data
+	// to use when constructing the right hand axis.
+	const raw_data_clone = clone_raw_data(raw_data, second_measure);
+	const scale_props = {
 		lower_value: props.lower_value,
 		upper_value: props.upper_value,
 		lower_boundary: props.lower_boundary,
 		upper_boundary: props.upper_boundary,
-	});
+	};
+	const [data, units] = scale_data(
+		raw_data,
+		first_measure,
+		second_measure,
+		scale_props,
+	);
+
+	const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
+		props.x_axis(),
+	);
 
 	const marks = plot_marks(data, units, {
 		project_slug: json_perf.project.slug,
 		isConsole: props.isConsole,
 		plotId: props.plotId,
-		lower_value: props.lower_value,
-		upper_value: props.upper_value,
-		lower_boundary: props.lower_boundary,
-		upper_boundary: props.upper_boundary,
 		x_axis_kind,
+		...scale_props,
 	});
+
+	// The `raw_data_clone` is only created if there is a second measure
+	if (raw_data_clone) {
+		const yScale = right_y_axis_ticks(
+			raw_data_clone,
+			first_measure,
+			second_measure as JsonMeasure,
+			scale_props,
+		);
+		marks.push(
+			Plot.axisY(yScale.ticks(), {
+				anchor: "right",
+				label: `↑ ${units?.[second_measure?.uuid]}`,
+				// y: yScale,
+				tickFormat: yScale.tickFormat(),
+			}),
+		);
+	}
 
 	return {
 		metrics_found,
 		x_axis_scale_type,
 		x_axis_label,
-		units,
+		units: units?.[first_measure?.uuid],
 		marks,
 		hoverStyles: hover_styles(props.theme()),
 	};
-};
-
-const get_units = (json_perf: JsonPerf) => {
-	const units = json_perf?.results?.[0]?.measure?.units;
-	if (units) {
-		return units;
-	}
-	return "units";
 };
 
 const get_x_axis = (x_axis: XAxis): [string, ScaleType, string] => {
@@ -220,6 +260,40 @@ const get_x_axis = (x_axis: XAxis): [string, ScaleType, string] => {
 		case XAxis.Version:
 			return ["number", "point", "Branch Version Number"];
 	}
+};
+
+const get_measures = (json_perf: JsonPerf, measures: Accessor<string[]>) => {
+	const [first_measure_uuid, second_measure_uuid] = measures();
+	const first_measure = json_perf?.results?.find(
+		(result) => result?.measure?.uuid === first_measure_uuid,
+	)?.measure;
+	const second_measure = json_perf?.results?.find(
+		(result) => result?.measure?.uuid === second_measure_uuid,
+	)?.measure;
+
+	switch (first_measure) {
+		case undefined:
+			switch (second_measure) {
+				case undefined:
+					return [];
+				default:
+					return [second_measure];
+			}
+		default:
+			switch (second_measure) {
+				case undefined:
+					return [first_measure];
+				default:
+					return [first_measure, second_measure];
+			}
+	}
+};
+
+const clone_raw_data = (raw_data, second_measure) => {
+	if (second_measure) {
+		return JSON.parse(JSON.stringify(raw_data));
+	}
+	return;
 };
 
 const hover_styles = (theme: Theme) => {
@@ -267,6 +341,14 @@ const perf_result = (
 			iteration: perf_metric.iteration,
 			lower_limit: perf_metric.boundary?.lower_limit,
 			upper_limit: perf_metric.boundary?.upper_limit,
+			// Display values: scaled but not relative when multi-axis
+			display: {
+				value: perf_metric.metric?.value,
+				lower_value: perf_metric.metric?.lower_value,
+				upper_value: perf_metric.metric?.upper_value,
+				lower_limit: perf_metric.boundary?.lower_limit,
+				upper_limit: perf_metric.boundary?.upper_limit,
+			},
 		};
 		line_data.push(datum);
 
@@ -278,6 +360,11 @@ const perf_result = (
 			lower_limit: datum.lower_limit,
 			upper_limit: datum.upper_limit,
 			threshold: perf_metric.threshold,
+			// Display values: scaled but not relative when multi-axis
+			display: {
+				lower_limit: datum.lower_limit,
+				upper_limit: datum.upper_limit,
+			},
 		};
 		if (perf_metric.alert && is_active(perf_metric.alert)) {
 			switch (perf_metric.alert?.limit) {
@@ -352,7 +439,8 @@ const boundary_skipped = (
 
 const scale_data = (
 	raw_data: object[],
-	raw_units: string,
+	first_measure: JsonMeasure,
+	second_measure: undefined | JsonMeasure,
 	props: {
 		lower_value: Accessor<boolean>;
 		upper_value: Accessor<boolean>;
@@ -360,124 +448,374 @@ const scale_data = (
 		upper_boundary: Accessor<boolean>;
 	},
 ) => {
-	const MAX = Number.MAX_SAFE_INTEGER;
+	const raw_first_units = first_measure?.units ?? DEFAULT_UNITS;
 
-	const min = Math.min(
-		...raw_data.map((data) =>
-			Math.min(
-				// The primary metric series
+	const first_min = data_min(raw_data, first_measure, props);
+	const first_factor = scale_factor(first_min, raw_first_units);
+	const first_scaled_units = scale_units(first_min, raw_first_units);
+
+	const first = {
+		measure: first_measure,
+		factor: first_factor,
+	};
+	if (!second_measure) {
+		const scaled_data = scale_data_by_factor(raw_data, first);
+		return [scaled_data, { [first_measure?.uuid]: first_scaled_units }];
+	}
+
+	const raw_second_units = second_measure?.units ?? DEFAULT_UNITS;
+
+	const second_min = data_min(raw_data, second_measure, props);
+	const second_factor = scale_factor(second_min, raw_second_units);
+	const second_scaled_units = scale_units(second_min, raw_second_units);
+
+	const first_max = data_max(raw_data, first_measure, props);
+	const second_max = data_max(raw_data, second_measure, props);
+	// Find the ratio to scale the second data relative to the first data
+	const first_range = first_max - first_min;
+	const second_range = second_max - second_min;
+	const ratio = first_range / second_range;
+
+	const second = {
+		measure: second_measure,
+		factor: second_factor,
+		ratio,
+	};
+	const scaled_data = scale_data_by_factor(raw_data, first, second);
+	return [
+		scaled_data,
+		{
+			[first_measure?.uuid]: first_scaled_units,
+			[second_measure?.uuid]: second_scaled_units,
+		},
+	];
+};
+
+const right_y_axis_ticks = (
+	raw_data: object[],
+	first_measure: JsonMeasure,
+	second_measure: JsonMeasure,
+	props: {
+		lower_value: Accessor<boolean>;
+		upper_value: Accessor<boolean>;
+		lower_boundary: Accessor<boolean>;
+		upper_boundary: Accessor<boolean>;
+	},
+) => {
+	const raw_second_units = second_measure?.units ?? DEFAULT_UNITS;
+
+	const second_min = data_min(raw_data, second_measure, props);
+	const second_factor = scale_factor(second_min, raw_second_units);
+
+	const second = {
+		measure: second_measure,
+		factor: second_factor,
+	};
+	const second_measure_data = raw_data.filter(
+		(datum) => datum?.result?.measure?.uuid === second_measure?.uuid,
+	);
+	const scaled_data = scale_data_by_factor(second_measure_data, second);
+
+	const axis_data = [];
+	const axis_limits = (datum) => {
+		if (
+			props.lower_boundary() &&
+			datum.lower_boundary !== undefined &&
+			datum.lower_boundary !== null
+		) {
+			axis_data.push(datum.lower_boundary);
+		}
+		if (
+			props.upper_boundary() &&
+			datum.upper_boundary !== undefined &&
+			datum.upper_boundary !== null
+		) {
+			axis_data.push(datum.upper_boundary);
+		}
+	};
+	for (const data of scaled_data) {
+		for (const datum of data?.line_data) {
+			axis_data.push(datum.value);
+			if (
+				props.lower_value() &&
+				datum.lower_value !== undefined &&
+				datum.lower_value !== null
+			) {
+				axis_data.push(datum.lower_value);
+			}
+			if (
+				props.upper_value() &&
+				datum.upper_value !== undefined &&
+				datum.upper_value !== null
+			) {
+				axis_data.push(datum.upper_value);
+			}
+			axis_limits(datum);
+		}
+		for (const datum in data?.lower_alert_data) {
+			axis_limits(datum);
+		}
+		for (const datum in data?.upper_alert_data) {
+			axis_limits(datum);
+		}
+		for (const datum in data?.boundary_data) {
+			axis_limits(datum);
+		}
+		for (const datum in data?.skipped_lower_data) {
+			axis_data.push(datum.y);
+		}
+		for (const datum in data?.skipped_upper_data) {
+			axis_data.push(datum.y);
+		}
+	}
+
+	// Calculate the range of axis_data
+	const axis_min = Math.min(...axis_data);
+	const axis_max = Math.max(...axis_data);
+
+	const first_min = data_min(raw_data, first_measure, props);
+	const first_max = data_max(raw_data, first_measure, props);
+
+	// Create a linear scale based on the range of axis_data
+	// return d3.scaleLinear([axis_min, axis_max], [first_min, first_max]);
+	return d3.scaleLinear([axis_min, axis_max]);
+};
+
+const MAX = Number.MAX_SAFE_INTEGER;
+const data_min = (
+	raw_data: object[],
+	measure: JsonMeasure,
+	props: {
+		lower_value: Accessor<boolean>;
+		upper_value: Accessor<boolean>;
+		lower_boundary: Accessor<boolean>;
+		upper_boundary: Accessor<boolean>;
+	},
+) =>
+	Math.min(
+		...raw_data
+			.filter((data) => data?.result?.measure?.uuid === measure?.uuid)
+			.map((data) =>
 				Math.min(
-					...(data.line_data?.map((datum) => datum.value ?? MAX) ?? MAX),
-				),
-				// The lower value series, if active
-				props.lower_value()
-					? Math.min(
-							...(data.line_data?.map((datum) => datum.lower_value ?? MAX) ??
-								MAX),
-						)
-					: MAX,
-				// The upper value series, if active
-				props.upper_value()
-					? Math.min(
-							...(data.line_data?.map((datum) => datum.upper_value ?? MAX) ??
-								MAX),
-						)
-					: MAX,
-				// The lower boundary series, if active
-				props.lower_boundary()
-					? Math.min(
-							...(data.line_data?.map((datum) => datum.lower_limit ?? MAX) ??
-								MAX),
-							...(data.skipped_lower_data?.map((datum) => datum.y ?? MAX) ??
-								MAX),
-						)
-					: MAX,
-				// The upper boundary series, if active
-				props.upper_boundary()
-					? Math.min(
-							...(data.line_data?.map((datum) => datum.upper_limit ?? MAX) ??
-								MAX),
-							...(data.skipped_upper_data?.map((datum) => datum.y ?? MAX) ??
-								MAX),
-						)
-					: MAX,
-				// The lower alert series
-				Math.min(
-					...(data.lower_alert_data?.map((datum) => datum.lower_limit ?? MAX) ??
-						MAX),
-				),
-				// The upper alert series
-				Math.min(
-					...(data.upper_alert_data?.map((datum) => datum.upper_limit ?? MAX) ??
-						MAX),
+					// The primary metric series
+					Math.min(
+						...(data.line_data?.map((datum) => datum.value ?? MAX) ?? MAX),
+					),
+					// The lower value series, if active
+					props.lower_value()
+						? Math.min(
+								...(data.line_data?.map((datum) => datum.lower_value ?? MAX) ??
+									MAX),
+							)
+						: MAX,
+					// The upper value series, if active
+					props.upper_value()
+						? Math.min(
+								...(data.line_data?.map((datum) => datum.upper_value ?? MAX) ??
+									MAX),
+							)
+						: MAX,
+					// The lower boundary series, if active
+					props.lower_boundary()
+						? Math.min(
+								...(data.line_data?.map((datum) => datum.lower_limit ?? MAX) ??
+									MAX),
+								...(data.skipped_lower_data?.map((datum) => datum.y ?? MAX) ??
+									MAX),
+							)
+						: MAX,
+					// The upper boundary series, if active
+					props.upper_boundary()
+						? Math.min(
+								...(data.line_data?.map((datum) => datum.upper_limit ?? MAX) ??
+									MAX),
+								...(data.skipped_upper_data?.map((datum) => datum.y ?? MAX) ??
+									MAX),
+							)
+						: MAX,
+					// The lower alert series
+					Math.min(
+						...(data.lower_alert_data?.map(
+							(datum) => datum.lower_limit ?? MAX,
+						) ?? MAX),
+					),
+					// The upper alert series
+					Math.min(
+						...(data.upper_alert_data?.map(
+							(datum) => datum.upper_limit ?? MAX,
+						) ?? MAX),
+					),
 				),
 			),
-		),
 	);
 
-	const factor = scale_factor(min, raw_units);
-	const scaled_data = raw_data.map((data) => {
+const MIN = Number.MIN_SAFE_INTEGER;
+const data_max = (
+	raw_data: object[],
+	measure: JsonMeasure,
+	props: {
+		lower_value: Accessor<boolean>;
+		upper_value: Accessor<boolean>;
+		lower_boundary: Accessor<boolean>;
+		upper_boundary: Accessor<boolean>;
+	},
+) =>
+	Math.max(
+		...raw_data
+			.filter((data) => data?.result?.measure?.uuid === measure?.uuid)
+			.map((data) =>
+				Math.max(
+					// The primary metric series
+					Math.max(
+						...(data.line_data?.map((datum) => datum.value ?? MIN) ?? MIN),
+					),
+					// The lower value series, if active
+					props.lower_value()
+						? Math.max(
+								...(data.line_data?.map((datum) => datum.lower_value ?? MIN) ??
+									MIN),
+							)
+						: MIN,
+					// The upper value series, if active
+					props.upper_value()
+						? Math.max(
+								...(data.line_data?.map((datum) => datum.upper_value ?? MIN) ??
+									MIN),
+							)
+						: MIN,
+					// The lower boundary series, if active
+					props.lower_boundary()
+						? Math.max(
+								...(data.line_data?.map((datum) => datum.lower_limit ?? MIN) ??
+									MIN),
+								...(data.skipped_lower_data?.map((datum) => datum.y ?? MIN) ??
+									MIN),
+							)
+						: MIN,
+					// The upper boundary series, if active
+					props.upper_boundary()
+						? Math.max(
+								...(data.line_data?.map((datum) => datum.upper_limit ?? MIN) ??
+									MIN),
+								...(data.skipped_upper_data?.map((datum) => datum.y ?? MIN) ??
+									MIN),
+							)
+						: MIN,
+					// The lower alert series
+					Math.max(
+						...(data.lower_alert_data?.map(
+							(datum) => datum.lower_limit ?? MIN,
+						) ?? MIN),
+					),
+					// The upper alert series
+					Math.max(
+						...(data.upper_alert_data?.map(
+							(datum) => datum.upper_limit ?? MIN,
+						) ?? MIN),
+					),
+				),
+			),
+	);
+
+const scale_data_by_factor = (
+	raw_data: object[],
+	first: {
+		measure: JsonMeasure;
+		factor: number;
+	},
+	second?: {
+		measure: JsonMeasure;
+		factor: number;
+		ratio: number;
+	},
+) => {
+	const scales = (data) => {
+		if (data?.result?.measure?.uuid === first?.measure?.uuid) {
+			return [first?.factor];
+		}
+		if (data?.result?.measure?.uuid === second?.measure?.uuid) {
+			return [second?.factor, second?.ratio];
+		}
+		return [];
+	};
+
+	const map_limits = (datum, factor: number, ratio: number) => {
+		if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
+			datum.lower_limit = datum.lower_limit / factor;
+			datum.display.lower_limit = datum.lower_limit;
+			if (ratio) {
+				datum.lower_limit = datum.lower_limit * ratio;
+			}
+		}
+		if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
+			datum.upper_limit = datum.upper_limit / factor;
+			datum.display.upper_limit = datum.upper_limit;
+			if (ratio) {
+				datum.upper_limit = datum.upper_limit * ratio;
+			}
+		}
+		return datum;
+	};
+
+	return raw_data.map((data) => {
+		const [factor, ratio] = scales(data);
+		if (!factor) {
+			return data;
+		}
+
 		data.line_data = data.line_data?.map((datum) => {
 			datum.value = datum.value / factor;
+			datum.display.value = datum.value;
+			if (ratio) {
+				datum.value = datum.value * ratio;
+			}
 			if (datum.lower_value !== undefined && datum.lower_value !== null) {
 				datum.lower_value = datum.lower_value / factor;
+				datum.display.lower_value = datum.lower_value;
+				if (ratio) {
+					datum.lower_value = datum.lower_value * ratio;
+				}
 			}
 			if (datum.upper_value !== undefined && datum.upper_value !== null) {
 				datum.upper_value = datum.upper_value / factor;
+				datum.display.upper_value = datum.upper_value;
+				if (ratio) {
+					datum.upper_value = datum.upper_value * ratio;
+				}
 			}
-			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
-				datum.lower_limit = datum.lower_limit / factor;
-			}
-			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
-				datum.upper_limit = datum.upper_limit / factor;
-			}
-			return datum;
+			return map_limits(datum, factor, ratio);
 		});
-		data.lower_alert_data = data.lower_alert_data?.map((datum) => {
-			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
-				datum.lower_limit = datum.lower_limit / factor;
-			}
-			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
-				datum.upper_limit = datum.upper_limit / factor;
-			}
-			return datum;
-		});
-		data.upper_alert_data = data.upper_alert_data?.map((datum) => {
-			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
-				datum.lower_limit = datum.lower_limit / factor;
-			}
-			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
-				datum.upper_limit = datum.upper_limit / factor;
-			}
-			return datum;
-		});
-		data.boundary_data = data.boundary_data?.map((datum) => {
-			if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
-				datum.lower_limit = datum.lower_limit / factor;
-			}
-			if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
-				datum.upper_limit = datum.upper_limit / factor;
-			}
-			return datum;
-		});
+		data.lower_alert_data = data.lower_alert_data?.map((datum) =>
+			map_limits(datum, factor, ratio),
+		);
+		data.upper_alert_data = data.upper_alert_data?.map((datum) =>
+			map_limits(datum, factor, ratio),
+		);
+		data.boundary_data = data.boundary_data?.map((datum) =>
+			map_limits(datum, factor, ratio),
+		);
 		data.skipped_lower_data = data.skipped_lower_data?.map((datum) => {
 			datum.y = datum.y / factor;
+			if (ratio) {
+				datum.y = datum.y * ratio;
+			}
 			return datum;
 		});
 		data.skipped_upper_data = data.skipped_upper_data?.map((datum) => {
 			datum.y = datum.y / factor;
+			if (ratio) {
+				datum.y = datum.y * ratio;
+			}
 			return datum;
 		});
+
 		return data;
 	});
-	const scaled_units = scale_units(min, raw_units);
-
-	return [scaled_data, scaled_units];
 };
 
 const plot_marks = (
 	plot_data,
-	plot_units: string,
+	plot_units: { [uuid: string]: string },
 	props: {
 		project_slug: string;
 		isConsole: boolean;
@@ -506,6 +844,7 @@ const plot_marks = (
 			skipped_lower_data,
 			skipped_upper_data,
 		} = data;
+		const units = plot_units?.[result?.measure?.uuid] ?? DEFAULT_UNITS;
 
 		const color = colors[index % 10] ?? "7f7f7f";
 
@@ -527,7 +866,7 @@ const plot_marks = (
 				fill: color,
 				title: (datum) =>
 					to_title(
-						`${prettyPrintFloat(datum?.value)}\n${plot_units}`,
+						`${prettyPrintFloat(datum?.display?.value)}\n${units}`,
 						result,
 						datum,
 						"\nClick to view Metric",
@@ -554,7 +893,7 @@ const plot_marks = (
 						BoundaryLimit.Lower,
 						color,
 						result,
-						plot_units,
+						units,
 					),
 				),
 			);
@@ -576,7 +915,7 @@ const plot_marks = (
 						BoundaryLimit.Upper,
 						color,
 						result,
-						plot_units,
+						units,
 					),
 				),
 			);
@@ -599,7 +938,7 @@ const plot_marks = (
 						color,
 						props.project_slug,
 						result,
-						plot_units,
+						units,
 						props.isConsole,
 					),
 				),
@@ -636,7 +975,7 @@ const plot_marks = (
 						color,
 						props.project_slug,
 						result,
-						plot_units,
+						units,
 						props.isConsole,
 					),
 				),
@@ -663,7 +1002,7 @@ const plot_marks = (
 					BoundaryLimit.Lower,
 					props.project_slug,
 					result,
-					plot_units,
+					units,
 					props.isConsole,
 					props.plotId,
 				),
@@ -677,7 +1016,7 @@ const plot_marks = (
 					BoundaryLimit.Upper,
 					props.project_slug,
 					result,
-					plot_units,
+					units,
 					props.isConsole,
 					props.plotId,
 				),
@@ -687,29 +1026,6 @@ const plot_marks = (
 
 	// This allows the alert images to appear on top of the plot lines.
 	plot_arrays.push(...warn_arrays, ...alert_arrays);
-
-	// Multi-axis
-	if (false) {
-		const cars = [
-			{ year: 2012, efficiency: 35.3, sales: 7245000 },
-			{ year: 2013, efficiency: 36.4, sales: 7586000 },
-			{ year: 2014, efficiency: 36.5, sales: 7708000 },
-			{ year: 2015, efficiency: 37.2, sales: 7517000 },
-			{ year: 2016, efficiency: 37.7, sales: 6873000 },
-			{ year: 2017, efficiency: 39.4, sales: 6081000 },
-		];
-		const v1 = (d) => d.sales;
-		const v2 = (d) => d.efficiency;
-		const y2 = d3.scaleLinear(d3.extent(cars, v2), [0, d3.max(cars, v1)]);
-		plot_arrays.push(
-			Plot.axisY(y2.ticks(), {
-				anchor: "right",
-				label: `↑ ${plot_units}`,
-				y: y2,
-				tickFormat: y2.tickFormat(),
-			}),
-		);
-	}
 
 	return plot_arrays;
 };
@@ -875,7 +1191,7 @@ const alert_image = (
 
 const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 	to_title(
-		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.[value_end_position_key(limit)])}\n${units}`,
+		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.display?.[value_end_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		"",
@@ -883,7 +1199,7 @@ const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 
 const limit_title = (limit: BoundaryLimit, result, datum, units, suffix) =>
 	to_title(
-		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.[boundary_position_key(limit)])}\n${units}`,
+		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.display?.[boundary_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		suffix,
