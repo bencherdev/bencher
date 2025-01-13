@@ -2,8 +2,10 @@ import * as Sentry from "@sentry/astro";
 import {
 	type Accessor,
 	For,
+	Match,
 	type Resource,
 	Show,
+	Switch,
 	createEffect,
 	createMemo,
 	createResource,
@@ -110,6 +112,10 @@ const FullPlotHeader = (props: Props) => {
 		getMeasures,
 	);
 
+	const [secondMeasure, setSecondMeasure] = createSignal(
+		props.measures().length > 1,
+	);
+
 	return (
 		<nav class="panel-heading">
 			<div class="columns is-vcentered">
@@ -122,14 +128,36 @@ const FullPlotHeader = (props: Props) => {
 					handleMeasure={props.handleMeasure}
 				/>
 				<Show when={props.measures().length >= 1}>
-					<MeasureSelect
-						isConsole={props.isConsole}
-						project_slug={props.project_slug}
-						measures={props.measures}
-						json_measures={measures}
-						index={1}
-						handleMeasure={props.handleMeasure}
-					/>
+					<Show
+						when={secondMeasure()}
+						fallback={
+							<div class="column is-narrow">
+								<button
+									class="button is-small is-rounded"
+									type="button"
+									title="Add a second Measure"
+									onMouseDown={(e) => {
+										e.preventDefault();
+										setSecondMeasure(true);
+									}}
+								>
+									<span class="icon">
+										<i class="fas fa-plus" />
+									</span>
+								</button>
+							</div>
+						}
+					>
+						<MeasureSelect
+							isConsole={props.isConsole}
+							project_slug={props.project_slug}
+							measures={props.measures}
+							json_measures={measures}
+							index={1}
+							handleMeasure={props.handleMeasure}
+							removeSecondMeasure={() => setSecondMeasure(false)}
+						/>
+					</Show>
 				</Show>
 				<div class="column" />
 				<SharedPlot {...props} />
@@ -145,6 +173,7 @@ const MeasureSelect = (props: {
 	json_measures: Resource<JsonMeasure[]>;
 	index: number;
 	handleMeasure: (index: number, slug: null | string) => void;
+	removeSecondMeasure?: () => void;
 }) => {
 	const measure = createMemo(() =>
 		props
@@ -181,23 +210,41 @@ const MeasureSelect = (props: {
 						<p id={BENCHER_MEASURE_ID} class="level-item">
 							Measure
 						</p>
-						<Show when={measure() && measure()?.uuid !== BENCHER_MEASURE}>
-							<a
-								class="level-item button is-small is-rounded"
-								style="margin-left: 1rem;"
-								title={`${props.isConsole ? "Manage" : "View"} ${
-									measure()?.name
-								}`}
-								href={`
+						<Switch>
+							<Match when={measure() && measure()?.uuid !== BENCHER_MEASURE}>
+								<a
+									class="level-item button is-small is-rounded"
+									style="margin-left: 1rem;"
+									title={`${props.isConsole ? "Manage" : "View"} ${
+										measure()?.name
+									}`}
+									href={`
 										${resourcePath(
 											props.isConsole,
 										)}/${props.project_slug()}/measures/${
 											measure()?.slug
 										}?${BACK_PARAM}=${encodePath()}`}
-							>
-								<small>{props.isConsole ? "Manage" : "View"}</small>
-							</a>
-						</Show>
+								>
+									<small>{props.isConsole ? "Manage" : "View"}</small>
+								</a>
+							</Match>
+							<Match when={props.index === 1 && props.removeSecondMeasure}>
+								<button
+									class="level-item button is-small is-rounded"
+									type="button"
+									style="margin-left: 1rem; font-size: 0.5em;"
+									title="Hide add a second Measure"
+									onMouseDown={(e) => {
+										e.preventDefault();
+										props.removeSecondMeasure();
+									}}
+								>
+									<span class="icon is-small">
+										<i class="fas fa-minus" />
+									</span>
+								</button>
+							</Match>
+						</Switch>
 					</div>
 				</div>
 			</div>
