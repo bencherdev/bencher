@@ -189,9 +189,9 @@ const line_plot = (props: Props) => {
 		return NOT_FOUND;
 	}
 
-	const raw_data = json_perf.results
-		.map((result, index) => perf_result(result, index, props.perfActive))
-		.filter((data) => data);
+	console.log(json_perf.results);
+	const raw_data = json_perf.results.map(perf_result);
+	console.log(raw_data);
 	const metrics_found = raw_data.reduce(
 		(acc, data) => acc || (data?.line_data?.length ?? 0) > 0,
 		false,
@@ -200,14 +200,16 @@ const line_plot = (props: Props) => {
 	// If there is a second measure, then there needs to be a deep clone of the raw data
 	// to use when constructing the right hand axis.
 	const raw_data_clone = clone_raw_data(raw_data, second_measure);
+	const active_raw_data = active_data(raw_data, props.perfActive);
 	const scale_props = {
 		lower_value: props.lower_value,
 		upper_value: props.upper_value,
 		lower_boundary: props.lower_boundary,
 		upper_boundary: props.upper_boundary,
 	};
+
 	const [data, units] = scale_data(
-		raw_data,
+		active_raw_data,
 		first_measure,
 		second_measure,
 		scale_props,
@@ -222,22 +224,23 @@ const line_plot = (props: Props) => {
 		isConsole: props.isConsole,
 		plotId: props.plotId,
 		x_axis_kind,
+		perfActive: props.perfActive,
 		...scale_props,
 	});
 
 	// The `raw_data_clone` is only created if there is a second measure
-	if (raw_data_clone) {
+	if (second_measure) {
 		const yScale = right_y_axis_ticks(
-			raw_data_clone,
+			active_data(raw_data, props.perfActive),
 			first_measure,
-			second_measure as JsonMeasure,
+			second_measure,
 			scale_props,
 		);
 		marks.push(
 			Plot.axisY(yScale.ticks(), {
 				anchor: "right",
 				label: `↑ ${units?.[second_measure?.uuid]}`,
-				// y: yScale,
+				y: yScale,
 				tickFormat: yScale.tickFormat(),
 			}),
 		);
@@ -261,6 +264,9 @@ const get_x_axis = (x_axis: XAxis): [string, ScaleType, string] => {
 			return ["number", "point", "Branch Version Number"];
 	}
 };
+
+const active_data = (plot_data, perfActive) =>
+	plot_data.filter((datum) => perfActive[datum.index]);
 
 const get_measures = (json_perf: JsonPerf, measures: Accessor<string[]>) => {
 	const [first_measure_uuid, second_measure_uuid] = measures();
@@ -311,16 +317,7 @@ const hover_styles = (theme: Theme) => {
 	}
 };
 
-const perf_result = (
-	result: JsonPerfMetrics,
-	index: number,
-	perfActive: boolean[],
-) => {
-	const perf_metrics = result.metrics;
-	if (!(Array.isArray(perf_metrics) && perfActive[index])) {
-		return null;
-	}
-
+const perf_result = (result: JsonPerfMetrics, index: number) => {
 	const line_data = [];
 	const lower_alert_data = [];
 	const upper_alert_data = [];
@@ -328,7 +325,7 @@ const perf_result = (
 	const skipped_lower_data = [];
 	const skipped_upper_data = [];
 
-	for (const perf_metric of perf_metrics) {
+	for (const perf_metric of result.metrics) {
 		const datum = {
 			report: perf_metric.report,
 			metric: perf_metric.metric?.uuid,
