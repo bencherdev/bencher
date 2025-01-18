@@ -141,7 +141,6 @@ const LinePlot = (props: Props) => {
 								grid: true,
 								axis: "left",
 								label: `↑ ${linePlot()?.y_axis?.units}`,
-								transform: (d) => d / (linePlot()?.y_axis?.factor ?? 1),
 							},
 							marks: linePlot().marks,
 							width: props.width(),
@@ -238,18 +237,6 @@ const line_plot = (props: Props) => {
 				anchor: "right",
 				label: `↑ ${right_scale?.units}`,
 				y: yScale,
-				// transform: (d) => {
-				// 	if (d === undefined) {
-				// 		console.error("Transform function received undefined value");
-				// 		return 0; // or another default value
-				// 	}
-				// 	console.log(d);
-				// 	console.log(right_scale?.factor);
-
-				// 	const r = d / (right_scale?.factor ?? 1);
-				// 	console.log(r);
-				// 	return r;
-				// },
 				tickFormat: yScale?.tickFormat(),
 			}),
 		);
@@ -351,14 +338,6 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 			iteration: perf_metric.iteration,
 			lower_limit: perf_metric.boundary?.lower_limit,
 			upper_limit: perf_metric.boundary?.upper_limit,
-			// Display values: scaled but not relative when multi-axis
-			display: {
-				value: perf_metric.metric?.value,
-				lower_value: perf_metric.metric?.lower_value,
-				upper_value: perf_metric.metric?.upper_value,
-				lower_limit: perf_metric.boundary?.lower_limit,
-				upper_limit: perf_metric.boundary?.upper_limit,
-			},
 		};
 		line_data.push(datum);
 		// console.log(line_data);
@@ -371,11 +350,6 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 			lower_limit: datum.lower_limit,
 			upper_limit: datum.upper_limit,
 			threshold: perf_metric.threshold,
-			// Display values: scaled but not relative when multi-axis
-			display: {
-				lower_limit: datum.lower_limit,
-				upper_limit: datum.upper_limit,
-			},
 		};
 		if (perf_metric.alert && is_active(perf_metric.alert)) {
 			switch (perf_metric.alert?.limit) {
@@ -468,7 +442,7 @@ const scale_factors = (
 		lower_boundary: Accessor<boolean>;
 		upper_boundary: Accessor<boolean>;
 	},
-): Scales => {
+): [object[], Scales] => {
 	const raw_first_units = first_measure?.units ?? DEFAULT_UNITS;
 
 	const first_min = data_min(raw_data, first_measure, props);
@@ -481,9 +455,13 @@ const scale_factors = (
 		units: first_scaled_units,
 	};
 	if (!second_measure) {
-		return {
-			[first_measure?.uuid]: first_scale,
-		};
+		const scaled_data = scale_data_by_factor(raw_data, first_scale);
+		return [
+			scaled_data,
+			{
+				[first_measure?.uuid]: first_scale,
+			},
+		];
 	}
 
 	const raw_second_units = second_measure?.units ?? DEFAULT_UNITS;
@@ -499,12 +477,19 @@ const scale_factors = (
 		measure: second_measure,
 		factor: second_factor,
 		units: second_scaled_units,
-		yScale: d3.scaleLinear([second_min, second_max], [first_min, first_max]),
+		yScale: d3.scaleLinear(
+			[second_min / second_factor, second_max / second_factor],
+			[first_min, first_max],
+		),
 	};
-	return {
-		[first_measure?.uuid]: first_scale,
-		[second_measure?.uuid]: second_scale,
-	};
+	const scaled_data = scale_data_by_factor(raw_data, first_scale, second_scale);
+	return [
+		scaled_data,
+		{
+			[first_measure?.uuid]: first_scale,
+			[second_measure?.uuid]: second_scale,
+		},
+	];
 };
 
 const right_y_axis_ticks = (
@@ -742,86 +727,59 @@ const scale_data_by_factor = (
 	second?: {
 		measure: JsonMeasure;
 		factor: number;
-		ratio: number;
 	},
 ) => {
 	const scales = (data) => {
 		if (data?.result?.measure?.uuid === first?.measure?.uuid) {
-			return [first?.factor];
+			return first?.factor;
 		}
 		if (data?.result?.measure?.uuid === second?.measure?.uuid) {
-			return [second?.factor, second?.ratio];
+			return second?.factor;
 		}
-		return [];
+		return;
 	};
 
-	const map_limits = (datum, factor: number, ratio: number) => {
+	const map_limits = (datum, factor: number) => {
 		if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
 			datum.lower_limit = datum.lower_limit / factor;
-			datum.display.lower_limit = datum.lower_limit;
-			if (ratio) {
-				datum.lower_limit = datum.lower_limit * ratio;
-			}
 		}
 		if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
 			datum.upper_limit = datum.upper_limit / factor;
-			datum.display.upper_limit = datum.upper_limit;
-			if (ratio) {
-				datum.upper_limit = datum.upper_limit * ratio;
-			}
 		}
 		return datum;
 	};
 
 	return raw_data.map((data) => {
-		const [factor, ratio] = scales(data);
+		const factor = scales(data);
 		if (!factor) {
 			return data;
 		}
 
 		data.line_data = data.line_data?.map((datum) => {
 			datum.value = datum.value / factor;
-			datum.display.value = datum.value;
-			if (ratio) {
-				datum.value = datum.value * ratio;
-			}
 			if (datum.lower_value !== undefined && datum.lower_value !== null) {
 				datum.lower_value = datum.lower_value / factor;
-				datum.display.lower_value = datum.lower_value;
-				if (ratio) {
-					datum.lower_value = datum.lower_value * ratio;
-				}
 			}
 			if (datum.upper_value !== undefined && datum.upper_value !== null) {
 				datum.upper_value = datum.upper_value / factor;
-				datum.display.upper_value = datum.upper_value;
-				if (ratio) {
-					datum.upper_value = datum.upper_value * ratio;
-				}
 			}
-			return map_limits(datum, factor, ratio);
+			return map_limits(datum, factor);
 		});
 		data.lower_alert_data = data.lower_alert_data?.map((datum) =>
-			map_limits(datum, factor, ratio),
+			map_limits(datum, factor),
 		);
 		data.upper_alert_data = data.upper_alert_data?.map((datum) =>
-			map_limits(datum, factor, ratio),
+			map_limits(datum, factor),
 		);
 		data.boundary_data = data.boundary_data?.map((datum) =>
-			map_limits(datum, factor, ratio),
+			map_limits(datum, factor),
 		);
 		data.skipped_lower_data = data.skipped_lower_data?.map((datum) => {
 			datum.y = datum.y / factor;
-			if (ratio) {
-				datum.y = datum.y * ratio;
-			}
 			return datum;
 		});
 		data.skipped_upper_data = data.skipped_upper_data?.map((datum) => {
 			datum.y = datum.y / factor;
-			if (ratio) {
-				datum.y = datum.y * ratio;
-			}
 			return datum;
 		});
 
@@ -881,7 +839,7 @@ const plot_marks = (
 			fill: color,
 			title: (datum) =>
 				to_title(
-					`${prettyPrintFloat(datum?.display?.value)}\n${units}`,
+					`${prettyPrintFloat(datum?.value)}\n${units}`,
 					result,
 					datum,
 					"\nClick to view Metric",
@@ -1209,7 +1167,7 @@ const alert_image = (
 
 const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 	to_title(
-		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.display?.[value_end_position_key(limit)])}\n${units}`,
+		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.[value_end_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		"",
@@ -1217,7 +1175,7 @@ const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 
 const limit_title = (limit: BoundaryLimit, result, datum, units, suffix) =>
 	to_title(
-		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.display?.[boundary_position_key(limit)])}\n${units}`,
+		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.[boundary_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		suffix,
