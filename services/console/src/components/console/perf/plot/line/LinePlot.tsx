@@ -208,7 +208,7 @@ const line_plot = (props: Props) => {
 		upper_boundary: props.upper_boundary,
 	};
 
-	const scales = scale_factors(
+	const [d, scales] = scale_factors(
 		active_raw_data,
 		first_measure,
 		second_measure,
@@ -479,7 +479,7 @@ const scale_factors = (
 		units: second_scaled_units,
 		yScale: d3.scaleLinear(
 			[second_min / second_factor, second_max / second_factor],
-			[first_min, first_max],
+			[first_min / first_factor, first_max / first_factor],
 		),
 	};
 	const scaled_data = scale_data_by_factor(raw_data, first_scale, second_scale);
