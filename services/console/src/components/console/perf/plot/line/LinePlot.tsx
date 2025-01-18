@@ -140,7 +140,8 @@ const LinePlot = (props: Props) => {
 							y: {
 								grid: true,
 								axis: "left",
-								label: `↑ ${linePlot().units}`,
+								label: `↑ ${linePlot()?.y_axis?.units}`,
+								transform: (d) => d / (linePlot()?.y_axis?.factor ?? 1),
 							},
 							marks: linePlot().marks,
 							width: props.width(),
@@ -189,9 +190,10 @@ const line_plot = (props: Props) => {
 		return NOT_FOUND;
 	}
 
-	console.log(json_perf.results);
+	// console.log(first_measure, second_measure);
+	// console.log(json_perf.results);
 	const raw_data = json_perf.results.map(perf_result);
-	console.log(raw_data);
+	// console.log(raw_data);
 	const metrics_found = raw_data.reduce(
 		(acc, data) => acc || (data?.line_data?.length ?? 0) > 0,
 		false,
@@ -199,7 +201,6 @@ const line_plot = (props: Props) => {
 
 	// If there is a second measure, then there needs to be a deep clone of the raw data
 	// to use when constructing the right hand axis.
-	const raw_data_clone = clone_raw_data(raw_data, second_measure);
 	const active_raw_data = active_data(raw_data, props.perfActive);
 	const scale_props = {
 		lower_value: props.lower_value,
@@ -208,7 +209,7 @@ const line_plot = (props: Props) => {
 		upper_boundary: props.upper_boundary,
 	};
 
-	const [data, units] = scale_data(
+	const scales = scale_factors(
 		active_raw_data,
 		first_measure,
 		second_measure,
@@ -219,7 +220,7 @@ const line_plot = (props: Props) => {
 		props.x_axis(),
 	);
 
-	const marks = plot_marks(data, units, {
+	const marks = plot_marks(active_raw_data, scales, {
 		project_slug: json_perf.project.slug,
 		isConsole: props.isConsole,
 		plotId: props.plotId,
@@ -230,18 +231,26 @@ const line_plot = (props: Props) => {
 
 	// The `raw_data_clone` is only created if there is a second measure
 	if (second_measure) {
-		const yScale = right_y_axis_ticks(
-			active_data(raw_data, props.perfActive),
-			first_measure,
-			second_measure,
-			scale_props,
-		);
+		const right_scale = scales?.[second_measure?.uuid];
+		const yScale = right_scale?.yScale;
 		marks.push(
-			Plot.axisY(yScale.ticks(), {
+			Plot.axisY(yScale?.ticks(), {
 				anchor: "right",
-				label: `↑ ${units?.[second_measure?.uuid]}`,
+				label: `↑ ${right_scale?.units}`,
 				y: yScale,
-				tickFormat: yScale.tickFormat(),
+				// transform: (d) => {
+				// 	if (d === undefined) {
+				// 		console.error("Transform function received undefined value");
+				// 		return 0; // or another default value
+				// 	}
+				// 	console.log(d);
+				// 	console.log(right_scale?.factor);
+
+				// 	const r = d / (right_scale?.factor ?? 1);
+				// 	console.log(r);
+				// 	return r;
+				// },
+				tickFormat: yScale?.tickFormat(),
 			}),
 		);
 	}
@@ -250,7 +259,7 @@ const line_plot = (props: Props) => {
 		metrics_found,
 		x_axis_scale_type,
 		x_axis_label,
-		units: units?.[first_measure?.uuid],
+		y_axis: scales?.[first_measure?.uuid],
 		marks,
 		hoverStyles: hover_styles(props.theme()),
 	};
@@ -326,6 +335,10 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 	const skipped_upper_data = [];
 
 	for (const perf_metric of result.metrics) {
+		// How does this already have four elements?
+		// console.log(line_data);
+
+		// console.log(perf_metric.metric?.value);
 		const datum = {
 			report: perf_metric.report,
 			metric: perf_metric.metric?.uuid,
@@ -348,6 +361,7 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 			},
 		};
 		line_data.push(datum);
+		// console.log(line_data);
 
 		const limit_datum = {
 			date_time: datum.date_time,
@@ -412,6 +426,7 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 		}
 	}
 
+	// console.log("DONE", index);
 	return {
 		index,
 		result,
@@ -434,7 +449,16 @@ const boundary_skipped = (
 	limit: undefined | number,
 ) => boundary && !limit;
 
-const scale_data = (
+type Scales = {
+	[uuid: string]: {
+		measure: JsonMeasure;
+		factor: number;
+		units: string;
+		yScale?: d3.ScaleLinear<number, number, never>;
+	};
+};
+
+const scale_factors = (
 	raw_data: object[],
 	first_measure: JsonMeasure,
 	second_measure: undefined | JsonMeasure,
@@ -444,20 +468,22 @@ const scale_data = (
 		lower_boundary: Accessor<boolean>;
 		upper_boundary: Accessor<boolean>;
 	},
-) => {
+): Scales => {
 	const raw_first_units = first_measure?.units ?? DEFAULT_UNITS;
 
 	const first_min = data_min(raw_data, first_measure, props);
 	const first_factor = scale_factor(first_min, raw_first_units);
 	const first_scaled_units = scale_units(first_min, raw_first_units);
 
-	const first = {
+	const first_scale = {
 		measure: first_measure,
 		factor: first_factor,
+		units: first_scaled_units,
 	};
 	if (!second_measure) {
-		const scaled_data = scale_data_by_factor(raw_data, first);
-		return [scaled_data, { [first_measure?.uuid]: first_scaled_units }];
+		return {
+			[first_measure?.uuid]: first_scale,
+		};
 	}
 
 	const raw_second_units = second_measure?.units ?? DEFAULT_UNITS;
@@ -468,24 +494,17 @@ const scale_data = (
 
 	const first_max = data_max(raw_data, first_measure, props);
 	const second_max = data_max(raw_data, second_measure, props);
-	// Find the ratio to scale the second data relative to the first data
-	const first_range = first_max - first_min;
-	const second_range = second_max - second_min;
-	const ratio = first_range / second_range;
 
-	const second = {
+	const second_scale = {
 		measure: second_measure,
 		factor: second_factor,
-		ratio,
+		units: second_scaled_units,
+		yScale: d3.scaleLinear([second_min, second_max], [first_min, first_max]),
 	};
-	const scaled_data = scale_data_by_factor(raw_data, first, second);
-	return [
-		scaled_data,
-		{
-			[first_measure?.uuid]: first_scaled_units,
-			[second_measure?.uuid]: second_scaled_units,
-		},
-	];
+	return {
+		[first_measure?.uuid]: first_scale,
+		[second_measure?.uuid]: second_scale,
+	};
 };
 
 const right_y_axis_ticks = (
@@ -812,7 +831,7 @@ const scale_data_by_factor = (
 
 const plot_marks = (
 	plot_data,
-	plot_units: { [uuid: string]: string },
+	plot_scales: Scales,
 	props: {
 		project_slug: string;
 		isConsole: boolean;
@@ -841,38 +860,37 @@ const plot_marks = (
 			skipped_lower_data,
 			skipped_upper_data,
 		} = data;
-		const units = plot_units?.[result?.measure?.uuid] ?? DEFAULT_UNITS;
+		const scale = plot_scales?.[result?.measure?.uuid];
+		const units = scale?.units ?? DEFAULT_UNITS;
 
 		const color = colors[index % 10] ?? "7f7f7f";
 
 		// Line
-		plot_arrays.push(
-			Plot.line(line_data, {
-				x: props.x_axis_kind,
-				y: "value",
-				stroke: color,
-			}),
-		);
+		const line_options = {
+			x: props.x_axis_kind,
+			y: "value",
+			stroke: color,
+		};
+		plot_arrays.push(Plot.lineY(line_data, map_options(scale, line_options)));
 		// Dots
-		plot_arrays.push(
-			Plot.dot(line_data, {
-				x: props.x_axis_kind,
-				y: "value",
-				symbol: "circle",
-				stroke: color,
-				fill: color,
-				title: (datum) =>
-					to_title(
-						`${prettyPrintFloat(datum?.display?.value)}\n${units}`,
-						result,
-						datum,
-						"\nClick to view Metric",
-					),
-				href: (datum) =>
-					dotUrl(props.project_slug, props.isConsole, props.plotId, datum),
-				target: "_top",
-			}),
-		);
+		const dot_options = {
+			x: props.x_axis_kind,
+			y: "value",
+			symbol: "circle",
+			stroke: color,
+			fill: color,
+			title: (datum) =>
+				to_title(
+					`${prettyPrintFloat(datum?.display?.value)}\n${units}`,
+					result,
+					datum,
+					"\nClick to view Metric",
+				),
+			href: (datum) =>
+				dotUrl(props.project_slug, props.isConsole, props.plotId, datum),
+			target: "_top",
+		};
+		plot_arrays.push(Plot.dotY(line_data, map_options(scale, dot_options)));
 
 		// Lower Value
 		if (props.lower_value()) {
@@ -1026,6 +1044,9 @@ const plot_marks = (
 
 	return plot_arrays;
 };
+
+const map_options = (scale, options: object) =>
+	scale?.yScale ? Plot.mapY((D) => D.map(scale?.yScale), options) : options;
 
 const to_title = (prefix, result, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
