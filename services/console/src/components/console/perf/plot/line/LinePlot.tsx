@@ -132,9 +132,9 @@ const LinePlot = (props: Props) => {
 					{addTooltips(
 						Plot.plot({
 							x: {
-								type: linePlot().x_axis_scale_type,
+								type: linePlot()?.x_axis?.scale_type,
 								grid: true,
-								label: `${linePlot().x_axis_label} ➡`,
+								label: `${linePlot()?.x_axis?.label} ➡`,
 								labelOffset: 36,
 							},
 							y: {
@@ -208,22 +208,20 @@ const line_plot = (props: Props) => {
 		upper_boundary: props.upper_boundary,
 	};
 
-	const [d, scales] = scale_factors(
+	const [scaled_data, scales] = scale_factors(
 		active_raw_data,
 		first_measure,
 		second_measure,
 		scale_props,
 	);
 
-	const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
-		props.x_axis(),
-	);
+	const x_axis = get_x_axis(props.x_axis());
 
-	const marks = plot_marks(active_raw_data, scales, {
+	const marks = plot_marks(scaled_data, scales, {
 		project_slug: json_perf.project.slug,
 		isConsole: props.isConsole,
 		plotId: props.plotId,
-		x_axis_kind,
+		x_axis_kind: x_axis.kind,
 		perfActive: props.perfActive,
 		...scale_props,
 	});
@@ -244,20 +242,27 @@ const line_plot = (props: Props) => {
 
 	return {
 		metrics_found,
-		x_axis_scale_type,
-		x_axis_label,
+		x_axis,
 		y_axis: scales?.[first_measure?.uuid],
 		marks,
 		hoverStyles: hover_styles(props.theme()),
 	};
 };
 
-const get_x_axis = (x_axis: XAxis): [string, ScaleType, string] => {
+const get_x_axis = (x_axis: XAxis) => {
 	switch (x_axis) {
 		case XAxis.DateTime:
-			return ["date_time", "time", "Report Date and Time"];
+			return {
+				kind: "date_time",
+				scale_type: "time",
+				label: "Report Date and Time",
+			};
 		case XAxis.Version:
-			return ["number", "point", "Branch Version Number"];
+			return {
+				kind: "number",
+				scale_type: "point",
+				label: "Branch Version Number",
+			};
 	}
 };
 
