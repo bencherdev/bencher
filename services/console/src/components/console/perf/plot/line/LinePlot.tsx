@@ -258,6 +258,7 @@ const line_plot = (props: Props) => {
 		const right_scale = scales?.[right_measure?.uuid];
 		const yScale = right_scale?.yScale;
 		if (yScale) {
+			console.log("RIGHT TICKS", yScale?.ticks());
 			marks.push(
 				Plot.axisY(yScale?.ticks(), {
 					anchor: "right",
@@ -475,13 +476,9 @@ const scale_data = (
 	const left_scaled_units = scale_units(left_min, raw_left_units);
 	const left_has_data = left_min < MAX;
 
-	const left = [left_min / left_factor, left_max / left_factor];
-	console.log("LEFT", left);
-
-	const leftScale = d3
-		.scaleLinear()
-		.domain([left_min / left_factor, left_max / left_factor])
-		.nice();
+	const left_domain = [left_min / left_factor, left_max / left_factor];
+	console.log("LEFT DOMAIN", left_domain);
+	const leftScale = d3.scaleLinear().domain(left_domain).nice();
 
 	const left_scale = {
 		measure: left_measure,
@@ -509,18 +506,17 @@ const scale_data = (
 	const right_factor = scale_factor(right_min, raw_right_units);
 	const right_scaled_units = scale_units(right_min, raw_right_units);
 
-	const left_range =
-		left_min === Number.POSITIVE_INFINITY ||
-		left_max === Number.NEGATIVE_INFINITY
-			? null
-			: left_max - left_min;
-	const right_range = right_max - right_min;
-	const ratio = left_range === null ? 1 : left_range / right_range;
+	const min_ratio = left_min / right_min;
+	console.log("MIN RATIO", min_ratio);
+	const max_ratio = left_max / right_max;
+	console.log("MAX RATIO", max_ratio);
+	const ratio = 1 / Math.max(min_ratio, max_ratio);
+	console.log("RATIO", ratio);
+	// const ratio = 1;
 
-	const rightScale = d3
-		.scaleLinear()
-		.domain([right_min / right_factor, right_max / right_factor])
-		.nice();
+	const right_domain = [right_min / right_factor, right_max / right_factor];
+	console.log("RIGHT DOMAIN", right_domain);
+	const rightScale = d3.scaleLinear().domain(right_domain).nice();
 
 	const right_scale = {
 		measure: right_measure,
@@ -1082,8 +1078,8 @@ const plot_marks = (
 	return plot_arrays;
 };
 
-const map_options = (scale, options: object) => options;
-// scale?.yScale ? Plot.mapY((D) => D.map(scale?.yScale), options) : options;
+const map_options = (scale, options: object) =>
+	scale?.yScale ? Plot.mapY((D) => D.map(scale?.yScale), options) : options;
 
 const to_title = (prefix, result, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
