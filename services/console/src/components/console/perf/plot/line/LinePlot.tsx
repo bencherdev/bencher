@@ -138,14 +138,11 @@ const LinePlot = (props: Props) => {
 							x: {
 								type: linePlot()?.x_axis?.scale_type,
 								grid: true,
-								label: `${linePlot()?.x_axis?.label} ➡`,
+								label: `${linePlot()?.x_axis?.label}`,
 								labelOffset: 36,
 							},
 							y: {
 								grid: true,
-								axis: "left",
-								label: `↑ ${linePlot()?.y_axis?.units}`,
-								tickFormat,
 							},
 							marks: linePlot().marks,
 							width: props.width(),
@@ -242,8 +239,22 @@ const line_plot = (props: Props) => {
 		...scale_props,
 	});
 
+	if (left_has_data) {
+		const left_scale = scales?.[left_measure?.uuid];
+		const yScale = left_scale?.yScale;
+		console.log("LEFT TICKS", yScale?.ticks());
+		marks.push(
+			Plot.axisY(yScale?.ticks(), {
+				anchor: "left",
+				label: `↑ ${left_scale?.units}`,
+				y: yScale,
+				tickFormat,
+			}),
+		);
+	}
+
 	// The `raw_data_clone` is only created if there is a second measure
-	if (right_measure) {
+	if (right_has_data) {
 		const right_scale = scales?.[right_measure?.uuid];
 		const yScale = right_scale?.yScale;
 		marks.push(
@@ -277,7 +288,7 @@ const get_x_axis = (x_axis: XAxis) => {
 			return {
 				kind: "number",
 				scale_type: "point",
-				label: "Branch Version Number",
+				label: "Branch Version Number →",
 			};
 	}
 };
@@ -463,14 +474,24 @@ const scale_data = (
 	const raw_first_units = first_measure?.units ?? DEFAULT_UNITS;
 
 	const first_min = data_min(raw_data, first_measure, props);
+	const first_max = data_max(raw_data, first_measure, props);
 	const first_factor = scale_factor(first_min, raw_first_units);
 	const first_scaled_units = scale_units(first_min, raw_first_units);
 	const first_has_data = first_min < MAX;
+
+	const leftScale = d3.scaleLinear([
+		first_min / first_factor,
+		first_max / first_factor,
+	]);
+	// if (first_has_data) {
+	// 	yScale.domain([first_min / first_factor, first_max / first_factor]);
+	// }
 
 	const first_scale = {
 		measure: first_measure,
 		factor: first_factor,
 		units: first_scaled_units,
+		yScale: leftScale,
 	};
 	if (!second_measure) {
 		if (first_has_data) {
@@ -493,7 +514,6 @@ const scale_data = (
 
 	console.log(second_min);
 
-	const first_max = data_max(raw_data, first_measure, props);
 	const second_max = data_max(raw_data, second_measure, props);
 	// Find the ratio to scale the second data relative to the first data
 	console.log("FIRST", first_min, first_max);
@@ -509,20 +529,20 @@ const scale_data = (
 	console.log("RATIO", ratio);
 	console.log("RANGE", second_min / second_factor, second_max / second_factor);
 
-	const yScale = d3.scaleLinear([
+	const rightScale = d3.scaleLinear([
 		second_min / second_factor,
 		second_max / second_factor,
 	]);
 	if (first_has_data) {
-		yScale.domain([first_min / first_factor, first_max / first_factor]);
+		rightScale.domain([first_min / first_factor, first_max / first_factor]);
 	}
-	console.log("TICKS", yScale.ticks());
+	console.log("TICKS", rightScale.ticks());
 	const second_scale = {
 		measure: second_measure,
 		factor: second_factor,
 		units: second_scaled_units,
 		ratio,
-		yScale,
+		yScale: rightScale,
 	};
 	const scaled_data = scale_data_by_factor(raw_data, first_scale, second_scale);
 	return [
