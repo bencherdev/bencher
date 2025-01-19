@@ -1,5 +1,4 @@
 import * as Plot from "@observablehq/plot";
-import type { ScaleType } from "@observablehq/plot";
 import * as d3 from "d3";
 import {
 	type Accessor,
@@ -203,18 +202,17 @@ const line_plot = (props: Props) => {
 		return NOT_FOUND;
 	}
 
-	// console.log(first_measure, second_measure);
-	// console.log(json_perf.results);
-	const raw_data = json_perf.results.map(perf_result);
-	// console.log(raw_data);
-	const metrics_found = raw_data.reduce(
+	const active_data = json_perf.results
+		.map(perf_result)
+		.filter((datum) => props.perfActive[datum.index]);
+	const metrics_found = active_data.reduce(
 		(acc, data) => acc || (data?.line_data?.length ?? 0) > 0,
 		false,
 	);
-
-	// If there is a second measure, then there needs to be a deep clone of the raw data
-	// to use when constructing the right hand axis.
-	const active_raw_data = active_data(raw_data, props.perfActive);
+	if (!metrics_found) {
+		return NOT_FOUND;
+	}
+	console.log(active_data);
 	const scale_props = {
 		lower_value: props.lower_value,
 		upper_value: props.upper_value,
@@ -223,7 +221,7 @@ const line_plot = (props: Props) => {
 	};
 
 	const [scaled_data, scales] = scale_data(
-		active_raw_data,
+		active_data,
 		first_measure,
 		second_measure,
 		scale_props,
@@ -280,8 +278,8 @@ const get_x_axis = (x_axis: XAxis) => {
 	}
 };
 
-const active_data = (plot_data, perfActive) =>
-	plot_data.filter((datum) => perfActive[datum.index]);
+// const active_data = (plot_data, perfActive) =>
+// 	plot_data.filter((datum) => perfActive[datum.index]);
 
 const get_measures = (json_perf: JsonPerf, measures: Accessor<string[]>) => {
 	const [first_measure_uuid, second_measure_uuid] = measures();
