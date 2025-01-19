@@ -9,6 +9,7 @@ import {
 	createMemo,
 	createSignal,
 } from "solid-js";
+import { createStore } from "solid-js/store";
 import { resourcePath } from "../../../../../config/util";
 import {
 	AlertStatus,
@@ -68,6 +69,7 @@ const LinePlot = (props: Props) => {
 	const [upper_boundary, setUpperBoundary] = createSignal(
 		props.upper_boundary(),
 	);
+	const [perfActive, setPerfActive] = createStore(props.perfActive);
 
 	const SCALE_FACTOR = 1.12;
 	createEffect(() => {
@@ -106,6 +108,9 @@ const LinePlot = (props: Props) => {
 		} else if (props.upper_boundary() !== upper_boundary()) {
 			setUpperBoundary(props.upper_boundary());
 			setIsPlotted(false);
+		} else if (!arraysEqual(props.perfActive, perfActive)) {
+			setPerfActive(props.perfActive);
+			setIsPlotted(false);
 		}
 	});
 
@@ -141,6 +146,7 @@ const LinePlot = (props: Props) => {
 								grid: true,
 								axis: "left",
 								label: `↑ ${linePlot()?.y_axis?.units}`,
+								tickFormat,
 							},
 							marks: linePlot().marks,
 							width: props.width(),
@@ -163,6 +169,14 @@ const LinePlot = (props: Props) => {
 			</>
 		</Show>
 	);
+};
+
+const arraysEqual = (a: any[], b: any[]): boolean => {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] !== b[i]) return false;
+	}
+	return true;
 };
 
 const line_plot = (props: Props) => {
@@ -208,7 +222,7 @@ const line_plot = (props: Props) => {
 		upper_boundary: props.upper_boundary,
 	};
 
-	const [scaled_data, scales] = scale_factors(
+	const [scaled_data, scales] = scale_data(
 		active_raw_data,
 		first_measure,
 		second_measure,
@@ -235,7 +249,7 @@ const line_plot = (props: Props) => {
 				anchor: "right",
 				label: `↑ ${right_scale?.units}`,
 				y: yScale,
-				tickFormat: yScale?.tickFormat(),
+				tickFormat,
 			}),
 		);
 	}
@@ -295,6 +309,8 @@ const get_measures = (json_perf: JsonPerf, measures: Accessor<string[]>) => {
 			}
 	}
 };
+
+const tickFormat = prettyPrintFloat;
 
 const clone_raw_data = (raw_data, second_measure) => {
 	if (second_measure) {
@@ -437,7 +453,7 @@ type Scales = {
 	};
 };
 
-const scale_factors = (
+const scale_data = (
 	raw_data: object[],
 	first_measure: JsonMeasure,
 	second_measure: undefined | JsonMeasure,
@@ -447,12 +463,13 @@ const scale_factors = (
 		lower_boundary: Accessor<boolean>;
 		upper_boundary: Accessor<boolean>;
 	},
-): [object[], Scales] => {
+): [object[], Scales?] => {
 	const raw_first_units = first_measure?.units ?? DEFAULT_UNITS;
 
 	const first_min = data_min(raw_data, first_measure, props);
 	const first_factor = scale_factor(first_min, raw_first_units);
 	const first_scaled_units = scale_units(first_min, raw_first_units);
+	const first_has_data = first_min < MAX;
 
 	const first_scale = {
 		measure: first_measure,
@@ -460,13 +477,16 @@ const scale_factors = (
 		units: first_scaled_units,
 	};
 	if (!second_measure) {
-		const scaled_data = scale_data_by_factor(raw_data, first_scale);
-		return [
-			scaled_data,
-			{
-				[first_measure?.uuid]: first_scale,
-			},
-		];
+		if (first_has_data) {
+			const scaled_data = scale_data_by_factor(raw_data, first_scale);
+			return [
+				scaled_data,
+				{
+					[first_measure?.uuid]: first_scale,
+				},
+			];
+		}
+		return [raw_data];
 	}
 
 	const raw_second_units = second_measure?.units ?? DEFAULT_UNITS;
@@ -475,17 +495,25 @@ const scale_factors = (
 	const second_factor = scale_factor(second_min, raw_second_units);
 	const second_scaled_units = scale_units(second_min, raw_second_units);
 
+	console.log(second_min);
+
 	const first_max = data_max(raw_data, first_measure, props);
 	const second_max = data_max(raw_data, second_measure, props);
 
+	console.log(second_min / second_factor, second_max / second_factor);
+
+	const yScale = d3.scaleLinear([
+		second_min / second_factor,
+		second_max / second_factor,
+	]);
+	if (first_has_data) {
+		yScale.domain([first_min / first_factor, first_max / first_factor]);
+	}
 	const second_scale = {
 		measure: second_measure,
 		factor: second_factor,
 		units: second_scaled_units,
-		yScale: d3.scaleLinear(
-			[second_min / second_factor, second_max / second_factor],
-			[first_min / first_factor, first_max / first_factor],
-		),
+		yScale,
 	};
 	const scaled_data = scale_data_by_factor(raw_data, first_scale, second_scale);
 	return [
