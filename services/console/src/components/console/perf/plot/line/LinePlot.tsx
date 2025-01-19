@@ -357,6 +357,14 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 			iteration: perf_metric.iteration,
 			lower_limit: perf_metric.boundary?.lower_limit,
 			upper_limit: perf_metric.boundary?.upper_limit,
+			// Display values: scaled but not relative when multi-axis
+			display: {
+				value: perf_metric.metric?.value,
+				lower_value: perf_metric.metric?.lower_value,
+				upper_value: perf_metric.metric?.upper_value,
+				lower_limit: perf_metric.boundary?.lower_limit,
+				upper_limit: perf_metric.boundary?.upper_limit,
+			},
 		};
 		line_data.push(datum);
 		// console.log(line_data);
@@ -369,6 +377,11 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 			lower_limit: datum.lower_limit,
 			upper_limit: datum.upper_limit,
 			threshold: perf_metric.threshold,
+			// Display values: scaled but not relative when multi-axis
+			display: {
+				lower_limit: datum.lower_limit,
+				upper_limit: datum.upper_limit,
+			},
 		};
 		if (perf_metric.alert && is_active(perf_metric.alert)) {
 			switch (perf_metric.alert?.limit) {
@@ -497,6 +510,10 @@ const scale_data = (
 
 	const first_max = data_max(raw_data, first_measure, props);
 	const second_max = data_max(raw_data, second_measure, props);
+	// Find the ratio to scale the second data relative to the first data
+	const first_range = first_max === MIN ? null : first_max - first_min;
+	const second_range = second_max - second_min;
+	const ratio = first_range === null ? 1 : first_range / second_range;
 
 	console.log(second_min / second_factor, second_max / second_factor);
 
@@ -511,6 +528,7 @@ const scale_data = (
 		measure: second_measure,
 		factor: second_factor,
 		units: second_scaled_units,
+		ratio,
 		yScale,
 	};
 	const scaled_data = scale_data_by_factor(raw_data, first_scale, second_scale);
@@ -758,59 +776,86 @@ const scale_data_by_factor = (
 	second?: {
 		measure: JsonMeasure;
 		factor: number;
+		ratio: number;
 	},
 ) => {
 	const scales = (data) => {
 		if (data?.result?.measure?.uuid === first?.measure?.uuid) {
-			return first?.factor;
+			return [first?.factor];
 		}
 		if (data?.result?.measure?.uuid === second?.measure?.uuid) {
-			return second?.factor;
+			return [second?.factor, second?.ratio];
 		}
-		return;
+		return [];
 	};
 
-	const map_limits = (datum, factor: number) => {
+	const map_limits = (datum, factor: number, ratio: number) => {
 		if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
 			datum.lower_limit = datum.lower_limit / factor;
+			datum.display.lower_limit = datum.lower_limit;
+			if (ratio) {
+				datum.lower_limit = datum.lower_limit * ratio;
+			}
 		}
 		if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
 			datum.upper_limit = datum.upper_limit / factor;
+			datum.display.upper_limit = datum.upper_limit;
+			if (ratio) {
+				datum.upper_limit = datum.upper_limit * ratio;
+			}
 		}
 		return datum;
 	};
 
 	return raw_data.map((data) => {
-		const factor = scales(data);
+		const [factor, ratio] = scales(data);
 		if (!factor) {
 			return data;
 		}
 
 		data.line_data = data.line_data?.map((datum) => {
 			datum.value = datum.value / factor;
+			datum.display.value = datum.value;
+			if (ratio) {
+				datum.value = datum.value * ratio;
+			}
 			if (datum.lower_value !== undefined && datum.lower_value !== null) {
 				datum.lower_value = datum.lower_value / factor;
+				datum.display.lower_value = datum.lower_value;
+				if (ratio) {
+					datum.lower_value = datum.lower_value * ratio;
+				}
 			}
 			if (datum.upper_value !== undefined && datum.upper_value !== null) {
 				datum.upper_value = datum.upper_value / factor;
+				datum.display.upper_value = datum.upper_value;
+				if (ratio) {
+					datum.upper_value = datum.upper_value * ratio;
+				}
 			}
-			return map_limits(datum, factor);
+			return map_limits(datum, factor, ratio);
 		});
 		data.lower_alert_data = data.lower_alert_data?.map((datum) =>
-			map_limits(datum, factor),
+			map_limits(datum, factor, ratio),
 		);
 		data.upper_alert_data = data.upper_alert_data?.map((datum) =>
-			map_limits(datum, factor),
+			map_limits(datum, factor, ratio),
 		);
 		data.boundary_data = data.boundary_data?.map((datum) =>
-			map_limits(datum, factor),
+			map_limits(datum, factor, ratio),
 		);
 		data.skipped_lower_data = data.skipped_lower_data?.map((datum) => {
 			datum.y = datum.y / factor;
+			if (ratio) {
+				datum.y = datum.y * ratio;
+			}
 			return datum;
 		});
 		data.skipped_upper_data = data.skipped_upper_data?.map((datum) => {
 			datum.y = datum.y / factor;
+			if (ratio) {
+				datum.y = datum.y * ratio;
+			}
 			return datum;
 		});
 
@@ -870,7 +915,7 @@ const plot_marks = (
 			fill: color,
 			title: (datum) =>
 				to_title(
-					`${prettyPrintFloat(datum?.value)}\n${units}`,
+					`${prettyPrintFloat(datum?.display?.value)}\n${units}`,
 					result,
 					datum,
 					"\nClick to view Metric",
@@ -1034,8 +1079,8 @@ const plot_marks = (
 	return plot_arrays;
 };
 
-const map_options = (scale, options: object) =>
-	scale?.yScale ? Plot.mapY((D) => D.map(scale?.yScale), options) : options;
+const map_options = (scale, options: object) => options;
+// scale?.yScale ? Plot.mapY((D) => D.map(scale?.yScale), options) : options;
 
 const to_title = (prefix, result, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
@@ -1198,7 +1243,7 @@ const alert_image = (
 
 const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 	to_title(
-		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.[value_end_position_key(limit)])}\n${units}`,
+		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.display?.[value_end_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		"",
@@ -1206,7 +1251,7 @@ const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 
 const limit_title = (limit: BoundaryLimit, result, datum, units, suffix) =>
 	to_title(
-		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.[boundary_position_key(limit)])}\n${units}`,
+		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.display?.[boundary_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		suffix,
