@@ -282,30 +282,11 @@ const get_x_axis = (x_axis: XAxis) => {
 // 	plot_data.filter((datum) => perfActive[datum.index]);
 
 const get_measures = (json_perf: JsonPerf, measures: Accessor<string[]>) => {
+	const findMeasure = (uuid: undefined | string) =>
+		json_perf?.results?.find((result) => result?.measure?.uuid === uuid)
+			?.measure;
 	const [first_measure_uuid, second_measure_uuid] = measures();
-	const first_measure = json_perf?.results?.find(
-		(result) => result?.measure?.uuid === first_measure_uuid,
-	)?.measure;
-	const second_measure = json_perf?.results?.find(
-		(result) => result?.measure?.uuid === second_measure_uuid,
-	)?.measure;
-
-	switch (first_measure) {
-		case undefined:
-			switch (second_measure) {
-				case undefined:
-					return [];
-				default:
-					return [second_measure];
-			}
-		default:
-			switch (second_measure) {
-				case undefined:
-					return [first_measure];
-				default:
-					return [first_measure, second_measure];
-			}
-	}
+	return [findMeasure(first_measure_uuid), findMeasure(second_measure_uuid)];
 };
 
 const tickFormat = prettyPrintFloat;
@@ -511,11 +492,18 @@ const scale_data = (
 	const first_max = data_max(raw_data, first_measure, props);
 	const second_max = data_max(raw_data, second_measure, props);
 	// Find the ratio to scale the second data relative to the first data
-	const first_range = first_max === MIN ? null : first_max - first_min;
+	console.log("FIRST", first_min, first_max);
+
+	const first_range =
+		first_min === Number.POSITIVE_INFINITY ||
+		first_max === Number.NEGATIVE_INFINITY
+			? null
+			: first_max - first_min;
 	const second_range = second_max - second_min;
 	const ratio = first_range === null ? 1 : first_range / second_range;
 
-	console.log(second_min / second_factor, second_max / second_factor);
+	console.log("RATIO", ratio);
+	console.log("RANGE", second_min / second_factor, second_max / second_factor);
 
 	const yScale = d3.scaleLinear([
 		second_min / second_factor,
@@ -524,6 +512,7 @@ const scale_data = (
 	if (first_has_data) {
 		yScale.domain([first_min / first_factor, first_max / first_factor]);
 	}
+	console.log("TICKS", yScale.ticks());
 	const second_scale = {
 		measure: second_measure,
 		factor: second_factor,
