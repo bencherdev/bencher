@@ -213,7 +213,6 @@ const line_plot = (props: Props) => {
 		return NOT_FOUND;
 	}
 
-	console.log(active_data);
 	const scale_props = {
 		lower_value: props.lower_value,
 		upper_value: props.upper_value,
@@ -242,28 +241,32 @@ const line_plot = (props: Props) => {
 	if (left_has_data) {
 		const left_scale = scales?.[left_measure?.uuid];
 		const yScale = left_scale?.yScale;
-		console.log("LEFT TICKS", yScale?.ticks());
-		marks.push(
-			Plot.axisY(yScale?.ticks(), {
-				anchor: "left",
-				label: `↑ ${left_scale?.units}`,
-				tickFormat: yScale?.tickFormat(),
-			}),
-		);
+		if (yScale) {
+			console.log("LEFT TICKS", yScale?.ticks());
+			marks.push(
+				Plot.axisY(yScale?.ticks(), {
+					anchor: "left",
+					label: `↑ ${left_scale?.units}`,
+					tickFormat: yScale?.tickFormat(),
+				}),
+			);
+		}
 	}
 
 	// The `raw_data_clone` is only created if there is a second measure
 	if (right_has_data) {
 		const right_scale = scales?.[right_measure?.uuid];
 		const yScale = right_scale?.yScale;
-		marks.push(
-			Plot.axisY(yScale?.ticks(), {
-				anchor: "right",
-				label: `↑ ${right_scale?.units}`,
-				// y: yScale,
-				tickFormat: yScale?.tickFormat(),
-			}),
-		);
+		if (yScale) {
+			marks.push(
+				Plot.axisY(yScale?.ticks(), {
+					anchor: "right",
+					label: `↑ ${right_scale?.units}`,
+					// y: yScale,
+					tickFormat: yScale?.tickFormat(),
+				}),
+			);
+		}
 	}
 
 	return {
@@ -336,10 +339,6 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 	const skipped_upper_data = [];
 
 	for (const perf_metric of result.metrics) {
-		// How does this already have four elements?
-		// console.log(line_data);
-
-		// console.log(perf_metric.metric?.value);
 		const datum = {
 			report: perf_metric.report,
 			metric: perf_metric.metric?.uuid,
@@ -362,7 +361,6 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 			},
 		};
 		line_data.push(datum);
-		// console.log(line_data);
 
 		const limit_datum = {
 			date_time: datum.date_time,
@@ -427,7 +425,6 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 		}
 	}
 
-	// console.log("DONE", index);
 	return {
 		index,
 		result,
@@ -461,8 +458,8 @@ type Scales = {
 
 const scale_data = (
 	raw_data: object[],
-	first_measure: JsonMeasure,
-	second_measure: undefined | JsonMeasure,
+	left_measure: JsonMeasure,
+	right_measure: undefined | JsonMeasure,
 	props: {
 		lower_value: Accessor<boolean>;
 		upper_value: Accessor<boolean>;
@@ -470,85 +467,74 @@ const scale_data = (
 		upper_boundary: Accessor<boolean>;
 	},
 ): [object[], Scales?] => {
-	const raw_first_units = first_measure?.units ?? DEFAULT_UNITS;
+	const raw_left_units = left_measure?.units ?? DEFAULT_UNITS;
 
-	const first_min = data_min(raw_data, first_measure, props);
-	const first_max = data_max(raw_data, first_measure, props);
-	const first_factor = scale_factor(first_min, raw_first_units);
-	const first_scaled_units = scale_units(first_min, raw_first_units);
-	const first_has_data = first_min < MAX;
+	const left_min = data_min(raw_data, left_measure, props);
+	const left_max = data_max(raw_data, left_measure, props);
+	const left_factor = scale_factor(left_min, raw_left_units);
+	const left_scaled_units = scale_units(left_min, raw_left_units);
+	const left_has_data = left_min < MAX;
 
-	const left = [first_min / first_factor, first_max / first_factor];
+	const left = [left_min / left_factor, left_max / left_factor];
 	console.log("LEFT", left);
 
 	const leftScale = d3
 		.scaleLinear()
-		.domain([first_min / first_factor, first_max / first_factor]) // Set the domain to first_min and first_max
+		.domain([left_min / left_factor, left_max / left_factor])
 		.nice();
 
-	const first_scale = {
-		measure: first_measure,
-		factor: first_factor,
-		units: first_scaled_units,
+	const left_scale = {
+		measure: left_measure,
+		factor: left_factor,
+		units: left_scaled_units,
 		yScale: leftScale,
 	};
-	if (!second_measure) {
-		if (first_has_data) {
-			const scaled_data = scale_data_by_factor(raw_data, first_scale);
+	if (!right_measure) {
+		if (left_has_data) {
+			const scaled_data = scale_data_by_factor(raw_data, left_scale);
 			return [
 				scaled_data,
 				{
-					[first_measure?.uuid]: first_scale,
+					[left_measure?.uuid]: left_scale,
 				},
 			];
 		}
 		return [raw_data];
 	}
 
-	const raw_second_units = second_measure?.units ?? DEFAULT_UNITS;
+	const raw_right_units = right_measure?.units ?? DEFAULT_UNITS;
 
-	const second_min = data_min(raw_data, second_measure, props);
-	const second_factor = scale_factor(second_min, raw_second_units);
-	const second_scaled_units = scale_units(second_min, raw_second_units);
+	const right_min = data_min(raw_data, right_measure, props);
+	const right_max = data_max(raw_data, right_measure, props);
+	const right_factor = scale_factor(right_min, raw_right_units);
+	const right_scaled_units = scale_units(right_min, raw_right_units);
 
-	console.log(second_min);
-
-	const second_max = data_max(raw_data, second_measure, props);
-	// Find the ratio to scale the second data relative to the first data
-	console.log("FIRST", first_min, first_max);
-
-	const first_range =
-		first_min === Number.POSITIVE_INFINITY ||
-		first_max === Number.NEGATIVE_INFINITY
+	const left_range =
+		left_min === Number.POSITIVE_INFINITY ||
+		left_max === Number.NEGATIVE_INFINITY
 			? null
-			: first_max - first_min;
-	const second_range = second_max - second_min;
-	const ratio = first_range === null ? 1 : first_range / second_range;
+			: left_max - left_min;
+	const right_range = right_max - right_min;
+	const ratio = left_range === null ? 1 : left_range / right_range;
 
-	console.log("RATIO", ratio);
-	console.log("RANGE", second_min / second_factor, second_max / second_factor);
+	const rightScale = d3
+		.scaleLinear()
+		.domain([right_min / right_factor, right_max / right_factor])
+		.nice();
 
-	const rightScale = d3.scaleLinear([
-		second_min / second_factor,
-		second_max / second_factor,
-	]);
-	if (first_has_data) {
-		rightScale.domain([first_min / first_factor, first_max / first_factor]);
-	}
-	console.log("TICKS", rightScale.ticks());
-	const second_scale = {
-		measure: second_measure,
-		factor: second_factor,
-		units: second_scaled_units,
+	const right_scale = {
+		measure: right_measure,
+		factor: right_factor,
+		units: right_scaled_units,
 		ratio,
 		yScale: rightScale,
 	};
-	const scaled_data = scale_data_by_factor(raw_data, first_scale, second_scale);
+	const scaled_data = scale_data_by_factor(raw_data, left_scale, right_scale);
 	return [
 		scaled_data,
 		{
-			[first_measure?.uuid]: first_scale,
-			[second_measure?.uuid]: second_scale,
+			[left_measure?.uuid]: left_scale,
+			[right_measure?.uuid]: right_scale,
 		},
 	];
 };
