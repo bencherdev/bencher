@@ -247,8 +247,7 @@ const line_plot = (props: Props) => {
 			Plot.axisY(yScale?.ticks(), {
 				anchor: "left",
 				label: `↑ ${left_scale?.units}`,
-				y: yScale,
-				tickFormat,
+				tickFormat: yScale?.tickFormat(),
 			}),
 		);
 	}
@@ -261,8 +260,8 @@ const line_plot = (props: Props) => {
 			Plot.axisY(yScale?.ticks(), {
 				anchor: "right",
 				label: `↑ ${right_scale?.units}`,
-				y: yScale,
-				tickFormat,
+				// y: yScale,
+				tickFormat: yScale?.tickFormat(),
 			}),
 		);
 	}
@@ -479,13 +478,13 @@ const scale_data = (
 	const first_scaled_units = scale_units(first_min, raw_first_units);
 	const first_has_data = first_min < MAX;
 
-	const leftScale = d3.scaleLinear([
-		first_min / first_factor,
-		first_max / first_factor,
-	]);
-	// if (first_has_data) {
-	// 	yScale.domain([first_min / first_factor, first_max / first_factor]);
-	// }
+	const left = [first_min / first_factor, first_max / first_factor];
+	console.log("LEFT", left);
+
+	const leftScale = d3
+		.scaleLinear()
+		.domain([first_min / first_factor, first_max / first_factor]) // Set the domain to first_min and first_max
+		.nice();
 
 	const first_scale = {
 		measure: first_measure,
@@ -915,10 +914,14 @@ const plot_marks = (
 		// Line
 		const line_options = {
 			x: props.x_axis_kind,
-			y: "value",
+			y: (d) => {
+				console.log("Y", d.value);
+				return d.value;
+			},
 			stroke: color,
 		};
-		plot_arrays.push(Plot.lineY(line_data, map_options(scale, line_options)));
+		plot_arrays.push(Plot.line(line_data, line_options));
+		// plot_arrays.push(Plot.lineY(line_data, map_options(scale, line_options)));
 		// Dots
 		const dot_options = {
 			x: props.x_axis_kind,
@@ -937,7 +940,8 @@ const plot_marks = (
 				dotUrl(props.project_slug, props.isConsole, props.plotId, datum),
 			target: "_top",
 		};
-		plot_arrays.push(Plot.dotY(line_data, map_options(scale, dot_options)));
+		plot_arrays.push(Plot.dot(line_data, dot_options));
+		// plot_arrays.push(Plot.dotY(line_data, map_options(scale, dot_options)));
 
 		// Lower Value
 		if (props.lower_value()) {
