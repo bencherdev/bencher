@@ -194,24 +194,28 @@ const line_plot = (props: Props) => {
 		return NOT_FOUND;
 	}
 
-	const [first_measure, second_measure] = get_measures(
-		json_perf,
-		props.measures,
-	);
-	if (!first_measure) {
+	const [left_measure, right_measure] = get_measures(json_perf, props.measures);
+	if (!left_measure) {
 		return NOT_FOUND;
 	}
 
 	const active_data = json_perf.results
 		.map(perf_result)
 		.filter((datum) => props.perfActive[datum.index]);
-	const metrics_found = active_data.reduce(
-		(acc, data) => acc || (data?.line_data?.length ?? 0) > 0,
-		false,
-	);
-	if (!metrics_found) {
+	const hasData = (measure: undefined | JsonMeasure) =>
+		active_data.reduce(
+			(acc, data) =>
+				acc ||
+				(data?.result?.measure?.uuid === measure?.uuid &&
+					(data?.line_data?.length ?? 0) > 0),
+			false,
+		);
+	const left_has_data = hasData(left_measure);
+	const right_has_data = hasData(right_measure);
+	if (!left_has_data && !right_has_data) {
 		return NOT_FOUND;
 	}
+
 	console.log(active_data);
 	const scale_props = {
 		lower_value: props.lower_value,
@@ -222,8 +226,8 @@ const line_plot = (props: Props) => {
 
 	const [scaled_data, scales] = scale_data(
 		active_data,
-		first_measure,
-		second_measure,
+		left_measure,
+		right_measure,
 		scale_props,
 	);
 
@@ -239,8 +243,8 @@ const line_plot = (props: Props) => {
 	});
 
 	// The `raw_data_clone` is only created if there is a second measure
-	if (second_measure) {
-		const right_scale = scales?.[second_measure?.uuid];
+	if (right_measure) {
+		const right_scale = scales?.[right_measure?.uuid];
 		const yScale = right_scale?.yScale;
 		marks.push(
 			Plot.axisY(yScale?.ticks(), {
@@ -253,9 +257,9 @@ const line_plot = (props: Props) => {
 	}
 
 	return {
-		metrics_found,
+		metrics_found: left_has_data || right_has_data,
 		x_axis,
-		y_axis: scales?.[first_measure?.uuid],
+		y_axis: scales?.[left_measure?.uuid],
 		marks,
 		hoverStyles: hover_styles(props.theme()),
 	};
