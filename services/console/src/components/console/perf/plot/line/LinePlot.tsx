@@ -890,6 +890,9 @@ const plot_marks = (
 			skipped_upper_data,
 		} = data;
 		const scale = plot_scales?.[result?.measure?.uuid];
+		if (!scale) {
+			continue;
+		}
 		const units = scale?.units ?? DEFAULT_UNITS;
 
 		const color = colors[index % 10] ?? "7f7f7f";
@@ -903,7 +906,6 @@ const plot_marks = (
 			},
 			stroke: color,
 		};
-		// plot_arrays.push(Plot.line(line_data, line_options));
 		plot_arrays.push(Plot.lineY(line_data, map_options(scale, line_options)));
 		// Dots
 		const dot_options = {
@@ -923,21 +925,21 @@ const plot_marks = (
 				dotUrl(props.project_slug, props.isConsole, props.plotId, datum),
 			target: "_top",
 		};
-		// plot_arrays.push(Plot.dot(line_data, dot_options));
 		plot_arrays.push(Plot.dotY(line_data, map_options(scale, dot_options)));
 
 		// Lower Value
 		if (props.lower_value()) {
 			plot_arrays.push(
-				Plot.line(
+				Plot.lineY(
 					line_data,
-					value_end_line(props.x_axis_kind, BoundaryLimit.Lower, color),
+					value_end_line(scale, props.x_axis_kind, BoundaryLimit.Lower, color),
 				),
 			);
 			plot_arrays.push(
-				Plot.dot(
+				Plot.dotY(
 					line_data,
 					value_end_dot(
+						scale,
 						props.x_axis_kind,
 						BoundaryLimit.Lower,
 						color,
@@ -951,15 +953,16 @@ const plot_marks = (
 		// Upper Value
 		if (props.upper_value()) {
 			plot_arrays.push(
-				Plot.line(
+				Plot.lineY(
 					line_data,
-					value_end_line(props.x_axis_kind, BoundaryLimit.Upper, color),
+					value_end_line(scale, props.x_axis_kind, BoundaryLimit.Upper, color),
 				),
 			);
 			plot_arrays.push(
-				Plot.dot(
+				Plot.dotY(
 					line_data,
 					value_end_dot(
+						scale,
 						props.x_axis_kind,
 						BoundaryLimit.Upper,
 						color,
@@ -1080,7 +1083,7 @@ const plot_marks = (
 };
 
 const map_options = (scale, options: object) =>
-	scale?.yScale ? Plot.mapY((D) => D.map(scale?.yScale), options) : options;
+	Plot.mapY((D) => D.map(scale?.yScale), options);
 
 const to_title = (prefix, result, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
@@ -1101,28 +1104,30 @@ const to_title = (prefix, result, datum, suffix) =>
 	}\nMeasure: ${result.measure?.name}${suffix}`;
 
 const value_end_line = (
+	scale,
 	x_axis: string,
 	limit: BoundaryLimit,
 	color: string,
 ) => {
-	return {
+	return map_options(scale, {
 		x: x_axis,
 		y: value_end_position_key(limit),
 		stroke: color,
 		strokeWidth: 2,
 		strokeOpacity: 0.9,
 		strokeDasharray: [3],
-	};
+	});
 };
 
 const value_end_dot = (
+	scale,
 	x_axis: string,
 	limit: BoundaryLimit,
 	color: string,
 	result: object,
 	units: string,
 ) => {
-	return {
+	return map_options(scale, {
 		x: x_axis,
 		y: value_end_position_key(limit),
 		symbol: "diamond",
@@ -1132,7 +1137,7 @@ const value_end_dot = (
 		fill: color,
 		fillOpacity: 0.9,
 		title: (datum) => value_end_title(limit, result, datum, units),
-	};
+	});
 };
 
 const boundary_line = (x_axis: string, limit: BoundaryLimit, color) => {
