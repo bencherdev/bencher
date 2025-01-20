@@ -480,23 +480,8 @@ const scale_data = (
 		upper_boundary: Accessor<boolean>;
 	},
 ): [object[], Scales?] => {
-	const raw_left_units = left_measure?.units ?? DEFAULT_UNITS;
-
-	const left_min = data_min(data, left_measure, props);
-	const left_max = data_max(data, left_measure, props);
-	const left_factor = scale_factor(left_min, raw_left_units);
-	const left_scaled_units = scale_units(left_min, raw_left_units);
-
-	const left_domain = [left_min / left_factor, left_max / left_factor];
-	const leftScale = d3.scaleLinear().domain(left_domain).nice();
-
-	const left_scale = {
-		measure: left_measure,
-		factor: left_factor,
-		units: left_scaled_units,
-		yScale: leftScale,
-	};
-	if (!right_measure) {
+	const left_scale = get_scale(data, left_measure, props);
+	if (!right_measure || !right_has_data) {
 		if (left_has_data) {
 			const scaled_data = scale_data_by_factor(data, left_scale);
 			return [
@@ -509,22 +494,7 @@ const scale_data = (
 		return [data];
 	}
 
-	const raw_right_units = right_measure?.units ?? DEFAULT_UNITS;
-
-	const right_min = data_min(data, right_measure, props);
-	const right_max = data_max(data, right_measure, props);
-	const right_factor = scale_factor(right_min, raw_right_units);
-	const right_scaled_units = scale_units(right_min, raw_right_units);
-
-	const right_domain = [right_min / right_factor, right_max / right_factor];
-	const rightScale = d3.scaleLinear().domain(right_domain).nice();
-
-	const right_scale = {
-		measure: right_measure,
-		factor: right_factor,
-		units: right_scaled_units,
-		yScale: rightScale,
-	};
+	const right_scale = get_scale(data, right_measure, props);
 	const scaled_data = scale_data_by_factor(data, left_scale, right_scale);
 	return [
 		scaled_data,
@@ -533,6 +503,34 @@ const scale_data = (
 			[right_measure?.uuid]: right_scale,
 		},
 	];
+};
+
+const get_scale = (
+	data: object[],
+	measure: JsonMeasure,
+	props: {
+		lower_value: Accessor<boolean>;
+		upper_value: Accessor<boolean>;
+		lower_boundary: Accessor<boolean>;
+		upper_boundary: Accessor<boolean>;
+	},
+): Scale => {
+	const min = data_min(data, measure, props);
+	const max = data_max(data, measure, props);
+
+	const raw_units = measure?.units ?? DEFAULT_UNITS;
+	const factor = scale_factor(min, raw_units);
+	const units = scale_units(min, raw_units);
+
+	const domain = [min / factor, max / factor];
+	const yScale = d3.scaleLinear().domain(domain).nice();
+
+	return {
+		measure,
+		factor,
+		units,
+		yScale,
+	};
 };
 
 const right_y_axis_ticks = (
@@ -771,6 +769,7 @@ const scale_data_by_factor = (
 	left: AxisScale,
 	right?: AxisScale,
 ) => {
+	// We need to get the scale factor for each datum individually since data from both measures is intermixed.
 	const scale_factor = (data) => {
 		if (data?.result?.measure?.uuid === left?.measure?.uuid) {
 			return left?.factor;
