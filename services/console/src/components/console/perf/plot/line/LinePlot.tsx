@@ -480,7 +480,7 @@ const scale_data = (
 		upper_boundary: Accessor<boolean>;
 	},
 ): [object[], Scales?] => {
-	const left_scale = get_scale(data, left_measure, props);
+	const left_scale = get_scale(data, left_measure, left_has_data, props);
 	if (!right_measure || !right_has_data) {
 		if (left_has_data) {
 			const scaled_data = scale_data_by_factor(data, left_scale);
@@ -494,7 +494,7 @@ const scale_data = (
 		return [data];
 	}
 
-	const right_scale = get_scale(data, right_measure, props);
+	const right_scale = get_scale(data, right_measure, right_has_data, props);
 	const scaled_data = scale_data_by_factor(data, left_scale, right_scale);
 	return [
 		scaled_data,
@@ -507,14 +507,19 @@ const scale_data = (
 
 const get_scale = (
 	data: object[],
-	measure: JsonMeasure,
+	measure: undefined | JsonMeasure,
+	has_data: boolean,
 	props: {
 		lower_value: Accessor<boolean>;
 		upper_value: Accessor<boolean>;
 		lower_boundary: Accessor<boolean>;
 		upper_boundary: Accessor<boolean>;
 	},
-): Scale => {
+): undefined | Scale => {
+	if (!measure || !has_data) {
+		return;
+	}
+
 	const min = data_min(data, measure, props);
 	const max = data_max(data, measure, props);
 
@@ -766,8 +771,8 @@ type AxisScale = {
 
 const scale_data_by_factor = (
 	input_data: object[],
-	left: AxisScale,
-	right?: AxisScale,
+	left: undefined | AxisScale,
+	right?: undefined | AxisScale,
 ) => {
 	// We need to get the scale factor for each datum individually since data from both measures is intermixed.
 	const scale_factor = (data) => {
@@ -875,10 +880,7 @@ const plot_marks = (
 		// Line
 		const line_options = {
 			x: props.x_axis_kind,
-			y: (d) => {
-				console.log("Y", d.value);
-				return d.value;
-			},
+			y: "value",
 			stroke: color,
 		};
 		plot_arrays.push(Plot.lineY(line_data, map_options(scale, line_options)));
