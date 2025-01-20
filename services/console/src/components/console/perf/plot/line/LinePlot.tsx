@@ -167,7 +167,7 @@ const LinePlot = (props: Props) => {
 	);
 };
 
-const arraysEqual = (a: any[], b: any[]): boolean => {
+const arraysEqual = (a: boolean[], b: boolean[]): boolean => {
 	if (a.length !== b.length) return false;
 	for (let i = 0; i < a.length; i++) {
 		if (a[i] !== b[i]) return false;
@@ -192,7 +192,7 @@ const line_plot = (props: Props) => {
 	}
 
 	const [left_measure, right_measure] = get_measures(json_perf, props.measures);
-	if (!left_measure) {
+	if (!left_measure && !right_measure) {
 		return NOT_FOUND;
 	}
 
@@ -237,7 +237,6 @@ const line_plot = (props: Props) => {
 		isConsole: props.isConsole,
 		plotId: props.plotId,
 		x_axis_kind: x_axis.kind,
-		perfActive: props.perfActive,
 		...scale_props,
 	});
 
@@ -257,7 +256,6 @@ const line_plot = (props: Props) => {
 	return {
 		metrics_found,
 		x_axis,
-		y_axis: scales?.[left_measure?.uuid],
 		marks,
 		hoverStyles: hover_styles(props.theme()),
 	};
@@ -280,24 +278,12 @@ const get_x_axis = (x_axis: XAxis) => {
 	}
 };
 
-// const active_data = (plot_data, perfActive) =>
-// 	plot_data.filter((datum) => perfActive[datum.index]);
-
 const get_measures = (json_perf: JsonPerf, measures: Accessor<string[]>) => {
 	const findMeasure = (uuid: undefined | string) =>
 		json_perf?.results?.find((result) => result?.measure?.uuid === uuid)
 			?.measure;
 	const [first_measure_uuid, second_measure_uuid] = measures();
 	return [findMeasure(first_measure_uuid), findMeasure(second_measure_uuid)];
-};
-
-const tickFormat = prettyPrintFloat;
-
-const clone_raw_data = (raw_data, second_measure) => {
-	if (second_measure) {
-		return JSON.parse(JSON.stringify(raw_data));
-	}
-	return;
 };
 
 enum Anchor {
@@ -469,7 +455,7 @@ type Scale = {
 
 const scale_data = (
 	data: object[],
-	left_measure: JsonMeasure,
+	left_measure: undefined | JsonMeasure,
 	left_has_data: boolean,
 	right_measure: undefined | JsonMeasure,
 	right_has_data: boolean,
@@ -481,26 +467,14 @@ const scale_data = (
 	},
 ): [object[], Scales?] => {
 	const left_scale = get_scale(data, left_measure, left_has_data, props);
-	if (!right_measure || !right_has_data) {
-		if (left_has_data) {
-			const scaled_data = scale_data_by_factor(data, left_scale);
-			return [
-				scaled_data,
-				{
-					[left_measure?.uuid]: left_scale,
-				},
-			];
-		}
-		return [data];
-	}
-
 	const right_scale = get_scale(data, right_measure, right_has_data, props);
 	const scaled_data = scale_data_by_factor(data, left_scale, right_scale);
 	return [
 		scaled_data,
 		{
-			[left_measure?.uuid]: left_scale,
-			[right_measure?.uuid]: right_scale,
+			...(left_measure && left_scale && { [left_measure?.uuid]: left_scale }),
+			...(right_measure &&
+				right_scale && { [right_measure?.uuid]: right_scale }),
 		},
 	];
 };
@@ -682,7 +656,7 @@ type AxisScale = {
 const scale_data_by_factor = (
 	input_data: object[],
 	left: undefined | AxisScale,
-	right?: undefined | AxisScale,
+	right: undefined | AxisScale,
 ) => {
 	// We need to get the scale factor for each datum individually since data from both measures is intermixed.
 	const scale_factor = (data) => {
@@ -750,7 +724,7 @@ const scale_data_by_factor = (
 
 const plot_marks = (
 	plot_data,
-	plot_scales: Scales,
+	plot_scales: undefined | Scales,
 	props: {
 		project_slug: string;
 		isConsole: boolean;
@@ -761,7 +735,7 @@ const plot_marks = (
 		upper_boundary: Accessor<boolean>;
 		x_axis_kind: string;
 	},
-) => {
+): (Plot.Line | Plot.Dot | Plot.Image | Plot.CompoundMark)[] => {
 	const plot_arrays = [];
 	const warn_arrays = [];
 	const alert_arrays = [];
