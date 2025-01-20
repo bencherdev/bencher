@@ -247,6 +247,7 @@ const line_plot = (props: Props) => {
 				Plot.axisY(yScale?.ticks(), {
 					anchor: "left",
 					label: `↑ ${left_scale?.units}`,
+					y: yScale,
 					tickFormat: yScale?.tickFormat(),
 				}),
 			);
@@ -263,7 +264,7 @@ const line_plot = (props: Props) => {
 				Plot.axisY(yScale?.ticks(), {
 					anchor: "right",
 					label: `↑ ${right_scale?.units}`,
-					// y: yScale,
+					y: yScale,
 					tickFormat: yScale?.tickFormat(),
 				}),
 			);
@@ -506,13 +507,13 @@ const scale_data = (
 	const right_factor = scale_factor(right_min, raw_right_units);
 	const right_scaled_units = scale_units(right_min, raw_right_units);
 
-	const min_ratio = left_min / right_min;
-	console.log("MIN RATIO", min_ratio);
-	const max_ratio = left_max / right_max;
-	console.log("MAX RATIO", max_ratio);
-	const ratio = 1 / Math.max(min_ratio, max_ratio);
-	console.log("RATIO", ratio);
-	// const ratio = 1;
+	// const min_ratio = left_min / right_min;
+	// console.log("MIN RATIO", min_ratio);
+	// const max_ratio = left_max / right_max;
+	// console.log("MAX RATIO", max_ratio);
+	// const ratio = 1 / Math.max(min_ratio, max_ratio);
+	// console.log("RATIO", ratio);
+	const ratio = 1;
 
 	const right_domain = [right_min / right_factor, right_max / right_factor];
 	console.log("RIGHT DOMAIN", right_domain);
@@ -902,8 +903,8 @@ const plot_marks = (
 			},
 			stroke: color,
 		};
-		plot_arrays.push(Plot.line(line_data, line_options));
-		// plot_arrays.push(Plot.lineY(line_data, map_options(scale, line_options)));
+		// plot_arrays.push(Plot.line(line_data, line_options));
+		plot_arrays.push(Plot.lineY(line_data, map_options(scale, line_options)));
 		// Dots
 		const dot_options = {
 			x: props.x_axis_kind,
@@ -922,8 +923,8 @@ const plot_marks = (
 				dotUrl(props.project_slug, props.isConsole, props.plotId, datum),
 			target: "_top",
 		};
-		plot_arrays.push(Plot.dot(line_data, dot_options));
-		// plot_arrays.push(Plot.dotY(line_data, map_options(scale, dot_options)));
+		// plot_arrays.push(Plot.dot(line_data, dot_options));
+		plot_arrays.push(Plot.dotY(line_data, map_options(scale, dot_options)));
 
 		// Lower Value
 		if (props.lower_value()) {
