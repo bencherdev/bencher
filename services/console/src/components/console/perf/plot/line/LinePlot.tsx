@@ -209,7 +209,8 @@ const line_plot = (props: Props) => {
 		);
 	const left_has_data = hasData(left_measure);
 	const right_has_data = hasData(right_measure);
-	if (!left_has_data && !right_has_data) {
+	const metrics_found = left_has_data || right_has_data;
+	if (!metrics_found) {
 		return NOT_FOUND;
 	}
 
@@ -239,40 +240,20 @@ const line_plot = (props: Props) => {
 	});
 
 	if (left_has_data) {
-		const left_scale = scales?.[left_measure?.uuid];
-		const yScale = left_scale?.yScale;
-		if (yScale) {
-			console.log("LEFT TICKS", yScale?.ticks());
-			marks.push(
-				Plot.axisY(yScale?.ticks(), {
-					anchor: "left",
-					label: `↑ ${left_scale?.units}`,
-					y: yScale,
-					tickFormat: yScale?.tickFormat(),
-				}),
-			);
+		const y_axis = get_y_axis(scales, left_measure, Anchor.Left);
+		if (y_axis) {
+			marks.push(y_axis);
 		}
 	}
-
-	// The `raw_data_clone` is only created if there is a second measure
 	if (right_has_data) {
-		const right_scale = scales?.[right_measure?.uuid];
-		const yScale = right_scale?.yScale;
-		if (yScale) {
-			console.log("RIGHT TICKS", yScale?.ticks());
-			marks.push(
-				Plot.axisY(yScale?.ticks(), {
-					anchor: "right",
-					label: `↑ ${right_scale?.units}`,
-					y: yScale,
-					tickFormat: yScale?.tickFormat(),
-				}),
-			);
+		const y_axis = get_y_axis(scales, right_measure, Anchor.Right);
+		if (y_axis) {
+			marks.push(y_axis);
 		}
 	}
 
 	return {
-		metrics_found: left_has_data || right_has_data,
+		metrics_found,
 		x_axis,
 		y_axis: scales?.[left_measure?.uuid],
 		marks,
@@ -313,6 +294,31 @@ const tickFormat = prettyPrintFloat;
 const clone_raw_data = (raw_data, second_measure) => {
 	if (second_measure) {
 		return JSON.parse(JSON.stringify(raw_data));
+	}
+	return;
+};
+
+enum Anchor {
+	Left = "left",
+	Right = "right",
+}
+const get_y_axis = (
+	scales: undefined | Scales,
+	measure: undefined | JsonMeasure,
+	anchor: Anchor,
+) => {
+	if (!measure?.uuid) {
+		return;
+	}
+	const scale = scales?.[measure?.uuid];
+	const yScale = scale?.yScale;
+	if (yScale) {
+		return Plot.axisY(yScale?.ticks(), {
+			anchor,
+			label: `↑ ${scale?.units}`,
+			y: yScale,
+			tickFormat: yScale?.tickFormat(),
+		});
 	}
 	return;
 };
@@ -1001,6 +1007,7 @@ const plot_marks = (
 				Plot.image(
 					skipped_lower_data,
 					warning_image(
+						scale,
 						props.x_axis_kind,
 						BoundaryLimit.Lower,
 						props.project_slug,
@@ -1039,6 +1046,7 @@ const plot_marks = (
 				Plot.image(
 					skipped_upper_data,
 					warning_image(
+						scale,
 						props.x_axis_kind,
 						BoundaryLimit.Upper,
 						props.project_slug,
@@ -1053,6 +1061,7 @@ const plot_marks = (
 			Plot.image(
 				lower_alert_data,
 				alert_image(
+					scale,
 					props.x_axis_kind,
 					BoundaryLimit.Lower,
 					props.project_slug,
@@ -1067,6 +1076,7 @@ const plot_marks = (
 			Plot.image(
 				upper_alert_data,
 				alert_image(
+					scale,
 					props.x_axis_kind,
 					BoundaryLimit.Upper,
 					props.project_slug,
@@ -1085,6 +1095,7 @@ const plot_marks = (
 	return plot_arrays;
 };
 
+// https://observablehq.com/@observablehq/plot-dual-axis
 const map_options = (scale: Scale, options: object) =>
 	Plot.mapY((D) => D.map(scale?.yScale), options);
 
@@ -1187,6 +1198,7 @@ const boundary_dot = (
 };
 
 const warning_image = (
+	scale: Scale,
 	x_axis: string,
 	limit: BoundaryLimit,
 	project_slug: string,
@@ -1194,7 +1206,7 @@ const warning_image = (
 	isConsole: boolean,
 	plotId: string | undefined,
 ) => {
-	return {
+	return map_options(scale, {
 		x: x_axis,
 		y: "y",
 		src: WARNING_URL,
@@ -1208,7 +1220,7 @@ const warning_image = (
 			),
 		href: (datum) => thresholdUrl(project_slug, isConsole, plotId, datum),
 		target: "_top",
-	};
+	});
 };
 
 const dotUrl = (
@@ -1232,6 +1244,7 @@ const thresholdUrl = (
 	}?model=${datum.threshold?.model?.uuid}&${BACK_PARAM}=${encodePath(plotId)}`;
 
 const alert_image = (
+	scale: Scale,
 	x_axis: string,
 	limit: BoundaryLimit,
 	project_slug: string,
@@ -1240,7 +1253,7 @@ const alert_image = (
 	isConsole: boolean,
 	plotId: string | undefined,
 ) => {
-	return {
+	return map_options(scale, {
 		x: x_axis,
 		y: boundary_position_key(limit),
 		src: SIREN_URL,
@@ -1252,7 +1265,7 @@ const alert_image = (
 				datum.alert?.uuid
 			}?${BACK_PARAM}=${encodePath(plotId)}`,
 		target: "_top",
-	};
+	});
 };
 
 const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
