@@ -450,12 +450,13 @@ const boundary_skipped = (
 ) => boundary && !limit;
 
 type Scales = {
-	[uuid: string]: {
-		measure: JsonMeasure;
-		factor: number;
-		units: string;
-		yScale?: d3.ScaleLinear<number, number, never>;
-	};
+	[uuid: string]: Scale;
+};
+type Scale = {
+	measure: JsonMeasure;
+	factor: number;
+	units: string;
+	yScale: d3.ScaleLinear<number, number, never>;
 };
 
 const scale_data = (
@@ -978,13 +979,14 @@ const plot_marks = (
 			plot_arrays.push(
 				Plot.line(
 					line_data,
-					boundary_line(props.x_axis_kind, BoundaryLimit.Lower, color),
+					boundary_line(scale, props.x_axis_kind, BoundaryLimit.Lower, color),
 				),
 			);
 			plot_arrays.push(
 				Plot.dot(
 					boundary_data,
 					boundary_dot(
+						scale,
 						props.x_axis_kind,
 						BoundaryLimit.Lower,
 						color,
@@ -1015,13 +1017,14 @@ const plot_marks = (
 			plot_arrays.push(
 				Plot.line(
 					line_data,
-					boundary_line(props.x_axis_kind, BoundaryLimit.Upper, color),
+					boundary_line(scale, props.x_axis_kind, BoundaryLimit.Upper, color),
 				),
 			);
 			plot_arrays.push(
 				Plot.dot(
 					boundary_data,
 					boundary_dot(
+						scale,
 						props.x_axis_kind,
 						BoundaryLimit.Upper,
 						color,
@@ -1082,7 +1085,7 @@ const plot_marks = (
 	return plot_arrays;
 };
 
-const map_options = (scale, options: object) =>
+const map_options = (scale: Scale, options: object) =>
 	Plot.mapY((D) => D.map(scale?.yScale), options);
 
 const to_title = (prefix, result, datum, suffix) =>
@@ -1104,7 +1107,7 @@ const to_title = (prefix, result, datum, suffix) =>
 	}\nMeasure: ${result.measure?.name}${suffix}`;
 
 const value_end_line = (
-	scale,
+	scale: Scale,
 	x_axis: string,
 	limit: BoundaryLimit,
 	color: string,
@@ -1120,7 +1123,7 @@ const value_end_line = (
 };
 
 const value_end_dot = (
-	scale,
+	scale: Scale,
 	x_axis: string,
 	limit: BoundaryLimit,
 	color: string,
@@ -1140,18 +1143,24 @@ const value_end_dot = (
 	});
 };
 
-const boundary_line = (x_axis: string, limit: BoundaryLimit, color) => {
-	return {
+const boundary_line = (
+	scale: Scale,
+	x_axis: string,
+	limit: BoundaryLimit,
+	color,
+) => {
+	return map_options(scale, {
 		x: x_axis,
 		y: boundary_position_key(limit),
 		stroke: color,
 		strokeWidth: 4,
 		strokeOpacity: 0.666,
 		strokeDasharray: [8],
-	};
+	});
 };
 
 const boundary_dot = (
+	scale: Scale,
 	x_axis: string,
 	limit: BoundaryLimit,
 	color: string,
@@ -1161,7 +1170,7 @@ const boundary_dot = (
 	isConsole: boolean,
 	plotId: string | undefined,
 ) => {
-	return {
+	return map_options(scale, {
 		x: x_axis,
 		y: boundary_position_key(limit),
 		symbol: "square",
@@ -1174,7 +1183,7 @@ const boundary_dot = (
 			limit_title(limit, result, datum, units, "\nClick to view Threshold"),
 		href: (datum) => thresholdUrl(project_slug, isConsole, plotId, datum),
 		target: "_top",
-	};
+	});
 };
 
 const warning_image = (
