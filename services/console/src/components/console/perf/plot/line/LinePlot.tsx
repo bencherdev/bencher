@@ -224,7 +224,9 @@ const line_plot = (props: Props) => {
 	const [scaled_data, scales] = scale_data(
 		active_data,
 		left_measure,
+		left_has_data,
 		right_measure,
+		right_has_data,
 		scale_props,
 	);
 
@@ -466,9 +468,11 @@ type Scale = {
 };
 
 const scale_data = (
-	raw_data: object[],
+	data: object[],
 	left_measure: JsonMeasure,
+	left_has_data: boolean,
 	right_measure: undefined | JsonMeasure,
+	right_has_data: boolean,
 	props: {
 		lower_value: Accessor<boolean>;
 		upper_value: Accessor<boolean>;
@@ -478,14 +482,12 @@ const scale_data = (
 ): [object[], Scales?] => {
 	const raw_left_units = left_measure?.units ?? DEFAULT_UNITS;
 
-	const left_min = data_min(raw_data, left_measure, props);
-	const left_max = data_max(raw_data, left_measure, props);
+	const left_min = data_min(data, left_measure, props);
+	const left_max = data_max(data, left_measure, props);
 	const left_factor = scale_factor(left_min, raw_left_units);
 	const left_scaled_units = scale_units(left_min, raw_left_units);
-	const left_has_data = left_min < MAX;
 
 	const left_domain = [left_min / left_factor, left_max / left_factor];
-	console.log("LEFT DOMAIN", left_domain);
 	const leftScale = d3.scaleLinear().domain(left_domain).nice();
 
 	const left_scale = {
@@ -496,7 +498,7 @@ const scale_data = (
 	};
 	if (!right_measure) {
 		if (left_has_data) {
-			const scaled_data = scale_data_by_factor(raw_data, left_scale);
+			const scaled_data = scale_data_by_factor(data, left_scale);
 			return [
 				scaled_data,
 				{
@@ -504,36 +506,26 @@ const scale_data = (
 				},
 			];
 		}
-		return [raw_data];
+		return [data];
 	}
 
 	const raw_right_units = right_measure?.units ?? DEFAULT_UNITS;
 
-	const right_min = data_min(raw_data, right_measure, props);
-	const right_max = data_max(raw_data, right_measure, props);
+	const right_min = data_min(data, right_measure, props);
+	const right_max = data_max(data, right_measure, props);
 	const right_factor = scale_factor(right_min, raw_right_units);
 	const right_scaled_units = scale_units(right_min, raw_right_units);
 
-	// const min_ratio = left_min / right_min;
-	// console.log("MIN RATIO", min_ratio);
-	// const max_ratio = left_max / right_max;
-	// console.log("MAX RATIO", max_ratio);
-	// const ratio = 1 / Math.max(min_ratio, max_ratio);
-	// console.log("RATIO", ratio);
-	const ratio = 1;
-
 	const right_domain = [right_min / right_factor, right_max / right_factor];
-	console.log("RIGHT DOMAIN", right_domain);
 	const rightScale = d3.scaleLinear().domain(right_domain).nice();
 
 	const right_scale = {
 		measure: right_measure,
 		factor: right_factor,
 		units: right_scaled_units,
-		ratio,
 		yScale: rightScale,
 	};
-	const scaled_data = scale_data_by_factor(raw_data, left_scale, right_scale);
+	const scaled_data = scale_data_by_factor(data, left_scale, right_scale);
 	return [
 		scaled_data,
 		{
@@ -769,48 +761,40 @@ const data_max = (
 			),
 	);
 
+type AxisScale = {
+	measure: JsonMeasure;
+	factor: number;
+};
+
 const scale_data_by_factor = (
-	raw_data: object[],
-	first: {
-		measure: JsonMeasure;
-		factor: number;
-	},
-	second?: {
-		measure: JsonMeasure;
-		factor: number;
-		ratio: number;
-	},
+	input_data: object[],
+	left: AxisScale,
+	right?: AxisScale,
 ) => {
-	const scales = (data) => {
-		if (data?.result?.measure?.uuid === first?.measure?.uuid) {
-			return [first?.factor];
+	const scale_factor = (data) => {
+		if (data?.result?.measure?.uuid === left?.measure?.uuid) {
+			return left?.factor;
 		}
-		if (data?.result?.measure?.uuid === second?.measure?.uuid) {
-			return [second?.factor, second?.ratio];
+		if (data?.result?.measure?.uuid === right?.measure?.uuid) {
+			return right?.factor;
 		}
-		return [];
+		return;
 	};
 
-	const map_limits = (datum, factor: number, ratio: number) => {
+	const map_limits = (datum, factor: number) => {
 		if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
 			datum.lower_limit = datum.lower_limit / factor;
 			datum.display.lower_limit = datum.lower_limit;
-			if (ratio) {
-				datum.lower_limit = datum.lower_limit * ratio;
-			}
 		}
 		if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
 			datum.upper_limit = datum.upper_limit / factor;
 			datum.display.upper_limit = datum.upper_limit;
-			if (ratio) {
-				datum.upper_limit = datum.upper_limit * ratio;
-			}
 		}
 		return datum;
 	};
 
-	return raw_data.map((data) => {
-		const [factor, ratio] = scales(data);
+	return input_data.map((data) => {
+		const factor = scale_factor(data);
 		if (!factor) {
 			return data;
 		}
@@ -818,46 +802,31 @@ const scale_data_by_factor = (
 		data.line_data = data.line_data?.map((datum) => {
 			datum.value = datum.value / factor;
 			datum.display.value = datum.value;
-			if (ratio) {
-				datum.value = datum.value * ratio;
-			}
 			if (datum.lower_value !== undefined && datum.lower_value !== null) {
 				datum.lower_value = datum.lower_value / factor;
 				datum.display.lower_value = datum.lower_value;
-				if (ratio) {
-					datum.lower_value = datum.lower_value * ratio;
-				}
 			}
 			if (datum.upper_value !== undefined && datum.upper_value !== null) {
 				datum.upper_value = datum.upper_value / factor;
 				datum.display.upper_value = datum.upper_value;
-				if (ratio) {
-					datum.upper_value = datum.upper_value * ratio;
-				}
 			}
-			return map_limits(datum, factor, ratio);
+			return map_limits(datum, factor);
 		});
 		data.lower_alert_data = data.lower_alert_data?.map((datum) =>
-			map_limits(datum, factor, ratio),
+			map_limits(datum, factor),
 		);
 		data.upper_alert_data = data.upper_alert_data?.map((datum) =>
-			map_limits(datum, factor, ratio),
+			map_limits(datum, factor),
 		);
 		data.boundary_data = data.boundary_data?.map((datum) =>
-			map_limits(datum, factor, ratio),
+			map_limits(datum, factor),
 		);
 		data.skipped_lower_data = data.skipped_lower_data?.map((datum) => {
 			datum.y = datum.y / factor;
-			if (ratio) {
-				datum.y = datum.y * ratio;
-			}
 			return datum;
 		});
 		data.skipped_upper_data = data.skipped_upper_data?.map((datum) => {
 			datum.y = datum.y / factor;
-			if (ratio) {
-				datum.y = datum.y * ratio;
-			}
 			return datum;
 		});
 
