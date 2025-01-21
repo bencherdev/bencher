@@ -1,4 +1,4 @@
-use bencher_json::{BranchName, GitHash, NameId, ResourceId, Slug};
+use bencher_json::{BranchName, GitHash, HeadUuid, NameId, ResourceId, Slug};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -106,6 +106,10 @@ pub struct CliBranchView {
 
     /// Branch slug or UUID
     pub branch: ResourceId,
+
+    /// Branch Head UUID
+    #[clap(long)]
+    pub head: Option<HeadUuid>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{HeadUuid, ResourceId};
 
 use crate::{
     bencher::{backend::PubBackend, sub::SubCmd},
@@ -10,6 +10,7 @@ use crate::{
 pub struct View {
     pub project: ResourceId,
     pub branch: ResourceId,
+    pub head: Option<HeadUuid>,
     pub backend: PubBackend,
 }
 
@@ -20,11 +21,13 @@ impl TryFrom<CliBranchView> for View {
         let CliBranchView {
             project,
             branch,
+            head,
             backend,
         } = view;
         Ok(Self {
             project,
             branch,
+            head,
             backend: backend.try_into()?,
         })
     }
@@ -35,12 +38,16 @@ impl SubCmd for View {
         let _json = self
             .backend
             .send(|client| async move {
-                client
+                let mut client = client
                     .proj_branch_get()
                     .project(self.project.clone())
-                    .branch(self.branch.clone())
-                    .send()
-                    .await
+                    .branch(self.branch.clone());
+
+                if let Some(head) = self.head {
+                    client = client.head(head);
+                }
+
+                client.send().await
             })
             .await?;
         Ok(())

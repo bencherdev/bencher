@@ -52,6 +52,7 @@ from_client!(
     ReportUuid,
     PlotUuid,
     BranchUuid,
+    HeadUuid,
     TestbedUuid,
     BenchmarkUuid,
     MeasureUuid,
