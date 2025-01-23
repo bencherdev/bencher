@@ -1,18 +1,16 @@
 use std::sync::LazyLock;
 use std::{io::Cursor, ops::Range};
 
-use bencher_json::Units;
 use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
+use bencher_json::{JsonMeasure, Units};
 use chrono::{DateTime, Duration, Utc};
 use image::{GenericImageView, ImageBuffer};
 use ordered_float::OrderedFloat;
-use plotters::coord::Shift;
-use plotters::prelude::DrawingArea;
 use plotters::{
-    coord::types::RangedCoordf64,
+    coord::{types::RangedCoordf64, Shift},
     prelude::{
-        BitMapBackend, BitMapElement, ChartBuilder, IntoDrawingArea, MultiLineText, Ranged,
-        Rectangle,
+        BitMapBackend, BitMapElement, ChartBuilder, DrawingArea, IntoDrawingArea, MultiLineText,
+        Ranged, Rectangle,
     },
     series::LineSeries,
     style::{Color, FontFamily, RGBColor, ShapeStyle, WHITE},
@@ -80,6 +78,7 @@ impl LinePlot {
         Ok(image_cursor.into_inner())
     }
 
+    #[allow(clippy::too_many_lines)]
     fn draw_inner(
         &self,
         title: Option<&str>,
@@ -99,40 +98,112 @@ impl LinePlot {
 
         let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
 
-        let mut chart_context = ChartBuilder::on(&plot_area)
+        let chart_context = ChartBuilder::on(&plot_area)
             .x_label_area_size(40)
-            .y_label_area_size(perf_data.y_label_area_size()?)
+            .y_label_area_size(perf_data.left_y_label_area_size()?)
+            .right_y_label_area_size(perf_data.right_y_label_area_size().unwrap_or(Ok(0))?)
             .margin_left(8)
             .margin_right(32)
             .margin_bottom(8)
-            .build_cartesian_2d(perf_data.x_range(), perf_data.y_range())?;
+            .build_cartesian_2d(perf_data.x_range(), perf_data.left_y_range())?;
 
-        chart_context
-            .configure_mesh()
-            .axis_desc_style((FontFamily::Monospace, 20))
-            .x_desc("Benchmark Date and Time")
-            .x_labels(usize::try_from(X_LABELS)?)
-            .x_label_style((FontFamily::Monospace, 16))
-            .x_label_formatter(&|x| perf_data.x_label_fmt(x))
-            .y_desc(&perf_data.y_desc)
-            .y_labels(Y_LABELS)
-            .y_label_style((FontFamily::Monospace, 12))
-            .y_label_formatter(&|&y| Units::format_number(y, perf_data.trim_key_point_decimal()))
-            .max_light_lines(4)
-            .draw()?;
+        let mut chart_context = if let Some(right_y_range) = perf_data.right_y_range() {
+            Chart::Dual(chart_context.set_secondary_coord(perf_data.x_range(), right_y_range))
+        } else {
+            Chart::Single(chart_context)
+        };
+
+        match &mut chart_context {
+            Chart::Single(chart_context) => {
+                chart_context
+                    .configure_mesh()
+                    .axis_desc_style((FontFamily::Monospace, 20))
+                    .x_desc("Benchmark Date and Time")
+                    .x_labels(usize::try_from(X_LABELS)?)
+                    .x_label_style((FontFamily::Monospace, 16))
+                    .x_label_formatter(&|x| perf_data.x_label_fmt(x))
+                    .y_desc(&perf_data.left_y_desc)
+                    .y_labels(Y_LABELS)
+                    .y_label_style((FontFamily::Monospace, 12))
+                    .y_label_formatter(&|&y| {
+                        Units::format_number(y, perf_data.trim_left_key_point_decimal())
+                    })
+                    .max_light_lines(4)
+                    .draw()?;
+            },
+            Chart::Dual(chart_context) => {
+                chart_context
+                    .configure_mesh()
+                    .axis_desc_style((FontFamily::Monospace, 20))
+                    .x_desc("Benchmark Date and Time")
+                    .x_labels(usize::try_from(X_LABELS)?)
+                    .x_label_style((FontFamily::Monospace, 16))
+                    .x_label_formatter(&|x| perf_data.x_label_fmt(x))
+                    .y_desc(&perf_data.left_y_desc)
+                    .y_labels(Y_LABELS)
+                    .y_label_style((FontFamily::Monospace, 12))
+                    .y_label_formatter(&|&y| {
+                        Units::format_number(y, perf_data.trim_left_key_point_decimal())
+                    })
+                    .max_light_lines(4)
+                    .draw()?;
+
+                if let (Some(y_desc), Some(trim_decimal)) = (
+                    &perf_data.right_y_desc,
+                    perf_data.trim_right_key_point_decimal(),
+                ) {
+                    chart_context
+                        .configure_secondary_axes()
+                        .axis_desc_style((FontFamily::Monospace, 20))
+                        .y_desc(y_desc)
+                        .y_labels(Y_LABELS)
+                        .label_style((FontFamily::Monospace, 12))
+                        .y_label_formatter(&|&y| Units::format_number(y, trim_decimal))
+                        .draw()?;
+                }
+            },
+        }
 
         let plot_box = perf_data.plot_box()?;
         let mut box_x_left = plot_box.x_left;
         for LineData {
             data,
+            anchor,
             color,
             dimensions,
         } in perf_data.lines
         {
-            let _series = chart_context.draw_series(
-                LineSeries::new(data.into_iter().map(|(x, y)| (x, y.into())), color.filled())
-                    .point_size(2),
-            )?;
+            match &mut chart_context {
+                Chart::Single(chart_context) => {
+                    let _series = chart_context.draw_series(
+                        LineSeries::new(
+                            data.into_iter().map(|(x, y)| (x, y.into())),
+                            color.filled(),
+                        )
+                        .point_size(2),
+                    )?;
+                },
+                Chart::Dual(chart_context) => match anchor {
+                    Anchor::Left => {
+                        let _series = chart_context.draw_series(
+                            LineSeries::new(
+                                data.into_iter().map(|(x, y)| (x, y.into())),
+                                color.filled(),
+                            )
+                            .point_size(2),
+                        )?;
+                    },
+                    Anchor::Right => {
+                        let _series = chart_context.draw_secondary_series(
+                            LineSeries::new(
+                                data.into_iter().map(|(x, y)| (x, y.into())),
+                                color.filled(),
+                            )
+                            .point_size(2),
+                        )?;
+                    },
+                },
+            }
 
             let box_x_right = box_x_left + plot_box.width;
 
@@ -204,31 +275,95 @@ impl LinePlot {
     }
 }
 
+enum Chart<'b> {
+    Single(
+        plotters::chart::ChartContext<
+            'b,
+            plotters_bitmap::BitMapBackend<'b>,
+            plotters::prelude::Cartesian2d<
+                plotters::prelude::RangedDateTime<chrono::DateTime<chrono::Utc>>,
+                plotters::coord::types::RangedCoordf64,
+            >,
+        >,
+    ),
+    Dual(
+        plotters::chart::DualCoordChartContext<
+            'b,
+            plotters_bitmap::BitMapBackend<'b>,
+            plotters::prelude::Cartesian2d<
+                plotters::prelude::RangedDateTime<chrono::DateTime<chrono::Utc>>,
+                plotters::coord::types::RangedCoordf64,
+            >,
+            plotters::prelude::Cartesian2d<
+                plotters::prelude::RangedDateTime<chrono::DateTime<chrono::Utc>>,
+                plotters::coord::types::RangedCoordf64,
+            >,
+        >,
+    ),
+}
+
 type Area<'b> = DrawingArea<BitMapBackend<'b>, Shift>;
 
 struct PerfData {
     lines: Vec<LineData>,
     x: (DateTime<Utc>, DateTime<Utc>),
-    y: (OrderedFloat<f64>, OrderedFloat<f64>),
     x_time: bool,
-    y_desc: String,
+    left_y: (OrderedFloat<f64>, OrderedFloat<f64>),
+    left_y_desc: String,
+    right_y: Option<(OrderedFloat<f64>, OrderedFloat<f64>)>,
+    right_y_desc: Option<String>,
 }
 
 struct LineData {
     data: Vec<(DateTime<Utc>, OrderedFloat<f64>)>,
+    anchor: Anchor,
     color: RGBColor,
     dimensions: String,
 }
 
+#[derive(Clone, Copy, Default)]
+enum Anchor {
+    #[default]
+    Left,
+    Right,
+}
+
 impl PerfData {
+    #[allow(clippy::too_many_lines)]
     fn new(json_perf: &JsonPerf) -> Option<PerfData> {
+        let mut json_measures: Vec<&JsonMeasure> = Vec::with_capacity(2);
+        for result in &json_perf.results {
+            if !json_measures
+                .iter()
+                .any(|measure| measure.uuid == result.measure.uuid)
+            {
+                json_measures.push(&result.measure);
+            }
+        }
+        let left_measure = json_measures.first()?;
+        let right_measure = json_measures.get(1);
+
+        let anchor = |measure: &JsonMeasure| -> Option<Anchor> {
+            if measure.uuid == left_measure.uuid {
+                Some(Anchor::Left)
+            } else if let Some(right_measure) = right_measure {
+                (measure.uuid == right_measure.uuid).then_some(Anchor::Right)
+            } else {
+                None
+            }
+        };
+
         // There needs to be at least one measure
-        let json_measure = json_perf.results.first().map(|result| &result.measure)?;
+        // let json_measure = json_perf.results.first().map(|result| &result.measure)?;
 
         let mut min_x = None;
         let mut max_x = None;
-        let mut min_y = None;
-        let mut max_y = None;
+
+        let mut left_min_y = None;
+        let mut left_max_y = None;
+
+        let mut right_min_y = None;
+        let mut right_max_y = None;
 
         let lines = json_perf
             .results
@@ -236,6 +371,7 @@ impl PerfData {
             .take(MAX_LINES)
             .enumerate()
             .map(|(index, result)| {
+                let anchor = anchor(&result.measure).unwrap_or_default();
                 let data = result
                     .metrics
                     .iter()
@@ -248,12 +384,24 @@ impl PerfData {
                             .map(|max| std::cmp::max(max, x_value))
                             .or(Some(x_value));
                         let y_value = metric.metric.value;
-                        min_y = min_y
-                            .map(|min| std::cmp::min(min, y_value))
-                            .or(Some(y_value));
-                        max_y = max_y
-                            .map(|max| std::cmp::max(max, y_value))
-                            .or(Some(y_value));
+                        match anchor {
+                            Anchor::Left => {
+                                left_min_y = left_min_y
+                                    .map(|min| std::cmp::min(min, y_value))
+                                    .or(Some(y_value));
+                                left_max_y = left_max_y
+                                    .map(|max| std::cmp::max(max, y_value))
+                                    .or(Some(y_value));
+                            },
+                            Anchor::Right => {
+                                right_min_y = right_min_y
+                                    .map(|min| std::cmp::min(min, y_value))
+                                    .or(Some(y_value));
+                                right_max_y = right_max_y
+                                    .map(|max| std::cmp::max(max, y_value))
+                                    .or(Some(y_value));
+                            },
+                        }
                         (x_value, y_value)
                     })
                     .collect();
@@ -261,19 +409,45 @@ impl PerfData {
                 let dimensions = LineData::dimensions(result);
                 LineData {
                     data,
+                    anchor,
                     color,
                     dimensions,
                 }
             })
             .collect::<Vec<LineData>>();
 
-        if let (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) = (min_x, max_x, min_y, max_y) {
+        if let (Some(min_x), Some(max_x), Some(left_min_y), Some(left_max_y)) =
+            (min_x, max_x, left_min_y, left_max_y)
+        {
+            let x = (min_x, max_x);
             let x_time = max_x - min_x < Duration::days(X_LABELS);
-            let units = Units::new(*min_y, json_measure.units.clone());
-            let factor = units.scale_factor();
-            let min_y = min_y / factor;
-            let max_y = max_y / factor;
-            let y_desc = format!("{}: {}", json_measure.name, units.scale_units());
+
+            fn measure_units(
+                measure: &JsonMeasure,
+                min_y: OrderedFloat<f64>,
+            ) -> (OrderedFloat<f64>, String) {
+                let units = Units::new(*min_y, measure.units.clone());
+                let factor = units.scale_factor();
+                let y_desc = format!("{}: {}", measure.name, units.scale_units());
+                (factor, y_desc)
+            }
+
+            let (left_factor, left_y_desc) = measure_units(left_measure, left_min_y);
+            let left_min_y = left_min_y / left_factor;
+            let left_max_y = left_max_y / left_factor;
+            let left_y = (left_min_y, left_max_y);
+
+            let (right_factor, right_y_desc, right_y) =
+                if let (Some(right_measure), Some(right_min_y), Some(right_max_y)) =
+                    (right_measure, right_min_y, right_max_y)
+                {
+                    let (right_factor, desc) = measure_units(right_measure, right_min_y);
+                    let right_min_y = right_min_y / right_factor;
+                    let right_max_y = right_max_y / right_factor;
+                    (right_factor, Some(desc), Some((right_min_y, right_max_y)))
+                } else {
+                    (1.0.into(), None, None)
+                };
 
             let lines = lines
                 .into_iter()
@@ -281,7 +455,15 @@ impl PerfData {
                     data: line
                         .data
                         .into_iter()
-                        .map(|(x, y)| (x, y / factor))
+                        .map(|(x, y)| {
+                            (
+                                x,
+                                y / match line.anchor {
+                                    Anchor::Left => left_factor,
+                                    Anchor::Right => right_factor,
+                                },
+                            )
+                        })
                         .collect(),
                     ..line
                 })
@@ -289,10 +471,12 @@ impl PerfData {
 
             Some(PerfData {
                 lines,
-                x: (min_x, max_x),
-                y: (min_y, max_y),
+                x,
                 x_time,
-                y_desc,
+                left_y,
+                left_y_desc,
+                right_y,
+                right_y_desc,
             })
         } else {
             None
@@ -319,10 +503,18 @@ impl PerfData {
         format!("{}", x.format(fmt))
     }
 
-    fn y_range(&self) -> Range<f64> {
-        let diff = self.y.1 - self.y.0;
-        let min = std::cmp::max(self.y.0 - (diff * 0.08), OrderedFloat::from(0.0));
-        let max = self.y.1 + (diff * 0.04);
+    fn left_y_range(&self) -> Range<f64> {
+        Self::y_range_inner(self.left_y)
+    }
+
+    fn right_y_range(&self) -> Option<Range<f64>> {
+        self.right_y.map(Self::y_range_inner)
+    }
+
+    fn y_range_inner(y: (OrderedFloat<f64>, OrderedFloat<f64>)) -> Range<f64> {
+        let diff = y.1 - y.0;
+        let min = std::cmp::max(y.0 - (diff * 0.08), OrderedFloat::from(0.0));
+        let max = y.1 + (diff * 0.04);
         min.into()..max.into()
     }
 
@@ -330,19 +522,44 @@ impl PerfData {
         0.0..0.0
     }
 
-    fn key_points(&self) -> Vec<f64> {
-        RangedCoordf64::from(self.y_range()).key_points(Y_LABELS)
+    fn left_key_points(&self) -> Vec<f64> {
+        RangedCoordf64::from(self.left_y_range()).key_points(Y_LABELS)
+    }
+
+    fn right_key_points(&self) -> Option<Vec<f64>> {
+        self.right_y_range()
+            .map(|range| RangedCoordf64::from(range).key_points(Y_LABELS))
     }
 
     fn trim_key_point_decimal(&self) -> bool {
+        self.trim_left_key_point_decimal() && self.trim_right_key_point_decimal().unwrap_or(true)
+    }
+
+    fn trim_left_key_point_decimal(&self) -> bool {
         !self
-            .key_points()
+            .left_key_points()
             .iter()
             .any(|y| !format!("{y:.2}").ends_with(".00"))
     }
 
-    fn y_label_area_size(&self) -> Result<u32, PlotError> {
-        let y_range = self.key_points();
+    fn trim_right_key_point_decimal(&self) -> Option<bool> {
+        self.right_key_points()
+            .map(|points| !points.iter().any(|y| !format!("{y:.2}").ends_with(".00")))
+    }
+
+    fn left_y_label_area_size(&self) -> Result<u32, PlotError> {
+        let y_range = self.left_key_points();
+        let trim_decimal = self.trim_left_key_point_decimal();
+        Self::y_label_area_size_inner(y_range, trim_decimal)
+    }
+
+    fn right_y_label_area_size(&self) -> Option<Result<u32, PlotError>> {
+        let y_range = self.right_key_points()?;
+        let trim_decimal = self.trim_right_key_point_decimal()?;
+        Some(Self::y_label_area_size_inner(y_range, trim_decimal))
+    }
+
+    fn y_label_area_size_inner(y_range: Vec<f64>, trim_decimal: bool) -> Result<u32, PlotError> {
         let min = y_range.first().copied().unwrap_or_default();
         let max = y_range.last().copied().unwrap_or_default();
         let buffer = if max < 1.0 {
@@ -352,12 +569,9 @@ impl PerfData {
         } else {
             32
         };
-        let y_len = buffer + 6 * std::cmp::max(self.float_len(min), self.float_len(max));
+        let float_len = |y: f64| -> usize { Units::format_number(y, trim_decimal).len() };
+        let y_len = buffer + 6 * std::cmp::max(float_len(min), float_len(max));
         u32::try_from(y_len).map_err(Into::into)
-    }
-
-    fn float_len(&self, y: f64) -> usize {
-        Units::format_number(y, self.trim_key_point_decimal()).len()
     }
 
     fn plot_box(&self) -> Result<PlotBox, PlotError> {
@@ -447,8 +661,8 @@ impl LineData {
 
     fn dimensions(result: &JsonPerfMetrics) -> String {
         format!(
-            "- {}\n- {}\n- {}",
-            result.branch.name, result.testbed.name, result.benchmark.name
+            "- {}\n- {}\n- {}\n- {}",
+            result.branch.name, result.testbed.name, result.benchmark.name, result.measure.name,
         )
     }
 }
