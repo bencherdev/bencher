@@ -347,14 +347,6 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 			iteration: perf_metric.iteration,
 			lower_limit: perf_metric.boundary?.lower_limit,
 			upper_limit: perf_metric.boundary?.upper_limit,
-			// Display values: scaled but not relative when multi-axis
-			display: {
-				value: perf_metric.metric?.value,
-				lower_value: perf_metric.metric?.lower_value,
-				upper_value: perf_metric.metric?.upper_value,
-				lower_limit: perf_metric.boundary?.lower_limit,
-				upper_limit: perf_metric.boundary?.upper_limit,
-			},
 		};
 		line_data.push(datum);
 
@@ -366,11 +358,6 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 			lower_limit: datum.lower_limit,
 			upper_limit: datum.upper_limit,
 			threshold: perf_metric.threshold,
-			// Display values: scaled but not relative when multi-axis
-			display: {
-				lower_limit: datum.lower_limit,
-				upper_limit: datum.upper_limit,
-			},
 		};
 		if (perf_metric.alert && is_active(perf_metric.alert)) {
 			switch (perf_metric.alert?.limit) {
@@ -672,11 +659,9 @@ const scale_data_by_factor = (
 	const map_limits = (datum, factor: number) => {
 		if (datum.lower_limit !== undefined && datum.lower_limit !== null) {
 			datum.lower_limit = datum.lower_limit / factor;
-			datum.display.lower_limit = datum.lower_limit;
 		}
 		if (datum.upper_limit !== undefined && datum.upper_limit !== null) {
 			datum.upper_limit = datum.upper_limit / factor;
-			datum.display.upper_limit = datum.upper_limit;
 		}
 		return datum;
 	};
@@ -689,14 +674,11 @@ const scale_data_by_factor = (
 
 		data.line_data = data.line_data?.map((datum) => {
 			datum.value = datum.value / factor;
-			datum.display.value = datum.value;
 			if (datum.lower_value !== undefined && datum.lower_value !== null) {
 				datum.lower_value = datum.lower_value / factor;
-				datum.display.lower_value = datum.lower_value;
 			}
 			if (datum.upper_value !== undefined && datum.upper_value !== null) {
 				datum.upper_value = datum.upper_value / factor;
-				datum.display.upper_value = datum.upper_value;
 			}
 			return map_limits(datum, factor);
 		});
@@ -777,7 +759,7 @@ const plot_marks = (
 			fill: color,
 			title: (datum) =>
 				to_title(
-					`${prettyPrintFloat(datum?.display?.value)}\n${units}`,
+					`${prettyPrintFloat(datum?.value)}\n${units}`,
 					result,
 					datum,
 					"\nClick to view Metric",
@@ -1124,7 +1106,7 @@ const alert_image = (
 
 const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 	to_title(
-		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.display?.[value_end_position_key(limit)])}\n${units}`,
+		`${position_label(limit)} Value\n${prettyPrintFloat(datum?.[value_end_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		"",
@@ -1132,7 +1114,7 @@ const value_end_title = (limit: BoundaryLimit, result, datum, units) =>
 
 const limit_title = (limit: BoundaryLimit, result, datum, units, suffix) =>
 	to_title(
-		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.display?.[boundary_position_key(limit)])}\n${units}`,
+		`${position_label(limit)} Boundary Limit\n${prettyPrintFloat(datum?.[boundary_position_key(limit)])}\n${units}`,
 		result,
 		datum,
 		suffix,
