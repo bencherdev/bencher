@@ -35,7 +35,7 @@ const BUFFER_SIZE: usize = IMG_WIDTH as usize * IMG_HEIGHT as usize * 3;
 
 const MAX_LINES: usize = 10;
 
-pub const BENCHER_WORDMARK: &[u8; 4910] = include_bytes!("../wordmark.png");
+pub const BENCHER_WORDMARK: &[u8; 4406] = include_bytes!("../wordmark.png");
 #[allow(clippy::expect_used)]
 static WORDMARK_ELEMENT: LazyLock<BitMapElement<(i32, i32)>> = LazyLock::new(|| {
     let wordmark_cursor = Cursor::new(BENCHER_WORDMARK);
