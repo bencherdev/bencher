@@ -91,11 +91,58 @@ impl LinePlot {
         Self::header(title, json_perf, &header)?;
         // Marshal the perf data into a plot-able form
         let perf_data = PerfData::new(json_perf);
-
         let Some(perf_data) = perf_data else {
             return Self::no_data_found(&root_area, &plot_area);
         };
+        Self::chart(perf_data, &plot_area)?;
+        root_area.present().map_err(Into::into)
+    }
 
+    fn split_header<'b>(
+        root_area: &DrawingArea<BitMapBackend<'b>, Shift>,
+    ) -> Result<(Area<'b>, Area<'b>), PlotError> {
+        root_area.fill(&WHITE)?;
+        // Bencher Wordmark
+        root_area.draw(&*WORDMARK_ELEMENT)?;
+        Ok(root_area.split_vertically(TITLE_HEIGHT))
+    }
+
+    fn header(
+        title: Option<&str>,
+        json_perf: &JsonPerf,
+        header: &Area<'_>,
+    ) -> Result<(), PlotError> {
+        // Adaptive title sizing
+        let title = title.unwrap_or(json_perf.project.name.as_ref());
+        let title_len = title.len();
+        let size = if title_len > MAX_TITLE_LEN {
+            let diff = title_len - MAX_TITLE_LEN;
+            std::cmp::max(TITLE_HEIGHT - u32::try_from(diff)?, 12)
+        } else {
+            TITLE_HEIGHT
+        };
+        header.titled(title, (FontFamily::Monospace, size))?;
+        Ok(())
+    }
+
+    fn no_data_found(root_area: &Area<'_>, plot_area: &Area<'_>) -> Result<(), PlotError> {
+        // Return an informative message if there is no perf data found
+        let _chart_context = ChartBuilder::on(plot_area)
+            .margin_top(TITLE_HEIGHT)
+            .caption(
+                format!("No Data Found: {}", Utc::now().format(DATE_TIME_FMT)),
+                (FontFamily::Monospace, 32),
+            )
+            .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
+
+        root_area.present().map_err(Into::into)
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn chart(
+        perf_data: PerfData,
+        plot_area: &DrawingArea<BitMapBackend<'_>, Shift>,
+    ) -> Result<(), PlotError> {
         let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
 
         let chart_context = ChartBuilder::on(&plot_area)
@@ -231,47 +278,7 @@ impl LinePlot {
             box_x_left = box_x_right + plot_box.gap;
         }
 
-        root_area.present().map_err(Into::into)
-    }
-
-    fn split_header<'b>(
-        root_area: &DrawingArea<BitMapBackend<'b>, Shift>,
-    ) -> Result<(Area<'b>, Area<'b>), PlotError> {
-        root_area.fill(&WHITE)?;
-        // Bencher Wordmark
-        root_area.draw(&*WORDMARK_ELEMENT)?;
-        Ok(root_area.split_vertically(TITLE_HEIGHT))
-    }
-
-    fn header(
-        title: Option<&str>,
-        json_perf: &JsonPerf,
-        header: &Area<'_>,
-    ) -> Result<(), PlotError> {
-        // Adaptive title sizing
-        let title = title.unwrap_or(json_perf.project.name.as_ref());
-        let title_len = title.len();
-        let size = if title_len > MAX_TITLE_LEN {
-            let diff = title_len - MAX_TITLE_LEN;
-            std::cmp::max(TITLE_HEIGHT - u32::try_from(diff)?, 12)
-        } else {
-            TITLE_HEIGHT
-        };
-        header.titled(title, (FontFamily::Monospace, size))?;
         Ok(())
-    }
-
-    fn no_data_found(root_area: &Area<'_>, plot_area: &Area<'_>) -> Result<(), PlotError> {
-        // Return an informative message if there is no perf data found
-        let _chart_context = ChartBuilder::on(plot_area)
-            .margin_top(TITLE_HEIGHT)
-            .caption(
-                format!("No Data Found: {}", Utc::now().format(DATE_TIME_FMT)),
-                (FontFamily::Monospace, 32),
-            )
-            .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
-
-        root_area.present().map_err(Into::into)
     }
 }
 
