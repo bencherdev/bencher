@@ -145,71 +145,8 @@ impl LinePlot {
     ) -> Result<(), PlotError> {
         let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
 
-        let chart_context = ChartBuilder::on(&plot_area)
-            .x_label_area_size(40)
-            .y_label_area_size(perf_data.left_y_label_area_size()?)
-            .right_y_label_area_size(perf_data.right_y_label_area_size().unwrap_or(Ok(0))?)
-            .margin_left(8)
-            .margin_right(32)
-            .margin_bottom(8)
-            .build_cartesian_2d(perf_data.x_range(), perf_data.left_y_range())?;
-
-        let mut chart_context = if let Some(right_y_range) = perf_data.right_y_range() {
-            Chart::Dual(chart_context.set_secondary_coord(perf_data.x_range(), right_y_range))
-        } else {
-            Chart::Single(chart_context)
-        };
-
-        match &mut chart_context {
-            Chart::Single(chart_context) => {
-                chart_context
-                    .configure_mesh()
-                    .axis_desc_style((FontFamily::Monospace, 20))
-                    .x_desc("Benchmark Date and Time")
-                    .x_labels(usize::try_from(X_LABELS)?)
-                    .x_label_style((FontFamily::Monospace, 16))
-                    .x_label_formatter(&|x| perf_data.x_label_fmt(x))
-                    .y_desc(&perf_data.left_y_desc)
-                    .y_labels(Y_LABELS)
-                    .y_label_style((FontFamily::Monospace, 12))
-                    .y_label_formatter(&|&y| {
-                        Units::format_number(y, perf_data.trim_left_key_point_decimal())
-                    })
-                    .max_light_lines(4)
-                    .draw()?;
-            },
-            Chart::Dual(chart_context) => {
-                chart_context
-                    .configure_mesh()
-                    .axis_desc_style((FontFamily::Monospace, 20))
-                    .x_desc("Benchmark Date and Time")
-                    .x_labels(usize::try_from(X_LABELS)?)
-                    .x_label_style((FontFamily::Monospace, 16))
-                    .x_label_formatter(&|x| perf_data.x_label_fmt(x))
-                    .y_desc(&perf_data.left_y_desc)
-                    .y_labels(Y_LABELS)
-                    .y_label_style((FontFamily::Monospace, 12))
-                    .y_label_formatter(&|&y| {
-                        Units::format_number(y, perf_data.trim_left_key_point_decimal())
-                    })
-                    .max_light_lines(4)
-                    .draw()?;
-
-                if let (Some(y_desc), Some(trim_decimal)) = (
-                    &perf_data.right_y_desc,
-                    perf_data.trim_right_key_point_decimal(),
-                ) {
-                    chart_context
-                        .configure_secondary_axes()
-                        .axis_desc_style((FontFamily::Monospace, 20))
-                        .y_desc(y_desc)
-                        .y_labels(Y_LABELS)
-                        .label_style((FontFamily::Monospace, 12))
-                        .y_label_formatter(&|&y| Units::format_number(y, trim_decimal))
-                        .draw()?;
-                }
-            },
-        }
+        let mut chart = Chart::new(&perf_data, &plot_area)?;
+        chart.layout(&perf_data)?;
 
         let plot_box = perf_data.plot_box()?;
         let mut box_x_left = plot_box.x_left;
@@ -220,7 +157,7 @@ impl LinePlot {
             dimensions,
         } in perf_data.lines
         {
-            match &mut chart_context {
+            match &mut chart {
                 Chart::Single(chart_context) => {
                     let _series = chart_context.draw_series(
                         LineSeries::new(
@@ -283,31 +220,118 @@ impl LinePlot {
 }
 
 // https://github.com/plotters-rs/plotters/blob/v0.3.7/plotters/examples/two-scales.rs
+#[allow(clippy::large_enum_variant, clippy::type_complexity)]
 enum Chart<'b> {
     Single(
         plotters::chart::ChartContext<
             'b,
-            plotters_bitmap::BitMapBackend<'b>,
+            BitMapBackend<'b>,
             plotters::prelude::Cartesian2d<
-                plotters::prelude::RangedDateTime<chrono::DateTime<chrono::Utc>>,
-                plotters::coord::types::RangedCoordf64,
+                plotters::prelude::RangedDateTime<DateTime<Utc>>,
+                RangedCoordf64,
             >,
         >,
     ),
     Dual(
         plotters::chart::DualCoordChartContext<
             'b,
-            plotters_bitmap::BitMapBackend<'b>,
+            BitMapBackend<'b>,
             plotters::prelude::Cartesian2d<
-                plotters::prelude::RangedDateTime<chrono::DateTime<chrono::Utc>>,
-                plotters::coord::types::RangedCoordf64,
+                plotters::prelude::RangedDateTime<DateTime<Utc>>,
+                RangedCoordf64,
             >,
             plotters::prelude::Cartesian2d<
-                plotters::prelude::RangedDateTime<chrono::DateTime<chrono::Utc>>,
-                plotters::coord::types::RangedCoordf64,
+                plotters::prelude::RangedDateTime<DateTime<Utc>>,
+                RangedCoordf64,
             >,
         >,
     ),
+}
+
+impl<'b> Chart<'b> {
+    fn new(
+        perf_data: &PerfData,
+        plot_area: &DrawingArea<BitMapBackend<'b>, Shift>,
+    ) -> Result<Self, PlotError> {
+        let chart_context = ChartBuilder::on(plot_area)
+            .x_label_area_size(40)
+            .y_label_area_size(perf_data.left_y_label_area_size()?)
+            .right_y_label_area_size(perf_data.right_y_label_area_size().unwrap_or(Ok(0))?)
+            .margin_left(8)
+            .margin_right(32)
+            .margin_bottom(8)
+            .build_cartesian_2d(perf_data.x_range(), perf_data.left_y_range())?;
+
+        Ok(if let Some(right_y_range) = perf_data.right_y_range() {
+            Self::Dual(chart_context.set_secondary_coord(perf_data.x_range(), right_y_range))
+        } else {
+            Self::Single(chart_context)
+        })
+    }
+
+    #[allow(clippy::items_after_statements)]
+    fn layout(&mut self, perf_data: &PerfData) -> Result<(), PlotError> {
+        const AXIS_DESC_STYLE: (FontFamily, u32) = (FontFamily::Monospace, 20);
+        const X_DESC: &str = "Benchmark Date and Time";
+        let x_labels = usize::try_from(X_LABELS)?;
+        const X_LABEL_STYLE: (FontFamily, u32) = (FontFamily::Monospace, 16);
+        #[allow(clippy::type_complexity)]
+        let x_label_formatter: Box<dyn Fn(&DateTime<Utc>) -> String> =
+            Box::new(move |x| perf_data.x_label_fmt(x));
+        const Y_LABEL_STYLE: (FontFamily, u32) = (FontFamily::Monospace, 12);
+        fn y_label_formatter(trim_decimal: bool) -> Box<dyn Fn(&f64) -> String> {
+            Box::new(move |&y| Units::format_number(y, trim_decimal))
+        }
+        const MAX_LIGHT_LINES: usize = 4;
+
+        match self {
+            Chart::Single(chart_context) => {
+                chart_context
+                    .configure_mesh()
+                    .axis_desc_style(AXIS_DESC_STYLE)
+                    .x_desc(X_DESC)
+                    .x_labels(x_labels)
+                    .x_label_style(X_LABEL_STYLE)
+                    .x_label_formatter(&x_label_formatter)
+                    .y_desc(&perf_data.left_y_desc)
+                    .y_labels(Y_LABELS)
+                    .y_label_style(Y_LABEL_STYLE)
+                    .y_label_formatter(&y_label_formatter(perf_data.trim_left_key_point_decimal()))
+                    .max_light_lines(MAX_LIGHT_LINES)
+                    .draw()?;
+            },
+            Chart::Dual(chart_context) => {
+                chart_context
+                    .configure_mesh()
+                    .axis_desc_style(AXIS_DESC_STYLE)
+                    .x_desc(X_DESC)
+                    .x_labels(x_labels)
+                    .x_label_style(X_LABEL_STYLE)
+                    .x_label_formatter(&x_label_formatter)
+                    .y_desc(&perf_data.left_y_desc)
+                    .y_labels(Y_LABELS)
+                    .y_label_style(Y_LABEL_STYLE)
+                    .y_label_formatter(&y_label_formatter(perf_data.trim_left_key_point_decimal()))
+                    .max_light_lines(MAX_LIGHT_LINES)
+                    .draw()?;
+
+                if let (Some(right_y_desc), Some(right_trim_decimal)) = (
+                    &perf_data.right_y_desc,
+                    perf_data.trim_right_key_point_decimal(),
+                ) {
+                    chart_context
+                        .configure_secondary_axes()
+                        .axis_desc_style(AXIS_DESC_STYLE)
+                        .y_desc(right_y_desc)
+                        .y_labels(Y_LABELS)
+                        .label_style(Y_LABEL_STYLE)
+                        .y_label_formatter(&y_label_formatter(right_trim_decimal))
+                        .draw()?;
+                }
+            },
+        }
+        Ok(())
+    }
 }
 
 type Area<'b> = DrawingArea<BitMapBackend<'b>, Shift>;
