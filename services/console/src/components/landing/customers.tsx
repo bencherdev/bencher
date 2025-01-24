@@ -8,9 +8,9 @@ interface Customer {
 export const CUSTOMERS: Customer[][] = [
 	[
 		{
-			name: "",
-			icon: "",
-			github: "",
+			name: "Jonathan Woollett-Light",
+			icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/JonathanWoollett-Light.jpg",
+			github: "JonathanWoollett-Light",
 			quote: "Bencher is like CodeCov for performance metrics.",
 		},
 		{

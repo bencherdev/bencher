@@ -40,25 +40,23 @@ const padQuote = (quote: string) => {
                   <div class="media-left">
                     <figure class="image is-48x48">
                       <a
-							          href={BENCHER_GITHUB_URL}
+							          href={`https://github.com/${customer.github}`}
                         target="_blank"
                         aria-label="GitHub"
                         rel="noreferrer"
 						          >
-							          <span class="icon has-text-primary">
-								          <i class="fab fa-github fa-2x" />
-							          </span>
+							          <img
+                          class="is-rounded"
+                          src={customer.icon}
+                          alt={customer.name}
+                        />
 						          </a>
-                      {/* <img
-                        src={customer.icon}
-                        alt={customer.name}
-                      /> */}
                     </figure>
                   </div>
-                  {/* <div class="media-content">
+                  <div class="media-content">
                       <p class="title is-4">{customer.name}</p>
                       <a class="subtitle is-6 is-link" href={`https://github.com/${customer.github}`}>@{customer.github}</p>
-                  </div> */}
+                  </div>
                 </div>
               </div>
             </div>
