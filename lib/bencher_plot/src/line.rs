@@ -78,7 +78,6 @@ impl LinePlot {
         Ok(image_cursor.into_inner())
     }
 
-    #[allow(clippy::too_many_lines)]
     fn draw_inner(
         &self,
         title: Option<&str>,
@@ -87,14 +86,18 @@ impl LinePlot {
     ) -> Result<(), PlotError> {
         let root_area =
             BitMapBackend::with_buffer(plot_buffer, (self.width, self.height)).into_drawing_area();
-        let (header, plot_area) = Self::split_header(&root_area)?;
-        Self::header(title, json_perf, &header)?;
+
+        let (header_area, plot_area) = Self::split_header(&root_area)?;
+        Self::header(title, json_perf, &header_area)?;
+
         // Marshal the perf data into a plot-able form
         let perf_data = PerfData::new(json_perf);
         let Some(perf_data) = perf_data else {
             return Self::no_data_found(&root_area, &plot_area);
         };
-        Self::chart(perf_data, &plot_area)?;
+
+        Self::plot(perf_data, &plot_area)?;
+
         root_area.present().map_err(Into::into)
     }
 
@@ -110,7 +113,7 @@ impl LinePlot {
     fn header(
         title: Option<&str>,
         json_perf: &JsonPerf,
-        header: &Area<'_>,
+        header_area: &Area<'_>,
     ) -> Result<(), PlotError> {
         // Adaptive title sizing
         let title = title.unwrap_or(json_perf.project.name.as_ref());
@@ -121,7 +124,7 @@ impl LinePlot {
         } else {
             TITLE_HEIGHT
         };
-        header.titled(title, (FontFamily::Monospace, size))?;
+        header_area.titled(title, (FontFamily::Monospace, size))?;
         Ok(())
     }
 
@@ -138,84 +141,14 @@ impl LinePlot {
         root_area.present().map_err(Into::into)
     }
 
-    #[allow(clippy::too_many_lines)]
-    fn chart(
+    fn plot(
         perf_data: PerfData,
         plot_area: &DrawingArea<BitMapBackend<'_>, Shift>,
     ) -> Result<(), PlotError> {
         let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
-
         let mut chart = Chart::new(&perf_data, &plot_area)?;
-        chart.layout(&perf_data)?;
-
-        let plot_box = perf_data.plot_box()?;
-        let mut box_x_left = plot_box.x_left;
-        for LineData {
-            data,
-            anchor,
-            color,
-            dimensions,
-        } in perf_data.lines
-        {
-            match &mut chart {
-                Chart::Single(chart_context) => {
-                    let _series = chart_context.draw_series(
-                        LineSeries::new(
-                            data.into_iter().map(|(x, y)| (x, y.into())),
-                            color.filled(),
-                        )
-                        .point_size(2),
-                    )?;
-                },
-                Chart::Dual(chart_context) => match anchor {
-                    Anchor::Left => {
-                        let _series = chart_context.draw_series(
-                            LineSeries::new(
-                                data.into_iter().map(|(x, y)| (x, y.into())),
-                                color.filled(),
-                            )
-                            .point_size(2),
-                        )?;
-                    },
-                    Anchor::Right => {
-                        let _series = chart_context.draw_secondary_series(
-                            LineSeries::new(
-                                data.into_iter().map(|(x, y)| (x, y.into())),
-                                color.filled(),
-                            )
-                            .point_size(2),
-                        )?;
-                    },
-                },
-            }
-
-            let box_x_right = box_x_left + plot_box.width;
-
-            let points = [(box_x_left, 0), (box_x_right, plot_box.height)];
-            let shape_style = ShapeStyle::from(color).filled();
-            let rectangle = Rectangle::new(points, shape_style);
-            key_area.draw(&rectangle)?;
-
-            let mut font = 16;
-            let text = loop {
-                let text = MultiLineText::from_str(
-                    dimensions.as_str(),
-                    (box_x_left, plot_box.text_start),
-                    (FontFamily::Monospace, font),
-                    plot_box.text_width,
-                );
-                let (_, text_height) = text.estimate_dimension().map_err(PlotError::Font)?;
-                if text_height < plot_box.text_end || font == 8 {
-                    break text;
-                }
-                font -= 1;
-            };
-            key_area.draw(&text)?;
-
-            box_x_left = box_x_right + plot_box.gap;
-        }
-
-        Ok(())
+        chart.layout_plot(&perf_data)?;
+        chart.plot_lines(perf_data, &key_area)
     }
 }
 
@@ -270,7 +203,7 @@ impl<'b> Chart<'b> {
     }
 
     #[allow(clippy::items_after_statements)]
-    fn layout(&mut self, perf_data: &PerfData) -> Result<(), PlotError> {
+    fn layout_plot(&mut self, perf_data: &PerfData) -> Result<(), PlotError> {
         const AXIS_DESC_STYLE: (FontFamily, u32) = (FontFamily::Monospace, 20);
         const X_DESC: &str = "Benchmark Date and Time";
         let x_labels = usize::try_from(X_LABELS)?;
@@ -330,6 +263,79 @@ impl<'b> Chart<'b> {
                 }
             },
         }
+        Ok(())
+    }
+
+    fn plot_lines(
+        &mut self,
+        perf_data: PerfData,
+        key_area: &DrawingArea<BitMapBackend<'_>, Shift>,
+    ) -> Result<(), PlotError> {
+        let plot_box = perf_data.plot_box()?;
+        let mut box_x_left = plot_box.x_left;
+        for LineData {
+            data,
+            anchor,
+            color,
+            dimensions,
+        } in perf_data.lines
+        {
+            self.plot_line(data, anchor, color)?;
+
+            // Draw key for plot line
+            let box_x_right = box_x_left + plot_box.width;
+
+            let points = [(box_x_left, 0), (box_x_right, plot_box.height)];
+            let shape_style = ShapeStyle::from(color).filled();
+            let rectangle = Rectangle::new(points, shape_style);
+            key_area.draw(&rectangle)?;
+
+            let mut font = 16;
+            let text = loop {
+                let text = MultiLineText::from_str(
+                    dimensions.as_str(),
+                    (box_x_left, plot_box.text_start),
+                    (FontFamily::Monospace, font),
+                    plot_box.text_width,
+                );
+                let (_, text_height) = text.estimate_dimension().map_err(PlotError::Font)?;
+                if text_height < plot_box.text_end || font == 8 {
+                    break text;
+                }
+                font -= 1;
+            };
+            key_area.draw(&text)?;
+
+            box_x_left = box_x_right + plot_box.gap;
+        }
+
+        Ok(())
+    }
+
+    fn plot_line(
+        &mut self,
+        data: Vec<(DateTime<Utc>, OrderedFloat<f64>)>,
+        anchor: Anchor,
+        color: RGBColor,
+    ) -> Result<(), PlotError> {
+        let line_series =
+            LineSeries::new(data.into_iter().map(|(x, y)| (x, y.into())), color.filled())
+                .point_size(2);
+
+        match self {
+            Chart::Single(chart_context) => {
+                let _series = chart_context.draw_series(line_series)?;
+            },
+            Chart::Dual(chart_context) => match anchor {
+                Anchor::Left => {
+                    let _series = chart_context.draw_series(line_series)?;
+                },
+                Anchor::Right => {
+                    let _series = chart_context.draw_secondary_series(line_series)?;
+                },
+            },
+        }
+
         Ok(())
     }
 }
@@ -454,6 +460,7 @@ impl PerfData {
             let x = (min_x, max_x);
             let x_time = max_x - min_x < Duration::days(X_LABELS);
 
+            #[allow(clippy::items_after_statements)]
             fn measure_units(
                 measure: &JsonMeasure,
                 min_y: OrderedFloat<f64>,
