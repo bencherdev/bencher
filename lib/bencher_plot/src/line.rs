@@ -33,7 +33,7 @@ const DATE_TIME_FMT: &str = "%d %b %Y %H:%M:%S";
 // https://docs.rs/image/latest/image/struct.Rgb.html
 const BUFFER_SIZE: usize = IMG_WIDTH as usize * IMG_HEIGHT as usize * 3;
 
-const MAX_LINES: usize = 8;
+const MAX_LINES: usize = 10;
 
 pub const BENCHER_WORDMARK: &[u8; 4910] = include_bytes!("../wordmark.png");
 #[allow(clippy::expect_used)]
@@ -367,159 +367,86 @@ enum Anchor {
 }
 
 impl PerfData {
-    #[allow(clippy::too_many_lines)]
     fn new(json_perf: &JsonPerf) -> Option<PerfData> {
-        let mut json_measures: Vec<&JsonMeasure> = Vec::with_capacity(2);
-        for result in &json_perf.results {
-            if !json_measures
-                .iter()
-                .any(|measure| measure.uuid == result.measure.uuid)
-            {
-                json_measures.push(&result.measure);
-            }
-        }
-        let left_measure = json_measures.first()?;
-        let right_measure = json_measures.get(1);
+        let Extent {
+            left_measure,
+            right_measure,
+            min_x,
+            max_x,
+            left_min_y,
+            left_max_y,
+            right_min_y,
+            right_max_y,
+            lines,
+        } = Extent::new(json_perf)?;
 
-        let anchor = |measure: &JsonMeasure| -> Option<Anchor> {
-            if measure.uuid == left_measure.uuid {
-                Some(Anchor::Left)
-            } else if let Some(right_measure) = right_measure {
-                (measure.uuid == right_measure.uuid).then_some(Anchor::Right)
-            } else {
-                None
-            }
+        let (Some(min_x), Some(max_x), Some(left_min_y), Some(left_max_y)) =
+            (min_x, max_x, left_min_y, left_max_y)
+        else {
+            return None;
         };
 
-        // There needs to be at least one measure
-        // let json_measure = json_perf.results.first().map(|result| &result.measure)?;
+        let x = (min_x, max_x);
+        let x_time = max_x - min_x < Duration::days(X_LABELS);
 
-        let mut min_x = None;
-        let mut max_x = None;
+        let (left_factor, left_y_desc) = Self::measure_units(&left_measure, left_min_y);
+        let left_min_y = left_min_y / left_factor;
+        let left_max_y = left_max_y / left_factor;
+        let left_y = (left_min_y, left_max_y);
 
-        let mut left_min_y = None;
-        let mut left_max_y = None;
+        let (right_factor, right_y, right_y_desc) =
+            if let (Some(right_measure), Some(right_min_y), Some(right_max_y)) =
+                (right_measure, right_min_y, right_max_y)
+            {
+                let (right_factor, desc) = Self::measure_units(&right_measure, right_min_y);
+                let right_min_y = right_min_y / right_factor;
+                let right_max_y = right_max_y / right_factor;
+                (right_factor, Some((right_min_y, right_max_y)), Some(desc))
+            } else {
+                (1.0.into(), None, None)
+            };
 
-        let mut right_min_y = None;
-        let mut right_max_y = None;
-
-        let lines = json_perf
-            .results
-            .iter()
-            .take(MAX_LINES)
-            .enumerate()
-            .map(|(index, result)| {
-                let anchor = anchor(&result.measure).unwrap_or_default();
-                let data = result
-                    .metrics
-                    .iter()
-                    .map(|metric| {
-                        let x_value = metric.start_time.into_inner();
-                        min_x = min_x
-                            .map(|min| std::cmp::min(min, x_value))
-                            .or(Some(x_value));
-                        max_x = max_x
-                            .map(|max| std::cmp::max(max, x_value))
-                            .or(Some(x_value));
-                        let y_value = metric.metric.value;
-                        match anchor {
-                            Anchor::Left => {
-                                left_min_y = left_min_y
-                                    .map(|min| std::cmp::min(min, y_value))
-                                    .or(Some(y_value));
-                                left_max_y = left_max_y
-                                    .map(|max| std::cmp::max(max, y_value))
-                                    .or(Some(y_value));
+        // Auto-scale line data
+        let lines = lines
+            .into_iter()
+            .map(|line| LineData {
+                data: line
+                    .data
+                    .into_iter()
+                    .map(|(x, y)| {
+                        (
+                            x,
+                            match line.anchor {
+                                Anchor::Left if left_factor.is_normal() => y / left_factor,
+                                Anchor::Right if right_factor.is_normal() => y / right_factor,
+                                Anchor::Left | Anchor::Right => y,
                             },
-                            Anchor::Right => {
-                                right_min_y = right_min_y
-                                    .map(|min| std::cmp::min(min, y_value))
-                                    .or(Some(y_value));
-                                right_max_y = right_max_y
-                                    .map(|max| std::cmp::max(max, y_value))
-                                    .or(Some(y_value));
-                            },
-                        }
-                        (x_value, y_value)
+                        )
                     })
-                    .collect();
-                let color = LineData::color(index);
-                let dimensions = LineData::dimensions(result);
-                LineData {
-                    data,
-                    anchor,
-                    color,
-                    dimensions,
-                }
+                    .collect(),
+                ..line
             })
-            .collect::<Vec<LineData>>();
+            .collect();
 
-        if let (Some(min_x), Some(max_x), Some(left_min_y), Some(left_max_y)) =
-            (min_x, max_x, left_min_y, left_max_y)
-        {
-            let x = (min_x, max_x);
-            let x_time = max_x - min_x < Duration::days(X_LABELS);
+        Some(PerfData {
+            lines,
+            x,
+            x_time,
+            left_y,
+            left_y_desc,
+            right_y,
+            right_y_desc,
+        })
+    }
 
-            #[allow(clippy::items_after_statements)]
-            fn measure_units(
-                measure: &JsonMeasure,
-                min_y: OrderedFloat<f64>,
-            ) -> (OrderedFloat<f64>, String) {
-                let units = Units::new(*min_y, measure.units.clone());
-                let factor = units.scale_factor();
-                let y_desc = format!("{}: {}", measure.name, units.scale_units());
-                (factor, y_desc)
-            }
-
-            let (left_factor, left_y_desc) = measure_units(left_measure, left_min_y);
-            let left_min_y = left_min_y / left_factor;
-            let left_max_y = left_max_y / left_factor;
-            let left_y = (left_min_y, left_max_y);
-
-            let (right_factor, right_y_desc, right_y) =
-                if let (Some(right_measure), Some(right_min_y), Some(right_max_y)) =
-                    (right_measure, right_min_y, right_max_y)
-                {
-                    let (right_factor, desc) = measure_units(right_measure, right_min_y);
-                    let right_min_y = right_min_y / right_factor;
-                    let right_max_y = right_max_y / right_factor;
-                    (right_factor, Some(desc), Some((right_min_y, right_max_y)))
-                } else {
-                    (1.0.into(), None, None)
-                };
-
-            let lines = lines
-                .into_iter()
-                .map(|line| LineData {
-                    data: line
-                        .data
-                        .into_iter()
-                        .map(|(x, y)| {
-                            (
-                                x,
-                                y / match line.anchor {
-                                    Anchor::Left => left_factor,
-                                    Anchor::Right => right_factor,
-                                },
-                            )
-                        })
-                        .collect(),
-                    ..line
-                })
-                .collect();
-
-            Some(PerfData {
-                lines,
-                x,
-                x_time,
-                left_y,
-                left_y_desc,
-                right_y,
-                right_y_desc,
-            })
-        } else {
-            None
-        }
+    fn measure_units(
+        measure: &JsonMeasure,
+        min_y: OrderedFloat<f64>,
+    ) -> (OrderedFloat<f64>, String) {
+        let units = Units::new(*min_y, measure.units.clone());
+        let factor = units.scale_factor();
+        let y_desc = format!("{}: {}", measure.name, units.scale_units());
+        (factor, y_desc)
     }
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
@@ -570,10 +497,6 @@ impl PerfData {
             .map(|range| RangedCoordf64::from(range).key_points(Y_LABELS))
     }
 
-    fn trim_key_point_decimal(&self) -> bool {
-        self.trim_left_key_point_decimal() && self.trim_right_key_point_decimal().unwrap_or(true)
-    }
-
     fn trim_left_key_point_decimal(&self) -> bool {
         !self
             .left_key_points()
@@ -589,16 +512,16 @@ impl PerfData {
     fn left_y_label_area_size(&self) -> Result<u32, PlotError> {
         let y_range = self.left_key_points();
         let trim_decimal = self.trim_left_key_point_decimal();
-        Self::y_label_area_size_inner(y_range, trim_decimal)
+        Self::y_label_area_size_inner(&y_range, trim_decimal)
     }
 
     fn right_y_label_area_size(&self) -> Option<Result<u32, PlotError>> {
         let y_range = self.right_key_points()?;
         let trim_decimal = self.trim_right_key_point_decimal()?;
-        Some(Self::y_label_area_size_inner(y_range, trim_decimal))
+        Some(Self::y_label_area_size_inner(&y_range, trim_decimal))
     }
 
-    fn y_label_area_size_inner(y_range: Vec<f64>, trim_decimal: bool) -> Result<u32, PlotError> {
+    fn y_label_area_size_inner(y_range: &[f64], trim_decimal: bool) -> Result<u32, PlotError> {
         let min = y_range.first().copied().unwrap_or_default();
         let max = y_range.last().copied().unwrap_or_default();
         let buffer = if max < 1.0 {
@@ -645,6 +568,125 @@ impl PerfData {
             text_end,
             text_width,
         })
+    }
+}
+
+struct Extent {
+    left_measure: JsonMeasure,
+    right_measure: Option<JsonMeasure>,
+    min_x: Option<DateTime<Utc>>,
+    max_x: Option<DateTime<Utc>>,
+    left_min_y: Option<OrderedFloat<f64>>,
+    left_max_y: Option<OrderedFloat<f64>>,
+    right_min_y: Option<OrderedFloat<f64>>,
+    right_max_y: Option<OrderedFloat<f64>>,
+    lines: Vec<LineData>,
+}
+
+impl Extent {
+    fn new(json_perf: &JsonPerf) -> Option<Self> {
+        let (left_measure, right_measure) = Self::measures(json_perf)?;
+
+        let find_anchor = |measure: &JsonMeasure| -> Option<Anchor> {
+            if measure.uuid == left_measure.uuid {
+                Some(Anchor::Left)
+            } else if let Some(right_measure) = &right_measure {
+                (measure.uuid == right_measure.uuid).then_some(Anchor::Right)
+            } else {
+                None
+            }
+        };
+
+        let mut min_x = None;
+        let mut max_x = None;
+
+        let mut left_min_y = None;
+        let mut left_max_y = None;
+
+        let mut right_min_y = None;
+        let mut right_max_y = None;
+
+        let lines = json_perf
+            .results
+            .iter()
+            .take(MAX_LINES)
+            .enumerate()
+            .map(|(index, result)| {
+                let anchor = find_anchor(&result.measure).unwrap_or_default();
+                let data = result
+                    .metrics
+                    .iter()
+                    .map(|metric| {
+                        let x_value = metric.start_time.into_inner();
+                        min_x = min_x
+                            .map(|min| std::cmp::min(min, x_value))
+                            .or(Some(x_value));
+                        max_x = max_x
+                            .map(|max| std::cmp::max(max, x_value))
+                            .or(Some(x_value));
+                        let y_value = metric.metric.value;
+                        match anchor {
+                            Anchor::Left => {
+                                left_min_y = left_min_y
+                                    .map(|min| std::cmp::min(min, y_value))
+                                    .or(Some(y_value));
+                                left_max_y = left_max_y
+                                    .map(|max| std::cmp::max(max, y_value))
+                                    .or(Some(y_value));
+                            },
+                            Anchor::Right => {
+                                right_min_y = right_min_y
+                                    .map(|min| std::cmp::min(min, y_value))
+                                    .or(Some(y_value));
+                                right_max_y = right_max_y
+                                    .map(|max| std::cmp::max(max, y_value))
+                                    .or(Some(y_value));
+                            },
+                        }
+                        (x_value, y_value)
+                    })
+                    .collect();
+                let color = LineData::color(index);
+                let dimensions = LineData::dimensions(result);
+                LineData {
+                    data,
+                    anchor,
+                    color,
+                    dimensions,
+                }
+            })
+            .collect::<Vec<LineData>>();
+
+        Some(Self {
+            left_measure,
+            right_measure,
+            min_x,
+            max_x,
+            left_min_y,
+            left_max_y,
+            right_min_y,
+            right_max_y,
+            lines,
+        })
+    }
+
+    fn measures(json_perf: &JsonPerf) -> Option<(JsonMeasure, Option<JsonMeasure>)> {
+        let mut json_measures: Vec<&JsonMeasure> = Vec::with_capacity(2);
+        for result in &json_perf.results {
+            if !json_measures
+                .iter()
+                .any(|measure| measure.uuid == result.measure.uuid)
+            {
+                json_measures.push(&result.measure);
+            }
+        }
+        let left_measure = json_measures.first()?;
+        let right_measure = json_measures.get(1);
+
+        Some((
+            (*left_measure).clone(),
+            right_measure.map(|v| &**v).cloned(),
+        ))
     }
 }
 
