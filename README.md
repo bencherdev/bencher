@@ -322,19 +322,106 @@ Otherwise, it will default to using the latest CLI version.
 Specify an exact version if using [Bencher _Self-Hosted_](https://bencher.dev/docs/explanation/bencher-self-hosted/).
 Do **not** specify an exact version if using Bencher _Cloud_ as there are still occasional breaking changes.
 
-## Share Your Benchmarks
+## These Devs Get It
 
-All public projects have their own [perf page](https://bencher.dev/perf). These results can easily be shared with an auto-updating perf image. Perfect for your README!
-
-<p align="center">
-  <a href="https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000&utm_medium=share&utm_source=bencher&utm_content=img&utm_campaign=perf+img+readme&utm_term=bencher">
-    <img
-      src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
-      title="Benchmark Adapter Comparison"
-      alt="Benchmark Adapter Comparison for Bencher - Bencher"
-    />
-  </a>
-</p>
+<table>
+  <tr>
+    <td>
+      <p>Bencher is like CodeCov for performance metrics.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/JonathanWoollett-Light">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/JonathanWoollett-Light.jpg" width="48" height="48" alt="Jonathan Woollett-Light" />
+        </a>
+        <br />
+        Jonathan Woollett-Light
+        <br />
+        <a href="https://github.com/JonathanWoollett-Light">
+          @JonathanWoollett-Light
+        </a>
+      </p>
+    </td>
+    <td>
+      <p>I think I'm in heaven. Now that I'm starting to see graphs of performance over time automatically from tests I'm running in CI. It's like this whole branch of errors can be caught and noticed sooner.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/gpwclark">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/gpwclark.jpg" width="48" height="48" alt="Price Clark" />
+        </a>
+        <br />
+        Price Clark
+        <br />
+        <a href="https://github.com/gpwclark">
+          @gpwclark
+        </a>
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p>95% of the time I don't want to think about my benchmarks. But when I need to, Bencher ensures that I have the detailed historical record waiting there for me. It's fire-and-forget.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/jneem">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jneem.jpg" width="48" height="48" alt="Joe Neeman" />
+        </a>
+        <br />
+        Joe Neeman
+        <br />
+        <a href="https://github.com/jneem">
+          @jneem
+        </a>
+      </p>
+    </td>
+    <td>
+      <p>I've been looking for a public service like Bencher for about 10 years :)</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/jaqx0r">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jaqx0r.png" width="48" height="48" alt="Jamie Wilkinson" />
+        </a>
+        <br />
+        Jamie Wilkinson
+        <br />
+        <a href="https://github.com/jaqx0r">
+          @jaqx0r
+        </a>
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p>I'm happy with how quickly I was able to get Bencher configured and working.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/westonpace">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/westonpace.jpg" width="48" height="48" alt="Weston Pace" />
+        </a>
+        <br />
+        Weston Pace
+        <br />
+        <a href="https://github.com/westonpace">
+          @westonpace
+        </a>
+      </p>
+    </td>
+    <td>
+      <p>Bencher's main ideas and concepts are really well designed.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/freeekanayaka">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/freeekanayaka.jpg" width="48" height="48" alt="Free Ekanayaka" />
+        </a>
+        <br />
+        Free Ekanayaka
+        <br />
+        <a href="https://github.com/freeekanayaka">
+          @freeekanayaka
+        </a>
+      </p>
+    </td>
+  </tr>
+</table>
 
 ## Contributing
 
