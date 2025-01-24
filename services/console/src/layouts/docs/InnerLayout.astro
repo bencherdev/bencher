@@ -1,4 +1,5 @@
 ---
+import { Image } from "astro:assets";
 import BaseLayout from "../BaseLayout.astro";
 import DocsMenu from "../../components/docs/menu/DocsMenu.astro";
 // biome-ignore lint/style/useImportType: astro jsx
@@ -67,7 +68,9 @@ const {
                     <div class="level-left">
                       <div class="level is-mobile">
                         <div class="level-item">
-                            <img src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" style="border-radius: 50%;" width="32" alt="Everett Pompeii" />
+                          <figure class="image is-32x32">
+                            <Image src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" class="is-rounded" width="32" height="32" alt="Everett Pompeii" />
+                          </figure>
                         </div>
                         <div class="level-item">
                           <p>Everett Pompeii</p>

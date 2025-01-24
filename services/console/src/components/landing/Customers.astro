@@ -1,5 +1,5 @@
 ---
-import { BENCHER_GITHUB_URL } from "../../util/ext";
+import { Image } from "astro:assets";
 import { CUSTOMERS } from "./customers.tsx";
 
 const padQuote = (quote: string) => {
@@ -45,10 +45,12 @@ const padQuote = (quote: string) => {
                         aria-label="GitHub"
                         rel="noreferrer"
 						          >
-							          <img
+							          <Image
                           class="is-rounded"
                           src={customer.icon}
                           alt={customer.name}
+                          width="48"
+                          height="48"
                         />
 						          </a>
                     </figure>
