@@ -1,0 +1,19 @@
+import BmfExample from "../bmf-example.mdx";
+
+## 示例 Bencher Metric Format (BMF) JSON
+
+<BmfExample />
+
+在这个示例中，有三个[基准测试][benchmark]：
+
+- `benchmark_name` 基准测试，包含两个[测量][measure]：
+  - 延迟 (`latency`)
+  - 吞吐量 (`throughput`)
+- `/bin/sh -c ./my_build_script.sh` 基准测试，包含一个测量用于[跟踪构建时间][track build time] (`build-time`)
+- `my_binary` 基准测试，包含一个测量用于[跟踪文件大小][track file size] (`file-size`)
+
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+[measure]: /zh/docs/explanation/benchmarking/#measure
+[track build time]: /zh/docs/how-to/track-build-time/
+[track file size]: /zh/docs/how-to/track-file-size/
+

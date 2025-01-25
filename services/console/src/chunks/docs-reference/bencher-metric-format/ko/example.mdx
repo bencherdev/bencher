@@ -1,0 +1,18 @@
+import BmfExample from "../bmf-example.mdx";
+
+## 벤처 메트릭 형식 (BMF) JSON 예제
+
+<BmfExample />
+
+이 예제에는 세 개의 [벤치마크][benchmark]가 있습니다:
+
+- `benchmark_name` 벤치마크에는 두 개의 [측정치][measure]:
+  - 지연 시간 (`latency`)
+  - 처리량 (`throughput`)
+- `/bin/sh -c ./my_build_script.sh` 벤치마크는 [빌드 시간 추적][track build time]을 위한 하나의 측정치 (`build-time`)
+- `my_binary` 벤치마크는 [파일 크기 추적][track file size]을 위한 하나의 측정치 (`file-size`)
+
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+[measure]: /ko/docs/explanation/benchmarking/#measure
+[track build time]: /ko/docs/how-to/track-build-time/
+[track file size]: /ko/docs/how-to/track-file-size/

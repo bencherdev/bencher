@@ -1,0 +1,18 @@
+import BmfExample from "../bmf-example.mdx";
+
+## Пример JSON в формате Bencher Metric Format (BMF)
+
+<BmfExample />
+
+В этом примере рассматриваются три [Бенчмарка][benchmark]:
+
+- `benchmark_name` Бенчмарк с двумя [Параметрами][measure]:
+  - Задержка (`latency`)
+  - Пропускная способность (`throughput`)
+- `/bin/sh -c ./my_build_script.sh` Бенчмарк с одним параметром для [отслеживания времени сборки][track build time] (`build-time`)
+- `my_binary` Бенчмарк с одним параметром для [отслеживания размера файла][track file size] (`file-size`)
+
+[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
+[measure]: /ru/docs/explanation/benchmarking/#measure
+[track build time]: /ru/docs/how-to/track-build-time/
+[track file size]: /ru/docs/how-to/track-file-size/

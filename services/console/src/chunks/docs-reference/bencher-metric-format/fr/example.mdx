@@ -1,0 +1,18 @@
+import BmfExample from "../bmf-example.mdx";
+
+## Exemple de format de métrique Bencher (BMF) JSON
+
+<BmfExample />
+
+Dans cet exemple, il y a trois [Benchmarks][benchmark]:
+
+- `benchmark_name` Benchmark avec deux [Mesures][measure] :
+  - Latence (`latency`)
+  - Débit (`throughput`)
+- `/bin/sh -c ./my_build_script.sh` Benchmark avec une Mesure pour [suivre le temps de construction][track build time] (`build-time`)
+- `my_binary` Benchmark avec une Mesure pour [suivre la taille du fichier][track file size] (`file-size`)
+
+[benchmark]: /fr/docs/explanation/benchmarking/#benchmark
+[measure]: /fr/docs/explanation/benchmarking/#measure
+[track build time]: /fr/docs/how-to/track-build-time/
+[track file size]: /fr/docs/how-to/track-file-size/

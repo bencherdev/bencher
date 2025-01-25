@@ -1,0 +1,18 @@
+import BmfExample from "../bmf-example.mdx";
+
+## ベンチャーメトリックフォーマット (BMF) JSON の例
+
+<BmfExample />
+
+この例では、3つの[ベンチマーク][benchmark]があります：
+
+- `benchmark_name` というベンチマークは、2つの[メジャー][measure]があります：
+  - レイテンシー (`latency`)
+  - スループット (`throughput`)
+- `/bin/sh -c ./my_build_script.sh` というベンチマークは、1つのメジャーで[ビルド時間を追跡][track build time](`build-time`)
+- `my_binary` というベンチマークは、1つのメジャーで[ファイルサイズを追跡][track file size](`file-size`)
+
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+[measure]: /ja/docs/explanation/benchmarking/#measure
+[track build time]: /ja/docs/how-to/track-build-time/
+[track file size]: /ja/docs/how-to/track-file-size/
