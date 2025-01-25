@@ -232,26 +232,28 @@ const line_plot = (props: Props) => {
 
 	const x_axis = get_x_axis(props.x_axis());
 
-	const marks = plot_marks(scaled_data, scales, {
+	const axis_marks = [];
+
+	if (left_has_data) {
+		const y_axis = get_y_axis(scales, left_measure, Anchor.Left);
+		if (y_axis) {
+			axis_marks.push(y_axis);
+		}
+	}
+	if (right_has_data) {
+		const y_axis = get_y_axis(scales, right_measure, Anchor.Right);
+		if (y_axis) {
+			axis_marks.push(y_axis);
+		}
+	}
+
+	const marks = plot_marks(scaled_data, scales, axis_marks, {
 		project_slug: json_perf.project.slug,
 		isConsole: props.isConsole,
 		plotId: props.plotId,
 		x_axis_kind: x_axis.kind,
 		...scale_props,
 	});
-
-	if (left_has_data) {
-		const y_axis = get_y_axis(scales, left_measure, Anchor.Left);
-		if (y_axis) {
-			marks.push(y_axis);
-		}
-	}
-	if (right_has_data) {
-		const y_axis = get_y_axis(scales, right_measure, Anchor.Right);
-		if (y_axis) {
-			marks.push(y_axis);
-		}
-	}
 
 	return {
 		metrics_found,
@@ -704,9 +706,12 @@ const scale_data_by_factor = (
 	});
 };
 
+type Series = (Plot.Line | Plot.Dot | Plot.Image | Plot.CompoundMark)[];
+
 const plot_marks = (
 	plot_data,
 	plot_scales: undefined | Scales,
+	axis_marks: Plot.CompoundMark[],
 	props: {
 		project_slug: string;
 		isConsole: boolean;
@@ -717,7 +722,7 @@ const plot_marks = (
 		upper_boundary: Accessor<boolean>;
 		x_axis_kind: string;
 	},
-): (Plot.Line | Plot.Dot | Plot.Image | Plot.CompoundMark)[] => {
+): Series => {
 	const plot_arrays = [];
 	const warn_arrays = [];
 	const alert_arrays = [];
@@ -925,10 +930,11 @@ const plot_marks = (
 		);
 	}
 
-	// This allows the alert images to appear on top of the plot lines.
-	plot_arrays.push(...warn_arrays, ...alert_arrays);
+	// This allows the alert images to appear on top of the plot lines,
+	// and the plot lines to appear on top of the axis marks.
+	(axis_marks as Series).push(...plot_arrays, ...warn_arrays, ...alert_arrays);
 
-	return plot_arrays;
+	return axis_marks;
 };
 
 // https://observablehq.com/@observablehq/plot-dual-axis
