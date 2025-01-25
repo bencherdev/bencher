@@ -925,6 +925,7 @@ const PerfPanel = (props: Props) => {
 		setSearchParams({
 			[REPORT_PARAM]: null,
 			[BRANCHES_PARAM]: plot?.branches?.join(","),
+			[HEADS_PARAM]: null,
 			[TESTBEDS_PARAM]: plot?.testbeds?.join(","),
 			[BENCHMARKS_PARAM]: plot?.benchmarks?.join(","),
 			[MEASURES_PARAM]: plot?.measures?.join(","),
@@ -975,6 +976,7 @@ const PerfPanel = (props: Props) => {
 				setSearchParams({
 					[REPORT_PARAM]: null,
 					[BRANCHES_PARAM]: null,
+					[HEADS_PARAM]: null,
 					[TESTBEDS_PARAM]: null,
 					[BENCHMARKS_PARAM]: null,
 					[MEASURES_PARAM]: null,
