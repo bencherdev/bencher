@@ -26,6 +26,7 @@
             "extensions": [
                 "astro-build.astro-vscode",
                 "eamodio.gitlens",
+                "elijah-potter.harper",
                 "GitHub.copilot",
                 "GitHub.vscode-github-actions",
                 "ms-azuretools.vscode-docker",
