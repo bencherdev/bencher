@@ -392,67 +392,72 @@ const ReportCard = (props: Props) => {
 																return (
 																	<>
 																		<td>
-																			{"📈"}{" "}
-																			<a
-																				href={perfUrl(
-																					props.isConsole,
-																					props.params?.project,
-																					props.value()?.uuid as string,
-																					props.value()?.branch as JsonBranch,
-																					props.value()?.testbed as JsonTestbed,
-																					result.benchmark,
-																					reportMeasure?.measure as JsonMeasure,
-																					boundaryLimits.lower,
-																					boundaryLimits.upper,
-																					props.value()?.start_time as string,
-																					props.value()?.end_time as string,
-																				)}
-																			>
-																				view plot
-																			</a>
-																			<Switch>
-																				<Match when={alert}>
-																					<br />
-																					{"🚨"}{" "}
-																					<a
-																						href={alertUrl(
-																							props.isConsole,
-																							props.params?.project,
-																							alert as JsonAlert,
-																						)}
+																			<Show when={reportMeasure}>
+																				{"📈"}{" "}
+																				<a
+																					href={perfUrl(
+																						props.isConsole,
+																						props.params?.project,
+																						props.value()?.uuid as string,
+																						props.value()?.branch as JsonBranch,
+																						props.value()
+																							?.testbed as JsonTestbed,
+																						result.benchmark,
+																						reportMeasure?.measure as JsonMeasure,
+																						boundaryLimits.lower,
+																						boundaryLimits.upper,
+																						props.value()?.start_time as string,
+																						props.value()?.end_time as string,
+																					)}
+																				>
+																					view plot
+																				</a>
+																				<Switch>
+																					<Match when={alert}>
+																						<br />
+																						{"🚨"}{" "}
+																						<a
+																							href={alertUrl(
+																								props.isConsole,
+																								props.params?.project,
+																								alert as JsonAlert,
+																							)}
+																						>
+																							view alert ({alertStatus(alert)})
+																						</a>
+																						<br />
+																						{"🚷"}{" "}
+																						<a
+																							href={thresholdUrl(
+																								props.isConsole,
+																								props.params?.project,
+																								alert?.threshold as JsonThreshold,
+																							)}
+																						>
+																							view threshold
+																						</a>
+																					</Match>
+																					<Match
+																						when={reportMeasure?.threshold}
 																					>
-																						view alert ({alertStatus(alert)})
-																					</a>
-																					<br />
-																					{"🚷"}{" "}
-																					<a
-																						href={thresholdUrl(
-																							props.isConsole,
-																							props.params?.project,
-																							alert?.threshold as JsonThreshold,
-																						)}
-																					>
-																						view threshold
-																					</a>
-																				</Match>
-																				<Match when={reportMeasure?.threshold}>
-																					<br />
-																					{"🚷"}{" "}
-																					<a
-																						href={thresholdUrl(
-																							props.isConsole,
-																							props.params?.project,
-																							reportMeasure?.threshold as JsonThreshold,
-																						)}
-																					>
-																						view threshold
-																					</a>
-																				</Match>
-																				<Match when={true}>
-																					<br />
-																					{"⚠️ NO THRESHOLD"}
-																				</Match>
-																			</Switch>
+																						<br />
+																						{"🚷"}{" "}
+																						<a
+																							href={thresholdUrl(
+																								props.isConsole,
+																								props.params?.project,
+																								reportMeasure?.threshold as JsonThreshold,
+																							)}
+																						>
+																							view threshold
+																						</a>
+																					</Match>
+																					<Match when={true}>
+																						<br />
+																						{"⚠️ NO THRESHOLD"}
+																					</Match>
+																				</Switch>
+																			</Show>
 																		</td>
 																		<Show
 																			when={typeof value === "number"}
