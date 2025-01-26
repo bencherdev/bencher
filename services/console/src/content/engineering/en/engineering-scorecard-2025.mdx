@@ -20,7 +20,7 @@ I thought it would be a great time to stop and reflect on all the engineering de
 
 In this post, I'm going to review where Bencher has spent its "innovation tokens" over the past three years.
 I'll start at the frontend of the [Bencher architecture][architecture] and move all the way down the stack.
-At each stop along with way, I'll discuss how we got here and rate how each innovation token was spent.
+At each stop along with way, I'll discuss how we got here and rate how each engineering decision panned out.
 
 [bencher]: https://bencher.dev
 [choose boring technology]: https://mcfunley.com/choose-boring-technology
@@ -35,7 +35,8 @@ If I had my druthers, I would have been able to write Bencher in full-stack Rust
 Dig back into the deep recesses of the [Bencher repo][bencher github],
 you'll see me trying to do exactly that.
 I experimented with [Yew][yew github], [Seed][seed github], and [Sycamore][sycamore github].
-While they may work great for some projects, there was one major sticking point I just couldn't get over: [JavaScript Interoperation][js ffi].
+While they may work great for some projects,
+there was one major sticking point I just couldn't get over: [JavaScript Interoperation][js ffi].
 
 While JS interop is possible from WASM via Rust,
 it was not going to be easy.
@@ -70,52 +71,8 @@ Over the past three years, I have found Solid to be a pleasure to work with.
 
 > | Technology | Verdict |
 > | :--------: | :-----: |
-> |   Solid    |    ✅    |
-
-Solid itself is "just a library".
-In order to build a modern frontend,
-I was going to need to use a full fledged web app framework.
-Wanting to keep things simple, I put all of my eggs in the Solid basket,
-and I initially used [SolidStart][solid start github].
-This implementation was a single-page app (SPA).
-
-An SPA was fine for getting going.
-Eventually though, I needed to start caring about things like SEO.
-I was beginning to write a lot more [Bencher documentation][bencher docs].
-I was also planning [the Learn section][bencher learn] of the site.
-This meant that I needed both client-side rendering (CSR)
-and static site generation (SSG).
-At the time, SolidStart was very young, and I couldn't get it to meet all of my needs.
-
-After learning about [Astro][astro] and trying it out,
-I decided to port the entire Bencher frontend from SolidStart over to Astro.
-This had a couple of drawbacks.
-The most obvious was the effort involved.
-Honestly, this wasn't _too_ bad.
-Astro has its [islands architecture][astro islands] and
-a first class [Solid integration][astro solid].
-I was also able to take a lot of the logic that I need from the [Solid Router][solid router],
-and it just sort of worked.
-
-The great compromise which is still present today
-is that Bencher went from a single-page app to a multi-page app.
-Most places you click in the console cause a full page rerender.
-Astro had the promise of [view transitions][astro view transitions],
-when I first made the switch.
-I tried them out, but they were buggy.
-I still need to circle back.
-
-In the mean time, SolidStart seems to have caught up some.
-They now support both CSR and SSG.
-Though I haven't checked whether they both work on the same site like I need.
-Water under the bridge.
-
-> | Technology | Verdict |
-> | :--------: | :-----: |
-> | SolidStart |    ❌    |
-> |   Astro    |    ✅    |
-
-
+> |   Rust Frontend    |    ❌    |
+> |   SolidJS    |    ✅    |
 
 [bencher github]: https://github.com/bencherdev/bencher
 [yew github]: https://github.com/yewstack/yew
@@ -129,6 +86,50 @@ Water under the bridge.
 [the elm architecture]: https://guide.elm-lang.org/architecture/
 [solid github]: https://github.com/solidjs/solid
 [react virtual dom]: https://legacy.reactjs.org/docs/faq-internals.html
+
+Solid itself is "just a library".
+In order to build a modern frontend,
+I was going to need to use a full fledged web app framework.
+Wanting to keep things simple, I put all of my eggs in the Solid basket,
+and I initially used [SolidStart][solid start github].
+At the time, SolidStart only supported single-page apps (SPAs).
+
+An SPA was fine for getting going.
+Eventually though, I needed to start caring about things like SEO.
+I was beginning to write a lot more [Bencher documentation][bencher docs].
+I was also planning [the Learn section][bencher learn] of the site.
+This meant that I needed both client-side rendering (CSR)
+and static site generation (SSG).
+SolidStart was very young, and I couldn't get it to meet all of my needs.
+
+After learning about [Astro][astro] and trying it out,
+I decided to port the entire Bencher frontend from SolidStart over to Astro.
+This had a couple of drawbacks.
+The most obvious was the effort involved.
+Honestly, it wasn't _too_ bad.
+Astro has its [islands architecture][astro islands] and
+a first class [Solid integration][astro solid].
+I was also able to take a lot of the logic that I need from the [Solid Router][solid router],
+and it just sort of worked.
+
+The great compromise which is still present today
+is that Bencher went from a single-page app to a multi-page app.
+Most places you click in the console cause a full page rerender.
+Astro had the promise of [view transitions][astro view transitions],
+when I first made the switch.
+I tried them out, but they were buggy.
+I still need to [circle back][github issue 556].
+
+In the mean time, SolidStart seems to have caught up some.
+They now support both CSR and SSG.
+Though I haven't checked whether they both work on the same site like I need.
+Water under the bridge.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | SolidStart |    ❌    |
+> |   Astro    |    ✅    |
+
 [solid start github]: https://github.com/solidjs/solid-start
 [bencher docs]: /docs/
 [bencher learn]: /learn/
@@ -137,3 +138,41 @@ Water under the bridge.
 [astro solid]: https://docs.astro.build/en/guides/integrations-guide/solid-js/
 [solid router]: https://github.com/solidjs/solid-router
 [astro view transitions]: https://docs.astro.build/en/guides/view-transitions/
+[github issue 556]: https://github.com/bencherdev/bencher/issues/556
+
+Astro has [built-in TypeScript support][astro typescript].
+In the transition from SolidStart to Astro, I also started the transition form JavaScript to TypeScript.
+Bencher's TypeScript config is set to Astro's `strictest` setting.
+However, Astro does not perform type checking during builds.
+As of writing, Bencher still has `604` type errors.
+These type errors are used more like hints when editing code,
+but they don't block the build ([yet][github issue 557]).
+
+I also added [Typeshare][typeshare github] to sync Bencher's Rust data types with the TypeScript frontend.
+This has been incredibly helpful for developing the Bencher Console.
+Further, all the field validators for things like usernames, emails, etc
+are shared between the Rust code and the TypeScript frontend via WASM.
+It's been a bit of a hassle to get WASM working in both SolidStart and Astro.
+The largest class of error that I've seen in the frontend has been places where a WASM function is called
+but the WASM module hasn't loaded yet.
+I've figured out how to fix it, but I'll still sometimes forget and it crops up again.
+
+Having both the shared types and validators auto-generated from the Rust code
+has made interfacing with the frontend much easier.
+They both get checked in CI, so they are never out of sync.
+All I have to do is make sure the HTTP requests are well formed,
+and it all just works.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | JavaScript |    ❌    |
+> | TypeScript |    ✅    |
+> | Typeshare  |    ✅    |
+> |   WASM     |    ✅    |
+
+[astro typescript]: https://docs.astro.build/en/guides/typescript/
+[github issue 557]: https://github.com/bencherdev/bencher/issues/557
+[typeshare github]: https://github.com/1Password/typeshare
+
+## Backend
+
