@@ -15,13 +15,125 @@ In the moment, it can be difficult to tell exactly where one stands in this tug-
 Every three years, the Rust programming language comes out with a new [Rust edition][rust editions].
 I think this is a nice cadence. It's long enough for real progress to be made.
 Yet, short enough not to drift too far afield.
+With Bencher turning 3 years old this spring,
+I thought it would be a great time to stop and reflect on all the engineering decisions that got us here.
 
 In this post, I'm going to review where Bencher has spent its "innovation tokens" over the past three years.
 I'll start at the frontend of the [Bencher architecture][architecture] and move all the way down the stack.
-At each stop along with way, I'll discuss how we got here and rate how each innovation token panned out.
+At each stop along with way, I'll discuss how we got here and rate how each innovation token was spent.
 
 [bencher]: https://bencher.dev
 [choose boring technology]: https://mcfunley.com/choose-boring-technology
 [beating the averages]: https://paulgraham.com/avg.html
 [rust editions]: https://doc.rust-lang.org/edition-guide/editions/
 [architecture]: /docs/reference/architecture/
+
+## Frontend
+
+As a recovering C++ developer, I'm a pretty big fan of Rust.
+If I had my druthers, I would have been able to write Bencher in full-stack Rust.
+Dig back into the deep recesses of the [Bencher repo][bencher github],
+you'll see me trying to do exactly that.
+I experimented with [Yew][yew github], [Seed][seed github], and [Sycamore][sycamore github].
+While they may work great for some projects, there was one major sticking point I just couldn't get over: [JavaScript Interoperation][js ffi].
+
+While JS interop is possible from WASM via Rust,
+it was not going to be easy.
+I knew I wanted Bencher to have highly interactive plots.
+This meant using a library like [D3][d3 github],
+which meant JS interop.
+
+So if I was going to have to use JavaScript, which framework should I choose?
+
+Going back to those Rust crates I experimented with,
+Yew is the Rust analogue to [React Hooks][react hooks].
+I'd built and deployed a frontend using React Hooks in the past,
+so I knew the most about this framework.
+However, I found the React Hooks lifecycle very complicated
+and full of gotcha, weird edge cases.
+
+I really liked the core principals of [functional reactive programming][functional reactive programming] (FRP) though.
+This lead me to trying out both Elm and its Rust analogue, Seed.
+Unfortunately, using Elm suffers from the same issues as using Rust.
+Elm requires its own [JavaScript Interop][elm js interop].
+I also found [The Elm Architecture][the elm architecture] a bit too restrictive for my liking.
+
+Of all the Rust frameworks that I tried, I liked Sycamore the most.
+Sycamore was inspired by [Solid][solid github].
+The more that I learned about Solid, the more I liked it.
+Unlike React, Solid does not use a [virtual DOM][react virtual dom].
+Instead, it compiles to good ole JavaScript.
+This makes it much faster, smaller, and easier to work with.
+Solid is made up of just a few powerful primitives that allow for fine-grained reactivity.
+When something in the UI gets updated, only the code that depends on it will rerun.
+Over the past three years, I have found Solid to be a pleasure to work with.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> |   Solid    |    ✅    |
+
+Solid itself is "just a library".
+In order to build a modern frontend,
+I was going to need to use a full fledged web app framework.
+Wanting to keep things simple, I put all of my eggs in the Solid basket,
+and I initially used [SolidStart][solid start github].
+This implementation was a single-page app (SPA).
+
+An SPA was fine for getting going.
+Eventually though, I needed to start caring about things like SEO.
+I was beginning to write a lot more [Bencher documentation][bencher docs].
+I was also planning [the Learn section][bencher learn] of the site.
+This meant that I needed both client-side rendering (CSR)
+and static site generation (SSG).
+At the time, SolidStart was very young, and I couldn't get it to meet all of my needs.
+
+After learning about [Astro][astro] and trying it out,
+I decided to port the entire Bencher frontend from SolidStart over to Astro.
+This had a couple of drawbacks.
+The most obvious was the effort involved.
+Honestly, this wasn't _too_ bad.
+Astro has its [islands architecture][astro islands] and
+a first class [Solid integration][astro solid].
+I was also able to take a lot of the logic that I need from the [Solid Router][solid router],
+and it just sort of worked.
+
+The great compromise which is still present today
+is that Bencher went from a single-page app to a multi-page app.
+Most places you click in the console cause a full page rerender.
+Astro had the promise of [view transitions][astro view transitions],
+when I first made the switch.
+I tried them out, but they were buggy.
+I still need to circle back.
+
+In the mean time, SolidStart seems to have caught up some.
+They now support both CSR and SSG.
+Though I haven't checked whether they both work on the same site like I need.
+Water under the bridge.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | SolidStart |    ❌    |
+> |   Astro    |    ✅    |
+
+
+
+[bencher github]: https://github.com/bencherdev/bencher
+[yew github]: https://github.com/yewstack/yew
+[seed github]: https://github.com/seed-rs/seed
+[sycamore github]: https://github.com/sycamore-rs/sycamore
+[js ffi]: https://rustwasm.github.io/docs/book/reference/js-ffi.html
+[d3 github]: https://github.com/d3/d3
+[react hooks]: https://react.dev/reference/react/hooks
+[functional reactive programming]: https://en.wikipedia.org/wiki/Functional_reactive_programming
+[elm js interop]: https://guide.elm-lang.org/interop/
+[the elm architecture]: https://guide.elm-lang.org/architecture/
+[solid github]: https://github.com/solidjs/solid
+[react virtual dom]: https://legacy.reactjs.org/docs/faq-internals.html
+[solid start github]: https://github.com/solidjs/solid-start
+[bencher docs]: /docs/
+[bencher learn]: /learn/
+[astro]: https://astro.build/
+[astro islands]: https://docs.astro.build/en/concepts/islands/
+[astro solid]: https://docs.astro.build/en/guides/integrations-guide/solid-js/
+[solid router]: https://github.com/solidjs/solid-router
+[astro view transitions]: https://docs.astro.build/en/guides/view-transitions/
