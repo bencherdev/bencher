@@ -30,7 +30,6 @@ At each stop along with way, I'll discuss how we got here and rate how each engi
 
 ## Frontend
 
-
 ### Frontend Library
 
 As a recovering C++ developer, I'm a pretty big fan of Rust.
@@ -183,7 +182,7 @@ and it all just works.
 
 ## Backend
 
-### Backend Framework
+### Backend HTTP Framework
 
 When deciding on a backend Rust HTTP framework,
 one of my highest considerations was built-in [OpenAPI spec][openapi spec] support.
@@ -207,7 +206,7 @@ Instead of working on upstreaming a fix, I put my efforts towards making Bencher
 But it turns out the solution was [less than 100 lines of code][dropshot github issue 1193].
 
 As an aside, [the `axum` framework][axum github] had not yet been released when I started working on Bencher.
-If it had been around at the time, I may have tried to pair it with one of the many 3rd party add-ons,
+If it had been around at the time, I may have tried to pair it with one of the many 3rd party OpenAPI add-ons,
 despite my better judgment.
 Lucky for me, `axum` wasn't yet there to tempt me.
 
@@ -220,3 +219,19 @@ Lucky for me, `axum` wasn't yet there to tempt me.
 [oxide computer]: https://oxide.computer/
 [dropshot github issue 1193]: https://github.com/oxidecomputer/dropshot/pull/1193
 [axum github]: https://github.com/tokio-rs/axum
+
+### Backend Database Framework
+
+The closer to the database I get, the more strongly typed I want things.
+It's okay to play a little fast and loose on the frontend.
+If I mess up, everything will be right as rain with the next push to production.
+If I corrupt the database though, it's much more of an ordeal to set right.
+With that in mind, I chose to use [Diesel][diesel github].
+
+Diesel is a strongly typed object relational mapper (ORM) and query builder for Rust.
+It checks all database interactions at compile time, preventing runtime errors.
+This compile time checking also makes Diesel a zero-cost abstraction over SQL.
+
+[diesel github]: https://github.com/diesel-rs/diesel
+
+
