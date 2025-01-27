@@ -30,11 +30,22 @@ pub struct ReportComment {
     benchmark_count: usize,
     missing_threshold: HashSet<Measure>,
     json_report: JsonReport,
+    sub_adapter: SubAdapter,
     source: String,
 }
 
+pub struct SubAdapter {
+    pub build_time: bool,
+    pub file_size: bool,
+}
+
 impl ReportComment {
-    pub fn new(console_url: Url, json_report: JsonReport, source: String) -> Self {
+    pub fn new(
+        console_url: Url,
+        json_report: JsonReport,
+        sub_adapter: SubAdapter,
+        source: String,
+    ) -> Self {
         Self {
             console_url,
             project_slug: json_report.project.slug.clone(),
@@ -43,6 +54,7 @@ impl ReportComment {
             benchmark_count: json_report.results.iter().map(Vec::len).sum(),
             missing_threshold: Measure::missing_threshold(&json_report),
             json_report,
+            sub_adapter,
             source,
         }
     }
@@ -543,10 +555,20 @@ impl ReportComment {
         let id = id.map_or_else(
             || {
                 format!(
-                    "{branch}/{testbed}/{adapter}",
+                    "{branch}/{testbed}/{adapter}{build_time}{file_size}",
                     branch = self.json_report.branch.slug,
                     testbed = self.json_report.testbed.slug,
-                    adapter = self.json_report.adapter
+                    adapter = self.json_report.adapter,
+                    build_time = if self.sub_adapter.build_time {
+                        "-build_time"
+                    } else {
+                        ""
+                    },
+                    file_size = if self.sub_adapter.file_size {
+                        "-file_size"
+                    } else {
+                        ""
+                    },
                 )
             },
             ToString::to_string,

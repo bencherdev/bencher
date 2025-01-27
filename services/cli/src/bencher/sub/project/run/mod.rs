@@ -19,6 +19,7 @@ mod error;
 mod fold;
 mod format;
 pub mod runner;
+mod sub_adapter;
 pub mod thresholds;
 
 use branch::Branch;
@@ -26,6 +27,7 @@ use ci::Ci;
 pub use error::RunError;
 use format::Format;
 use runner::Runner;
+use sub_adapter::SubAdapter;
 use thresholds::Thresholds;
 
 use crate::bencher::SubCmd;
@@ -37,6 +39,7 @@ pub struct Run {
     branch: Branch,
     testbed: NameId,
     adapter: Adapter,
+    sub_adapter: SubAdapter,
     average: Option<JsonAverage>,
     iter: usize,
     fold: Option<JsonFold>,
@@ -80,6 +83,7 @@ impl TryFrom<CliRun> for Run {
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
             adapter: adapter.into(),
+            sub_adapter: (&cmd).into(),
             average: average.map(Into::into),
             iter,
             fold: fold.map(Into::into),
@@ -206,13 +210,12 @@ impl Run {
             .get_console_url()
             .await
             .map_err(RunError::ConsoleUrl)?;
-        let report_comment = ReportComment::new(
-            console_url,
-            json_report,
-            self.ci
-                .as_ref()
-                .map_or_else(|| "cli".to_owned(), Ci::source),
-        );
+        let source = self
+            .ci
+            .as_ref()
+            .map_or_else(|| "cli".to_owned(), Ci::source);
+        let report_comment =
+            ReportComment::new(console_url, json_report, self.sub_adapter.into(), source);
 
         let report_str = match self.format {
             Format::Human => report_comment.human(),
