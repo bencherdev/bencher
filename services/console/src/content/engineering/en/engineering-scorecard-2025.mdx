@@ -180,6 +180,45 @@ and it all just works.
 [github issue 557]: https://github.com/bencherdev/bencher/issues/557
 [typeshare github]: https://github.com/1Password/typeshare
 
+### Frontend Hosting
+
+My initial decision to go "all-in" on Solid was pretty heavily influence by
+[Netlify hiring the creator of Solid to work on it full-time].
+You see, Netlify's biggest competitor is [Vercel][vercel].
+Vercel created and maintains [Next.js][next js github].
+And I figured Netlify wanted Solid to be their Next.js.
+Therefore, I thought there would be no better place to host a SolidStart site than Netlify.
+
+By default, Netlify tries to get you to use their build system.
+Using Netlify's build system makes it very hard to do atomic deploys.
+Netlify would still publish the frontend even if the backend pipeline failed.
+Very bad!
+This lead me to move over to building the frontend in the same CI/CD environment as the backend
+and then just uploading the latest version to Netlify with their CLI.
+
+Bencher managed to stay under the Netlify free tier for quite some time.
+With Bencher's increasing popularity though,
+we have started to exceed some of the free tier limits.
+I have considered moving the Astro site over to [sst on AWS][sst aws astro].
+However, the cost savings haven't seemed worth the effort at this point.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | Netlify Builds |    ❌    |
+> | Netlify Deploys |    ✅    |
+
+Everything worked fine when I was prototyping,
+but when Bencher started to have users 
+
+
+Going "all-in" on Solid also influenced my decision on which hosting provider to use.
+Around the time that I was researching 
+
+[dev to netlify]: https://dev.to/ryansolid/when-netlify-asks-you-to-full-time-oss-you-say-yes-5ccf
+[vercel]: https://vercel.com/
+[next js github]: https://github.com/vercel/next.js
+[sst aws astro]: https://sst.dev/docs/component/aws/astro/
+
 ## Backend
 
 ### Backend HTTP Framework
