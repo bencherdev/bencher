@@ -185,7 +185,7 @@ impl ReportComment {
 
     fn html_benchmarks(&self, html: &mut String, require_threshold: bool) {
         self.html_no_benchmarks(html);
-        self.html_no_threshold(html);
+        self.html_no_threshold(html, require_threshold);
         self.html_alerts(html);
         self.html_benchmark_details(html, require_threshold);
     }
@@ -196,8 +196,8 @@ impl ReportComment {
         }
     }
 
-    fn html_no_threshold(&self, html: &mut String) {
-        if self.benchmark_count == 0 || self.missing_threshold.is_empty() {
+    fn html_no_threshold(&self, html: &mut String, require_threshold: bool) {
+        if self.benchmark_count == 0 || self.missing_threshold.is_empty() || require_threshold {
             return;
         }
 
@@ -214,7 +214,7 @@ impl ReportComment {
 
         html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
         html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
-        html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> CLI flag</a>.</p>", utm = self.utm_query()));
+        html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> flag</a>.</p>", utm = self.utm_query()));
         html.push_str("</blockquote>");
     }
 
