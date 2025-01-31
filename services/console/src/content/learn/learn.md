@@ -86,6 +86,7 @@
 - How to use perf
   - https://www.youtube.com/watch?v=nXaxk27zwlk
 - Building your own eBPF based profiler
+- https://www.martinfowler.com/ieeeSoftware/yetOptimization.pdf
 
 # Machine Learning
 - https://harvard-edge.github.io/cs249r_book/contents/benchmarking/benchmarking.html
