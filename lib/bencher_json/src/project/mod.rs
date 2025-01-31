@@ -84,7 +84,6 @@ impl Display for JsonProject {
 // Just isolating the variants to the `url` field doesn't work either
 // because `dropshot` doesn't like a flattened and untagged inner struct enum.
 // So we are left with this solution, a top-level, untagged enum.
-// In the future, avoid this by not having nullable fields in the API that need to be individually modified.
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]

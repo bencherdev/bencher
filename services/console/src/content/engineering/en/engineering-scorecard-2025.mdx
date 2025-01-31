@@ -241,6 +241,8 @@ As an aside, [the `axum` framework][axum github] had not yet been released when 
 If it had been around at the time, I may have tried to pair it with one of the many 3rd party OpenAPI add-ons,
 despite my better judgment.
 Lucky for me, `axum` wasn't yet there to tempt me.
+Dropshot has been a great choice.
+See the [CLI API Client][cli api client] section for more on this point.
 
 > | Technology | Verdict |
 > | :--------: | :-----: |
@@ -251,6 +253,7 @@ Lucky for me, `axum` wasn't yet there to tempt me.
 [oxide computer]: https://oxide.computer/
 [dropshot github issue 1193]: https://github.com/oxidecomputer/dropshot/pull/1193
 [axum github]: https://github.com/tokio-rs/axum
+[cli api client]: #cli-api-client
 
 ### Backend Database Framework
 
@@ -276,6 +279,16 @@ I have had no runtime SQL errors when working with Diesel.
 [case study diesel]: /learn/case-study/diesel/
 [engineering sqlite]: /learn/engineering/sqlite-performance-tuning/
 
+### Backend Language
+
+[Rust][rust].
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | Rust   |    ✅    |
+
+[rust]: https://www.rust-lang.org/
+
 ### Backend Database
 
 When I started developing Bencher, I tried to keep it as simple as possible.
@@ -290,7 +303,7 @@ However, this approach has two major draw backs.
 First, the `git clone` times would eventually become untenable for heavy users.
 Second, all historical data would have to be present in the HTML file,
 leading to very long initial load times for heavy users.
-A tool should love their heavy users, not punish them.
+A dev tool should love their heavy users, not punish them.
 
 It turns out there's a solution to my problem.
 It's called a database.
@@ -363,14 +376,127 @@ As mentioned above, this work on Litestream was eventually cannibalized by LiteF
 and LiteFS is now dead.
 So that didn't really pan out as I had hoped.
 
-With that said though, I have found deploying to Fly.io to be mostly pleasant.
-They did have a couple of major outages which took Bencher down for half-a-day each time.
 In the future when I switch to Kamal, I'll also be moving off of Fly.io.
-Between the outages and the ever increasing bills as they meter more and more things
-I don't think Bencher Cloud really fits their use case.
+Fly.io has had a couple of major outages which took Bencher down for half-a-day each time.
+But the biggest issue is the impedance mismatch that comes from using Litestream.
 
-The [AWS S3][aws s3] backend for the Litestream replication has been 
+Every time I log into the Fly.io dashboard, I see this warning:
+
+> ℹ Your app is running on a single machine
+> Scale and run your app on more Machines to ensure high availability with one command:
+> ```
+> fly scale count 2
+> ```
+> Check out the [documentation](https://fly.io/docs/launch/scale-count/) for more details on scaling.
+
+But with Litestream, you can't have more than one machine!
+You all never delivered read replication, like you promised!
+
+So yeah, that's all a little ironic and frustrating.
+At one point, I looked into [libSQL][github libsql] and [Turso][turso].
+However, libSQL requires a special backend server for replication
+which makes it [not work with Diesel][libsql github issue 1180].
+Either way, it looks like I dodged another [end-of-life shutdown][turso roadmap] there as well.
+I am very interested to see what Turso does with [Limbo][github limbo], their Rust rewrite of SQLite.
+But I won't be making that switch anytime soon.
+The next stop is a nice, boring, and stable VM running Kamal.
+
+The [AWS S3][aws s3] backend for the Litestream replication has worked flawlessly.
+Even with the rug pull around Litestream and Fly.io,
+I still think I made the right call using Litestream with Bencher.
+I'm starting to hit some scaling issues with Bencher Cloud,
+but this as a good problem to have.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | Fly.io   |    ❌    |
+> | AWS S3   |   ✅     |
 
 [fly io]: https://fly.io/
 [fly io sqlite]: https://fly.io/blog/all-in-on-sqlite-litestream/
+[github libsql]: https://github.com/tursodatabase/libsql
+[turso]: https://turso.tech/
+[libsql github issue 1180]: https://github.com/tursodatabase/libsql/issues/1180
+[turso roadmap]: https://turso.tech/blog/upcoming-changes-to-the-turso-platform-and-roadmap
+[github limbo]: https://github.com/tursodatabase/limbo
 [aws s3]: https://aws.amazon.com/s3/
+
+## CLI
+
+### CLI Framework
+
+When building a Rust CLI, [clap][github clap] is a bit of a de facto standard.
+So imagine my shock when [I first publicly demoed Bencher][talks rust dc]
+and the creator himself, [Ed Page][github epage], was there! 🤩
+
+Over time, I keep finding more and more helpful things that clap can do.
+It's a bit embarrassing, but I just recently discovered
+[the `default_value` option][docs clap default value].
+All of these capabilities really helps shrink the amount of code I have to maintain
+for the `bencher` CLI.
+
+> 🐰 Fun Fact: [clap uses Bencher][clap github pr 5826] to [track binary size][track binary size]!
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | Clap   |    ✅    |
+
+[github clap]: https://github.com/clap-rs/clap
+[talks rust dc]: /docs/explanation/talks/#rust-dc-20-sep-22
+[github epage]: https://github.com/epage
+[docs clap default value]: https://docs.rs/clap/4.5.27/clap/struct.Arg.html#method.default_value
+[clap github pr 5826]: https://github.com/clap-rs/clap/pull/5826
+[track binary size]: /docs/how-to/track-file-size/
+
+### CLI API Client
+
+When I picked [Dropshot][github dropshot] as Bencher's
+[backend HTTP framework][backend http framework],
+one of its biggest selling points was its built-in ability to generate an OpenAPI spec.
+I was hopeful that one day I could auto-generate an API client from that spec.
+A year or so later, the creators of Dropshot delivered: [Progenitor][github progenitor].
+
+Progenitor is the yin to Dropshot's yang.
+Using the OpenAPI spec from Dropshot, Progenitor can generate a Rust API client
+in either a positional pattern:
+
+```
+client.instance_create(org, proj, body)
+```
+
+or a builder pattern:
+
+```
+client.instance_create().organization_name("org").project_name("proj").body(body)
+```
+
+Personally, I prefer the latter,
+so that's what Bencher uses.
+Progenitor can also generate an entire clap CLI to interact with API.
+However, I haven't used it.
+I needed to have tighter control over things,
+especially for commands like [`bencher run`][bencher run].
+
+The only notable downside I've found with the generated types is that
+due to limitations in JSON Schema, you can't just use an `Option<Option<Item>>`
+when you need to be able to disambiguate between a missing `item` key and an `item` key with the value set to `null`.
+This is possible with something like [`double_option`][docs serde with double option],
+but it all looks the same at the level of the JSON Schema.
+Using a [flattened][serde flattened] or [untagged][serde untagged] inner struct enum
+doesn't play nice with Dropshot.
+The only solution that I found was to use [a top-level, untagged enum][github bencher json update project].
+There are only two such fields in the entire API at this point though,
+so not a huge deal.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | Progenitor |    ✅    |
+
+[github dropshot]: https://github.com/oxidecomputer/dropshot
+[github progenitor]: https://github.com/oxidecomputer/progenitor
+[backend http framework]: #backend-http-framework
+[bencher run]: /docs/explanation/bencher-run/
+[docs serde with double option]: https://docs.rs/serde_with/3.12.0/serde_with/rust/double_option/index.html
+[serde flattened]: https://serde.rs/attr-flatten.html
+[serde untagged]: https://serde.rs/enum-representations.html#untagged
+[github bencher json update project]: https://github.com/bencherdev/bencher/blob/09084ed5549fea71b181da048ec6fa8672e17541/lib/bencher_json/src/project/mod.rs#L91
