@@ -500,3 +500,76 @@ so not a huge deal.
 [serde flattened]: https://serde.rs/attr-flatten.html
 [serde untagged]: https://serde.rs/enum-representations.html#untagged
 [github bencher json update project]: https://github.com/bencherdev/bencher/blob/09084ed5549fea71b181da048ec6fa8672e17541/lib/bencher_json/src/project/mod.rs#L91
+
+## Development Workflow
+
+### Developer Environment
+
+When I started working on Bencher, folks were calling for [the end of localhost][dx tips].
+I was already well past the need for a new development laptop,
+so I decided to try out a cloud development environment.
+At the time GitHub Workspaces wasn't generally available (GA) for my use case,
+so I went with [Gitpod][gitpod].
+
+This experiment lasted for about six months.
+My conclusion: cloud development environments do not work well for side projects.
+Do you want to hop on and knock out five minutes of work?
+Nope! You're going to sit there and wait for your dev environment to reinitialize itself for the 1,000th time.
+Oh, you have an entire afternoon on the weekend to really crank out some work?
+Nope! Your dev environment is just going to [randomly stop working while you are using it][github gitpod 9629]. Again and again and again.
+
+I ran into these issues as a paid user.
+At $25/month, I could get a brand new M1 MacBook Pro with much better specs every five years.
+When Gitpod announced they were changing their pricing from a flat rate to be usage based,
+I just let them cancel my plan and headed on over to [apple.com][apple].
+
+Maybe this was all an issue with Gitpod's [now abandoned decision][gitpod kubernetes] to use Kubernetes.
+But I'm in no hurry to try out another cloud development environment with Bencher again.
+I did eventually port the Gitpod configuration over to a [dev container][github bencher dev container]
+to make it easier for contributors to get started.
+For me though, I'm sticking with `localhost`.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | Gitpod |    ❌    |
+> | M1 MacBook Pro |    ✅    |
+
+[dx tips]: https://dx.tips/the-end-of-localhost
+[gitpod]: https://www.gitpod.io/
+[github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
+[apple]: https://www.apple.com
+[gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
+[github bencher dev container]: https://github.com/bencherdev/bencher/tree/v0.4.33/.devcontainer
+
+### Continuous Integration
+
+Bencher is [open source][github bencher].
+As a modern open source project, you sort of have to be on GitHub.
+This means the path of least resistance for continuous integration (CI) is GitHub Actions.
+Over the years, I've began to loathe the YAML based CI DSLs.
+They each have their own quarks, and when it comes to a company as big as GitHub,
+getting a ⚠️ icon instead of an ❌ icon can [languish for years][github runner 2347].
+
+This motivated me to try out [Dagger][github dagger].
+At the time, you could only use Dagger via this esoteric language called [CUE][github cue].
+I tried. I really did. For like a whole weekend.
+Maybe if ChatGPT had existed back then, I could have made it through.
+But it wasn't just me.
+Dagger eventually [abandoned CUE][dagger cue] altogether for more sane SDKs.
+
+Defeated by Dagger, I accepted my YAML CI DSL fate,
+and Bencher now uses GitHub Actions.
+Heck, I even built a [Bencher CLI][github bencher cli] GitHub Action.
+Be the ~~change~~ problem you wish to see in the world.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | Dagger |    ❌    |
+> | GitHub Actions |    ✅    |
+
+[github bencher]: https://github.com/bencherdev/bencher
+[github runner 2347]: https://github.com/actions/runner/issues/2347
+[github dagger]: https://github.com/dagger/dagger
+[github cue]: https://github.com/cue-lang/cue
+[dagger cue]: https://dagger.io/blog/ending-cue-support
+[github bencher cli]: https://github.com/marketplace/actions/bencher-cli
