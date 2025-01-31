@@ -121,7 +121,13 @@ const PerfPlot = (props: Props) => {
 								/>
 							}
 						>
-							<Match when={props.perfData.loading}>
+							<Match
+								when={
+									props.perfData.loading ||
+									props.perfData() === undefined ||
+									Object.keys(props.perfData() as JsonPerf).length === 0
+								}
+							>
 								<progress
 									class="progress is-primary"
 									style="margin-top: 8rem; margin-bottom: 16rem;"
