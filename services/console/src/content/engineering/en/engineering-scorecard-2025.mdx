@@ -8,6 +8,8 @@ sortOrder: -2025.0125
 draft: true
 ---
 
+import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
+
 When developing a new technology, like [Bencher][bencher],
 there is a fundamental tension between wanting to [choose boring technology][choose boring technology]
 and [beating the averages][beating the averages].
@@ -20,7 +22,8 @@ I thought it would be a great time to stop and reflect on all the engineering de
 
 In this post, I'm going to review where Bencher has spent its "innovation tokens" over the past three years.
 I'll start at the frontend of the [Bencher architecture][architecture] and move all the way down the stack.
-At each stop along with way, I'll discuss how we got here and rate how each engineering decision panned out.
+At each stop along with way, I'll discuss how we got here
+and give a binary verdict on how each engineering decision panned out.
 
 [bencher]: https://bencher.dev
 [choose boring technology]: https://mcfunley.com/choose-boring-technology
@@ -46,7 +49,7 @@ I knew I wanted Bencher to have highly interactive plots.
 This meant using a library like [D3][d3 github],
 which meant JS interop.
 
-So if I was going to have to use JavaScript, which framework should I choose?
+So if I was going to have to use JavaScript, which library should I choose?
 
 Going back to those Rust crates I experimented with,
 Yew is the Rust analogue to [React Hooks][react hooks].
@@ -55,8 +58,8 @@ so I knew the most about this framework.
 However, I found the React Hooks lifecycle very complicated
 and full of gotcha, weird edge cases.
 
-I really liked the core principals of [functional reactive programming][functional reactive programming] (FRP) though.
-This lead me to trying out both Elm and its Rust analogue, Seed.
+I really liked the core principals of [functional reactive programming][functional reactive programming] (FRP).
+This lead me to trying out both [Elm][elm] and its Rust analogue, Seed.
 Unfortunately, using Elm suffers from the same issues as using Rust.
 Elm requires its own [JavaScript Interop][elm js interop].
 I also found [The Elm Architecture][the elm architecture] a bit too restrictive for my liking.
@@ -71,10 +74,13 @@ Solid is made up of just a few powerful primitives that allow for fine-grained r
 When something in the UI gets updated, only the code that depends on it will rerun.
 Over the past three years, I have found Solid to be a pleasure to work with.
 
-> | Technology    | Verdict |
-> | :--------:    | :-----: |
-> | Rust Frontend |    ❌    |
-> | SolidJS       |    ✅    |
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> |    Yew     |    ❌    |
+> |    Seed    |    ❌    |
+> |  Sycamore  |    ❌    |
+> |    Elm     |    ❌    |
+> |  SolidJS   |    ✅    |
 
 [bencher github]: https://github.com/bencherdev/bencher
 [yew github]: https://github.com/yewstack/yew
@@ -84,6 +90,7 @@ Over the past three years, I have found Solid to be a pleasure to work with.
 [d3 github]: https://github.com/d3/d3
 [react hooks]: https://react.dev/reference/react/hooks
 [functional reactive programming]: https://en.wikipedia.org/wiki/Functional_reactive_programming
+[elm]: https://elm-lang.org/
 [elm js interop]: https://guide.elm-lang.org/interop/
 [the elm architecture]: https://guide.elm-lang.org/architecture/
 [solid github]: https://github.com/solidjs/solid
@@ -91,7 +98,7 @@ Over the past three years, I have found Solid to be a pleasure to work with.
 
 ### Frontend Framework
 
-Solid itself is "just a library".
+Solid itself is just a library.
 In order to build a modern frontend,
 I was going to need to use a full fledged web app framework.
 Wanting to keep things simple, I put all of my eggs in the Solid basket,
@@ -157,7 +164,7 @@ but they don't block the build ([yet][github issue 557]).
 I also added [Typeshare][typeshare github] to sync Bencher's Rust data types with the TypeScript frontend.
 This has been incredibly helpful for developing the Bencher Console.
 Further, all the field validators for things like usernames, emails, etc
-are shared between the Rust code and the TypeScript frontend via WASM.
+are shared between the Rust code and the TypeScript frontend [via WASM][github wasm bindgen].
 It's been a bit of a hassle to get WASM working in both SolidStart and Astro.
 The largest class of error that I've seen in the frontend has been places where a WASM function is called
 but the WASM module hasn't loaded yet.
@@ -168,17 +175,20 @@ has made interfacing with the frontend much easier.
 They both get checked in CI, so they are never out of sync.
 All I have to do is make sure the HTTP requests are well formed,
 and it all just works.
+This makes not being able to use full-stack Rust sting a little less.
 
 > | Technology | Verdict |
 > | :--------: | :-----: |
+> |    Rust    |    ❌    |
 > | JavaScript |    ❌    |
 > | TypeScript |    ✅    |
 > | Typeshare  |    ✅    |
-> |   WASM     |    ✅    |
+> |    WASM    |    ✅    |
 
 [astro typescript]: https://docs.astro.build/en/guides/typescript/
 [github issue 557]: https://github.com/bencherdev/bencher/issues/557
 [typeshare github]: https://github.com/1Password/typeshare
+[github wasm bindgen]: https://github.com/rustwasm/wasm-bindgen
 
 ### Frontend Hosting
 
@@ -193,8 +203,11 @@ By default, Netlify tries to get you to use their build system.
 Using Netlify's build system makes it very hard to do atomic deploys.
 Netlify would still publish the frontend even if the backend pipeline failed.
 Very bad!
-This lead me to move over to building the frontend in the same CI/CD environment as the backend
+This lead me to move over to building the frontend in the same [CI/CD environment][continuous integration] as the backend
 and then just uploading the latest version to Netlify with their CLI.
+When I made the transition from SolidStart to Astro,
+I was able to keep the same CI/CD setup.
+Astro has a first-party [Netlify integration][astro netlify].
 
 Bencher managed to stay under the Netlify free tier for quite some time.
 With Bencher's increasing popularity though,
@@ -202,25 +215,38 @@ we have started to exceed some of the free tier limits.
 I have considered moving the Astro site over to [`sst` on AWS][sst aws astro].
 However, the cost savings haven't seemed worth the effort at this point.
 
-> | Technology | Verdict |
-> | :--------: | :-----: |
-> | Netlify Builds |    ❌    |
+> |   Technology    | Verdict |
+> | :-------------: | :-----: |
+> | Netlify Builds  |    ❌    |
 > | Netlify Deploys |    ✅    |
 
 [dev to netlify]: https://dev.to/ryansolid/when-netlify-asks-you-to-full-time-oss-you-say-yes-5ccf
 [vercel]: https://vercel.com/
 [next js github]: https://github.com/vercel/next.js
+[continuous integration]: #continuous-integration
+[astro netlify]: https://docs.astro.build/en/guides/integrations-guide/netlify/
 [sst aws astro]: https://sst.dev/docs/component/aws/astro/
 
 ## Backend
 
-### Backend HTTP Framework
+### Backend Language
 
-When deciding on a backend Rust HTTP framework,
-one of my highest considerations was built-in [OpenAPI spec][openapi spec] support.
-For the same reasons that I invested in setting up Typeshare and WASM on the frontend,
+[Rust][rust].
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> |    Rust    |    ✅    |
+
+[rust]: https://www.rust-lang.org/
+
+### HTTP Server Framework
+
+One of my top considerations when selecting a Rust HTTP server framework
+was built-in [OpenAPI spec][openapi spec] support.
+For the same reasons that I invested in setting up
+[Typeshare and WASM on the frontend][frontend language],
 I wanted the ability to auto-generate both API docs and clients from that spec.
-It was important to me that this functionality was built-in and not a 3rd party add-on.
+It was important to me that this functionality was built-in and not a third-party add-on.
 For the automation to actually be worth it, it has to work pretty close to 100% of the time.
 This means the maintenance and compatibility burden needs to be on the core framework engineers themselves.
 Otherwise, you will inevitably find yourself in edge case hell.
@@ -236,26 +262,28 @@ When an error is generated by the API server, it causes a CORS failure on the fr
 This means that the web frontend can't display very helpful error messages to users.
 Instead of working on upstreaming a fix, I put my efforts towards making Bencher easier and more intuitive to use.
 But it turns out the solution was [less than 100 lines of code][dropshot github issue 1193].
+Jokes on me!
 
 As an aside, [the `axum` framework][axum github] had not yet been released when I started working on Bencher.
 If it had been around at the time, I may have tried to pair it with one of the many 3rd party OpenAPI add-ons,
 despite my better judgment.
 Lucky for me, `axum` wasn't yet there to tempt me.
 Dropshot has been a great choice.
-See the [CLI API Client][cli api client] section for more on this point.
+See the [API Client][api client] section for more on this point.
 
 > | Technology | Verdict |
 > | :--------: | :-----: |
-> | Dropshot   |    ✅    |
+> |  Dropshot  |    ✅    |
 
 [openapi spec]: https://swagger.io/specification/
+[frontend language]: #frontend-language
 [dropshot github]: https://github.com/oxidecomputer/dropshot
 [oxide computer]: https://oxide.computer/
 [dropshot github issue 1193]: https://github.com/oxidecomputer/dropshot/pull/1193
 [axum github]: https://github.com/tokio-rs/axum
-[cli api client]: #cli-api-client
+[api client]: #api-client
 
-### Backend Database Framework
+### Database Driver
 
 The closer to the database I get, the more strongly typed I want things.
 It's okay to play a little fast and loose on the frontend.
@@ -273,25 +301,15 @@ I have had no runtime SQL errors when working with Diesel.
 
 > | Technology | Verdict |
 > | :--------: | :-----: |
-> | Diesel   |    ✅    |
+> |   Diesel   |    ✅    |
 
 [diesel github]: https://github.com/diesel-rs/diesel
 [case study diesel]: /learn/case-study/diesel/
 [engineering sqlite]: /learn/engineering/sqlite-performance-tuning/
 
-### Backend Language
+### Database
 
-[Rust][rust].
-
-> | Technology | Verdict |
-> | :--------: | :-----: |
-> | Rust   |    ✅    |
-
-[rust]: https://www.rust-lang.org/
-
-### Backend Database
-
-When I started developing Bencher, I tried to keep it as simple as possible.
+I've tried to keep Bencher as simple as possible.
 The first version of Bencher took everything,
 including the benchmarks results themselves through URL query params.
 I quickly learned that all browsers have [a limit on URL length][chrome url length].
@@ -346,13 +364,13 @@ In the future, I plan to move to zero-downtime deploys using [Kamal][github kama
 With [Rails 8.0 defaulting to Kamal and SQLite][rails 8],
 I feel fairly confident that Kamal and Litestream should pair well together.
 
-> | Technology | Verdict |
-> | :--------: | :-----: |
-> | URL Query Params   |    ❌    |
-> | git + HTML   |    ❌    |
-> | SQLite   |    ✅    |
-> | Litestream   |    ✅    |
-> | LiteFS   |    ❌    |
+> |    Technology    | Verdict |
+> | :--------------: | :-----: |
+> | URL Query Params |    ❌    |
+> |    git + HTML    |    ❌    |
+> |      SQLite      |    ✅    |
+> |    Litestream    |    ✅    |
+> |      LiteFS      |    ❌    |
 
 [chrome url length]: https://chromium.googlesource.com/chromium/src/+/main/docs/security/url_display_guidelines/url_display_guidelines.md#url-length
 [bencher self hosted]: /docs/explanation/bencher-self-hosted/
@@ -376,13 +394,14 @@ As mentioned above, this work on Litestream was eventually cannibalized by LiteF
 and LiteFS is now dead.
 So that didn't really pan out as I had hoped.
 
-In the future when I switch to Kamal, I'll also be moving off of Fly.io.
+In the future when I switch to [Kamal][github kamal], I'll also be moving off of Fly.io.
 Fly.io has had a couple of major outages which took Bencher down for half-a-day each time.
 But the biggest issue is the impedance mismatch that comes from using Litestream.
 
 Every time I log into the Fly.io dashboard, I see this warning:
 
-> ℹ Your app is running on a single machine
+> <h4>ℹ Your app is running on a single machine</h4>
+>
 > Scale and run your app on more Machines to ensure high availability with one command:
 > ```
 > fly scale count 2
@@ -409,11 +428,12 @@ but this as a good problem to have.
 
 > | Technology | Verdict |
 > | :--------: | :-----: |
-> | Fly.io   |    ❌    |
-> | AWS S3   |   ✅     |
+> |   Fly.io   |    ❌    |
+> |   AWS S3   |    ✅    |
 
 [fly io]: https://fly.io/
 [fly io sqlite]: https://fly.io/blog/all-in-on-sqlite-litestream/
+[github kamal]: https://github.com/basecamp/kamal
 [github libsql]: https://github.com/tursodatabase/libsql
 [turso]: https://turso.tech/
 [libsql github issue 1180]: https://github.com/tursodatabase/libsql/issues/1180
@@ -423,7 +443,7 @@ but this as a good problem to have.
 
 ## CLI
 
-### CLI Framework
+### CLI Library
 
 When building a Rust CLI, [clap][github clap] is a bit of a de facto standard.
 So imagine my shock when [I first publicly demoed Bencher][talks rust dc]
@@ -432,14 +452,14 @@ and the creator himself, [Ed Page][github epage], was there! 🤩
 Over time, I keep finding more and more helpful things that clap can do.
 It's a bit embarrassing, but I just recently discovered
 [the `default_value` option][docs clap default value].
-All of these capabilities really helps shrink the amount of code I have to maintain
-for the `bencher` CLI.
+All of these capabilities really help to shrink the amount of code I have to maintain
+in the `bencher` CLI.
 
 > 🐰 Fun Fact: [clap uses Bencher][clap github pr 5826] to [track binary size][track binary size]!
 
 > | Technology | Verdict |
 > | :--------: | :-----: |
-> | Clap   |    ✅    |
+> |    Clap    |    ✅    |
 
 [github clap]: https://github.com/clap-rs/clap
 [talks rust dc]: /docs/explanation/talks/#rust-dc-20-sep-22
@@ -448,11 +468,11 @@ for the `bencher` CLI.
 [clap github pr 5826]: https://github.com/clap-rs/clap/pull/5826
 [track binary size]: /docs/how-to/track-file-size/
 
-### CLI API Client
+### API Client
 
-When I picked [Dropshot][github dropshot] as Bencher's
-[backend HTTP framework][backend http framework],
-one of its biggest selling points was its built-in ability to generate an OpenAPI spec.
+A major factor in picking [Dropshot][github dropshot] as Bencher's
+[HTTP server framework][http server framework]
+was its built-in ability to generate an [OpenAPI spec][openapi spec].
 I was hopeful that one day I could auto-generate an API client from that spec.
 A year or so later, the creators of Dropshot delivered: [Progenitor][github progenitor].
 
@@ -461,13 +481,13 @@ Using the OpenAPI spec from Dropshot, Progenitor can generate a Rust API client
 in either a positional pattern:
 
 ```
-client.instance_create(org, proj, body)
+client.instance_create("bencher", "api")
 ```
 
 or a builder pattern:
 
 ```
-client.instance_create().organization_name("org").project_name("proj").body(body)
+client.instance_create().organization("bencher").project("api").send()
 ```
 
 Personally, I prefer the latter,
@@ -494,18 +514,19 @@ so not a huge deal.
 
 [github dropshot]: https://github.com/oxidecomputer/dropshot
 [github progenitor]: https://github.com/oxidecomputer/progenitor
-[backend http framework]: #backend-http-framework
+[http server framework]: #http-server-framework
+[openapi spec]: https://swagger.io/specification/
 [bencher run]: /docs/explanation/bencher-run/
 [docs serde with double option]: https://docs.rs/serde_with/3.12.0/serde_with/rust/double_option/index.html
 [serde flattened]: https://serde.rs/attr-flatten.html
 [serde untagged]: https://serde.rs/enum-representations.html#untagged
 [github bencher json update project]: https://github.com/bencherdev/bencher/blob/09084ed5549fea71b181da048ec6fa8672e17541/lib/bencher_json/src/project/mod.rs#L91
 
-## Development Workflow
+## Development
 
 ### Developer Environment
 
-When I started working on Bencher, folks were calling for [the end of localhost][dx tips].
+As I started working on Bencher, folks were calling for [the end of localhost][dx tips].
 I was already well past the need for a new development laptop,
 so I decided to try out a cloud development environment.
 At the time GitHub Workspaces wasn't generally available (GA) for my use case,
@@ -529,9 +550,9 @@ I did eventually port the Gitpod configuration over to a [dev container][github 
 to make it easier for contributors to get started.
 For me though, I'm sticking with `localhost`.
 
-> | Technology | Verdict |
-> | :--------: | :-----: |
-> | Gitpod |    ❌    |
+> |   Technology   | Verdict |
+> | :------------: | :-----: |
+> |     Gitpod     |    ❌    |
 > | M1 MacBook Pro |    ✅    |
 
 [dx tips]: https://dx.tips/the-end-of-localhost
@@ -539,7 +560,7 @@ For me though, I'm sticking with `localhost`.
 [github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
 [apple]: https://www.apple.com
 [gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
-[github bencher dev container]: https://github.com/bencherdev/bencher/tree/v0.4.33/.devcontainer
+[github bencher dev container]: https://github.com/bencherdev/bencher/pkgs/container/bencher-dev-container
 
 ### Continuous Integration
 
@@ -551,7 +572,7 @@ They each have their own quarks, and when it comes to a company as big as GitHub
 getting a ⚠️ icon instead of an ❌ icon can [languish for years][github runner 2347].
 
 This motivated me to try out [Dagger][github dagger].
-At the time, you could only use Dagger via this esoteric language called [CUE][github cue].
+At the time, you could only use Dagger via this esoteric language called [CUE][cue].
 I tried. I really did. For like a whole weekend.
 Maybe if ChatGPT had existed back then, I could have made it through.
 But it wasn't just me.
@@ -562,14 +583,60 @@ and Bencher now uses GitHub Actions.
 Heck, I even built a [Bencher CLI][github bencher cli] GitHub Action.
 Be the ~~change~~ problem you wish to see in the world.
 
-> | Technology | Verdict |
-> | :--------: | :-----: |
-> | Dagger |    ❌    |
+> |   Technology   | Verdict |
+> | :------------: | :-----: |
+> |     Dagger     |    ❌    |
 > | GitHub Actions |    ⚠️    |
 
 [github bencher]: https://github.com/bencherdev/bencher
 [github runner 2347]: https://github.com/actions/runner/issues/2347
 [github dagger]: https://github.com/dagger/dagger
-[github cue]: https://github.com/cue-lang/cue
+[cue]: https://cuelang.org/
 [dagger cue]: https://dagger.io/blog/ending-cue-support
 [github bencher cli]: https://github.com/marketplace/actions/bencher-cli
+
+## Conclusion
+
+Building Bencher has taught me a lot about the trade-offs
+that come with each engineering decision.
+There are some choices that I would make differently now,
+but that's a good thing.
+It means that I've learned a thing or two along the way.
+Overall, I'm very happy with where Bencher is today.
+Bencher has gone form a sketch in my notebook to a full-fledged product
+with a growing user base, a vibrant community, and paying customers.
+I'm excited to see where the next three years take us!
+
+> |            Stack            |                     Component                     |    Technology    | Verdict |
+> | :-------------------------: | :-----------------------------------------------: | :--------------: | :-----: |
+> |    [Frontend](#frontend)    |       [Frontend Library](#frontend-library)       |       Yew        |    ❌    |
+> |                             |                                                   |       Seed       |    ❌    |
+> |                             |                                                   |     Sycamore     |    ❌    |
+> |                             |                                                   |       Elm        |    ❌    |
+> |                             |                                                   |     SolidJS      |    ✅    |
+> |                             |      [Frontend Language](#frontend-language)      |       Rust       |    ❌    |
+> |                             |                                                   |    JavaScript    |    ❌    |
+> |                             |                                                   |    TypeScript    |    ✅    |
+> |                             |                                                   |    Typeshare     |    ✅    |
+> |                             |                                                   |       WASM       |    ✅    |
+> |                             |       [Frontend Hosting](#frontend-hosting)       |  Netlify Builds  |    ❌    |
+> |                             |                                                   | Netlify Deploys  |    ✅    |
+> |     [Backend](#backend)     |       [Backend Language](#backend-language)       |       Rust       |    ✅    |
+> |                             |  [HTTP Server Framework](#http-server-framework)  |     Dropshot     |    ✅    |
+> |                             |        [Database Driver](#database-driver)        |      Diesel      |    ✅    |
+> |                             |               [Database](#database)               | URL Query Params |    ❌    |
+> |                             |                                                   |    git + HTML    |    ❌    |
+> |                             |                                                   |      SQLite      |    ✅    |
+> |                             |                                                   |    Litestream    |    ✅    |
+> |                             |                                                   |      LiteFS      |    ❌    |
+> |                             |        [Backend Hosting](#backend-hosting)        |      Fly.io      |    ❌    |
+> |                             |                                                   |      AWS S3      |    ✅    |
+> |         [CLI](#cli)         |            [CLI Library](#cli-library)            |       Clap       |    ✅    |
+> |                             |             [API Client](#api-client)             |    Progenitor    |    ✅    |
+> | [Development](#development) |  [Developer Environment](#developer-environment)  |      Gitpod      |    ❌    |
+> |                             |                                                   |  M1 MacBook Pro  |    ✅    |
+> |                             | [Continuous Integration](#continuous-integration) |      Dagger      |    ❌    |
+> |                             |                                                   |  GitHub Actions  |    ⚠️    |
+
+<BencherFooter />
+
