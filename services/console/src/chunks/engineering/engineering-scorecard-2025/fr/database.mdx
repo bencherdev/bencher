@@ -1,0 +1,77 @@
+### Base de données
+
+J'ai essayé de garder Bencher aussi simple que possible.
+La première version de Bencher prenait tout,
+y compris les résultats des benchmarks eux-mêmes via les paramètres de requête URL.
+J'ai rapidement appris que tous les navigateurs ont [une limite sur la longueur des URL][chrome url length].
+Cela a du sens.
+
+Ensuite, j'ai envisagé de stocker les résultats des benchmarks dans `git`
+et de simplement générer un fichier HTML statique avec les graphiques et les résultats.
+Cependant, cette approche a deux inconvénients majeurs.
+Premièrement, le temps de `git clone` finirait par devenir intenable pour les utilisateurs intensifs.
+Deuxièmement, toutes les données historiques devraient être présentes dans le fichier HTML,
+conduisant à des temps de chargement initial très longs pour les utilisateurs intensifs.
+Un outil de développement devrait aimer ses utilisateurs intensifs, pas les punir.
+
+Il s'avère qu'il existe une solution à mon problème.
+Cela s'appelle une base de données.
+
+Alors pourquoi ne pas simplement utiliser Postgres et en rester là ?
+Eh bien, je voulais vraiment que les gens puissent [héberger Bencher eux-mêmes][bencher self hosted].
+Plus je pouvais simplifier l'architecture,
+plus il serait facile (et bon marché) pour les autres de l'héberger eux-mêmes.
+J'allais déjà nécessiter deux conteneurs en raison du frontend et du backend séparés.
+Pourrais-je éviter un troisième ? Oui !
+
+Avant Bencher, je n'avais utilisé [SQLite][sqlite] que comme base de données de test.
+L'expérience développeur était fantastique, mais je n'avais jamais envisagé de l'utiliser en production.
+Puis je suis tombé sur [Litestream][github litestream].
+Litestream est un outil de récupération en cas de sinistre pour SQLite.
+Il fonctionne en arrière-plan et réplique continuellement les changements vers S3
+ou tout autre magasin de données de votre choix.
+Cela le rend à la fois facile à utiliser et incroyablement économique à exécuter,
+puisque S3 ne facture pas les écritures.
+Pensez à quelques centimes par jour pour une petite instance.
+
+Lorsque j'ai découvert Litestream pour la première fois,
+il y avait aussi la promesse de répliques de lecture en direct qui devaient arriver bientôt.
+Cependant, ceci [ne s'est jamais réalisé][litestream github issue 8].
+L'alternative suggérée était un projet successeur par le même développeur
+appelé [LiteFS][github litefs].
+Cependant, il y a des inconvénients majeurs à LiteFS.
+Il n'offre pas de récupération en cas de sinistre intégrée, si toutes les réplicas tombent en panne.
+Pour avoir plusieurs réplicas,
+vous devez infecter votre logique d'application avec le concept de lecteur ou d'écrivain.
+Et le blocage absolu était qu'il nécessite une instance de [Consul][github consul]
+pour gérer les réplicas en permanence.
+L'ensemble du but de l'utilisation de SQLite était d'éviter encore un autre service.
+Heureusement, je n'ai pas essayé d'utiliser LiteFS avec Bencher Cloud non plus,
+car [LiteFS Cloud a été abandonné un an après son lancement][litefs sunset],
+et [LiteFS est désormais presque à l'arrêt][github litefs contributors].
+
+Actuellement, le petit temps d'arrêt entre les déploiements est [géré par le CLI de Bencher][bencher attempts].
+À l'avenir, je prévois de passer à des déploiements sans temps d'arrêt en utilisant [Kamal][github kamal].
+Avec [Rails 8.0 par défaut vers Kamal et SQLite][rails 8],
+je me sens assez confiant que Kamal et Litestream devraient bien fonctionner ensemble.
+
+> |    Technologie    | Verdict |
+> | :--------------: | :-----: |
+> | Paramètres de requête URL |    ❌    |
+> |    git + HTML    |    ❌    |
+> |      SQLite      |    ✅    |
+> |    Litestream    |    ✅    |
+> |      LiteFS      |    ❌    |
+
+[chrome url length]: https://chromium.googlesource.com/chromium/src/+/main/docs/security/url_display_guidelines/url_display_guidelines.md#url-length
+[bencher self hosted]: /fr/docs/explanation/bencher-self-hosted/
+[sqlite]: https://sqlite.org/
+[github litestream]: https://github.com/benbjohnson/litestream
+[litestream github issue 8]: https://github.com/benbjohnson/litestream/issues/8#issuecomment-1173214316
+[github litefs]: https://github.com/superfly/litefs
+[github consul]: https://github.com/hashicorp/consul
+[litefs sunset]: https://community.fly.io/t/sunsetting-litefs-cloud/20829
+[github litefs contributors]: https://github.com/superfly/litefs/graphs/contributors
+[bencher attempts]: /fr/docs/explanation/bencher-run/#--attempts-count
+[github kamal]: https://github.com/basecamp/kamal
+[rails 8]: https://rubyonrails.org/2024/9/27/rails-8-beta1-no-paas-required

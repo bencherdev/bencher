@@ -1,0 +1,59 @@
+### フロントエンドライブラリ
+
+C++開発者から脱却中の身として、私はRustが非常に好きです。
+もし私に選択権があったなら、BencherをフルスタックでRustで書くことができたでしょう。
+[Bencherのレポ][bencher github]の奥深くを掘り下げると、私がまさにそれを試みているのを見ることができます。
+[Yew][yew github]、[Seed][seed github]、[Sycamore][sycamore github]を試してみました。
+これらのライブラリは一部のプロジェクトでうまく機能するかもしれませんが、どうしても克服できなかった大きな問題がありました: [JavaScriptインタープ][js ffi]。
+
+Rustを通じてWASMからJSインタープは可能ですが、
+それは簡単ではないだろうと感じました。
+私はBencherに非常にインタラクティブなプロットを持たせたいと考えていました。
+これには、[D3][d3 github]のようなライブラリを使う必要があり、つまりJSインタープが必要でした。
+
+それで、JavaScriptを使う必要がある場合、どのライブラリを選ぶべきでしょうか？
+
+過去に試したRustクレートに戻ると、
+Yewは[React Hooks][react hooks]のRustアナログです。
+以前にReact Hooksを使用してフロントエンドを構築しデプロイしたことがあるので、
+このフレームワークについて最も知識を持っていました。
+しかし、React Hooksのライフサイクルは非常に複雑で、
+注意すべきポイントや奇妙な端ケースがたくさんあることに気づきました。
+
+私は[関数型リアクティブプログラミング][functional reactive programming]（FRP）の基本的な原則が本当に好きです。
+これが私を[Elm][elm]とそのRust版であるSeedを試すことに導きました。
+残念ながら、Elmを使うことはRustを使うことと同じ問題に苦しみます。
+Elmは独自の[JavaScriptインタープ][elm js interop]を必要とします。
+また、[Elmアーキテクチャ][the elm architecture]が私には少し制限的すぎると感じました。
+
+試したRustフレームワークの中で、私はSycamoreが最も気に入りました。
+Sycamoreは[Solid][solid github]に触発されました。
+Solidについて知れば知るほど、それが好きになりました。
+Reactとは異なり、Solidは[仮想DOM][react virtual dom]を使用しません。
+代わりに、素のJavaScriptにコンパイルされます。
+これにより、はるかに速く、軽量で、扱いやすくなります。
+Solidは、細粒度のリアクティブ性を可能にするいくつかの強力なプリミティブで構成されています。
+UIの何かが更新されると、それに依存するコードだけが再実行されます。
+過去3年間、Solidは使っていてとても快適だったと感じています。
+
+> | テクノロジー | 評価 |
+> | :--------: | :--: |
+> |    Yew     |  ❌   |
+> |    Seed    |  ❌   |
+> |  Sycamore  |  ❌   |
+> |    Elm     |  ❌   |
+> |  SolidJS   |  ✅   |
+
+[bencher github]: https://github.com/bencherdev/bencher
+[yew github]: https://github.com/yewstack/yew
+[seed github]: https://github.com/seed-rs/seed
+[sycamore github]: https://github.com/sycamore-rs/sycamore
+[js ffi]: https://rustwasm.github.io/docs/book/reference/js-ffi.html
+[d3 github]: https://github.com/d3/d3
+[react hooks]: https://react.dev/reference/react/hooks
+[functional reactive programming]: https://en.wikipedia.org/wiki/Functional_reactive_programming
+[elm]: https://elm-lang.org/
+[elm js interop]: https://guide.elm-lang.org/interop/
+[the elm architecture]: https://guide.elm-lang.org/architecture/
+[solid github]: https://github.com/solidjs/solid
+[react virtual dom]: https://legacy.reactjs.org/docs/faq-internals.html

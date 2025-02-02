@@ -1,0 +1,36 @@
+### 개발자 환경
+
+Bencher에서 작업을 시작할 때, 사람들은 [localhost의 끝][dx tips]을 부르짖고 있었습니다.
+저는 이미 새로운 개발 노트북이 필요할 만큼 오래되었으므로,
+클라우드 개발 환경을 시도해보기로 결정했습니다.
+그 당시 GitHub Workspaces는 제 사용 사례에 대해 일반적으로 사용 가능(GA)하지 않았기 때문에,
+[Gitpod][gitpod]을 선택했습니다.
+
+이 실험은 약 6개월 동안 지속되었습니다.
+제 결론: 클라우드 개발 환경은 사이드 프로젝트에 적합하지 않습니다.
+5분 동안 급히 작업을 하고 싶으신가요?
+안 됩니다! 개발 환경이 1,000번째로 다시 초기화될 때까지 기다려야 할 것입니다.
+아, 주말 오후 내내 작업에 몰두할 시간이 있으신가요?
+안 됩니다! 개발 환경이 [사용 중에 무작위로 작동을 멈춥니다][github gitpod 9629]. 계속해서 반복됩니다.
+
+이 문제들은 유료 사용자로서 겪었습니다.
+월 $25이면 5년마다 훨씬 더 좋은 사양의 새로운 M1 MacBook Pro를 살 수 있었습니다.
+Gitpod가 요금을 일정 요금제에서 사용 기반으로 변경한다고 발표했을 때,
+저는 그저 그들 계획을 취소하고 [apple.com][apple]으로 향했습니다.
+
+이 모든 것이 Kubernetes를 사용하겠다는 Gitpod의 [이제 포기된 결정][gitpod kubernetes] 때문일지도 모릅니다.
+그러나 저는 Bencher와 함께 다른 클라우드 개발 환경을 시도할 마음이 없습니다.
+결국, 기여자들이 쉽게 시작할 수 있도록 Gitpod 구성을 [dev 컨테이너][github bencher dev container]로 포팅했습니다.
+그러나 저는 `localhost`를 고수할 것입니다.
+
+> |   기술   | 판결 |
+> | :------: | :--: |
+> |  Gitpod  |  ❌   |
+> | M1 MacBook Pro |  ✅  |
+
+[dx tips]: https://dx.tips/the-end-of-localhost
+[gitpod]: https://www.gitpod.io/
+[github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
+[apple]: https://www.apple.com
+[gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
+[github bencher dev container]: https://github.com/bencherdev/bencher/pkgs/container/bencher-dev-container

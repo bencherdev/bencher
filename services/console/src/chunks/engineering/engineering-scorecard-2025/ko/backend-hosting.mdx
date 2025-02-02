@@ -1,0 +1,53 @@
+### 백엔드 호스팅
+
+제가 Solid를 사용했기 때문에 프런트엔드 호스팅으로 Netlify를 선택한 것과 마찬가지로,
+백엔드 호스팅으로는 Litestream을 사용했기 때문에 [Fly.io][fly io]를 선택했습니다.
+[Fly.io는 막 Litestream의 창시자를 풀타임으로 고용했었습니다][fly io sqlite].
+위에서 언급했듯이, 이 Litestream의 작업은 결국 LiteFS에 의해 대체되었고,
+LiteFS는 이제 더 이상 존재하지 않습니다.
+결국, 그 부분은 제가 기대했던 대로 풀리지 않았습니다.
+
+[카말][github kamal]로 전환할 때, Fly.io를 떠날 예정입니다.
+Fly.io는 Bencher를 반나절 동안 중단시킨 주요 장애가 몇 차례 발생했습니다.
+하지만 가장 큰 문제는 Litestream을 사용하면서 발생하는 불일치입니다.
+
+제가 Fly.io 대시보드에 로그인할 때마다, 이 경고를 봅니다:
+
+> <h4>ℹ 당신의 앱이 단일 머신에서 실행되고 있습니다</h4>
+>
+> 확장을 통해 고가용성을 보장하려면 한 명령어로 앱을 여러 머신에서 실행하십시오:
+> ```
+> fly scale count 2
+> ```
+> 스케일링에 대한 자세한 내용은 [문서](https://fly.io/ko/docs/launch/scale-count/)를 확인하세요.
+
+하지만 Litestream과 함께, 여전히 하나 이상의 머신을 사용할 수 없습니다!
+약속한 것처럼 읽기 복제를 제공하지 않았습니다!
+
+그래서 그 점이 조금 아이러니하고 답답합니다.
+한때 [libSQL][github libsql]과 [Turso][turso]를 살펴본 적이 있습니다.
+그러나 libSQL은 복제를 위해 특별한 백엔드 서버가 필요하며, 이는 [Diesel과 호환되지 않게 만듭니다][libsql github issue 1180].
+어쨌든 또 다른 [서비스 종료][turso roadmap]를 피한 것 같습니다.
+Turso가 [Limbo][github limbo], 즉 SQLite의 Rust 재작성과 관련하여 무엇을 할지 매우 궁금합니다.
+그러나 당분간 그 전환을 하지 않을 것입니다.
+다음 목적지는 평범하고 안정적인 카말로 실행되는 가상 머신입니다.
+
+Litestream 복제를 위한 [AWS S3][aws s3] 백엔드는 흠잡을 데 없이 작동했습니다.
+Litestream 및 Fly.io의 혼란에도 불구하고,
+Bencher에 Litestream을 사용하는 것이 올바른 선택이었다고 생각합니다.
+Bencher Cloud에서 몇 가지 확장 문제에 직면하고 있지만, 이는 좋은 문제라고 할 수 있습니다.
+
+> |   기술   |   평가   |
+> | :--------: | :-----: |
+> |   Fly.io   |    ❌    |
+> |   AWS S3   |    ✅    |
+
+[fly io]: https://fly.io/
+[fly io sqlite]: https://fly.io/blog/all-in-on-sqlite-litestream/
+[github kamal]: https://github.com/basecamp/kamal
+[github libsql]: https://github.com/tursodatabase/libsql
+[turso]: https://turso.tech/
+[libsql github issue 1180]: https://github.com/tursodatabase/libsql/issues/1180
+[turso roadmap]: https://turso.tech/blog/upcoming-changes-to-the-turso-platform-and-roadmap
+[github limbo]: https://github.com/tursodatabase/limbo
+[aws s3]: https://aws.amazon.com/s3/

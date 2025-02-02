@@ -1,0 +1,21 @@
+### Framework de Servidor HTTP
+
+Uma das minhas principais considerações ao selecionar um framework de servidor HTTP em Rust foi o suporte embutido para [especificação OpenAPI][openapi spec]. Pelas mesmas razões que investi na configuração de [Typeshare e WASM no frontend][frontend language], eu queria a capacidade de autogerar tanto a documentação da API quanto os clientes a partir dessa especificação. Era importante para mim que essa funcionalidade fosse integrada e não um complemento de terceiros. Para que a automação realmente valesse a pena, ela precisa funcionar bem próximo de 100% do tempo. Isso significa que o ônus da manutenção e da compatibilidade precisa estar nos próprios engenheiros do framework principal. Caso contrário, você inevitavelmente se encontrará em um inferno de casos de borda.
+
+Outra consideração importante foi o risco de abandono. Existem vários frameworks HTTP em Rust que prometiam muito, mas agora estão praticamente abandonados. O único framework que encontrei com suporte embutido para especificação OpenAPI e no qual estava disposto a apostar foi o [Dropshot][dropshot github]. Dropshot foi criado e ainda é mantido pela [Oxide Computer][oxide computer].
+
+Até agora, tive apenas um grande problema com o Dropshot. Quando um erro é gerado pelo servidor de API, ele causa uma falha de CORS no frontend devido a cabeçalhos de resposta ausentes. Isso significa que o frontend web não pode exibir mensagens de erro muito úteis para os usuários. Em vez de trabalhar em uma correção upstream, concentrei meus esforços em tornar o Bencher mais fácil e intuitivo de usar. Mas, ao que parece, a solução era [menos de 100 linhas de código][dropshot github issue 1193]. Ironia do destino!
+
+Como observação, [o framework `axum`][axum github] ainda não havia sido lançado quando comecei a trabalhar no Bencher. Se ele existisse na época, eu poderia ter tentado combiná-lo com um dos muitos complementos OpenAPI de terceiros, apesar do meu melhor julgamento. Sorte minha que o `axum` ainda não estava lá para me tentar. Dropshot tem sido uma ótima escolha. Veja a seção [Cliente da API][api client] para mais sobre este ponto.
+
+> | Tecnologia | Veredicto |
+> | :--------: | :-------: |
+> |  Dropshot  |    ✅    |
+
+[openapi spec]: https://swagger.io/specification/
+[frontend language]: #frontend-language
+[dropshot github]: https://github.com/oxidecomputer/dropshot
+[oxide computer]: https://oxide.computer/
+[dropshot github issue 1193]: https://github.com/oxidecomputer/dropshot/pull/1193
+[axum github]: https://github.com/tokio-rs/axum
+[api client]: #api-client

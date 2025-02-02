@@ -1,0 +1,19 @@
+### 持续集成
+
+Bencher 是 [开源的][github bencher]。作为一个现代开源项目，你几乎必须在 GitHub 上。这意味着对于持续集成（CI），最简单的路径是 GitHub Actions。多年来，我开始厌恶基于 YAML 的 CI DSLs。它们每一个都有自己的怪癖，而对于像 GitHub 这样的大公司，得到一个 ⚠️ 图标而不是 ❌ 图标可能[要拖延多年][github runner 2347]。
+
+这促使我尝试 [Dagger][github dagger]。当时，你只能通过这个叫做 [CUE][cue] 的生僻语言来使用 Dagger。我试过了。真的试过了。差不多花了整个周末。也许如果当时有 ChatGPT，我可能能挺过去。但不只是我。Dagger 最终[完全放弃了 CUE][dagger cue]，转而采用更合理的 SDK。不过到那时，对我来说已经太晚了。
+
+被 Dagger 打败后，我接受了我的 YAML CI DSL 命运，Bencher 现在使用 GitHub Actions。事实上，我甚至还创建了一个 [Bencher CLI][github bencher cli] 的 GitHub Action。成为你希望在世界上看到的~~变化~~问题。
+
+> |   技术   | 结论 |
+> | :------: | :--: |
+> |  Dagger  |  ❌   |
+> | GitHub Actions |  ⚠️  |
+
+[github bencher]: https://github.com/bencherdev/bencher
+[github runner 2347]: https://github.com/actions/runner/issues/2347
+[github dagger]: https://github.com/dagger/dagger
+[cue]: https://cuelang.org/
+[dagger cue]: https://dagger.io/blog/ending-cue-support
+[github bencher cli]: https://github.com/marketplace/actions/bencher-cli

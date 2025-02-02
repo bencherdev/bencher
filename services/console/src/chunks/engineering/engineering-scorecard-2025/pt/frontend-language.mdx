@@ -1,0 +1,20 @@
+### Linguagem Frontend
+
+Astro tem [suporte embutido para TypeScript][astro typescript]. Na transição de SolidStart para Astro, também comecei a transição de JavaScript para TypeScript. A configuração de TypeScript do Bencher está definida na configuração `mais restritiva` do Astro. No entanto, o Astro não realiza verificação de tipos durante as builds. No momento da escrita, o Bencher ainda possui `604` erros de tipo. Esses erros de tipo são usados mais como dicas ao editar o código, mas eles não bloqueiam a build (ainda não [github issue 557]).
+
+Também adicionei [Typeshare][typeshare github] para sincronizar os tipos de dados Rust do Bencher com o frontend TypeScript. Isso tem sido incrivelmente útil para desenvolver o Bencher Console. Além disso, todos os validadores de campos para coisas como nomes de usuário, e-mails, etc. são compartilhados entre o código Rust e o frontend TypeScript [via WASM][github wasm bindgen]. Tem sido um pouco complicado fazer o WASM funcionar tanto no SolidStart quanto no Astro. A maior classe de erros que vi no frontend são lugares onde uma função WASM é chamada mas o módulo WASM ainda não foi carregado. Descobri como consertar isso, mas ainda às vezes esqueço e o problema ressurge.
+
+Ter tanto os tipos quanto os validadores compartilhados gerados automaticamente do código Rust tornou a interface com o frontend muito mais fácil. Ambos são verificados em CI, então nunca ficam fora de sincronização. Tudo que preciso garantir é que as requisições HTTP estejam bem formadas, e tudo funciona. Isso faz com que não poder usar Rust full-stack doa um pouco menos.
+
+> | Tecnologia | Veredicto |
+> | :--------: | :-------: |
+> |    Rust    |    ❌     |
+> | JavaScript |    ❌     |
+> | TypeScript |    ✅     |
+> | Typeshare  |    ✅     |
+> |    WASM    |    ✅     |
+
+[astro typescript]: https://docs.astro.build/pt/guides/typescript/
+[github issue 557]: https://github.com/bencherdev/bencher/issues/557
+[typeshare github]: https://github.com/1Password/typeshare
+[github wasm bindgen]: https://github.com/rustwasm/wasm-bindgen

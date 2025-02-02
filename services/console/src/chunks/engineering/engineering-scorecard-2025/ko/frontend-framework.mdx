@@ -1,0 +1,26 @@
+### 프론트엔드 프레임워크
+
+Solid 자체는 단지 라이브러리입니다. 현대적인 프론트엔드를 구축하기 위해서는 완전한 웹 앱 프레임워크를 사용해야 했습니다. 간단하게 유지하고 싶어서 모든 것을 Solid에 의존하기로 했고, 처음에는 [SolidStart][solid start github]를 사용했습니다. 그 당시 SolidStart는 단일 페이지 앱(SPA)만 지원했습니다.
+
+SPA는 시작하기에는 괜찮았습니다. 하지만 시간이 지나고 SEO와 같은 것들에 신경을 써야 했습니다. 훨씬 더 많은 [벤처 문서][bencher docs]를 작성하기 시작했고 사이트의 [학습 섹션][bencher learn]을 계획하고 있었습니다. 이는 클라이언트 사이드 렌더링(CSR)과 정적 사이트 생성(SSG) 모두가 필요하다는 것을 의미했습니다. SolidStart는 매우 신생 상태였고, 제가 필요한 모든 것을 충족시키지 못했습니다.
+
+[Astro][astro]에 대해 배우고 시도해 본 후에, Bencher 프론트엔드 전체를 SolidStart에서 Astro로 포팅하기로 결정했습니다. 이것에는 몇 가지 단점이 있었습니다. 가장 분명한 것은 관련된 노력이었습니다. 솔직히 말해서 그렇게 나쁘지 않았습니다. Astro는 [아일랜드 아키텍처][astro islands]와 일류의 [Solid 통합][astro solid]을 가지고 있습니다. [Solid Router][solid router]에서 필요한 많은 논리를 가져오는데, 그저 잘 작동했습니다.
+
+오늘날까지도 존재하는 큰 타협점은 Bencher가 단일 페이지 앱에서 다중 페이지 앱으로 전환되었다는 것입니다. 콘솔에서 대부분의 클릭이 전체 페이지 재렌더링을 일으킵니다. 처음 전환했을 때 Astro는 [뷰 트랜지션][astro view transitions]을 약속했었습니다. 시도해봤지만 오류가 많았습니다. 아직 [다시 돌아가봐야][github issue 556] 합니다.
+
+그동안 SolidStart는 어느 정도 따라잡은 것으로 보입니다. 이제 CSR과 SSG 모두를 지원합니다. 제가 필요한 것처럼 동일한 사이트에서 둘 다 작동하는지는 확인하지 않았습니다. 이미 지나간 일입니다.
+
+> | 기술       | 평가    |
+> | :--------: | :-----: |
+> | SolidStart |    ❌    |
+> |   Astro    |    ✅    |
+
+[solid start github]: https://github.com/solidjs/solid-start
+[bencher docs]: /ko/docs/
+[bencher learn]: /ko/learn/
+[astro]: https://astro.build/
+[astro islands]: https://docs.astro.build/en/concepts/islands/
+[astro solid]: https://docs.astro.build/en/guides/integrations-guide/solid-js/
+[solid router]: https://github.com/solidjs/solid-router
+[astro view transitions]: https://docs.astro.build/en/guides/view-transitions/
+[github issue 556]: https://github.com/bencherdev/bencher/issues/556

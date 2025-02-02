@@ -1,0 +1,21 @@
+### 開発環境
+
+私がBencherでの作業を始めたとき、人々は[localhostの終わり][dx tips]を求めていました。私はすでに新しい開発用ラップトップが必要な時期を過ぎていたので、クラウド開発環境を試してみることにしました。当時、GitHub Workspacesは私のユースケースには一般利用（GA）されていなかったため、[Gitpod][gitpod]を選びました。
+
+この実験は約6か月続きました。結論として、クラウド開発環境はサイドプロジェクトにはうまく機能しません。5分だけ作業をしたいですか？ できません！開発環境が1,000回目の再初期化を行うのを待たなければなりません。週末の午後に本気で作業を進めたい？ できません！開発環境が使用中に[ランダムに停止します][github gitpod 9629]。何度も何度も。
+
+これらの問題は有料ユーザーとして直面しました。月額25ドルで、5年ごとにスペックのはるかに優れた新品のM1 MacBook Proが手に入ることができます。Gitpodが料金を固定から使用ベースに変更すると発表したとき、私は彼らが私のプランをキャンセルさせ、[apple.com][apple]へ向かいました。
+
+これらはすべてGitpodの[Kubernetesの使用という廃止された決定][gitpod kubernetes]に関する問題だったのかもしれません。しかし、私はBencherを使って別のクラウド開発環境を試すつもりはありません。最終的には、Gitpodの設定を[devコンテナ][github bencher dev container]に移植して、コントリビューターが開始しやすいようにしました。しかし私は、`localhost`を使い続けます。
+
+> |   技術   | 評価 |
+> | :------: | :--: |
+> |  Gitpod  |  ❌  |
+> | M1 MacBook Pro |  ✅  |
+
+[dx tips]: https://dx.tips/the-end-of-localhost
+[gitpod]: https://www.gitpod.io/
+[github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
+[apple]: https://www.apple.com
+[gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
+[github bencher dev container]: https://github.com/bencherdev/bencher/pkgs/container/bencher-dev-container

@@ -1,0 +1,18 @@
+### Biblioteca CLI
+
+Ao construir uma CLI em Rust, [Clap][github clap] é um tipo de padrão de fato. Então imagine meu choque quando [eu fiz a primeira demonstração pública do Bencher][talks rust dc] e o próprio criador, [Ed Page][github epage], estava lá! 🤩
+
+Com o tempo, continuo descobrindo mais e mais coisas úteis que o Clap pode fazer. É um pouco constrangedor, mas acabei de descobrir [a opção `default_value`][docs clap default value]. Todas essas capacidades realmente ajudam a reduzir a quantidade de código que tenho que manter no CLI `bencher`.
+
+> 🐰 Curiosidade: [Clap usa Bencher][clap github pr 5826] para [monitorar o tamanho do binário][track binary size]!
+
+> | Tecnologia | Veredicto |
+> | :--------: | :-------: |
+> |    Clap    |    ✅    |
+
+[github clap]: https://github.com/clap-rs/clap
+[talks rust dc]: /pt/docs/explanation/talks/#rust-dc-20-sep-22
+[github epage]: https://github.com/epage
+[docs clap default value]: https://docs.rs/clap/4.5.27/clap/struct.Arg.html#method.default_value
+[clap github pr 5826]: https://github.com/clap-rs/clap/pull/5826
+[track binary size]: /pt/docs/how-to/track-file-size/

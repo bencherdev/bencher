@@ -1,0 +1,38 @@
+### Lenguaje Frontend
+
+Astro tiene [soporte integrado de TypeScript][astro typescript].
+En la transición de SolidStart a Astro, también comencé la transición de JavaScript a TypeScript.
+La configuración de TypeScript de Bencher está establecida en la configuración `más estricta` de Astro.
+Sin embargo, Astro no realiza comprobación de tipos durante las compilaciones.
+Al momento de escribir, Bencher todavía tiene `604` errores de tipo.
+Estos errores de tipo se utilizan más como sugerencias al editar código,
+pero no bloquean la compilación ([aún][github issue 557]).
+
+También agregué [Typeshare][typeshare github] para sincronizar los tipos de datos Rust de Bencher con el frontend de TypeScript.
+Esto ha sido increíblemente útil para desarrollar la Consola de Bencher.
+Además, todos los validadors de campos para cosas como nombres de usuario, correos electrónicos, etc.,
+se comparten entre el código Rust y el frontend de TypeScript [a través de WASM][github wasm bindgen].
+Ha sido un poco complicado hacer que WASM funcione tanto en SolidStart como en Astro.
+La clase más grande de error que he visto en el frontend ha sido lugares donde se llama a una función WASM,
+pero el módulo WASM aún no se ha cargado.
+He descubierto cómo solucionarlo, pero a veces lo olvido y vuelve a aparecer.
+
+Tener tanto los tipos compartidos como los validadores autogenerados desde el código Rust
+ha facilitado mucho la interfaz con el frontend.
+Ambos se verifican en CI, por lo que nunca están desincronizados.
+Todo lo que tengo que hacer es asegurarme de que las solicitudes HTTP estén bien formadas,
+y todo funciona.
+Esto hace que no poder usar Rust en toda la pila duela un poco menos.
+
+> | Tecnología | Veredicto |
+> | :--------: | :-------: |
+> |    Rust    |    ❌    |
+> | JavaScript |    ❌    |
+> | TypeScript |    ✅    |
+> | Typeshare  |    ✅    |
+> |    WASM    |    ✅    |
+
+[astro typescript]: https://docs.astro.build/es/guides/typescript/
+[github issue 557]: https://github.com/bencherdev/bencher/issues/557
+[typeshare github]: https://github.com/1Password/typeshare
+[github wasm bindgen]: https://github.com/rustwasm/wasm-bindgen

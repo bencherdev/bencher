@@ -1,0 +1,24 @@
+### Pilote de Base de Données
+
+Plus je me rapproche de la base de données, plus je souhaite que les choses soient fortement typées.
+C'est acceptable de jouer un peu plus librement sur le frontend.
+Si je fais une erreur, tout sera corrigé avec la prochaine mise en production.
+Cependant, si je corromps la base de données, c'est bien plus compliqué à rectifier.
+Avec cela en tête, j'ai choisi d'utiliser [Diesel][diesel github].
+
+Diesel est un mapper relationnel d'objets (ORM) fortement typé et un constructeur de requêtes pour Rust.
+Il vérifie toutes les interactions avec la base de données à la compilation, empêchant ainsi les erreurs d'exécution.
+Cette vérification à la compilation fait également de Diesel une abstraction sans coût sur le SQL.
+À part un petit bug de mon côté lors de l'optimisation des performances pour rendre les choses [1200 fois plus rapides][engineering sqlite],
+je n'ai eu aucune erreur SQL en exécutant Diesel.
+
+> 🐰 Fait amusant : [Diesel utilise Bencher][case study diesel] pour le [benchmarking continu][continuous benchmarking] !
+
+> | Technologie | Verdict |
+> | :---------: | :-----: |
+> |   Diesel    |    ✅    |
+
+[diesel github]: https://github.com/diesel-rs/diesel
+[case study diesel]: /fr/learn/case-study/diesel/
+[engineering sqlite]: /fr/learn/engineering/sqlite-performance-tuning/
+[continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/

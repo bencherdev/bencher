@@ -1,0 +1,34 @@
+## 결론
+
+Bencher를 구축하면서 각 엔지니어링 결정에 따른 트레이드오프에 대해 많은 것을 배웠습니다. 지금이라면 다르게 선택할 몇 가지가 있지만, 이는 제가 그동안 몇 가지를 배웠다는 좋은 신호입니다. 전반적으로, 저는 현재 Bencher의 상태에 매우 만족합니다. Bencher는 저의 노트북 속 스케치에서 성장하는 사용자 기반, 활기찬 커뮤니티, 유료 고객을 가진 완전한 제품으로 발전했습니다. 앞으로의 3년이 더욱 기대됩니다!
+
+> |            스택            |                     구성 요소                     |    기술    | 결론   |
+> | :-------------------------: | :-----------------------------------------------: | :--------------: | :-----: |
+> |    [프론트엔드](#frontend)    |       [프론트엔드 라이브러리](#frontend-library)       |       Yew        |    ❌    |
+> |                             |                                                   |       Seed       |    ❌    |
+> |                             |                                                   |     Sycamore     |    ❌    |
+> |                             |                                                   |       Elm        |    ❌    |
+> |                             |                                                   |     SolidJS      |    ✅    |
+> |                             |      [프론트엔드 언어](#frontend-language)      |       Rust       |    ❌    |
+> |                             |                                                   |    JavaScript    |    ❌    |
+> |                             |                                                   |    TypeScript    |    ✅    |
+> |                             |                                                   |    Typeshare     |    ✅    |
+> |                             |                                                   |       WASM       |    ✅    |
+> |                             |       [프론트엔드 호스팅](#frontend-hosting)       |  Netlify Builds  |    ❌    |
+> |                             |                                                   | Netlify Deploys  |    ✅    |
+> |     [백엔드](#backend)     |       [백엔드 언어](#backend-language)       |       Rust       |    ✅    |
+> |                             |  [HTTP 서버 프레임워크](#http-server-framework)  |     Dropshot     |    ✅    |
+> |                             |               [데이터베이스](#database)               | URL Query Params |    ❌    |
+> |                             |                                                   |    git + HTML    |    ❌    |
+> |                             |                                                   |      SQLite      |    ✅    |
+> |                             |                                                   |    Litestream    |    ✅    |
+> |                             |                                                   |      LiteFS      |    ❌    |
+> |                             |        [데이터베이스 드라이버](#database-driver)        |      Diesel      |    ✅    |
+> |                             |        [백엔드 호스팅](#backend-hosting)        |      Fly.io      |    ❌    |
+> |                             |                                                   |      AWS S3      |    ✅    |
+> |         [CLI](#cli)         |            [CLI 라이브러리](#cli-library)            |       Clap       |    ✅    |
+> |                             |             [API 클라이언트](#api-client)             |    Progenitor    |    ✅    |
+> | [개발](#development) |  [개발자 환경](#developer-environment)  |      Gitpod      |    ❌    |
+> |                             |                                                   |  M1 MacBook Pro  |    ✅    |
+> |                             | [지속적 통합](#continuous-integration) |      Dagger      |    ❌    |
+> |                             |                                                   |  GitHub Actions  |    ⚠️    |

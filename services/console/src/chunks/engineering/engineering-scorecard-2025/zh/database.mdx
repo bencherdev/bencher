@@ -1,0 +1,36 @@
+### 数据库
+
+我尽量让 Bencher 尽可能简单。第一版的 Bencher 通过 URL 查询参数获取所有内容，包括基准测试结果。我很快了解到所有浏览器都有 [URL 长度限制][chrome url length]。这确实合理。
+
+接下来，我考虑将基准测试结果存储在 `git` 中，并仅生成静态 HTML 文件，其中包含图表和结果。但是，这种方法有两个主要缺点。首先，`git clone` 时间对于重度用户最终会变得无法忍受。其次，所有历史数据都必须存在于 HTML 文件中，导致重度用户的初次加载时间非常长。一个开发工具应该热爱它的重度用户，而不是惩罚他们。
+
+结果发现，我的问题有解决方案。它就叫做数据库。
+
+那么为什么不直接引入 Postgres 然后就了事呢？嗯，我确实希望人们能够 [自托管 Bencher][bencher self hosted]。我能够简化架构，就可以让别人更轻松（和便宜）地自托管。由于前端和后端分离，我已经需要两个容器。我能避免第三个吗？没错！
+
+在使用 Bencher 之前，我只用过 [SQLite][sqlite] 作为测试数据库。开发者体验非常棒，但我从未考虑过在生产环境中运行它。然后我发现了 [Litestream][github litestream]。Litestream 是一个 SQLite 的灾难恢复工具。它在后台运行，并持续将更改复制到 S3 或您选择的任何其他数据存储。这使得它既易于使用又非常经济实惠，因为 S3 不收写入费用。对于一个小型实例，每天只需花费几分钱。
+
+当我第一次遇到 Litestream 时，它还承诺即将推出实时读取副本。然而，这 [从未实现][litestream github issue 8]。建议的替代方案是同一开发者的继承项目，称为 [LiteFS][github litefs]。然而，LiteFS 有很大的缺陷。如果所有副本都中断，它不提供内置的灾难恢复。为了拥有多个副本，您必须在应用程序逻辑中引入是否为读者或写者的概念。而绝对的障碍是它需要一直运行一个 [Consul][github consul] 实例来管理副本。使用 SQLite 的整个重点就是避免再添加一个服务。谢天谢地，我也没有尝试将 LiteFS 用于 Bencher Cloud，因为 [LiteFS Cloud 在发布一年后关闭][litefs sunset]，而 [LiteFS 现在几乎已经停滞][github litefs contributors]。
+
+目前，部署之间的小停机时间是通过 [Bencher CLI 处理的][bencher attempts]。将来，我计划使用 [Kamal][github kamal] 进行零停机部署。随着 [Rails 8.0 默认使用 Kamal 和 SQLite][rails 8]，我对 Kamal 和 Litestream 的结合相当有信心。
+
+> |    技术    | 结论 |
+> | :--------: | :--: |
+> | URL 查询参数 |    ❌    |
+> |    git + HTML    |    ❌    |
+> |      SQLite      |    ✅    |
+> |    Litestream    |    ✅    |
+> |      LiteFS      |    ❌    |
+
+[chrome url length]: https://chromium.googlesource.com/chromium/src/+/main/docs/security/url_display_guidelines/url_display_guidelines.md#url-length
+[bencher self hosted]: /zh/docs/explanation/bencher-self-hosted/
+[sqlite]: https://sqlite.org/
+[github litestream]: https://github.com/benbjohnson/litestream
+[litestream github issue 8]: https://github.com/benbjohnson/litestream/issues/8#issuecomment-1173214316
+[github litefs]: https://github.com/superfly/litefs
+[github consul]: https://github.com/hashicorp/consul
+[litefs sunset]: https://community.fly.io/t/sunsetting-litefs-cloud/20829
+[github litefs contributors]: https://github.com/superfly/litefs/graphs/contributors
+[bencher attempts]: /zh/docs/explanation/bencher-run/#--attempts-count
+[github kamal]: https://github.com/basecamp/kamal
+[rails 8]: https://rubyonrails.org/2024/9/27/rails-8-beta1-no-paas-required

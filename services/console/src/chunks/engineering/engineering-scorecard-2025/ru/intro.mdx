@@ -1,0 +1,24 @@
+При разработке новой технологии, такой как [Bencher][bencher],
+существует фундаментальное напряжение между желанием [выбирать скучные технологии][choose boring technology]
+и [побеждать средние показатели][beating the averages].
+В данный момент может быть трудно точно определить, где именно ты находишься в этом противоборстве.
+Каждые три года язык программирования Rust выпускает новое [издание Rust][rust editions].
+Я считаю, что это хороший ритм.
+Достаточно долго, чтобы добиться реального прогресса,
+но достаточно коротко, чтобы не уйти слишком далеко в сторону.
+Поскольку этой весной Bencher исполняется 3 года,
+я подумал, что это отличное время остановиться и поразмышлять обо всех инженерных решениях, которые привели нас сюда.
+
+В этом посте я собираюсь оглянуться назад и посмотреть, как Bencher использовал свои "токены инноваций" за последние три года.
+Bencher — это [проект с открытым исходным кодом][github bencher] набор [инструментов для непрерывного бенчмаркинга][continuous benchmarking].
+Я начну с фронтенда [архитектуры Bencher][architecture] и буду двигаться по всей структуре вниз.
+На каждой остановке по пути я обсудю, как мы сюда попали
+и дам бинарное заключение о том, как каждое инженерное решение себя проявило.
+
+[bencher]: https://bencher.dev
+[choose boring technology]: https://mcfunley.com/choose-boring-technology
+[beating the averages]: https://paulgraham.com/avg.html
+[rust editions]: https://doc.rust-lang.org/edition-guide/editions/
+[github bencher]: https://github.com/bencherdev/bencher
+[continuous benchmarking]: /ru/docs/explanation/continuous-benchmarking/
+[architecture]: /ru/docs/reference/architecture/

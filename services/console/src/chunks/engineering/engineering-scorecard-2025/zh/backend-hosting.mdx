@@ -1,0 +1,55 @@
+### 后端托管
+
+就像我选择 Netlify 作为我的前端托管是因为我使用 Solid，
+我选择了 [Fly.io][fly io] 作为我的后端托管是因为我使用 Litestream。
+[Fly.io 刚刚聘请了 Litestream 的创建者进行全职开发][fly io sqlite]。
+正如上面提到的，Litestream 的工作最终被 LiteFS 吞并，
+而 LiteFS 现在已经停止。
+所以事情并没有按照我预期的发展。
+
+将来当我切换到 [Kamal][github kamal] 时，我也会迁移离开 Fly.io。
+Fly.io 曾经历过几次重大故障，每次都使 Bencher 崩溃长达半天。
+但最大的问题是使用 Litestream 带来的阻抗不匹配。
+
+每次我登录到 Fly.io 仪表板时，我都会看到这个警告：
+
+> <h4>ℹ 您的应用程序正在一台机器上运行</h4>
+>
+> 扩展并在更多机器上运行您的应用程序，以确保高可用性，只需一个命令：
+> ```
+> fly scale count 2
+> ```
+> 查看[文档](https://fly.io/zh/docs/launch/scale-count/)获取有关扩展的更多详细信息。
+
+但使用 Litestream，你还是不能有多于一台的机器！
+你们从未兑现你们承诺的读取复制功能！
+
+所以，是的，这一切有点讽刺和令人沮丧。
+有一次，我研究了 [libSQL][github libsql] 和 [Turso][turso]。
+然而，libSQL 需要一个特殊的后台服务器进行复制，
+这使得它[无法与 Diesel 一起使用][libsql github issue 1180]。
+无论如何，看起来我躲过了另一个[生命周期结束的关闭][turso roadmap]。
+我对 Turso 用 [Limbo][github limbo]，他们用 Rust 重写的 SQLite 非常感兴趣。
+但我不会很快做出这种切换。
+下一步是一个不错、无聊且稳定的运行 Kamal 的虚拟机。
+
+用于 Litestream 复制的 [AWS S3][aws s3] 后端运行得非常完美。
+即使 Litestream 和 Fly.io 周围发生了意外，
+我仍然认为使用 Litestream 与 Bencher 是正确的选择。
+我开始遇到一些 Bencher Cloud 的扩展问题，
+但这些都是好问题。
+
+> | 技术 | 结论 |
+> | :--------: | :-----: |
+> |   Fly.io   |    ❌    |
+> |   AWS S3   |    ✅    | 
+
+[fly io]: https://fly.io/
+[fly io sqlite]: https://fly.io/blog/all-in-on-sqlite-litestream/
+[github kamal]: https://github.com/basecamp/kamal
+[github libsql]: https://github.com/tursodatabase/libsql
+[turso]: https://turso.tech/
+[libsql github issue 1180]: https://github.com/tursodatabase/libsql/issues/1180
+[turso roadmap]: https://turso.tech/blog/upcoming-changes-to-the-turso-platform-and-roadmap
+[github limbo]: https://github.com/tursodatabase/limbo
+[aws s3]: https://aws.amazon.com/s3/

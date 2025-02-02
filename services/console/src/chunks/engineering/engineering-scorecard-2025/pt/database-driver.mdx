@@ -1,0 +1,16 @@
+### Driver de Banco de Dados
+
+Quanto mais próximo do banco de dados eu chego, mais quero que as coisas sejam fortemente tipadas. Está tudo bem ser um pouco mais flexível no frontend. Se eu cometer um erro, tudo ficará certo na próxima publicação em produção. No entanto, se eu corromper o banco de dados, é muito mais difícil corrigir o problema. Com isso em mente, eu escolhi usar o [Diesel][diesel github].
+
+Diesel é um mapeador objeto-relacional (ORM) fortemente tipado e construtor de consultas para Rust. Ele verifica todas as interações com o banco de dados em tempo de compilação, prevenindo erros em tempo de execução. Essa verificação em tempo de compilação também faz do Diesel uma abstração de custo zero sobre SQL. Exceto por um pequeno bug do meu lado ao tornar as coisas [1200x mais rápidas com ajustes de desempenho][engineering sqlite], eu não tive erros de SQL em tempo de execução ao trabalhar com Diesel.
+
+> 🐰 Curiosidade: [Diesel usa Bencher][case study diesel] para [benchmarking contínuo][continuous benchmarking]!
+
+> | Tecnologia | Veredicto |
+> | :--------: | :-------: |
+> |   Diesel   |    ✅    |
+
+[diesel github]: https://github.com/diesel-rs/diesel
+[case study diesel]: /pt/learn/case-study/diesel/
+[engineering sqlite]: /pt/learn/engineering/sqlite-performance-tuning/
+[continuous benchmarking]: /pt/docs/explanation/continuous-benchmarking/

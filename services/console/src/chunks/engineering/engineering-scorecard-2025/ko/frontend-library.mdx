@@ -1,0 +1,48 @@
+### 프론트엔드 라이브러리
+
+C++ 개발자였던 시절을 회상하며, 저는 Rust를 매우 좋아합니다. 
+제 선택이 있었다면, Bencher를 전체 스택 Rust로 작성할 수 있었을 것입니다. 
+[Bencher 리포][bencher github]의 깊숙한 곳을 파고들어 보면, 
+제가 정확히 그렇게 하려고 노력한 것을 볼 수 있습니다. 
+저는 [Yew][yew github], [Seed][seed github], [Sycamore][sycamore github]를 실험해보았습니다. 
+어떤 프로젝트에는 이 라이브러리들이 매우 훌륭할 수 있지만, 
+제가 극복할 수 없었던 큰 장애물이 하나 있었습니다: [JavaScript 상호 운용성][js ffi].
+
+비록 JS 상호 운용이 Rust를 통한 WASM에서 가능하지만, 
+쉽지는 않을 것임을 알았습니다. 
+저는 Bencher가 매우 인터랙티브한 차트를 갖기를 원했습니다. 
+이것은 [D3][d3 github] 같은 라이브러리를 사용해야 한다는 것을 의미했고, 
+이로 인해 JS 상호 운용이 필요했습니다.
+
+그렇다면, JavaScript를 사용해야 한다면, 어떤 라이브러리를 선택해야 할까요?
+
+제가 실험했던 Rust 크레이트로 돌아가 보면, 
+Yew는 [React Hooks][react hooks]에 대한 Rust 유사체입니다. 
+저는 과거에 React Hooks를 사용하여 프론트엔드를 구축하고 배포한 경험이 있어, 
+이 프레임워크에 대해 가장 많이 알고 있었습니다. 
+하지만 React Hooks의 라이프사이클은 매우 복잡하고, 
+예기치 못한 이상한 모서리 케이스가 많다는 것을 알았습니다.
+
+저는 [함수형 반응 프로그래밍][functional reactive programming] (FRP)의 핵심 원칙을 정말 좋아했습니다. 
+이것은 저를 [Elm][elm]과 그 Rust 유사체인 Seed를 시도하게 만들었습니다. 
+불행히도, Elm을 사용하는 것은 Rust를 사용하는 것과 같은 문제를 겪게 됩니다. 
+Elm은 자체 [JavaScript 상호 운용성][elm js interop]이 필요합니다. 
+저는 또한 [Elm 아키텍처][the elm architecture]가 제 취향에는 다소 제한적이라는 것을 알았습니다.
+
+제가 시도한 Rust 프레임워크 중에서, 저는 Sycamore가 가장 마음에 들었습니다. 
+Sycamore는 [Solid][solid github]에서 영감을 받았습니다. 
+Solid에 대해 배우면 배울수록 더 좋아하게 되었습니다. 
+React와 달리 Solid는 [가상 DOM][react virtual dom]을 사용하지 않습니다. 
+대신, 고전적인 JavaScript로 컴파일됩니다. 
+이것은 속도가 더 빠르고, 크기가 더 작으며, 작업하기 더 쉽다는 것을 의미합니다. 
+Solid는 세밀한 반응성을 가능하게 하는 몇 가지 강력한 원칙들로 구성되어 있습니다. 
+UI의 어떤 부분이 업데이트되면, 그것에 의존하는 코드만 다시 실행됩니다. 
+지난 3년 동안, 저는 Solid를 사용하는 것이 즐거웠습니다.
+
+> | 기술       | 평가  |
+> | :--------: | :---: |
+> |    Yew     |   ❌  |
+> |    Seed    |   ❌  |
+> |  Sycamore  |   ❌  |
+> |    Elm     |   ❌  |
+> |  SolidJS   |   ✅  |

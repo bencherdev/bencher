@@ -1,0 +1,33 @@
+### API-Client
+
+Ein entscheidender Faktor bei der Auswahl von [Dropshot][github dropshot] als Benchers [HTTP-Server-Framework][http server framework] war seine eingebaute Möglichkeit, eine [OpenAPI-Spezifikation][openapi spec] zu generieren. Ich hoffte, eines Tages einen API-Client automatisch aus dieser Spezifikation generieren zu können. Ein Jahr oder so später lieferten die Ersteller von Dropshot: [Progenitor][github progenitor].
+
+Progenitor ist das Yin zu Dropshots Yang. Mit der OpenAPI-Spezifikation von Dropshot kann Progenitor einen Rust-API-Client entweder in einem positionsbasierten Muster generieren:
+
+```
+client.instance_create("bencher", "api", None)
+```
+
+oder in einem Builder-Muster:
+
+```
+client.instance_create().organization("bencher").project("api").send()
+```
+
+Persönlich bevorzuge ich Letzteres, und daher verwendet Bencher dieses Muster. Progenitor kann auch ein komplettes Clap-CLI zur Interaktion mit der API generieren. Allerdings habe ich es nicht benutzt. Ich musste die Dinge enger kontrollieren, besonders bei Befehlen wie [`bencher run`][bencher run].
+
+Der einzige bemerkenswerte Nachteil, den ich bei den generierten Typen festgestellt habe, ist, dass es aufgrund von Einschränkungen im JSON-Schema nicht möglich ist, einfach ein `Option<Option<Item>>` zu verwenden, wenn man zwischen einem fehlenden `item`-Schlüssel und einem `item`-Schlüssel mit dem Wert `null` unterscheiden muss. Dies ist mit etwas wie [`double_option`][docs serde with double option] möglich, sieht aber auf der Ebene des JSON-Schemas alles gleich aus. Die Verwendung eines [abgeflachten][serde flattened] oder [nicht getaggten][serde untagged] inneren Struktur-Enums funktioniert mit Dropshot nicht gut. Die einzige Lösung, die ich gefunden habe, war die Verwendung eines [Top-Level nicht getaggten Enums][github bencher json update project]. Es gibt jedoch nur zwei solcher Felder in der gesamten API zu diesem Zeitpunkt, also kein großes Problem.
+
+> | Technologie | Urteil |
+> | :---------: | :----: |
+> | Progenitor  |   ✅   |
+
+[github dropshot]: https://github.com/oxidecomputer/dropshot
+[github progenitor]: https://github.com/oxidecomputer/progenitor
+[http server framework]: #http-server-framework
+[openapi spec]: https://swagger.io/specification/
+[bencher run]: /de/docs/explanation/bencher-run/
+[docs serde with double option]: https://docs.rs/serde_with/3.12.0/serde_with/rust/double_option/index.html
+[serde flattened]: https://serde.rs/attr-flatten.html
+[serde untagged]: https://serde.rs/enum-representations.html#untagged
+[github bencher json update project]: https://github.com/bencherdev/bencher/blob/09084ed5549fea71b181da048ec6fa8672e17541/lib/bencher_json/src/project/mod.rs#L91

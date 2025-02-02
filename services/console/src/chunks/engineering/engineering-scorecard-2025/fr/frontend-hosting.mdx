@@ -1,0 +1,36 @@
+### Hébergement Frontend
+
+Ma décision initiale de m'investir totalement dans Solid a été fortement influencée par le fait que
+[Netlify a embauché le créateur de Solid pour qu'il travaille dessus à plein temps][dev to netlify].
+Vous voyez, le principal concurrent de Netlify est [Vercel][vercel].
+Vercel a créé et maintient [Next.js][next js github].
+Et j'ai pensé que Netlify voulait que Solid soit leur Next.js.
+Par conséquent, je pensais qu'il n'y aurait pas de meilleur endroit pour héberger un site SolidStart que Netlify.
+
+Par défaut, Netlify essaie de vous faire utiliser leur système de build.
+Utiliser le système de build de Netlify rend très difficile la réalisation de déploiements atomiques.
+Netlify publierait toujours le frontend même si la chaîne backend échouait.
+Très mauvais !
+Cela m'a amené à construire le frontend dans le même [environnement CI/CD][continuous integration] que le backend
+et ensuite simplement télécharger la dernière version sur Netlify avec leur CLI.
+Lorsque j'ai effectué la transition de SolidStart à Astro,
+j'ai pu garder la même configuration CI/CD.
+Astro a une [intégration Netlify][astro netlify] de première partie.
+
+Bencher a réussi à rester sous le niveau gratuit de Netlify pendant un certain temps.
+Cependant, avec la popularité croissante de Bencher,
+nous avons commencé à dépasser certaines des limites du niveau gratuit.
+J'ai envisagé de déplacer le site Astro vers [`sst` sur AWS][sst aws astro].
+Cependant, les économies de coûts ne semblent pas en valoir la peine à ce stade.
+
+> |    Technologie    | Verdict |
+> | :---------------: | :-----: |
+> | Build Netlify     |    ❌    |
+> | Déploiements Netlify |  ✅   |
+
+[dev to netlify]: https://dev.to/ryansolid/when-netlify-asks-you-to-full-time-oss-you-say-yes-5ccf
+[vercel]: https://vercel.com/
+[next js github]: https://github.com/vercel/next.js
+[continuous integration]: #continuous-integration
+[astro netlify]: https://docs.astro.build/fr/guides/integrations-guide/netlify/
+[sst aws astro]: https://sst.dev/docs/component/aws/astro/

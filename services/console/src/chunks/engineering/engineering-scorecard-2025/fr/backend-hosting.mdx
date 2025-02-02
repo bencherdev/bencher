@@ -1,0 +1,36 @@
+### Hébergement Backend
+
+De la même manière que j'ai choisi Netlify pour l'hébergement de mon frontend parce que j'utilisais Solid, j'ai choisi [Fly.io][fly io] pour l'hébergement de mon backend parce que j'utilisais Litestream. [Fly.io avait tout juste embauché le créateur de Litestream pour qu'il travaille dessus à plein temps][fly io sqlite]. Comme mentionné ci-dessus, ce travail sur Litestream a finalement été cannibalisé par LiteFS, et LiteFS est maintenant mort. Donc cela ne s'est pas vraiment passé comme je l'avais espéré.
+
+À l'avenir, lorsque je passerai à [Kamal][github kamal], je quitterai également Fly.io. Fly.io a connu deux pannes majeures qui ont mis Bencher hors ligne pendant une demi-journée à chaque fois. Mais le plus gros problème est le décalage d'impédance qui vient de l'utilisation de Litestream.
+
+Chaque fois que je me connecte au tableau de bord Fly.io, je vois cet avertissement :
+
+> <h4>ℹ Votre application fonctionne sur une seule machine</h4>
+>
+> Mettez votre application à l'échelle et exécutez-la sur plusieurs Machines pour assurer une haute disponibilité avec une commande :
+> ```
+> fly scale count 2
+> ```
+> Consultez la [documentation](https://fly.io/fr/docs/launch/scale-count/) pour plus de détails sur la mise à l'échelle.
+
+Mais avec Litestream, vous ne pouvez toujours pas avoir plus d'une machine ! Vous n'avez jamais fourni la réplication en lecture, comme vous l'aviez promis !
+
+Donc oui, c'est un peu ironique et frustrant. À un moment donné, j'ai regardé [libSQL][github libsql] et [Turso][turso]. Cependant, libSQL nécessite un serveur backend spécial pour la réplication, ce qui le rend [incompatible avec Diesel][libsql github issue 1180]. Quoi qu'il en soit, il semble que j'ai esquivé une autre [fin de vie][turso roadmap] là aussi. Je suis très intéressé de voir ce que Turso va faire avec [Limbo][github limbo], leur réécriture de SQLite en Rust. Mais je ne ferai pas ce changement de sitôt. La prochaine étape est une VM agréable, ennuyeuse et stable fonctionnant avec Kamal.
+
+Le backend [AWS S3][aws s3] pour la réplication Litestream a fonctionné parfaitement. Même avec le retrait brutal autour de Litestream et Fly.io, je pense toujours avoir fait le bon choix en utilisant Litestream avec Bencher. Je commence à rencontrer quelques problèmes de mise à l'échelle avec Bencher Cloud, mais c'est un bon problème à avoir.
+
+> | Technologie | Avis |
+> | :---------: | :--: |
+> |   Fly.io   |   ❌  |
+> |   AWS S3   |   ✅  |
+
+[fly io]: https://fly.io/
+[fly io sqlite]: https://fly.io/blog/all-in-on-sqlite-litestream/
+[github kamal]: https://github.com/basecamp/kamal
+[github libsql]: https://github.com/tursodatabase/libsql
+[turso]: https://turso.tech/
+[libsql github issue 1180]: https://github.com/tursodatabase/libsql/issues/1180
+[turso roadmap]: https://turso.tech/blog/upcoming-changes-to-the-turso-platform-and-roadmap
+[github limbo]: https://github.com/tursodatabase/limbo
+[aws s3]: https://aws.amazon.com/s3/

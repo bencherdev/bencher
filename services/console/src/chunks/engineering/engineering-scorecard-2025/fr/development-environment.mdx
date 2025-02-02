@@ -1,0 +1,37 @@
+### Environnement de Développement
+
+Lorsque j'ai commencé à travailler sur Bencher, les gens appelaient [à la fin de localhost][dx tips].
+J'avais déjà bien dépassé le besoin d'un nouvel ordinateur portable de développement,
+alors j'ai décidé d'essayer un environnement de développement dans le cloud.
+À l'époque, GitHub Workspaces n'était pas généralement disponible (GA) pour mon cas d'utilisation,
+donc j'ai choisi [Gitpod][gitpod].
+
+Cette expérience a duré environ six mois.
+Ma conclusion : les environnements de développement dans le cloud ne fonctionnent pas bien pour les projets parallèles.
+Vous voulez intervenir et effectuer cinq minutes de travail ?
+Impossible ! Vous allez vous asseoir là et attendre que votre environnement de développement se réinitialise pour la 1 000ème fois.
+Oh, vous avez tout un après-midi le week-end pour vraiment avancer dans votre travail ?
+Impossible ! Votre environnement de développement va juste [s'arrêter de fonctionner de manière aléatoire pendant que vous l'utilisez][github gitpod 9629]. Encore et encore et encore.
+
+J'ai rencontré ces problèmes en tant qu'utilisateur payant.
+À 25 $/mois, je pourrais obtenir un tout nouveau MacBook Pro M1 avec des spécifications bien meilleures tous les cinq ans.
+Quand Gitpod a annoncé qu'ils modifiaient leur tarification d'un taux fixe à un modèle basé sur l'utilisation,
+je les ai simplement laissés annuler mon plan et je me suis rendu sur [apple.com][apple].
+
+Peut-être que tout cela était un problème lié à la [décision maintenant abandonnée de Gitpod][gitpod kubernetes] d'utiliser Kubernetes.
+Mais je ne suis pas pressé d'essayer un autre environnement de développement cloud avec Bencher à nouveau.
+J'ai finalement porté la configuration de Gitpod vers un [dev container][github bencher dev container]
+pour faciliter l'initiation des contributeurs.
+Pour moi, je reste avec `localhost`.
+
+> |   Technologie   | Verdict |
+> | :-------------: | :-----: |
+> |     Gitpod      |    ❌    |
+> | MacBook Pro M1  |    ✅    |
+
+[dx tips]: https://dx.tips/the-end-of-localhost
+[gitpod]: https://www.gitpod.io/
+[github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
+[apple]: https://www.apple.com
+[gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
+[github bencher dev container]: https://github.com/bencherdev/bencher/pkgs/container/bencher-dev-container

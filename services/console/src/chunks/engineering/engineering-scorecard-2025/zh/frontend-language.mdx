@@ -1,0 +1,20 @@
+### 前端语言
+
+Astro具有[内置的TypeScript支持][astro typescript]。在从SolidStart过渡到Astro的过程中，我也开始从JavaScript转向TypeScript。Bencher的TypeScript配置被设置为Astro的`strictest`设置。然而，Astro在构建过程中不进行类型检查。在撰写本文时，Bencher仍有`604`个类型错误。这些类型错误在编辑代码时更多用作提示，但它们不会（目前还不会）阻止构建（[见GitHub问题557][github issue 557]）。
+
+我还添加了[Typeshare][typeshare github]，以同步Bencher的Rust数据类型与TypeScript前端。这对开发Bencher控制台非常有帮助。此外，所有针对用户名、电子邮件等的字段验证器都通过WASM在Rust代码和TypeScript前端之间共享[详见WASM][github wasm bindgen]。让WASM在SolidStart和Astro中都能正常工作有点麻烦。前端中最大的一类错误是调用WASM函数但WASM模块尚未加载的地方。我已经找到了修复它的方法，但有时还是会忘记，然后再次出现。
+
+自动从Rust代码生成共享的类型和验证器使得与前端的接口变得更加容易。它们都在CI中进行检查，所以永远不会不同步。我所要做的就是确保HTTP请求格式正确，然后一切就会正常运作。这使得无法使用全栈Rust的痛苦稍微减轻了一些。
+
+> |   技术    |  结论  |
+> | :--------: | :----: |
+> |    Rust    |   ❌   |
+> | JavaScript |   ❌   |
+> | TypeScript |   ✅   |
+> | Typeshare  |   ✅   |
+> |    WASM    |   ✅   |
+
+[astro typescript]: https://docs.astro.build/zh/guides/typescript/
+[github issue 557]: https://github.com/bencherdev/bencher/issues/557
+[typeshare github]: https://github.com/1Password/typeshare
+[github wasm bindgen]: https://github.com/rustwasm/wasm-bindgen

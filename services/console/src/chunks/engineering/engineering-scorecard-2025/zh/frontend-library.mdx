@@ -1,0 +1,35 @@
+### 前端库
+
+作为一个正在康复中的 C++ 开发者，我非常喜欢 Rust。如果我能按照自己的想法去做，我会使用全栈 Rust 来编写 Bencher。深入挖掘 [Bencher 仓库][bencher github]，你会看到我正尝试这样做。我尝试了 [Yew][yew github]、[Seed][seed github] 和 [Sycamore][sycamore github]。尽管这些可能在某些项目中表现出色，但有一个主要的症结让我无法克服：[JavaScript 互操作性][js ffi]。
+
+虽然通过 Rust 可以从 WASM 中进行 JS 互操作，但这并不容易。我想要 Bencher 拥有高度交互的图表，这意味着需要使用像 [D3][d3 github] 这样的库，也就意味着要进行 JS 互操作。
+
+所以，如果我必须使用 JavaScript，我应该选择哪个库呢？
+
+回到我试验的那些 Rust crates，Yew 是 [React Hooks][react hooks] 的 Rust 类比。我过去曾使用 React Hooks 创建并部署了一个前端，所以对这个框架最为了解。然而，我发现 React Hooks 的生命周期非常复杂，并且充满了陷阱和奇怪的边缘案例。
+
+我非常喜欢 [函数式反应式编程][functional reactive programming] (FRP) 的核心原则。这引导我尝试了 [Elm][elm] 及其 Rust 类比 Seed。不幸的是，使用 Elm 也面临与使用 Rust 同样的问题。Elm 需要自己的 [JavaScript 互操作][elm js interop]。我也发现 [Elm 架构][the elm architecture] 对我来说有点过于限制。
+
+在所有我尝试的 Rust 框架中，我最喜欢 Sycamore。Sycamore 受到 [Solid][solid github] 的启发。我了解到 Solid 的更多信息后，越发喜欢它。与 React 不同，Solid 不使用 [虚拟 DOM][react virtual dom]。相反，它编译成传统的 JavaScript。这使得它更快、更小、更易于使用。Solid 由少数强大的原语组成，允许细粒度的反应性。当用户界面中的某些内容更新时，只有依赖它的代码才会重新运行。在过去的三年中，我发现与 Solid 一起工作是一种享受。
+
+> | 技术 | 结论 |
+> | :--: | :--: |
+> |  Yew  |  ❌  |
+> |  Seed |  ❌  |
+> | Sycamore |  ❌  |
+> |  Elm  |  ❌  |
+> | SolidJS | ✅ |
+
+[bencher github]: https://github.com/bencherdev/bencher
+[yew github]: https://github.com/yewstack/yew
+[seed github]: https://github.com/seed-rs/seed
+[sycamore github]: https://github.com/sycamore-rs/sycamore
+[js ffi]: https://rustwasm.github.io/docs/book/reference/js-ffi.html
+[d3 github]: https://github.com/d3/d3
+[react hooks]: https://react.dev/reference/react/hooks
+[functional reactive programming]: https://en.wikipedia.org/wiki/Functional_reactive_programming
+[elm]: https://elm-lang.org/
+[elm js interop]: https://guide.elm-lang.org/interop/
+[the elm architecture]: https://guide.elm-lang.org/architecture/
+[solid github]: https://github.com/solidjs/solid
+[react virtual dom]: https://legacy.reactjs.org/docs/faq-internals.html

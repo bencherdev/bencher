@@ -1,0 +1,33 @@
+### 지속적 통합
+
+Bencher는 [오픈 소스][github bencher]입니다.
+현대의 오픈 소스 프로젝트로서, GitHub에 있어야 합니다.
+이는 지속적 통합 (CI)에서 가장 손쉬운 경로가 GitHub Actions임을 의미합니다.
+여러 해가 지나면서, 저는 YAML 기반의 CI DSL에 염증을 느끼기 시작했습니다.
+각 DSL마다 고유의 버그가 있고, GitHub 같은 대기업에서는
+❌ 아이콘 대신 ⚠️ 아이콘을 받는 문제가 [몇 년 동안 방치되기도][github runner 2347] 했습니다.
+
+이 때문에 [Dagger][github dagger]를 시도해 보기로 했습니다.
+그 당시에는 [CUE][cue]라는 난해한 언어를 통해서만 Dagger를 사용할 수 있었습니다.
+정말 노력했습니다. 주말 내내 시도했습니다.
+아마 그때 ChatGPT가 있었다면, 성공했을지도 모릅니다.
+하지만 저만 그런 게 아니었습니다.
+Dagger는 궁극적으로 더 합리적인 SDK를 위해 [CUE를 포기했습니다][dagger cue].
+하지만 그때는 이미 너무 늦었습니다.
+
+Dagger에 패배한 저는 YAML CI DSL 운명을 받아들였고,
+Bencher는 이제 GitHub Actions를 사용합니다.
+게다가 저는 [Bencher CLI][github bencher cli] GitHub Action까지 제작했습니다.
+세상에서 ~~변화~~ 문제가 되고자 하는 사람이 되세요.
+
+> |   기술   | 평결 |
+> | :------: | :--: |
+> |  Dagger  |  ❌  |
+> | GitHub Actions |  ⚠️  |
+
+[github bencher]: https://github.com/bencherdev/bencher
+[github runner 2347]: https://github.com/actions/runner/issues/2347
+[github dagger]: https://github.com/dagger/dagger
+[cue]: https://cuelang.org/
+[dagger cue]: https://dagger.io/blog/ending-cue-support
+[github bencher cli]: https://github.com/marketplace/actions/bencher-cli

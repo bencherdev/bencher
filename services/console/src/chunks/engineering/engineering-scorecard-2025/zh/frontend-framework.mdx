@@ -1,0 +1,26 @@
+### 前端框架
+
+Solid 本身只是一个库。为了构建一个现代化的前端，我需要使用一个功能齐全的 Web 应用框架。为了保持简单，我把所有的筹码都押在了 Solid 上，最初使用了 [SolidStart][solid start github]。那时，SolidStart 只支持单页面应用（SPA）。
+
+SPA 对于开始开发来说是可以的。但是，最终我需要开始关注像 SEO 这样的问题。我开始撰写更多的[Bencher 文档][bencher docs]。我还计划了网站的[学习部分][bencher learn]。这意味着我需要客户端渲染（CSR）和静态网站生成（SSG）。SolidStart 非常年轻，我无法让它满足我的所有需求。
+
+在了解 [Astro][astro] 并尝试之后，我决定将整个 Bencher 前端从 SolidStart 转到 Astro。这样做有两个缺点。最明显的是涉及的工作量。说实话，也不是太糟糕。Astro 有它的[岛屿架构][astro islands]和一流的[Solid 集成][astro solid]。我还能从 [Solid Router][solid router] 中获取我需要的很多逻辑，它非常顺利地工作了。
+
+至今仍在存在的一个妥协是，Bencher 从单页面应用变成了多页面应用。在控制台中点击的大多数地方都会导致整页重新渲染。在我第一次进行切换时，Astro 承诺了[视图过渡][astro view transitions]。我尝试过，但它们有些问题。我仍然需要[回到这一点][github issue 556]。
+
+在此期间，SolidStart 似乎已经赶上了一些。他们现在同时支持 CSR 和 SSG。不过，我还没有检查它们是否可以像我需要的那样在同一个站点上同时工作。时过境迁。
+
+> | 技术       | 结论   |
+> | :--------: | :----: |
+> | SolidStart |    ❌    |
+> |   Astro    |    ✅    |
+
+[solid start github]: https://github.com/solidjs/solid-start
+[bencher docs]: /zh/docs/
+[bencher learn]: /zh/learn/
+[astro]: https://astro.build/
+[astro islands]: https://docs.astro.build/en/concepts/islands/
+[astro solid]: https://docs.astro.build/en/guides/integrations-guide/solid-js/
+[solid router]: https://github.com/solidjs/solid-router
+[astro view transitions]: https://docs.astro.build/en/guides/view-transitions/
+[github issue 556]: https://github.com/bencherdev/bencher/issues/556

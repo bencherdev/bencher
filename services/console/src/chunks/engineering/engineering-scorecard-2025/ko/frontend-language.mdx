@@ -1,0 +1,20 @@
+### 프론트엔드 언어
+
+Astro는 [내장 TypeScript 지원][astro typescript]을 제공합니다. SolidStart에서 Astro로의 전환과 함께, JavaScript에서 TypeScript로의 전환도 시작했습니다. Bencher의 TypeScript 설정은 Astro의 `strictest` 설정으로 되어 있습니다. 그러나 Astro는 빌드 중에 타입 검사를 수행하지 않습니다. 작성 시점에, Bencher는 여전히 `604`개의 타입 오류가 있습니다. 이러한 타입 오류는 코드를 편집할 때 힌트로 사용되지만, 빌드를 막지는 않습니다 ([아직은][github issue 557]).
+
+Bencher의 Rust 데이터 타입을 TypeScript 프론트엔드와 동기화하기 위해 [Typeshare][typeshare github]도 추가했습니다. 이는 Bencher Console을 개발하는 데 매우 유용했습니다. 더 나아가, 사용자 이름, 이메일 등과 같은 항목의 모든 필드 검증기는 [WASM을 통해][github wasm bindgen] Rust 코드와 TypeScript 프론트엔드 간에 공유됩니다. SolidStart와 Astro에서 WASM을 작동시키는 데 약간 어려움이 있었습니다. 프론트엔드에서 보아온 가장 큰 유형의 오류는 WASM 함수가 호출되지만 WASM 모듈이 아직 로드되지 않은 경우입니다. 이를 해결하는 방법을 알아냈지만, 때때로 잊어버리면 다시 나타나곤 합니다.
+
+Rust 코드에서 자동 생성된 공유 타입과 검증기를 모두 갖춤으로써 프론트엔드와의 인터페이스가 훨씬 쉬워졌습니다. 두 개가 모두 CI에서 확인되므로, 절대 싱크가 맞지 않는 경우가 없습니다. HTTP 요청이 잘 형성되었는지만 확인하면, 모두 잘 작동합니다. 이는 전체 스택 Rust를 사용할 수 없는 아쉬움을 조금 덜어줍니다.
+
+> | 기술       | 평가    |
+> | :--------: | :-----: |
+> |    Rust    |    ❌    |
+> | JavaScript |    ❌    |
+> | TypeScript |    ✅    |
+> | Typeshare  |    ✅    |
+> |    WASM    |    ✅    |
+
+[astro typescript]: https://docs.astro.build/ko/guides/typescript/
+[github issue 557]: https://github.com/bencherdev/bencher/issues/557
+[typeshare github]: https://github.com/1Password/typeshare
+[github wasm bindgen]: https://github.com/rustwasm/wasm-bindgen

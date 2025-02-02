@@ -1,0 +1,36 @@
+### バックエンドホスティング
+
+同じようにSolidを使っていたのでフロントエンドホスティングにはNetlifyを選んだのと同じ理由で、Litestreamを利用していたのでバックエンドホスティングには[Fly.io][fly io]を選びました。[Fly.ioはちょうどLitestreamの作成者をフルタイムで雇っていました][fly io sqlite]。上記のように、Litestreamのこの作業は最終的にLiteFSによって吸収され、LiteFSは今ではなくなりました。なので、私が期待していたようにはなりませんでした。
+
+将来的に[Kamal][github kamal]に切り替える際には、Fly.ioからも移行します。Fly.ioでは2度の大規模な障害が発生し、そのたびにベンチャーが半日ダウンしました。しかし、最大の問題は、Litestreamを使用することによるインピーダンスミスマッチです。
+
+Fly.ioのダッシュボードにログインするたびに、この警告メッセージが表示されます：
+
+> <h4>ℹ あなたのアプリは単一のマシンで動作しています</h4>
+>
+> 1つのコマンドで複数のマシンでアプリをスケーリングして高可用性を確保しましょう：
+> ```
+> fly scale count 2
+> ```
+> スケーリングについて詳細は[ドキュメント](https://fly.io/ja/docs/launch/scale-count/)をご確認ください。
+
+しかし、Litestreamを使っていると、依然として複数のマシンを使うことはできません！約束したようなリードレプリケーションを提供することは決してありませんでした！
+
+なので、これは少し皮肉であり、またフラストレーションを感じます。一時期、[libSQL][github libsql]や[Turso][turso]を調べたこともあります。しかし、libSQLはレプリケーション用に特別なバックエンドサーバが必要であり、それが[Dieselで動作しない][libsql github issue 1180]原因になっています。いずれにしても、また別の[サポート終了のシャットダウン][turso roadmap]を回避したようです。[Limbo][github limbo]というTursoのSQLiteをRustで書き直したものに非常に興味がありますが、すぐに移行することはないでしょう。次のステップは、良好で安定したVMをKamalで動かすことです。
+
+Litestreamのレプリケーションのための[AWS S3][aws s3]バックエンドは、問題なく機能しています。LitestreamとFly.ioに対する突然の変更にもかかわらず、BencherでLitestreamを使用するという判断は正しかったと考えています。Bencher Cloudでスケーリングの問題に直面し始めていますが、これは良い問題であると考えています。
+
+> | 技術     | 評価 |
+> | :------: | :---: |
+> |  Fly.io  |   ❌   |
+> |  AWS S3  |   ✅   |
+
+[fly io]: https://fly.io/
+[fly io sqlite]: https://fly.io/blog/all-in-on-sqlite-litestream/
+[github kamal]: https://github.com/basecamp/kamal
+[github libsql]: https://github.com/tursodatabase/libsql
+[turso]: https://turso.tech/
+[libsql github issue 1180]: https://github.com/tursodatabase/libsql/issues/1180
+[turso roadmap]: https://turso.tech/blog/upcoming-changes-to-the-turso-platform-and-roadmap
+[github limbo]: https://github.com/tursodatabase/limbo
+[aws s3]: https://aws.amazon.com/s3/

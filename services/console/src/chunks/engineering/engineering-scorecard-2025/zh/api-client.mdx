@@ -1,0 +1,52 @@
+### API 客户端
+
+选择 [Dropshot][github dropshot] 作为 Bencher 的
+[HTTP 服务器框架][http server framework] 的一个主要因素
+是其内置生成 [OpenAPI 规范][openapi spec] 的能力。
+我希望有一天可以从规范中自动生成一个 API 客户端。
+大约一年之后，Dropshot 的创建者实现了这一目标：[Progenitor][github progenitor]。
+
+Progenitor 就像是 Dropshot 的阴阳互补。
+使用 Dropshot 的 OpenAPI 规范，Progenitor 可以生成一个 Rust API 客户端，
+支持位置模式：
+
+```
+client.instance_create("bencher", "api", None)
+```
+
+或者生成器模式：
+
+```
+client.instance_create().organization("bencher").project("api").send()
+```
+
+个人而言，我更喜欢后者，
+所以 Bencher 也是这么用的。
+Progenitor 还可以生成一个完整的 Clap CLI 来与 API 交互。
+然而，我没有使用它。
+我需要对某些事情有更严格的控制，
+尤其对于类似 [`bencher run`][bencher run] 的命令。
+
+我发现生成的类型唯一显著的缺点是，
+由于 JSON Schema 的限制，当需要能够区分缺失的 `item` 键和具有 `null` 值的 `item` 键时，不能简单地使用 `Option<Option<Item>>`。
+使用 [`double_option`][docs serde with double option] 可以解决这个问题，
+但在 JSON Schema 的层面上看起来一切都相同。
+使用 [flattened][serde flattened] 或 [untagged][serde untagged] 的内部结构枚举
+与 Dropshot 结合得不太好。
+我发现的唯一解决方案是使用 [顶级、无标签的枚举][github bencher json update project]。
+不过，目前整个 API 中只有两个这样的字段，
+所以问题不大。
+
+> | 技术        | 结论   |
+> | :--------: | :-----: |
+> | Progenitor |    ✅    |
+
+[github dropshot]: https://github.com/oxidecomputer/dropshot
+[github progenitor]: https://github.com/oxidecomputer/progenitor
+[http server framework]: #http-server-framework
+[openapi spec]: https://swagger.io/specification/
+[bencher run]: /zh/docs/explanation/bencher-run/
+[docs serde with double option]: https://docs.rs/serde_with/3.12.0/serde_with/rust/double_option/index.html
+[serde flattened]: https://serde.rs/attr-flatten.html
+[serde untagged]: https://serde.rs/enum-representations.html#untagged
+[github bencher json update project]: https://github.com/bencherdev/bencher/blob/09084ed5549fea71b181da048ec6fa8672e17541/lib/bencher_json/src/project/mod.rs#L91

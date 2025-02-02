@@ -1,0 +1,33 @@
+### APIクライアント
+
+[Bencher][http server framework]の[HTTPサーバーフレームワーク][http server framework]として[Dropshot][github dropshot]を選んだ主な理由は、組み込みで[OpenAPIスペック][openapi spec]を生成する機能があったからです。将来的にはそのスペックからAPIクライアントを自動生成できることを期待していました。1年ほど後、Dropshotの開発者たちは[Progenitor][github progenitor]を提供しました。
+
+ProgenitorはDropshotの補完的な存在です。DropshotからのOpenAPIスペックを使用して、ProgenitorはRustのAPIクライアントを位置指定パターンで生成できます：
+
+```
+client.instance_create("bencher", "api", None)
+```
+
+またはビルダーパターンで：
+
+```
+client.instance_create().organization("bencher").project("api").send()
+```
+
+個人的には後者が好みなので、Bencherではこちらを使用しています。ProgenitorはAPIとやり取りするためのClap CLI全体を生成することも可能ですが、それは使用していません。特に[`bencher run`][bencher run]のようなコマンドでは、より細やかな制御が必要だったためです。
+
+生成された型に関して見つけた唯一の注目すべき欠点は、JSON Schemaの制約により、`item`キーが欠落している場合と値が`null`に設定されている`item`キーを区別する必要があるときに、`Option<Option<Item>>`を単純に使用できないことです。これは[`double_option`][docs serde with double option]のようなもので可能ですが、JSON Schemaのレベルではすべて同じに見えます。[flattened][serde flattened]や[untagged][serde untagged]の内部構造体enumを使用してもDropshotとうまく連携しません。一番の解決策として見つけたのは、[トップレベルのタグなしenum][github bencher json update project]を使用することでした。ただし、現段階ではAPI全体でこのようなフィールドは2つしかないので、大した問題ではありません。
+
+> | 技術     | 評価 |
+> | :------: | :--: |
+> | Progenitor |    ✅    |
+
+[github dropshot]: https://github.com/oxidecomputer/dropshot
+[github progenitor]: https://github.com/oxidecomputer/progenitor
+[http server framework]: #http-server-framework
+[openapi spec]: https://swagger.io/specification/
+[bencher run]: /ja/docs/explanation/bencher-run/
+[docs serde with double option]: https://docs.rs/serde_with/3.12.0/serde_with/rust/double_option/index.html
+[serde flattened]: https://serde.rs/attr-flatten.html
+[serde untagged]: https://serde.rs/enum-representations.html#untagged
+[github bencher json update project]: https://github.com/bencherdev/bencher/blob/09084ed5549fea71b181da048ec6fa8672e17541/lib/bencher_json/src/project/mod.rs#L91

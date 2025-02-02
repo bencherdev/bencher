@@ -1,0 +1,21 @@
+### HTTP 서버 프레임워크
+
+러스트 HTTP 서버 프레임워크를 선택할 때 가장 중요하게 고려한 점 중 하나는 내장된 [OpenAPI 사양][openapi spec] 지원이었습니다. [Typeshare 및 WASM을 프론트엔드에 설정한 이유][frontend language]와 같은 이유로, 저는 API 문서 및 클라이언트를 그 사양에서 자동 생성할 수 있는 기능을 원했습니다. 이 기능이 서드파티 추가 기능이 아닌, 내장되어 있는 것이 중요했습니다. 자동화가 실제로 가치 있기 위해서는 거의 100%에 가깝게 작동해야 합니다. 이는 유지보수 및 호환성 부담이 핵심 프레임워크 엔지니어들에게 있어야 함을 의미합니다. 그렇지 않으면, 결국 최악의 경계 상황에 빠지게 될 것입니다.
+
+또 다른 중요한 고려 사항은 방치 위험이었습니다. 한때 유망했던 여러 러스트 HTTP 프레임워크들이 지금은 거의 방치되어 있습니다. 내장된 OpenAPI 사양 지원을 가지고 있으며 제가 신뢰할 수 있는 유일한 프레임워크는 [Dropshot][dropshot github]였습니다. Dropshot은 [Oxide Computer][oxide computer]에서 제작되어 현재도 유지보수되고 있습니다.
+
+현재까지 Dropshot에서 크게 문제가 된 부분은 하나뿐이었습니다. API 서버에서 오류가 발생하면, 응답 헤더가 누락되어 프론트엔드에서 CORS 오류가 발생합니다. 이는 웹 프론트엔드가 사용자에게 도움이 되는 오류 메시지를 표시할 수 없다는 것을 의미합니다. 저는 수정사항을 업스트림에 기여하는 대신 Bencher를 더 쉽고 직관적으로 사용하도록 만드는 데 주력했습니다. 그러나 해결책은 [100줄 미만의 코드][dropshot github issue 1193]였습니다. 웃긴 일이네요!
+
+여담으로, [`axum` 프레임워크][axum github]는 제가 Bencher를 작업하기 시작했을 때 아직 출시되지 않았습니다. 그때 만약 출시되어 있었다면, 여러 서드파티 OpenAPI 추가 기능 중 하나와 짝짓기를 시도했을지도 모릅니다, 제 나름대로의 판단을 무시하며 말이죠. 다행히도 `axum`은 저를 유혹하지 않았습니다. Dropshot은 훌륭한 선택이었습니다. 이 점에 대해 더 알아보려면 [API 클라이언트][api client] 섹션을 참조하세요.
+
+> | 기술 | 결론 |
+> | :--: | :--: |
+> | Dropshot | ✅ |
+
+[openapi spec]: https://swagger.io/specification/
+[frontend language]: #frontend-language
+[dropshot github]: https://github.com/oxidecomputer/dropshot
+[oxide computer]: https://oxide.computer/
+[dropshot github issue 1193]: https://github.com/oxidecomputer/dropshot/pull/1193
+[axum github]: https://github.com/tokio-rs/axum
+[api client]: #api-client

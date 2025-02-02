@@ -1,0 +1,11 @@
+新しいテクノロジーを開発する際、例えば [Bencher][bencher] のような場合、「退屈な技術を選ぶこと」と「平均を打ち破ること」の間に基本的な緊張関係があります。この綱引きにおいて自分がどの立場にいるのか、瞬間的には判断するのが難しいことがあります。Rustプログラミング言語は3年ごとに新しい [Rustエディション][rust editions] を発表します。このペースは良いものだと思います。大きな進展を遂げるには十分に長い時間ですが、あまりにも遠くに離れ過ぎないほど短い時間です。Bencherがこの春で3年を迎えるにあたり、ここまで来たすべてのエンジニアリング決定について振り返る良い機会だと思いました。
+
+この投稿では、過去3年間にわたるBencherの「イノベーショントークン」の使い方を振り返ります。Bencherは[継続的なベンチマーク][continuous benchmarking] ツールの[オープンソース][github bencher] スイートです。私は[Bencherアーキテクチャ][architecture] のフロントエンドから始まり、全体のスタックを見ていきます。各ステップで、どのようにここまで来たのかを議論し、各エンジニアリング決定がどのように展開したかに関するバイナリ判定を与えます。
+
+[bencher]: https://bencher.dev
+[choose boring technology]: https://mcfunley.com/choose-boring-technology
+[beating the averages]: https://paulgraham.com/avg.html
+[rust editions]: https://doc.rust-lang.org/edition-guide/editions/
+[github bencher]: https://github.com/bencherdev/bencher
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
+[architecture]: /ja/docs/reference/architecture/

@@ -1,0 +1,19 @@
+### 前端托管
+
+我最初决定全面投入使用 Solid，很大程度上受到[Netlify 聘请 Solid 的创建者全职开发][dev to netlify]的影响。你看，Netlify 最大的竞争对手是 [Vercel][vercel]。Vercel 创建并维护 [Next.js][next js github]。我猜 Netlify 希望 Solid 成为他们的 Next.js。因此，我认为没有比在 Netlify 上托管一个 SolidStart 站点更好的地方了。
+
+默认情况下，Netlify 会尝试让你使用他们的构建系统。使用 Netlify 的构建系统使得原子部署变得非常困难。即使后端流水线失败，Netlify 仍然会发布前端。这非常糟糕！这导致我选择在与后端相同的 [CI/CD 环境][continuous integration] 中构建前端，然后只使用他们的 CLI 将最新版本上传到 Netlify。当我从 SolidStart 迁移到 Astro 时，我能够保持相同的 CI/CD 设置。Astro 提供了一个官方的 [Netlify 集成][astro netlify]。
+
+Bencher 在 Netlify 的免费套餐下坚持了相当长的一段时间。不过，随着 Bencher 的受欢迎程度增加，我们开始超过一些免费套餐限制。我曾考虑将 Astro 站点迁移到 [`sst` on AWS][sst aws astro]。然而，到目前为止，节省的成本似乎不值得付出这一努力。
+
+> |   技术    | 结论 |
+> | :-------: | :--: |
+> | Netlify 构建 |  ❌   |
+> | Netlify 部署 |  ✅   |
+
+[dev to netlify]: https://dev.to/ryansolid/when-netlify-asks-you-to-full-time-oss-you-say-yes-5ccf
+[vercel]: https://vercel.com/
+[next js github]: https://github.com/vercel/next.js
+[continuous integration]: #continuous-integration
+[astro netlify]: https://docs.astro.build/zh/guides/integrations-guide/netlify/
+[sst aws astro]: https://sst.dev/docs/component/aws/astro/

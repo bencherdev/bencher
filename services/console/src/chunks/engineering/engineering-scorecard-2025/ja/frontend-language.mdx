@@ -1,0 +1,33 @@
+### フロントエンド言語
+
+Astroには[TypeScriptの組み込みサポート][astro typescript]があります。
+SolidStartからAstroへの移行に伴い、JavaScriptからTypeScriptへの移行も開始しました。
+BencherのTypeScript設定はAstroの`strictest`設定に設定されています。
+ただし、Astroはビルド中に型チェックを行いません。
+執筆時点では、Bencherにはまだ`604`の型エラーがあります。
+これらの型エラーはコード編集時のヒントのように使用されますが、ビルドをブロックすることはありません（[まだ][github issue 557]）。
+
+また、BencherのRustデータ型をTypeScriptのフロントエンドと同期させるために[Typeshare][typeshare github]を追加しました。
+これはBencher Consoleの開発に非常に役立っています。
+さらに、ユーザー名やメールアドレスなどのフィールドバリデーターは、[WASM経由で][github wasm bindgen]RustコードとTypeScriptフロントエンドの間で共有されています。
+SolidStartとAstroの両方でWASMを動作させるのは少し手間がかかりました。
+フロントエンドで見られる最大のエラーのクラスは、WASM関数が呼び出される場所ですが、WASMモジュールがまだロードされていないというものです。
+どう修正するかは分かりましたが、時々忘れてしまい、再び問題が発生します。
+
+Rustコードから自動生成される共有の型とバリデーターの両方によって、フロントエンドとのインターフェースが非常に容易になりました。
+これらはCIでチェックされるため、同期が崩れることはありません。
+HTTPリクエストが正しく形成されていることを確認するだけで、すべてがうまく動作します。
+これにより、フルスタックでRustを使用できないことの痛みが少し和らぎます。
+
+> | テクノロジー | 判定 |
+> | :--------: | :-----: |
+> |    Rust    |    ❌    |
+> | JavaScript |    ❌    |
+> | TypeScript |    ✅    |
+> | Typeshare  |    ✅    |
+> |    WASM    |    ✅    |
+
+[astro typescript]: https://docs.astro.build/ja/guides/typescript/
+[github issue 557]: https://github.com/bencherdev/bencher/issues/557
+[typeshare github]: https://github.com/1Password/typeshare
+[github wasm bindgen]: https://github.com/rustwasm/wasm-bindgen

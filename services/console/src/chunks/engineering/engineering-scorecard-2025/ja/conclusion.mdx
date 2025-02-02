@@ -1,0 +1,39 @@
+## 結論
+
+Bencherを構築する過程で、エンジニアリングの決定にはそれぞれのトレードオフがあることをたくさん学びました。
+今なら異なる選択をするだろうと思うこともありますが、それは良いことです。
+それは、プロジェクトを通していくつかの知識を得たことを意味しています。
+全体として、現在のBencherの状況には非常に満足しています。
+Bencherは私のノートのスケッチから、成長するユーザーベース、活気あるコミュニティ、支払い顧客を持つ本格的な製品になりました。
+これからの3年間でどんな展開があるのか楽しみです！
+
+> |          スタック           |                    コンポーネント                    |     技術     |   評価   |
+> | :-------------------------: | :-----------------------------------------------: | :-----------: | :------: |
+> |    [フロントエンド](#frontend)    |       [フロントエンドライブラリ](#frontend-library)       |       Yew        |    ❌    |
+> |                             |                                                   |      Seed       |    ❌    |
+> |                             |                                                   |    Sycamore     |    ❌    |
+> |                             |                                                   |      Elm        |    ❌    |
+> |                             |                                                   |    SolidJS      |    ✅    |
+> |                             |      [フロントエンド言語](#frontend-language)      |      Rust       |    ❌    |
+> |                             |                                                   |   JavaScript    |    ❌    |
+> |                             |                                                   |   TypeScript    |    ✅    |
+> |                             |                                                   |   Typeshare     |    ✅    |
+> |                             |                                                   |      WASM       |    ✅    |
+> |                             |       [フロントエンドホスティング](#frontend-hosting)       |  Netlify Builds  |    ❌    |
+> |                             |                                                   | Netlify Deploys |    ✅    |
+> |     [バックエンド](#backend)     |       [バックエンド言語](#backend-language)       |      Rust       |    ✅    |
+> |                             |  [HTTPサーバーフレームワーク](#http-server-framework)  |    Dropshot     |    ✅    |
+> |                             |               [データベース](#database)               | URL Query Params |    ❌    |
+> |                             |                                                   |    git + HTML    |    ❌    |
+> |                             |                                                   |      SQLite      |    ✅    |
+> |                             |                                                   |    Litestream    |    ✅    |
+> |                             |                                                   |      LiteFS      |    ❌    |
+> |                             |        [データベースドライバー](#database-driver)        |      Diesel      |    ✅    |
+> |                             |        [バックエンドホスティング](#backend-hosting)        |      Fly.io      |    ❌    |
+> |                             |                                                   |      AWS S3      |    ✅    |
+> |        [CLI](#cli)         |            [CLIライブラリ](#cli-library)            |       Clap       |    ✅    |
+> |                             |             [APIクライアント](#api-client)             |    Progenitor    |    ✅    |
+> | [開発](#development) |  [開発者環境](#developer-environment)  |      Gitpod      |    ❌    |
+> |                             |                                                   |  M1 MacBook Pro  |    ✅    |
+> |                             | [継続的インテグレーション](#continuous-integration) |      Dagger      |    ❌    |
+> |                             |                                                   |  GitHub Actions  |    ⚠️    |

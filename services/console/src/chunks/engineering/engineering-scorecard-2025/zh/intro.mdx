@@ -1,0 +1,11 @@
+在开发像 [Bencher][bencher] 这样的新技术时，存在一种根本的张力，即希望[选择乏味的技术][choose boring technology]和[打破平均值][beating the averages]之间的平衡。在当下，这种拉锯战中确切的位置可能很难判断。每三年，Rust 编程语言会推出一个新的[Rust 版本][rust editions]。我认为这是一个不错的节奏。时间足够长，可以取得真正的进展，但也足够短，以免偏离太远。随着 Bencher 在今年春天迎来三周年，我认为这是一个很好的时机，可以停下来反思所有让我们走到今天的工程决策。
+
+在这篇文章中，我将回顾过去三年中 Bencher 在何处使用了它的“创新代币”。Bencher 是一个[开源][github bencher]的[持续基准测试][continuous benchmarking]工具套件。我将从 [Bencher 架构][architecture] 的前端开始，一直深入到底层。在这个过程中每一站，我都会讨论我们是如何走到这里的，并对每个工程决策的结果做出二分判断。
+
+[bencher]: https://bencher.dev
+[choose boring technology]: https://mcfunley.com/choose-boring-technology
+[beating the averages]: https://paulgraham.com/avg.html
+[rust editions]: https://doc.rust-lang.org/edition-guide/editions/
+[github bencher]: https://github.com/bencherdev/bencher
+[continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
+[architecture]: /zh/docs/reference/architecture/

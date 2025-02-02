@@ -1,0 +1,37 @@
+### 开发者环境
+
+当我开始在 Bencher 工作时，人们呼吁[终结 localhost][dx tips]。
+我早已不再需要一个新的开发笔记本电脑，
+所以我决定尝试一个云开发环境。
+当时 GitHub Workspaces 并未一般性地向我的用例开放，
+所以我选择了 [Gitpod][gitpod]。
+
+这个实验持续了大约六个月。
+我的结论是：云开发环境不适用于副项目。
+你想跳进去并快速完成五分钟的工作？
+不行！你要坐在那里，等待你的开发环境第 1000 次重新初始化。
+哦，你有一个整个周末下午真正冲刺工作的时间？
+不行！你的开发环境会[随机停止工作][github gitpod 9629]，而你正在使用它。再一次，再一次，再一次。
+
+这些问题是我作为付费用户遇到的。
+每月 25 美元，我可以每五年获得一台配置更优的新 M1 MacBook Pro。
+当 Gitpod 宣布他们将定价模式从固定费率改为基于使用量时，
+我干脆让他们取消了我的计划，并前往 [apple.com][apple]。
+
+也许这都是 Gitpod [现已放弃的决定][gitpod kubernetes]使用 Kubernetes 的问题。
+但我并不急于再次在 Bencher 上尝试另一种云开发环境。
+最终我将 Gitpod 配置移植到一个[开发容器][github bencher dev container]上，
+以便让贡献者更容易入门。
+但对于我而言，我还是选择坚持使用 `localhost`。
+
+> |   技术   | 结论 |
+> | :------: | :--: |
+> |  Gitpod  |  ❌  |
+> | M1 MacBook Pro |  ✅  |
+
+[dx tips]: https://dx.tips/the-end-of-localhost
+[gitpod]: https://www.gitpod.io/
+[github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
+[apple]: https://www.apple.com
+[gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
+[github bencher dev container]: https://github.com/bencherdev/bencher/pkgs/container/bencher-dev-container

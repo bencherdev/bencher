@@ -1,0 +1,35 @@
+### Frontend-Bibliothek
+
+Als sich erholender C++-Entwickler bin ich ein ziemlich großer Fan von Rust. Wenn ich die Wahl hätte, hätte ich Bencher gerne in Full-Stack Rust geschrieben. Wenn Sie in die tiefen Winkel des [Bencher-Repo][bencher github] eintauchen, werden Sie sehen, dass ich genau das versucht habe. Ich experimentierte mit [Yew][yew github], [Seed][seed github] und [Sycamore][sycamore github]. Während diese für einige Projekte großartig funktionieren können, gab es einen großen Haken, über den ich einfach nicht hinwegkam: [JavaScript-Interoperation][js ffi].
+
+Während JS-Interop von WASM über Rust möglich ist, würde es nicht einfach werden. Ich wusste, dass ich wollte, dass Bencher hochinteraktive Diagramme besitzt. Dies bedeutete die Verwendung einer Bibliothek wie [D3][d3 github], was JS-Interop bedeutete.
+
+Also, wenn ich JavaScript verwenden müsste, welche Bibliothek sollte ich wählen?
+
+Zurück zu den Rust-Crates, mit denen ich experimentiert habe: Yew ist das Rust-Äquivalent zu [React Hooks][react hooks]. Ich hatte in der Vergangenheit ein Frontend mit React Hooks gebaut und bereitgestellt, daher wusste ich am meisten über dieses Framework. Allerdings fand ich den React Hooks-Lebenszyklus sehr kompliziert und voller Tücken und seltsamer Randfälle.
+
+Ich mochte die Grundprinzipien der [funktionalen reaktiven Programmierung][functional reactive programming] (FRP) wirklich. Dies führte dazu, dass ich sowohl [Elm][elm] als auch sein Rust-Äquivalent Seed ausprobierte. Leider leidet die Verwendung von Elm unter den gleichen Problemen wie die Verwendung von Rust. Elm erfordert seine eigene [JavaScript-Interop][elm js interop]. Ich fand auch [Die Elm-Architektur][the elm architecture] ein bisschen zu einschränkend für meinen Geschmack.
+
+Von allen Rust-Frameworks, die ich ausprobierte, gefiel mir Sycamore am meisten. Sycamore wurde von [Solid][solid github] inspiriert. Je mehr ich über Solid lernte, desto mehr gefiel es mir. Anders als React verwendet Solid keinen [virtuellen DOM][react virtual dom]. Stattdessen kompiliert es zu gutem alten JavaScript. Dies macht es viel schneller, kleiner und einfacher zu arbeiten. Solid besteht aus nur wenigen mächtigen Primitiven, die eine fein abgestufte Reaktivität ermöglichen. Wenn etwas in der UI aktualisiert wird, wird nur der Code, der davon abhängt, erneut ausgeführt. In den letzten drei Jahren habe ich es als Vergnügen empfunden, mit Solid zu arbeiten.
+
+> | Technologie | Urteil |
+> | :---------: | :----: |
+> |    Yew     |    ❌    |
+> |    Seed    |    ❌    |
+> |  Sycamore  |    ❌    |
+> |    Elm     |    ❌    |
+> |   SolidJS  |    ✅    |
+
+[bencher github]: https://github.com/bencherdev/bencher
+[yew github]: https://github.com/yewstack/yew
+[seed github]: https://github.com/seed-rs/seed
+[sycamore github]: https://github.com/sycamore-rs/sycamore
+[js ffi]: https://rustwasm.github.io/docs/book/reference/js-ffi.html
+[d3 github]: https://github.com/d3/d3
+[react hooks]: https://react.dev/reference/react/hooks
+[functional reactive programming]: https://en.wikipedia.org/wiki/Functional_reactive_programming
+[elm]: https://elm-lang.org/
+[elm js interop]: https://guide.elm-lang.org/interop/
+[the elm architecture]: https://guide.elm-lang.org/architecture/
+[solid github]: https://github.com/solidjs/solid
+[react virtual dom]: https://legacy.reactjs.org/docs/faq-internals.html

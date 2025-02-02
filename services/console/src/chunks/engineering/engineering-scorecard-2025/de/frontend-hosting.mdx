@@ -1,0 +1,36 @@
+### Frontend-Hosting
+
+Meine anfängliche Entscheidung, "voll auf Solid zu setzen", wurde stark von der
+[Tatsache beeinflusst, dass Netlify den Ersteller von Solid eingestellt hat, um Vollzeit daran zu arbeiten][dev to netlify].
+Netlifys größter Konkurrent ist [Vercel][vercel].
+Vercel hat [Next.js][next js github] erstellt und pflegt es.
+Und ich dachte, Netlify wollte, dass Solid ihr Next.js wird.
+Daher dachte ich, es gäbe keinen besseren Ort, um eine SolidStart-Site zu hosten, als Netlify.
+
+Standardmäßig versucht Netlify, Sie dazu zu bringen, ihr Build-System zu verwenden.
+Die Nutzung von Netlifys Build-System macht es sehr schwierig, atomare Deployments durchzuführen.
+Netlify würde das Frontend trotzdem veröffentlichen, selbst wenn die Backend-Pipeline fehlschlug.
+Sehr schlecht!
+Das führte dazu, dass ich das Frontend in derselben [CI/CD-Umgebung][continuous integration] wie das Backend erstellte
+und dann einfach die neueste Version mit ihrer CLI zu Netlify hochlud.
+Als ich den Übergang von SolidStart zu Astro machte,
+konnte ich das gleiche CI/CD-Setup beibehalten.
+Astro hat eine native [Netlify-Integration][astro netlify].
+
+Bencher konnte für einige Zeit unter dem kostenlosen Netlify-Tarif bleiben.
+Mit der zunehmenden Popularität von Bencher
+begannen wir jedoch, einige der kostenlosen Tarife zu überschreiten.
+Ich habe darüber nachgedacht, die Astro-Site zu [`sst` auf AWS][sst aws astro] zu verlagern.
+Die Kosteneinsparungen scheinen jedoch bisher den Aufwand nicht wert zu sein.
+
+> |    Technologie    | Urteil |
+> | :---------------: | :----: |
+> | Netlify-Builds    |   ❌   |
+> | Netlify-Deploys   |   ✅   |
+
+[dev to netlify]: https://dev.to/ryansolid/when-netlify-asks-you-to-full-time-oss-you-say-yes-5ccf
+[vercel]: https://vercel.com/
+[next js github]: https://github.com/vercel/next.js
+[continuous integration]: #continuous-integration
+[astro netlify]: https://docs.astro.build/de/guides/integrations-guide/netlify/
+[sst aws astro]: https://sst.dev/docs/component/aws/astro/

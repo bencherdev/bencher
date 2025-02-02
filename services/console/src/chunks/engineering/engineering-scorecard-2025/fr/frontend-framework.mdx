@@ -1,0 +1,26 @@
+### Frontend Framework
+
+Solid est en soi juste une bibliothèque. Pour construire un frontend moderne, j'avais besoin d'utiliser un framework d'application web complet. Voulant garder les choses simples, j'ai mis tous mes œufs dans le panier de Solid et j'ai initialement utilisé [SolidStart][solid start github]. À l'époque, SolidStart ne supportait que les applications monopages (SPAs).
+
+Une SPA était suffisante pour commencer. Cependant, avec le temps, j'ai dû commencer à me soucier de choses comme le SEO. Je commençais à écrire beaucoup plus de [documentation Bencher][bencher docs]. Je prévoyais également [la section Apprendre][bencher learn] du site. Cela signifiait que j'avais besoin à la fois du rendu côté client (CSR) et de la génération de site statique (SSG). SolidStart était très jeune et ne répondait pas à tous mes besoins.
+
+Après avoir découvert [Astro][astro] et l'avoir essayé, j'ai décidé de porter l'ensemble du frontend de Bencher de SolidStart vers Astro. Cela avait quelques inconvénients. Le plus évident était l'effort impliqué. Honnêtement, ce n'était pas _trop_ mal. Astro a son [architecture îlots][astro islands] et une [intégration Solid][astro solid] de premier ordre. J'ai également pu reprendre beaucoup de la logique dont j'avais besoin à partir du [Solid Router][solid router], et cela a plutôt bien fonctionné.
+
+Le grand compromis qui est toujours présent aujourd'hui est que Bencher est passé d'une application monopage à une application multipage. La plupart des endroits où vous cliquez dans la console entraînent un rechargement complet de la page. Astro avait la promesse de [transitions de vue][astro view transitions] lorsque j'ai effectué le changement. Je les ai essayées, mais elles étaient boguées. J'ai encore besoin de [revenir dessus][github issue 556].
+
+Entre-temps, SolidStart semble avoir rattrapé un peu de son retard. Ils supportent maintenant à la fois CSR et SSG. Bien que je n'aie pas vérifié s'ils fonctionnent tous deux sur le même site, comme j'en ai besoin. C'est de l'histoire ancienne.
+
+> | Technologie | Verdict |
+> | :---------: | :-----: |
+> | SolidStart  |    ❌    |
+> |   Astro     |    ✅    |
+
+[solid start github]: https://github.com/solidjs/solid-start
+[bencher docs]: /fr/docs/
+[bencher learn]: /fr/learn/
+[astro]: https://astro.build/
+[astro islands]: https://docs.astro.build/en/concepts/islands/
+[astro solid]: https://docs.astro.build/en/guides/integrations-guide/solid-js/
+[solid router]: https://github.com/solidjs/solid-router
+[astro view transitions]: https://docs.astro.build/en/guides/view-transitions/
+[github issue 556]: https://github.com/bencherdev/bencher/issues/556

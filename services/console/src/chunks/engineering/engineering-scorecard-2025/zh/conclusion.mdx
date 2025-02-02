@@ -1,0 +1,34 @@
+## 结论
+
+构建 Bencher 的过程中，我学到了很多关于每个工程决策所带来的权衡。有些选择如果可以重来，我会做出不同的决定，但这也是件好事。这意味着我在这个过程中学到了一些东西。总体上，我对 Bencher 目前的状况感到非常满意。Bencher 从我笔记本中的一个草图发展成为一个功能齐全的产品，拥有不断增长的用户群体、充满活力的社区，以及付费客户。我期待着接下来三年中我们会走到哪里！
+
+> |            技术栈            |                     组件                     |      技术       | 结论 |
+> | :-------------------------: | :------------------------------------------: | :-------------: | :--: |
+> |    [前端](#frontend)    |       [前端库](#frontend-library)       |       Yew        |    ❌    |
+> |                             |                                               |       Seed       |    ❌    |
+> |                             |                                               |     Sycamore     |    ❌    |
+> |                             |                                               |       Elm        |    ❌    |
+> |                             |                                               |     SolidJS      |    ✅    |
+> |                             |      [前端语言](#frontend-language)      |       Rust       |    ❌    |
+> |                             |                                               |    JavaScript    |    ❌    |
+> |                             |                                               |    TypeScript    |    ✅    |
+> |                             |                                               |    Typeshare     |    ✅    |
+> |                             |                                               |       WASM       |    ✅    |
+> |                             |       [前端托管](#frontend-hosting)       |  Netlify Builds  |    ❌    |
+> |                             |                                               | Netlify Deploys  |    ✅    |
+> |     [后端](#backend)     |       [后端语言](#backend-language)       |       Rust       |    ✅    |
+> |                             |  [HTTP 服务器框架](#http-server-framework)  |     Dropshot     |    ✅    |
+> |                             |               [数据库](#database)               | URL 查询参数 |    ❌    |
+> |                             |                                               |    git + HTML    |    ❌    |
+> |                             |                                               |      SQLite      |    ✅    |
+> |                             |                                               |    Litestream    |    ✅    |
+> |                             |                                               |      LiteFS      |    ❌    |
+> |                             |        [数据库驱动](#database-driver)        |      Diesel      |    ✅    |
+> |                             |        [后端托管](#backend-hosting)        |      Fly.io      |    ❌    |
+> |                             |                                               |      AWS S3      |    ✅    |
+> |         [CLI](#cli)         |            [CLI 库](#cli-library)            |       Clap       |    ✅    |
+> |                             |             [API 客户端](#api-client)             |    Progenitor    |    ✅    |
+> | [开发](#development) |  [开发者环境](#developer-environment)  |      Gitpod      |    ❌    |
+> |                             |                                               |  M1 MacBook Pro  |    ✅    |
+> |                             | [持续集成](#continuous-integration) |      Dagger      |    ❌    |
+> |                             |                                               |  GitHub Actions  |    ⚠️    |

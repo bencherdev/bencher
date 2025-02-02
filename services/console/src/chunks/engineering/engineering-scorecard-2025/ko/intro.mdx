@@ -1,0 +1,11 @@
+새로운 기술을 개발할 때, [Bencher][bencher]와 같은 기술을 개발할 때는 [평범한 기술을 선택하고][choose boring technology] 싶어하는 욕구와 [평균을 넘어서기][beating the averages] 간의 근본적인 긴장이 존재합니다. 그 순간에는 이 줄다리기에서 정확히 어디에 서 있는지 알기 어려울 수 있습니다. 매 3년마다, Rust 프로그래밍 언어는 새로운 [Rust 에디션][rust editions]을 발표합니다. 저는 이것이 좋은 리듬이라고 생각합니다. 실제로 진보가 이루어질 만큼 충분히 길고, 너무 멀리 벗어나지 않을 만큼 충분히 짧습니다. Bencher가 올해 봄에 3주년을 맞이하기에, 여기까지 오게 만든 모든 엔지니어링 결정을 되돌아보기에 좋은 시기라고 생각했습니다.
+
+이 글에서는 지난 3년 동안 Bencher가 "혁신 토큰"을 어떻게 사용했는지 되돌아보려 합니다. Bencher는 [오픈 소스][github bencher] [지속적인 벤치마킹][continuous benchmarking] 도구 모음입니다. [Bencher 아키텍처][architecture]의 프런트엔드에서 시작하여 스택 전체로 이동할 것입니다. 각 지점에서는 우리가 어떻게 여기에 이르렀는지 논의하고, 각 엔지니어링 결정이 어떻게 결과로 나타났는지에 대한 이진 평가를 할 것입니다.
+
+[bencher]: https://bencher.dev
+[choose boring technology]: https://mcfunley.com/choose-boring-technology
+[beating the averages]: https://paulgraham.com/avg.html
+[rust editions]: https://doc.rust-lang.org/edition-guide/editions/
+[github bencher]: https://github.com/bencherdev/bencher
+[continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
+[architecture]: /ko/docs/reference/architecture/

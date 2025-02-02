@@ -1,0 +1,22 @@
+### CLI 库
+
+在构建 Rust CLI 时，[Clap][github clap] 算是事实上的标准。
+所以当我第一次公开演示 [Bencher][talks rust dc] 时，想象一下我的震惊，
+创作者本人 [Ed Page][github epage] 竟然在场！🤩
+
+随着时间的推移，我不断发现 Clap 的更多有用功能。
+有点尴尬，但我最近才发现 [`default_value` 选项][docs clap default value]。
+所有这些功能确实有助于减少我需要在 `bencher` CLI 中维护的代码量。
+
+> 🐰 趣闻： [Clap 使用 Bencher][clap github pr 5826] 来 [跟踪二进制文件大小][track binary size]！
+
+> | 技术 | 判定 |
+> | :--: | :--: |
+> | Clap |  ✅ |
+
+[github clap]: https://github.com/clap-rs/clap
+[talks rust dc]: /zh/docs/explanation/talks/#rust-dc-20-sep-22
+[github epage]: https://github.com/epage
+[docs clap default value]: https://docs.rs/clap/4.5.27/clap/struct.Arg.html#method.default_value
+[clap github pr 5826]: https://github.com/clap-rs/clap/pull/5826
+[track binary size]: /zh/docs/how-to/track-file-size/

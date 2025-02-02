@@ -1,0 +1,21 @@
+### HTTP 服务器框架
+
+我选择 Rust HTTP 服务器框架时，首要考虑之一是内置的 [OpenAPI 规范][openapi spec] 支持。出于同样的原因，我投入精力设置 [前端的 Typeshare 和 WASM][frontend language]，我希望能够从该规范中自动生成 API 文档和客户端。对我来说，重要的是这种功能是内置的，而不是第三方的附加组件。为使自动化真正有价值，它必须几乎 100% 的时间都能正常工作。这意味着维护和兼容性负担需要由核心框架工程师自己承担。否则，你将不可避免地会陷入边缘案例的困境。
+
+另一个主要考虑因素是被遗弃的风险。有几个曾经很有前途的 Rust HTTP 框架现在几乎被遗弃了。我发现唯一一个具有内置 OpenAPI 规范支持并且我愿意赌一把的框架是 [Dropshot][dropshot github]。Dropshot 是由 [Oxide Computer][oxide computer] 创建并仍在维护的。
+
+到目前为止，我只有一个主要的 Dropshot 问题。当 API 服务器产生错误时，由于缺少响应头，导致前端出现 CORS 失败。这意味着 Web 前端无法向用户显示非常有帮助的错误信息。我没有致力于向上游提交一个修复，而是把精力放在使 Bencher 更易于使用和更加直观。但是结果表明，解决方案 [不到100行代码][dropshot github issue 1193]。我真是自讨苦吃！
+
+顺便提一下，[`axum` 框架][axum github] 在我开始进行 Bencher 时还没有发布。如果它当时已经存在，我可能会试着将它与许多第三方 OpenAPI 附加组件之一配对，虽然我知道这不是个好主意。幸运的是，`axum` 当时还没有来诱惑我。Dropshot 是一个很好的选择。有关这一点的更多信息，请参见 [API 客户端][api client] 部分。
+
+> | 技术       | 结论    |
+> | :--------: | :-----: |
+> |  Dropshot  |    ✅    |
+
+[openapi spec]: https://swagger.io/specification/
+[frontend language]: #frontend-language
+[dropshot github]: https://github.com/oxidecomputer/dropshot
+[oxide computer]: https://oxide.computer/
+[dropshot github issue 1193]: https://github.com/oxidecomputer/dropshot/pull/1193
+[axum github]: https://github.com/tokio-rs/axum
+[api client]: #api-client

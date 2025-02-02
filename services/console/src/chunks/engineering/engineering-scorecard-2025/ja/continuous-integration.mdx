@@ -1,0 +1,19 @@
+### 継続的インテグレーション
+
+Bencherは[オープンソース][github bencher]です。 現代のオープンソースプロジェクトとして、GitHub上に存在しなければならないようなものです。 継続的インテグレーション (CI) の最小抵抗経路はGitHub Actionsです。 年々、YAMLベースのCI DSLが嫌いになってきました。 それぞれ独自の癖があり、GitHubのような大企業の場合、❌ アイコンの代わりに ⚠️ アイコンが表示される問題が[何年も放置されることもあります][github runner 2347]。
+
+これが動機となって[Dagger][github dagger]を試してみました。当時、Daggerはこの難解な言語である[CUE][cue]を介してのみ使用できました。私は試しました。 本当に試しました。週末丸々使って。 もしかしたら当時ChatGPTが存在していたら、なんとか通り抜けられたかもしれません。 でも、私だけではありませんでした。 結局Daggerは、より理にかなったSDKのために[CUEのサポートを終了しました][dagger cue]。 でもその時点では、私にとっては手遅れでした。
+
+Daggerに敗れた私は、YAML CI DSLの運命を受け入れ、Bencherは現在GitHub Actionsを使用しています。 なんと、[Bencher CLI][github bencher cli] GitHub Actionまで作りました。 世の中に見たい変化、いや問題を起こす人になれということですね。
+
+> |   テクノロジー   | 評価 |
+> | :------------: | :--: |
+> |     Dagger     |  ❌  |
+> | GitHub Actions |  ⚠️  |
+
+[github bencher]: https://github.com/bencherdev/bencher
+[github runner 2347]: https://github.com/actions/runner/issues/2347
+[github dagger]: https://github.com/dagger/dagger
+[cue]: https://cuelang.org/
+[dagger cue]: https://dagger.io/blog/ending-cue-support
+[github bencher cli]: https://github.com/marketplace/actions/bencher-cli

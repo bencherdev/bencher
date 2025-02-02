@@ -1,0 +1,37 @@
+### Entorno de Desarrollo
+
+Cuando comencé a trabajar en Bencher, la gente pedía [el fin de localhost][dx tips].
+Ya había pasado mucho tiempo desde que necesitaba un nuevo portátil de desarrollo,
+así que decidí probar un entorno de desarrollo en la nube.
+En ese momento, GitHub Workspaces no estaba generalmente disponible (GA) para mi caso de uso,
+por lo que opté por [Gitpod][gitpod].
+
+Este experimento duró unos seis meses.
+Mi conclusión: los entornos de desarrollo en la nube no funcionan bien para proyectos secundarios.
+¿Quieres conectarte y hacer cinco minutos de trabajo?
+¡No! Vas a sentarte y esperar a que tu entorno de desarrollo se reinicialice por la milésima vez.
+Oh, ¿tienes toda una tarde el fin de semana para realmente avanzar en el trabajo?
+¡No! Tu entorno de desarrollo simplemente va a [dejar de funcionar aleatoriamente mientras lo usas][github gitpod 9629]. Una y otra vez.
+
+Me encontré con estos problemas siendo un usuario de pago.
+Por $25/mes, podría obtener un nuevo MacBook Pro M1 con mucho mejores especificaciones cada cinco años.
+Cuando Gitpod anunció que estaban cambiando su precio de una tarifa fija a ser basado en el uso,
+simplemente dejé que cancelaran mi plan y me dirigí a [apple.com][apple].
+
+Tal vez todo esto fue un problema con la [decisión ahora abandonada][gitpod kubernetes] de Gitpod de usar Kubernetes.
+Pero no tengo prisa por probar otro entorno de desarrollo en la nube con Bencher nuevamente.
+Finalmente hice la transición de la configuración de Gitpod a un [contenedor de desarrollo][github bencher dev container]
+para facilitar el inicio a los contribuyentes.
+Para mí, sin embargo, me quedo con `localhost`.
+
+> |   Tecnología   | Veredicto |
+> | :------------: | :-------: |
+> |     Gitpod     |     ❌     |
+> | M1 MacBook Pro |     ✅     |
+
+[dx tips]: https://dx.tips/the-end-of-localhost
+[gitpod]: https://www.gitpod.io/
+[github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
+[apple]: https://www.apple.com
+[gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
+[github bencher dev container]: https://github.com/bencherdev/bencher/pkgs/container/bencher-dev-container

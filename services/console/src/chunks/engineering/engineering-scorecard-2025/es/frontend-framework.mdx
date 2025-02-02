@@ -1,0 +1,54 @@
+### Marco de trabajo Frontend
+
+Solid en sí mismo es solo una biblioteca.
+Para construir un frontend moderno,
+necesitaba usar un marco de aplicación web completo.
+Deseando mantener las cosas simples, decidí apostar completamente por Solid,
+y al principio usé [SolidStart][solid start github].
+En ese momento, SolidStart solo soportaba aplicaciones de una sola página (SPA).
+
+Una SPA estaba bien para comenzar.
+Sin embargo, eventualmente necesitaba preocuparme por cosas como el SEO.
+Estaba comenzando a escribir mucha más [documentación de Bencher][bencher docs].
+También estaba planeando [la sección Aprende][bencher learn] del sitio.
+Esto significaba que necesitaba tanto renderizado del lado del cliente (CSR)
+como generación de sitios estáticos (SSG).
+SolidStart era muy joven y no podía satisfacer todas mis necesidades.
+
+Después de conocer [Astro][astro] y probarlo,
+decidí portar todo el frontend de Bencher de SolidStart a Astro.
+Esto tuvo un par de inconvenientes.
+El más obvio fue el esfuerzo involucrado.
+Honestamente, no fue _tan_ malo.
+Astro tiene su [arquitectura de islas][astro islands] y
+una [integración de Solid][astro solid] de primera clase.
+También pude tomar gran parte de la lógica que necesitaba del [Router de Solid][solid router],
+y simplemente funcionó.
+
+El gran compromiso que aún está presente hoy
+es que Bencher pasó de ser una aplicación de una sola página a una de varias páginas.
+La mayoría de los lugares donde haces clic en la consola causan un rerenderizado de página completa.
+Astro tenía la promesa de [transiciones de vista][astro view transitions],
+cuando hice el cambio por primera vez.
+Las probé, pero eran defectuosas.
+Aún necesito [volver][github issue 556].
+
+Mientras tanto, parece que SolidStart ha avanzado un poco.
+Ahora soportan tanto CSR como SSG.
+Aunque no he verificado si ambos funcionan en el mismo sitio como necesito.
+Agua bajo el puente.
+
+> | Tecnología | Veredicto |
+> | :--------: | :-------: |
+> | SolidStart |    ❌    |
+> |   Astro    |    ✅    |
+
+[solid start github]: https://github.com/solidjs/solid-start
+[bencher docs]: /es/docs/
+[bencher learn]: /es/learn/
+[astro]: https://astro.build/
+[astro islands]: https://docs.astro.build/en/concepts/islands/
+[astro solid]: https://docs.astro.build/en/guides/integrations-guide/solid-js/
+[solid router]: https://github.com/solidjs/solid-router
+[astro view transitions]: https://docs.astro.build/en/guides/view-transitions/
+[github issue 556]: https://github.com/bencherdev/bencher/issues/556

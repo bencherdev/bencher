@@ -1,0 +1,19 @@
+### フロントエンドホスティング
+
+私がSolidに「全力投球」することを決めたのは、[NetlifyがSolidの作成者をフルタイムで雇った][dev to netlify]という点に大いに影響を受けました。Netlifyの最大の競争相手は[Vercel][vercel]です。Vercelは[Next.js][next js github]を作り維持しています。そして私は、NetlifyはSolidを彼らのNext.jsにしたいと考えていると思いました。したがって、SolidStartサイトをホスティングするのにNetlifyより良い場所はないだろうと思いました。
+
+デフォルトでは、Netlifyは独自のビルドシステムを使用させようとします。Netlifyのビルドシステムを使用すると、アトミックデプロイを行うのが非常に難しくなります。Netlifyは、バックエンドパイプラインが失敗してもフロントエンドを公開してしまいます。それは非常に悪いです！これにより、フロントエンドをバックエンドと同じ[CI/CD環境][continuous integration]でビルドして、NetlifyのCLIを使って最新バージョンをアップロードするようにしました。SolidStartからAstroに移行したときも、同じCI/CDセットアップを維持することができました。Astroには、公式の[Netlifyインテグレーション][astro netlify]があります。
+
+Bencherはしばらくの間、Netlifyの無料枠内に収まっていました。ただし、Bencherの人気が高まるにつれて、無料枠の制限を超え始めています。アストロサイトを[`sst` on AWS][sst aws astro]に移すことも考えています。しかし、現時点ではコスト削減のための努力が見合わないと感じています。
+
+> |   技術       | 判定 |
+> | :---------: | :---: |
+> | Netlifyビルド    |   ❌    |
+> | Netlifyデプロイ  |   ✅    |
+
+[dev to netlify]: https://dev.to/ryansolid/when-netlify-asks-you-to-full-time-oss-you-say-yes-5ccf
+[vercel]: https://vercel.com/
+[next js github]: https://github.com/vercel/next.js
+[continuous integration]: #continuous-integration
+[astro netlify]: https://docs.astro.build/ja/guides/integrations-guide/netlify/
+[sst aws astro]: https://sst.dev/docs/component/aws/astro/

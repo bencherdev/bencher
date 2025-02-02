@@ -1,0 +1,37 @@
+### Entwicklerumgebung
+
+Als ich anfing, an Bencher zu arbeiten, forderten die Leute [das Ende von localhost][dx tips].
+Ich war bereits weit über das Bedürfnis hinaus, einen neuen Entwicklungs-Laptop zu benötigen,
+also beschloss ich, eine Cloud-Entwicklungsumgebung auszuprobieren.
+Zu dieser Zeit war GitHub Workspaces für meinen Anwendungsfall noch nicht allgemein verfügbar (GA),
+also entschied ich mich für [Gitpod][gitpod].
+
+Dieses Experiment dauerte etwa sechs Monate.
+Mein Fazit: Cloud-Entwicklungsumgebungen funktionieren nicht gut für Nebenprojekte.
+Möchten Sie schnell fünf Minuten Arbeit erledigen?
+Nein! Sie werden dabeisitzen und warten, bis Ihre Entwicklungsumgebung sich zum tausendsten Mal neu initialisiert.
+Oh, Sie haben einen ganzen Nachmittag am Wochenende, um wirklich viel Arbeit zu leisten?
+Nein! Ihre Entwicklungsumgebung wird einfach [zufällig nicht mehr funktionieren, während Sie sie benutzen][github gitpod 9629]. Immer wieder und wieder.
+
+Ich stieß auf diese Probleme als zahlender Nutzer.
+Für 25 $/Monat könnte ich mir alle fünf Jahre ein brandneues M1 MacBook Pro mit viel besseren Spezifikationen leisten.
+Als Gitpod ankündigte, dass sie ihre Preisgestaltung von einem Festpreis auf eine nutzungsbasierte umstellen würden,
+ließ ich einfach meinen Plan kündigen und wechselte zu [apple.com][apple].
+
+Vielleicht war das alles ein Problem mit Gitpods [nun aufgegebener Entscheidung][gitpod kubernetes], Kubernetes zu nutzen.
+Aber ich habe es nicht eilig, mit Bencher erneut eine andere Cloud-Entwicklungsumgebung auszuprobieren.
+Letztendlich habe ich die Gitpod-Konfiguration in einen [Dev-Container][github bencher dev container] portiert,
+um es Mitwirkenden zu erleichtern, loszulegen.
+Für mich bleibt es jedoch bei `localhost`.
+
+> |   Technologie   | Urteil |
+> | :-------------: | :----: |
+> |     Gitpod      |   ❌    |
+> | M1 MacBook Pro  |   ✅    | 
+
+[dx tips]: https://dx.tips/the-end-of-localhost
+[gitpod]: https://www.gitpod.io/
+[github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
+[apple]: https://www.apple.com
+[gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
+[github bencher dev container]: https://github.com/bencherdev/bencher/pkgs/container/bencher-dev-container

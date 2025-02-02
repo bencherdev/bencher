@@ -1,0 +1,33 @@
+### API 클라이언트
+
+[Bencher][http server framework]의 [HTTP 서버 프레임워크][http server framework]로 [Dropshot][github dropshot]을 선택한 주요 이유는 내장된 [OpenAPI 스펙][openapi spec] 생성 기능이었습니다. 언젠가 그 스펙으로부터 API 클라이언트를 자동 생성할 수 있기를 희망했습니다. 약 일 년 후, Dropshot의 제작자들은 [Progenitor][github progenitor]를 선보였습니다.
+
+Progenitor는 Dropshot의 양에 대한 음입니다. Dropshot으로부터 OpenAPI 스펙을 사용하여, Progenitor는 Rust API 클라이언트를 아래와 같은 방식의 위치 기반 패턴으로 생성할 수 있습니다:
+
+```
+client.instance_create("bencher", "api", None)
+```
+
+또는 빌더 패턴:
+
+```
+client.instance_create().organization("bencher").project("api").send()
+```
+
+개인적으로 후자를 선호하며, Bencher는 이를 사용합니다. Progenitor는 또한 API와 상호작용할 수 있는 전체 Clap CLI를 생성할 수 있습니다. 하지만, 저는 이를 사용하지 않았습니다. 특히 [`bencher run`][bencher run]과 같은 명령에 대해 더 세밀한 제어가 필요했습니다.
+
+생성된 타입과 관련하여 제가 찾은 유일한 주목할만한 단점은 JSON Schema의 제한 때문에 키가 없는 `item`과 값이 `null`인 `item` 키를 구별해야 할 때 `Option<Option<Item>>`를 그냥 사용할 수 없다는 점입니다. [`double_option`][docs serde with double option]과 같은 것을 사용하면 가능하지만, JSON Schema 수준에서는 동일하게 보입니다. [nested][serde flattened] 또는 [untagged][serde untagged] 내부 구조체 열거형은 Dropshot과 잘 맞지 않습니다. 제가 찾은 유일한 해결책은 [상위 수준의, untagged 열거형][github bencher json update project]을 사용하는 것이었습니다. 현재로선 API 전체에 두 개의 필드밖에 없으므로 큰 문제는 아닙니다.
+
+> | 기술       | 판단     |
+> | :--------: | :-----:  |
+> | Progenitor |    ✅    |
+
+[github dropshot]: https://github.com/oxidecomputer/dropshot
+[github progenitor]: https://github.com/oxidecomputer/progenitor
+[http server framework]: #http-server-framework
+[openapi spec]: https://swagger.io/specification/
+[bencher run]: /ko/docs/explanation/bencher-run/
+[docs serde with double option]: https://docs.rs/serde_with/3.12.0/serde_with/rust/double_option/index.html
+[serde flattened]: https://serde.rs/attr-flatten.html
+[serde untagged]: https://serde.rs/enum-representations.html#untagged
+[github bencher json update project]: https://github.com/bencherdev/bencher/blob/09084ed5549fea71b181da048ec6fa8672e17541/lib/bencher_json/src/project/mod.rs#L91

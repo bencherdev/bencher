@@ -1,0 +1,22 @@
+### CLI 라이브러리
+
+Rust CLI를 구축할 때, [Clap][github clap]은 사실상의 표준에 가깝습니다.
+그래서 [제가 Bencher를 처음으로 공개 시연했을 때][talks rust dc], 
+정작 창시자 himself, [Ed Page][github epage]가 거기에 있었을 때의 충격을 상상해 보세요! 🤩
+
+시간이 지남에 따라, Clap이 할 수 있는 점점 더 많은 유용한 것을 발견하고 있습니다.
+조금 창피합니다만, 최근에야 [the `default_value` option][docs clap default value]을 발견했습니다.
+이 모든 기능은 `bencher` CLI에서 관리해야 하는 코드의 양을 줄이는 데 정말로 도움이 됩니다.
+
+> 🐰 재미있는 사실: [Clap은 Bencher를 사용합니다][clap github pr 5826] [이진 파일 크기를 추적하기 위해][track binary size]!
+
+> |   기술   | 결과 |
+> | :------: | :--: |
+> |   Clap   |  ✅  |
+
+[github clap]: https://github.com/clap-rs/clap
+[talks rust dc]: /ko/docs/explanation/talks/#rust-dc-20-sep-22
+[github epage]: https://github.com/epage
+[docs clap default value]: https://docs.rs/clap/4.5.27/clap/struct.Arg.html#method.default_value
+[clap github pr 5826]: https://github.com/clap-rs/clap/pull/5826
+[track binary size]: /ko/docs/how-to/track-file-size/

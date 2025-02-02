@@ -1,0 +1,32 @@
+### Kontinuierliche Integration
+
+Bencher ist [Open Source][github bencher].
+Als modernes Open-Source-Projekt muss man irgendwie auf GitHub sein.
+Das bedeutet, dass der Weg des geringsten Widerstands für die kontinuierliche Integration (CI) GitHub Actions ist.
+Im Laufe der Jahre habe ich begonnen, YAML-basierte CI-DSLs zu verabscheuen.
+Jede hat ihre eigenen Eigenheiten, und bei einem so großen Unternehmen wie GitHub kann es [Jahre dauern][github runner 2347], bis ein ⚠️-Symbol anstelle eines ❌-Symbols behoben wird.
+
+Dies motivierte mich dazu, [Dagger][github dagger] auszuprobieren.
+Damals konnte man Dagger nur über diese esoterische Sprache namens [CUE][cue] verwenden.
+Ich habe es versucht. Wirklich. Ein ganzes Wochenende lang.
+Vielleicht hätte ich es geschafft, wenn es damals ChatGPT gegeben hätte.
+Aber es lag nicht nur an mir.
+Dagger hat letztendlich [CUE aufgegeben][dagger cue] zugunsten sinnvollerer SDKs.
+Zu diesem Zeitpunkt war es für mich jedoch zu spät.
+
+Von Dagger geschlagen, akzeptierte ich mein YAML CI DSL Schicksal,
+und Bencher nutzt jetzt GitHub Actions.
+Verdammt, ich habe sogar eine [Bencher CLI][github bencher cli] GitHub Action gebaut.
+Sei das ~~Change~~-Problem, das du in der Welt sehen möchtest.
+
+> |   Technologie  | Urteil  |
+> | :------------: | :-----: |
+> |     Dagger     |    ❌    |
+> | GitHub Actions |    ⚠️    |
+
+[github bencher]: https://github.com/bencherdev/bencher
+[github runner 2347]: https://github.com/actions/runner/issues/2347
+[github dagger]: https://github.com/dagger/dagger
+[cue]: https://cuelang.org/
+[dagger cue]: https://dagger.io/blog/ending-cue-support
+[github bencher cli]: https://github.com/marketplace/actions/bencher-cli

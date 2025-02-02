@@ -1,0 +1,55 @@
+### フロントエンドフレームワーク
+
+Solid自体は単なるライブラリです。
+モダンなフロントエンドを構築するためには、
+完全なウェブアプリフレームワークを使用する必要がありました。
+シンプルさを保ちたかったので、私はすべての卵をSolidというバスケットに入れ、
+最初に[SolidStart][solid start github]を使用しました。
+当時、SolidStartはシングルページアプリ (SPA) のみをサポートしていました。
+
+SPAはスタートするには問題ありませんでした。
+しかし最終的には、SEOのようなことを気にし始める必要があることもあります。
+私はより多くの[Bencherドキュメント](/ja/docs/)を書くようになっていました。
+サイトの[学習セクション](/ja/learn/)も計画していました。
+これはクライアントサイドレンダリング (CSR) と
+静的サイトジェネレーション (SSG) の両方を必要とすることを意味しました。
+SolidStartは非常に若かったため、私のすべてのニーズを満たすことができませんでした。
+
+[Astro][astro]について学び、試してみた結果、
+Bencherのフロントエンド全体をSolidStartからAstroに移植することに決めました。
+これにはいくつかの欠点がありました。
+最も明白なのは、関与する努力です。
+正直に言って、それほど悪くはありませんでした。
+Astroには[アイランドアーキテクチャ][astro islands]と
+一級の[Solidインテグレーション][astro solid]があります。
+また、多くのロジックを[Solid Router][solid router]から取ることができ、
+うまくいったようでした。
+
+今日でも存在する大きな妥協は、
+Bencherがシングルページアプリからマルチページアプリになったことです。
+コンソール内でクリックするほとんどの場所は、
+ページ全体の再レンダリングを引き起こします。
+Astroには、最初に切り替えを行ったときに
+[ビューのトランジション][astro view transitions]の約束がありました。
+それを試してみましたが、バグがありました。
+まだ[見直しが必要][github issue 556]です。
+
+その間に、SolidStartは少し追いついているようです。
+現在ではCSRとSSGの両方をサポートしています。
+ただし、私が必要とするように同じサイトで両方が機能するかどうかを確認していません。
+過去の問題です。
+
+> | テクノロジー | 評価 |
+> | :--------: | :--: |
+> | SolidStart |  ❌  |
+> |   Astro    |  ✅  |
+
+[solid start github]: https://github.com/solidjs/solid-start
+[bencher docs]: /ja/docs/
+[bencher learn]: /ja/learn/
+[astro]: https://astro.build/
+[astro islands]: https://docs.astro.build/en/concepts/islands/
+[astro solid]: https://docs.astro.build/en/guides/integrations-guide/solid-js/
+[solid router]: https://github.com/solidjs/solid-router
+[astro view transitions]: https://docs.astro.build/en/guides/view-transitions/
+[github issue 556]: https://github.com/bencherdev/bencher/issues/556

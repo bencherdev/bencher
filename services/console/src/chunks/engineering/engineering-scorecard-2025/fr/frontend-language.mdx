@@ -1,0 +1,20 @@
+### Langage Frontend
+
+Astro dispose d'un [support TypeScript intégré][astro typescript]. Dans la transition de SolidStart à Astro, j'ai également commencé la transition de JavaScript à TypeScript. La configuration TypeScript de Bencher est réglée sur le paramètre `strictest` d'Astro. Cependant, Astro ne vérifie pas le typage pendant les builds. Au moment de la rédaction, Bencher a encore `604` erreurs de type. Ces erreurs de type sont utilisées plus comme des indices lors de l'édition de code, mais elles ne bloquent pas le build ([pour l'instant][github issue 557]).
+
+J'ai également ajouté [Typeshare][typeshare github] pour synchroniser les types de données Rust de Bencher avec le frontend TypeScript. Cela a été incroyablement utile pour développer la Bencher Console. De plus, tous les validateurs de champs pour des éléments comme les noms d'utilisateur, emails, etc., sont partagés entre le code Rust et le frontend TypeScript [via WASM][github wasm bindgen]. Cela a été un peu compliqué de faire fonctionner WASM à la fois dans SolidStart et Astro. La plus grande catégorie d'erreurs que j'ai vue dans le frontend concerne les endroits où une fonction WASM est appelée mais où le module WASM n'a pas encore été chargé. J'ai compris comment le réparer, mais il m'arrive encore parfois d'oublier et cela réapparaît.
+
+Avoir à la fois les types et les validateurs partagés auto-générés depuis le code Rust a considérablement facilité l'interfaçage avec le frontend. Ils sont tous les deux vérifiés en CI, donc ils ne sont jamais désynchronisés. Tout ce que j'ai à faire, c'est de m'assurer que les requêtes HTTP sont bien formées, et tout fonctionne simplement. Cela rend le fait de ne pas pouvoir utiliser Rust full-stack un peu moins frustrant.
+
+> | Technologie | Verdict |
+> | :---------: | :-----: |
+> |    Rust     |    ❌    |
+> | JavaScript  |    ❌    |
+> | TypeScript  |    ✅    |
+> | Typeshare   |    ✅    |
+> |    WASM     |    ✅    |
+
+[astro typescript]: https://docs.astro.build/fr/guides/typescript/
+[github issue 557]: https://github.com/bencherdev/bencher/issues/557
+[typeshare github]: https://github.com/1Password/typeshare
+[github wasm bindgen]: https://github.com/rustwasm/wasm-bindgen

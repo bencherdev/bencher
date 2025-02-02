@@ -1,0 +1,68 @@
+### データベース
+
+Bencherをできるだけシンプルに保とうとしています。
+最初のバージョンのBencherでは、ベンチマーク結果自体も含めて、すべてをURLクエリパラメータで受け取るようにしていました。
+しかし、すぐにすべてのブラウザには[URLの長さに制限がある][chrome url length]ことを学びました。
+納得ですね。
+
+次に考えたのが、ベンチマーク結果を`git`に保存し、プロットと結果を含んだ静的なHTMLファイルを生成する方法です。
+ただし、このアプローチには2つの大きな欠点があります。
+まず、`git clone`の時間が、ヘビーユーザーには耐えられない長さになる可能性があります。
+次に、すべての履歴データがHTMLファイルに含まれることになり、ヘビーユーザーには非常に長い初期ロード時間を強いることになります。
+デベロッパーツールは、ヘビーユーザーに優しくあるべきです。
+
+結果的に、私の問題には解決策があります。
+それはデータベースというものです。
+
+では、Postgresを取り入れて終わりにしない理由は何でしょうか？
+まあ、本当にBencherを[セルフホストできるようにしたかった][bencher self hosted]んです。
+アーキテクチャをシンプルにできればできるほど、他の人がセルフホストするのが簡単（かつ安価）になります。
+すでにフロントエンドとバックエンドを分けたため、2つのコンテナを必要としていました。
+3つ目を避けられるか？ そうです、避けられます！
+
+Bencherの前には、テストデータベースとして[SQLite][sqlite]のみを使用していました。
+開発者体験は素晴らしかったですが、プロダクションでそれを動かすことは考えていませんでした。
+その後、[Litestream][github litestream]に出会いました。
+LitestreamはSQLiteのためのディザスタリカバリツールです。
+バックグラウンドで動作し、S3や他の任意のデータストアに継続的に変更をレプリケートします。
+これにより使いやすく、運用コストも非常に低く、
+特にS3は書き込みに対して課金しないため、
+小規模インスタンスだと1日数セントで済むことになります。
+
+Litestreamに出会った当時、ライブリードレプリカが間もなく登場すると約束されていました。
+しかし、これが実現されることは[ありませんでした][litestream github issue 8]。
+提案された代替プロジェクトは、同じ開発者による後継プロジェクトである [LiteFS][github litefs] でした。
+しかし、LiteFSには大きな欠点があります。
+すべてのレプリカがダウンすると、組み込みのディザスタリカバリを提供していません。
+複数のレプリカを持つためには、アプリケーションロジックにリーダーかライターかの概念を組み込む必要があります。
+そして決定的な障壁は、レプリカを管理するために常に[Consul][github consul] インスタンスを稼働させる必要があることでした。
+SQLiteを使う最大の理由は、他のサービスを避けることでした。
+幸いにも、Bencher CloudでLiteFSを使おうとはしませんでした。
+というのも、[LiteFS Cloudはローンチから1年で終了][litefs sunset]し、
+[LiteFS自体もほとんど死んでいます][github litefs contributors]。
+
+現在、デプロイ間の小さなダウンタイムは[Bencher CLIによって対応されています][bencher attempts]。
+将来的には、[Kamal][github kamal]を使ってゼロダウンタイムデプロイに移行する予定です。
+[Rails 8.0がKamalとSQLiteをデフォルトにするにあたり][rails 8]、
+KamalとLitestreamがうまく連携することにかなり自信を持っています。
+
+> |    テクノロジー     | 結論 |
+> | :----------------: | :--: |
+> | URLクエリパラメータ |  ❌  |
+> |     git + HTML     |  ❌  |
+> |       SQLite       |  ✅  |
+> |     Litestream     |  ✅  |
+> |        LiteFS      |  ❌  |
+
+[chrome url length]: https://chromium.googlesource.com/chromium/src/+/main/docs/security/url_display_guidelines/url_display_guidelines.md#url-length
+[bencher self hosted]: /ja/docs/explanation/bencher-self-hosted/
+[sqlite]: https://sqlite.org/
+[github litestream]: https://github.com/benbjohnson/litestream
+[litestream github issue 8]: https://github.com/benbjohnson/litestream/issues/8#issuecomment-1173214316
+[github litefs]: https://github.com/superfly/litefs
+[github consul]: https://github.com/hashicorp/consul
+[litefs sunset]: https://community.fly.io/t/sunsetting-litefs-cloud/20829
+[github litefs contributors]: https://github.com/superfly/litefs/graphs/contributors
+[bencher attempts]: /ja/docs/explanation/bencher-run/#--attempts-count
+[github kamal]: https://github.com/basecamp/kamal
+[rails 8]: https://rubyonrails.org/2024/9/27/rails-8-beta1-no-paas-required

@@ -1,0 +1,21 @@
+### Cadre de Serveur HTTP
+
+L'une de mes principales considérations lors de la sélection d’un cadre de serveur HTTP Rust était le support intégré de la [spécification OpenAPI][openapi spec]. Pour les mêmes raisons pour lesquelles j'ai investi dans la mise en place de [Typeshare et WASM sur le frontend][frontend language], je voulais la capacité de générer automatiquement à la fois la documentation de l'API et les clients à partir de cette spécification. Il était important pour moi que cette fonctionnalité soit intégrée et non un module complémentaire tiers. Pour que l'automatisation en vaille vraiment la peine, elle doit fonctionner presque 100% du temps. Cela signifie que la charge de maintenance et de compatibilité doit incomber aux ingénieurs du cadre central eux-mêmes. Sinon, vous finirez inévitablement par vous retrouver dans un enfer de cas limites.
+
+Une autre considération clé était le risque d'abandon. Il existe plusieurs cadres HTTP Rust autrefois prometteurs qui sont maintenant presque à l'abandon. Le seul cadre que j'ai trouvé qui avait un support intégré de la spécification OpenAPI et sur lequel j'étais prêt à parier était [Dropshot][dropshot github]. Dropshot a été créé et est toujours maintenu par [Oxide Computer][oxide computer].
+
+Je n'ai eu qu'un seul problème majeur avec Dropshot jusqu'à présent. Lorsqu'une erreur est générée par le serveur API, cela provoque un échec CORS sur le frontend en raison de l'absence d'en-têtes de réponse. Cela signifie que le frontend web ne peut pas afficher de messages d'erreur très utiles aux utilisateurs. Au lieu de travailler sur l'intégration d'une correction, j'ai mis mes efforts à rendre Bencher plus facile et intuitif à utiliser. Mais il s'avère que la solution était [moins de 100 lignes de code][dropshot github issue 1193]. C'est pour ma pomme !
+
+En passant, [le cadre `axum`][axum github] n'avait pas encore été publié lorsque j'ai commencé à travailler sur Bencher. S'il avait été disponible à l'époque, j'aurais pu essayer de l'associer à l'un des nombreux modules complémentaires OpenAPI tiers, malgré mon meilleur jugement. Heureusement pour moi, `axum` n'était pas encore là pour me tenter. Dropshot a été un excellent choix. Voir la section [Client API][api client] pour plus d'informations à ce sujet.
+
+> | Technologie | Verdict |
+> | :---------: | :-----: |
+> |  Dropshot  |    ✅    |
+
+[openapi spec]: https://swagger.io/specification/
+[frontend language]: #frontend-language
+[dropshot github]: https://github.com/oxidecomputer/dropshot
+[oxide computer]: https://oxide.computer/
+[dropshot github issue 1193]: https://github.com/oxidecomputer/dropshot/pull/1193
+[axum github]: https://github.com/tokio-rs/axum
+[api client]: #api-client

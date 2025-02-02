@@ -1,0 +1,24 @@
+### Datenbank-Treiber
+
+Je näher ich an die Datenbank komme, desto stärker typisiert möchte ich die Dinge haben.
+Es ist in Ordnung, es im Frontend ein wenig locker anzugehen.
+Wenn ich einen Fehler mache, wird alles mit dem nächsten Push in die Produktion wieder in Ordnung sein.
+Wenn ich jedoch die Datenbank beschädige, ist es viel schwieriger, das wieder in Ordnung zu bringen.
+Mit diesem Gedanken im Hinterkopf habe ich mich entschieden, [Diesel][diesel github] zu verwenden.
+
+Diesel ist ein stark typisierter objekt-relationaler Mapper (ORM) und Query-Builder für Rust.
+Es überprüft alle Datenbankinteraktionen zur Kompilierzeit und verhindert Laufzeitfehler.
+Diese Überprüfung zur Kompilierzeit macht Diesel auch zu einer abstraktionsfreien Lösung über SQL.
+Abgesehen von einem kleinen Fehler meinerseits, als ich die Dinge [1200x schneller durch Performance-Tuning gemacht habe][engineering sqlite],
+hatte ich keine Laufzeit-SQL-Fehler, als ich mit Diesel gearbeitet habe.
+
+> 🐰 Fun Fact: [Diesel verwendet Bencher][case study diesel] für [kontinuierliches Benchmarking][continuous benchmarking]!
+
+> | Technologie | Urteil |
+> | :---------: | :----: |
+> |   Diesel    |   ✅   |
+
+[diesel github]: https://github.com/diesel-rs/diesel
+[case study diesel]: /de/learn/case-study/diesel/
+[engineering sqlite]: /de/learn/engineering/sqlite-performance-tuning/
+[continuous benchmarking]: /de/docs/explanation/continuous-benchmarking/

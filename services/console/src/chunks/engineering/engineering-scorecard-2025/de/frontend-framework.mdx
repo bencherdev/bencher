@@ -1,0 +1,54 @@
+### Frontend-Framework
+
+Solid selbst ist nur eine Bibliothek.
+Um ein modernes Frontend zu bauen,
+musste ich ein vollwertiges Web-App-Framework verwenden.
+Um die Dinge einfach zu halten, setzte ich alles auf die Solid-Karte,
+und ich benutzte anfänglich [SolidStart][solid start github].
+Zu der Zeit unterstützte SolidStart nur Single-Page-Apps (SPAs).
+
+Eine SPA war in Ordnung, um loszulegen.
+Letztendlich musste ich jedoch anfangen, mich um Dinge wie SEO zu kümmern.
+Ich begann, viel mehr [Bencher-Dokumentation][bencher docs] zu schreiben.
+Ich plante auch [den Lernbereich][bencher learn] der Website.
+Das bedeutete, dass ich sowohl Client-Side Rendering (CSR) 
+als auch eine statische Webseiten-Generierung (SSG) benötigte.
+SolidStart war sehr jung, und ich konnte es nicht dazu bringen, all meine Bedürfnisse zu erfüllen.
+
+Nachdem ich von [Astro][astro] erfahren und es ausprobiert hatte,
+entschied ich mich, das gesamte Bencher-Frontend von SolidStart zu Astro zu portieren.
+Dies hatte ein paar Nachteile.
+Der offensichtlichste war der dafür erforderliche Aufwand.
+Ehrlich gesagt, war es nicht _zu_ schlimm.
+Astro hat seine [Islands-Architektur][astro islands] und
+eine erstklassige [Solid-Integration][astro solid].
+Ich konnte auch viel von der Logik, die ich vom [Solid Router][solid router] benötigte, übernehmen,
+und es funktionierte einfach irgendwie.
+
+Der große Kompromiss, der bis heute besteht,
+ist, dass Bencher von einer Single-Page-App zu einer Multi-Page-App wechselte.
+Die meisten Orte, auf die Sie in der Konsole klicken, verursachen ein vollständiges Seiten-Neuladen.
+Astro hatte das Versprechen von [Ansichtstransitionen][astro view transitions],
+als ich den Wechsel vornahm.
+Ich habe sie ausprobiert, aber sie waren fehlerhaft.
+Ich muss immer noch [darauf zurückkommen][github issue 556].
+
+In der Zwischenzeit scheint SolidStart etwas aufgeholt zu haben.
+Sie unterstützen jetzt sowohl CSR als auch SSG.
+Obwohl ich nicht überprüft habe, ob sie beide auf derselben Seite funktionieren, wie ich es brauche.
+Vergangene Ereignisse.
+
+> | Technologie | Urteil  |
+> | :---------: | :-----: |
+> | SolidStart  |    ❌    |
+> |    Astro    |    ✅    |
+
+[solid start github]: https://github.com/solidjs/solid-start
+[bencher docs]: /de/docs/
+[bencher learn]: /de/learn/
+[astro]: https://astro.build/
+[astro islands]: https://docs.astro.build/en/concepts/islands/
+[astro solid]: https://docs.astro.build/en/guides/integrations-guide/solid-js/
+[solid router]: https://github.com/solidjs/solid-router
+[astro view transitions]: https://docs.astro.build/en/guides/view-transitions/
+[github issue 556]: https://github.com/bencherdev/bencher/issues/556

@@ -1,0 +1,24 @@
+### Controlador de Base de Datos
+
+Cuanto más me acerco a la base de datos, más fuertemente tipificado quiero que sean las cosas.
+Está bien ser un poco flexible en el frontend.
+Si cometo un error, todo estará bien con el próximo despliegue a producción.
+Sin embargo, si corrompo la base de datos, es mucho más complicado arreglarlo.
+Con eso en mente, elegí usar [Diesel][diesel github].
+
+Diesel es un mapeador objeto-relacional (ORM) y generador de consultas fuertemente tipificado para Rust.
+Verifica todas las interacciones con la base de datos en tiempo de compilación, previniendo errores en tiempo de ejecución.
+Esta verificación en tiempo de compilación también hace de Diesel una abstracción sin costo sobre SQL.
+Aparte de un pequeño error por mi parte al hacer las cosas [1200x más rápidas con ajustes de rendimiento][engineering sqlite],
+no he tenido errores de SQL en tiempo de ejecución al trabajar con Diesel.
+
+> 🐰 Dato Curioso: ¡[Diesel usa Bencher][case study diesel] para [benchmarking continuo][continuous benchmarking]!
+
+> | Tecnología | Veredicto |
+> | :--------: | :-------: |
+> |   Diesel   |    ✅    |
+
+[diesel github]: https://github.com/diesel-rs/diesel
+[case study diesel]: /es/learn/case-study/diesel/
+[engineering sqlite]: /es/learn/engineering/sqlite-performance-tuning/
+[continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/

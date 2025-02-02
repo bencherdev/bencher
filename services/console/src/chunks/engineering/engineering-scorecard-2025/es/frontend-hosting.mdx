@@ -1,0 +1,36 @@
+### Alojamiento Frontend
+
+Mi decisión inicial de apostar completamente por Solid fue bastante influenciada por
+[Netlify contratando al creador de Solid para trabajar en ello a tiempo completo][dev to netlify].
+Verás, el mayor competidor de Netlify es [Vercel][vercel].
+Vercel creó y mantiene [Next.js][next js github].
+Y pensé que Netlify quería que Solid fuera su Next.js.
+Por lo tanto, pensé que no habría mejor lugar para alojar un sitio SolidStart que Netlify.
+
+Por defecto, Netlify intenta que uses su sistema de compilación.
+Usar el sistema de compilación de Netlify hace que sea muy difícil realizar despliegues atómicos.
+Netlify seguiría publicando el frontend incluso si la tubería de backend fallara.
+¡Muy malo!
+Esto me llevó a pasar a construir el frontend en el mismo [entorno CI/CD][continuous integration] que el backend
+y luego simplemente subir la última versión a Netlify con su CLI.
+Cuando hice la transición de SolidStart a Astro,
+pude mantener la misma configuración de CI/CD.
+Astro tiene una [integración de Netlify][astro netlify] de primera mano.
+
+Bencher logró mantenerse dentro del nivel gratuito de Netlify durante bastante tiempo.
+Sin embargo, con la creciente popularidad de Bencher,
+hemos empezado a exceder algunos de los límites del nivel gratuito.
+He considerado mover el sitio de Astro a [`sst` en AWS][sst aws astro].
+Sin embargo, los ahorros de costos no han parecido valer el esfuerzo en este punto.
+
+> |   Tecnología    | Veredicto |
+> | :-------------: | :-------: |
+> | Compilaciones de Netlify |    ❌    |
+> | Despliegues de Netlify |    ✅    |
+
+[dev to netlify]: https://dev.to/ryansolid/when-netlify-asks-you-to-full-time-oss-you-say-yes-5ccf
+[vercel]: https://vercel.com/
+[next js github]: https://github.com/vercel/next.js
+[continuous integration]: #continuous-integration
+[astro netlify]: https://docs.astro.build/es/guides/integrations-guide/netlify/
+[sst aws astro]: https://sst.dev/docs/component/aws/astro/

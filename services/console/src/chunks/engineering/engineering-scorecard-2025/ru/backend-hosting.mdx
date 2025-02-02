@@ -1,0 +1,36 @@
+### Хостинг бэкенда
+
+Так же, как я выбрал Netlify для хостинга фронтенда, потому что я использовал Solid, я выбрал [Fly.io][fly io] для хостинга бэкенда, потому что я использовал Litestream. [Fly.io только что наняли создателя Litestream для работы над ним на полный рабочий день][fly io sqlite]. Как упоминалось выше, эта работа над Litestream в конечном итоге была заменена LiteFS, и LiteFS теперь не существует. Так что это не сработало так, как я надеялся.
+
+В будущем, когда я переключусь на [Kamal][github kamal], я также уйду с Fly.io. Fly.io испытал несколько крупных сбоев, которые каждый раз выводили Bencher из строя на полдня. Но самая большая проблема — это несоответствие, возникающее при использовании Litestream.
+
+Каждый раз, когда я вхожу в панель управления Fly.io, я вижу следующее предупреждение:
+
+> <h4>ℹ Ваше приложение работает на одной машине</h4>
+>
+> Масштабируйте и запускайте приложение на большем количестве машин, чтобы обеспечить высокую доступность, с одной командой:
+> ```
+> fly scale count 2
+> ```
+> Ознакомьтесь с [документацией](https://fly.io/ru/docs/launch/scale-count/), чтобы получить более подробную информацию о масштабировании.
+
+Но с Litestream вы все равно не можете иметь более одной машины! Вы так и не реализовали репликацию для чтения, как обещали!
+
+Так что да, это все немного иронично и раздражает. В какой-то момент я изучил [libSQL][github libsql] и [Turso][turso]. Однако libSQL требует специальный сервер для репликации, что делает его [несовместимым с Diesel][libsql github issue 1180]. В любом случае, похоже, я избежал еще одной [приостановки жизненного цикла][turso roadmap]. Мне очень интересно, что Turso сделает с [Limbo][github limbo], их перепиской SQLite на Rust. Но я не собираюсь переходить на это в ближайшее время. Следующая остановка — это хорошая, скучная и стабильная ВМ на Kamal.
+
+Бэкенд [AWS S3][aws s3] для репликации Litestream работал безупречно. Даже с исчезновением Litestream и Fly.io, я все равно считаю, что сделал правильный выбор, используя Litestream с Bencher. Я начинаю сталкиваться с проблемами масштабирования с Bencher Cloud, но это хорошая проблема.
+
+> | Технология | Вердикт |
+> | :--------: | :-----: |
+> |   Fly.io   |    ❌    |
+> |   AWS S3   |    ✅    | 
+
+[fly io]: https://fly.io/
+[fly io sqlite]: https://fly.io/blog/all-in-on-sqlite-litestream/
+[github kamal]: https://github.com/basecamp/kamal
+[github libsql]: https://github.com/tursodatabase/libsql
+[turso]: https://turso.tech/
+[libsql github issue 1180]: https://github.com/tursodatabase/libsql/issues/1180
+[turso roadmap]: https://turso.tech/blog/upcoming-changes-to-the-turso-platform-and-roadmap
+[github limbo]: https://github.com/tursodatabase/limbo
+[aws s3]: https://aws.amazon.com/s3/
