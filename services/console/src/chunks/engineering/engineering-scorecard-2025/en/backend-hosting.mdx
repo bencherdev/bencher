@@ -1,0 +1,55 @@
+### Backend Hosting
+
+In the same way that I chose Netlify for my frontend hosting because I was using Solid,
+I chose [Fly.io][fly io] for my backend hosting because I was using Litestream.
+[Fly.io had just hired the creator of Litestream to work on it full-time][fly io sqlite].
+As mentioned above, this work on Litestream was eventually cannibalized by LiteFS,
+and LiteFS is now dead.
+So that didn't really pan out as I had hoped.
+
+In the future when I switch to [Kamal][github kamal], I'll also be moving off of Fly.io.
+Fly.io has had a couple of major outages which took Bencher down for half-a-day each time.
+But the biggest issue is the impedance mismatch that comes from using Litestream.
+
+Every time I log into the Fly.io dashboard, I see this warning:
+
+> <h4>ℹ Your app is running on a single machine</h4>
+>
+> Scale and run your app on more Machines to ensure high availability with one command:
+> ```
+> fly scale count 2
+> ```
+> Check out the [documentation](https://fly.io/docs/launch/scale-count/) for more details on scaling.
+
+But with Litestream, you still can't have more than one machine!
+You all never delivered read replication, like you promised!
+
+So yeah, that's all a little ironic and frustrating.
+At one point, I looked into [libSQL][github libsql] and [Turso][turso].
+However, libSQL requires a special backend server for replication
+which makes it [not work with Diesel][libsql github issue 1180].
+Either way, it looks like I dodged another [end-of-life shutdown][turso roadmap] there as well.
+I am very interested to see what Turso does with [Limbo][github limbo], their Rust rewrite of SQLite.
+But I won't be making that switch anytime soon.
+The next stop is a nice, boring, and stable VM running Kamal.
+
+The [AWS S3][aws s3] backend for the Litestream replication has worked flawlessly.
+Even with the rug pull around Litestream and Fly.io,
+I still think I made the right call using Litestream with Bencher.
+I'm starting to hit some scaling issues with Bencher Cloud,
+but this as a good problem to have.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> |   Fly.io   |    ❌    |
+> |   AWS S3   |    ✅    |
+
+[fly io]: https://fly.io/
+[fly io sqlite]: https://fly.io/blog/all-in-on-sqlite-litestream/
+[github kamal]: https://github.com/basecamp/kamal
+[github libsql]: https://github.com/tursodatabase/libsql
+[turso]: https://turso.tech/
+[libsql github issue 1180]: https://github.com/tursodatabase/libsql/issues/1180
+[turso roadmap]: https://turso.tech/blog/upcoming-changes-to-the-turso-platform-and-roadmap
+[github limbo]: https://github.com/tursodatabase/limbo
+[aws s3]: https://aws.amazon.com/s3/

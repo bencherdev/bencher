@@ -1,0 +1,42 @@
+## Conclusion
+
+Building Bencher has taught me a lot about the trade-offs
+that come with each engineering decision.
+There are some choices that I would make differently now,
+but that's a good thing.
+It means that I've learned a thing or two along the way.
+Overall, I'm very happy with where Bencher is today.
+Bencher has gone form a sketch in my notebook to a full-fledged product
+with a growing user base, a vibrant community, and paying customers.
+I'm excited to see where the next three years take us!
+
+> |            Stack            |                     Component                     |    Technology    | Verdict |
+> | :-------------------------: | :-----------------------------------------------: | :--------------: | :-----: |
+> |    [Frontend](#frontend)    |       [Frontend Library](#frontend-library)       |       Yew        |    ❌    |
+> |                             |                                                   |       Seed       |    ❌    |
+> |                             |                                                   |     Sycamore     |    ❌    |
+> |                             |                                                   |       Elm        |    ❌    |
+> |                             |                                                   |     SolidJS      |    ✅    |
+> |                             |      [Frontend Language](#frontend-language)      |       Rust       |    ❌    |
+> |                             |                                                   |    JavaScript    |    ❌    |
+> |                             |                                                   |    TypeScript    |    ✅    |
+> |                             |                                                   |    Typeshare     |    ✅    |
+> |                             |                                                   |       WASM       |    ✅    |
+> |                             |       [Frontend Hosting](#frontend-hosting)       |  Netlify Builds  |    ❌    |
+> |                             |                                                   | Netlify Deploys  |    ✅    |
+> |     [Backend](#backend)     |       [Backend Language](#backend-language)       |       Rust       |    ✅    |
+> |                             |  [HTTP Server Framework](#http-server-framework)  |     Dropshot     |    ✅    |
+> |                             |               [Database](#database)               | URL Query Params |    ❌    |
+> |                             |                                                   |    git + HTML    |    ❌    |
+> |                             |                                                   |      SQLite      |    ✅    |
+> |                             |                                                   |    Litestream    |    ✅    |
+> |                             |                                                   |      LiteFS      |    ❌    |
+> |                             |        [Database Driver](#database-driver)        |      Diesel      |    ✅    |
+> |                             |        [Backend Hosting](#backend-hosting)        |      Fly.io      |    ❌    |
+> |                             |                                                   |      AWS S3      |    ✅    |
+> |         [CLI](#cli)         |            [CLI Library](#cli-library)            |       Clap       |    ✅    |
+> |                             |             [API Client](#api-client)             |    Progenitor    |    ✅    |
+> | [Development](#development) |  [Developer Environment](#developer-environment)  |      Gitpod      |    ❌    |
+> |                             |                                                   |  M1 MacBook Pro  |    ✅    |
+> |                             | [Continuous Integration](#continuous-integration) |      Dagger      |    ❌    |
+> |                             |                                                   |  GitHub Actions  |    ⚠️    |

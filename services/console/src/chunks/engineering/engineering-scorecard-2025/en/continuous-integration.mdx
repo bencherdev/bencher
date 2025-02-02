@@ -1,0 +1,33 @@
+### Continuous Integration
+
+Bencher is [open source][github bencher].
+As a modern open source project, you sort of have to be on GitHub.
+This means the path of least resistance for continuous integration (CI) is GitHub Actions.
+Over the years, I've began to loathe the YAML based CI DSLs.
+They each have their own quarks, and when it comes to a company as big as GitHub,
+getting a ⚠️ icon instead of an ❌ icon can [languish for years][github runner 2347].
+
+This motivated me to try out [Dagger][github dagger].
+At the time, you could only use Dagger via this esoteric language called [CUE][cue].
+I tried. I really did. For like a whole weekend.
+Maybe if ChatGPT had existed back then, I could have made it through.
+But it wasn't just me.
+Dagger eventually [abandoned CUE][dagger cue] altogether for more sane SDKs.
+By that time though, it was too late for me.
+
+Defeated by Dagger, I accepted my YAML CI DSL fate,
+and Bencher now uses GitHub Actions.
+Heck, I even built a [Bencher CLI][github bencher cli] GitHub Action.
+Be the ~~change~~ problem you wish to see in the world.
+
+> |   Technology   | Verdict |
+> | :------------: | :-----: |
+> |     Dagger     |    ❌    |
+> | GitHub Actions |    ⚠️    |
+
+[github bencher]: https://github.com/bencherdev/bencher
+[github runner 2347]: https://github.com/actions/runner/issues/2347
+[github dagger]: https://github.com/dagger/dagger
+[cue]: https://cuelang.org/
+[dagger cue]: https://dagger.io/blog/ending-cue-support
+[github bencher cli]: https://github.com/marketplace/actions/bencher-cli

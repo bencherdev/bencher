@@ -1,0 +1,78 @@
+
+### Database
+
+I've tried to keep Bencher as simple as possible.
+The first version of Bencher took everything,
+including the benchmarks results themselves through URL query params.
+I quickly learned that all browsers have [a limit on URL length][chrome url length].
+Makes sense.
+
+Next, I considered storing the benchmark results in `git`
+and just generating a static HTML file with the plots and results.
+However, this approach has two major draw backs.
+First, the `git clone` times would eventually become untenable for heavy users.
+Second, all historical data would have to be present in the HTML file,
+leading to very long initial load times for heavy users.
+A dev tool should love their heavy users, not punish them.
+
+It turns out there's a solution to my problem.
+It's called a database.
+
+So why not just pull in Postgres and call it a day?
+Well, I really wanted folks to be able to [self-host Bencher][bencher self hosted].
+The simpler I could make the architecture,
+the easier (and cheaper) it would be for others to self-host.
+I was already going to require two containers due to the separate frontend and backend.
+Could I avoid a third? Yep!
+
+Before Bencher, I had only used [SQLite][sqlite] as a test database.
+The developer experience was fantastic, but I never considered running it in production.
+Then I came across [Litestream][github litestream].
+Litestream is a disaster recovery tool for SQLite.
+It runs in the background and continuously replicates changes to S3
+or any other datastore of your choosing.
+This makes it both easy to use and incredibly cost efficient to run,
+since S3 doesn't charge for writes.
+Think pennies per day for a small instance.
+
+When I first ran across Litestream,
+there was also the promise of live read replicas coming soon.
+However, this [never came to fruition][litestream github issue 8].
+The suggested alternative was a successor project by the same developer
+called [LiteFS][github litefs].
+There are major downsides to LiteFS though.
+It does not offer built-in disaster recovery, if all replicas go down.
+In order to have multiple replicas,
+you have to infect your application logic with the concept of whether they are a reader or a writer.
+And the absolute blocker was that it requires a [Consul][github consul] instance
+to be running at all times to manage the replicas.
+The entire point of using SQLite was to avoid yet another service.
+Thankfully, I didn't try to use LiteFS with Bencher Cloud either,
+as [LiteFS Cloud was sunset a year after launch][litefs sunset],
+and [LiteFS is now all but dead][github litefs contributors].
+
+Currently, the small downtime between deploys is [handled by the Bencher CLI][bencher attempts].
+In the future, I plan to move to zero-downtime deploys using [Kamal][github kamal].
+With [Rails 8.0 defaulting to Kamal and SQLite][rails 8],
+I feel fairly confident that Kamal and Litestream should pair well together.
+
+> |    Technology    | Verdict |
+> | :--------------: | :-----: |
+> | URL Query Params |    ❌    |
+> |    git + HTML    |    ❌    |
+> |      SQLite      |    ✅    |
+> |    Litestream    |    ✅    |
+> |      LiteFS      |    ❌    |
+
+[chrome url length]: https://chromium.googlesource.com/chromium/src/+/main/docs/security/url_display_guidelines/url_display_guidelines.md#url-length
+[bencher self hosted]: /docs/explanation/bencher-self-hosted/
+[sqlite]: https://sqlite.org/
+[github litestream]: https://github.com/benbjohnson/litestream
+[litestream github issue 8]: https://github.com/benbjohnson/litestream/issues/8#issuecomment-1173214316
+[github litefs]: https://github.com/superfly/litefs
+[github consul]: https://github.com/hashicorp/consul
+[litefs sunset]: https://community.fly.io/t/sunsetting-litefs-cloud/20829
+[github litefs contributors]: https://github.com/superfly/litefs/graphs/contributors
+[bencher attempts]: /docs/explanation/bencher-run/#--attempts-count
+[github kamal]: https://github.com/basecamp/kamal
+[rails 8]: https://rubyonrails.org/2024/9/27/rails-8-beta1-no-paas-required

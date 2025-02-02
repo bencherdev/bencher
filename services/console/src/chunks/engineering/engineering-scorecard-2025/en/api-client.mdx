@@ -1,0 +1,53 @@
+### API Client
+
+A major factor in picking [Dropshot][github dropshot] as Bencher's
+[HTTP server framework][http server framework]
+was its built-in ability to generate an [OpenAPI spec][openapi spec].
+I was hopeful that one day I could auto-generate an API client from that spec.
+A year or so later, the creators of Dropshot delivered: [Progenitor][github progenitor].
+
+Progenitor is the yin to Dropshot's yang.
+Using the OpenAPI spec from Dropshot, Progenitor can generate a Rust API client
+in either a positional pattern:
+
+```
+client.instance_create("bencher", "api", None)
+```
+
+or a builder pattern:
+
+```
+client.instance_create().organization("bencher").project("api").send()
+```
+
+Personally, I prefer the latter,
+so that's what Bencher uses.
+Progenitor can also generate an entire Clap CLI to interact with the API.
+However, I haven't used it.
+I needed to have tighter control over things,
+especially for commands like [`bencher run`][bencher run].
+
+The only notable downside I've found with the generated types is that
+due to limitations in JSON Schema, you can't just use an `Option<Option<Item>>`
+when you need to be able to disambiguate between a missing `item` key and an `item` key with the value set to `null`.
+This is possible with something like [`double_option`][docs serde with double option],
+but it all looks the same at the level of the JSON Schema.
+Using a [flattened][serde flattened] or [untagged][serde untagged] inner struct enum
+doesn't play nice with Dropshot.
+The only solution that I found was to use [a top-level, untagged enum][github bencher json update project].
+There are only two such fields in the entire API at this point though,
+so not a huge deal.
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> | Progenitor |    ✅    |
+
+[github dropshot]: https://github.com/oxidecomputer/dropshot
+[github progenitor]: https://github.com/oxidecomputer/progenitor
+[http server framework]: #http-server-framework
+[openapi spec]: https://swagger.io/specification/
+[bencher run]: /docs/explanation/bencher-run/
+[docs serde with double option]: https://docs.rs/serde_with/3.12.0/serde_with/rust/double_option/index.html
+[serde flattened]: https://serde.rs/attr-flatten.html
+[serde untagged]: https://serde.rs/enum-representations.html#untagged
+[github bencher json update project]: https://github.com/bencherdev/bencher/blob/09084ed5549fea71b181da048ec6fa8672e17541/lib/bencher_json/src/project/mod.rs#L91

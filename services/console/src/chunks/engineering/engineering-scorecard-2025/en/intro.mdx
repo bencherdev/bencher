@@ -1,0 +1,24 @@
+When developing a new technology, like [Bencher][bencher],
+there is a fundamental tension between wanting to [choose boring technology][choose boring technology]
+and [beating the averages][beating the averages].
+In the moment, it can be difficult to tell exactly where one stands in this tug-of-war.
+Every three years, the Rust programming language comes out with a new [Rust edition][rust editions].
+I think this is a nice cadence.
+It's long enough for real progress to be made.
+Yet, short enough not to drift too far afield.
+With Bencher turning 3 years old this spring,
+I thought it would be a great time to stop and reflect on all the engineering decisions that got us here.
+
+In this post, I'm going to look back at where Bencher has spent its "innovation tokens" over the past three years.
+Bencher is an [open source][github bencher] suite of [continuous benchmarking][continuous benchmarking] tools.
+I'll start at the frontend of the [Bencher architecture][architecture] and move all the way down the stack.
+At each stop along with way, I'll discuss how we got here
+and give a binary verdict on how each engineering decision panned out.
+
+[bencher]: https://bencher.dev
+[choose boring technology]: https://mcfunley.com/choose-boring-technology
+[beating the averages]: https://paulgraham.com/avg.html
+[rust editions]: https://doc.rust-lang.org/edition-guide/editions/
+[github bencher]: https://github.com/bencherdev/bencher
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[architecture]: /docs/reference/architecture/

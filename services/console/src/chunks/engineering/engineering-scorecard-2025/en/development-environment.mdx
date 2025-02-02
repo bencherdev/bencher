@@ -1,0 +1,37 @@
+### Developer Environment
+
+As I started working on Bencher, folks were calling for [the end of localhost][dx tips].
+I was already well past the need for a new development laptop,
+so I decided to try out a cloud development environment.
+At the time GitHub Workspaces wasn't generally available (GA) for my use case,
+so I went with [Gitpod][gitpod].
+
+This experiment lasted for about six months.
+My conclusion: cloud development environments do not work well for side projects.
+Do you want to hop on and knock out five minutes of work?
+Nope! You're going to sit there and wait for your dev environment to reinitialize itself for the 1,000th time.
+Oh, you have an entire afternoon on the weekend to really crank out some work?
+Nope! Your dev environment is just going to [randomly stop working while you are using it][github gitpod 9629]. Again and again and again.
+
+I ran into these issues as a paid user.
+At $25/month, I could get a brand new M1 MacBook Pro with much better specs every five years.
+When Gitpod announced they were changing their pricing from a flat rate to be usage based,
+I just let them cancel my plan and headed on over to [apple.com][apple].
+
+Maybe this was all an issue with Gitpod's [now abandoned decision][gitpod kubernetes] to use Kubernetes.
+But I'm in no hurry to try out another cloud development environment with Bencher again.
+I did eventually port the Gitpod configuration over to a [dev container][github bencher dev container]
+to make it easier for contributors to get started.
+For me though, I'm sticking with `localhost`.
+
+> |   Technology   | Verdict |
+> | :------------: | :-----: |
+> |     Gitpod     |    ❌    |
+> | M1 MacBook Pro |    ✅    |
+
+[dx tips]: https://dx.tips/the-end-of-localhost
+[gitpod]: https://www.gitpod.io/
+[github gitpod 9629]: https://github.com/gitpod-io/gitpod/issues/9629#issuecomment-1473986095
+[apple]: https://www.apple.com
+[gitpod kubernetes]: https://www.gitpod.io/blog/we-are-leaving-kubernetes
+[github bencher dev container]: https://github.com/bencherdev/bencher/pkgs/container/bencher-dev-container

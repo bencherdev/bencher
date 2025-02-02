@@ -1,0 +1,24 @@
+### Database Driver
+
+The closer to the database I get, the more strongly typed I want things.
+It's okay to play a little fast and loose on the frontend.
+If I mess up, everything will be right as rain with the next push to production.
+If I corrupt the database though, it's much more of an ordeal to set right.
+With that in mind, I chose to use [Diesel][diesel github].
+
+Diesel is a strongly typed object relational mapper (ORM) and query builder for Rust.
+It checks all database interactions at compile time, preventing runtime errors.
+This compile time checking also makes Diesel a zero-cost abstraction over SQL.
+Other than a small bug on my end when making things [1200x faster with performance tuning][engineering sqlite],
+I have had no runtime SQL errors when working with Diesel.
+
+> 🐰 Fun Fact: [Diesel uses Bencher][case study diesel] for [continuous benchmarking][continuous benchmarking]!
+
+> | Technology | Verdict |
+> | :--------: | :-----: |
+> |   Diesel   |    ✅    |
+
+[diesel github]: https://github.com/diesel-rs/diesel
+[case study diesel]: /learn/case-study/diesel/
+[engineering sqlite]: /learn/engineering/sqlite-performance-tuning/
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
