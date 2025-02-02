@@ -298,7 +298,7 @@ With that in mind, I chose to use [Diesel][diesel github].
 Diesel is a strongly typed object relational mapper (ORM) and query builder for Rust.
 It checks all database interactions at compile time, preventing runtime errors.
 This compile time checking also makes Diesel a zero-cost abstraction over SQL.
-Other than a small bug on my end when making thing [1200x faster with performance tuning][engineering sqlite],
+Other than a small bug on my end when making things [1200x faster with performance tuning][engineering sqlite],
 I have had no runtime SQL errors when working with Diesel.
 
 > 🐰 Fun Fact: [Diesel uses Bencher][case study diesel] for [continuous benchmarking][continuous benchmarking]!
@@ -450,17 +450,17 @@ but this as a good problem to have.
 
 ### CLI Library
 
-When building a Rust CLI, [clap][github clap] is a bit of a de facto standard.
+When building a Rust CLI, [Clap][github clap] is a bit of a de facto standard.
 So imagine my shock when [I first publicly demoed Bencher][talks rust dc]
 and the creator himself, [Ed Page][github epage], was there! 🤩
 
-Over time, I keep finding more and more helpful things that clap can do.
+Over time, I keep finding more and more helpful things that Clap can do.
 It's a bit embarrassing, but I just recently discovered
 [the `default_value` option][docs clap default value].
 All of these capabilities really help to shrink the amount of code I have to maintain
 in the `bencher` CLI.
 
-> 🐰 Fun Fact: [clap uses Bencher][clap github pr 5826] to [track binary size][track binary size]!
+> 🐰 Fun Fact: [Clap uses Bencher][clap github pr 5826] to [track binary size][track binary size]!
 
 > | Technology | Verdict |
 > | :--------: | :-----: |
@@ -486,7 +486,7 @@ Using the OpenAPI spec from Dropshot, Progenitor can generate a Rust API client
 in either a positional pattern:
 
 ```
-client.instance_create("bencher", "api")
+client.instance_create("bencher", "api", None)
 ```
 
 or a builder pattern:
@@ -497,7 +497,7 @@ client.instance_create().organization("bencher").project("api").send()
 
 Personally, I prefer the latter,
 so that's what Bencher uses.
-Progenitor can also generate an entire clap CLI to interact with API.
+Progenitor can also generate an entire Clap CLI to interact with the API.
 However, I haven't used it.
 I needed to have tighter control over things,
 especially for commands like [`bencher run`][bencher run].
@@ -582,6 +582,7 @@ I tried. I really did. For like a whole weekend.
 Maybe if ChatGPT had existed back then, I could have made it through.
 But it wasn't just me.
 Dagger eventually [abandoned CUE][dagger cue] altogether for more sane SDKs.
+By that time though, it was too late for me.
 
 Defeated by Dagger, I accepted my YAML CI DSL fate,
 and Bencher now uses GitHub Actions.
