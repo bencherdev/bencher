@@ -145,6 +145,10 @@ Intention + Obstacle
 - Assembly viewer
   - https://godbolt.org/
   - https://cppinsights.io/
+- gnuplot
+  - http://www.gnuplot.info/
+- Plotters
+  - https://github.com/plotters-rs/plotters
 
 ## Programming
 - Create error message help pages for each supported programming language
