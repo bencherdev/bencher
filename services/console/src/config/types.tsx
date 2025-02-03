@@ -108,6 +108,7 @@ export enum Button {
 	SEARCH = "search",
 	DATE_TIME = "date_time",
 	ARCHIVED = "archived",
+	DISMISS_ALL = "dismiss_all",
 }
 
 export enum ActionButton {

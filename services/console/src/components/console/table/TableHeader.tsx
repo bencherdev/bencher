@@ -1,17 +1,25 @@
+import * as Sentry from "@sentry/astro";
+import type { Params } from "astro";
 import {
-	createResource,
+	type Accessor,
 	For,
 	Match,
+	type Resource,
 	Show,
 	Switch,
-	type Accessor,
+	createMemo,
+	createResource,
 } from "solid-js";
-import { pathname } from "../../../util/url";
 import { Button } from "../../../config/types";
-import type { Params } from "astro";
+import { AlertStatus, type JsonAlert } from "../../../types/bencher";
+import { authUser } from "../../../util/auth";
+import { X_TOTAL_COUNT, apiUrl, httpGet, httpPatch } from "../../../util/http";
+import { NotifyKind, pageNotify } from "../../../util/notify";
+import { pathname } from "../../../util/url";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
 import DateRange from "../../field/kinds/DateRange";
+import { ARCHIVED_PARAM, PAGE_PARAM, PER_PAGE_PARAM } from "./TablePanel";
 
 export interface Props {
 	apiUrl: string;
@@ -21,6 +29,7 @@ export interface Props {
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
 	archived: Accessor<undefined | string>;
+	tableData: Resource<object[]>;
 	handleRefresh: () => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
@@ -54,6 +63,7 @@ const TableHeader = (props: Props) => {
 							end_date={props.end_date}
 							search={props.search}
 							archived={props.archived}
+							tableData={props.tableData}
 							title={title}
 							button={button}
 							handleRefresh={props.handleRefresh}
@@ -83,6 +93,7 @@ const TableHeaderButton = (props: {
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
 	archived: Accessor<undefined | string>;
+	tableData: Resource<object[]>;
 	title: string;
 	button: TableButton;
 	handleRefresh: () => void;
@@ -120,6 +131,35 @@ const TableHeaderButton = (props: {
 							props.handleSearch(search as string)
 						}
 					/>
+				</Match>
+				<Match when={props.button.kind === Button.DISMISS_ALL}>
+					<DismissAllButton
+						apiUrl={props.apiUrl}
+						params={props.params}
+						archived={props.archived}
+						tableData={props.tableData}
+						handleRefresh={props.handleRefresh}
+					/>
+				</Match>
+				<Match when={props.button.kind === Button.ARCHIVED}>
+					<button
+						class={`button${props.archived() === "true" ? " is-primary" : ""}`}
+						type="button"
+						title={
+							props.archived() === "true"
+								? `View active ${props.title}`
+								: `View archived ${props.title}`
+						}
+						onMouseDown={(e) => {
+							e.preventDefault();
+							props.handleArchived();
+						}}
+					>
+						<span class="icon">
+							<i class="fas fa-archive" />
+						</span>
+						<span>Archived</span>
+					</button>
 				</Match>
 				<Match when={props.button.kind === Button.ADD}>
 					<Show
@@ -195,28 +235,151 @@ const TableHeaderButton = (props: {
 						<span>Refresh</span>
 					</button>
 				</Match>
-				<Match when={props.button.kind === Button.ARCHIVED}>
-					<button
-						class={`button${props.archived() === "true" ? " is-primary" : ""}`}
-						type="button"
-						title={
-							props.archived() === "true"
-								? `View active ${props.title}`
-								: `View archived ${props.title}`
-						}
-						onMouseDown={(e) => {
-							e.preventDefault();
-							props.handleArchived();
-						}}
-					>
-						<span class="icon">
-							<i class="fas fa-archive" />
-						</span>
-						<span>Archived</span>
-					</button>
-				</Match>
 			</Switch>
 		</p>
+	);
+};
+
+const DismissAllButton = (props: {
+	apiUrl: string;
+	params: Params;
+	archived: Accessor<undefined | string>;
+	tableData: Resource<object[]>;
+	handleRefresh: () => void;
+}) => {
+	const alertsQuery = async (
+		apiUrl: string,
+		params: Params,
+		per_page: number,
+		page: number,
+		archived: boolean,
+		token: string,
+	) => {
+		const searchParams = new URLSearchParams();
+		searchParams.set(PER_PAGE_PARAM, per_page.toString());
+		searchParams.set(PAGE_PARAM, page.toString());
+		searchParams.set(ARCHIVED_PARAM, archived.toString());
+		const path = `/v0/projects/${params.project}/alerts?${searchParams.toString()}`;
+		return await httpGet(apiUrl, path, token)
+			.then((resp) => {
+				return [resp?.headers?.[X_TOTAL_COUNT], resp?.data];
+			})
+			.catch((error) => {
+				console.error(error);
+				Sentry.captureException(error);
+				return [];
+			});
+	};
+	const fetcher = createMemo(() => {
+		return {
+			apiUrl: props.apiUrl,
+			params: props.params,
+			archived: props.archived(),
+			tableData: props.tableData(),
+			token: authUser()?.token,
+		};
+	});
+	const getAlerts = async (fetcher: {
+		apiUrl: string;
+		params: Params;
+		archived: undefined | boolean;
+		token: string;
+	}) => {
+		const all_alerts: JsonAlert[] = [];
+		if (!fetcher?.token) {
+			return all_alerts;
+		}
+		const PER_PAGE = 255;
+		let page = 1;
+		while (true) {
+			const [total, alerts] = await alertsQuery(
+				fetcher.apiUrl,
+				fetcher.params,
+				PER_PAGE,
+				page,
+				fetcher.archived ?? false,
+				fetcher.token,
+			);
+			if (!total || !alerts) {
+				break;
+			}
+			all_alerts.push(...alerts);
+			if (alerts.length < PER_PAGE || all_alerts.length === total) {
+				break;
+			}
+			page++;
+		}
+		// console.log(all_alerts);
+		return all_alerts;
+	};
+	const [alerts] = createResource<JsonAlert[]>(fetcher, getAlerts);
+
+	const anyActive = createMemo(() =>
+		alerts()?.some((alert) => alert.status === AlertStatus.Active),
+	);
+
+	const dismissAll = () => {
+		const fetch = fetcher();
+		if (!fetch.token) {
+			return;
+		}
+		const activeAlerts = alerts()?.filter(
+			(alert) => alert.status === AlertStatus.Active,
+		);
+		let count = 0;
+		for (const alert of activeAlerts) {
+			httpPatch(
+				fetch.apiUrl,
+				`/v0/projects/${fetch.params.project}/alerts/${alert.uuid}`,
+				fetch.token,
+				{ status: AlertStatus.Dismissed },
+			)
+				.then((_resp) => {
+					count++;
+					if (count === activeAlerts.length) {
+						props.handleRefresh();
+					}
+				})
+				.catch((error) => {
+					console.error(error);
+					Sentry.captureException(error);
+					pageNotify(
+						NotifyKind.ERROR,
+						"Lettuce romaine calm! Failed to dismiss alerts. Please, try again.",
+					);
+				});
+		}
+	};
+
+	return (
+		<button
+			class="button"
+			type="button"
+			title={
+				anyActive()
+					? "Dismiss all active alerts"
+					: "No active alerts to dismiss"
+			}
+			disabled={!anyActive()}
+			onMouseDown={(e) => {
+				e.preventDefault();
+				dismissAll();
+			}}
+		>
+			<Show
+				when={anyActive()}
+				fallback={
+					<span class="icon">
+						<i class="far fa-bell-slash" />
+					</span>
+				}
+			>
+				<span class="icon has-text-primary">
+					<i class="far fa-bell" />
+				</span>
+			</Show>
+			<span>Dismiss All</span>
+		</button>
 	);
 };
 

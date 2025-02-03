@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/astro";
+import { debounce } from "@solid-primitives/scheduled";
 import type { Params } from "astro";
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
@@ -13,6 +15,12 @@ import {
 	resourcePlural,
 } from "../../../config/types";
 import { authUser } from "../../../util/auth";
+import {
+	dateToTime,
+	isBoolParam,
+	timeToDate,
+	timeToDateOnlyIso,
+} from "../../../util/convert";
 import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
@@ -20,21 +28,13 @@ import { DEBOUNCE_DELAY, validJwt, validU32 } from "../../../util/valid";
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import Table, { type TableConfig, TableState } from "./Table";
 import TableHeader, { type TableHeaderConfig } from "./TableHeader";
-import { debounce } from "@solid-primitives/scheduled";
-import {
-	dateToTime,
-	isBoolParam,
-	timeToDate,
-	timeToDateOnlyIso,
-} from "../../../util/convert";
-import * as Sentry from "@sentry/astro";
 
-const PER_PAGE_PARAM = "per_page";
-const PAGE_PARAM = "page";
+export const PER_PAGE_PARAM = "per_page";
+export const PAGE_PARAM = "page";
 const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
 const SEARCH_PARAM = "search";
-const ARCHIVED_PARAM = "archived";
+export const ARCHIVED_PARAM = "archived";
 
 const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
@@ -170,6 +170,7 @@ const TablePanel = (props: Props) => {
 						: TableState.OK,
 				);
 				setTotalCount(resp?.headers?.[X_TOTAL_COUNT]);
+				// console.log(resp?.data);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -235,6 +236,7 @@ const TablePanel = (props: Props) => {
 				end_date={end_date}
 				search={search}
 				archived={archived}
+				tableData={tableData}
 				handleRefresh={refetch}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}

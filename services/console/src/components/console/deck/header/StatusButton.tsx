@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/astro";
 import {
 	type Accessor,
 	Match,
@@ -9,7 +10,6 @@ import { AlertStatus, type JsonAuthUser } from "../../../../types/bencher";
 import { httpPatch } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { validJwt } from "../../../../util/valid";
-import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -52,12 +52,6 @@ const StatusButton = (props: Props) => {
 			.then((_resp) => {
 				setSubmitting(false);
 				props.handleRefresh();
-				pageNotify(
-					NotifyKind.OK,
-					isActive
-						? "Phew, that was a hare-raising experience! Alert has been dismissed."
-						: "We're not out of the woods yet! Alert has been reactivated.",
-				);
 			})
 			.catch((error) => {
 				setSubmitting(false);
@@ -76,7 +70,7 @@ const StatusButton = (props: Props) => {
 		<Switch>
 			<Match when={props.data()?.status === AlertStatus.Active}>
 				<button
-					class="button is-primary is-fullwidth"
+					class="button is-fullwidth"
 					type="button"
 					title="Dismiss alert"
 					disabled={submitting()}
@@ -85,7 +79,7 @@ const StatusButton = (props: Props) => {
 						sendStatus();
 					}}
 				>
-					<span class="icon">
+					<span class="icon has-text-primary">
 						<i class="far fa-bell" />
 					</span>
 					<span>Dismiss</span>
