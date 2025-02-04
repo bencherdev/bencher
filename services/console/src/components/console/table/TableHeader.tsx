@@ -29,7 +29,6 @@ export interface Props {
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
 	archived: Accessor<undefined | string>;
-	tableData: Resource<object[]>;
 	handleRefresh: () => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
@@ -63,7 +62,6 @@ const TableHeader = (props: Props) => {
 							end_date={props.end_date}
 							search={props.search}
 							archived={props.archived}
-							tableData={props.tableData}
 							title={title}
 							button={button}
 							handleRefresh={props.handleRefresh}
@@ -93,7 +91,6 @@ const TableHeaderButton = (props: {
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
 	archived: Accessor<undefined | string>;
-	tableData: Resource<object[]>;
 	title: string;
 	button: TableButton;
 	handleRefresh: () => void;
@@ -137,7 +134,6 @@ const TableHeaderButton = (props: {
 						apiUrl={props.apiUrl}
 						params={props.params}
 						archived={props.archived}
-						tableData={props.tableData}
 						handleRefresh={props.handleRefresh}
 					/>
 				</Match>
@@ -244,7 +240,6 @@ const DismissAllButton = (props: {
 	apiUrl: string;
 	params: Params;
 	archived: Accessor<undefined | string>;
-	tableData: Resource<object[]>;
 	handleRefresh: () => void;
 }) => {
 	const alertsQuery = async (
@@ -275,7 +270,6 @@ const DismissAllButton = (props: {
 			apiUrl: props.apiUrl,
 			params: props.params,
 			archived: props.archived(),
-			tableData: props.tableData(),
 			token: authUser()?.token,
 		};
 	});
@@ -337,7 +331,13 @@ const DismissAllButton = (props: {
 				.then((_resp) => {
 					count++;
 					if (count === activeAlerts.length) {
-						props.handleRefresh();
+						if (props.archived() === "true") {
+							props.handleRefresh();
+						} else {
+							// TODO move to global state
+							// Reload the entire page to update the alert count in the side bar
+							window.location.reload();
+						}
 					}
 				})
 				.catch((error) => {

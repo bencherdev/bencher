@@ -16,7 +16,6 @@ export interface Props {
 	user: JsonAuthUser;
 	path: Accessor<string>;
 	data: Resource<object>;
-	handleRefresh: () => void;
 }
 
 const StatusButton = (props: Props) => {
@@ -51,7 +50,9 @@ const StatusButton = (props: Props) => {
 		httpPatch(props.apiUrl, props.path(), token, data)
 			.then((_resp) => {
 				setSubmitting(false);
-				props.handleRefresh();
+				// TODO move to global state
+				// Reload the entire page to update the alert count in the side bar
+				window.location.reload();
 			})
 			.catch((error) => {
 				setSubmitting(false);

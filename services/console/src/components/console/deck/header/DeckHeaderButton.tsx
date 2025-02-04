@@ -3,18 +3,18 @@ import {
 	type Accessor,
 	Match,
 	type Resource,
+	Show,
 	Switch,
 	createResource,
-	Show,
 } from "solid-js";
 import { Button } from "../../../../config/types";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import { BACK_PARAM, encodePath, pathname } from "../../../../util/url";
+import type { PubResourceKind } from "../../../perf/util";
+import RefreshButton from "../../../site/RefreshButton";
 import ConsoleButton from "./ConsoleButton";
 import PerfButton from "./PerfButton";
 import StatusButton from "./StatusButton";
-import RefreshButton from "../../../site/RefreshButton";
-import type { PubResourceKind } from "../../../perf/util";
 
 export interface Props {
 	isConsole: boolean;
@@ -79,7 +79,6 @@ const DeckHeaderButton = (props: Props) => {
 					user={props.user}
 					path={props.path}
 					data={props.data}
-					handleRefresh={props.handleRefresh}
 				/>
 			</Match>
 			<Match when={props.button.kind === Button.CONSOLE && props.user?.token}>

@@ -236,7 +236,6 @@ const TablePanel = (props: Props) => {
 				end_date={end_date}
 				search={search}
 				archived={archived}
-				tableData={tableData}
 				handleRefresh={refetch}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}
