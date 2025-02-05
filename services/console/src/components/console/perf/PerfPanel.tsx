@@ -348,9 +348,6 @@ const PerfPanel = (props: Props) => {
 
 	// Create marshalized memos of all query params
 	const report = createMemo(() => searchParams[REPORT_PARAM]);
-	const measures = createMemo(() =>
-		arrayFromString(searchParams[MEASURES_PARAM]),
-	);
 	const branches = createMemo(() =>
 		arrayFromString(searchParams[BRANCHES_PARAM]),
 	);
@@ -362,6 +359,9 @@ const PerfPanel = (props: Props) => {
 	);
 	const benchmarks = createMemo(() =>
 		arrayFromString(searchParams[BENCHMARKS_PARAM]),
+	);
+	const measures = createMemo(() =>
+		arrayFromString(searchParams[MEASURES_PARAM]),
 	);
 	const plot = createMemo(() => searchParams[PLOT_PARAM]);
 
@@ -534,7 +534,6 @@ const PerfPanel = (props: Props) => {
 			token: user?.token,
 		};
 	});
-
 	const getProject = async (fetcher: {
 		project_slug: string;
 		refresh: number;
@@ -561,7 +560,6 @@ const PerfPanel = (props: Props) => {
 				return EMPTY_OBJECT;
 			});
 	};
-
 	const [project] = createResource<JsonProject>(projectFetcher, getProject);
 
 	// Initialize as empty, wait for resources to load
@@ -579,11 +577,141 @@ const PerfPanel = (props: Props) => {
 	const [benchmarksTotalCount, setBenchmarksTotalCount] = createSignal(0);
 	const [plotsTotalCount, setPlotsTotalCount] = createSignal(0);
 
+	// Display the already selected dimensions
+	async function getSelected<T extends { uuid: string }>(
+		perfTab: PerfTab,
+		memo: T[],
+		fetcher: {
+			bencher_valid: undefined | InitOutput;
+			project_slug: undefined | string;
+			param_uuids: string[];
+			token: string;
+		},
+	) {
+		const EMPTY_ARRAY: T[] = [];
+		if (!fetcher.bencher_valid) {
+			return EMPTY_ARRAY;
+		}
+
+		if (
+			(props.isConsole && !validJwt(fetcher.token)) ||
+			!fetcher.project_slug ||
+			fetcher.project_slug === "undefined" ||
+			props.isEmbed === true
+		) {
+			return EMPTY_ARRAY;
+		}
+
+		const requests = fetcher.param_uuids.map((uuid) => {
+			const memo_datum = memo.find((dimension) => dimension.uuid === uuid);
+			if (memo_datum) {
+				return memo_datum;
+			}
+
+			const path = `/v0/projects/${fetcher.project_slug}/${perfTab}/${uuid}`;
+			return httpGet(props.apiUrl, path, fetcher.token)
+				.then((resp) => resp?.data as T[])
+				.catch((error) => {
+					console.error(error);
+					Sentry.captureException(error);
+					return EMPTY_ARRAY;
+				});
+		});
+
+		return await Promise.all(requests);
+	}
+
+	const [branches_memo, setBranchesMemo] = createStore<JsonBranch[]>([]);
+	const selectedBranchesFetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			project_slug: project_slug(),
+			param_uuids: branches(),
+			token: user?.token,
+		};
+	});
+	const [branches_selected] = createResource<JsonBranch[]>(
+		selectedBranchesFetcher,
+		async (fetcher) =>
+			getSelected<JsonBranch>(PerfTab.BRANCHES, branches_memo, fetcher),
+	);
+	createEffect(() => {
+		const data = branches_selected();
+		if (data) {
+			setBranchesMemo(data);
+		}
+	});
+	const handleBranchSelected = (uuid: string) => {
+		const [branch_uuids, i] = removeFromArray(branches(), uuid);
+		const head_uuids = heads();
+		if (i !== null) {
+			head_uuids.splice(i, 1);
+		}
+		setSearchParams({
+			[BRANCHES_PARAM]: arrayToString(branch_uuids),
+			[HEADS_PARAM]: arrayToString(head_uuids),
+		});
+	};
+
+	const [testbeds_memo, setTestbedsMemo] = createStore<JsonTestbed[]>([]);
+	const selectedTestbedFetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			project_slug: project_slug(),
+			param_uuids: testbeds(),
+			token: user?.token,
+		};
+	});
+	const [testbeds_selected] = createResource<JsonTestbed[]>(
+		selectedTestbedFetcher,
+		async (fetcher) =>
+			getSelected<JsonTestbed>(PerfTab.TESTBEDS, testbeds_memo, fetcher),
+	);
+	createEffect(() => {
+		const data = testbeds_selected();
+		if (data) {
+			setTestbedsMemo(data);
+		}
+	});
+	const handleTestbedSelected = (uuid: string) => {
+		const [testbed_uuids, _i] = removeFromArray(testbeds(), uuid);
+		setSearchParams({
+			[TESTBEDS_PARAM]: arrayToString(testbed_uuids),
+		});
+	};
+
+	const [benchmarks_memo, setBenchmarksMemo] = createStore<JsonBenchmark[]>([]);
+	const selectedBenchmarkFetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			project_slug: project_slug(),
+			param_uuids: benchmarks(),
+			token: user?.token,
+		};
+	});
+	const [benchmarks_selected] = createResource<JsonBenchmark[]>(
+		selectedBenchmarkFetcher,
+		async (fetcher) =>
+			getSelected<JsonBenchmark>(PerfTab.BENCHMARKS, benchmarks_memo, fetcher),
+	);
+	createEffect(() => {
+		const data = benchmarks_selected();
+		if (data) {
+			setBenchmarksMemo(data);
+		}
+	});
+	const handleBenchmarkSelected = (uuid: string) => {
+		const [benchmark_uuids, _i] = removeFromArray(benchmarks(), uuid);
+		setSearchParams({
+			[BENCHMARKS_PARAM]: arrayToString(benchmark_uuids),
+		});
+	};
+
 	// Resource tabs data: Reports, Branches, Testbeds, Benchmarks, Plots
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
 		fetcher: {
-			bencher_valid: InitOutput;
+			bencher_valid: undefined | InitOutput;
 			project_slug: undefined | string;
 			per_page: number;
 			page: number;
@@ -593,7 +721,7 @@ const PerfPanel = (props: Props) => {
 			refresh: number;
 			token: string;
 		},
-		totalCount: (headers: object) => void,
+		totalCount: (headers: { [X_TOTAL_COUNT]: string }) => void,
 	) {
 		const EMPTY_ARRAY: T[] = [];
 		if (!fetcher.bencher_valid) {
@@ -665,10 +793,10 @@ const PerfPanel = (props: Props) => {
 		if (
 			!clear() &&
 			first_report &&
-			branches().length === 0 &&
-			testbeds().length === 0 &&
-			benchmarks().length === 0 &&
-			measures().length === 0 &&
+			branchesIsEmpty() &&
+			testbedsIsEmpty() &&
+			benchmarksIsEmpty() &&
+			measuresIsEmpty() &&
 			tab() === DEFAULT_PERF_TAB
 		) {
 			const benchmarks = first_report?.results?.[first]
@@ -1142,6 +1270,9 @@ const PerfPanel = (props: Props) => {
 						benchmarks={benchmarks}
 						measures={measures}
 						tab={tab}
+						branches_selected={branches_selected}
+						testbeds_selected={testbeds_selected}
+						benchmarks_selected={benchmarks_selected}
 						reports_data={reports_data}
 						branches_data={branches_data}
 						testbeds_data={testbeds_data}
@@ -1174,6 +1305,9 @@ const PerfPanel = (props: Props) => {
 						benchmarks_search={benchmarks_search}
 						plots_search={plots_search}
 						handleTab={handleTab}
+						handleBranchSelected={handleBranchSelected}
+						handleTestbedSelected={handleTestbedSelected}
+						handleBenchmarkSelected={handleBenchmarkSelected}
 						handleReportChecked={handleReportChecked}
 						handleBranchChecked={handleBranchChecked}
 						handleTestbedChecked={handleTestbedChecked}

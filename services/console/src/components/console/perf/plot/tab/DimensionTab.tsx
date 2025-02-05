@@ -1,5 +1,6 @@
-import { type Accessor, For, Show, Switch, Match } from "solid-js";
+import { type Accessor, For, Match, Show, Switch } from "solid-js";
 import type { PerfTab } from "../../../../../config/types";
+import { resourcePath, toCapitalized } from "../../../../../config/util";
 import type {
 	JsonBenchmark,
 	JsonBranch,
@@ -7,11 +8,10 @@ import type {
 	JsonTestbed,
 } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
-import type { TabElement, TabList } from "./PlotTab";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
-import { themeText, type Theme } from "../../../../navbar/theme/theme";
-import { resourcePath, toCapitalized } from "../../../../../config/util";
+import { type Theme, themeText } from "../../../../navbar/theme/theme";
+import type { TabElement, TabList } from "./PlotTab";
 
 const DimensionsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -20,14 +20,26 @@ const DimensionsTab = (props: {
 	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
 	tabUuids: Accessor<string[]>;
+	selected: Accessor<JsonBranch[] | JsonTestbed[] | JsonBenchmark[]>;
 	tabList: Accessor<TabList<JsonBranch | JsonTestbed | JsonBenchmark>>;
 	per_page: Accessor<number>;
 	search: Accessor<undefined | string>;
+	handleSelected: (uuid: string) => void;
 	handleChecked: (index?: number, slug?: string) => void;
 	handleSearch: FieldHandler;
 }) => {
 	return (
 		<>
+			<Show when={props.selected()?.length > 0}>
+				<DimensionSelected
+					project_slug={props.project_slug}
+					theme={props.theme}
+					isConsole={props.isConsole}
+					tab={props.tab}
+					selected={props.selected}
+					handleSelected={props.handleSelected}
+				/>
+			</Show>
 			<div class="panel-block is-block">
 				<div class="columns is-vcentered">
 					<div class="column">
@@ -107,6 +119,57 @@ const DimensionsTab = (props: {
 				</Match>
 			</Switch>
 		</>
+	);
+};
+
+const DimensionSelected = (props: {
+	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
+	isConsole: boolean;
+	tab: Accessor<PerfTab>;
+	selected: Accessor<JsonBranch[] | JsonTestbed[] | JsonBenchmark[]>;
+	handleSelected: (uuid: string) => void;
+}) => {
+	return (
+		<For each={props.selected()}>
+			{(dimension) => (
+				<div class="panel-block is-block">
+					<div class="level">
+						<div class={`level-left ${themeText(props.theme())}`}>
+							<div class="level-item">
+								<div class="columns is-vcentered is-mobile">
+									<div class="column is-narrow">
+										<button
+											class="delete"
+											type="button"
+											title={`Remove ${dimension?.name} from ${props.tab()}`}
+											onMouseDown={(_e) =>
+												props.handleSelected(dimension?.uuid)
+											}
+										/>
+									</div>
+									<div class="column">
+										<small style="word-break: break-word;">
+											{dimension?.name}
+										</small>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="level-right">
+							<div class="level-item">
+								<ViewDimensionButton
+									project_slug={props.project_slug}
+									isConsole={props.isConsole}
+									tab={props.tab}
+									dimension={dimension}
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+		</For>
 	);
 };
 

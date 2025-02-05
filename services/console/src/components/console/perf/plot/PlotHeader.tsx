@@ -115,6 +115,9 @@ const FullPlotHeader = (props: Props) => {
 	const [secondMeasure, setSecondMeasure] = createSignal(
 		props.measures().length > 1,
 	);
+	createEffect(() => {
+		setSecondMeasure(props.measures().length > 1);
+	});
 
 	return (
 		<nav class="panel-heading">

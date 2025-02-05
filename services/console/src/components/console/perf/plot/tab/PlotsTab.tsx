@@ -1,11 +1,11 @@
-import { type Accessor, For, Show, Switch, Match, createMemo } from "solid-js";
+import { type Accessor, For, Match, Show, Switch, createMemo } from "solid-js";
 import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime } from "../../../../../config/util";
-import type { JsonPlot, JsonReport } from "../../../../../types/bencher";
-import type { TabElement, TabList } from "./PlotTab";
-import { themeText, type Theme } from "../../../../navbar/theme/theme";
+import type { JsonPlot } from "../../../../../types/bencher";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
+import { type Theme, themeText } from "../../../../navbar/theme/theme";
+import type { TabElement, TabList } from "./PlotTab";
 
 const PlotsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -13,7 +13,7 @@ const PlotsTab = (props: {
 	isConsole: boolean;
 	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
-	tabList: Accessor<TabList<JsonReport>>;
+	tabList: Accessor<TabList<JsonPlot>>;
 	per_page: Accessor<number>;
 	search: Accessor<undefined | string>;
 	handleChecked: (index: number, slug?: string) => void;

@@ -1,10 +1,10 @@
+import { createElementSize } from "@solid-primitives/resize-observer";
 import {
 	type Accessor,
-	For,
-	createMemo,
 	type Resource,
-	createSignal,
 	createEffect,
+	createMemo,
+	createSignal,
 } from "solid-js";
 import { PerfTab } from "../../../../../config/types";
 import type {
@@ -14,11 +14,10 @@ import type {
 	JsonReport,
 	JsonTestbed,
 } from "../../../../../types/bencher";
-import Pagination, { PaginationSize } from "../../../../site/Pagination";
-import Tab from "./Tab";
 import type { FieldHandler } from "../../../../field/Field";
 import type { Theme } from "../../../../navbar/theme/theme";
-import { createElementSize } from "@solid-primitives/resize-observer";
+import Pagination, { PaginationSize } from "../../../../site/Pagination";
+import Tab from "./Tab";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -39,6 +38,10 @@ export interface Props {
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
 	measures: Accessor<string[]>;
+	// Tab selected data
+	branches_selected: Resource<JsonBranch[]>;
+	testbeds_selected: Resource<JsonTestbed[]>;
+	benchmarks_selected: Resource<JsonBenchmark[]>;
 	// Tab data
 	reports_data: Resource<JsonReport>;
 	branches_data: Resource<JsonBranch>;
@@ -76,6 +79,10 @@ export interface Props {
 	testbeds_search: Accessor<undefined | string>;
 	benchmarks_search: Accessor<undefined | string>;
 	plots_search: Accessor<undefined | string>;
+	// Handle selected
+	handleBranchSelected: (uuid: string) => void;
+	handleTestbedSelected: (uuid: string) => void;
+	handleBenchmarkSelected: (uuid: string) => void;
 	// Handle checked
 	handleReportChecked: (index: number) => void;
 	handleBranchChecked: (index: undefined | number) => void;
@@ -340,6 +347,9 @@ const PlotTab = (props: Props) => {
 				testbeds={props.testbeds}
 				benchmarks={props.benchmarks}
 				measures={props.measures}
+				branches_selected={props.branches_selected}
+				testbeds_selected={props.testbeds_selected}
+				benchmarks_selected={props.benchmarks_selected}
 				reports_tab={props.reports_tab}
 				branches_tab={props.branches_tab}
 				testbeds_tab={props.testbeds_tab}
@@ -353,6 +363,9 @@ const PlotTab = (props: Props) => {
 				width={width}
 				reports_start_date={props.reports_start_date}
 				reports_end_date={props.reports_end_date}
+				handleBranchSelected={props.handleBranchSelected}
+				handleTestbedSelected={props.handleTestbedSelected}
+				handleBenchmarkSelected={props.handleBenchmarkSelected}
 				handlePage={handlePage}
 				handleChecked={handleChecked}
 				handleSearch={handleSearch as FieldHandler}
