@@ -107,7 +107,7 @@ const PinnedFrame = (props: Props) => {
 	const start_date = createMemo(() => timeToDateOnlyIso(start_time()));
 	const end_date = createMemo(() => timeToDateOnlyIso(end_time()));
 
-	const key = createMemo(() => false);
+	const [key, setKey] = createSignal(false);
 	const x_axis = createMemo(() => props.plot?.x_axis ?? XAxis.DateTime);
 	const clear = createMemo(() => false);
 
@@ -119,7 +119,7 @@ const PinnedFrame = (props: Props) => {
 	const embed_logo = createMemo(() => props.logo === true);
 	const embed_title = createMemo(() => props.plot?.title ?? "");
 	const embed_header = createMemo(() => false);
-	const embed_key = createMemo(() => false);
+	const embed_key = createMemo(() => true);
 
 	const handleVoid = (_void: string | PerfTab | boolean | XAxis | null) => {};
 
@@ -159,7 +159,7 @@ const PinnedFrame = (props: Props) => {
 					handleStartTime={handleVoid}
 					handleEndTime={handleVoid}
 					handleTab={handleVoid}
-					handleKey={handleVoid}
+					handleKey={setKey}
 					handleXAxis={handleVoid}
 					handleClear={handleVoid}
 					handleLowerValue={handleVoid}
