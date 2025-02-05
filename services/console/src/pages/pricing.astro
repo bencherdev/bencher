@@ -99,6 +99,77 @@ const description =
             </h2>
           </div>
         </div>
+        <div id="faq-benchmark-result" class="box">
+          <div class="content">
+            <h3 class="subtitle is-3">
+              What is a benchmark result?
+              <LinkFragment fragment="faq-benchmark-result"/>
+            </h3>
+            <p>A benchmark result is referred to as a <a href="#faq-metrics">Metric</a>.</p>
+          </div>
+        </div>
+        <div id="faq-metrics" class="box">
+          <div class="content">
+            <h3 class="subtitle is-3">
+              What is a Metric?
+              <LinkFragment fragment="faq-metrics"/>
+            </h3>
+            <p>
+              A Metric is a single, point-in-time benchmark result.
+              Each time a benchmark is run, it creates at least one new Metric.
+            </p>
+            <p>
+              For example, if you have <code>5</code> benchmarks that measure latency
+              then they would create <code>5</code> Metrics each time they run.
+              If you ran your benchmarks <code>10</code> times,
+              you would then have <code>50</code> Metrics:
+            </p>
+            <p>
+              <code>5</code> benchmarks x <code>10</code> runs = <code>50</code> Metrics
+            </p>
+            <p>
+              Even if your benchmark harness runs your benchmarks 1,000 times to get a more accurate result,
+              you would still only have <code>50</code> Metrics.
+            </p>
+            <p>
+              Some benchmarks may create more than one new Metric per run.
+            </p>
+            <p>
+              For example, if you have <code>5</code> benchmarks that each have <code>2</code> measures, latency and throughput,
+              then they would create <code>10</code> Metrics each time they run.
+              If you ran your benchmarks <code>10</code> times,
+              you would then have <code>100</code> Metrics:
+            </p>
+            <p>
+              <code>5</code> benchmarks x <code>2</code> measures x <code>10</code> runs = <code>100</code> Metrics
+          </div>
+        </div>
+        <div id="faq-metrics-billing" class="box">
+          <div class="content">
+            <h3 class="subtitle is-3">
+              How are Metrics billed?
+              <LinkFragment fragment="faq-metrics-billing"/>
+            </h3>
+            <p>
+              On Bencher Cloud, Metrics are billed either:
+              <ul>
+                <li>Monthly based on metered usage</li>
+                <li>Annually based on a licensed quantity</li>
+              </ul>
+            </p>
+            <p>
+              For example, if you create <code>5,280</code> Metrics in a particular calendar
+              month with metered usage then you would be billed for <code>5,280</code> Metrics that month.
+            </p>
+            <p>
+							Bencher Self-Hosted Metrics are always billed annually based on a licensed quantity.
+						</p>
+						<p>
+							For example, if you create <code>5,280</code> Metrics within a given year,
+              then you would need to have a licensed quantity of say <code>6,000</code> Metrics.
+						</p>
+          </div>
+        </div>
         <div id="faq-public-projects" class="box">
           <div class="content">
             <h3 class="subtitle is-3">
@@ -132,47 +203,6 @@ const description =
               In order to create and use Private Projects, your organization
               must have an active Bencher Plus plan.
             </p>
-          </div>
-        </div>
-        <div id="faq-metrics" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              What is a Metric?
-              <LinkFragment fragment="faq-metrics"/>
-            </h3>
-            <p>A Metric is a single, point-in-time benchmark result.</p>
-            <p>
-              For example, if you have five benchmarks then they would create
-              five Metrics each time they run. If you ran your benchmarks ten
-              times, you would then have fifty Metrics. (ex: 5 benchmarks x 10
-              runs = 50 Metrics)
-            </p>
-          </div>
-        </div>
-        <div id="faq-metrics-billing" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              How are Metrics billed?
-              <LinkFragment fragment="faq-metrics-billing"/>
-            </h3>
-            <p>
-              On Bencher Cloud Metrics are billed either:
-              <ul>
-                <li>Monthly based on metered usage</li>
-                <li>Annually based on a licensed quantity</li>
-              </ul>
-            </p>
-            <p>
-              For example, if you create 5,280 Metrics in a particular calendar
-              month with metered usage then you would be billed for 5,280 Metrics that month.
-            </p>
-            <p>
-							Bencher Self-Hosted Metrics are always billed annually based on a licensed quantity.
-						</p>
-						<p>
-							For example, if you create 5,280 Metrics within a given year,
-              then you would need to have a licensed quantity of say 6,000 Metrics.
-						</p>
           </div>
         </div>
         <div id="faq-metrics-public-projects" class="box">
