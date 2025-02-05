@@ -124,8 +124,9 @@ const PerfPlot = (props: Props) => {
 							<Match
 								when={
 									props.perfData.loading ||
-									props.perfData() === undefined ||
-									Object.keys(props.perfData() as JsonPerf).length === 0
+									(!props.isPlotInit() &&
+										(props.perfData() === undefined ||
+											Object.keys(props.perfData() as JsonPerf).length === 0))
 								}
 							>
 								<progress
