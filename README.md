@@ -50,7 +50,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
 
 - Tutorial
   - [Quick Start](https://bencher.dev/docs/tutorial/quick-start/)
-  - [Docker Quick Start](https://bencher.dev/docs/tutorial/docker/)
+  - [Self-Hosted Quick Start](https://bencher.dev/docs/tutorial/docker/)
 - How To
   - [Install CLI](https://bencher.dev/docs/how-to/install-cli/)
   - [Track Benchmarks in CI](https://bencher.dev/docs/how-to/track-benchmarks/)
