@@ -11,6 +11,6 @@ function check_architecture() {
     fi
 }
 
-ARCH=${1:-$(check_architecture)}
-
-docker compose -f docker/docker-compose.$ARCH.yml up --build
+export ARCH=${1:-$(check_architecture)}
+script_dir=`dirname $0`
+docker compose -f $script_dir/docker-compose.yml up --build
