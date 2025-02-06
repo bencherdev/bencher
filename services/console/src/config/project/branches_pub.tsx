@@ -1,6 +1,6 @@
 import type { Params } from "astro";
-import { Button, Card, Display } from "../types";
 import { PubResourceKind } from "../../components/perf/util";
+import { Button, Card, Display, ReportDimension } from "../types";
 
 const branchesPubConfig = {
 	resource: PubResourceKind.Branch,
@@ -43,6 +43,10 @@ const branchesPubConfig = {
 				label: "Branch Start Point",
 				keys: ["head", "start_point"],
 				display: Display.START_POINT,
+			},
+			{
+				kind: Card.REPORT_TABLE,
+				dimension: ReportDimension.BRANCH,
 			},
 		],
 	},

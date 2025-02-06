@@ -1,14 +1,22 @@
 import type { Params } from "astro";
-import { validResourceName, validSlug } from "../../util/valid";
-import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import { parentPath, addPath, viewSlugPath, createdSlugPath } from "../util";
-import type { JsonTestbed } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
+import type { JsonTestbed } from "../../types/bencher";
 import {
 	isAllowedProjectCreate,
 	isAllowedProjectDelete,
 	isAllowedProjectEdit,
 } from "../../util/auth";
+import { validResourceName, validSlug } from "../../util/valid";
+import {
+	ActionButton,
+	Button,
+	Card,
+	Display,
+	Operation,
+	ReportDimension,
+	Row,
+} from "../types";
+import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 
 export const TESTBED_ICON = "fas fa-server";
 
@@ -165,6 +173,10 @@ const testbedsConfig = {
 					label: "Testbed UUID",
 					key: "uuid",
 					display: Display.RAW,
+				},
+				{
+					kind: Card.REPORT_TABLE,
+					dimension: ReportDimension.TESTBED,
 				},
 			],
 			buttons: [

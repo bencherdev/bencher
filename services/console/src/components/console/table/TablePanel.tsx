@@ -162,13 +162,7 @@ const TablePanel = (props: Props) => {
 		)}?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
-				setState(
-					resp?.data.length === 0
-						? page() === 1
-							? TableState.EMPTY
-							: TableState.END
-						: TableState.OK,
-				);
+				setState(resp?.data.length === 0 ? TableState.EMPTY : TableState.OK);
 				setTotalCount(resp?.headers?.[X_TOTAL_COUNT]);
 				// console.log(resp?.data);
 				return resp?.data;

@@ -147,25 +147,6 @@ const Tab = (props: {
 			</Match>
 			<Match
 				when={
-					!props.loading() &&
-					tabList().length === 0 &&
-					props.page() !== DEFAULT_PAGE
-				}
-			>
-				<div class="box">
-					<div class="columns is-centered">
-						<div class="column is-5">
-							<BackButton
-								tab={props.tab}
-								page={props.page}
-								handlePage={props.handlePage}
-							/>
-						</div>
-					</div>
-				</div>
-			</Match>
-			<Match
-				when={
 					props.tab() === PerfTab.REPORTS &&
 					(props.loading() ||
 						typeof props.reports_start_date() === "string" ||
@@ -288,26 +269,6 @@ const AddButton = (props: {
 		>
 			{getText()}
 		</a>
-	);
-};
-
-const BackButton = (props: {
-	tab: Accessor<PerfTab>;
-	page: Accessor<number>;
-	handlePage: (page: number) => void;
-}) => {
-	return (
-		<button
-			class="button is-primary is-fullwidth"
-			type="button"
-			title="Go back to the previous page"
-			onMouseDown={(e) => {
-				e.preventDefault();
-				props.handlePage(props.page() - 1);
-			}}
-		>
-			That's all the {props.tab()}. Go back.
-		</button>
 	);
 };
 

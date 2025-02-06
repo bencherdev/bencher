@@ -1,14 +1,22 @@
 import type { Params } from "astro";
-import { validBranchName, validSlug } from "../../util/valid";
-import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import { parentPath, addPath, viewSlugPath, createdSlugPath } from "../util";
-import type { JsonBranch } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
+import type { JsonBranch } from "../../types/bencher";
 import {
 	isAllowedProjectCreate,
 	isAllowedProjectDelete,
 	isAllowedProjectEdit,
 } from "../../util/auth";
+import { validBranchName, validSlug } from "../../util/valid";
+import {
+	ActionButton,
+	Button,
+	Card,
+	Display,
+	Operation,
+	ReportDimension,
+	Row,
+} from "../types";
+import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 
 export const BRANCH_ICON = "fas fa-code-branch";
 
@@ -174,6 +182,10 @@ const branchesConfig = {
 					label: "Branch Start Point",
 					keys: ["head", "start_point"],
 					display: Display.START_POINT,
+				},
+				{
+					kind: Card.REPORT_TABLE,
+					dimension: ReportDimension.BRANCH,
 				},
 			],
 			buttons: [

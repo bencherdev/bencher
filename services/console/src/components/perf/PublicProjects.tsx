@@ -1,22 +1,22 @@
+import * as Sentry from "@sentry/astro";
+import { debounce } from "@solid-primitives/scheduled";
 import {
 	type Accessor,
 	For,
+	Match,
+	Switch,
 	createEffect,
 	createMemo,
 	createResource,
-	Switch,
-	Match,
 	createSignal,
 } from "solid-js";
 import type { JsonProject } from "../../types/bencher";
 import { X_TOTAL_COUNT, httpGet } from "../../util/http";
 import { useSearchParams } from "../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../util/valid";
-import Pagination, { PaginationSize } from "../site/Pagination";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
-import { debounce } from "@solid-primitives/scheduled";
-import * as Sentry from "@sentry/astro";
+import Pagination, { PaginationSize } from "../site/Pagination";
 
 // const SORT_PARAM = "sort";
 // const DIRECTION_PARAM = "direction";
@@ -166,11 +166,6 @@ const PublicProjects = (props: Props) => {
 									</For>
 								</Match>
 							</Switch>
-							{!projects.loading && projectsLength() === 0 && page() !== 1 && (
-								<div class="box">
-									<BackButton page={page} handlePage={handlePage} />
-								</div>
-							)}
 							<br />
 						</div>
 					</div>
@@ -185,24 +180,6 @@ const PublicProjects = (props: Props) => {
 				/>
 			</div>
 		</section>
-	);
-};
-
-const BackButton = (props: {
-	page: Accessor<number>;
-	handlePage: (page: number) => void;
-}) => {
-	return (
-		<button
-			class="button is-primary is-fullwidth"
-			type="button"
-			onMouseDown={(e) => {
-				e.preventDefault();
-				props.handlePage(props.page() - 1);
-			}}
-		>
-			That's all the projects. Go back.
-		</button>
 	);
 };
 

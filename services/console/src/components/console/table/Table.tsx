@@ -7,8 +7,6 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { BRANCH_ICON } from "../../../config/project/branches";
-import { TESTBED_ICON } from "../../../config/project/testbeds";
 import { Row } from "../../../config/types";
 import { fmtDateTime } from "../../../config/util";
 import {
@@ -25,8 +23,7 @@ export enum TableState {
 	LOADING = 0,
 	EMPTY = 1,
 	OK = 2,
-	END = 3,
-	ERR = 4,
+	ERR = 3,
 }
 
 export interface Props {
@@ -53,7 +50,6 @@ const Table = (props: Props) => {
 			<Match when={props.state() === TableState.LOADING}>
 				<FallbackTable />
 			</Match>
-
 			<Match when={props.state() === TableState.EMPTY}>
 				<Show
 					when={
@@ -67,7 +63,6 @@ const Table = (props: Props) => {
 					<AddButton config={props.config?.add as AddButtonConfig} />
 				</Show>
 			</Match>
-
 			<Match when={props.state() === TableState.OK}>
 				<For each={props.tableData()}>
 					{(datum, _i) => (
@@ -107,17 +102,6 @@ const Table = (props: Props) => {
 					)}
 				</For>
 			</Match>
-
-			<Match when={props.state() === TableState.END}>
-				<div class="box">
-					<BackButton
-						name={props.config?.name}
-						page={props.page}
-						handlePage={props.handlePage}
-					/>
-				</div>
-			</Match>
-
 			<Match when={props.state() === TableState.ERR}>
 				<LogoutButton />
 			</Match>
@@ -183,25 +167,6 @@ const rowHref = (config: RowsButtonConfig, datum: Record<string, string>) =>
 
 const rowEffect = (config: RowsButtonConfig, datum: Record<string, string>) =>
 	config?.effect?.(datum);
-
-const BackButton = (props: {
-	name: string;
-	page: Accessor<number>;
-	handlePage: (page: number) => void;
-}) => {
-	return (
-		<button
-			class="button is-primary is-fullwidth"
-			type="button"
-			onMouseDown={(e) => {
-				e.preventDefault();
-				props.handlePage(props.page() - 1);
-			}}
-		>
-			That's all the {props.name}. Go back.
-		</button>
-	);
-};
 
 const LogoutButton = () => {
 	return (

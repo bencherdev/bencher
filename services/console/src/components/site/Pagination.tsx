@@ -1,4 +1,4 @@
-import { createMemo, type Accessor } from "solid-js";
+import { type Accessor, createMemo } from "solid-js";
 
 export enum PaginationSize {
 	SMALL = "is-small",
@@ -28,7 +28,7 @@ const Pagination = (props: {
 				class="pagination-previous"
 				type="button"
 				title="Go to previous page"
-				disabled={props.page() < 2}
+				disabled={props.page() <= 1}
 				onMouseDown={(e) => {
 					e.preventDefault();
 					props.handlePage(props.page() - 1);
@@ -122,7 +122,7 @@ const Pagination = (props: {
 				class="pagination-next"
 				type="button"
 				title="Go to next page"
-				disabled={(props.data_len() ?? 0) < props.per_page()}
+				disabled={props.page() >= max_page()}
 				onMouseDown={(e) => {
 					e.preventDefault();
 					props.handlePage(props.page() + 1);

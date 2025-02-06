@@ -1,11 +1,12 @@
+import type { Params } from "astro";
 import { type Accessor, Match, type Resource, Switch } from "solid-js";
-import FieldCard from "./FieldCard";
-import type { JsonAuthUser } from "../../../../../types/bencher";
 import { Card } from "../../../../../config/types";
+import type { JsonAuthUser } from "../../../../../types/bencher";
 import { fmtNestedValue } from "../../../../../util/resource";
 import type CardConfig from "./CardConfig";
-import type { Params } from "astro";
+import FieldCard from "./FieldCard";
 import ReportCard from "./ReportCard";
+import ReportTableCard from "./ReportTableCard";
 
 export interface Props {
 	isConsole: boolean;
@@ -58,6 +59,16 @@ const DeckCard = (props: Props) => {
 						params={props.params}
 						value={props.data}
 						width={props.width}
+					/>
+				</Match>
+				<Match when={props.card?.kind === Card.REPORT_TABLE}>
+					<ReportTableCard
+						isConsole={props.isConsole}
+						apiUrl={props.apiUrl}
+						params={props.params}
+						user={props.user}
+						dimension={props.card?.dimension}
+						value={props.data}
 					/>
 				</Match>
 			</Switch>

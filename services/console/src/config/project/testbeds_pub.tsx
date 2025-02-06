@@ -1,6 +1,6 @@
 import type { Params } from "astro";
-import { Button, Card, Display } from "../types";
 import { PubResourceKind } from "../../components/perf/util";
+import { Button, Card, Display, ReportDimension } from "../types";
 
 const testbedsPubConfig = {
 	resource: PubResourceKind.Testbed,
@@ -35,6 +35,10 @@ const testbedsPubConfig = {
 				label: "Testbed UUID",
 				key: "uuid",
 				display: Display.RAW,
+			},
+			{
+				kind: Card.REPORT_TABLE,
+				dimension: ReportDimension.TESTBED,
 			},
 		],
 	},
