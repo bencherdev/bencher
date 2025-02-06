@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   bencher_api_compose:
     image: ghcr.io/bencherdev/bencher-api:latest
