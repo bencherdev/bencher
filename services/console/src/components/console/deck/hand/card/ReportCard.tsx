@@ -437,7 +437,8 @@ const ReportCard = (props: Props) => {
 																								alert as JsonAlert,
 																							)}
 																						>
-																							view alert ({alertStatus(alert)})
+																							view alert (
+																							{alertStatus(alert as JsonAlert)})
 																						</a>
 																						<br />
 																						{"🚷"}{" "}
@@ -549,8 +550,15 @@ const ValueCell = (props: {
 			<>
 				{prettyPrintFloat(props.value / props.factor)}
 				<Show when={percent !== null}>
-					<br />({percent > 0.0 ? "+" : ""}
-					{prettyPrintFloat(percent)}%)
+					<br />
+					<details>
+						<summary>
+							({(percent as number) > 0.0 ? "+" : ""}
+							{prettyPrintFloat(percent as number)}%)
+						</summary>
+						Baseline:{" "}
+						{prettyPrintFloat((props.baseline as number) / props.factor)}
+					</details>
 				</Show>
 			</>
 		);

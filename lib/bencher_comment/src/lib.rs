@@ -811,7 +811,14 @@ fn value_cell(
             };
             let plus = if percent > 0.0.into() { "+" } else { "" };
             let percent = Units::format_float(percent.into());
-            cell.push_str(&format!("<br />({plus}{percent}%)"));
+            let baseline = Units::format_float((baseline / factor).into());
+            cell.push_str("<br />");
+            cell.push_str("<details>");
+            cell.push_str("<summary>");
+            cell.push_str(&format!("({plus}{percent}%)"));
+            cell.push_str("</summary>");
+            cell.push_str(&format!("Baseline: {baseline}"));
+            cell.push_str("</details>");
         }
 
         cell
