@@ -1,12 +1,15 @@
 import { type Accessor, For, Match, Show, Switch, createMemo } from "solid-js";
-import { ALERT_ICON } from "../../../../../config/project/alerts";
+import {
+	ALERT_ICON,
+	ALERT_OFF_ICON,
+} from "../../../../../config/project/alerts";
 import { BENCHMARK_ICON } from "../../../../../config/project/benchmarks";
 import { BRANCH_ICON } from "../../../../../config/project/branches";
 import { MEASURE_ICON } from "../../../../../config/project/measures";
 import { TESTBED_ICON } from "../../../../../config/project/testbeds";
 import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime, resourcePath } from "../../../../../config/util";
-import type { JsonReport } from "../../../../../types/bencher";
+import { AlertStatus, type JsonReport } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import DateRange from "../../../../field/kinds/DateRange";
 import { type Theme, themeText } from "../../../../navbar/theme/theme";
@@ -14,6 +17,8 @@ import ReportCard, {
 	boundaryLimitsMap,
 } from "../../../deck/hand/card/ReportCard";
 import type { TabElement, TabList } from "./PlotTab";
+
+const ADAPTER_ICON = "fas fa-plug";
 
 const ReportsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -115,8 +120,10 @@ const ReportRow = (props: {
 	handleChecked: (index: number, uuid: string) => void;
 }) => {
 	const report = props.report?.resource as JsonReport;
-	const benchmarkCount = report?.results?.map((iteration) => iteration?.length);
-	const hasBenchmarks = benchmarkCount.length > 0;
+	const hasBenchmarks =
+		report?.results
+			?.map((iteration) => iteration?.length)
+			?.reduce((acc, n) => acc + n, 0) > 0;
 
 	const viewReport = createMemo(() => props.isChecked && hasBenchmarks);
 
@@ -153,53 +160,7 @@ const ReportRow = (props: {
 							</Show>
 						</div>
 						<div class="column">
-							<small style="word-break: break-word;">
-								{fmtDateTime(report?.start_time)}
-							</small>
-							<ReportDimension icon={BRANCH_ICON} name={report?.branch?.name} />
-							<ReportDimension
-								icon={TESTBED_ICON}
-								name={report?.testbed?.name}
-							/>
-							<ReportDimension
-								icon={BENCHMARK_ICON}
-								name={(() => {
-									if (benchmarkCount.length === 0) {
-										return "0 benchmarks";
-									}
-									const plural =
-										benchmarkCount.length > 1 ||
-										benchmarkCount.some((count) => count > 1);
-									return `${benchmarkCount.join(" + ")} benchmark${
-										plural ? "s" : ""
-									}`;
-								})()}
-							/>
-							<ReportDimension
-								icon={MEASURE_ICON}
-								name={(() => {
-									const measureCount = report?.results?.map(
-										(iteration) => boundaryLimitsMap(iteration).size,
-									);
-									if (measureCount.length === 0) {
-										return "0 measures";
-									}
-									const plural =
-										measureCount.length > 1 ||
-										measureCount.some((count) => count > 1);
-									return `${measureCount.join(" + ")} measure${plural ? "s" : ""}`;
-								})()}
-							/>
-							<Show when={report?.alerts?.length > 0}>
-								<ReportDimension
-									icon={ALERT_ICON}
-									iconClass=" has-text-primary"
-									name={(() => {
-										const count = report?.alerts.length;
-										return `${count} alert${count > 0 ? "s" : ""}`;
-									})()}
-								/>
-							</Show>
+							<ReportRowFields report={report} />
 						</div>
 					</div>
 				</a>
@@ -222,6 +183,70 @@ const ReportRow = (props: {
 					width={props.width}
 				/>
 			</Show>
+		</div>
+	);
+};
+
+export const ReportRowFields = (props: { report: JsonReport }) => {
+	const benchmarkCount = props.report?.results?.map(
+		(iteration) => iteration?.length,
+	);
+
+	const totalAlerts = props.report?.alerts?.length;
+	const activeAlerts = props.report?.alerts?.filter(
+		(alert) => alert.status === AlertStatus.Active,
+	).length;
+
+	return (
+		<div>
+			<small style="word-break: break-word;">
+				{fmtDateTime(props.report?.start_time)}
+			</small>
+			<Show when={totalAlerts}>
+				<ReportDimension
+					icon={activeAlerts === 0 ? ALERT_OFF_ICON : ALERT_ICON}
+					iconClass={activeAlerts === 0 ? "" : " has-text-primary"}
+					name={(() => {
+						const active =
+							activeAlerts === 0 || activeAlerts === totalAlerts
+								? ""
+								: ` (${activeAlerts} active | ${totalAlerts - activeAlerts} inactive)`;
+						return `${totalAlerts} ${totalAlerts === 1 ? "alert" : "alerts"}${active}`;
+					})()}
+				/>
+			</Show>
+			<ReportDimension icon={BRANCH_ICON} name={props.report?.branch?.name} />
+			<ReportDimension icon={TESTBED_ICON} name={props.report?.testbed?.name} />
+			<ReportDimension
+				icon={BENCHMARK_ICON}
+				name={(() => {
+					if (benchmarkCount.length === 0) {
+						return "0 benchmarks";
+					}
+					const plural =
+						benchmarkCount.length > 1 ||
+						benchmarkCount.some((count) => count > 1);
+					return `${benchmarkCount.join(" + ")} benchmark${plural ? "s" : ""}`;
+				})()}
+			/>
+			<ReportDimension
+				icon={MEASURE_ICON}
+				name={(() => {
+					const measureCount = props.report?.results?.map(
+						(iteration) => boundaryLimitsMap(iteration).size,
+					);
+					if (measureCount.length === 0) {
+						return "0 measures";
+					}
+					const plural =
+						measureCount.length > 1 || measureCount.some((count) => count > 1);
+					return `${measureCount.join(" + ")} measure${plural ? "s" : ""}`;
+				})()}
+			/>
+			<ReportDimension
+				icon={ADAPTER_ICON}
+				name={props.report?.adapter ?? "Mystery"}
+			/>
 		</div>
 	);
 };

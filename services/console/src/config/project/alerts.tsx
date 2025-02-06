@@ -5,6 +5,7 @@ import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 
 export const ALERT_ICON = "fas fa-bell";
+export const ALERT_OFF_ICON = "far fa-bell-slash";
 
 const alertsConfig = {
 	[Operation.LIST]: {

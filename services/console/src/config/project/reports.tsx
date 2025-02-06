@@ -1,7 +1,7 @@
 import type { Params } from "astro";
+import { isAllowedProjectDelete } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
-import { isAllowedProjectDelete } from "../../util/auth";
 
 const reportsConfig = {
 	[Operation.LIST]: {
@@ -32,23 +32,7 @@ const reportsConfig = {
 				text: "Track Your Benchmarks",
 			},
 			row: {
-				key: "start_time",
-				kind: Row.DATE_TIME,
-				items: [
-					{
-						kind: Row.TEXT,
-						key: "adapter",
-					},
-					{},
-					{
-						kind: Row.NESTED_TEXT,
-						keys: ["branch", "name"],
-					},
-					{
-						kind: Row.NESTED_TEXT,
-						keys: ["testbed", "name"],
-					},
-				],
+				kind: Row.REPORT,
 				button: {
 					text: "View",
 					path: viewUuidPath,

@@ -127,6 +127,7 @@ export enum Row {
 	BOOL = "bool",
 	SELECT = "select",
 	NESTED_TEXT = "nested_text",
+	REPORT = "report",
 }
 
 export enum Card {

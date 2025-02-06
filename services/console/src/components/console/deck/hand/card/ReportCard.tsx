@@ -60,6 +60,15 @@ const ReportCard = (props: Props) => {
 		props.value()?.alerts?.some((alert) => alert.limit === BoundaryLimit.Upper),
 	);
 
+	const alertsCount = createMemo(() => props.value()?.alerts?.length ?? 0);
+	const activeAlertsCount = createMemo(
+		() =>
+			props
+				.value()
+				?.alerts?.filter((alert) => alert.status === AlertStatus.Active)
+				.length ?? 0,
+	);
+
 	return (
 		<div class="columns is-centered" style="margin-top: 1rem">
 			<div class="column is-12">
@@ -106,11 +115,16 @@ const ReportCard = (props: Props) => {
 							</a>
 						</p>
 					</Show>
-					<Show when={(props.value()?.alerts?.length ?? 0) > 0}>
+					<Show when={alertsCount() > 0}>
 						<h3 class="title is-3">
-							🚨 {props.value()?.alerts?.length}{" "}
-							{props.value()?.alerts?.length === 1 ? "Alert" : "Alerts"}
+							🚨 {alertsCount()} {alertsCount() === 1 ? "Alert" : "Alerts"}
 						</h3>
+						<Show when={activeAlertsCount() !== alertsCount()}>
+							<h4 class="subtitle is-4">
+								🔔 {activeAlertsCount()} | 🔕{" "}
+								{alertsCount() - activeAlertsCount()}
+							</h4>
+						</Show>
 						<div
 							class="table-container"
 							style={`max-width: ${props.width()}px;`}

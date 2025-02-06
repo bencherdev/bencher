@@ -4,14 +4,21 @@ import {
 	For,
 	Match,
 	type Resource,
-	Switch,
 	Show,
+	Switch,
 } from "solid-js";
+import { BRANCH_ICON } from "../../../config/project/branches";
+import { TESTBED_ICON } from "../../../config/project/testbeds";
 import { Row } from "../../../config/types";
 import { fmtDateTime } from "../../../config/util";
-import { AlertStatus, type Slug } from "../../../types/bencher";
+import {
+	AlertStatus,
+	type JsonReport,
+	type Slug,
+} from "../../../types/bencher";
 import { fmtValues } from "../../../util/resource";
 import { BACK_PARAM, encodePath, pathname } from "../../../util/url";
+import { ReportRowFields } from "../perf/plot/tab/ReportsTab";
 import FallbackTable from "./FallbackTable";
 
 export enum TableState {
@@ -91,6 +98,9 @@ const Table = (props: Props) => {
 										</span>
 										<span>{rowText(props.config?.row, datum)}</span>
 									</span>
+								</Match>
+								<Match when={props.config?.row?.kind === Row.REPORT}>
+									<ReportRowFields report={datum as JsonReport} />
 								</Match>
 							</Switch>
 						</a>
