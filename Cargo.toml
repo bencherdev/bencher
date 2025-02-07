@@ -11,7 +11,7 @@ exclude = ["services/benchers", "services/cargo-bencher"]
 resolver = "2"
 
 [workspace.package]
-license = "(Apache-2.0 OR MIT) AND LicenseRef-Bencher-Plus"
+license = "LicenseRef-Bencher-Plus"
 version = "0.4.34"
 authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2021"
