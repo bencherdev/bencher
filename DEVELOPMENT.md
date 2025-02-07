@@ -1,9 +1,11 @@
 ## Getting Started
 
-In order to get started with the project, you will need to have the following
-prerequisites installed on your machine.
+This document provides instructions for setting up the Bencher development environment.
 
 ### Prerequisites
+
+In order to get started with the project, you will need to have the following
+prerequisites installed on your machine.
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Rust](https://www.rust-lang.org/tools/install)
