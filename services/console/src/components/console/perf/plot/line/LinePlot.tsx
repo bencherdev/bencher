@@ -490,10 +490,15 @@ const get_scale = (
 	const factor = scale_factor(min, raw_units);
 	const units = scale_units(min, raw_units);
 
-	const domain = [min / factor, max / factor];
-	// Use pow scaling to allow users to more easily reason on graphs with highly differentiated values
+	// Use pow scaling to allow users to more easily reason on graphs with
+	// highly differentiated values. If the min is less than 1,000 times
+	// smaller than max use a linear scale pow(1), or else use a square root
+	// scale pow(.5).
+	//
 	// See: https://observablehq.com/plot/features/scales#continuous-scales
-	const yScale = d3.scalePow().exponent(0.5).domain(domain).nice();
+	const exponent = (max / min) < 1000 ? 1 : 0.5;
+	const domain = [min / factor, max / factor];
+	const yScale = d3.scalePow().exponent(exponent).domain(domain).nice();
 
 	return {
 		measure,
