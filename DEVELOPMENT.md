@@ -9,7 +9,7 @@ prerequisites installed on your machine.
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Rust](https://www.rust-lang.org/tools/install)
-- [Node.js](https://nodejs.org/en/)
+- [Node.js](https://nodejs.org/)
 - [typeshare](https://crates.io/crates/typeshare)
 - [wasm-pack](https://crates.io/crates/wasm-pack)
 
