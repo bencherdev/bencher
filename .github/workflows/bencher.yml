@@ -905,6 +905,8 @@ jobs:
         run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
       - name: Rebase main on cloud
         run: |
+            git config --global user.name "Bencher"
+            git config --global user.email "git@bencher.dev"
             git fetch origin cloud
             git checkout cloud
             git pull
