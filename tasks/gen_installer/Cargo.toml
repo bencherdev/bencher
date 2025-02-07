@@ -1,5 +1,6 @@
 [package]
 name = "gen_installer"
+license.workspace = true
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
