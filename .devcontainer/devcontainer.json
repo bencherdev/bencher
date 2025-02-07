@@ -6,7 +6,7 @@
             "MOLD_DEFAULT": "true",
             "RUST_VERSION": "1.82.0",
             "LITESTREAM_VERSION": "0.3.13",
-            "LITESTREAM_ARCH": "amd64"
+            "LITESTREAM_ARCH": "${localEnv:ARCH:amd64}"
         }
     },
     "postCreateCommand": "./.devcontainer/scripts/setup.sh",
@@ -22,6 +22,13 @@
         61016
     ],
     "customizations": {
+        "jetbrains": {
+            "settings": {
+                "com.intellij:app:HttpConfigurable.use_proxy_pac": true,
+                "com.intellij:app:BaseRefactoringSettings.safe_delete_when_delete": false,
+                "com.intellij:app:BaseRefactoringSettings.move_search_for_references_for_file": false
+            }
+        },
         "vscode": {
             "extensions": [
                 "astro-build.astro-vscode",
