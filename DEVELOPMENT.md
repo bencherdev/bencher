@@ -8,6 +8,8 @@ prerequisites installed on your machine.
 - [Docker](https://docs.docker.com/get-docker/)
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Node.js](https://nodejs.org/en/)
+- [typeshare](https://crates.io/crates/typeshare)
+- [wasm-pack](https://crates.io/crates/wasm-pack)
 
 ### Installation
 
@@ -16,35 +18,49 @@ prerequisites installed on your machine.
    ```shell
    git clone git@github.com:bencherdev/bencher.git
     ```
-3. Checkout the `develop` branch
+3. Checkout the `devel` branch
    ```shell
    git checkout devel
    ```
-4. Build and run the project
+4. Build the project
+    ```shell
+    cargo build
+    ```
+5. Run the API service
    ```shell
-   docker/run.sh
+   cd services/api
+   cargo run
    ```
-   or run directly with docker compose using the following command:
+6. Run the Console
+    ```shell
+    cd services/console
+    npm run dev
+    ```
+7. Configure the CLI environment
+   ```shell
+   cd ./services/cli 
+   . ./env.sh
+   ```
 
-   **X64**
-   ```shell
-   ARCH=amd64 docker compose up --file docker/docker-compose.yml --build
-   ```
-    **ARM64**
-   ```shell
-   ARCH=arm64 docker compose up --file docker/docker-compose.yml --build
-   ```
-### Accessing the application
+### Accessing the Console
 
 Once the application is running, you can access it by visiting
 [http://localhost:3000](http://localhost:3000) in your browser.
 
 1. Sign up for an account by entering your name and email address.
-2. Click on the "Confirm Email" link that is provided in the docker compose logs.
+2. Click on the "Confirm Email" link that is provided in the API logs.
 
 ### Accessing the API
 
 The API is accessible at [http://localhost:61016](http://localhost:61016).
+
+### Seeding the Database
+
+To seed the database with sample data, run the following command:
+
+```shell
+cargo test-api seed
+```
 
 ### Accessing the Database
 
@@ -349,3 +365,25 @@ erDiagram
     plot ||--o{ plot_benchmark : "uses"
     plot ||--o{ plot_measure : "uses"
 ```
+
+### Testing with Docker
+
+To test the application using Docker, follow these steps:
+
+1. Build and run the project
+   ```shell
+   docker/run.sh
+   ```
+   or run directly with docker compose using the following command:
+
+   **X64**
+   ```shell
+   ARCH=amd64 docker compose up --file docker/docker-compose.yml --build
+   ```
+   **ARM64**
+   ```shell
+   ARCH=arm64 docker compose up --file docker/docker-compose.yml --build
+   ```
+2. Open the console in your browser [http://localhost:3000](http://localhost:3000).
+3. Sign up for an account by entering your name and email address.
+4. Click on the "Confirm Email" link that is provided in the docker compose logs.
