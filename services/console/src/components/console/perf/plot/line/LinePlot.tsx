@@ -439,7 +439,7 @@ type Scale = {
 	measure: JsonMeasure;
 	factor: number;
 	units: string;
-	yScale: d3.ScaleLinear<number, number, never>;
+	yScale: d3.ScalePower<number, number, never>;
 };
 
 const scale_data = (
@@ -491,7 +491,9 @@ const get_scale = (
 	const units = scale_units(min, raw_units);
 
 	const domain = [min / factor, max / factor];
-	const yScale = d3.scaleLinear().domain(domain).nice();
+	// Use pow scaling to allow users to more easily reason on graphs with highly differentiated values
+	// See: https://observablehq.com/plot/features/scales#continuous-scales
+	const yScale = d3.scalePow().exponent(0.5).domain(domain).nice();
 
 	return {
 		measure,
