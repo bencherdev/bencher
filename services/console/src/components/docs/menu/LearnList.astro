@@ -22,6 +22,12 @@ const benchmarkingPythonCollection = await getLangCollection(
 const benchmarkingRustCollection = await getLangCollection(
 	Collection.benchmarking_rust,
 );
+const trackInCiCppCollection = await getLangCollection(
+  Collection.track_in_ci_cpp,
+);
+const trackInCiPythonCollection = await getLangCollection(
+  Collection.track_in_ci_python,
+);
 const trackInCiRustCollection = await getLangCollection(
 	Collection.track_in_ci_rust,
 );
@@ -55,6 +61,16 @@ const { lang } = Astro.props;
   {
     label: trackInCi(lang),
     sections: [
+      {
+        section: "C++",
+        collection: Collection.track_in_ci_cpp,
+        content: trackInCiCppCollection,
+      },
+      {
+        section: "Python",
+        collection: Collection.track_in_ci_python,
+        content: trackInCiPythonCollection,
+      },
       {
         section: "Rust",
         collection: Collection.track_in_ci_rust,

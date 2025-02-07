@@ -1,0 +1,33 @@
+---
+title: "pytest-benchmark"
+description: "在CI中跟踪Python pytest-benchmark基准测试的分步指南"
+heading: "如何在CI中跟踪Python pytest-benchmark基准测试"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci/zh/intro.mdx";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/zh/steps.mdx";
+import PythonPytest from "../../../chunks/docs-explanation/adapters/zh/python-pytest.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="如何使用pytest-benchmark对Python代码进行基准测试"
+  url="/zh/learn/benchmarking/python/pytest-benchmark/"
+  name="pytest-benchmark"
+/>
+
+## 什么是Bencher？
+
+<BencherIntro />
+
+<Steps
+  adapter="python_pytest"
+  url="/zh/docs/explanation/adapters/#-python-pytest"
+/>
+
+<PythonPytest />
+
+<CallToAction lang={Language.zh} />

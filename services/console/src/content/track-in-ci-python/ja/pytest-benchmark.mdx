@@ -1,0 +1,33 @@
+---
+title: "pytest-benchmark"
+description: "CIでのPython pytest-benchmarkベンチマークを追跡するためのステップバイステップガイド"
+heading: "CIでのPython pytest-benchmarkベンチマークを追跡する方法"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci/ja/intro.mdx";
+import BencherIntro from "../../../chunks/general/ja/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ja/steps.mdx";
+import PythonPytest from "../../../chunks/docs-explanation/adapters/ja/python-pytest.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="pytest-benchmarkでPythonコードをベンチマークする方法"
+  url="/ja/learn/benchmarking/python/pytest-benchmark/"
+  name="pytest-benchmark"
+/>
+
+## Bencherとは何ですか？
+
+<BencherIntro />
+
+<Steps
+  adapter="python_pytest"
+  url="/ja/docs/explanation/adapters/#-python-pytest"
+/>
+
+<PythonPytest />
+
+<CallToAction lang={Language.ja} />

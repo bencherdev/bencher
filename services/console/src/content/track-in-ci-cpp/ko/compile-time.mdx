@@ -1,0 +1,35 @@
+---
+title: "컴파일 시간"
+description: "CI에서 C++ 컴파일 시간을 추적하는 단계별 가이드"
+heading: "CI에서 C++ 컴파일 시간을 추적하는 방법"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 2
+---
+
+import Intro from "../../../chunks/track-in-ci/ko/compile-time-intro.mdx";
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ko/compile-time-steps.mdx";
+import BuildTimeInner from "../../../chunks/docs-explanation/adapters/ko/build-time-inner.mdx";
+import CppBuild from "../../../chunks/track-in-ci-cpp/cpp-build-time.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="C++"
+/>
+
+## 벤처(Bencher)란 무엇인가?
+
+<BencherIntro />
+
+<Steps
+  lang="C++"
+  flagUrl="/ko/docs/explanation/adapters/#%EF%B8%8F-build-time"
+  adapterUrl="/ko/docs/explanation/adapters/#-json"
+/>
+
+<BuildTimeInner>
+  <CppBuild />
+</BuildTimeInner>
+
+<CallToAction lang={Language.ko} />

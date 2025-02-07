@@ -7,11 +7,12 @@ modified: "2024-11-21T07:17:00Z"
 sortOrder: 3
 ---
 
-import Intro from "../../../chunks/track-in-ci-rust/en/intro.mdx";
+import Intro from "../../../chunks/track-in-ci/en/intro.mdx";
 import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
-import Steps from "../../../chunks/track-in-ci-rust/en/steps.mdx";
+import Steps from "../../../chunks/track-in-ci/en/steps.mdx";
 import RustIai from "../../../chunks/docs-explanation/adapters/en/rust-iai.mdx";
 import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
 
 <Intro
   text="how to benchmark Rust code with Iai"
@@ -30,4 +31,4 @@ import CallToAction from "../../../components/landing/CallToAction.astro";
 
 <RustIai />
 
-<CallToAction />
+<CallToAction lang={Language.en} />

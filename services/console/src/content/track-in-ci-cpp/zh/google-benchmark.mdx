@@ -1,0 +1,33 @@
+---
+title: "Google 基准"
+description: "如何在 CI 中跟踪 Google Benchmark C++ 基准的分步指南"
+heading: "如何在 CI 中跟踪 Google Benchmark C++ 基准"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci/zh/intro.mdx";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/zh/steps.mdx";
+import GoogleBenchmark from "../../../chunks/docs-explanation/adapters/zh/cpp-google.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="如何使用 Google Benchmark 对 C++ 代码进行基准测试"
+  url="/zh/learn/benchmarking/cpp/google-benchmark/"
+  name="Google Benchmark"
+/>
+
+## 什么是 Bencher？
+
+<BencherIntro />
+
+<Steps
+  adapter="cpp_google"
+  url="/zh/docs/explanation/adapters/#-c-google"
+/>
+
+<GoogleBenchmark />
+
+<CallToAction lang={Language.zh} />

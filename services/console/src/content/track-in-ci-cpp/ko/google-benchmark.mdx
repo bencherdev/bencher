@@ -1,0 +1,33 @@
+---
+title: "구글 벤치마크"
+description: "CI에서 Google Benchmark C++ 벤치마크를 추적하는 단계별 가이드"
+heading: "CI에서 Google Benchmark C++ 벤치마크를 추적하는 방법"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci/ko/intro.mdx";
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ko/steps.mdx";
+import GoogleBenchmark from "../../../chunks/docs-explanation/adapters/ko/cpp-google.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="Google Benchmark로 C++ 코드를 벤치마크하는 방법"
+  url="/ko/learn/benchmarking/cpp/google-benchmark/"
+  name="Google Benchmark"
+/>
+
+## Bencher란 무엇인가요?
+
+<BencherIntro />
+
+<Steps
+  adapter="cpp_google"
+  url="/ko/docs/explanation/adapters/#-c-google"
+/>
+
+<GoogleBenchmark />
+
+<CallToAction lang={Language.ko} />

@@ -1,0 +1,35 @@
+---
+title: "Temps de Compilation"
+description: "Un guide étape par étape pour suivre les temps de compilation Python avec PyInstaller dans CI"
+heading: "Comment suivre les temps de compilation Python avec PyInstaller dans CI"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 2
+---
+
+import Intro from "../../../chunks/track-in-ci/fr/compile-time-intro.mdx";
+import BencherIntro from "../../../chunks/general/fr/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/fr/compile-time-steps.mdx";
+import BuildTimeInner from "../../../chunks/docs-explanation/adapters/fr/build-time-inner.mdx";
+import PythonBuild from "../../../chunks/track-in-ci-python/python-build-time.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="Python avec PyInstaller"
+/>
+
+## Qu'est-ce que Bencher ?
+
+<BencherIntro />
+
+<Steps
+  lang="Python"
+  flagUrl="/fr/docs/explanation/adapters/#%EF%B8%8F-build-time"
+  adapterUrl="/fr/docs/explanation/adapters/#-json"
+/>
+
+<BuildTimeInner>
+  <PythonBuild />
+</BuildTimeInner>
+
+<CallToAction lang={Language.fr} />

@@ -1,0 +1,35 @@
+---
+title: "Tamaño del Binario"
+description: "Una guía paso a paso sobre cómo rastrear los tamaños de binarios de Python con PyInstaller en CI"
+heading: "Cómo rastrear los tamaños de binarios de Python con PyInstaller en CI"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci/es/binary-size-intro.mdx";
+import BencherIntro from "../../../chunks/general/es/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/es/binary-size-steps.mdx";
+import FileSizeInner from "../../../chunks/docs-explanation/adapters/es/file-size-inner.mdx";
+import PythonBuild from "../../../chunks/track-in-ci-python/python-file-size.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="Python con PyInstaller"
+/>
+
+## ¿Qué es Bencher?
+
+<BencherIntro />
+
+<Steps
+  lang="Python"
+  optionUrl="/es/docs/explanation/adapters/#%EF%B8%8F-file-size"
+  adapterUrl="/es/docs/explanation/adapters/#-json"
+/>
+
+<FileSizeInner>
+  <PythonBuild />
+</FileSizeInner>
+
+<CallToAction lang={Language.es} />

@@ -1,0 +1,35 @@
+---
+title: "バイナリサイズ"
+description: "CIでC++バイナリサイズを追跡するためのステップバイステップガイド"
+heading: "CIでC++バイナリサイズを追跡する方法"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci/ja/binary-size-intro.mdx";
+import BencherIntro from "../../../chunks/general/ja/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ja/binary-size-steps.mdx";
+import FileSizeInner from "../../../chunks/docs-explanation/adapters/ja/file-size-inner.mdx";
+import CppBuild from "../../../chunks/track-in-ci-cpp/cpp-file-size.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="C++"
+/>
+
+## Bencherとは何ですか？
+
+<BencherIntro />
+
+<Steps
+  lang="C++"
+  optionUrl="/ja/docs/explanation/adapters/#%EF%B8%8F-file-size"
+  adapterUrl="/ja/docs/explanation/adapters/#-json"
+/>
+
+<FileSizeInner>
+  <CppBuild />
+</FileSizeInner>
+
+<CallToAction lang={Language.ja} />

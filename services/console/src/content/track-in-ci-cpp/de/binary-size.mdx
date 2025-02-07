@@ -1,0 +1,35 @@
+---
+title: "Binärgröße"
+description: "Eine Schritt-für-Schritt-Anleitung, wie man C++ Binärgrößen in CI verfolgt"
+heading: "Wie man C++ Binärgrößen in CI verfolgt"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci/de/binary-size-intro.mdx";
+import BencherIntro from "../../../chunks/general/de/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/de/binary-size-steps.mdx";
+import FileSizeInner from "../../../chunks/docs-explanation/adapters/de/file-size-inner.mdx";
+import CppBuild from "../../../chunks/track-in-ci-cpp/cpp-file-size.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="C++"
+/>
+
+## Was ist Bencher?
+
+<BencherIntro />
+
+<Steps
+  lang="C++"
+  optionUrl="/de/docs/explanation/adapters/#%EF%B8%8F-file-size"
+  adapterUrl="/de/docs/explanation/adapters/#-json"
+/>
+
+<FileSizeInner>
+  <CppBuild />
+</FileSizeInner>
+
+<CallToAction lang={Language.de} />

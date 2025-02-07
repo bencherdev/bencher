@@ -1,0 +1,35 @@
+---
+title: "编译时间"
+description: "逐步指南：如何在 CI 中追踪使用 PyInstaller 的 Python 编译时间"
+heading: "如何在 CI 中追踪使用 PyInstaller 的 Python 编译时间"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 2
+---
+
+import Intro from "../../../chunks/track-in-ci/zh/compile-time-intro.mdx";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/zh/compile-time-steps.mdx";
+import BuildTimeInner from "../../../chunks/docs-explanation/adapters/zh/build-time-inner.mdx";
+import PythonBuild from "../../../chunks/track-in-ci-python/python-build-time.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="Python with PyInstaller"
+/>
+
+## 什么是 Bencher？
+
+<BencherIntro />
+
+<Steps
+  lang="Python"
+  flagUrl="/zh/docs/explanation/adapters/#%EF%B8%8F-build-time"
+  adapterUrl="/zh/docs/explanation/adapters/#-json"
+/>
+
+<BuildTimeInner>
+  <PythonBuild />
+</BuildTimeInner>
+
+<CallToAction lang={Language.zh} />

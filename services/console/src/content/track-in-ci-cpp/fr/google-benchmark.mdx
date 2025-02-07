@@ -1,0 +1,33 @@
+---
+title: "Google Benchmark"
+description: "Un guide étape par étape pour suivre les benchmarks C++ de Google Benchmark dans CI"
+heading: "Comment suivre les benchmarks C++ de Google Benchmark dans CI"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci/fr/intro.mdx";
+import BencherIntro from "../../../chunks/general/fr/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/fr/steps.mdx";
+import GoogleBenchmark from "../../../chunks/docs-explanation/adapters/fr/cpp-google.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="comment benchmarker du code C++ avec Google Benchmark"
+  url="/fr/learn/benchmarking/cpp/google-benchmark/"
+  name="Google Benchmark"
+/>
+
+## Qu'est-ce que Bencher ?
+
+<BencherIntro />
+
+<Steps
+  adapter="cpp_google"
+  url="/fr/docs/explanation/adapters/#-c-google"
+/>
+
+<GoogleBenchmark />
+
+<CallToAction lang={Language.fr} />

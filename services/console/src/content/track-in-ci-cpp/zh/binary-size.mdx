@@ -1,0 +1,35 @@
+---
+title: "二进制大小"
+description: "在 CI 中跟踪 C++ 二进制文件大小的分步指南"
+heading: "如何在 CI 中跟踪 C++ 二进制文件大小"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci/zh/binary-size-intro.mdx";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/zh/binary-size-steps.mdx";
+import FileSizeInner from "../../../chunks/docs-explanation/adapters/zh/file-size-inner.mdx";
+import CppBuild from "../../../chunks/track-in-ci-cpp/cpp-file-size.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="C++"
+/>
+
+## 什么是 Bencher？
+
+<BencherIntro />
+
+<Steps
+  lang="C++"
+  optionUrl="/zh/docs/explanation/adapters/#%EF%B8%8F-file-size"
+  adapterUrl="/zh/docs/explanation/adapters/#-json"
+/>
+
+<FileSizeInner>
+  <CppBuild />
+</FileSizeInner>
+
+<CallToAction lang={Language.zh} />

@@ -1,0 +1,33 @@
+---
+title: "pytest-benchmark"
+description: "CI에서 Python pytest-benchmark 벤치마크를 추적하는 단계별 가이드"
+heading: "CI에서 Python pytest-benchmark 벤치마크를 추적하는 방법"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci/ko/intro.mdx";
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ko/steps.mdx";
+import PythonPytest from "../../../chunks/docs-explanation/adapters/ko/python-pytest.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="pytest-benchmark를 사용하여 Python 코드를 벤치마크하는 방법"
+  url="/ko/learn/benchmarking/python/pytest-benchmark/"
+  name="pytest-benchmark"
+/>
+
+## Bencher란 무엇인가요?
+
+<BencherIntro />
+
+<Steps
+  adapter="python_pytest"
+  url="/ko/docs/explanation/adapters/#-python-pytest"
+/>
+
+<PythonPytest />
+
+<CallToAction lang={Language.ko} />

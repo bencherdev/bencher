@@ -1,0 +1,33 @@
+---
+title: "pytest-benchmark"
+description: "Пошаговое руководство по тому, как отслеживать бенчмарки pytest-benchmark в CI"
+heading: "Как отслеживать бенчмарки pytest-benchmark в CI"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 1
+---
+
+import Intro from "../../../chunks/track-in-ci/ru/intro.mdx";
+import BencherIntro from "../../../chunks/general/ru/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ru/steps.mdx";
+import PythonPytest from "../../../chunks/docs-explanation/adapters/ru/python-pytest.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="как протестировать код Python с помощью pytest-benchmark"
+  url="/ru/learn/benchmarking/python/pytest-benchmark/"
+  name="pytest-benchmark"
+/>
+
+## Что такое Bencher?
+
+<BencherIntro />
+
+<Steps
+  adapter="python_pytest"
+  url="/ru/docs/explanation/adapters/#-python-pytest"
+/>
+
+<PythonPytest />
+
+<CallToAction lang={Language.ru} />

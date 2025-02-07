@@ -6,12 +6,13 @@ published: "2024-11-21T07:12:00Z"
 sortOrder: 4
 ---
 
-import Intro from "../../../chunks/track-in-ci-rust/en/intro.mdx";
+import Intro from "../../../chunks/track-in-ci/en/intro.mdx";
 import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
-import Steps from "../../../chunks/track-in-ci-rust/en/steps.mdx";
+import Steps from "../../../chunks/track-in-ci/en/steps.mdx";
 import JsonInner from "../../../chunks/docs-explanation/adapters/en/json-inner.mdx";
 import CargoBench from "../../../chunks/track-in-ci-rust/cargo-bench-custom.mdx";
 import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
 
 <Intro
   text="how to build a custom benchmarking harness in Rust"
@@ -32,4 +33,4 @@ import CallToAction from "../../../components/landing/CallToAction.astro";
   <CargoBench />
 </JsonInner>
 
-<CallToAction />
+<CallToAction lang={Language.en} />

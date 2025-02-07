@@ -1,0 +1,35 @@
+---
+title: "바이너리 크기"
+description: "CI에서 PyInstaller 바이너리 크기를 추적하는 단계별 가이드"
+heading: "CI에서 PyInstaller로 Python 바이너리 크기 추적하는 방법"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci/ko/binary-size-intro.mdx";
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ko/binary-size-steps.mdx";
+import FileSizeInner from "../../../chunks/docs-explanation/adapters/ko/file-size-inner.mdx";
+import PythonBuild from "../../../chunks/track-in-ci-python/python-file-size.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="Python with PyInstaller"
+/>
+
+## 벤처(Bencher)란 무엇인가?
+
+<BencherIntro />
+
+<Steps
+  lang="Python"
+  optionUrl="/ko/docs/explanation/adapters/#%EF%B8%8F-file-size"
+  adapterUrl="/ko/docs/explanation/adapters/#-json"
+/>
+
+<FileSizeInner>
+  <PythonBuild />
+</FileSizeInner>
+
+<CallToAction lang={Language.ko} />

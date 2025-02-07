@@ -6,11 +6,12 @@ published: "2024-11-09T19:15:00Z"
 sortOrder: 2
 ---
 
-import Intro from "../../../chunks/track-in-ci-rust/en/intro.mdx";
+import Intro from "../../../chunks/track-in-ci/en/intro.mdx";
 import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
-import Steps from "../../../chunks/track-in-ci-rust/en/steps.mdx";
+import Steps from "../../../chunks/track-in-ci/en/steps.mdx";
 import RustCriterion from "../../../chunks/docs-explanation/adapters/en/rust-criterion.mdx";
 import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
 
 <Intro
   text="how to benchmark Rust code with Criterion"
@@ -29,4 +30,4 @@ import CallToAction from "../../../components/landing/CallToAction.astro";
 
 <RustCriterion />
 
-<CallToAction />
+<CallToAction lang={Language.en} />

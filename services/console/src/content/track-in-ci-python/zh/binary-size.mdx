@@ -1,0 +1,35 @@
+---
+title: "二进制大小"
+description: "有关如何在CI中跟踪Python与PyInstaller二进制大小的分步指南"
+heading: "如何在CI中跟踪Python与PyInstaller二进制大小"
+published: "2025-02-07T07:15:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci/zh/binary-size-intro.mdx";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/zh/binary-size-steps.mdx";
+import FileSizeInner from "../../../chunks/docs-explanation/adapters/zh/file-size-inner.mdx";
+import PythonBuild from "../../../chunks/track-in-ci-python/python-file-size.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  lang="Python with PyInstaller"
+/>
+
+## 什么是Bencher？
+
+<BencherIntro />
+
+<Steps
+  lang="Python"
+  optionUrl="/zh/docs/explanation/adapters/#%EF%B8%8F-file-size"
+  adapterUrl="/zh/docs/explanation/adapters/#-json"
+/>
+
+<FileSizeInner>
+  <PythonBuild />
+</FileSizeInner>
+
+<CallToAction lang={Language.zh} />
