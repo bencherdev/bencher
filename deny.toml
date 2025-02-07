@@ -26,12 +26,12 @@ ignore = [
 [licenses]
 allow = [
     "Apache-2.0",
-    "LicenseRef-Bencher-Plus",
     "BSD-2-Clause",
     "BSD-3-Clause",
     "BSL-1.0",
     "CC0-1.0",
     "ISC",
+    "LicenseRef-Bencher-Plus",
     "MIT",
     "MPL-2.0",
     "OpenSSL",
