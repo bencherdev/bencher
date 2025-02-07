@@ -4,5 +4,6 @@ Disallow: /console/
 Disallow: /chat$
 Disallow: /demo$
 Disallow: /repo$
+Disallow: /perf/*/*
 
 Sitemap: https://bencher.dev/sitemap-index.xml
