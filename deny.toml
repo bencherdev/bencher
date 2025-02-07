@@ -31,7 +31,7 @@ allow = [
     "BSL-1.0",
     "CC0-1.0",
     "ISC",
-    "LicenseRef-Bencher-Plus",
+    "LicenseRef-Bencher",
     "MIT",
     "MPL-2.0",
     "OpenSSL",
