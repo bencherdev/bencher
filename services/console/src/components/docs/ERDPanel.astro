@@ -1,0 +1,296 @@
+<pre class="mermaid">
+erDiagram
+alert &#123;
+    id INTEGER
+    uuid TEXT
+    boundary_id INTEGER
+    boundary_limit BOOLEAN
+    status INTEGER
+    modified BIGINT
+}
+benchmark &#123;
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    name TEXT
+    slug TEXT
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+boundary &#123;
+    id INTEGER
+    uuid TEXT
+    metric_id INTEGER
+    threshold_id INTEGER
+    model_id BOOLEAN
+    baseline DOUBLE
+    lower_limit DOUBLE
+    upper_limit DOUBLE
+}
+branch &#123;
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    name TEXT
+    slug TEXT
+    head_id INTEGER
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+head &#123;
+    id INTEGER
+    uuid TEXT
+    branch_id INTEGER
+    start_point_id INTEGER
+    created BIGINT
+    replaced BIGINT
+}
+head_version &#123;
+    id INTEGER
+    head_id INTEGER
+    version_id INTEGER
+}
+measure &#123;
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    name TEXT
+    slug TEXT
+    unites TEXT
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+metric &#123;
+    id INTEGER
+    uuid TEXT
+    report_benchmark_id INTEGER
+    measure_id INTEGER
+    value DOUBLE
+    lower_value DOUBLE
+    upper_value DOUBLE
+}
+model &#123;
+    id INTEGER
+    uuid TEXT
+    threshold_id INTEGER
+    test INTEGER
+    min_sample_size BIGINT
+    max_sample_size BIGINT
+    window BIGINT
+    lower_boundary DOUBLE
+    upper_boundary DOUBLE
+    created BIGINT
+    replaced BIGINT
+}
+organization &#123;
+    id INTEGER
+    uuid TEXT
+    name TEXT
+    slug TEXT
+    license TEXT
+    created BIGINT
+    modified BIGINT
+}
+organization_role &#123;
+    id INTEGER
+    user_id INTEGER
+    organization_id INTEGER
+    role TEXT
+    created BIGINT
+    modified BIGINT
+}
+plan &#123;
+    id INTEGER
+    organization_id INTEGER
+    metered_plan TEXT
+    licensed_plan TEXT
+    license TEXT
+    created BIGINT
+    modified BIGINT
+}
+plot &#123;
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    rank BIGINT
+    title TEXT
+    lower_value BOOLEAN
+    upper_value BOOLEAN
+    lower_boundary BOOLEAN
+    upper_boundary BOOLEAN
+    x_axis INTEGER
+    window BIGINT
+    created BIGINT
+    modified BIGINT
+}
+plot_benchmark &#123;
+    plot_id INTEGER
+    benchmark_id INTEGER
+    rank BIGINT
+}
+plot_branch &#123;
+    plot_id INTEGER
+    branch_id INTEGER
+    rank BIGINT
+}
+plot_measure &#123;
+    plot_id INTEGER
+    measure_id INTEGER
+    rank BIGINT
+}
+plot_testbed &#123;
+    plot_id INTEGER
+    testbed_id INTEGER
+    rank BIGINT
+}
+project &#123;
+    id INTEGER
+    uuid TEXT
+    organization_id INTEGER
+    name TEXT
+    slug TEXT
+    url TEXT
+    visibility INTEGER
+    created BIGINT
+    modified BIGINT
+}
+project_role &#123;
+    id INTEGER
+    user_id INTEGER
+    project_id INTEGER
+    role TEXT
+    created BIGINT
+    modified BIGINT
+}
+report &#123;
+    id INTEGER
+    uuid TEXT
+    user_id INTEGER
+    project_id INTEGER
+    head_id INTEGER
+    version_id INTEGER
+    testbed_id INTEGER
+    adapter INTEGER
+    start_time BIGINT
+    end_time BIGINT
+    created BIGINT
+}
+report_benchmark &#123;
+    id INTEGER
+    uuid TEXT
+    report_id INTEGER
+    iteration INTEGER
+    benchmark_id INTEGER
+}
+server &#123;
+    id INTEGER
+    uuid TEXT
+    created BIGINT
+}
+testbed &#123;
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    name TEXT
+    slug TEXT
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+threshold &#123;
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    branch_id INTEGER
+    testbed_id INTEGER
+    measure_id INTEGER
+    model_id INTEGER
+    created BIGINT
+    modified BIGINT
+}
+token &#123;
+    id INTEGER
+    uuid TEXT
+    user_id INTEGER
+    name TEXT
+    jwt TEXT
+    creation BIGINT
+    expiration BIGINT
+}
+user &#123;
+    id INTEGER
+    uuid TEXT
+    name TEXT
+    slug TEXT
+    email TEXT
+    admin BOOLEAN
+    locked BOOLEAN
+    created BIGINT
+    modified BIGINT
+}
+version &#123;
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    number INTEGER
+    hash TEXT
+}
+
+user ||--o&#123; token : "has"
+user ||--o&#123; organization_role : "has"
+user ||--o&#123; project_role : "has"
+user ||--o&#123; report : "writes"
+
+organization ||--o&#123; organization_role : "assigns"
+organization ||--o&#123; project : "owns"
+organization ||--o&#123; plan : "has"
+
+project ||--o&#123; project_role : "assigns"
+project ||--o&#123; version : "has"
+project ||--o&#123; threshold : "has"
+project ||--o&#123; testbed : "has"
+project ||--o&#123; benchmark : "has"
+project ||--o&#123; measure : "has"
+project ||--o&#123; branch : "has"
+project ||--o&#123; plot : "has"
+
+threshold ||--o&#123; model : "uses"
+threshold ||--o&#123; metric : "relates"
+
+benchmark ||--o&#123; plot_benchmark : "part of"
+
+measure ||--o&#123; plot_measure : "visualized"
+measure ||--o&#123; metric : "measured"
+measure ||--o&#123; threshold : "used"
+
+testbed ||--o&#123; plot_testbed : "analyzed"
+testbed ||--o&#123; report : "used in"
+
+branch ||--o&#123; plot_branch : "analyzed"
+branch ||--o&#123; head : "tracks"
+
+head ||--o&#123; head_version : "links"
+head_version ||--o&#123; version : "includes"
+
+report ||--o&#123; metric : "generates"
+report ||--o&#123; plot : "visualizes"
+report ||--o&#123; version : "reports on"
+report ||--o&#123; testbed : "runs on"
+
+alert ||--o&#123; metric : "monitors"
+metric ||--o&#123; report_benchmark : "derived from"
+
+server ||--o&#123; report : "hosts"
+
+plot ||--o&#123; plot_branch : "uses"
+plot ||--o&#123; plot_testbed : "uses"
+plot ||--o&#123; plot_benchmark : "uses"
+plot ||--o&#123; plot_measure : "uses"
+</pre>
+<script>
+import mermaid from "mermaid";
+mermaid.initialize({ startOnLoad: true });
+</script>
