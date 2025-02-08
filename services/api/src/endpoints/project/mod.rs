@@ -8,5 +8,6 @@ pub mod perf;
 pub mod plots;
 pub mod projects;
 pub mod reports;
+pub mod run;
 pub mod testbeds;
 pub mod thresholds;

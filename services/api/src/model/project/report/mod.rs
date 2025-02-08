@@ -9,21 +9,26 @@ use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use dropshot::HttpError;
+use http::StatusCode;
+use results::ReportResults;
 use slog::Logger;
 
+#[cfg(feature = "plus")]
+use crate::model::organization::plan::PlanKind;
 use crate::{
     conn_lock,
     context::ApiContext,
-    error::resource_not_found_err,
+    error::{issue_error, resource_conflict_err, resource_not_found_err},
     model::{
         project::{
             benchmark::QueryBenchmark,
+            branch::version::QueryVersion,
             measure::QueryMeasure,
             testbed::{QueryTestbed, TestbedId},
             threshold::{alert::QueryAlert, model::QueryModel, QueryThreshold},
             ProjectId, QueryProject,
         },
-        user::{QueryUser, UserId},
+        user::{auth::AuthUser, QueryUser, UserId},
     },
     schema::{self, report as report_table},
     util::fn_get::{fn_get_id, fn_get_uuid},
@@ -34,7 +39,7 @@ use super::{
     branch::{head::HeadId, version::VersionId, QueryBranch},
     metric::QueryMetric,
     metric_boundary::QueryMetricBoundary,
-    threshold::boundary::QueryBoundary,
+    threshold::{boundary::QueryBoundary, InsertThreshold},
 };
 
 pub mod report_benchmark;
@@ -62,6 +67,124 @@ pub struct QueryReport {
 impl QueryReport {
     fn_get_id!(report, ReportId, ReportUuid);
     fn_get_uuid!(report, ReportId, ReportUuid);
+
+    pub async fn create(
+        log: &Logger,
+        context: &ApiContext,
+        query_project: &QueryProject,
+        mut json_report: JsonNewReport,
+        auth_user: &AuthUser,
+    ) -> Result<JsonReport, HttpError> {
+        let project_id = query_project.id;
+
+        // Get or create the branch and testbed
+        let (branch_id, head_id) = QueryBranch::get_or_create(
+            log,
+            context,
+            project_id,
+            &json_report.branch,
+            json_report.start_point.as_ref(),
+        )
+        .await?;
+        let testbed_id =
+            QueryTestbed::get_or_create(context, project_id, &json_report.testbed).await?;
+
+        // Insert the thresholds for the report
+        InsertThreshold::from_report_json(
+            log,
+            context,
+            project_id,
+            branch_id,
+            testbed_id,
+            json_report.thresholds.take(),
+        )
+        .await?;
+
+        // Check to see if the project is public or private
+        // If private, then validate that there is an active subscription or license
+        #[cfg(feature = "plus")]
+        let plan_kind = PlanKind::new_for_project(
+            conn_lock!(context),
+            context.biller.as_ref(),
+            &context.licensor,
+            query_project,
+        )
+        .await?;
+
+        // If there is a hash then try to see if there is already a code version for
+        // this branch with that particular hash.
+        // Otherwise, create a new code version for this branch with/without the hash.
+        let version_id = QueryVersion::get_or_increment(
+            conn_lock!(context),
+            project_id,
+            head_id,
+            json_report.hash.as_ref(),
+        )?;
+
+        let json_settings = json_report.settings.take().unwrap_or_default();
+        let adapter = json_settings.adapter.unwrap_or_default();
+
+        // Create a new report and add it to the database
+        let insert_report = InsertReport::from_json(
+            auth_user.id(),
+            project_id,
+            head_id,
+            version_id,
+            testbed_id,
+            &json_report,
+            adapter,
+        );
+
+        diesel::insert_into(schema::report::table)
+            .values(&insert_report)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Report, insert_report))?;
+
+        let query_report = schema::report::table
+        .filter(schema::report::uuid.eq(&insert_report.uuid))
+        .first::<QueryReport>(conn_lock!(context))
+        .map_err(|e| {
+            issue_error(
+                StatusCode::NOT_FOUND,
+                "Failed to find new report that was just created",
+                &format!("Failed to find new report ({insert_report:?}) in project ({project_id}) on Bencher even though it was just created."),
+                e,
+            )
+        })?;
+
+        #[cfg(feature = "plus")]
+        let mut usage = 0;
+
+        // Process and record the report results
+        let mut report_results =
+            ReportResults::new(project_id, branch_id, head_id, testbed_id, query_report.id);
+        let results_array = json_report
+            .results
+            .iter()
+            .map(AsRef::as_ref)
+            .collect::<Vec<&str>>();
+        let processed_report = report_results
+            .process(
+                log,
+                context,
+                &results_array,
+                adapter,
+                json_settings,
+                #[cfg(feature = "plus")]
+                &mut usage,
+            )
+            .await;
+
+        #[cfg(feature = "plus")]
+        plan_kind
+            .check_usage(context.biller.as_ref(), &query_project, usage)
+            .await?;
+
+        // Don't return the error from processing the report until after the metrics usage has been checked
+        processed_report?;
+        // If the report was processed successfully, then return the report with the results
+        query_report.into_json(log, context).await
+    }
 
     pub async fn into_json(
         self,
