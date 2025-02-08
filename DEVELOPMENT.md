@@ -13,6 +13,10 @@ prerequisites installed on your machine.
 - [typeshare](https://crates.io/crates/typeshare)
 - [wasm-pack](https://crates.io/crates/wasm-pack)
 
+  ```shell
+  curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+  ```
+
 ### Installation
 
 1. Fork the repository (optional)
