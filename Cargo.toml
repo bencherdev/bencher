@@ -11,6 +11,7 @@ exclude = ["services/benchers", "services/cargo-bencher"]
 resolver = "2"
 
 [workspace.package]
+license = "LicenseRef-Bencher"
 version = "0.4.34"
 authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2021"

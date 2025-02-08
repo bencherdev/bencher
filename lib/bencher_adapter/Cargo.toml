@@ -1,5 +1,6 @@
 [package]
 name = "bencher_adapter"
+license.workspace = true
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
