@@ -11,6 +11,11 @@ prerequisites installed on your machine.
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Node.js](https://nodejs.org/)
 - [typeshare](https://crates.io/crates/typeshare)
+
+    ```shell
+    cargo install typeshare-cli --version 1.13.2 --locked
+    ```
+
 - [wasm-pack](https://crates.io/crates/wasm-pack)
 
   ```shell
