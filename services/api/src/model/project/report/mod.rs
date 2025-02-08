@@ -177,7 +177,7 @@ impl QueryReport {
 
         #[cfg(feature = "plus")]
         plan_kind
-            .check_usage(context.biller.as_ref(), &query_project, usage)
+            .check_usage(context.biller.as_ref(), query_project, usage)
             .await?;
 
         // Don't return the error from processing the report until after the metrics usage has been checked

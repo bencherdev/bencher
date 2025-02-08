@@ -5,6 +5,7 @@ use dropshot::{ApiDescription, ApiDescriptionRegisterError};
 pub mod endpoint;
 pub mod organization;
 pub mod project;
+pub mod run;
 pub mod system;
 pub mod user;
 
@@ -26,6 +27,12 @@ impl Api {
             api.register(system::root::server_root_options)?;
         }
         api.register(system::root::server_root_get)?;
+
+        // Run
+        if http_options {
+            api.register(run::run::run_options)?;
+        }
+        api.register(run::run::run_post)?;
 
         // Auth
         if http_options {
