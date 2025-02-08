@@ -193,6 +193,29 @@ export const architecture = (lang: Language) => {
 	}
 };
 
+export const schema = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Schema";
+		case Language.de:
+			return "Schema";
+		case Language.es:
+			return "Esquema";
+		case Language.fr:
+			return "Schéma";
+		case Language.ja:
+			return "スキーマ";
+		case Language.ko:
+			return "스키마";
+		case Language.pt:
+			return "Esquema";
+		case Language.ru:
+			return "Схема";
+		case Language.zh:
+			return "模式";
+	}
+};
+
 export const benchmarking = (lang: Language) => {
 	switch (lang) {
 		case Language.en:

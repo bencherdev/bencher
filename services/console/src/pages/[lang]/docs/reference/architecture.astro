@@ -1,6 +1,5 @@
 ---
 import ArchitecturePanel from "../../../../components/docs/ArchitecturePanel.astro";
-import ERDPanel from "../../../../components/docs/ERDPanel.astro";
 import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
 import { Language, architecture, otherLanguages } from "../../../../i18n/ui";
 import Collection from "../../../../util/collection";
@@ -68,5 +67,4 @@ const modified = "2024-02-06T07:56:00Z";
 <DocsLayout title={architecture(lang)} description={description()} heading={heading()} published={published} modified={modified} lang={lang} collection={collection}
 slug="architecture" canonical="https://bencher.dev/docs/reference/architecture/">
   <ArchitecturePanel />
-  <ERDPanel />
 </DocsLayout>

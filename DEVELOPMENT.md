@@ -75,8 +75,9 @@ sqlite3 services/api/data/bencher.db
 
 #### Architecture and Entity Relationship Diagram
 
-For information on the architecture and entity relationship diagram, see
-[Architecture](https://bencher.dev/docs/reference/architecture/).
+For additional development references, see the
+[Architecture](https://bencher.dev/docs/reference/architecture/) and
+[Schema](https://bencher.dev/docs/reference/schema/) documents.
 
 ### Testing with Docker
 

@@ -1,0 +1,70 @@
+---
+import SchemaPanel from "../../../../components/docs/SchemaPanel.astro";
+import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
+import { Language, schema, otherLanguages } from "../../../../i18n/ui";
+import Collection from "../../../../util/collection";
+
+const collection = Collection.reference;
+
+export async function getStaticPaths() {
+	return otherLanguages.map((lang) => {
+		return { params: { lang } };
+	});
+}
+
+const { lang } = Astro.params;
+
+const description = () => {
+	switch (lang) {
+		case Language.en:
+			return "Diagram of the Bencher Schema";
+		case Language.de:
+			return "Diagramm des Bencher-Schemas";
+		case Language.es:
+			return "Diagrama del esquema de Bencher";
+		case Language.fr:
+			return "Diagramme du schéma Bencher";
+		case Language.ja:
+			return "Bencherスキーマの図";
+		case Language.ko:
+			return "Bencher 스키마 다이어그램";
+		case Language.pt:
+			return "Diagrama do esquema Bencher";
+		case Language.ru:
+			return "Диаграмма схемы Bencher";
+		case Language.zh:
+			return "Bencher架构图";
+	}
+};
+
+const heading = () => {
+	switch (lang) {
+		case Language.en:
+			return "Bencher Schema";
+		case Language.de:
+			return "Bencher-Schema";
+		case Language.es:
+			return "Esquema de Bencher";
+		case Language.fr:
+			return "Schéma Bencher";
+		case Language.ja:
+			return "Bencherスキーマ";
+		case Language.ko:
+			return "Bencher 스키마";
+		case Language.pt:
+			return "Esquema Bencher";
+		case Language.ru:
+			return "Схема Bencher";
+		case Language.zh:
+			return "Bencher架构";
+	}
+};
+
+const published = "2023-09-26T10:25:00Z";
+const modified = "2024-02-06T07:56:00Z";
+---
+
+<DocsLayout title={schema(lang)} description={description()} heading={heading()} published={published} modified={modified} lang={lang} collection={collection}
+slug="schema" canonical="https://bencher.dev/docs/reference/schema/">
+  <SchemaPanel />
+</DocsLayout>

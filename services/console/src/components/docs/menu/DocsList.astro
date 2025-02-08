@@ -1,6 +1,7 @@
 ---
 import {
 	architecture,
+    schema,
 	explanation,
 	howTo,
 	reference,
@@ -54,6 +55,9 @@ const { lang } = Astro.props;
       </li>
       <li>
         <a href={`/${langPath(lang)}docs/reference/architecture/`}>{architecture(lang)}</a>
+      </li>
+      <li>
+        <a href={`/${langPath(lang)}docs/reference/schema/`}>{schema(lang)}</a>
       </li>
     ),
   }
