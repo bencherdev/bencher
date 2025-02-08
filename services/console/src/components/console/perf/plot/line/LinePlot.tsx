@@ -492,7 +492,7 @@ const get_scale = (
 
 	// Use pow scaling to allow users to more easily reason on graphs with
 	// highly differentiated values. If the min is less than 10 times smaller
-	// than max use a linear scale.
+	// than the max, use a linear scale.
 	//
 	// See: https://observablehq.com/plot/features/scales#continuous-scales
 	const relativeDifference = max / min;
