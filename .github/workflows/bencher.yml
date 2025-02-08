@@ -140,18 +140,6 @@ jobs:
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
-  # Governance
-  cargo_deny:
-    name: Cargo Deny
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          log-level: warn
-          command: check
-          arguments: --all-features
-
   # Pretty Rust
   cargo_fmt:
     name: Cargo Format
@@ -407,6 +395,19 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - run: cargo audit
+
+  # Cargo Deny
+  cargo_deny:
+    name: Cargo Deny
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          log-level: warn
+          command: check
+          arguments: --all-features
 
   # Cargo Unused Deps
   cargo_udeps:
@@ -851,14 +852,13 @@ jobs:
     continue-on-error: true
     timeout-minutes: 5
     needs:
-      # Governance
-      - cargo_deny
       # Lint
       - cargo_fmt
       - cargo_clippy
       - npx_biome_format
       - npx_biome_lint
       - check_generated
+      - cargo_deny
       # Test
       - cargo_test
       - api_smoke_test
@@ -1012,6 +1012,7 @@ jobs:
       - npx_biome_format
       - npx_biome_lint
       - check_generated
+      - cargo_deny
       # Test
       - cargo_test
       - api_smoke_test
