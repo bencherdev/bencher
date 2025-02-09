@@ -196,23 +196,23 @@ export const architecture = (lang: Language) => {
 export const schema = (lang: Language) => {
 	switch (lang) {
 		case Language.en:
-			return "Schema";
+			return "Database Schema";
 		case Language.de:
-			return "Schema";
+			return "Datenbankschema";
 		case Language.es:
-			return "Esquema";
+			return "Esquema de base de datos";
 		case Language.fr:
-			return "Schéma";
+			return "Schéma de base de données";
 		case Language.ja:
-			return "スキーマ";
+			return "データベーススキーマ";
 		case Language.ko:
-			return "스키마";
+			return "데이터베이스 스키마";
 		case Language.pt:
-			return "Esquema";
+			return "Esquema de Banco de Dados";
 		case Language.ru:
-			return "Схема";
+			return "Схема базы данных";
 		case Language.zh:
-			return "模式";
+			return "数据库架构";
 	}
 };
 

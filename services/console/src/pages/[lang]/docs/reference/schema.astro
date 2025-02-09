@@ -4,7 +4,7 @@ import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
 import { Language, schema, otherLanguages } from "../../../../i18n/ui";
 import Collection from "../../../../util/collection";
 
-const collection = Collection.reference;
+const collection = Collection.docs_reference;
 
 export async function getStaticPaths() {
 	return otherLanguages.map((lang) => {
@@ -17,51 +17,51 @@ const { lang } = Astro.params;
 const description = () => {
 	switch (lang) {
 		case Language.en:
-			return "Diagram of the Bencher Schema";
+			return "Bencher Database Schema Diagram";
 		case Language.de:
 			return "Diagramm des Bencher-Schemas";
 		case Language.es:
 			return "Diagrama del esquema de Bencher";
 		case Language.fr:
-			return "Diagramme du schéma Bencher";
+			return "Schéma Bencher Diagram";
 		case Language.ja:
-			return "Bencherスキーマの図";
+			return "Bencherスキーマ図";
 		case Language.ko:
 			return "Bencher 스키마 다이어그램";
 		case Language.pt:
-			return "Diagrama do esquema Bencher";
+			return "Diagrama de esquema Bencher";
 		case Language.ru:
-			return "Диаграмма схемы Bencher";
+			return "Схема Bencher Диаграмма";
 		case Language.zh:
-			return "Bencher架构图";
+			return "Bencher数据库架构图";
 	}
 };
 
 const heading = () => {
 	switch (lang) {
 		case Language.en:
-			return "Bencher Schema";
+			return "Bencher Database Schema";
 		case Language.de:
 			return "Bencher-Schema";
 		case Language.es:
-			return "Esquema de Bencher";
+			return "Esquema de base de datos Bencher";
 		case Language.fr:
-			return "Schéma Bencher";
+			return "Schéma de base de données Bencher";
 		case Language.ja:
-			return "Bencherスキーマ";
+			return "Bencherデータベーススキーマ";
 		case Language.ko:
-			return "Bencher 스키마";
+			return "Bencher 데이터베이스 스키마";
 		case Language.pt:
-			return "Esquema Bencher";
+			return "Esquema de banco de dados Bencher";
 		case Language.ru:
-			return "Схема Bencher";
+			return "Схема базы данных Bencher";
 		case Language.zh:
-			return "Bencher架构";
+			return "Bencher数据库架构";
 	}
 };
 
 const published = "2023-09-26T10:25:00Z";
-const modified = "2024-02-06T07:56:00Z";
+const modified = "2025-02-09T08:30:00Z";
 ---
 
 <DocsLayout title={schema(lang)} description={description()} heading={heading()} published={published} modified={modified} lang={lang} collection={collection}

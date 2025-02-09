@@ -185,11 +185,6 @@ report_benchmark &#123;
     iteration INTEGER
     benchmark_id INTEGER
 }
-server &#123;
-    id INTEGER
-    uuid TEXT
-    created BIGINT
-}
 testbed &#123;
     id INTEGER
     uuid TEXT
@@ -259,6 +254,8 @@ project ||--o&#123; plot : "has"
 
 threshold ||--o&#123; model : "uses"
 threshold ||--o&#123; metric : "relates"
+threshold ||--o&#123; boundary : "has"
+model ||--o&#123; boundary : "has"
 
 benchmark ||--o&#123; plot_benchmark : "part of"
 
@@ -282,8 +279,7 @@ report ||--o&#123; testbed : "runs on"
 
 alert ||--o&#123; metric : "monitors"
 metric ||--o&#123; report_benchmark : "derived from"
-
-server ||--o&#123; report : "hosts"
+metric ||--o&#123; boundary : "has"
 
 plot ||--o&#123; plot_branch : "uses"
 plot ||--o&#123; plot_testbed : "uses"
