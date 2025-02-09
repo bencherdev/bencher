@@ -174,7 +174,7 @@ jobs:
       - name: Run clippy
         run: cargo clippy --no-deps --all-features -- -Dwarnings
 
-  check_generated:
+  check_generated_openapi:
     name: Check Generated
     runs-on: ubuntu-22.04
     steps:
@@ -186,12 +186,6 @@ jobs:
         run: cargo gen-spec
       - name: Check OpenAPI Spec for changes
         run: git diff --exit-code
-      - name: Generate Typescript Types
-        run: |
-          cargo install typeshare-cli --version 1.13.2 --locked
-          cargo gen-ts
-      - name: Check Typescript Types for changes
-        run: git diff --exit-code
       - name: Generate Unix CLI install scripts
         run: cargo gen-installer sh
       - name: Check Unix CLI install script for changes
@@ -199,6 +193,21 @@ jobs:
       - name: Generate Windows CLI install scripts
         run: cargo gen-installer ps1
       - name: Check Windows CLI install script for changes
+        run: git diff --exit-code
+
+  check_generated_types:
+    name: Check Generated
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Generate Typescript Types
+        run: |
+          cargo install typeshare-cli --version 1.13.2 --locked
+          cargo gen-ts
+      - name: Check Typescript Types for changes
         run: git diff --exit-code
 
   # Cargo Test
@@ -863,7 +872,8 @@ jobs:
       - cargo_clippy
       - npx_biome_format
       - npx_biome_lint
-      - check_generated
+      - check_generated_openapi
+      - check_generated_types
       - cargo_deny
       # Test
       - cargo_test
@@ -1017,7 +1027,8 @@ jobs:
       - cargo_clippy
       - npx_biome_format
       - npx_biome_lint
-      - check_generated
+      - check_generated_openapi
+      - check_generated_types
       - cargo_deny
       # Test
       - cargo_test
