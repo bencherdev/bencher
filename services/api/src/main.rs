@@ -1,5 +1,6 @@
 #[cfg(feature = "sentry")]
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use bencher_api::{
     config::{config_tx::ConfigTx, Config},
@@ -13,10 +14,13 @@ use slog::{error, info, Logger};
 #[cfg(feature = "plus")]
 use tokio::process::Command;
 use tokio::{sync, task::JoinHandle};
+use tokio_rustls::rustls::crypto::{aws_lc_rs, CryptoProvider};
 
 #[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
+    #[error("Failed to install default AWS credentials provider: {0:?}")]
+    Rustls(Arc<CryptoProvider>),
     #[error("{0}")]
     Config(bencher_api::config::ConfigError),
     #[cfg(feature = "plus")]
@@ -41,6 +45,13 @@ async fn main() -> Result<(), ApiError> {
         ..Default::default()
     });
     info!(&log, "🐰 Bencher API Server v{API_VERSION}");
+
+    let crypto_provider = aws_lc_rs::default_provider();
+    crypto_provider
+        .install_default()
+        .map_err(ApiError::Rustls)
+        .inspect_err(|e| error!(&log, { e }))?;
+
     if let Err(e) = run(
         &log,
         #[cfg(feature = "sentry")]
