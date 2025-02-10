@@ -14,7 +14,7 @@ use slog::{error, info, Logger};
 #[cfg(feature = "plus")]
 use tokio::process::Command;
 use tokio::{sync, task::JoinHandle};
-use tokio_rustls::rustls::crypto::{aws_lc_rs, CryptoProvider};
+use tokio_rustls::rustls::crypto::{ring, CryptoProvider};
 
 #[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
@@ -46,7 +46,7 @@ async fn main() -> Result<(), ApiError> {
     });
     info!(&log, "🐰 Bencher API Server v{API_VERSION}");
 
-    let crypto_provider = aws_lc_rs::default_provider();
+    let crypto_provider = ring::default_provider();
     crypto_provider
         .install_default()
         .map_err(ApiError::Rustls)

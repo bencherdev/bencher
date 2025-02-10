@@ -3,8 +3,8 @@ name = "bencher_api"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 license-file.workspace = true
+publish = false
 
 [features]
 default = ["plus", "sentry"]
@@ -65,14 +65,7 @@ css-inline = "0.14"
 diesel_migrations = "2.2"
 # https://github.com/stalwartlabs/mail-send/blob/962518a299c5b6da5c44d9f4e090a10d14e8a236/Cargo.toml#L37
 # https://github.com/bencherdev/bencher/issues/525
-mail-send = { version = "0.5", default-features = false, features = [
-    "digest-md5",
-    "cram-md5",
-    "builder",
-    "dkim",
-    "aws_lc_rs",
-    "tls12",
-] }
+mail-send = "0.5"
 paste = "1.0"
 sentry = { version = "0.36", optional = true, default-features = false, features = [
     "reqwest",

@@ -13,23 +13,19 @@ targets = [
     "x86_64-pc-windows-msvc",
     "aarch64-pc-windows-msvc",
 ]
-all-features = true
 
 [advisories]
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 # rustsec advisory exemptions
 ignore = [
+    # https://rustsec.org/advisories/RUSTSEC-2024-0384.html
     "RUSTSEC-2024-0384",
-    "RUSTSEC-2024-0399",
-    "RUSTSEC-2024-0402",
-    "RUSTSEC-2024-0421",
-    "RUSTSEC-2025-0004",
 ]
 
 [bans]
 # Ignores duplicate versions of the same crate.
-# multiple-versions = "allow"
+multiple-versions = "allow"
 # The graph highlighting used when creating dotgraphs for crates
 # with multiple versions
 highlight = "all"
@@ -38,7 +34,7 @@ deny = [
     { crate = "git2", use-instead = "gix" },
     { crate = "openssl", use-instead = "rustls" },
     { crate = "openssl-sys", use-instead = "rustls" },
-    { crate = "ring", use-instead = "aws_lc_rs" },
+    { crate = "aws_lc_rs", use-instead = "ring" },
     "libssh2-sys",
     "serde_yml",
 ]
@@ -50,7 +46,6 @@ confidence-threshold = 0.9
 # See https://spdx.org/licenses/ for list of possible licenses
 # [possible values: any SPDX 3.11 short identifier (+ optional exception)].
 allow = [
-    "LicenseRef-Bencher",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
@@ -60,25 +55,21 @@ allow = [
     "ISC",
     "MIT",
     "MPL-2.0",
-    "OpenSSL",                        # required by aws-lc-sys
-    "Unicode-DFS-2016",
+    "Unicode-3.0",
     "Zlib",
+    "LicenseRef-ring",
 ]
 
-# aws_lc_rs has a rather complicated LICENSE file due to reasons spelled out
+[licenses.private]
+ignore = true
+
+# ring has a rather complicated LICENSE file due to reasons spelled out
 # in said LICENSE file, but is basically OpenSSL for older parts, and ISC
 # for newer parts
 [[licenses.clarify]]
-name = "aws_lc_rs"
-expression = "ISC AND (Apache-2.0 OR ISC)"
-version = "0.16.20"
+name = "ring"
+expression = "LicenseRef-ring"
 license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
-
-# [[licenses.clarify]]
-# name = "encoding_rs"
-# version = "*"
-# expression = "(Apache-2.0 OR MIT) AND BSD-3-Clause"
-# license-files = [{ path = "COPYRIGHT", hash = 0x39f8ad31 }]
 
 [sources]
 # Lint level for what to happen when a crate from a crate registry that is not

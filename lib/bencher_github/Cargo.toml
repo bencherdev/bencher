@@ -3,8 +3,8 @@ name = "bencher_github"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 license-file.workspace = true
+publish = false
 
 [dependencies]
 bencher_valid.workspace = true

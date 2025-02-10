@@ -3,7 +3,6 @@ name = "gen_installer"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 license-file.workspace = true
 publish = false
 

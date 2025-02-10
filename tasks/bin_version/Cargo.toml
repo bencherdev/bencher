@@ -3,7 +3,6 @@ name = "bin_version"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 license-file.workspace = true
 publish = false
 
