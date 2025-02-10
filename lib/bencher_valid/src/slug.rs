@@ -116,11 +116,11 @@ impl Slug {
         use rand::Rng;
 
         const CHARSET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyz";
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         (0..Self::RAND_LEN)
             .map(|_| {
-                let index = rng.gen_range(0..CHARSET.len());
+                let index = rng.random_range(0..CHARSET.len());
                 if let Some(c) = CHARSET.get(index).copied() {
                     c as char
                 } else {

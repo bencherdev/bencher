@@ -28,7 +28,7 @@ tokio = { workspace = true, features = ["time"] }
 url.workspace = true
 uuid = { workspace = true, features = ["serde", "v4"] }
 # Crate
-bytes = "1.7"
+bytes = "1.10"
 
 [build-dependencies]
 progenitor.workspace = true

@@ -40,6 +40,7 @@ deny = [
     { crate = "openssl-sys", use-instead = "rustls" },
     { crate = "ring", use-instead = "aws_lc_rs" },
     "libssh2-sys",
+    "serde_yml",
 ]
 
 [licenses]

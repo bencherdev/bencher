@@ -13,7 +13,7 @@ serde.workspace = true
 thiserror.workspace = true
 url.workspace = true
 # Crate
-oauth2 = "4.4"
+oauth2 = "5.0"
 
 [lints]
 workspace = true
