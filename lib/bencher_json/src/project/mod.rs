@@ -1,7 +1,9 @@
-use std::{fmt, str::FromStr};
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
 use bencher_valid::{DateTime, ResourceName, Slug, Url};
-use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -291,7 +293,7 @@ mod visibility {
 }
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, derive_more::Display)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectPermission {

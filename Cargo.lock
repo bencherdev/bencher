@@ -876,7 +876,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strip-ansi-escapes",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -902,7 +902,7 @@ dependencies = [
  "bencher_token",
  "chrono",
  "css-inline",
- "derive_more 1.0.0",
+ "derive_more 2.0.1",
  "diesel",
  "diesel_migrations",
  "dropshot",
@@ -923,7 +923,7 @@ dependencies = [
  "serde_yaml",
  "slog",
  "slug",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tokio",
  "tokio-rustls 0.26.1",
  "url",
@@ -940,7 +940,7 @@ dependencies = [
  "literally",
  "pretty_assertions",
  "rand 0.9.0",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tokio",
  "uuid 1.13.1",
 ]
@@ -952,7 +952,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "url",
 ]
 
@@ -966,7 +966,7 @@ dependencies = [
  "pretty_assertions",
  "slog",
  "statrs",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -991,7 +991,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tabled",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tokio",
  "tokio-rustls 0.26.1",
  "url",
@@ -1011,7 +1011,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.98",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tokio",
  "url",
  "uuid 1.13.1",
@@ -1035,7 +1035,7 @@ dependencies = [
  "oauth2",
  "octocrab",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "url",
 ]
 
@@ -1048,7 +1048,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tame-oauth",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tokio",
  "url",
 ]
@@ -1059,7 +1059,7 @@ version = "0.4.35"
 dependencies = [
  "bencher_valid",
  "chrono",
- "derive_more 1.0.0",
+ "derive_more 2.0.1",
  "diesel",
  "ordered-float",
  "percent-encoding",
@@ -1071,7 +1071,7 @@ dependencies = [
  "serde_yaml",
  "slug",
  "tabled",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "typeshare",
  "url",
  "uuid 1.13.1",
@@ -1087,7 +1087,7 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -1109,7 +1109,7 @@ dependencies = [
  "plotters",
  "plotters-bitmap",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -1117,7 +1117,7 @@ name = "bencher_rank"
 version = "0.4.35"
 dependencies = [
  "diesel",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -1138,7 +1138,7 @@ dependencies = [
  "chrono",
  "jsonwebtoken",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "uuid 1.13.1",
 ]
 
@@ -1149,7 +1149,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "console_error_panic_hook",
- "derive_more 1.0.0",
+ "derive_more 2.0.1",
  "diesel",
  "email_address",
  "git-validate",
@@ -1163,7 +1163,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slug",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "typeshare",
  "url",
  "uuid 1.13.1",
@@ -2099,18 +2099,18 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "1.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
+checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
 dependencies = [
  "derive_more-impl",
 ]
 
 [[package]]
 name = "derive_more-impl"
-version = "1.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
+checksum = "bda628edc44c4bb645fbe0f758797143e4e07926f7ebf4e9bdfbd3d2ce621df3"
 dependencies = [
  "proc-macro2",
  "quote",

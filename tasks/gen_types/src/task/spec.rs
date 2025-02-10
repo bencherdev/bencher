@@ -35,6 +35,7 @@ impl Spec {
             true,
         )
         .map_err(|e| anyhow::anyhow!("Failed to register API: {e}"))?;
+        let api_version = API_VERSION.parse()?;
         let mut spec_file = fs::File::create(SPEC_PATH)?;
 
         api_description.tag_config(TagConfig {
@@ -59,7 +60,7 @@ impl Spec {
                 "tokens" => TagDetails { description: Some("API Tokens".into()), external_docs: None},
                 "server" => TagDetails { description: Some("Server".into()), external_docs: None},
         }})
-            .openapi(bencher_api::config::API_NAME, API_VERSION)
+            .openapi(bencher_api::config::API_NAME, api_version)
             .write(&mut spec_file)
             ?;
 

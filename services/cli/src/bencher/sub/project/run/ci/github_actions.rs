@@ -42,8 +42,8 @@ pub enum GitHubError {
     )]
     NoEventPath,
     #[error(
-        "Failed to read GitHub Action event path ({0}): {1}\n{}",
-        docker_mount(GITHUB_EVENT_PATH)
+        "Failed to read GitHub Action event path ({0}): {1}\n{mount}",
+        mount = docker_mount(GITHUB_EVENT_PATH)
     )]
     BadEventPath(String, std::io::Error),
     #[error("Failed to parse GitHub Action event ({0}): {1}\n")]

@@ -1,6 +1,8 @@
-use std::{fmt, str::FromStr};
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
-use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -12,7 +14,7 @@ use uuid::Uuid;
 use crate::{non_empty::is_valid_non_empty, NonEmpty, Slug, ValidError};
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, derive_more::Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct NameId(String);
 
