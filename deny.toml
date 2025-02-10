@@ -28,6 +28,8 @@ ignore = [
 ]
 
 [bans]
+# Ignores duplicate versions of the same crate.
+# multiple-versions = "allow"
 # The graph highlighting used when creating dotgraphs for crates
 # with multiple versions
 highlight = "all"

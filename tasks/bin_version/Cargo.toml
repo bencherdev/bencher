@@ -1,9 +1,10 @@
 [package]
 name = "bin_version"
-license.workspace = true
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+license.workspace = true
+license-file.workspace = true
 publish = false
 
 [lints]
