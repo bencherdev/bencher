@@ -50,7 +50,7 @@ async fn main() -> Result<(), ApiError> {
     crypto_provider
         .install_default()
         .map_err(ApiError::Rustls)
-        .inspect_err(|e| error!(&log, { e }))?;
+        .inspect_err(|e| error!(&log, "{e}"))?;
 
     if let Err(e) = run(
         &log,
