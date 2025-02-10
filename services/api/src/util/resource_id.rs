@@ -16,7 +16,6 @@ macro_rules! fn_eq_resource_id {
             Ok(
                 match resource_id.try_into().map_err(|e| {
                     crate::error::issue_error(
-                        http::StatusCode::INTERNAL_SERVER_ERROR,
                         "Failed to parse resource ID",
                         "Failed to parse resource ID.",
                         e,

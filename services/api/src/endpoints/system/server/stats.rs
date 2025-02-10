@@ -2,7 +2,6 @@
 
 use bencher_json::JsonServerStats;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use http::StatusCode;
 use slog::Logger;
 
 use crate::{
@@ -95,7 +94,6 @@ async fn post_inner(
     let server_stats = serde_json::to_string_pretty(&json_server_stats).map_err(|e| {
         slog::error!(log, "Failed to serialize stats: {e}");
         issue_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to serialize stats",
             &format!("Failed to serialize stats: {json_server_stats:?}"),
             e,

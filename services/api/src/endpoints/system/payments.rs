@@ -6,7 +6,6 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use http::StatusCode;
 
 use crate::{
     conn_lock,
@@ -82,7 +81,6 @@ async fn post_inner(
     Ok(JsonPayment {
         customer: customer_id.as_ref().parse().map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to parse customer ID",
                 &format!("Failed to parse customer ID ({customer_id})."),
                 e,
@@ -90,7 +88,6 @@ async fn post_inner(
         })?,
         payment_method: payment_method_id.as_ref().parse().map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to parse payment method ID",
                 &format!("Failed to parse payment method ID ({payment_method_id})."),
                 e,
@@ -184,7 +181,6 @@ async fn checkouts_post_inner(
         )
         .await.map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create checkout session",
                 &format!("Failed to create checkout session for {customer:?} at {level:?} using {price_name} with {entitlements:?}."),
                 e,

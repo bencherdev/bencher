@@ -8,7 +8,6 @@ use bencher_json::{
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -97,7 +96,6 @@ async fn get_one_inner(
         Ok(json_plan)
     } else {
         Err(issue_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to find subscription for plan",
         &format!(
             "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
@@ -174,7 +172,6 @@ async fn post_inner(
             .await
             .map_err(|e| {
                 issue_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to get checkout session",
                     &format!("Failed to get checkout session {checkout}.",),
                     e,
@@ -183,7 +180,6 @@ async fn post_inner(
     } else {
         checkout.as_ref().parse().map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to parse subscription ID",
                 &format!("Failed to parse subscription ID {checkout}.",),
                 e,
@@ -211,7 +207,6 @@ async fn post_inner(
             .to_licensed_plan(biller, &context.licensor, query_organization.uuid).await?
             .ok_or_else(|| {
                 issue_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to find licensed plan after creating it",
                 &format!("Failed to find licensed plan for organization ({query_organization:?}) after creating it even though plan exists."),
                 "Failed to find licensed plan after creating it"
@@ -229,7 +224,6 @@ async fn post_inner(
             .to_metered_plan(biller).await?
             .ok_or_else(|| {
                 issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to find metered plan after creating it",
             &format!("Failed to find metered plan for organization ({query_organization:?}) after creating it even though plan exists."),
           "Failed to find metered plan after creating it"
@@ -343,7 +337,6 @@ async fn delete_plan(
         }
     } else {
         return Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to find subscription for plan deletion",
             &format!(
                 "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."

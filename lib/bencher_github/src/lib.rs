@@ -2,8 +2,8 @@ use std::sync::LazyLock;
 
 use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
-    basic::BasicClient, reqwest::AsyncHttpClientError, AuthUrl, AuthorizationCode, ClientId,
-    ClientSecret, TokenResponse, TokenUrl,
+    basic::BasicClient, reqwest, AuthUrl, AuthorizationCode, ClientId, ClientSecret,
+    EndpointNotSet, EndpointSet, TokenResponse, TokenUrl,
 };
 use octocrab::Octocrab;
 use serde::Deserialize;
@@ -22,16 +22,19 @@ static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
 
 #[derive(Debug, Clone)]
 pub struct GitHub {
-    oauth2_client: BasicClient,
+    oauth2_client:
+        BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>,
 }
 
 #[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
 pub enum GitHubError {
+    #[error("Failed to create a reqwest client: {0}")]
+    Reqwest(reqwest::Error),
     #[error("Failed to exchange code for access token: {0}")]
     Exchange(
         oauth2::RequestTokenError<
-            AsyncHttpClientError,
+            oauth2::HttpClientError<reqwest::Error>,
             oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,
         >,
     ),
@@ -54,22 +57,25 @@ impl GitHub {
         let client_id = ClientId::new(client_id.into());
         let client_secret = ClientSecret::new(client_secret.into());
 
-        let oauth2_client = BasicClient::new(
-            client_id,
-            Some(client_secret),
-            AUTH_URL.clone(),
-            Some(TOKEN_URL.clone()),
-        );
+        let oauth2_client = BasicClient::new(client_id)
+            .set_client_secret(client_secret)
+            .set_auth_uri(AUTH_URL.clone())
+            .set_token_uri(TOKEN_URL.clone());
 
         Self { oauth2_client }
     }
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GitHubError> {
         let code = AuthorizationCode::new(code.into());
+        let http_client = reqwest::ClientBuilder::new()
+            // Following redirects opens the client up to SSRF vulnerabilities.
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(GitHubError::Reqwest)?;
         let token = self
             .oauth2_client
             .exchange_code(code)
-            .request_async(oauth2::reqwest::async_http_client)
+            .request_async(&http_client)
             .await
             .map_err(GitHubError::Exchange)?;
 

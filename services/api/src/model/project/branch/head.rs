@@ -8,7 +8,6 @@ use diesel::{
 };
 
 use dropshot::HttpError;
-use http::StatusCode;
 use slog::Logger;
 
 use super::{
@@ -134,7 +133,6 @@ impl QueryHead {
             },
             (None, None) => Ok(()),
             _ => Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Branch start point mismatch",
                 "Failed to match branch start point for head",
                 format!("{branch_start_point:?}\n{self:?}"),

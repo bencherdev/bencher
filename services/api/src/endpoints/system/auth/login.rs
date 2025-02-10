@@ -2,7 +2,6 @@ use bencher_json::JsonAuthAck;
 use bencher_json::JsonLogin;
 
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use http::StatusCode;
 use slog::Logger;
 
 use crate::{
@@ -60,7 +59,6 @@ async fn post_inner(
         .new_auth(json_login.email.clone(), AUTH_TOKEN_TTL)
         .map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create auth JWT at login",
                 &format!(
                     "Failed failed to create auth JWT ({json_login:?} | {AUTH_TOKEN_TTL}) at login"

@@ -7,7 +7,6 @@ use diesel::{
     BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
@@ -274,7 +273,6 @@ async fn post_inner(
         )
         .map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create new invite token",
                 "Failed to create new invite token.",
                 e,

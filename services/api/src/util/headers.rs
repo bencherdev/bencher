@@ -1,7 +1,6 @@
 use std::fmt;
 
 use dropshot::HttpError;
-use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -108,7 +107,6 @@ impl TryFrom<i64> for TotalCount {
         match u32::try_from(total_count) {
             Ok(total_count) => Ok(TotalCount(total_count)),
             Err(err) => Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to count resource total.",
                 &format!("Failed to count resource total: {total_count}"),
                 err,

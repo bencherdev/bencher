@@ -1,8 +1,7 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use dropshot::HttpError;
-use http::StatusCode;
+use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
 use thiserror::Error;
 
 pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token.";
@@ -86,49 +85,53 @@ pub fn bad_request_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, StatusCode::BAD_REQUEST, error.to_string())
+    HttpError::for_client_error(None, ClientErrorStatusCode::BAD_REQUEST, error.to_string())
 }
 
 pub fn unauthorized_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, StatusCode::UNAUTHORIZED, error.to_string())
+    HttpError::for_client_error(None, ClientErrorStatusCode::UNAUTHORIZED, error.to_string())
 }
 
 pub fn payment_required_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, StatusCode::PAYMENT_REQUIRED, error.to_string())
+    HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::PAYMENT_REQUIRED,
+        error.to_string(),
+    )
 }
 
 pub fn forbidden_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, StatusCode::FORBIDDEN, error.to_string())
+    HttpError::for_client_error(None, ClientErrorStatusCode::FORBIDDEN, error.to_string())
 }
 
 pub fn not_found_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, StatusCode::NOT_FOUND, error.to_string())
+    HttpError::for_client_error(None, ClientErrorStatusCode::NOT_FOUND, error.to_string())
 }
 
 pub fn conflict_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, StatusCode::CONFLICT, error.to_string())
+    HttpError::for_client_error(None, ClientErrorStatusCode::CONFLICT, error.to_string())
 }
 
 pub fn locked_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, StatusCode::LOCKED, error.to_string())
+    HttpError::for_client_error(None, ClientErrorStatusCode::LOCKED, error.to_string())
 }
 
 pub fn resource_not_found_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
@@ -209,7 +212,7 @@ macro_rules! resource_conflict_err {
 
 pub(crate) use resource_conflict_err;
 
-pub fn issue_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError
+pub fn issue_error<E>(title: &str, body: &str, error: E) -> HttpError
 where
     E: fmt::Display,
 {
@@ -219,10 +222,12 @@ where
         &format!("{body}\nError code: {error_code}\nError: {error}"),
     );
     let http_error = HttpError {
+        status_code: ErrorStatusCode::INTERNAL_SERVER_ERROR,
         error_code: Some(error_code.to_string()),
-        status_code,
         external_message: format!("{title}: {error}\nPlease report this issue: {issue_url}"),
         internal_message: format!("INTERNAL ERROR ({error_code}): {error}"),
+        // TODO Add CORS headers
+        headers: None,
     };
     // debug_assert!(false, "Internal Error Found: {http_error}");
     #[cfg(feature = "sentry")]

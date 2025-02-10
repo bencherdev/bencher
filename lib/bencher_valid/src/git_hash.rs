@@ -1,5 +1,5 @@
-use ::gix_hash::ObjectId;
 use derive_more::Display;
+use gix_hash::ObjectId;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};

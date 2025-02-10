@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use bencher_adapter::{results::adapter_metrics::AdapterMetrics, AdapterResults};
 use bencher_json::{JsonNewMetric, NameId};
-use rand::{distributions::Uniform, prelude::Distribution, Rng};
+use rand::{
+    distr::{Distribution, Uniform},
+    Rng,
+};
 
 use crate::{cli_println, parser::mock::CliMock, CliError};
 
@@ -19,8 +22,12 @@ pub struct Mock {
     pub flaky: bool,
 }
 
+#[allow(clippy::absolute_paths)]
 #[derive(thiserror::Error, Debug)]
 pub enum MockError {
+    #[error("Failed to generate uniform distribution: {0}")]
+    BadDistribution(rand::distr::uniform::Error),
+
     #[error("Failed to parse benchmark name: {0}")]
     ParseBenchmarkName(bencher_json::ValidError),
 
@@ -65,7 +72,7 @@ impl Mock {
             serde_json::to_string_pretty(&adapter_results).map_err(MockError::SerializeResults)?
         );
 
-        if self.fail || (self.flaky && rand::thread_rng().gen::<bool>()) {
+        if self.fail || (self.flaky && rand::rng().random::<bool>()) {
             Err(MockError::MockFailure)
         } else {
             Ok(())
@@ -78,13 +85,13 @@ impl Mock {
         let pow = self.pow.unwrap_or(1);
         let ten_pow = 10.0f64.powi(pow);
         let mut results = HashMap::with_capacity(count);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for c in 0..count {
             let mut measures_map = HashMap::with_capacity(self.measures.len());
             for measure in self.measures.clone() {
                 let low = ten_pow * c as f64;
                 let high = ten_pow * (c + 1) as f64;
-                let uniform = Uniform::new(low, high);
+                let uniform = Uniform::new(low, high).map_err(MockError::BadDistribution)?;
                 let value: f64 = uniform.sample(&mut rng);
                 let variance = value * 0.1;
                 let metric = JsonNewMetric {

@@ -2,7 +2,6 @@
 
 use bencher_json::{system::auth::JsonOAuth, JsonAuthUser, JsonSignup, PlanLevel};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use http::StatusCode;
 use slog::Logger;
 
 use crate::{
@@ -118,7 +117,6 @@ async fn post_inner(
         .new_client(email.clone(), CLIENT_TOKEN_TTL)
         .map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create client JWT for GitHub OAuth2",
                 &format!(
                     "Failed to create client JWT for GitHub OAuth2 ({email} | {CLIENT_TOKEN_TTL})"
@@ -129,7 +127,6 @@ async fn post_inner(
 
     let claims = context.token_key.validate_client(&token).map_err(|e| {
         issue_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to validate new client JWT for GitHub OAuth2",
             &format!("Failed to validate new client JWT for GitHub OAuth2: {token}"),
             e,

@@ -9,7 +9,6 @@ use bencher_json::{
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
-use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -128,7 +127,6 @@ async fn get_inner(
         {
             let Some(json_license) = json_plan.license.clone() else {
                 return Err(issue_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
                     "No license JSON found for licensed plan",
                     &format!(
                         "Failed to find license for licensed plan ({query_plan:?}) as JSON ({json_plan:?})",
@@ -161,7 +159,6 @@ async fn get_inner(
             })
         } else {
             Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to find subscription for plan usage",
             &format!(
                 "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."

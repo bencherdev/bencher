@@ -6,19 +6,19 @@ pub enum BoundaryError {
     Normal {
         mean: f64,
         std_dev: f64,
-        error: statrs::StatsError,
+        error: statrs::distribution::NormalError,
     },
     #[error("Invalid Student T Distribution (mean: {mean} | scale: {std_dev} | freedom: {freedom}): {error}")]
     StudentsT {
         mean: f64,
         std_dev: f64,
         freedom: f64,
-        error: statrs::StatsError,
+        error: statrs::distribution::StudentsTError,
     },
     #[error("Invalid Log Normal Distribution (location: {location} | scale: {scale}): {error}")]
     LogNormal {
         location: f64,
         scale: f64,
-        error: statrs::StatsError,
+        error: statrs::distribution::LogNormalError,
     },
 }

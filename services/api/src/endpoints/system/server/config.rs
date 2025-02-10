@@ -3,7 +3,6 @@ use bencher_json::{
     JsonConfig,
 };
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use http::StatusCode;
 use slog::Logger;
 
 use crate::{
@@ -57,7 +56,6 @@ async fn get_one_inner(log: &Logger) -> Result<JsonConfig, HttpError> {
         .await
         .map_err(|e| {
             issue_error(
-                StatusCode::NOT_FOUND,
                 "Failed to load config file",
                 "Failed to load configuration file",
                 e,
@@ -102,7 +100,6 @@ async fn put_inner(
         .await
         .map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to write config file",
                 "Failed to write configuration file",
                 e,

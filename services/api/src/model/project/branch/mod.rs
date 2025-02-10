@@ -4,7 +4,6 @@ use bencher_json::{
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
-use http::StatusCode;
 use slog::Logger;
 use version::{QueryVersion, VersionId};
 
@@ -69,7 +68,6 @@ impl QueryBranch {
         self.head_id.ok_or_else(|| {
             // A branch should always have a head
             let err = issue_error(
-                StatusCode::NOT_FOUND,
                 "Failed to find branch head",
                 &format!("No branch head: {}/{}", self.project_id, self.uuid),
                 "branch head is null",

@@ -14,7 +14,7 @@ macro_rules! fn_get {
                         "Failed to query {table} table with ID ({id})",
                         table = stringify!($table)
                     );
-                    crate::error::issue_error(http::StatusCode::NOT_FOUND, &message, &message, e)
+                    crate::error::issue_error(&message, &message, e)
                 })
         }
     };
@@ -39,7 +39,7 @@ macro_rules! fn_get_id {
                         "Failed to query {table} table with UUID ({uuid})",
                         table = stringify!($table)
                     );
-                    crate::error::issue_error(http::StatusCode::NOT_FOUND, &message, &message, e)
+                    crate::error::issue_error(&message, &message, e)
                 })
         }
     };
@@ -64,7 +64,7 @@ macro_rules! fn_get_uuid {
                         "Failed to query {table} table for for UUID with ID ({id})",
                         table = stringify!($table)
                     );
-                    crate::error::issue_error(http::StatusCode::NOT_FOUND, &message, &message, e)
+                    crate::error::issue_error(&message, &message, e)
                 })
         }
     };

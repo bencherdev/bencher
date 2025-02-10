@@ -63,7 +63,6 @@ impl QueryMetric {
             .try_into()
             .map_err(|e| {
                 crate::error::issue_error(
-                    http::StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to count metric usage",
                     &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
                 e

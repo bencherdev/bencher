@@ -313,7 +313,7 @@ fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
     } = server;
     ConfigDropshot {
         bind_address,
-        request_body_max_bytes,
+        default_request_body_max_bytes: request_body_max_bytes,
         default_handler_task_mode: dropshot::HandlerTaskMode::Detached,
         log_headers: Vec::new(),
     }

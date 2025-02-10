@@ -9,7 +9,6 @@ use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use dropshot::HttpError;
-use http::StatusCode;
 use results::ReportResults;
 use slog::Logger;
 
@@ -145,7 +144,6 @@ impl QueryReport {
         .first::<QueryReport>(conn_lock!(context))
         .map_err(|e| {
             issue_error(
-                StatusCode::NOT_FOUND,
                 "Failed to find new report that was just created",
                 &format!("Failed to find new report ({insert_report:?}) in project ({project_id}) on Bencher even though it was just created."),
                 e,

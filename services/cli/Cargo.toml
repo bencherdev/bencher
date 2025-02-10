@@ -29,11 +29,12 @@ serde_json.workspace = true
 tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt", "signal"] }
+tokio-rustls.workspace = true
 url.workspace = true
 # Crate
-bollard = "0.17"
+bollard = "0.18"
 futures-util = "0.3"
-gix = { version = "0.66", default-features = false, features = ["revision"] }
+gix = { version = "0.70", default-features = false, features = ["revision"] }
 
 [lints]
 workspace = true

@@ -147,7 +147,6 @@ impl QueryProject {
             .join(&path)
             .map_err(|e| {
                 crate::error::issue_error(
-                    http::StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to create new perf URL.",
                     &format!("Failed to create new perf URL for {console_url} at {path}",),
                     e,

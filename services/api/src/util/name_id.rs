@@ -16,7 +16,6 @@ macro_rules! fn_eq_name_id {
             Ok(
                 match name_id.try_into().map_err(|e| {
                     crate::error::issue_error(
-                        http::StatusCode::INTERNAL_SERVER_ERROR,
                         "Failed to parse name ID",
                         "Failed to parse name ID.",
                         e,
@@ -66,12 +65,7 @@ macro_rules! filter_name_id {
     ($name:ident, $query:ident, $table:ident, $name_id:ident) => {
         #[allow(unused_qualifications)]
         match $name_id.try_into().map_err(|e| {
-            crate::error::issue_error(
-                http::StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to parse name ID",
-                "Failed to parse name ID.",
-                e,
-            )
+            crate::error::issue_error("Failed to parse name ID", "Failed to parse name ID.", e)
         })? {
             bencher_json::NameIdKind::Uuid(uuid) => {
                 $query = $query.filter(schema::$table::uuid.eq(uuid.to_string()));

@@ -8,7 +8,6 @@ use bencher_json::{
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use http::StatusCode;
 
 use crate::{
     context::DbConnection,
@@ -70,7 +69,6 @@ impl QueryPlan {
 
         let Some(license) = self.license.clone() else {
             return Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to find license for licensed plan",
                 &format!(
                     "Failed to find license for plan ({self:?}) even though licensed plan exists ({json_plan:?}).",
@@ -170,7 +168,6 @@ impl InsertPlan {
         let license = licensor
             .new_annual_license(organization_uuid, plan_level, entitlements)
             .map_err(|e| issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create license",
                 &format!("Failed to create license for organization ({query_organization:?}) with entitlements ({entitlements})."),
                 e,
@@ -323,7 +320,6 @@ impl PlanKind {
             Self::Metered(metered_plan_id) => {
                 let Some(biller) = biller else {
                     return Err(issue_error(
-                        StatusCode::INTERNAL_SERVER_ERROR,
                         "No Biller when checking usage",
                         "Failed to find Biller in Bencher Cloud when checking usage.",
                         PlanKindError::NoBiller,
@@ -334,7 +330,6 @@ impl PlanKind {
                     .await
                     .map_err(|e| {
                         issue_error(
-                            StatusCode::BAD_REQUEST,
                             "Failed to record usage",
                             &format!("Failed to record usage ({usage}) for project ({project:?})."),
                             e,

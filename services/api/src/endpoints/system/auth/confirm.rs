@@ -1,6 +1,5 @@
 use bencher_json::{system::auth::JsonAuthUser, JsonConfirm};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use http::StatusCode;
 
 use crate::{
     conn_lock,
@@ -56,7 +55,6 @@ async fn post_inner(
         .new_client(email.clone(), CLIENT_TOKEN_TTL)
         .map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create client JWT",
                 &format!("Failed to create client JWT ({email} | {CLIENT_TOKEN_TTL})"),
                 e,
@@ -65,7 +63,6 @@ async fn post_inner(
 
     let claims = context.token_key.validate_client(&token).map_err(|e| {
         issue_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to validate new client JWT",
             &format!("Failed to validate new client JWT: {token}"),
             e,

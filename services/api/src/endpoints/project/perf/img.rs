@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use bencher_plot::LinePlot;
 use dropshot::{endpoint, Body, HttpError, Path, Query, RequestContext};
-use http::{Response, StatusCode};
+use http::Response;
 
 use crate::{
     context::ApiContext,
@@ -70,7 +70,7 @@ pub async fn proj_perf_img_get(
     .await?;
 
     Response::builder()
-        .status(StatusCode::OK)
+        .status(http::StatusCode::OK)
         .header(http::header::CONTENT_TYPE, "image/jpeg")
         .header(http::header::CACHE_CONTROL, "private, max-age=0, no-cache")
         .body(jpeg.into())
@@ -87,7 +87,6 @@ async fn get_inner(
     let json_perf = super::get_inner(context, path_params, json_perf_query, auth_user).await?;
     LinePlot::new().draw(title, &json_perf).map_err(|e| {
         issue_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to draw perf plot",
             &format!("Failed draw perf plot: {json_perf:?}"),
             e,

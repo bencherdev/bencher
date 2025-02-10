@@ -1,7 +1,6 @@
 use bencher_json::system::auth::JsonAuthAck;
 use bencher_json::JsonSignup;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use http::StatusCode;
 use slog::Logger;
 
 use crate::{
@@ -64,7 +63,6 @@ async fn post_inner(
         .new_auth(insert_user.email.clone(), AUTH_TOKEN_TTL)
         .map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create auth JWT at signup",
                 &format!("Failed failed to create auth JWT ({insert_user:?} | {AUTH_TOKEN_TTL}) at signup"),
                 e,

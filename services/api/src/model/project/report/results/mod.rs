@@ -10,7 +10,6 @@ use bencher_json::{
 };
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
-use http::StatusCode;
 use slog::Logger;
 
 use crate::{
@@ -180,7 +179,6 @@ impl ReportResults {
             };
             let query_metric = QueryMetric::from_uuid(conn_lock!(context), insert_metric.uuid).map_err(|e| {
                     issue_error(
-                        StatusCode::NOT_FOUND,
                         "Failed to find metric",
                         &format!("Failed to find new metric ({insert_metric:?}) for report benchmark ({insert_report_benchmark:?}) even though it was just created."),
                         e,

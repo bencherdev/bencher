@@ -14,7 +14,6 @@ use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
     ServerContext, SharedExtractor,
 };
-use http::StatusCode;
 use oso::{PolarValue, ToPolar};
 
 use crate::{
@@ -110,7 +109,6 @@ impl AuthUser {
             .load::<(OrganizationId, String)>(conn)
             .map_err(|e| {
                 crate::error::issue_error(
-                    StatusCode::NOT_FOUND,
                     "User can't query organization roles",
                     &format!("My user ({email}) on Bencher failed to query organization roles."),
                     e,
@@ -124,7 +122,6 @@ impl AuthUser {
                 Ok(role) => Some((org_id.to_string(), role)),
                 Err(e) => {
                     let _err = crate::error::issue_error(
-                        StatusCode::NOT_FOUND,
                         "Failed to parse organization role",
                         &format!("My user ({email}) on Bencher has an invalid organization role ({role})."),
                         e,
@@ -154,7 +151,6 @@ impl AuthUser {
             .load::<(OrganizationId, ProjectId, String)>(conn)
             .map_err(|e| {
                 crate::error::issue_error(
-                    StatusCode::NOT_FOUND,
                     "User can't query project roles",
                     &format!("My user ({email}) on Bencher failed to query project roles."),
                     e,
@@ -174,7 +170,6 @@ impl AuthUser {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
                     let _err = crate::error::issue_error(
-                        StatusCode::NOT_FOUND,
                         "Failed to parse project role",
                         &format!(
                             "My user ({email}) on Bencher has an invalid project role ({role})."

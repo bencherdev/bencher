@@ -5,7 +5,6 @@ use bencher_json::{
 use bencher_token::TokenKey;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use http::StatusCode;
 
 use crate::{
     context::{DbConnection, Rbac},
@@ -122,7 +121,6 @@ impl InsertToken {
 
         let jwt = token_key.new_api_key(query_user.email, ttl).map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create new API key",
                 "Failed to create new API key.",
                 e,
@@ -131,7 +129,6 @@ impl InsertToken {
 
         let claims = token_key.validate_api_key(&jwt).map_err(|e| {
             issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to validate new API key",
                 &format!("Failed to validate new API key: {jwt}"),
                 e,
