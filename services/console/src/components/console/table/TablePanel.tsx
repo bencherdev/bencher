@@ -175,7 +175,7 @@ const TablePanel = (props: Props) => {
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to fetch ${resourcePlural(
 						props.resource,
-					)}. Please, try again.`,
+					)}: ${error?.response?.data?.message}`,
 				);
 				return EMPTY_ARRAY;
 			});

@@ -62,7 +62,7 @@ const StatusButton = (props: Props) => {
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to ${
 						isActive ? "dismiss" : "reactivate"
-					} alert. Please, try again.`,
+					} alert: ${error?.response?.data?.message}`,
 				);
 			});
 	};

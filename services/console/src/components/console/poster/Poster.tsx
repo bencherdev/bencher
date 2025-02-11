@@ -1,20 +1,20 @@
+import * as Sentry from "@sentry/astro";
+import type { Params } from "astro";
 import bencher_valid_init from "bencher_valid";
 import { For, Show, createResource, createSignal } from "solid-js";
-import Field, { type FieldConfig, type FieldValue } from "../../field/Field";
-import FieldKind from "../../field/kind";
 import { createStore } from "solid-js/store";
-import { authUser } from "../../../util/auth";
-import { BACK_PARAM, pathname } from "../../../util/url";
-import { validJwt } from "../../../util/valid";
 import {
-	Operation,
 	type BencherResource,
+	Operation,
 	resourceSingular,
 } from "../../../config/types";
+import { authUser } from "../../../util/auth";
 import { httpPost, httpPut } from "../../../util/http";
-import type { Params } from "astro";
 import { NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
-import * as Sentry from "@sentry/astro";
+import { BACK_PARAM, pathname } from "../../../util/url";
+import { validJwt } from "../../../util/valid";
+import Field, { type FieldConfig, type FieldValue } from "../../field/Field";
+import FieldKind from "../../field/kind";
 
 export interface Props {
 	apiUrl: string;
@@ -166,7 +166,7 @@ const Poster = (props: Props) => {
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to post ${resourceSingular(
 						props.resource,
-					)}. Please, try again.`,
+					)}: ${error?.response?.data?.message}`,
 				);
 			});
 	};

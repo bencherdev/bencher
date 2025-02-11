@@ -72,7 +72,7 @@ const DeckPanel = (props: Props) => {
 					NotifyKind.ERROR,
 					`Lettuce romaine calm! Failed to get ${resourceSingular(
 						props.resource,
-					)}. Please, try again.`,
+					)}: ${error?.response?.data?.message}`,
 				);
 				return EMPTY_OBJECT;
 			});

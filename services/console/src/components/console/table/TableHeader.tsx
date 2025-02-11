@@ -345,7 +345,7 @@ const DismissAllButton = (props: {
 					Sentry.captureException(error);
 					pageNotify(
 						NotifyKind.ERROR,
-						"Lettuce romaine calm! Failed to dismiss alerts. Please, try again.",
+						`Lettuce romaine calm! Failed to dismiss alerts: ${error?.response?.data?.message}`,
 					);
 				});
 		}

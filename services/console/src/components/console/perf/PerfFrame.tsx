@@ -132,7 +132,7 @@ const PerfFrame = (props: Props) => {
 				} else {
 					pageNotify(
 						NotifyKind.ERROR,
-						"Lettuce romaine calm! Failed to get perf. Please, try again.",
+						`Lettuce romaine calm! Failed to get perf: ${error?.response?.data?.message}`,
 					);
 				}
 				return EMPTY_OBJECT;

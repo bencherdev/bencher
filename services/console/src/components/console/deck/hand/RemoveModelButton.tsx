@@ -1,9 +1,9 @@
+import * as Sentry from "@sentry/astro";
 import { type Accessor, type Resource, Show, createSignal } from "solid-js";
 import type { JsonAuthUser, JsonThreshold } from "../../../../types/bencher";
 import { httpPut } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { validJwt } from "../../../../util/valid";
-import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -47,7 +47,7 @@ const RemoveModelButton = (props: Props) => {
 				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
-					"Lettuce romaine calm! Failed to remove model. Please, try again.",
+					`Lettuce romaine calm! Failed to remove model: ${error?.response?.data?.message}`,
 				);
 			});
 	};

@@ -127,7 +127,7 @@ const UpdateCard = (props: Props) => {
 				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
-					`Lettuce romaine calm! Failed to update ${props.card?.field?.label?.toLowerCase()}. Please, try again.`,
+					`Lettuce romaine calm! Failed to update ${props.card?.field?.label?.toLowerCase()}: ${error?.response?.data?.message}`,
 				);
 			});
 	};

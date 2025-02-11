@@ -1,5 +1,8 @@
+import * as Sentry from "@sentry/astro";
 import bencher_valid_init from "bencher_valid";
-import { type Accessor, createSignal, createResource } from "solid-js";
+import { type Accessor, createResource, createSignal } from "solid-js";
+import { createStore } from "solid-js/store";
+import { PLOT_FIELDS } from "../../../../config/project/plot";
 import type {
 	JsonAuthUser,
 	JsonNewPlot,
@@ -8,13 +11,10 @@ import type {
 	XAxis,
 } from "../../../../types/bencher";
 import { httpPost } from "../../../../util/http";
+import { NotifyKind, pageNotify } from "../../../../util/notify";
+import { useNavigate } from "../../../../util/url";
 import Field, { type FieldHandler } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import { useNavigate } from "../../../../util/url";
-import { createStore } from "solid-js/store";
-import { NotifyKind, pageNotify } from "../../../../util/notify";
-import { PLOT_FIELDS } from "../../../../config/project/plot";
-import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -108,7 +108,10 @@ const PinModal = (props: Props) => {
 				setSubmitting(false);
 				console.error(error);
 				Sentry.captureException(error);
-				pageNotify(NotifyKind.ERROR, "Failed to save plot. Please, try again.");
+				pageNotify(
+					NotifyKind.ERROR,
+					`Failed to save plot: ${error?.response?.data?.message}`,
+				);
 			});
 	};
 

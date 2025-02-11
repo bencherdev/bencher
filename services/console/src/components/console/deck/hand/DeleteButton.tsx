@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/astro";
 import {
 	type Accessor,
 	Match,
@@ -14,7 +15,6 @@ import {
 } from "../../../../util/notify";
 import { pathname } from "../../../../util/url";
 import { validJwt } from "../../../../util/valid";
-import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
@@ -68,7 +68,7 @@ const DeleteButton = (props: Props) => {
 				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
-					"Lettuce romaine calm! Failed to delete. Please, try again.",
+					`Lettuce romaine calm! Failed to delete: ${error?.response?.data?.message}`,
 				);
 			});
 	};

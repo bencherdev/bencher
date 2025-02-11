@@ -1,10 +1,10 @@
+import * as Sentry from "@sentry/astro";
 import { type Accessor, type Resource, Show, createSignal } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
+import { fmtDate } from "../../../../util/convert";
 import { httpPatch } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { validJwt } from "../../../../util/valid";
-import * as Sentry from "@sentry/astro";
-import { fmtDate } from "../../../../util/convert";
 
 export interface Props {
 	apiUrl: string;
@@ -48,7 +48,7 @@ const ArchiveButton = (props: Props) => {
 				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
-					"Lettuce romaine calm! Failed to archive. Please, try again.",
+					`Lettuce romaine calm! Failed to archive: ${error?.response?.data?.message}`,
 				);
 			});
 	};
