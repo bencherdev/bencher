@@ -12,4 +12,8 @@ test $ARCH = "aarch64" && sed -i "s/$WASM_OPT true/$WASM_OPT false/g" $CARGO_TOM
 
 wasm-pack build ../../lib/bencher_valid --target web --no-default-features --features plus,wasm
 
+# wasm-pack copies over the LICENSE.md file
+# https://github.com/rustwasm/wasm-pack/issues/407
+rm ../../lib/LICENSE.md
+
 test $ARCH = "aarch64" && sed -i "s/$WASM_OPT false/$WASM_OPT true/g" $CARGO_TOML; true
