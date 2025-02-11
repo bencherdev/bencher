@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use crate::error::issue_error;
 
 const ALL_ORIGIN: &str = "*";
-const ALL_HEADERS: &str = "*";
 const PUB_HEADERS: &str = "Content-Type";
 const AUTH_HEADERS: &str = "Content-Type, Authorization";
 const EXPOSE_HEADERS: &str = "X-Total-Count";
@@ -28,7 +27,7 @@ impl CorsHeaders {
         T: ToString,
     {
         let methods = methods_str(methods);
-        Self::new_origin_all(methods, ALL_HEADERS.to_owned(), None)
+        Self::new_origin_all(methods, AUTH_HEADERS.to_owned(), None)
     }
 
     pub fn new_with_total_count<T>(methods: &[T], total_count: TotalCount) -> Self
@@ -36,7 +35,7 @@ impl CorsHeaders {
         T: ToString,
     {
         let methods = methods_str(methods);
-        Self::new_origin_all(methods, ALL_HEADERS.to_owned(), Some(total_count))
+        Self::new_origin_all(methods, AUTH_HEADERS.to_owned(), Some(total_count))
     }
 
     pub fn new_pub<T>(methods: &T) -> Self

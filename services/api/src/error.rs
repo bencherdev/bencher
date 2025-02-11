@@ -85,53 +85,77 @@ pub fn bad_request_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, ClientErrorStatusCode::BAD_REQUEST, error.to_string())
+    cors_headers(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::BAD_REQUEST,
+        error.to_string(),
+    ))
 }
 
 pub fn unauthorized_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, ClientErrorStatusCode::UNAUTHORIZED, error.to_string())
+    cors_headers(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::UNAUTHORIZED,
+        error.to_string(),
+    ))
 }
 
 pub fn payment_required_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(
+    cors_headers(HttpError::for_client_error(
         None,
         ClientErrorStatusCode::PAYMENT_REQUIRED,
         error.to_string(),
-    )
+    ))
 }
 
 pub fn forbidden_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, ClientErrorStatusCode::FORBIDDEN, error.to_string())
+    cors_headers(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::FORBIDDEN,
+        error.to_string(),
+    ))
 }
 
 pub fn not_found_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, ClientErrorStatusCode::NOT_FOUND, error.to_string())
+    cors_headers(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::NOT_FOUND,
+        error.to_string(),
+    ))
 }
 
 pub fn conflict_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, ClientErrorStatusCode::CONFLICT, error.to_string())
+    cors_headers(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::CONFLICT,
+        error.to_string(),
+    ))
 }
 
 pub fn locked_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
 {
-    HttpError::for_client_error(None, ClientErrorStatusCode::LOCKED, error.to_string())
+    cors_headers(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::LOCKED,
+        error.to_string(),
+    ))
 }
 
 pub fn resource_not_found_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
@@ -226,12 +250,33 @@ where
         error_code: Some(error_code.to_string()),
         external_message: format!("{title}: {error}\nPlease report this issue: {issue_url}"),
         internal_message: format!("INTERNAL ERROR ({error_code}): {error}"),
-        // TODO Add CORS headers
         headers: None,
     };
     // debug_assert!(false, "Internal Error Found: {http_error}");
     #[cfg(feature = "sentry")]
     sentry::capture_error(&http_error);
+    cors_headers(http_error)
+}
+
+fn cors_headers(mut http_error: HttpError) -> HttpError {
+    for (header, value) in [
+        ("access-control-allow-origin", "*"),
+        (
+            "access-control-allow-methods",
+            "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        ),
+        (
+            "access-control-allow-headers",
+            "Authorization, Content-Type",
+        ),
+        ("access-control-expose-headers", "X-Total-Count"),
+    ] {
+        if let Err(err) = http_error.add_header(header, value) {
+            debug_assert!(false, "{err}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&err);
+        }
+    }
     http_error
 }
 

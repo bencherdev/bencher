@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
@@ -8,8 +9,8 @@ import {
 } from "solid-js";
 import consoleConfig from "../../../config/console";
 import {
-	Operation,
 	type BencherResource,
+	Operation,
 	resourceSingular,
 } from "../../../config/types";
 import { authUser } from "../../../util/auth";
@@ -19,7 +20,6 @@ import { pathname, useSearchParams } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 import Deck, { type DeckConfig } from "./hand/Deck";
 import DeckHeader, { type DeckHeaderConfig } from "./header/DeckHeader";
-import * as Sentry from "@sentry/astro";
 
 interface Props {
 	apiUrl: string;
