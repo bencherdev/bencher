@@ -413,6 +413,7 @@ jobs:
         with:
           log-level: warn
           command: check
+          arguments: --locked
 
   # Cargo Unused Deps
   cargo_udeps:
