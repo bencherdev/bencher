@@ -36,7 +36,7 @@
 		"astro": "^4.6.0",
 		"astro-expressive-code": "^0.34.1",
 		"astro-seo": "^0.8.3",
-		"axios": "^1.7.7",
+		"axios": "^1.7.9",
 		"bulma": "^1.0.3",
 		"d3": "^7.9.0",
 		"htl": "^0.3.1",
