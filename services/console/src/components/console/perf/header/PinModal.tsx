@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/astro";
-import bencher_valid_init from "bencher_valid";
 import { type Accessor, createResource, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import { PLOT_FIELDS } from "../../../../config/project/plot";
@@ -13,6 +12,7 @@ import type {
 import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { useNavigate } from "../../../../util/url";
+import { init_valid } from "../../../../util/valid";
 import Field, { type FieldHandler } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
 
@@ -36,9 +36,7 @@ export interface Props {
 }
 
 const PinModal = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const navigate = useNavigate();
 
 	const [form, setForm] = createStore(initForm());

@@ -1,6 +1,8 @@
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
-
+import * as Sentry from "@sentry/astro";
+import { createMemo, createResource } from "solid-js";
+import type { JsonOrganization, JsonProject } from "../../../types/bencher";
 import { authUser, removeUser } from "../../../util/auth";
+import { httpGet } from "../../../util/http";
 import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
@@ -8,27 +10,21 @@ import {
 	forwardParams,
 	navigateNotify,
 } from "../../../util/notify";
-import { useNavigate } from "../../../util/url";
-import { PLAN_PARAM } from "../../auth/auth";
-import { createMemo, createResource } from "solid-js";
-import { validJwt } from "../../../util/valid";
-import { httpGet } from "../../../util/http";
-import type { JsonOrganization, JsonProject } from "../../../types/bencher";
 import {
 	getOrganization,
 	removeOrganization,
 	setOrganization,
 } from "../../../util/organization";
-import * as Sentry from "@sentry/astro";
+import { useNavigate } from "../../../util/url";
+import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { PLAN_PARAM } from "../../auth/auth";
 
 export interface Props {
 	apiUrl: string;
 }
 
 const ConsoleRedirect = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const navigate = useNavigate();
 
@@ -55,7 +51,7 @@ const ConsoleRedirect = (props: Props) => {
 		};
 	});
 	const getOrganizations = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		const cachedOrganization = getOrganization();
@@ -124,7 +120,7 @@ const ConsoleRedirect = (props: Props) => {
 		};
 	});
 	const getProjects = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 		organization: undefined | JsonOrganization;
 	}) => {

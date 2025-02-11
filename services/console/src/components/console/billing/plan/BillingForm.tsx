@@ -1,5 +1,4 @@
 import type { Params } from "astro";
-import type { InitOutput } from "bencher_valid";
 import {
 	type Accessor,
 	For,
@@ -17,27 +16,31 @@ import {
 } from "../../../../types/bencher";
 import { fmtDate } from "../../../../util/convert";
 import { useSearchParams } from "../../../../util/url";
-import { validPlanLevel, validUuid } from "../../../../util/valid";
+import {
+	type InitValid,
+	validPlanLevel,
+	validUuid,
+} from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
 import Pricing from "./Pricing";
 
-// Toggle checkout flow
-// import PaymentCard from "./PaymentCard";
-import Checkout from "./Checkout";
+import { getThemeColor } from "../../../navbar/theme/util";
 import {
 	ENTERPRISE_TEXT,
 	FREE_TEXT,
 	TEAM_TEXT,
 } from "../../../pricing/ConsoleFallbackPricingTable";
-import { getThemeColor } from "../../../navbar/theme/util";
+// Toggle checkout flow
+// import PaymentCard from "./PaymentCard";
+import Checkout from "./Checkout";
 
 interface Props {
 	apiUrl: string;
 	params: Params;
 	onboard: boolean;
-	bencher_valid: Resource<InitOutput>;
+	bencher_valid: Resource<InitValid>;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;

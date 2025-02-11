@@ -1,4 +1,3 @@
-import bencher_valid_init from "bencher_valid";
 import {
 	createEffect,
 	createMemo,
@@ -6,6 +5,7 @@ import {
 	createSignal,
 } from "solid-js";
 
+import * as Sentry from "@sentry/astro";
 import { createStore } from "solid-js/store";
 import type {
 	Email,
@@ -18,21 +18,23 @@ import { setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 import { useSearchParams } from "../../util/url";
-import { validEmail, validJwt, validPlanLevel } from "../../util/valid";
+import {
+	init_valid,
+	validEmail,
+	validJwt,
+	validPlanLevel,
+} from "../../util/valid";
 import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
-import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
 }
 
 const ConfirmForm = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [submitting, setSubmitting] = createSignal(false);

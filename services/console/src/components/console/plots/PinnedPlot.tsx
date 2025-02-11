@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { createMemo, createResource } from "solid-js";
 import type { JsonPlot } from "../../../types/bencher";
 import {
@@ -10,7 +9,7 @@ import {
 } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
-import { validJwt } from "../../../util/valid";
+import { type InitValid, init_valid, validJwt } from "../../../util/valid";
 import Pinned from "./Pinned";
 
 export interface Props {
@@ -20,9 +19,7 @@ export interface Props {
 }
 
 const PinnedPlot = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 
 	const user = authUser();
 
@@ -34,7 +31,7 @@ const PinnedPlot = (props: Props) => {
 		};
 	});
 	const getPlot = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};

@@ -1,13 +1,17 @@
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
+import * as Sentry from "@sentry/astro";
 import { createMemo, createResource } from "solid-js";
-import { authUser, setUser } from "../../util/auth";
-import { useNavigate, useSearchParams } from "../../util/url";
 import type { JsonAuthUser, JsonOAuth } from "../../types/bencher";
+import { authUser, setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
+import { useNavigate, useSearchParams } from "../../util/url";
+import {
+	type InitValid,
+	init_valid,
+	validJwt,
+	validPlanLevel,
+} from "../../util/valid";
 import { PLAN_PARAM } from "./auth";
-import { validJwt, validPlanLevel } from "../../util/valid";
-import * as Sentry from "@sentry/astro";
 
 const CODE_PARAM = "code";
 const STATE_PARAM = "state";
@@ -19,9 +23,7 @@ interface Props {
 }
 
 const AuthGitHub = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 
 	const [searchParams, _setSearchParams] = useSearchParams();
 	const user = authUser();
@@ -37,7 +39,7 @@ const AuthGitHub = (props: Props) => {
 	});
 	const getAuthUser = async (fetcher: {
 		user: JsonAuthUser;
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		code: undefined | string;
 		state: undefined | string;
 	}) => {

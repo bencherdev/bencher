@@ -1,5 +1,5 @@
+import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import type { InitOutput } from "bencher_valid";
 import { type Accessor, type Resource, createSignal } from "solid-js";
 import type {
 	JsonAuthUser,
@@ -9,14 +9,13 @@ import type {
 import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { useNavigate } from "../../../../util/url";
-import { validJwt } from "../../../../util/valid";
-import * as Sentry from "@sentry/astro";
+import { type InitValid, validJwt } from "../../../../util/valid";
 
 interface Props {
 	apiUrl: string;
 	params: Params;
 	onboard: boolean;
-	bencher_valid: Resource<InitOutput>;
+	bencher_valid: Resource<InitValid>;
 	user: JsonAuthUser;
 	organization: undefined | string;
 	plan: Accessor<PlanLevel>;

@@ -1,8 +1,8 @@
-import { createMemo, createResource } from "solid-js";
-import { isAllowedOrganization } from "../../../util/auth";
-import { OrganizationPermission } from "../../../types/bencher";
-import bencher_valid_init from "bencher_valid";
 import type { Params } from "astro";
+import { createMemo, createResource } from "solid-js";
+import { OrganizationPermission } from "../../../types/bencher";
+import { isAllowedOrganization } from "../../../util/auth";
+import { init_valid } from "../../../util/valid";
 import OrgMenuInner from "./OrgMenuInner";
 
 interface Props {
@@ -11,9 +11,7 @@ interface Props {
 }
 
 const OrgMenu = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const params = createMemo(() => props.params);
 	const organization = createMemo(() => params().organization);
 	const [billing] = createResource(bencher_valid, async (bv) => {

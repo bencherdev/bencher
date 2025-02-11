@@ -1,22 +1,22 @@
+import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	Match,
 	type Resource,
+	Show,
 	Switch,
 	createMemo,
 	createResource,
 	createSignal,
-	Show,
 } from "solid-js";
 import consoleConfig from "../../../config/console";
 import { Host } from "../../../config/organization/billing";
 import { BencherResource } from "../../../config/types";
 import {
+	type JsonAuthUser,
 	type JsonUsage,
 	type Jwt,
 	UsageKind,
-	type JsonAuthUser,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import {
@@ -29,15 +29,14 @@ import {
 import { isBencherCloud } from "../../../util/ext";
 import { httpGet, httpPatch } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
-import { validJwt } from "../../../util/valid";
+import { type InitValid, init_valid, validJwt } from "../../../util/valid";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
+import ConsoleFallbackPricingTable from "../../pricing/ConsoleFallbackPricingTable";
 import type { BillingHeaderConfig } from "./BillingHeader";
 import BillingHeader from "./BillingHeader";
 import BillingForm from "./plan/BillingForm";
 import PaymentMethod from "./plan/PaymentMethod";
-import ConsoleFallbackPricingTable from "../../pricing/ConsoleFallbackPricingTable";
-import * as Sentry from "@sentry/astro";
 
 interface Props {
 	apiUrl: string;
@@ -51,9 +50,7 @@ export interface BillingPanelConfig {
 }
 
 const BillingPanel = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const config = createMemo<BillingPanelConfig>(
 		() =>
@@ -71,7 +68,7 @@ const BillingPanel = (props: Props) => {
 	});
 	const fetchPlan = async (fetcher: {
 		params: Params;
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		if (!fetcher.bencher_valid || !validJwt(fetcher.token)) {
@@ -135,7 +132,7 @@ const BillingPanelSwitch = (props: {
 	apiUrl: string;
 	params: Params;
 	onboard: boolean;
-	bencher_valid: Resource<InitOutput>;
+	bencher_valid: Resource<InitValid>;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
@@ -331,7 +328,7 @@ const SelfHostedFreePanel = (props: {
 	apiUrl: string;
 	params: Params;
 	onboard: boolean;
-	bencher_valid: Resource<InitOutput>;
+	bencher_valid: Resource<InitValid>;
 	usage: Resource<null | JsonUsage>;
 	refetch: () => void;
 }) => {

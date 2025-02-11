@@ -1,11 +1,10 @@
+import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { createMemo, createResource } from "solid-js";
 import { authUser } from "../../../util/auth";
-import { httpGet, X_TOTAL_COUNT } from "../../../util/http";
-import { validJwt } from "../../../util/valid";
+import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
+import { type InitValid, init_valid, validJwt } from "../../../util/valid";
 import ProjectMenuInner from "./ProjectMenuInner";
-import * as Sentry from "@sentry/astro";
 
 interface Props {
 	apiUrl: string;
@@ -13,9 +12,7 @@ interface Props {
 }
 
 const ProjectMenu = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const params = createMemo(() => props.params);
 	const project = createMemo(() => params().project);
 	const user = authUser();
@@ -28,7 +25,7 @@ const ProjectMenu = (props: Props) => {
 		};
 	});
 	const getAlerts = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		project_slug: string;
 		token: string;
 	}): Promise<number> => {

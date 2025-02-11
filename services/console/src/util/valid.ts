@@ -1,4 +1,5 @@
-import {
+import bencher_valid_init, {
+	type InitOutput,
 	is_valid_benchmark_name,
 	is_valid_boundary,
 	is_valid_branch_name,
@@ -26,6 +27,17 @@ import {
 import type { JsonAuthUser } from "../types/bencher";
 
 export const DEBOUNCE_DELAY = 250;
+
+export type InitValid = undefined | InitOutput;
+
+export const init_valid = async (): Promise<InitValid> => {
+	try {
+		return await bencher_valid_init();
+	} catch (e) {
+		console.error(e);
+		return;
+	}
+};
 
 export const validString = (
 	input: string,

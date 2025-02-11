@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	For,
 	Show,
@@ -15,6 +14,7 @@ import { authUser } from "../../util/auth";
 import { httpGet } from "../../util/http";
 import { fmtValues } from "../../util/resource";
 import { BACK_PARAM, decodePath, useSearchParams } from "../../util/url";
+import { type InitValid, init_valid } from "../../util/valid";
 import ArchivedButton from "../console/deck/hand/ArchivedButton";
 import Deck from "../console/deck/hand/Deck";
 import HeadReplacedButton from "../console/deck/hand/HeadReplacedButton";
@@ -59,9 +59,7 @@ export interface PubDeckConfig {
 }
 
 const PublicDeck = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [refresh, setRefresh] = createSignal(false);
 
@@ -80,7 +78,7 @@ const PublicDeck = (props: Props) => {
 	const user = authUser();
 	const path = createMemo(() => props.apiUrl);
 
-	const getData = async (_bencher_valid: InitOutput) => {
+	const getData = async (_bencher_valid: InitValid) => {
 		if (props.data && !refresh()) {
 			return props.data;
 		}

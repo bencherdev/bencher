@@ -1,29 +1,30 @@
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
-
+import * as Sentry from "@sentry/astro";
 import { createEffect, createMemo, createResource } from "solid-js";
-import { authUser } from "../../../util/auth";
-import { useSearchParams } from "../../../util/url";
-import { validJwt, validPlanLevel } from "../../../util/valid";
-import { httpGet, httpPost } from "../../../util/http";
 import type {
-	PlanLevel,
 	JsonNewToken,
 	JsonToken,
+	PlanLevel,
 } from "../../../types/bencher";
+import { authUser } from "../../../util/auth";
+import { httpGet, httpPost } from "../../../util/http";
+import { useSearchParams } from "../../../util/url";
+import {
+	type InitValid,
+	init_valid,
+	validJwt,
+	validPlanLevel,
+} from "../../../util/valid";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
-import OnboardSteps from "./OnboardSteps";
 import CopyButton from "./CopyButton";
+import OnboardSteps from "./OnboardSteps";
 import { OnboardStep } from "./OnboardStepsInner";
-import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
 }
 
 const OnboardToken = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -52,7 +53,7 @@ const OnboardToken = (props: Props) => {
 		};
 	});
 	const getTokens = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		if (!fetcher.bencher_valid) {
@@ -87,7 +88,7 @@ const OnboardToken = (props: Props) => {
 		};
 	});
 	const getToken = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 		tokens: undefined | JsonToken[];
 	}) => {

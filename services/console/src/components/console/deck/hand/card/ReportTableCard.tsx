@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	For,
 	Match,
@@ -20,7 +19,11 @@ import type {
 } from "../../../../../types/bencher";
 import { X_TOTAL_COUNT, httpGet } from "../../../../../util/http";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
-import { validJwt } from "../../../../../util/valid";
+import {
+	type InitValid,
+	init_valid,
+	validJwt,
+} from "../../../../../util/valid";
 import Pagination, { PaginationSize } from "../../../../site/Pagination";
 import { DEFAULT_PAGE, REPORTS_PER_PAGE } from "../../../perf/PerfPanel";
 import { ReportRowFields } from "../../../perf/plot/tab/ReportsTab";
@@ -37,9 +40,7 @@ export interface Props {
 }
 
 const ReportTableCard = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 
 	const per_page = () => REPORTS_PER_PAGE;
 	const [page, setPage] = createSignal(DEFAULT_PAGE);
@@ -62,7 +63,7 @@ const ReportTableCard = (props: Props) => {
 		};
 	});
 	async function getReports<T>(fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		value: JsonBranch | JsonTestbed;
 		pagination: { per_page: number; page: number };
 		token: string;

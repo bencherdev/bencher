@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	createEffect,
 	createMemo,
@@ -17,7 +16,7 @@ import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { pathname, useSearchParams } from "../../../util/url";
-import { validJwt } from "../../../util/valid";
+import { type InitValid, init_valid, validJwt } from "../../../util/valid";
 import Deck, { type DeckConfig } from "./hand/Deck";
 import DeckHeader, { type DeckHeaderConfig } from "./header/DeckHeader";
 
@@ -33,9 +32,7 @@ export interface DeckPanelConfig {
 }
 
 const DeckPanel = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const [searchParams, _setSearchParams] = useSearchParams();
 	const user = authUser();
 	const config = createMemo<DeckPanelConfig>(
@@ -53,7 +50,7 @@ const DeckPanel = (props: Props) => {
 	});
 
 	const getData = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};

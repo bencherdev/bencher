@@ -1,7 +1,6 @@
 import * as Sentry from "@sentry/astro";
 import { debounce } from "@solid-primitives/scheduled";
 import type { Params } from "astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	type Accessor,
 	For,
@@ -23,7 +22,12 @@ import {
 import { httpGet } from "../../../util/http";
 import { setPageTitle } from "../../../util/resource";
 import { useSearchParams } from "../../../util/url";
-import { DEBOUNCE_DELAY, validJwt } from "../../../util/valid";
+import {
+	DEBOUNCE_DELAY,
+	type InitValid,
+	init_valid,
+	validJwt,
+} from "../../../util/valid";
 import FallbackPlots from "./FallbackPlots";
 import Pinned from "./Pinned";
 import PlotsHeader from "./PlotsHeader";
@@ -38,9 +42,7 @@ export interface Props {
 }
 
 const PlotsPanel = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const params = createMemo(() => props.params);
@@ -74,7 +76,7 @@ const PlotsPanel = (props: Props) => {
 		};
 	});
 	const getProject = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		project_slug: string;
 		token: string;
 	}) => {
@@ -113,7 +115,7 @@ const PlotsPanel = (props: Props) => {
 		};
 	});
 	const getPlots = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		project_slug: string;
 		searchQuery: {
 			per_page: number;

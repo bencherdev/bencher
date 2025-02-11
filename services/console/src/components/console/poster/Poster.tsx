@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import bencher_valid_init from "bencher_valid";
 import { For, Show, createResource, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import {
@@ -12,7 +11,7 @@ import { authUser } from "../../../util/auth";
 import { httpPost, httpPut } from "../../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
 import { BACK_PARAM, pathname } from "../../../util/url";
-import { validJwt } from "../../../util/valid";
+import { init_valid, validJwt } from "../../../util/valid";
 import Field, { type FieldConfig, type FieldValue } from "../../field/Field";
 import FieldKind from "../../field/kind";
 
@@ -71,9 +70,7 @@ const initForm = (fields: PosterFieldConfig[]) => {
 };
 
 const Poster = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const [form, setForm] = createStore(initForm(props.config?.fields));
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);

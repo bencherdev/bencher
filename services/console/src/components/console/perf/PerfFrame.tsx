@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	type Accessor,
 	type Resource,
@@ -21,7 +20,7 @@ import {
 	NotifyKind,
 	pageNotify,
 } from "../../../util/notify";
-import { validJwt } from "../../../util/valid";
+import { type InitValid, init_valid, validJwt } from "../../../util/valid";
 import type { Theme } from "../../navbar/theme/theme";
 import PerfPlot from "./plot/PerfPlot";
 
@@ -70,9 +69,7 @@ export interface Props {
 }
 
 const PerfFrame = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 
 	const perfFetcher = createMemo(() => {
 		return {
@@ -84,7 +81,7 @@ const PerfFrame = (props: Props) => {
 		};
 	});
 	const getPerf = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		project_slug: string;
 		perfQuery: JsonPerfQuery;
 		refresh: number;

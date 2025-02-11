@@ -1,5 +1,4 @@
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
-
+import * as Sentry from "@sentry/astro";
 import {
 	For,
 	createEffect,
@@ -7,35 +6,37 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import { authUser } from "../../../util/auth";
-import { useSearchParams } from "../../../util/url";
-import { validJwt, validPlanLevel } from "../../../util/valid";
-import { httpGet, httpPost } from "../../../util/http";
+import { createStore } from "solid-js/store";
+import { MEMBER_FIELDS } from "../../../config/organization/members";
 import {
-	OrganizationRole,
 	type JsonAuthAck,
 	type JsonNewMember,
 	type JsonOrganization,
+	OrganizationRole,
 	type PlanLevel,
 } from "../../../types/bencher";
+import { authUser } from "../../../util/auth";
+import { httpGet, httpPost } from "../../../util/http";
+import { getOrganization, setOrganization } from "../../../util/organization";
+import { useSearchParams } from "../../../util/url";
+import {
+	type InitValid,
+	init_valid,
+	validJwt,
+	validPlanLevel,
+} from "../../../util/valid";
+import { PLAN_PARAM, planParam } from "../../auth/auth";
 import Field, { type FieldHandler } from "../../field/Field";
 import FieldKind from "../../field/kind";
-import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps from "./OnboardSteps";
-import { createStore } from "solid-js/store";
-import { MEMBER_FIELDS } from "../../../config/organization/members";
 import { OnboardStep } from "./OnboardStepsInner";
-import { getOrganization, setOrganization } from "../../../util/organization";
-import * as Sentry from "@sentry/astro";
 
 export interface Props {
 	apiUrl: string;
 }
 
 const OnboardInvite = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -62,7 +63,7 @@ const OnboardInvite = (props: Props) => {
 		};
 	});
 	const getOrganizations = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		const cachedOrganization = getOrganization();
@@ -137,7 +138,7 @@ const OnboardInvite = (props: Props) => {
 		};
 	});
 	const postInvite = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 		organization: undefined | JsonOrganization;
 		form: object;

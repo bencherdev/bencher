@@ -1,26 +1,27 @@
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
-
-import { createEffect, createMemo, createResource } from "solid-js";
-import { authUser } from "../../../util/auth";
-import { useSearchParams } from "../../../util/url";
-import { validJwt, validPlanLevel } from "../../../util/valid";
-import { httpGet } from "../../../util/http";
-import type { JsonOrganization, PlanLevel } from "../../../types/bencher";
-import { PLAN_PARAM } from "../../auth/auth";
-import OnboardSteps from "./OnboardSteps";
-import BillingPanel from "../billing/BillingPanel";
-import { OnboardStep } from "./OnboardStepsInner";
-import { getOrganization, setOrganization } from "../../../util/organization";
 import * as Sentry from "@sentry/astro";
+import { createEffect, createMemo, createResource } from "solid-js";
+import type { JsonOrganization, PlanLevel } from "../../../types/bencher";
+import { authUser } from "../../../util/auth";
+import { httpGet } from "../../../util/http";
+import { getOrganization, setOrganization } from "../../../util/organization";
+import { useSearchParams } from "../../../util/url";
+import {
+	type InitValid,
+	init_valid,
+	validJwt,
+	validPlanLevel,
+} from "../../../util/valid";
+import { PLAN_PARAM } from "../../auth/auth";
+import BillingPanel from "../billing/BillingPanel";
+import OnboardSteps from "./OnboardSteps";
+import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;
 }
 
 const OnboardPlan = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -47,7 +48,7 @@ const OnboardPlan = (props: Props) => {
 		};
 	});
 	const getOrganizations = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		const cachedOrganization = getOrganization();

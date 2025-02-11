@@ -1,5 +1,4 @@
 import type { Params } from "astro";
-import type { InitOutput } from "bencher_valid";
 import { type Accessor, type Resource, Show, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import type {
@@ -12,6 +11,7 @@ import type {
 import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import {
+	type InitValid,
 	cleanCardNumber,
 	cleanExpiration,
 	validCardCvc,
@@ -26,7 +26,7 @@ import FieldKind from "../../../field/kind";
 interface Props {
 	apiUrl: string;
 	params: Params;
-	bencher_valid: Resource<InitOutput>;
+	bencher_valid: Resource<InitValid>;
 	user: JsonAuthUser;
 	path: string;
 	plan: Accessor<PlanLevel>;

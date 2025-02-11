@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/astro";
-import bencher_valid_init from "bencher_valid";
 import { createEffect, createResource } from "solid-js";
 import type { JsonNewPlan } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
@@ -7,6 +6,7 @@ import { httpPost } from "../../../util/http";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
 import {
+	init_valid,
 	validJwt,
 	validOptionUuid,
 	validPlanLevel,
@@ -20,9 +20,7 @@ export interface Props {
 }
 
 const CheckoutRedirect = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, _setSearchParams] = useSearchParams();
 

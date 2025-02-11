@@ -1,5 +1,5 @@
+import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	For,
 	createEffect,
@@ -14,8 +14,7 @@ import {
 } from "../../types/bencher";
 import { httpGet } from "../../util/http";
 import { useNavigate } from "../../util/url";
-import { validJwt } from "../../util/valid";
-import * as Sentry from "@sentry/astro";
+import { type InitValid, init_valid, validJwt } from "../../util/valid";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all--projects--";
 
@@ -26,9 +25,7 @@ interface Props {
 }
 
 const ProjectSelect = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const params = createMemo(() => props.params);
 	const navigate = useNavigate();
 
@@ -41,7 +38,7 @@ const ProjectSelect = (props: Props) => {
 		};
 	});
 	const fetchOrg = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		organization_slug: string;
 		project_slug: string;
 		token: string;
@@ -88,7 +85,7 @@ const ProjectSelect = (props: Props) => {
 		};
 	});
 	const fetchProjects = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		organization: string;
 		project_slug: string;
 		token: string;

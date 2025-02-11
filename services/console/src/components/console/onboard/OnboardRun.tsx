@@ -1,32 +1,34 @@
-import bencher_valid_init, { type InitOutput, new_slug } from "bencher_valid";
-
+import * as Sentry from "@sentry/astro";
+import { new_slug } from "bencher_valid";
 import { createEffect, createMemo, createResource } from "solid-js";
-import { authUser } from "../../../util/auth";
-import { useSearchParams } from "../../../util/url";
-import { validJwt, validPlanLevel } from "../../../util/valid";
-import { httpGet } from "../../../util/http";
 import type {
 	JsonOrganization,
 	JsonProject,
 	JsonToken,
 	PlanLevel,
 } from "../../../types/bencher";
-import { PLAN_PARAM, planParam } from "../../auth/auth";
-import OnboardSteps from "./OnboardSteps";
+import { authUser } from "../../../util/auth";
 import { isBencherCloud } from "../../../util/ext";
-import CopyButton from "./CopyButton";
-import { OnboardStep } from "./OnboardStepsInner";
+import { httpGet } from "../../../util/http";
 import { getOrganization, setOrganization } from "../../../util/organization";
-import * as Sentry from "@sentry/astro";
+import { useSearchParams } from "../../../util/url";
+import {
+	type InitValid,
+	init_valid,
+	validJwt,
+	validPlanLevel,
+} from "../../../util/valid";
+import { PLAN_PARAM, planParam } from "../../auth/auth";
+import CopyButton from "./CopyButton";
+import OnboardSteps from "./OnboardSteps";
+import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;
 }
 
 const OnboardRun = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
+	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -53,7 +55,7 @@ const OnboardRun = (props: Props) => {
 		};
 	});
 	const getOrganizations = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		const cachedOrganization = getOrganization();
@@ -102,7 +104,7 @@ const OnboardRun = (props: Props) => {
 		};
 	});
 	const getProjects = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 		organization: undefined | JsonOrganization;
 	}) => {
@@ -146,7 +148,7 @@ const OnboardRun = (props: Props) => {
 		};
 	});
 	const getTokens = async (fetcher: {
-		bencher_valid: InitOutput;
+		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		if (!fetcher.bencher_valid) {
