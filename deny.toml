@@ -34,7 +34,7 @@ deny = [
     { crate = "git2", use-instead = "gix" },
     { crate = "openssl", use-instead = "rustls" },
     { crate = "openssl-sys", use-instead = "rustls" },
-    { crate = "aws_lc_rs", use-instead = "ring" },
+    { crate = "aws-lc-rs", use-instead = "ring" },
     "libssh2-sys",
     "serde_yml",
 ]
