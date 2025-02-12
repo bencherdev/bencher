@@ -30,6 +30,7 @@ env:
   WASM_BENCHER_VALID: bencher-valid-pkg
   # Console
   CONSOLE_DOCKER_IMAGE: bencher-console
+  NETLIFY_CLI_VERSION: 18.0.4
   # Dev Container
   DEV_CONTAINER_DOCKER_IMAGE: bencher-dev-container
   # Cache
@@ -952,7 +953,7 @@ jobs:
         working-directory: ./services/console
         run: npm run netlify
       - name: Install Netlify CLI
-        run: npm install --save-dev netlify-cli@17.27.0
+        run: npm install --save-dev netlify-cli@$NETLIFY_CLI_VERSION
       - name: Deploy Console UI to Netlify Dev
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
@@ -986,7 +987,7 @@ jobs:
         working-directory: ./services/console
         run: npm run netlify
       - name: Install Netlify CLI
-        run: npm install --save-dev netlify-cli@17.27.0
+        run: npm install --save-dev netlify-cli@$NETLIFY_CLI_VERSION
       - name: Deploy Console UI to Netlify
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
