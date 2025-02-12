@@ -20,7 +20,7 @@ const BENCHER_GITHUB_URL = "https://github.com/bencherdev/bencher";
 export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
 	site: "https://bencher.dev",
-	output: "server",
+	output: "static",
 	// This is needed for WASM
 	// https://docs.astro.build/en/reference/configuration-reference/#buildassets
 	// https://github.com/withastro/astro/issues/5745
