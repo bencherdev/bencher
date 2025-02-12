@@ -12,6 +12,10 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import wasmPack from "vite-plugin-wasm-pack";
 
+const BENCHER_CHAT_URL = "https://discord.gg/yGEsdUh7R4";
+const BENCHER_CALENDLY_URL = "https://calendly.com/bencher/demo";
+const BENCHER_GITHUB_URL = "https://github.com/bencherdev/bencher";
+
 // https://astro.build/config
 export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
@@ -28,6 +32,10 @@ export default defineConfig({
 	adapter: undefined,
 	// Do not use any trailing slashes in the paths below
 	redirects: {
+		"/chat": BENCHER_CHAT_URL,
+		"/demo": BENCHER_CALENDLY_URL,
+		"/repo": BENCHER_GITHUB_URL,
+		// Redirects for old URLs
 		"/docs/how-to/quick-start": "/docs/tutorial/quick-start",
 		"/docs/how-to/branch-selection": "/docs/explanation/branch-selection",
 		// Docs

@@ -11,7 +11,7 @@ import {
 	TWITTER_BENCHER,
 	twitter,
 } from "../components/docs/author";
-// import { ViewTransitions } from "astro:transitions";
+// import { ClientRouter } from "astro:transitions";
 
 interface Props {
 	title: string;
@@ -182,7 +182,8 @@ const article = () => {
       gtag("js", new Date());
       gtag("config", PUBLIC_GOOGLE_ANALYTICS_ID);
     </script>
-    <!-- <ViewTransitions /> -->
+    <!-- https://docs.astro.build/en/guides/view-transitions/ -->
+    <!-- <ClientRouter /> -->
   </head>
   <body>
     <slot name="navbar">
