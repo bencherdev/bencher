@@ -25,10 +25,7 @@ switch (adapter) {
 			'// import netlify from "@astrojs/netlify";',
 			'import netlify from "@astrojs/netlify";',
 		);
-		file = file.replace(
-			"adapter: undefined,",
-			"adapter: netlify({edgeMiddleware: true}),",
-		);
+		file = file.replace("adapter: undefined,", "adapter: netlify(),");
 		break;
 }
 
