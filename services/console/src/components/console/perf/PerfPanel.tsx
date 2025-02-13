@@ -715,7 +715,7 @@ const PerfPanel = (props: Props) => {
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
 		fetcher: {
-			bencher_valid: undefined | InitValid;
+			bencher_valid: InitValid;
 			project_slug: undefined | string;
 			per_page: number;
 			page: number;

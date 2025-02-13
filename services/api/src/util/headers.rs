@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::issue_error;
 
-const ALL_ORIGIN: &str = "*";
+pub const ALL_ORIGIN: &str = "*";
 const PUB_HEADERS: &str = "Content-Type";
-const AUTH_HEADERS: &str = "Content-Type, Authorization";
-const EXPOSE_HEADERS: &str = "X-Total-Count";
+pub const AUTH_HEADERS: &str = "Content-Type, Authorization";
+pub const EXPOSE_HEADERS: &str = "X-Total-Count";
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]

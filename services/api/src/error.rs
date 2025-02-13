@@ -236,6 +236,8 @@ macro_rules! resource_conflict_err {
 
 pub(crate) use resource_conflict_err;
 
+use crate::util::headers::{ALL_ORIGIN, AUTH_HEADERS, EXPOSE_HEADERS};
+
 pub fn issue_error<E>(title: &str, body: &str, error: E) -> HttpError
 where
     E: fmt::Display,
@@ -260,16 +262,13 @@ where
 
 fn cors_headers(mut http_error: HttpError) -> HttpError {
     for (header, value) in [
-        ("access-control-allow-origin", "*"),
+        ("access-control-allow-origin", ALL_ORIGIN),
         (
             "access-control-allow-methods",
             "GET, POST, PUT, PATCH, DELETE, OPTIONS",
         ),
-        (
-            "access-control-allow-headers",
-            "Authorization, Content-Type",
-        ),
-        ("access-control-expose-headers", "X-Total-Count"),
+        ("access-control-allow-headers", AUTH_HEADERS),
+        ("access-control-expose-headers", EXPOSE_HEADERS),
     ] {
         if let Err(err) = http_error.add_header(header, value) {
             debug_assert!(false, "{err}");
