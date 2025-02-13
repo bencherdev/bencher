@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/astro";
 import bencher_valid_init, {
 	type InitOutput,
 	is_valid_benchmark_name,
@@ -33,8 +34,9 @@ export type InitValid = undefined | InitOutput;
 export const init_valid = async (): Promise<InitValid> => {
 	try {
 		return await bencher_valid_init();
-	} catch (e) {
-		console.error(e);
+	} catch (error) {
+		console.error(error);
+		Sentry.captureException(error);
 		return;
 	}
 };
