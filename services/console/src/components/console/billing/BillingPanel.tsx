@@ -26,7 +26,6 @@ import {
 	planLevelPrice,
 	suggestedMetrics,
 } from "../../../util/convert";
-import { isBencherCloud } from "../../../util/ext";
 import { httpGet, httpPatch } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { type InitValid, init_valid, validJwt } from "../../../util/valid";
@@ -40,6 +39,7 @@ import PaymentMethod from "./plan/PaymentMethod";
 
 interface Props {
 	apiUrl: string;
+	isBencherCloud: boolean;
 	params: Params;
 	onboard?: boolean;
 }
@@ -55,7 +55,7 @@ const BillingPanel = (props: Props) => {
 	const config = createMemo<BillingPanelConfig>(
 		() =>
 			consoleConfig[BencherResource.BILLING]?.[
-				isBencherCloud() ? Host.BENCHER_CLOUD : Host.SELF_HOSTED
+				props.isBencherCloud ? Host.BENCHER_CLOUD : Host.SELF_HOSTED
 			],
 	);
 

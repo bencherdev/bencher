@@ -1,6 +1,8 @@
 ---
 export const prerender = true;
 
+import { IS_BENCHER_CLOUD } from "astro:env/client";
+
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import AuthRedirect from "../../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../../components/site/SelfHostedRedirct";
@@ -17,7 +19,7 @@ import CallToAction from "../../components/landing/CallToAction.astro";
   title="Track Rust Iai-Callgrind benchmarks"
   description="Track Rust Iai-Callgrind benchmarks over time with Bencher"
 >
-  <SelfHostedRedirect client:only="solid-js" path="/console" />
+  <SelfHostedRedirect client:only="solid-js" isBencherCloud={IS_BENCHER_CLOUD} path="/console" />
   <AuthRedirect client:only="solid-js" path="/console" />
   <section class="hero is-large">
     <div class="hero-body">

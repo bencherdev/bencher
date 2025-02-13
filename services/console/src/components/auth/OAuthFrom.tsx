@@ -1,10 +1,10 @@
-import { createMemo } from "solid-js";
+import { Show, createMemo } from "solid-js";
 import { useSearchParams } from "../../util/url";
 import { INVITE_PARAM, PLAN_PARAM } from "./auth";
 
 interface Props {
 	newUser: boolean;
-	githubClientId: string;
+	githubClientId: undefined | string;
 }
 
 const OAuthForm = (props: Props) => {
@@ -22,23 +22,20 @@ const OAuthForm = (props: Props) => {
 		return path;
 	});
 
-	if (props.githubClientId) {
-		return (
-			<>
-				<a
-					class="button is-fullwidth"
-					href={githubPath()}
-					style="margin-top: 3rem;"
-				>
-					<span class="icon">
-						<i class="fab fa-github" />
-					</span>
-					<span>{props.newUser ? "Sign up" : "Log in"} with GitHub</span>
-				</a>
-			</>
-		);
-	}
-	return <></>;
+	return (
+		<Show when={props.githubClientId}>
+			<a
+				class="button is-fullwidth"
+				href={githubPath()}
+				style="margin-top: 3rem;"
+			>
+				<span class="icon">
+					<i class="fab fa-github" />
+				</span>
+				<span>{props.newUser ? "Sign up" : "Log in"} with GitHub</span>
+			</a>
+		</Show>
+	);
 };
 
 export default OAuthForm;

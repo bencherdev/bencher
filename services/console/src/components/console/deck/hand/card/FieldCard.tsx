@@ -1,13 +1,14 @@
-import { createSignal, type Accessor, Show } from "solid-js";
-import type { JsonAuthUser } from "../../../../../types/bencher";
-import ViewCard from "./ViewCard";
-import UpdateCard from "./UpdateCard";
-import type CardConfig from "./CardConfig";
 import type { Params } from "astro";
+import { type Accessor, Show, createSignal } from "solid-js";
+import type { JsonAuthUser } from "../../../../../types/bencher";
+import type CardConfig from "./CardConfig";
+import UpdateCard from "./UpdateCard";
+import ViewCard from "./ViewCard";
 
 export interface Props {
 	isConsole?: boolean;
 	apiUrl: string;
+	isBencherCloud: boolean;
 	params: Params;
 	user: JsonAuthUser;
 	path: Accessor<string>;
@@ -31,6 +32,7 @@ const FieldCard = (props: Props) => {
 				<ViewCard
 					isConsole={props.isConsole}
 					apiUrl={props.apiUrl}
+					isBencherCloud={props.isBencherCloud}
 					params={props.params}
 					card={props.card}
 					value={props.value}

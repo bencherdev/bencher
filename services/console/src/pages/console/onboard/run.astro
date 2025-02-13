@@ -1,6 +1,8 @@
 ---
 export const prerender = false;
 
+import { BENCHER_API_URL } from "astro:env/server";
+import { IS_BENCHER_CLOUD } from "astro:env/client";
 import { getEntry } from "astro:content";
 
 import BaseLayout from "../../../layouts/BaseLayout.astro";
@@ -8,15 +10,11 @@ import OnboardRun from "../../../components/console/onboard/OnboardRun";
 import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
 import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
 import Collection from "../../../util/collection";
-import { isBencherCloud } from "../../../util/ext";
-
-// Using `meta.env` requires `prerender = false`
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 
 const collection = Collection.onboard;
 const cloudPage = await getEntry(collection, "en/install-cli");
 const selfHostedPage = await getEntry(collection, "en/install-cli-version");
-const { Content } = isBencherCloud()
+const { Content } = IS_BENCHER_CLOUD
 	? await cloudPage.render()
 	: await selfHostedPage.render();
 ---
@@ -27,7 +25,7 @@ const { Content } = isBencherCloud()
 >
 <div slot="navbar" />
 
-<OnboardRun client:only="solid-js" apiUrl={BENCHER_API_URL}>
+<OnboardRun client:only="solid-js" apiUrl={BENCHER_API_URL} isBencherCloud={IS_BENCHER_CLOUD}>
   <div slot="fallback">
     <OnboardStepsFallback step={OnboardStep.RUN} />
     <section class="section">

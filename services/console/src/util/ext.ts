@@ -25,6 +25,3 @@ export const BENCHER_VERSION = `${swagger?.info?.version}`;
 export const SWAGGER = swagger;
 export const BENCHER_CLOUD = "Bencher Cloud";
 export const BENCHER_SELF_HOSTED = "Bencher Self-Hosted";
-
-export const isBencherCloud = (): boolean =>
-	`${import.meta.env.PUBLIC_IS_BENCHER_CLOUD}` === "true";

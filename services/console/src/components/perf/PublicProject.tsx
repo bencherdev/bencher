@@ -4,6 +4,7 @@ import PerfPanel from "../console/perf/PerfPanel";
 
 export interface Props {
 	apiUrl: string;
+	isBencherCloud: boolean;
 	params: Params;
 	project: undefined | JsonProject;
 }
@@ -16,6 +17,7 @@ const PublicProject = (props: Props) => {
 					<div class="column">
 						<PerfPanel
 							apiUrl={props.apiUrl}
+							isBencherCloud={props.isBencherCloud}
 							params={props.params}
 							project={props.project}
 						/>

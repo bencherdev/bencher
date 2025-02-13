@@ -5,7 +5,7 @@
 	"scripts": {
 		"fmt": "npx biome format --write .",
 		"lint": "npx biome lint .",
-		"typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
+		"typeshare": "typeshare --version | grep -q 'typeshare 1.13.2' && typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
 		"wasm": "./build_wasm.sh",
 		"copy": "cp -r ../cli/templates/output ./public/download && cp ../api/openapi.json ./public/download/openapi.json",
 		"setup": "npm run typeshare && npm run wasm && npm run copy",

@@ -8,7 +8,6 @@ import type {
 	PlanLevel,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
-import { isBencherCloud } from "../../../util/ext";
 import { httpGet } from "../../../util/http";
 import { getOrganization, setOrganization } from "../../../util/organization";
 import { useSearchParams } from "../../../util/url";
@@ -25,6 +24,7 @@ import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;
+	isBencherCloud: boolean;
 }
 
 const OnboardRun = (props: Props) => {
@@ -191,7 +191,7 @@ const OnboardRun = (props: Props) => {
 				: {
 						token: "YOUR_TOKEN_HERE",
 					};
-		const host = isBencherCloud() ? "" : `--host ${props.apiUrl} `;
+		const host = props.isBencherCloud ? "" : `--host ${props.apiUrl} `;
 		return `bencher run --project ${project.slug} --token ${token.token} ${host}bencher mock`;
 	});
 

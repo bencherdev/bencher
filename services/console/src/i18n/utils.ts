@@ -1,6 +1,6 @@
+import { getCollection } from "astro:content";
 import type Collection from "../util/collection";
 import { type Language, defaultLang, showDefaultLang } from "./ui";
-import { getCollection } from "astro:content";
 
 export async function getEnPaths(collection: Collection) {
 	const pages = await getPaths(collection);

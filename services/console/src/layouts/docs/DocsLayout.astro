@@ -1,4 +1,6 @@
 ---
+import { IS_BENCHER_CLOUD } from "astro:env/client";
+
 import InnerLayout from "./InnerLayout.astro";
 import { DocsTab } from "../../components/docs/menu/docs_tab";
 import type Collection from "../../util/collection";
@@ -44,6 +46,6 @@ const {
   slug={slug}
   canonical={canonical}
 >
-  <SelfHostedRedirect client:only="solid-js" path="/docs/api" />
+  <SelfHostedRedirect client:only="solid-js" isBencherCloud={IS_BENCHER_CLOUD} path="/docs/api" />
   <slot />
 </InnerLayout>

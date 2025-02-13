@@ -1,21 +1,22 @@
+import { createElementSize } from "@solid-primitives/resize-observer";
 import type { Params } from "astro";
 import {
 	type Accessor,
-	createEffect,
-	createSignal,
 	For,
 	type Resource,
 	Show,
+	createEffect,
+	createSignal,
 } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import DeckButton, { type DeckButtonConfig } from "./DeckButton";
 import type CardConfig from "./card/CardConfig";
 import DeckCard from "./card/DeckCard";
-import { createElementSize } from "@solid-primitives/resize-observer";
 
 export interface Props {
 	isConsole?: boolean;
 	apiUrl: string;
+	isBencherCloud: boolean;
 	params: Params;
 	user: JsonAuthUser;
 	config: DeckConfig;
@@ -68,6 +69,7 @@ const Deck = (props: Props) => {
 					<DeckCard
 						isConsole={props.isConsole === true}
 						apiUrl={props.apiUrl}
+						isBencherCloud={props.isBencherCloud}
 						params={props.params}
 						user={props.user}
 						path={props.path}

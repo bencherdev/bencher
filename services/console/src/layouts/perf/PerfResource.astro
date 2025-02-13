@@ -1,4 +1,6 @@
 ---
+import { BENCHER_API_URL, INTERNAL_API_URL } from "astro:env/server";
+
 import PerfLayout from "./PerfLayout.astro";
 import Tetris from "../../components/site/Tetris.astro";
 import { fetchSSR, PubResource } from "../../components/perf/util";
@@ -7,10 +9,6 @@ import PublicDeck, {
 	type PubDeckPanelConfig,
 } from "../../components/perf/PublicDeck";
 import FallbackPublicDeck from "../../components/perf/FallbackPublicDeck.astro";
-
-// Using `meta.env` requires `prerender = false`
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
 
 interface Props {
 	title: (json?: undefined | object) => string;

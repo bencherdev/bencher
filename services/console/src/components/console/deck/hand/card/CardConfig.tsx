@@ -9,7 +9,11 @@ export interface CardConfig {
 	keys?: string[];
 	display: Display;
 	field: PosterFieldConfig;
-	is_allowed: (apiUrl: string, params: Params) => boolean;
+	is_allowed: (
+		apiUrl: string,
+		params: Params,
+		isBencherCloud?: boolean,
+	) => boolean;
 	path: (params: Params, data: object) => string;
 	notify?: boolean;
 }

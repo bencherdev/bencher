@@ -22,6 +22,7 @@ import DeckHeader, { type DeckHeaderConfig } from "./header/DeckHeader";
 
 interface Props {
 	apiUrl: string;
+	isBencherCloud: boolean;
 	params: Params;
 	resource: BencherResource;
 }
@@ -105,6 +106,7 @@ const DeckPanel = (props: Props) => {
 							<Deck
 								isConsole={true}
 								apiUrl={props.apiUrl}
+								isBencherCloud={props.isBencherCloud}
 								params={props.params}
 								user={user}
 								config={config()?.deck}

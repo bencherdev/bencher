@@ -1,6 +1,8 @@
 ---
 export const prerender = true;
 
+import { IS_BENCHER_CLOUD } from "astro:env/client";
+
 import BaseLayout from "../layouts/BaseLayout.astro";
 import PricingTable from "../components/pricing/PricingTable";
 import FallbackPricingTable from "../components/pricing/FallbackPricingTable";
@@ -15,7 +17,7 @@ const description =
 ---
 
 <BaseLayout title={title} description={description}>
-  <SelfHostedRedirect client:only="solid-js" path="/console" />
+  <SelfHostedRedirect client:only="solid-js" isBencherCloud={IS_BENCHER_CLOUD} path="/console" />
   <div>
     <section class="hero">
       <div class="hero-body">

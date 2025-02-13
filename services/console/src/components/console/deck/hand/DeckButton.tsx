@@ -1,21 +1,21 @@
-import {
-	Switch,
-	type Accessor,
-	type Resource,
-	Match,
-	createResource,
-	createMemo,
-} from "solid-js";
-import type { JsonAuthUser } from "../../../../types/bencher";
-import { ActionButton } from "../../../../config/types";
-import DeleteButton from "./DeleteButton";
 import type { Params } from "astro";
+import {
+	type Accessor,
+	Match,
+	type Resource,
+	Switch,
+	createMemo,
+	createResource,
+} from "solid-js";
+import { ActionButton } from "../../../../config/types";
+import type { JsonAuthUser } from "../../../../types/bencher";
+import type { PubResourceKind } from "../../../perf/util";
 import ArchiveButton from "./ArchiveButton";
+import ArchivedButton from "./ArchivedButton";
+import DeleteButton from "./DeleteButton";
+import HeadReplacedButton from "./HeadReplacedButton";
 import ModelReplacedButton from "./ModelReplacedButton";
 import RawButton from "./RawButton";
-import HeadReplacedButton from "./HeadReplacedButton";
-import ArchivedButton from "./ArchivedButton";
-import type { PubResourceKind } from "../../../perf/util";
 import RemoveModelButton from "./RemoveModelButton";
 
 export interface Props {

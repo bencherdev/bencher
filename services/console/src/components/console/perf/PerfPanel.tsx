@@ -177,6 +177,7 @@ const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000;
 
 export interface Props {
 	apiUrl: string;
+	isBencherCloud: boolean;
 	params: Params;
 	isConsole?: boolean;
 	isEmbed?: boolean;
@@ -1204,6 +1205,7 @@ const PerfPanel = (props: Props) => {
 				<PerfHeader
 					isConsole={props.isConsole === true}
 					apiUrl={props.apiUrl}
+					isBencherCloud={props.isBencherCloud}
 					user={user}
 					project={project}
 					isPlotInit={isPlotInit}

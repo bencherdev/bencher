@@ -1,8 +1,9 @@
 ---
 export const prerender = true;
 
+import { IS_BENCHER_CLOUD } from "astro:env/client";
+
 import LegalLayout from "../layouts/legal/LegalLayout.astro";
-import { isBencherCloud } from "../util/ext";
 import { PROJECTS } from "../components/landing/projects.ts";
 
 const title = "Explore";
@@ -12,7 +13,7 @@ const description =
 ---
 
 <LegalLayout title={title} titleFmt={titleFmt} description={description} heading={title}>
-  {isBencherCloud() && PROJECTS.flat().map((project)=> (
+  {IS_BENCHER_CLOUD && PROJECTS.flat().map((project)=> (
     <a class="box"
       title={`View ${project.name}`}
       href={`/perf/${project.slug}?${project.query}`}>

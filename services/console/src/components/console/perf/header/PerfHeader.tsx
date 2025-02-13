@@ -23,6 +23,7 @@ import ShareModal from "./ShareModal";
 export interface Props {
 	isConsole: boolean;
 	apiUrl: string;
+	isBencherCloud: boolean;
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
 	isPlotInit: Accessor<boolean>;
@@ -72,6 +73,7 @@ const PerfHeader = (props: Props) => {
 			</div>
 			<ShareModal
 				apiUrl={props.apiUrl}
+				isBencherCloud={props.isBencherCloud}
 				user={props.user}
 				perfQuery={props.perfQuery}
 				isPlotInit={props.isPlotInit}

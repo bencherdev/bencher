@@ -1,15 +1,15 @@
 ---
 export const prerender = false;
 
+import { BENCHER_API_URL, INTERNAL_API_URL } from "astro:env/server";
+import { IS_BENCHER_CLOUD } from "astro:env/client";
+
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import type { JsonProject } from "../../../types/bencher";
 import PerfPanel from "../../../components/console/perf/PerfPanel";
 import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
 import * as Sentry from "@sentry/astro";
 
-// Using `meta.env` requires `prerender = false`
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
 const params = Astro.params;
 const getProjectUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
 	params.project
@@ -74,6 +74,7 @@ if (hasPerfImage(Astro.url)) {
     <PerfPanel
       client:only="solid-js"
       apiUrl={BENCHER_API_URL}
+      isBencherCloud={IS_BENCHER_CLOUD}
       params={params}
       project={jsonProject}
       isEmbed={true}

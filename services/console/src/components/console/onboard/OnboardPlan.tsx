@@ -18,6 +18,7 @@ import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;
+	isBencherCloud: boolean;
 }
 
 const OnboardPlan = (props: Props) => {
@@ -106,6 +107,7 @@ const OnboardPlan = (props: Props) => {
 							<br />
 							<BillingPanel
 								apiUrl={props.apiUrl}
+								isBencherCloud={props.isBencherCloud}
 								params={{ organization: organization()?.slug ?? "" }}
 								onboard={true}
 							/>

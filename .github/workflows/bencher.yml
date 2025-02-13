@@ -28,6 +28,8 @@ env:
   GLIBC_VERSION: 2.17
   # WASM
   WASM_BENCHER_VALID: bencher-valid-pkg
+  # Typeshare
+  TYPESHARE_VERSION: 1.13.2
   # Console
   CONSOLE_DOCKER_IMAGE: bencher-console
   NETLIFY_CLI_VERSION: 18.0.4
@@ -188,7 +190,7 @@ jobs:
       - name: Check OpenAPI Spec for changes
         run: git diff --exit-code
       - name: Install Typeshare CLI
-        run: cargo install typeshare-cli --version 1.13.2 --locked
+        run: cargo install typeshare-cli --version $TYPESHARE_VERSION --locked
       - name: Generate Typescript Types
         run: cargo gen-ts
       - name: Check Typescript Types for changes
@@ -781,7 +783,7 @@ jobs:
         run: npm run netlify
       - name: Test Links
         continue-on-error: true
-        uses: lycheeverse/lychee-action@v2.0.2
+        uses: lycheeverse/lychee-action@v2.3.0
         with:
           args: --config ./services/console/lychee.toml ./services/console/dist
 
@@ -951,6 +953,9 @@ jobs:
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console
+        env:
+          SENTRY_UPLOAD: true
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run netlify
       - name: Install Netlify CLI
         run: npm install --save-dev netlify-cli@$NETLIFY_CLI_VERSION
@@ -985,6 +990,9 @@ jobs:
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console
+        env:
+          SENTRY_UPLOAD: true
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run netlify
       - name: Install Netlify CLI
         run: npm install --save-dev netlify-cli@$NETLIFY_CLI_VERSION

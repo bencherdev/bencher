@@ -11,6 +11,7 @@ import ReportTableCard from "./ReportTableCard";
 export interface Props {
 	isConsole: boolean;
 	apiUrl: string;
+	isBencherCloud?: boolean;
 	params: Params;
 	user: JsonAuthUser;
 	path: Accessor<string>;
@@ -22,6 +23,10 @@ export interface Props {
 }
 
 const DeckCard = (props: Props) => {
+	// This only matters for cards that act differently between Bencher Cloud and Bencher Self-Hosted.
+	// So for individual cards, we don't require it to be passed in.
+	const isBencherCloud = props.isBencherCloud ?? true;
+
 	return (
 		<div style="margin-bottom: 0.5rem;">
 			<Switch>
@@ -29,6 +34,7 @@ const DeckCard = (props: Props) => {
 					<FieldCard
 						isConsole={props.isConsole}
 						apiUrl={props.apiUrl}
+						isBencherCloud={isBencherCloud}
 						params={props.params}
 						user={props.user}
 						path={props.path}
@@ -44,6 +50,7 @@ const DeckCard = (props: Props) => {
 					<FieldCard
 						isConsole={props.isConsole}
 						apiUrl={props.apiUrl}
+						isBencherCloud={isBencherCloud}
 						params={props.params}
 						user={props.user}
 						path={props.path}

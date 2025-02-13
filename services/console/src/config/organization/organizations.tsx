@@ -1,17 +1,16 @@
+import FieldKind from "../../components/field/kind";
 import type { JsonOrganization } from "../../types/bencher";
-import { ActionButton, Button, Card, Display, Row } from "../types";
-import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
-import { Operation } from "../types";
-import type { Params } from "../../util/url";
 import {
 	isAllowedOrganizationDelete,
 	isAllowedOrganizationEdit,
 	isAllowedOrganizationManage,
 } from "../../util/auth";
-import FieldKind from "../../components/field/kind";
-import { validResourceName, validOptionJwt, validSlug } from "../../util/valid";
-import { isBencherCloud } from "../../util/ext";
 import { removeOrganization, setOrganization } from "../../util/organization";
+import type { Params } from "../../util/url";
+import { validOptionJwt, validResourceName, validSlug } from "../../util/valid";
+import { ActionButton, Button, Card, Display, Row } from "../types";
+import { Operation } from "../types";
+import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 
 const ORGANIZATION_FIELDS = {
 	name: {
@@ -157,8 +156,11 @@ const organizationsConfig = {
 					label: "License Key",
 					key: "license",
 					display: Display.RAW,
-					is_allowed: (apiUrl: string, params: Params) =>
-						!isBencherCloud() && isAllowedOrganizationManage(apiUrl, params),
+					is_allowed: (
+						apiUrl: string,
+						params: Params,
+						isBencherCloud: boolean,
+					) => !isBencherCloud && isAllowedOrganizationManage(apiUrl, params),
 					field: {
 						kind: FieldKind.INPUT,
 						label: "License Key",

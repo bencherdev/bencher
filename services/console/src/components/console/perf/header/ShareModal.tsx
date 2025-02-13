@@ -6,7 +6,6 @@ import type {
 	JsonPerfQuery,
 	JsonProject,
 } from "../../../../types/bencher";
-import { isBencherCloud } from "../../../../util/ext";
 import { apiUrl } from "../../../../util/http";
 import { useSearchParams } from "../../../../util/url";
 import { DEBOUNCE_DELAY } from "../../../../util/valid";
@@ -20,6 +19,7 @@ import {
 
 export interface Props {
 	apiUrl: string;
+	isBencherCloud: boolean;
 	user: JsonAuthUser;
 	perfQuery: Accessor<JsonPerfQuery>;
 	isPlotInit: Accessor<boolean>;
@@ -47,7 +47,7 @@ const ShareModal = (props: Props) => {
 			}
 		}
 
-		if (isBencherCloud()) {
+		if (props.isBencherCloud) {
 			newParams.set("utm_medium", "share");
 			newParams.set("utm_source", "bencher");
 			newParams.set("utm_content", "img");
@@ -103,7 +103,7 @@ const ShareModal = (props: Props) => {
 			newParams.set(EMBED_TITLE_PARAM, img_title);
 		}
 
-		if (isBencherCloud()) {
+		if (props.isBencherCloud) {
 			newParams.set("utm_medium", "share");
 			newParams.set("utm_source", "bencher");
 			newParams.set("utm_content", "iframe");
