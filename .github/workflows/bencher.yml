@@ -1005,7 +1005,6 @@ jobs:
           npx netlify-cli \
           deploy \
           --prod \
-          --alias ${GITHUB_REF#refs/*/} \
           --message "$DEPLOY_MESSAGE" \
           --json \
           | tee netlify.json
