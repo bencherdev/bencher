@@ -5,24 +5,35 @@ import {
 } from "../../../util/ext";
 
 export const BENCHER_THEME_KEY = "BENCHER_THEME";
+export const LIGHT_THEME = "light";
+export const DARK_THEME = "dark";
 
 export enum Theme {
-	Light = "light",
-	Dark = "dark",
+	// biome-ignore lint/style/useLiteralEnumMembers: const reuse
+	Light = LIGHT_THEME,
+	// biome-ignore lint/style/useLiteralEnumMembers: const reuse
+	Dark = DARK_THEME,
 }
 
 export const THEME_TOGGLE_ID = "theme-toggle";
+export const LIGHT_THEME_ID = "light-theme";
+export const DARK_THEME_ID = "dark-theme";
 
 export enum ThemeId {
-	Light = "light-theme",
-	Dark = "dark-theme",
+	// biome-ignore lint/style/useLiteralEnumMembers: const reuse
+	Light = LIGHT_THEME_ID,
+	// biome-ignore lint/style/useLiteralEnumMembers: const reuse
+	Dark = DARK_THEME_ID,
 }
 
 export const getColorScheme = () => {
+	if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+		return Theme.Light;
+	}
 	if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
 		return Theme.Dark;
 	}
-	return Theme.Light;
+	return;
 };
 
 export const getTheme = () => getCachedTheme() ?? getColorScheme();
