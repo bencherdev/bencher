@@ -5,16 +5,16 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 ---
 
 <button id={THEME_TOGGLE_ID} class="button" title="Toggle dark mode">
-  <span id={ThemeId.Light} class="icon has-text-primary">
+  <span id={ThemeId.Light} class="icon has-text-grey">
     <i class="fas fa-sun" />
   </span>
-  <span id={ThemeId.Dark} class="icon has-text-light">
+  <span id={ThemeId.Dark} class="icon has-text-grey">
     <i class="far fa-moon" />
   </span>
 </button>
 
 <script>
-  import {Theme, THEME_TOGGLE_ID, ThemeId, getTheme, storeTheme} from "./theme";
+  import { Theme, THEME_TOGGLE_ID, ThemeId, getTheme, storeTheme } from "./theme";
 
   const themeToggle = document.getElementById(THEME_TOGGLE_ID);
   const sunIcon = document.getElementById(ThemeId.Light);
@@ -22,15 +22,19 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 
   const setLightTheme = () => {
     themeToggle ? themeToggle.title = "Toggle dark mode" : null;
+    sunIcon?.classList.remove("has-text-grey");
     sunIcon?.classList.remove("has-text-dark");
     sunIcon?.classList.add("has-text-primary");
+    moonIcon?.classList.remove("has-text-grey");
     moonIcon?.classList.remove("has-text-primary");
     moonIcon?.classList.add("has-text-light");
   }
   const setDarkTheme = () => {
     themeToggle ? themeToggle.title = "Toggle light mode" : null;
+    sunIcon?.classList.remove("has-text-grey");
     sunIcon?.classList.remove("has-text-primary");
     sunIcon?.classList.add("has-text-dark");
+    moonIcon?.classList.remove("has-text-grey");
     moonIcon?.classList.remove("has-text-light");
     moonIcon?.classList.add("has-text-primary");
   }

@@ -1,4 +1,5 @@
 import {
+	BENCHER_WORDMARK,
 	BENCHER_WORDMARK_DARK,
 	BENCHER_WORDMARK_LIGHT,
 } from "../../../util/ext";
@@ -17,6 +18,13 @@ export enum ThemeId {
 	Dark = "dark-theme",
 }
 
+export const getColorScheme = () => {
+	if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+		return Theme.Dark;
+	}
+	return Theme.Light;
+};
+
 export const getTheme = () => getCachedTheme() ?? getColorScheme();
 
 const getCachedTheme = () => {
@@ -33,13 +41,6 @@ const getCachedTheme = () => {
 		}
 	}
 	return null;
-};
-
-const getColorScheme = () => {
-	if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-		return Theme.Dark;
-	}
-	return Theme.Light;
 };
 
 export const storeTheme = (theme: Theme) =>
@@ -63,12 +64,14 @@ export const themeColor = (theme: Theme) => {
 	}
 };
 
-export const themeWordmark = (theme: Theme) => {
+export const themeWordmark = (theme: undefined | Theme) => {
 	switch (theme) {
 		case Theme.Light:
 			return BENCHER_WORDMARK_LIGHT;
 		case Theme.Dark:
 			return BENCHER_WORDMARK_DARK;
+		default:
+			return BENCHER_WORDMARK;
 	}
 };
 

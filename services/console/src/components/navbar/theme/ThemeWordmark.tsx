@@ -1,10 +1,13 @@
 import { createMemo } from "solid-js";
-import { BENCHER_WORDMARK_ID } from "../../../util/ext";
+import { BENCHER_WORDMARK, BENCHER_WORDMARK_ID } from "../../../util/ext";
 import { themeWordmark } from "./theme";
 import { themeSignal } from "./util";
 
 const ThemeWordmark = () => {
-	const wordmark = createMemo(() => themeWordmark(themeSignal()));
+	const wordmark = createMemo(
+		() => themeWordmark(themeSignal()),
+		BENCHER_WORDMARK,
+	);
 
 	return (
 		<img

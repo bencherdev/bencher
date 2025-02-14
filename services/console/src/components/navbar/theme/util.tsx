@@ -1,7 +1,7 @@
 import { createMemo, createSignal } from "solid-js";
-import { Theme, getTheme, themeBackground, themeColor } from "./theme";
+import { getColorScheme, getTheme, themeBackground, themeColor } from "./theme";
 
-const [theme, setTheme] = createSignal(Theme.Light);
+const [theme, setTheme] = createSignal(getColorScheme());
 setInterval(() => {
 	const newTheme = getTheme();
 	if (theme() !== newTheme) {
