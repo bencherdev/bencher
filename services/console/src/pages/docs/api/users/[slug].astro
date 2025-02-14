@@ -6,24 +6,20 @@ import Operation from "../../../../components/docs/api/Operation.astro";
 import {
 	API_DOCS_MODIFIED,
 	API_DOCS_PUBLISHED,
-	getEnCollection,
+	getEnOnlyPaths,
 } from "../../../../i18n/utils";
-import Collection, { fmtPageId } from "../../../../util/collection";
+import Collection from "../../../../util/collection";
 
 const collection = Collection.api_users;
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
 	const collection = Collection.api_users;
-	const pages = await getEnCollection(collection);
-	return pages.map((page) => ({
-		params: { slug: fmtPageId(page.id) },
-		props: { page },
-	}));
+	return await getEnOnlyPaths(collection);
 }
 // 2. When it's time to render, you can get the entry directly from the prop
-const { page } = Astro.props;
 const { slug } = Astro.params;
+const page = Astro.props;
 ---
 
 <ApiLayout

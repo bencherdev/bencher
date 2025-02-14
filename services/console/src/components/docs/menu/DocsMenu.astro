@@ -3,7 +3,7 @@ import { IS_BENCHER_CLOUD } from "astro:env/client";
 
 import { DocsTab, DocsMenuId } from "./docs_tab.tsx";
 import { type Language, defaultLang } from "../../../i18n/ui.ts";
-import { getEnCollection, getLangCollection } from "../../../i18n/utils.ts";
+import { getEnOnlyCollection, getLangCollection } from "../../../i18n/utils.ts";
 import LangButton from "../../../i18n/LangButton.astro";
 import Collection from "../../../util/collection.ts";
 import DocsList from "./DocsList.astro";
@@ -30,12 +30,14 @@ const docsReferenceCollection = await getLangCollection(
 );
 
 // Api
-const apiOrganizationsCollection = await getEnCollection(
+const apiOrganizationsCollection = await getEnOnlyCollection(
 	Collection.api_organizations,
 );
-const apiProjectsCollection = await getEnCollection(Collection.api_projects);
-const apiUsersCollection = await getEnCollection(Collection.api_users);
-const apiServerCollection = await getEnCollection(Collection.api_server);
+const apiProjectsCollection = await getEnOnlyCollection(
+	Collection.api_projects,
+);
+const apiUsersCollection = await getEnOnlyCollection(Collection.api_users);
+const apiServerCollection = await getEnOnlyCollection(Collection.api_server);
 
 // Learn
 const benchmarkingCppCollection = await getLangCollection(
