@@ -9,7 +9,7 @@ import { getEnOnlyPaths } from "../../i18n/utils";
 
 export async function getStaticPaths() {
 	const collection = Collection.legal;
-  return await getEnOnlyPaths(collection);
+	return await getEnOnlyPaths(collection);
 }
 
 const page = Astro.props;

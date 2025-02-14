@@ -12,13 +12,12 @@ import Collection from "../../../../util/collection";
 
 const collection = Collection.docs_tutorial;
 
-// 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
 	const collection = Collection.docs_tutorial;
 	const pages = await getLangPaths(collection);
 	return pages.filter((page) => page.params.slug === "quick-start");
 }
-// 2. When it's time to render, you can get the entry directly from the prop
+
 const lang = Astro.params.lang as Language;
 
 const signupText = () => {
