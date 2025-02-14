@@ -107,7 +107,7 @@ const { lang } = Astro.props;
       {
         content[lang]?.map((page) => (
           <li>
-            <a href={`/${langPath(lang)}learn/${collectionPath(collection)}/${page.slug}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}learn/${collectionPath(collection)}/${page.id}/`}>{page.data.title}</a>
           </li>
         ))
       }

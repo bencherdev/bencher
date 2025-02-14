@@ -1,6 +1,8 @@
 ---
 export const prerender = true;
 
+import { render } from "astro:content";
+
 import LearnLayout from "../../../layouts/docs/LearnLayout.astro";
 import { getEnPaths } from "../../../i18n/utils";
 import { Author } from "../../../components/docs/author";
@@ -16,7 +18,7 @@ export async function getStaticPaths() {
 // 2. When it's time to render, you can get the entry directly from the prop
 const { slug } = Astro.params;
 const page = Astro.props;
-const { Content } = await page.render();
+const { Content } = await render(page);
 ---
 
 <LearnLayout

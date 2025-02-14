@@ -20,7 +20,7 @@ pages.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
     {
       pages.map((page) => (
         <li>
-          <a href={`/legal/${page.slug}`}>{page.data.heading}</a>
+          <a href={`/legal/${page.id}`}>{page.data.heading}</a>
         </li>
       ))
     }

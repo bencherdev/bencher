@@ -1,6 +1,8 @@
 ---
 export const prerender = true;
 
+import { render } from "astro:content";
+
 import { getCollection } from "astro:content";
 import LegalLayout from "../../layouts/legal/LegalLayout.astro";
 import Collection from "../../util/collection";
@@ -9,13 +11,13 @@ import Collection from "../../util/collection";
 export async function getStaticPaths() {
 	const pages = await getCollection(Collection.legal);
 	return pages.map((page) => ({
-		params: { slug: page.slug },
+		params: { slug: page.id },
 		props: { page },
 	}));
 }
 // 2. When it's time to render, you can get the entry directly from the prop
 const { page } = Astro.props;
-const { Content } = await page.render();
+const { Content } = await render(page);
 ---
 
 <LegalLayout

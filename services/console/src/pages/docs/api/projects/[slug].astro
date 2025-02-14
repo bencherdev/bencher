@@ -17,7 +17,7 @@ export async function getStaticPaths() {
 	const collection = Collection.api_projects;
 	const pages = await getEnCollection(collection);
 	return pages.map((page) => ({
-		params: { slug: page.slug },
+		params: { slug: page.id },
 		props: { page },
 	}));
 }
