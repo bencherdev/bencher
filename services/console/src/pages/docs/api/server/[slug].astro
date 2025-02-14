@@ -8,7 +8,7 @@ import {
 	API_DOCS_PUBLISHED,
 	getEnCollection,
 } from "../../../../i18n/utils";
-import Collection from "../../../../util/collection";
+import Collection, { fmtPageId } from "../../../../util/collection";
 
 const collection = Collection.api_server;
 
@@ -17,7 +17,7 @@ export async function getStaticPaths() {
 	const collection = Collection.api_server;
 	const pages = await getEnCollection(collection);
 	return pages.map((page) => ({
-		params: { slug: page.id },
+		params: { slug: fmtPageId(page.id) },
 		props: { page },
 	}));
 }

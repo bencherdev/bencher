@@ -6,7 +6,7 @@ import {
 	engineering,
 } from "../../../i18n/ui.ts";
 import { getLangCollection, langPath } from "../../../i18n/utils.ts";
-import Collection, { collectionPath } from "../../../util/collection.ts";
+import Collection, { collectionPath, fmtPageId } from "../../../util/collection.ts";
 
 interface Props {
 	lang: string;
@@ -107,7 +107,7 @@ const { lang } = Astro.props;
       {
         content[lang]?.map((page) => (
           <li>
-            <a href={`/${langPath(lang)}learn/${collectionPath(collection)}/${page.id}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}learn/${collectionPath(collection)}/${fmtPageId(page.id)}/`}>{page.data.title}</a>
           </li>
         ))
       }

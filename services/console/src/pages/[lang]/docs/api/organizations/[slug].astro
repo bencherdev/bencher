@@ -5,7 +5,7 @@ import { getCollection } from "astro:content";
 import ApiLayout from "../../../../../layouts/docs/ApiLayout.astro";
 import Operation from "../../../../../components/docs/api/Operation.astro";
 import { otherLanguages } from "../../../../../i18n/ui";
-import Collection from "../../../../../util/collection";
+import Collection, { fmtPageId } from "../../../../../util/collection";
 import {
 	API_DOCS_MODIFIED,
 	API_DOCS_PUBLISHED,
@@ -19,7 +19,7 @@ export async function getStaticPaths() {
 	const pages = await getCollection(collection);
 	return otherLanguages.flatMap((lang) => {
 		return pages.map((page) => ({
-			params: { lang, slug: page.id },
+			params: { lang, slug: fmtPageId(page.id) },
 			props: { page },
 		}));
 	});

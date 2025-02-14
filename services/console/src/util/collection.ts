@@ -1,3 +1,5 @@
+import { Language } from "../i18n/ui";
+
 enum Collection {
 	// Legal
 	legal = "legal",
@@ -71,5 +73,12 @@ export const collectionPath = (collection: Collection) => {
 			return "onboard";
 	}
 };
+
+export const fmtPageId = (page_id: string) =>
+	page_id
+		// Remove the language prefix from the page_id (`en/`)
+		.replace(new RegExp(`^(${Object.values(Language).join("|")})/`), "")
+		// Remove the file extension from the page_id (`.mdx`)
+		.replace(/\.mdx$/, "");
 
 export default Collection;

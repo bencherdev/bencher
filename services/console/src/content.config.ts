@@ -21,84 +21,74 @@ const legal = defineCollection({
 	schema: pageSchema,
 });
 
-const docs = (section: string) =>
+const i18n_collection = (collection: string) =>
 	defineCollection({
-		loader: glob({ pattern: I18N_MDX, base: `${CONTENT}/docs-${section}` }),
+		loader: glob({ pattern: I18N_MDX, base: `${CONTENT}/${collection}` }),
 		schema: pageSchema,
 	});
 
-const api = defineCollection({
-	loader: glob({ pattern: "api-*", base: CONTENT }),
-	schema: z.object({
-		title: z.string(),
-		description: z.string(),
-		heading: z.string(),
-		published: z.string().optional(),
-		modified: z.string().optional(),
-		sortOrder: z.number(),
-		draft: z.boolean().optional(),
-		canonicalize: z.boolean().optional(),
-		paths: z.array(
-			z.object({
-				path: z.string(),
-				method: z.string(),
-				headers: z.string(),
-				cli: z.string().optional().nullable(),
-			}),
-		),
-	}),
-});
+const docs = (section: string) => i18n_collection(`docs-${section}`);
 
-const benchmarking = defineCollection({
-	loader: glob({ pattern: "benchmarking-*.mdx", base: CONTENT }),
-	schema: pageSchema,
-});
+const api = (resource: string) =>
+	defineCollection({
+		loader: glob({ pattern: MDX, base: `${CONTENT}/api-${resource}` }),
+		schema: z.object({
+			title: z.string(),
+			description: z.string(),
+			heading: z.string(),
+			published: z.string().optional(),
+			modified: z.string().optional(),
+			sortOrder: z.number(),
+			draft: z.boolean().optional(),
+			canonicalize: z.boolean().optional(),
+			paths: z.array(
+				z.object({
+					path: z.string(),
+					method: z.string(),
+					headers: z.string(),
+					cli: z.string().optional().nullable(),
+				}),
+			),
+		}),
+	});
 
-const track_in_ci = defineCollection({
-	loader: glob({ pattern: "track-in-ci-*.mdx", base: CONTENT }),
-	schema: pageSchema,
-});
+enum Lang {
+	Cpp = "cpp",
+	Python = "python",
+	Rust = "rust",
+}
 
-const case_study = defineCollection({
-	loader: glob({ pattern: "case-study.mdx", base: CONTENT }),
-	schema: pageSchema,
-});
+const benchmarking = (lang: Lang) => learn("benchmarking", lang);
 
-const engineering = defineCollection({
-	loader: glob({ pattern: "engineering.mdx", base: CONTENT }),
-	schema: pageSchema,
-});
+const track_in_ci = (lang: Lang) => learn("track-in-ci", lang);
 
-const onboard = defineCollection({
-	loader: glob({ pattern: "onboard.mdx", base: CONTENT }),
-	schema: pageSchema,
-});
+const learn = (section: string, lang: Lang) =>
+	i18n_collection(`${section}-${lang}`);
 
-// 3. Export a single `collections` object to register your collection(s)
 export const collections = {
 	// legal
 	legal: legal,
 	// docs
 	docs_tutorial: docs("tutorial"),
-	docs_how_to: docs,
-	docs_explanation: docs,
-	docs_reference: docs,
+	docs_how_to: docs("how-to"),
+	docs_explanation: docs("explanation"),
+	docs_reference: docs("reference"),
 	// api
-	api_organizations: api,
-	api_projects: api,
-	api_users: api,
-	api_server: api,
+	api_organizations: api("organizations"),
+	api_projects: api("projects"),
+	api_users: api("users"),
+	api_server: api("server"),
 	// learn
-	benchmarking_cpp: benchmarking,
-	benchmarking_python: benchmarking,
-	benchmarking_rust: benchmarking,
-	track_in_ci_cpp: track_in_ci,
-	track_in_ci_python: track_in_ci,
-	track_in_ci_rust: track_in_ci,
-	case_study: case_study,
-	engineering: engineering,
+	benchmarking_cpp: benchmarking(Lang.Cpp),
+	benchmarking_python: benchmarking(Lang.Python),
+	benchmarking_rust: benchmarking(Lang.Rust),
+	track_in_ci_cpp: track_in_ci(Lang.Cpp),
+	track_in_ci_python: track_in_ci(Lang.Python),
+	track_in_ci_rust: track_in_ci(Lang.Rust),
+	case_study: i18n_collection("case-study"),
+	engineering: i18n_collection("engineering"),
 	// onboard
-	onboard: onboard,
+	onboard: i18n_collection("onboard"),
 };
 
 export const keywords = ["Continuous Benchmarking"];

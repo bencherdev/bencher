@@ -5,13 +5,13 @@ import { render } from "astro:content";
 
 import { getCollection } from "astro:content";
 import LegalLayout from "../../layouts/legal/LegalLayout.astro";
-import Collection from "../../util/collection";
+import Collection, { fmtPageId } from "../../util/collection";
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
 	const pages = await getCollection(Collection.legal);
 	return pages.map((page) => ({
-		params: { slug: page.id },
+		params: { slug: fmtPageId(page.id) },
 		props: { page },
 	}));
 }
