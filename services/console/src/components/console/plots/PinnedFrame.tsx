@@ -26,6 +26,12 @@ export interface Props {
 	project_slug: Accessor<undefined | string>;
 	plot: JsonPlot;
 	logo?: boolean;
+	embed?: {
+		logo?: boolean;
+		title?: string;
+		header?: boolean;
+		key?: boolean;
+	};
 }
 
 const PinnedFrame = (props: Props) => {
@@ -116,10 +122,12 @@ const PinnedFrame = (props: Props) => {
 	const lower_boundary = createMemo(() => props.plot?.lower_boundary ?? false);
 	const upper_boundary = createMemo(() => props.plot?.upper_boundary ?? false);
 
-	const embed_logo = createMemo(() => props.logo === true);
-	const embed_title = createMemo(() => props.plot?.title ?? "");
-	const embed_header = createMemo(() => false);
-	const embed_key = createMemo(() => true);
+	const embed_logo = createMemo(() => props.embed?.logo === true);
+	const embed_title = createMemo(
+		() => props.embed?.title ?? props.plot?.title ?? "",
+	);
+	const embed_header = createMemo(() => props.embed?.header === true);
+	const embed_key = createMemo(() => props.embed?.key === true);
 
 	const handleVoid = (_void: string | PerfTab | boolean | XAxis | null) => {};
 

@@ -12,7 +12,11 @@ import type {
 	JsonProject,
 	XAxis,
 } from "../../../../types/bencher";
-import { type Theme, themeColor } from "../../../navbar/theme/theme";
+import {
+	type Theme,
+	getColorScheme,
+	themeColor,
+} from "../../../navbar/theme/theme";
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
@@ -62,7 +66,10 @@ export interface Props {
 }
 
 const PerfPlot = (props: Props) => {
-	const themeClass = createMemo(() => themeColor(props.theme()));
+	const themeClass = createMemo(
+		() => themeColor(props.theme()),
+		getColorScheme(),
+	);
 
 	return (
 		<div class="columns">

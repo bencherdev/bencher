@@ -29,7 +29,7 @@ const GamePlot = () => (
 					modified: "2024-11-24T19:32:41Z",
 				} as JsonPlot
 			}
-			logo={true}
+			embed={{ logo: true, key: false }}
 		/>
 	</div>
 );
