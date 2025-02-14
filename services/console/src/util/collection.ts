@@ -74,11 +74,19 @@ export const collectionPath = (collection: Collection) => {
 	}
 };
 
-export const fmtPageId = (page_id: string) =>
-	page_id
-		// Remove the language prefix from the page_id (`en/`)
-		.replace(new RegExp(`^(${Object.values(Language).join("|")})/`), "")
-		// Remove the file extension from the page_id (`.mdx`)
-		.replace(/\.mdx$/, "");
+export const splitPageId = (page_id: string): [undefined | string, string] => {
+	const langPattern = `^(${Object.values(Language).join("|")})/`;
+	const lang = page_id.match(new RegExp(langPattern))?.[1];
+	if (lang) {
+		const slug = page_id
+			.replace(new RegExp(langPattern), "")
+			.replace(/\.mdx$/, "");
+		return [lang, slug];
+	}
+	const slug = page_id.replace(/\.mdx$/, "");
+	return [lang, slug];
+};
+
+export const fmtPageId = (page_id: string) => splitPageId(page_id)[1];
 
 export default Collection;

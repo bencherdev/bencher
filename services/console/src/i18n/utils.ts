@@ -1,5 +1,6 @@
 import { getCollection } from "astro:content";
 import type Collection from "../util/collection";
+import { splitPageId } from "../util/collection";
 import { type Language, defaultLang, showDefaultLang } from "./ui";
 
 export async function getEnPaths(collection: Collection) {
@@ -15,10 +16,9 @@ export async function getLangPaths(collection: Collection) {
 async function getPaths(collection: Collection) {
 	const pages = await getCollection(collection);
 	return pages.filter(filterDraft).map((page) => {
-		const [lang, ...slug] =
-			page.id.substring(0, page.id.lastIndexOf("."))?.split("/") ?? [];
+		const [lang, slug] = splitPageId(page.id);
 		return {
-			params: { lang, slug: slug.join("/") || undefined },
+			params: { lang, slug },
 			props: page,
 		};
 	});
@@ -29,9 +29,7 @@ export async function getLangCollection(collection: Collection) {
 	const langPagesMap = pages
 		.filter(filterDraft)
 		.map((page) => {
-			const [lang, ...slug] =
-				page.id.substring(0, page.id.lastIndexOf("."))?.split("/") ?? [];
-			page.slug = slug.join("/") || undefined;
+			const [lang, _slug] = splitPageId(page.id);
 			return { lang, page };
 		})
 		.reduce((lpMap, langPage) => {
