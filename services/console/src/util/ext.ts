@@ -18,6 +18,7 @@ export const BENCHER_REDDIT_URL: string = "https://www.reddit.com/r/bencher";
 export const BENCHER_LOGO: string = "/favicon.svg";
 export const BENCHER_WORDMARK_ID: string = "bencher-wordmark";
 export const BENCHER_WORDMARK: string = "/wordmark.svg";
+export const BENCHER_WORDMARK_LIGHT: string = "/wordmark-light.svg";
 export const BENCHER_WORDMARK_DARK: string = "/wordmark-dark.svg";
 
 export const BENCHER_VERSION = `${swagger?.info?.version}`;

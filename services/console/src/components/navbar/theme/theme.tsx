@@ -1,4 +1,7 @@
-import { BENCHER_WORDMARK, BENCHER_WORDMARK_DARK } from "../../../util/ext";
+import {
+	BENCHER_WORDMARK_DARK,
+	BENCHER_WORDMARK_LIGHT,
+} from "../../../util/ext";
 
 export const BENCHER_THEME_KEY = "BENCHER_THEME";
 
@@ -63,7 +66,7 @@ export const themeColor = (theme: Theme) => {
 export const themeWordmark = (theme: Theme) => {
 	switch (theme) {
 		case Theme.Light:
-			return BENCHER_WORDMARK;
+			return BENCHER_WORDMARK_LIGHT;
 		case Theme.Dark:
 			return BENCHER_WORDMARK_DARK;
 	}
