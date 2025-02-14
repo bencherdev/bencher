@@ -1,12 +1,11 @@
 ---
 export const prerender = true;
 
-import { getCollection } from "astro:content";
+import { getEnOnlyCollection } from "../../i18n/utils";
 import LegalLayout from "../../layouts/legal/LegalLayout.astro";
 import Collection from "../../util/collection.ts";
 
-const pages = await getCollection(Collection.legal);
-pages.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+const pages = await getEnOnlyCollection(Collection.legal);
 ---
 
 <LegalLayout
@@ -16,7 +15,7 @@ pages.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
   published="2023-10-18T10:28:00Z"
   modified="2023-12-10T09:03:00Z"
 >
-  <ul>
+  <ul style="margin-bottom: 24rem;">
     {
       pages.map((page) => (
         <li>

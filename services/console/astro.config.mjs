@@ -1,4 +1,4 @@
-// import node from "@astrojs/node";
+import node from "@astrojs/node";
 // import netlify from "@astrojs/netlify";
 import mdx from "@astrojs/mdx";
 import partytown from "@astrojs/partytown";
@@ -35,7 +35,7 @@ export default defineConfig({
 		assets: "assets",
 	},
 	// DO NOT REMOVE OR MODIFY: This line is used by adapter.js
-	adapter: undefined,
+	adapter: node({ mode: "standalone" }),
 	// https://docs.astro.build/en/guides/environment-variables/#type-safe-environment-variables
 	env: {
 		schema: {

@@ -3,20 +3,16 @@ export const prerender = true;
 
 import { render } from "astro:content";
 
-import { getCollection } from "astro:content";
 import LegalLayout from "../../layouts/legal/LegalLayout.astro";
-import Collection, { fmtPageId } from "../../util/collection";
+import Collection from "../../util/collection";
+import { getEnOnlyPaths } from "../../i18n/utils";
 
-// 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-	const pages = await getCollection(Collection.legal);
-	return pages.map((page) => ({
-		params: { slug: fmtPageId(page.id) },
-		props: { page },
-	}));
+	const collection = Collection.legal;
+  return await getEnOnlyPaths(collection);
 }
-// 2. When it's time to render, you can get the entry directly from the prop
-const { page } = Astro.props;
+
+const page = Astro.props;
 const { Content } = await render(page);
 ---
 
