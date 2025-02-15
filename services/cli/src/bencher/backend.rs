@@ -1,4 +1,4 @@
-use std::{fmt, ops::Deref};
+use std::{fmt, ops::Deref, time::Duration};
 
 use bencher_json::{JsonApiVersion, JsonConsole, Jwt, BENCHER_API_URL, BENCHER_URL};
 use serde::{de::DeserializeOwned, Serialize};
@@ -64,20 +64,30 @@ impl TryFrom<(CliBackend, bool)> for Backend {
         let CliBackend {
             host,
             token,
+            allow_insecure_host,
+            native_tls,
+            timeout,
             attempts,
             retry_after,
             strict,
         } = backend;
         let host = host.try_into().map_err(BackendError::ParseHost)?;
         let token = map_token(token, is_public)?;
-        let client = bencher_client::BencherClient::new(
-            Some(host),
-            token,
-            Some(attempts),
-            Some(retry_after),
-            Some(strict),
-            Some(true),
-        );
+        let mut builder = bencher_client::BencherClient::builder().host(host);
+        if let Some(token) = token {
+            builder = builder.token(token);
+        }
+        if let Some(allow_insecure_host) = allow_insecure_host {
+            builder = builder.allow_insecure_host(allow_insecure_host);
+        }
+        let client = builder
+            .native_tls(native_tls)
+            .timeout(Duration::from_secs(timeout))
+            .attempts(attempts)
+            .retry_after(retry_after)
+            .strict(strict)
+            .log(true)
+            .build();
         Ok(Self { client })
     }
 }

@@ -13,7 +13,14 @@ impl TryFrom<TaskEmailList> for EmailList {
 
     fn try_from(email_list: TaskEmailList) -> Result<Self, Self::Error> {
         let TaskEmailList { host, token } = email_list;
-        let client = BencherClient::new(host, token, None, None, None, None);
+        let mut builder = BencherClient::builder();
+        if let Some(host) = host {
+            builder = builder.host(host);
+        }
+        if let Some(token) = token {
+            builder = builder.token(token);
+        }
+        let client = builder.build();
         Ok(Self { client })
     }
 }

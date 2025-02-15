@@ -46,7 +46,7 @@ pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plus::{
     CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
-    LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus,
+    LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus, TrustedHost,
 };
 pub use resource_id::{ResourceId, ResourceIdKind};
 pub use resource_name::ResourceName;

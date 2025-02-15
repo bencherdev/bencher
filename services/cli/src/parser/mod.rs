@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+#[cfg(feature = "plus")]
+use bencher_json::TrustedHost;
 use bencher_json::{Jwt, Url, BENCHER_API_URL_STR};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
@@ -122,6 +124,20 @@ pub struct CliBackend {
     /// User API token
     #[clap(long, env = "BENCHER_API_TOKEN")]
     pub token: Option<Jwt>,
+
+    /// Allow insecure connections to a host (Bencher Self-Hosted only)
+    #[cfg(feature = "plus")]
+    #[clap(long)]
+    pub allow_insecure_host: Option<Vec<TrustedHost>>,
+
+    /// Load TLS certificates from the platform's native certificate store
+    #[cfg(feature = "plus")]
+    #[clap(long)]
+    pub native_tls: bool,
+
+    /// Request timeout
+    #[clap(long, value_name = "SECONDS", default_value = "15")]
+    pub timeout: u64,
 
     /// Request attempt(s)
     #[clap(long, value_name = "COUNT", default_value = "10")]

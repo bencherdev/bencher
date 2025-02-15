@@ -9,6 +9,7 @@ mod number;
 mod plan_id;
 mod plan_level;
 mod plan_status;
+mod trusted_host;
 mod year;
 
 pub use brand::CardBrand;
@@ -20,4 +21,5 @@ pub use number::CardNumber;
 pub use plan_id::{LicensedPlanId, MeteredPlanId};
 pub use plan_level::PlanLevel;
 pub use plan_status::PlanStatus;
+pub use trusted_host::TrustedHost;
 pub use year::ExpirationYear;

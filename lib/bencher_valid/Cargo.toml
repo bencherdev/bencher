@@ -13,7 +13,7 @@ crate-type = ["cdylib", "rlib"]
 full = ["dep:rand", "dep:regex"]
 lite = ["dep:regex-lite"]
 db = ["dep:diesel"]
-plus = ["chrono/clock"]
+plus = ["chrono/clock", "serde-untagged"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 wasm = [
     "dep:console_error_panic_hook",
@@ -33,6 +33,7 @@ rand = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true, features = ["chrono"] }
 serde.workspace = true
 serde_json = { workspace = true, optional = true }
+serde-untagged = { workspace = true, optional = true }
 slug.workspace = true
 thiserror.workspace = true
 typeshare.workspace = true

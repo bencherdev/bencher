@@ -10,15 +10,16 @@ publish = false
 default = ["lite", "plus", "rustls-tls"]
 full = ["bencher_json/full"]
 lite = ["bencher_json/lite"]
-plus = ["bencher_json/plus"]
+plus = ["bencher_json/plus", "fs-err"]
 # Reqwest TLS
 native-tls = ["reqwest/native-tls"]
-rustls-tls = ["reqwest/rustls-tls"]
+rustls-tls = ["reqwest/rustls-tls", "reqwest/rustls-tls-native-roots"]
 
 [dependencies]
 # Workspace
 bencher_json.workspace = true
 chrono = { workspace = true, features = ["serde"] }
+fs-err = { workspace = true, optional = true }
 progenitor-client.workspace = true
 reqwest = { workspace = true, features = ["json"] }
 serde.workspace = true

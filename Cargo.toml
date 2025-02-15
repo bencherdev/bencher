@@ -47,6 +47,7 @@ chrono = { version = "0.4", default-features = false }
 clap = { version = "4.5", features = ["derive"] }
 derive_more = { version = "2.0", features = ["display"] }
 diesel = "2.2"
+fs-err = "3.1"
 http = "1.2"
 jsonwebtoken = "9.3"
 literally = "0.1"
@@ -59,6 +60,7 @@ reqwest = { version = "0.12", default-features = false }
 schemars = { version = "0.8", features = ["uuid1"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde-untagged = "0.1"
 serde_urlencoded = "0.7"
 serde_yaml = "0.9"
 slog = "2.7"
