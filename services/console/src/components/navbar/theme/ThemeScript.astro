@@ -6,7 +6,7 @@ import {
 	LIGHT_THEME,
 	DARK_THEME,
 	BENCHER_THEME_KEY,
-  DATA_THEME,
+	DATA_THEME,
 } from "./theme";
 import {
 	BENCHER_WORDMARK_LIGHT,
@@ -15,6 +15,7 @@ import {
 } from "../../../util/ext";
 ---
 
+<!-- `is:inline` to prevent FOUC -->
 <script is:inline  define:vars={{ DATA_THEME, BENCHER_WORDMARK_ID, BENCHER_WORDMARK_LIGHT, BENCHER_WORDMARK_DARK, THEME_TOGGLE_ID, LIGHT_THEME_ID, DARK_THEME_ID, LIGHT_THEME, DARK_THEME, BENCHER_THEME_KEY }}>
   const themeToggle = document.getElementById(THEME_TOGGLE_ID);
   const sunIcon = document.getElementById(LIGHT_THEME_ID);
