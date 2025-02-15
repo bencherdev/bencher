@@ -64,7 +64,7 @@ impl TryFrom<(CliBackend, bool)> for Backend {
         let CliBackend {
             host,
             token,
-            allow_insecure_host,
+            insecure_host,
             native_tls,
             timeout,
             attempts,
@@ -77,10 +77,8 @@ impl TryFrom<(CliBackend, bool)> for Backend {
         if let Some(token) = token {
             builder = builder.token(token);
         }
-        if let Some(allow_insecure_host) = allow_insecure_host {
-            builder = builder.allow_insecure_host(allow_insecure_host);
-        }
         let client = builder
+            .insecure_host(insecure_host)
             .native_tls(native_tls)
             .timeout(Duration::from_secs(timeout))
             .attempts(attempts)

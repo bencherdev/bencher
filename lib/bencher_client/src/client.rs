@@ -2,27 +2,26 @@
 
 use std::env;
 
-#[cfg(feature = "plus")]
-use bencher_json::TrustedHost;
 use bencher_json::{Jwt, BENCHER_API_URL};
 use reqwest::ClientBuilder;
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::time::{sleep, Duration};
 
 #[cfg(feature = "plus")]
-use crate::SSL_CLIENT_CERT;
+use crate::{SSL_CERT_FILE, SSL_CLIENT_CERT};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
 const DEFAULT_ATTEMPTS: usize = 10;
 const DEFAULT_RETRY_AFTER: u64 = 1;
 
+#[allow(clippy::struct_excessive_bools)]
 /// A client for the Bencher API
 #[derive(Debug, Clone)]
 pub struct BencherClient {
     pub host: url::Url,
     pub token: Option<Jwt>,
     #[cfg(feature = "plus")]
-    pub allow_insecure_host: Option<Vec<TrustedHost>>,
+    pub insecure_host: bool,
     #[cfg(feature = "plus")]
     pub native_tls: bool,
     pub timeout: Duration,
@@ -87,7 +86,7 @@ impl BencherClient {
             host: Some(self.host),
             token: self.token,
             #[cfg(feature = "plus")]
-            allow_insecure_host: self.allow_insecure_host,
+            insecure_host: Some(self.insecure_host),
             #[cfg(feature = "plus")]
             native_tls: Some(self.native_tls),
             timeout: Some(self.timeout),
@@ -170,7 +169,7 @@ impl BencherClient {
                     let json_response = Json::try_from(response)
                         .map_err(Into::into)
                         .map_err(ClientError::DeserializeResponse)?;
-                    self.log(&json_response)?;
+                    self.log_json(&json_response)?;
                     return Ok(json_response);
                 },
                 #[allow(clippy::print_stderr)]
@@ -219,7 +218,7 @@ impl BencherClient {
                     } else {
                         match serde_json::from_slice(&bytes) {
                             Ok(json_response) => {
-                                self.log(&json_response)?;
+                                self.log_json(&json_response)?;
                                 Ok(json_response)
                             },
                             Err(e) => Err(ClientError::InvalidResponsePayload(e)),
@@ -233,7 +232,7 @@ impl BencherClient {
                         } else {
                             match response.json().await {
                                 Ok(json_response) => {
-                                    self.log(&json_response)?;
+                                    self.log_json(&json_response)?;
                                     Ok(json_response)
                                 },
                                 Err(e) => Err(ClientError::UnexpectedResponseOk(e)),
@@ -261,19 +260,19 @@ impl BencherClient {
         }
 
         #[cfg(feature = "plus")]
-        let client_builder = self.client_builder_tls(client_builder)?;
+        let client_builder = self.client_builder_tls(client_builder);
 
         Ok(client_builder)
     }
 
     #[cfg(feature = "plus")]
-    fn client_builder_tls(
-        &self,
-        client_builder: ClientBuilder,
-    ) -> Result<ClientBuilder, ClientError> {
-        let mut client_builder = client_builder.tls_built_in_root_certs(false);
+    fn client_builder_tls(&self, mut client_builder: ClientBuilder) -> ClientBuilder {
+        if self.insecure_host {
+            client_builder = client_builder.danger_accept_invalid_certs(true);
+        }
 
-        client_builder = if self.native_tls {
+        client_builder = client_builder.tls_built_in_root_certs(false);
+        client_builder = if self.native_tls || self.cert_file_exists() {
             client_builder.tls_built_in_native_certs(true)
         } else {
             client_builder.tls_built_in_webpki_certs(true)
@@ -284,27 +283,44 @@ impl BencherClient {
             match crate::tls::read_identity(&ssl_client_cert) {
                 Ok(identity) => client_builder = client_builder.identity(identity),
                 Err(err) => {
-                    self.log(&format!("Ignoring invalid `SSL_CLIENT_CERT`: {err}"))?;
+                    self.log_str(&format!("Ignoring invalid `SSL_CLIENT_CERT`: {err}"));
                 },
             }
         }
 
-        Ok(client_builder)
+        client_builder
     }
 
-    #[allow(clippy::result_large_err)]
-    fn log<T>(&self, response: &T) -> Result<(), ClientError>
+    // Check for the presence of an `SSL_CERT_FILE`.
+    #[cfg(feature = "plus")]
+    fn cert_file_exists(&self) -> bool {
+        use std::path::Path;
+        env::var_os(SSL_CERT_FILE).is_some_and(|path| {
+            let path_exists = Path::new(&path).exists();
+            if !path_exists {
+                self.log_str(&format!(
+                    "Ignoring invalid `SSL_CERT_FILE`. File does not exist: {path:?}"
+                ));
+            }
+            path_exists
+        })
+    }
+
+    fn log_json<T>(&self, response: &T) -> Result<(), ClientError>
     where
         T: Serialize,
     {
+        let json =
+            serde_json::to_string_pretty(&response).map_err(ClientError::SerializeResponse)?;
+        self.log_str(&json);
+        Ok(())
+    }
+
+    fn log_str(&self, err: &str) {
         #[allow(clippy::print_stdout)]
         if self.log {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&response).map_err(ClientError::SerializeResponse)?
-            );
+            println!("{err}");
         }
-        Ok(())
     }
 }
 
@@ -337,7 +353,7 @@ pub struct BencherClientBuilder {
     host: Option<url::Url>,
     token: Option<Jwt>,
     #[cfg(feature = "plus")]
-    allow_insecure_host: Option<Vec<TrustedHost>>,
+    insecure_host: Option<bool>,
     #[cfg(feature = "plus")]
     native_tls: Option<bool>,
     timeout: Option<Duration>,
@@ -371,8 +387,8 @@ impl BencherClientBuilder {
     #[cfg(feature = "plus")]
     #[must_use]
     /// Set allow insecure host
-    pub fn allow_insecure_host(mut self, allow_insecure_host: Vec<TrustedHost>) -> Self {
-        self.allow_insecure_host = Some(allow_insecure_host);
+    pub fn insecure_host(mut self, insecure_host: bool) -> Self {
+        self.insecure_host = Some(insecure_host);
         self
     }
 
@@ -430,7 +446,7 @@ impl BencherClientBuilder {
             host,
             token,
             #[cfg(feature = "plus")]
-            allow_insecure_host,
+            insecure_host,
             #[cfg(feature = "plus")]
             native_tls,
             timeout,
@@ -443,7 +459,7 @@ impl BencherClientBuilder {
             host: host.unwrap_or_else(|| BENCHER_API_URL.clone()),
             token,
             #[cfg(feature = "plus")]
-            allow_insecure_host,
+            insecure_host: insecure_host.unwrap_or_default(),
             #[cfg(feature = "plus")]
             native_tls: native_tls.unwrap_or_default(),
             timeout: timeout.unwrap_or(DEFAULT_TIMEOUT),

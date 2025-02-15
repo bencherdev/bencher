@@ -1,0 +1,36 @@
+## Custom CA certificates
+
+By default, the `bencher` CLI loads certificates from the bundled [`webpki-roots` crate](webpki-roots).
+The `webpki-roots` are a reliable set of trust roots from Mozilla,
+and including them in `bencher` improves portability and performance.
+This is especially true on macOS, where reading the system trust store incurs a significant delay.
+
+However, in some cases, you may want to use the platform's native certificate store,
+especially if you're relying on a corporate trust root that's included in your system's certificate store
+for a mandatory proxy or self-signed Bencher Self-Hosted connections.
+To instruct `bencher` to use the system's trust store, run `bencher` with
+[the `--native-tls` flag][native tls].
+
+If a direct path to the certificate is required,
+set the `SSL_CERT_FILE` environment variable to the path of the certificate bundle,
+to instruct `bencher` to use that file instead of the system's trust store.
+This is often the case in CI environments where the system's trust store is not available.
+
+If client certificate authentication (mTLS) is desired,
+set the `SSL_CLIENT_CERT` environment variable to the path of the PEM formatted file
+containing the certificate followed by the private key.
+
+Finally, if you're using a setup in which you want to trust a self-signed certificate
+or otherwise disable certificate verification,
+you can instruct `bencher` to allow insecure connections to dedicated hosts via
+[the `insecure-host` flag][insecure host].
+This flag is only applicable to HTTPS connections, as HTTP connections are inherently insecure.
+
+**WARNING**: nly use `--insecure-host` in a secure network with verified sources,
+as it bypasses SSL verification and could expose you to [man-in-the-middle attacks][wikipedia mitm].
+
+[wikipedia mitm]: https://en.wikipedia.org/wiki/Man-in-the-middle_attack
+
+[webpki-roots]: https://github.com/rustls/webpki-roots
+[native tls]: /docs/explanation/bencher-run/#--native-tls
+[insecure host]: /docs/explanation/bencher-run/#--insecure-host
