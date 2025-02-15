@@ -1,5 +1,6 @@
 import { type Accessor, For } from "solid-js";
 import type { PlanLevel } from "../../../types/bencher";
+import Wordmark from "../../navbar/Wordmark";
 import { type Theme, themeWordmark } from "../../navbar/theme/theme";
 
 export interface Props {
@@ -45,12 +46,7 @@ const OnboardStepsInner = (props: Props) => {
 					<div class="column is-half">
 						<div class="content has-text-centered">
 							<div title="Bencher - Continuous Benchmarking">
-								<img
-									src={themeWordmark(props.theme?.())}
-									width="150"
-									height="28.25"
-									alt="🐰 Bencher"
-								/>
+								<Wordmark src={themeWordmark(props.theme?.())} />
 							</div>
 						</div>
 						<br />

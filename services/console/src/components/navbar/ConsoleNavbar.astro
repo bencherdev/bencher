@@ -5,7 +5,8 @@ import NavbarProjects from "./NavbarProjects";
 import NavbarDropdown from "./NavbarDropdown";
 import NavbarHelp from "./NavbarHelp";
 import FallbackNavbarHelp from "./NavbarHelp.astro";
-import ThemeWordmark from "./theme/ThemeWordmark.astro";
+import Wordmark from "./Wordmark";
+import { BENCHER_WORDMARK_ID } from "../../util/ext";
 
 const { apiUrl, params } = Astro.props;
 ---
@@ -21,7 +22,7 @@ const { apiUrl, params } = Astro.props;
 			title="Bencher - Continuous Benchmarking"
 			href="/console"
 		>
-			<ThemeWordmark />
+			<Wordmark id={BENCHER_WORDMARK_ID} />
 		</a>
 
 		<button

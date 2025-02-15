@@ -1,10 +1,8 @@
 ---
-import { Image } from "astro:assets";
-
-import Wordmark from "./ThemeWordmark.tsx";
-import { BENCHER_WORDMARK } from "../../../util/ext";
+import Wordmark from "../Wordmark.tsx";
+import ToggleWordmark from "./ThemeWordmark.tsx";
 ---
 
-<Wordmark client:only="solid-js">
-	<Image slot="fallback" src={BENCHER_WORDMARK} width="150" height="28.25" alt="🐰 Bencher" />
-</Wordmark>
+<ToggleWordmark client:only="solid-js">
+	<Wordmark slot="fallback" />
+</ToggleWordmark>

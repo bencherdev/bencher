@@ -8,6 +8,11 @@ import {
 	BENCHER_THEME_KEY,
 	ThemeId,
 } from "./theme";
+import {
+	BENCHER_WORDMARK_LIGHT,
+	BENCHER_WORDMARK_DARK,
+	BENCHER_WORDMARK_ID,
+} from "../../../util/ext";
 
 // https://docs.astro.build/en/tutorial/6-islands/2/
 ---
@@ -21,12 +26,16 @@ import {
   </span>
 </button>
 
-<script is:inline  define:vars={{ THEME_TOGGLE_ID, LIGHT_THEME_ID, DARK_THEME_ID, LIGHT_THEME, DARK_THEME, BENCHER_THEME_KEY }}>
+<script is:inline  define:vars={{ BENCHER_WORDMARK_ID, BENCHER_WORDMARK_LIGHT, BENCHER_WORDMARK_DARK, THEME_TOGGLE_ID, LIGHT_THEME_ID, DARK_THEME_ID, LIGHT_THEME, DARK_THEME, BENCHER_THEME_KEY }}>
   const themeToggle = document.getElementById(THEME_TOGGLE_ID);
   const sunIcon = document.getElementById(LIGHT_THEME_ID);
   const moonIcon = document.getElementById(DARK_THEME_ID);
 
   const setLightTheme = () => {
+    const wordmark = document.getElementById(BENCHER_WORDMARK_ID);
+    if (wordmark) {
+      wordmark.src = BENCHER_WORDMARK_LIGHT;
+    }
     themeToggle ? themeToggle.title = "Toggle dark mode" : null;
     sunIcon?.classList.remove("has-text-grey");
     sunIcon?.classList.remove("has-text-dark");
@@ -36,6 +45,10 @@ import {
     moonIcon?.classList.add("has-text-light");
   }
   const setDarkTheme = () => {
+    const wordmark = document.getElementById(BENCHER_WORDMARK_ID);
+    if (wordmark) {
+      wordmark.src = BENCHER_WORDMARK_DARK;
+    }
     themeToggle ? themeToggle.title = "Toggle light mode" : null;
     sunIcon?.classList.remove("has-text-grey");
     sunIcon?.classList.remove("has-text-primary");

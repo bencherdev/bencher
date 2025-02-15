@@ -14,7 +14,7 @@ const DocsWordmark = () => {
 			id={BENCHER_WORDMARK_ID}
 			src={wordmark()}
 			width="90%"
-			alt="🐰 Bencher"
+			aria-label="🐰 Bencher"
 		/>
 	);
 };

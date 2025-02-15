@@ -287,7 +287,7 @@ const EmbedPlotHeader = (props: Props) => {
 				<img
 					src={themeWordmark(props.theme())}
 					width="128em"
-					alt="🐰 Bencher"
+					aria-label="🐰 Bencher"
 				/>
 			</a>
 		);

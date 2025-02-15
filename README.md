@@ -2,7 +2,7 @@
   <a href="https://bencher.dev">
     <img
       src="https://bencher.dev/favicon.svg"
-      alt="🐰 Bencher"
+      aria-label="🐰 Bencher"
       width=32
     />
   </a>
