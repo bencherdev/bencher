@@ -1,14 +1,18 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 7351:
+/***/ 4914:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -21,14 +25,14 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.issue = exports.issueCommand = void 0;
-const os = __importStar(__nccwpck_require__(2037));
-const utils_1 = __nccwpck_require__(5278);
+const os = __importStar(__nccwpck_require__(857));
+const utils_1 = __nccwpck_require__(302);
 /**
  * Commands
  *
@@ -83,13 +87,13 @@ class Command {
     }
 }
 function escapeData(s) {
-    return utils_1.toCommandValue(s)
+    return (0, utils_1.toCommandValue)(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A');
 }
 function escapeProperty(s) {
-    return utils_1.toCommandValue(s)
+    return (0, utils_1.toCommandValue)(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A')
@@ -100,14 +104,18 @@ function escapeProperty(s) {
 
 /***/ }),
 
-/***/ 2186:
+/***/ 7484:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -120,7 +128,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -134,13 +142,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
-const command_1 = __nccwpck_require__(7351);
-const file_command_1 = __nccwpck_require__(717);
-const utils_1 = __nccwpck_require__(5278);
-const os = __importStar(__nccwpck_require__(2037));
-const path = __importStar(__nccwpck_require__(1017));
-const oidc_utils_1 = __nccwpck_require__(8041);
+exports.platform = exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = exports.markdownSummary = exports.summary = exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
+const command_1 = __nccwpck_require__(4914);
+const file_command_1 = __nccwpck_require__(4753);
+const utils_1 = __nccwpck_require__(302);
+const os = __importStar(__nccwpck_require__(857));
+const path = __importStar(__nccwpck_require__(6928));
+const oidc_utils_1 = __nccwpck_require__(5306);
 /**
  * The code to exit an action
  */
@@ -154,7 +162,7 @@ var ExitCode;
      * A code indicating that the action was a failure
      */
     ExitCode[ExitCode["Failure"] = 1] = "Failure";
-})(ExitCode = exports.ExitCode || (exports.ExitCode = {}));
+})(ExitCode || (exports.ExitCode = ExitCode = {}));
 //-----------------------------------------------------------------------
 // Variables
 //-----------------------------------------------------------------------
@@ -165,13 +173,13 @@ var ExitCode;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function exportVariable(name, val) {
-    const convertedVal = utils_1.toCommandValue(val);
+    const convertedVal = (0, utils_1.toCommandValue)(val);
     process.env[name] = convertedVal;
     const filePath = process.env['GITHUB_ENV'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('ENV', file_command_1.prepareKeyValueMessage(name, val));
+        return (0, file_command_1.issueFileCommand)('ENV', (0, file_command_1.prepareKeyValueMessage)(name, val));
     }
-    command_1.issueCommand('set-env', { name }, convertedVal);
+    (0, command_1.issueCommand)('set-env', { name }, convertedVal);
 }
 exports.exportVariable = exportVariable;
 /**
@@ -179,7 +187,7 @@ exports.exportVariable = exportVariable;
  * @param secret value of the secret
  */
 function setSecret(secret) {
-    command_1.issueCommand('add-mask', {}, secret);
+    (0, command_1.issueCommand)('add-mask', {}, secret);
 }
 exports.setSecret = setSecret;
 /**
@@ -189,10 +197,10 @@ exports.setSecret = setSecret;
 function addPath(inputPath) {
     const filePath = process.env['GITHUB_PATH'] || '';
     if (filePath) {
-        file_command_1.issueFileCommand('PATH', inputPath);
+        (0, file_command_1.issueFileCommand)('PATH', inputPath);
     }
     else {
-        command_1.issueCommand('add-path', {}, inputPath);
+        (0, command_1.issueCommand)('add-path', {}, inputPath);
     }
     process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`;
 }
@@ -267,10 +275,10 @@ exports.getBooleanInput = getBooleanInput;
 function setOutput(name, value) {
     const filePath = process.env['GITHUB_OUTPUT'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('OUTPUT', file_command_1.prepareKeyValueMessage(name, value));
+        return (0, file_command_1.issueFileCommand)('OUTPUT', (0, file_command_1.prepareKeyValueMessage)(name, value));
     }
     process.stdout.write(os.EOL);
-    command_1.issueCommand('set-output', { name }, utils_1.toCommandValue(value));
+    (0, command_1.issueCommand)('set-output', { name }, (0, utils_1.toCommandValue)(value));
 }
 exports.setOutput = setOutput;
 /**
@@ -279,7 +287,7 @@ exports.setOutput = setOutput;
  *
  */
 function setCommandEcho(enabled) {
-    command_1.issue('echo', enabled ? 'on' : 'off');
+    (0, command_1.issue)('echo', enabled ? 'on' : 'off');
 }
 exports.setCommandEcho = setCommandEcho;
 //-----------------------------------------------------------------------
@@ -310,7 +318,7 @@ exports.isDebug = isDebug;
  * @param message debug message
  */
 function debug(message) {
-    command_1.issueCommand('debug', {}, message);
+    (0, command_1.issueCommand)('debug', {}, message);
 }
 exports.debug = debug;
 /**
@@ -319,7 +327,7 @@ exports.debug = debug;
  * @param properties optional properties to add to the annotation.
  */
 function error(message, properties = {}) {
-    command_1.issueCommand('error', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('error', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.error = error;
 /**
@@ -328,7 +336,7 @@ exports.error = error;
  * @param properties optional properties to add to the annotation.
  */
 function warning(message, properties = {}) {
-    command_1.issueCommand('warning', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('warning', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.warning = warning;
 /**
@@ -337,7 +345,7 @@ exports.warning = warning;
  * @param properties optional properties to add to the annotation.
  */
 function notice(message, properties = {}) {
-    command_1.issueCommand('notice', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('notice', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.notice = notice;
 /**
@@ -356,14 +364,14 @@ exports.info = info;
  * @param name The name of the output group
  */
 function startGroup(name) {
-    command_1.issue('group', name);
+    (0, command_1.issue)('group', name);
 }
 exports.startGroup = startGroup;
 /**
  * End an output group.
  */
 function endGroup() {
-    command_1.issue('endgroup');
+    (0, command_1.issue)('endgroup');
 }
 exports.endGroup = endGroup;
 /**
@@ -401,9 +409,9 @@ exports.group = group;
 function saveState(name, value) {
     const filePath = process.env['GITHUB_STATE'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('STATE', file_command_1.prepareKeyValueMessage(name, value));
+        return (0, file_command_1.issueFileCommand)('STATE', (0, file_command_1.prepareKeyValueMessage)(name, value));
     }
-    command_1.issueCommand('save-state', { name }, utils_1.toCommandValue(value));
+    (0, command_1.issueCommand)('save-state', { name }, (0, utils_1.toCommandValue)(value));
 }
 exports.saveState = saveState;
 /**
@@ -425,25 +433,29 @@ exports.getIDToken = getIDToken;
 /**
  * Summary exports
  */
-var summary_1 = __nccwpck_require__(1327);
+var summary_1 = __nccwpck_require__(1847);
 Object.defineProperty(exports, "summary", ({ enumerable: true, get: function () { return summary_1.summary; } }));
 /**
  * @deprecated use core.summary
  */
-var summary_2 = __nccwpck_require__(1327);
+var summary_2 = __nccwpck_require__(1847);
 Object.defineProperty(exports, "markdownSummary", ({ enumerable: true, get: function () { return summary_2.markdownSummary; } }));
 /**
  * Path exports
  */
-var path_utils_1 = __nccwpck_require__(2981);
+var path_utils_1 = __nccwpck_require__(1976);
 Object.defineProperty(exports, "toPosixPath", ({ enumerable: true, get: function () { return path_utils_1.toPosixPath; } }));
 Object.defineProperty(exports, "toWin32Path", ({ enumerable: true, get: function () { return path_utils_1.toWin32Path; } }));
 Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: function () { return path_utils_1.toPlatformPath; } }));
+/**
+ * Platform utilities exports
+ */
+exports.platform = __importStar(__nccwpck_require__(8968));
 //# sourceMappingURL=core.js.map
 
 /***/ }),
 
-/***/ 717:
+/***/ 4753:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -451,7 +463,11 @@ Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: funct
 // For internal use, subject to change.
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -464,7 +480,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -472,10 +488,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareKeyValueMessage = exports.issueFileCommand = void 0;
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const fs = __importStar(__nccwpck_require__(7147));
-const os = __importStar(__nccwpck_require__(2037));
-const uuid_1 = __nccwpck_require__(5840);
-const utils_1 = __nccwpck_require__(5278);
+const crypto = __importStar(__nccwpck_require__(6982));
+const fs = __importStar(__nccwpck_require__(9896));
+const os = __importStar(__nccwpck_require__(857));
+const utils_1 = __nccwpck_require__(302);
 function issueFileCommand(command, message) {
     const filePath = process.env[`GITHUB_${command}`];
     if (!filePath) {
@@ -484,14 +500,14 @@ function issueFileCommand(command, message) {
     if (!fs.existsSync(filePath)) {
         throw new Error(`Missing file at path: ${filePath}`);
     }
-    fs.appendFileSync(filePath, `${utils_1.toCommandValue(message)}${os.EOL}`, {
+    fs.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
         encoding: 'utf8'
     });
 }
 exports.issueFileCommand = issueFileCommand;
 function prepareKeyValueMessage(key, value) {
-    const delimiter = `ghadelimiter_${uuid_1.v4()}`;
-    const convertedValue = utils_1.toCommandValue(value);
+    const delimiter = `ghadelimiter_${crypto.randomUUID()}`;
+    const convertedValue = (0, utils_1.toCommandValue)(value);
     // These should realistically never happen, but just in case someone finds a
     // way to exploit uuid generation let's not allow keys or values that contain
     // the delimiter.
@@ -508,7 +524,7 @@ exports.prepareKeyValueMessage = prepareKeyValueMessage;
 
 /***/ }),
 
-/***/ 8041:
+/***/ 5306:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -524,9 +540,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OidcClient = void 0;
-const http_client_1 = __nccwpck_require__(6255);
-const auth_1 = __nccwpck_require__(5526);
-const core_1 = __nccwpck_require__(2186);
+const http_client_1 = __nccwpck_require__(4844);
+const auth_1 = __nccwpck_require__(4552);
+const core_1 = __nccwpck_require__(7484);
 class OidcClient {
     static createHttpClient(allowRetry = true, maxRetry = 10) {
         const requestOptions = {
@@ -576,9 +592,9 @@ class OidcClient {
                     const encodedAudience = encodeURIComponent(audience);
                     id_token_url = `${id_token_url}&audience=${encodedAudience}`;
                 }
-                core_1.debug(`ID token url is ${id_token_url}`);
+                (0, core_1.debug)(`ID token url is ${id_token_url}`);
                 const id_token = yield OidcClient.getCall(id_token_url);
-                core_1.setSecret(id_token);
+                (0, core_1.setSecret)(id_token);
                 return id_token;
             }
             catch (error) {
@@ -592,14 +608,18 @@ exports.OidcClient = OidcClient;
 
 /***/ }),
 
-/***/ 2981:
+/***/ 1976:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -612,13 +632,13 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = void 0;
-const path = __importStar(__nccwpck_require__(1017));
+const path = __importStar(__nccwpck_require__(6928));
 /**
  * toPosixPath converts the given path to the posix form. On Windows, \\ will be
  * replaced with /.
@@ -657,7 +677,108 @@ exports.toPlatformPath = toPlatformPath;
 
 /***/ }),
 
-/***/ 1327:
+/***/ 8968:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getDetails = exports.isLinux = exports.isMacOS = exports.isWindows = exports.arch = exports.platform = void 0;
+const os_1 = __importDefault(__nccwpck_require__(857));
+const exec = __importStar(__nccwpck_require__(5236));
+const getWindowsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { stdout: version } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', undefined, {
+        silent: true
+    });
+    const { stdout: name } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', undefined, {
+        silent: true
+    });
+    return {
+        name: name.trim(),
+        version: version.trim()
+    };
+});
+const getMacOsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
+    const { stdout } = yield exec.getExecOutput('sw_vers', undefined, {
+        silent: true
+    });
+    const version = (_b = (_a = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a === void 0 ? void 0 : _a[1]) !== null && _b !== void 0 ? _b : '';
+    const name = (_d = (_c = stdout.match(/ProductName:\s*(.+)/)) === null || _c === void 0 ? void 0 : _c[1]) !== null && _d !== void 0 ? _d : '';
+    return {
+        name,
+        version
+    };
+});
+const getLinuxInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { stdout } = yield exec.getExecOutput('lsb_release', ['-i', '-r', '-s'], {
+        silent: true
+    });
+    const [name, version] = stdout.trim().split('\n');
+    return {
+        name,
+        version
+    };
+});
+exports.platform = os_1.default.platform();
+exports.arch = os_1.default.arch();
+exports.isWindows = exports.platform === 'win32';
+exports.isMacOS = exports.platform === 'darwin';
+exports.isLinux = exports.platform === 'linux';
+function getDetails() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return Object.assign(Object.assign({}, (yield (exports.isWindows
+            ? getWindowsInfo()
+            : exports.isMacOS
+                ? getMacOsInfo()
+                : getLinuxInfo()))), { platform: exports.platform,
+            arch: exports.arch,
+            isWindows: exports.isWindows,
+            isMacOS: exports.isMacOS,
+            isLinux: exports.isLinux });
+    });
+}
+exports.getDetails = getDetails;
+//# sourceMappingURL=platform.js.map
+
+/***/ }),
+
+/***/ 1847:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -673,8 +794,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = void 0;
-const os_1 = __nccwpck_require__(2037);
-const fs_1 = __nccwpck_require__(7147);
+const os_1 = __nccwpck_require__(857);
+const fs_1 = __nccwpck_require__(9896);
 const { access, appendFile, writeFile } = fs_1.promises;
 exports.SUMMARY_ENV_VAR = 'GITHUB_STEP_SUMMARY';
 exports.SUMMARY_DOCS_URL = 'https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary';
@@ -947,7 +1068,7 @@ exports.summary = _summary;
 
 /***/ }),
 
-/***/ 5278:
+/***/ 302:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -994,7 +1115,7 @@ exports.toCommandProperties = toCommandProperties;
 
 /***/ }),
 
-/***/ 1514:
+/***/ 5236:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1029,8 +1150,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getExecOutput = exports.exec = void 0;
-const string_decoder_1 = __nccwpck_require__(1576);
-const tr = __importStar(__nccwpck_require__(8159));
+const string_decoder_1 = __nccwpck_require__(3193);
+const tr = __importStar(__nccwpck_require__(6665));
 /**
  * Exec a command.
  * Output will be streamed to the live console.
@@ -1104,7 +1225,7 @@ exports.getExecOutput = getExecOutput;
 
 /***/ }),
 
-/***/ 8159:
+/***/ 6665:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1139,13 +1260,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.argStringToArray = exports.ToolRunner = void 0;
-const os = __importStar(__nccwpck_require__(2037));
-const events = __importStar(__nccwpck_require__(2361));
-const child = __importStar(__nccwpck_require__(2081));
-const path = __importStar(__nccwpck_require__(1017));
-const io = __importStar(__nccwpck_require__(7436));
-const ioUtil = __importStar(__nccwpck_require__(1962));
-const timers_1 = __nccwpck_require__(9512);
+const os = __importStar(__nccwpck_require__(857));
+const events = __importStar(__nccwpck_require__(4434));
+const child = __importStar(__nccwpck_require__(5317));
+const path = __importStar(__nccwpck_require__(6928));
+const io = __importStar(__nccwpck_require__(4994));
+const ioUtil = __importStar(__nccwpck_require__(5207));
+const timers_1 = __nccwpck_require__(3557);
 /* eslint-disable @typescript-eslint/unbound-method */
 const IS_WINDOWS = process.platform === 'win32';
 /*
@@ -1729,7 +1850,7 @@ class ExecState extends events.EventEmitter {
 
 /***/ }),
 
-/***/ 5526:
+/***/ 4552:
 /***/ (function(__unused_webpack_module, exports) {
 
 "use strict";
@@ -1817,7 +1938,7 @@ exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHand
 
 /***/ }),
 
-/***/ 6255:
+/***/ 4844:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1857,11 +1978,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HttpClient = exports.isHttps = exports.HttpClientResponse = exports.HttpClientError = exports.getProxyUrl = exports.MediaTypes = exports.Headers = exports.HttpCodes = void 0;
-const http = __importStar(__nccwpck_require__(3685));
-const https = __importStar(__nccwpck_require__(5687));
-const pm = __importStar(__nccwpck_require__(9835));
-const tunnel = __importStar(__nccwpck_require__(4294));
-const undici_1 = __nccwpck_require__(1773);
+const http = __importStar(__nccwpck_require__(8611));
+const https = __importStar(__nccwpck_require__(5692));
+const pm = __importStar(__nccwpck_require__(4988));
+const tunnel = __importStar(__nccwpck_require__(770));
+const undici_1 = __nccwpck_require__(6752);
 var HttpCodes;
 (function (HttpCodes) {
     HttpCodes[HttpCodes["OK"] = 200] = "OK";
@@ -2384,7 +2505,7 @@ class HttpClient {
         }
         const usingSsl = parsedUrl.protocol === 'https:';
         proxyAgent = new undici_1.ProxyAgent(Object.assign({ uri: proxyUrl.href, pipelining: !this._keepAlive ? 0 : 1 }, ((proxyUrl.username || proxyUrl.password) && {
-            token: `${proxyUrl.username}:${proxyUrl.password}`
+            token: `Basic ${Buffer.from(`${proxyUrl.username}:${proxyUrl.password}`).toString('base64')}`
         })));
         this._proxyAgentDispatcher = proxyAgent;
         if (usingSsl && this._ignoreSslError) {
@@ -2476,7 +2597,7 @@ const lowercaseKeys = (obj) => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCa
 
 /***/ }),
 
-/***/ 9835:
+/***/ 4988:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -2498,11 +2619,11 @@ function getProxyUrl(reqUrl) {
     })();
     if (proxyVar) {
         try {
-            return new URL(proxyVar);
+            return new DecodedURL(proxyVar);
         }
         catch (_a) {
             if (!proxyVar.startsWith('http://') && !proxyVar.startsWith('https://'))
-                return new URL(`http://${proxyVar}`);
+                return new DecodedURL(`http://${proxyVar}`);
         }
     }
     else {
@@ -2561,11 +2682,24 @@ function isLoopbackAddress(host) {
         hostLower.startsWith('[::1]') ||
         hostLower.startsWith('[0:0:0:0:0:0:0:1]'));
 }
+class DecodedURL extends URL {
+    constructor(url, base) {
+        super(url, base);
+        this._decodedUsername = decodeURIComponent(super.username);
+        this._decodedPassword = decodeURIComponent(super.password);
+    }
+    get username() {
+        return this._decodedUsername;
+    }
+    get password() {
+        return this._decodedPassword;
+    }
+}
 //# sourceMappingURL=proxy.js.map
 
 /***/ }),
 
-/***/ 1962:
+/***/ 5207:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -2600,11 +2734,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rename = exports.readlink = exports.readdir = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = void 0;
-const fs = __importStar(__nccwpck_require__(7147));
-const path = __importStar(__nccwpck_require__(1017));
-_a = fs.promises, exports.chmod = _a.chmod, exports.copyFile = _a.copyFile, exports.lstat = _a.lstat, exports.mkdir = _a.mkdir, exports.readdir = _a.readdir, exports.readlink = _a.readlink, exports.rename = _a.rename, exports.rmdir = _a.rmdir, exports.stat = _a.stat, exports.symlink = _a.symlink, exports.unlink = _a.unlink;
+exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.READONLY = exports.UV_FS_O_EXLOCK = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rm = exports.rename = exports.readlink = exports.readdir = exports.open = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = void 0;
+const fs = __importStar(__nccwpck_require__(9896));
+const path = __importStar(__nccwpck_require__(6928));
+_a = fs.promises
+// export const {open} = 'fs'
+, exports.chmod = _a.chmod, exports.copyFile = _a.copyFile, exports.lstat = _a.lstat, exports.mkdir = _a.mkdir, exports.open = _a.open, exports.readdir = _a.readdir, exports.readlink = _a.readlink, exports.rename = _a.rename, exports.rm = _a.rm, exports.rmdir = _a.rmdir, exports.stat = _a.stat, exports.symlink = _a.symlink, exports.unlink = _a.unlink;
+// export const {open} = 'fs'
 exports.IS_WINDOWS = process.platform === 'win32';
+// See https://github.com/nodejs/node/blob/d0153aee367422d0858105abec186da4dff0a0c5/deps/uv/include/uv/win.h#L691
+exports.UV_FS_O_EXLOCK = 0x10000000;
+exports.READONLY = fs.constants.O_RDONLY;
 function exists(fsPath) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -2749,7 +2889,7 @@ exports.getCmdPath = getCmdPath;
 
 /***/ }),
 
-/***/ 7436:
+/***/ 4994:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -2784,13 +2924,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findInPath = exports.which = exports.mkdirP = exports.rmRF = exports.mv = exports.cp = void 0;
-const assert_1 = __nccwpck_require__(9491);
-const childProcess = __importStar(__nccwpck_require__(2081));
-const path = __importStar(__nccwpck_require__(1017));
-const util_1 = __nccwpck_require__(3837);
-const ioUtil = __importStar(__nccwpck_require__(1962));
-const exec = util_1.promisify(childProcess.exec);
-const execFile = util_1.promisify(childProcess.execFile);
+const assert_1 = __nccwpck_require__(2613);
+const path = __importStar(__nccwpck_require__(6928));
+const ioUtil = __importStar(__nccwpck_require__(5207));
 /**
  * Copies a file or folder.
  * Based off of shelljs - https://github.com/shelljs/shelljs/blob/9237f66c52e5daa40458f94f9565e18e8132f5a6/src/cp.js
@@ -2871,61 +3007,23 @@ exports.mv = mv;
 function rmRF(inputPath) {
     return __awaiter(this, void 0, void 0, function* () {
         if (ioUtil.IS_WINDOWS) {
-            // Node doesn't provide a delete operation, only an unlink function. This means that if the file is being used by another
-            // program (e.g. antivirus), it won't be deleted. To address this, we shell out the work to rd/del.
             // Check for invalid characters
             // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
             if (/[*"<>|]/.test(inputPath)) {
                 throw new Error('File path must not contain `*`, `"`, `<`, `>` or `|` on Windows');
             }
-            try {
-                const cmdPath = ioUtil.getCmdPath();
-                if (yield ioUtil.isDirectory(inputPath, true)) {
-                    yield exec(`${cmdPath} /s /c "rd /s /q "%inputPath%""`, {
-                        env: { inputPath }
-                    });
-                }
-                else {
-                    yield exec(`${cmdPath} /s /c "del /f /a "%inputPath%""`, {
-                        env: { inputPath }
-                    });
-                }
-            }
-            catch (err) {
-                // if you try to delete a file that doesn't exist, desired result is achieved
-                // other errors are valid
-                if (err.code !== 'ENOENT')
-                    throw err;
-            }
-            // Shelling out fails to remove a symlink folder with missing source, this unlink catches that
-            try {
-                yield ioUtil.unlink(inputPath);
-            }
-            catch (err) {
-                // if you try to delete a file that doesn't exist, desired result is achieved
-                // other errors are valid
-                if (err.code !== 'ENOENT')
-                    throw err;
-            }
         }
-        else {
-            let isDir = false;
-            try {
-                isDir = yield ioUtil.isDirectory(inputPath);
-            }
-            catch (err) {
-                // if you try to delete a file that doesn't exist, desired result is achieved
-                // other errors are valid
-                if (err.code !== 'ENOENT')
-                    throw err;
-                return;
-            }
-            if (isDir) {
-                yield execFile(`rm`, [`-rf`, `${inputPath}`]);
-            }
-            else {
-                yield ioUtil.unlink(inputPath);
-            }
+        try {
+            // note if path does not exist, error is silent
+            yield ioUtil.rm(inputPath, {
+                force: true,
+                maxRetries: 3,
+                recursive: true,
+                retryDelay: 300
+            });
+        }
+        catch (err) {
+            throw new Error(`File was unable to be removed ${err}`);
         }
     });
 }
@@ -3097,14 +3195,18 @@ function copyFile(srcFile, destFile, force) {
 
 /***/ }),
 
-/***/ 2473:
+/***/ 8036:
 /***/ (function(module, exports, __nccwpck_require__) {
 
 "use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -3117,7 +3219,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -3132,13 +3234,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports._readLinuxVersionFile = exports._getOsVersion = exports._findMatch = void 0;
-const semver = __importStar(__nccwpck_require__(5911));
-const core_1 = __nccwpck_require__(2186);
+const semver = __importStar(__nccwpck_require__(9318));
+const core_1 = __nccwpck_require__(7484);
 // needs to be require for core node modules to be mocked
 /* eslint @typescript-eslint/no-require-imports: 0 */
-const os = __nccwpck_require__(2037);
-const cp = __nccwpck_require__(2081);
-const fs = __nccwpck_require__(7147);
+const os = __nccwpck_require__(857);
+const cp = __nccwpck_require__(5317);
+const fs = __nccwpck_require__(9896);
 function _findMatch(versionSpec, stable, candidates, archFilter) {
     return __awaiter(this, void 0, void 0, function* () {
         const platFilter = os.platform();
@@ -3147,11 +3249,11 @@ function _findMatch(versionSpec, stable, candidates, archFilter) {
         let file;
         for (const candidate of candidates) {
             const version = candidate.version;
-            core_1.debug(`check ${version} satisfies ${versionSpec}`);
+            (0, core_1.debug)(`check ${version} satisfies ${versionSpec}`);
             if (semver.satisfies(version, versionSpec) &&
                 (!stable || candidate.stable === stable)) {
                 file = candidate.files.find(item => {
-                    core_1.debug(`${item.arch}===${archFilter} && ${item.platform}===${platFilter}`);
+                    (0, core_1.debug)(`${item.arch}===${archFilter} && ${item.platform}===${platFilter}`);
                     let chk = item.arch === archFilter && item.platform === platFilter;
                     if (chk && item.platform_version) {
                         const osVersion = module.exports._getOsVersion();
@@ -3165,7 +3267,7 @@ function _findMatch(versionSpec, stable, candidates, archFilter) {
                     return chk;
                 });
                 if (file) {
-                    core_1.debug(`matched ${candidate.version}`);
+                    (0, core_1.debug)(`matched ${candidate.version}`);
                     match = candidate;
                     break;
                 }
@@ -3203,10 +3305,7 @@ function _getOsVersion() {
                 if (parts.length === 2 &&
                     (parts[0].trim() === 'VERSION_ID' ||
                         parts[0].trim() === 'DISTRIB_RELEASE')) {
-                    version = parts[1]
-                        .trim()
-                        .replace(/^"/, '')
-                        .replace(/"$/, '');
+                    version = parts[1].trim().replace(/^"/, '').replace(/"$/, '');
                     break;
                 }
             }
@@ -3232,14 +3331,18 @@ exports._readLinuxVersionFile = _readLinuxVersionFile;
 
 /***/ }),
 
-/***/ 8279:
+/***/ 7380:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -3252,7 +3355,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -3267,7 +3370,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetryHelper = void 0;
-const core = __importStar(__nccwpck_require__(2186));
+const core = __importStar(__nccwpck_require__(7484));
 /**
  * Internal class for retries
  */
@@ -3322,14 +3425,18 @@ exports.RetryHelper = RetryHelper;
 
 /***/ }),
 
-/***/ 7784:
+/***/ 3472:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -3342,7 +3449,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -3355,25 +3462,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.evaluateVersions = exports.isExplicitVersion = exports.findFromManifest = exports.getManifestFromRepo = exports.findAllVersions = exports.find = exports.cacheFile = exports.cacheDir = exports.extractZip = exports.extractXar = exports.extractTar = exports.extract7z = exports.downloadTool = exports.HTTPError = void 0;
-const core = __importStar(__nccwpck_require__(2186));
-const io = __importStar(__nccwpck_require__(7436));
-const fs = __importStar(__nccwpck_require__(7147));
-const mm = __importStar(__nccwpck_require__(2473));
-const os = __importStar(__nccwpck_require__(2037));
-const path = __importStar(__nccwpck_require__(1017));
-const httpm = __importStar(__nccwpck_require__(6255));
-const semver = __importStar(__nccwpck_require__(5911));
-const stream = __importStar(__nccwpck_require__(2781));
-const util = __importStar(__nccwpck_require__(3837));
-const assert_1 = __nccwpck_require__(9491);
-const v4_1 = __importDefault(__nccwpck_require__(7468));
-const exec_1 = __nccwpck_require__(1514);
-const retry_helper_1 = __nccwpck_require__(8279);
+const core = __importStar(__nccwpck_require__(7484));
+const io = __importStar(__nccwpck_require__(4994));
+const crypto = __importStar(__nccwpck_require__(6982));
+const fs = __importStar(__nccwpck_require__(9896));
+const mm = __importStar(__nccwpck_require__(8036));
+const os = __importStar(__nccwpck_require__(857));
+const path = __importStar(__nccwpck_require__(6928));
+const httpm = __importStar(__nccwpck_require__(4844));
+const semver = __importStar(__nccwpck_require__(9318));
+const stream = __importStar(__nccwpck_require__(2203));
+const util = __importStar(__nccwpck_require__(9023));
+const assert_1 = __nccwpck_require__(2613);
+const exec_1 = __nccwpck_require__(5236);
+const retry_helper_1 = __nccwpck_require__(7380);
 class HTTPError extends Error {
     constructor(httpStatusCode) {
         super(`Unexpected HTTP response: ${httpStatusCode}`);
@@ -3396,7 +3500,7 @@ const userAgent = 'actions/tool-cache';
  */
 function downloadTool(url, dest, auth, headers) {
     return __awaiter(this, void 0, void 0, function* () {
-        dest = dest || path.join(_getTempDirectory(), v4_1.default());
+        dest = dest || path.join(_getTempDirectory(), crypto.randomUUID());
         yield io.mkdirP(path.dirname(dest));
         core.debug(`Downloading ${url}`);
         core.debug(`Destination ${dest}`);
@@ -3485,8 +3589,8 @@ function downloadToolAttempt(url, dest, auth, headers) {
  */
 function extract7z(file, dest, _7zPath) {
     return __awaiter(this, void 0, void 0, function* () {
-        assert_1.ok(IS_WINDOWS, 'extract7z() not supported on current OS');
-        assert_1.ok(file, 'parameter "file" is required');
+        (0, assert_1.ok)(IS_WINDOWS, 'extract7z() not supported on current OS');
+        (0, assert_1.ok)(file, 'parameter "file" is required');
         dest = yield _createExtractFolder(dest);
         const originalCwd = process.cwd();
         process.chdir(dest);
@@ -3503,7 +3607,7 @@ function extract7z(file, dest, _7zPath) {
                 const options = {
                     silent: true
                 };
-                yield exec_1.exec(`"${_7zPath}"`, args, options);
+                yield (0, exec_1.exec)(`"${_7zPath}"`, args, options);
             }
             finally {
                 process.chdir(originalCwd);
@@ -3532,7 +3636,7 @@ function extract7z(file, dest, _7zPath) {
             };
             try {
                 const powershellPath = yield io.which('powershell', true);
-                yield exec_1.exec(`"${powershellPath}"`, args, options);
+                yield (0, exec_1.exec)(`"${powershellPath}"`, args, options);
             }
             finally {
                 process.chdir(originalCwd);
@@ -3560,7 +3664,7 @@ function extractTar(file, dest, flags = 'xz') {
         // Determine whether GNU tar
         core.debug('Checking tar --version');
         let versionOutput = '';
-        yield exec_1.exec('tar --version', [], {
+        yield (0, exec_1.exec)('tar --version', [], {
             ignoreReturnCode: true,
             silent: true,
             listeners: {
@@ -3596,7 +3700,7 @@ function extractTar(file, dest, flags = 'xz') {
             args.push('--overwrite');
         }
         args.push('-C', destArg, '-f', fileArg);
-        yield exec_1.exec(`tar`, args);
+        yield (0, exec_1.exec)(`tar`, args);
         return dest;
     });
 }
@@ -3611,8 +3715,8 @@ exports.extractTar = extractTar;
  */
 function extractXar(file, dest, flags = []) {
     return __awaiter(this, void 0, void 0, function* () {
-        assert_1.ok(IS_MAC, 'extractXar() not supported on current OS');
-        assert_1.ok(file, 'parameter "file" is required');
+        (0, assert_1.ok)(IS_MAC, 'extractXar() not supported on current OS');
+        (0, assert_1.ok)(file, 'parameter "file" is required');
         dest = yield _createExtractFolder(dest);
         let args;
         if (flags instanceof Array) {
@@ -3626,7 +3730,7 @@ function extractXar(file, dest, flags = []) {
             args.push('-v');
         }
         const xarPath = yield io.which('xar', true);
-        yield exec_1.exec(`"${xarPath}"`, _unique(args));
+        yield (0, exec_1.exec)(`"${xarPath}"`, _unique(args));
         return dest;
     });
 }
@@ -3680,7 +3784,7 @@ function extractZipWin(file, dest) {
                 pwshCommand
             ];
             core.debug(`Using pwsh at path: ${pwshPath}`);
-            yield exec_1.exec(`"${pwshPath}"`, args);
+            yield (0, exec_1.exec)(`"${pwshPath}"`, args);
         }
         else {
             const powershellCommand = [
@@ -3701,7 +3805,7 @@ function extractZipWin(file, dest) {
             ];
             const powershellPath = yield io.which('powershell', true);
             core.debug(`Using powershell at path: ${powershellPath}`);
-            yield exec_1.exec(`"${powershellPath}"`, args);
+            yield (0, exec_1.exec)(`"${powershellPath}"`, args);
         }
     });
 }
@@ -3713,7 +3817,7 @@ function extractZipNix(file, dest) {
             args.unshift('-q');
         }
         args.unshift('-o'); //overwrite with -o, otherwise a prompt is shown which freezes the run
-        yield exec_1.exec(`"${unzipPath}"`, args, { cwd: dest });
+        yield (0, exec_1.exec)(`"${unzipPath}"`, args, { cwd: dest });
     });
 }
 /**
@@ -3890,7 +3994,7 @@ function _createExtractFolder(dest) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!dest) {
             // create a temp dir
-            dest = path.join(_getTempDirectory(), v4_1.default());
+            dest = path.join(_getTempDirectory(), crypto.randomUUID());
         }
         yield io.mkdirP(dest);
         return dest;
@@ -3963,7 +4067,7 @@ exports.evaluateVersions = evaluateVersions;
  */
 function _getCacheDirectory() {
     const cacheDirectory = process.env['RUNNER_TOOL_CACHE'] || '';
-    assert_1.ok(cacheDirectory, 'Expected RUNNER_TOOL_CACHE to be defined');
+    (0, assert_1.ok)(cacheDirectory, 'Expected RUNNER_TOOL_CACHE to be defined');
     return cacheDirectory;
 }
 /**
@@ -3971,7 +4075,7 @@ function _getCacheDirectory() {
  */
 function _getTempDirectory() {
     const tempDirectory = process.env['RUNNER_TEMP'] || '';
-    assert_1.ok(tempDirectory, 'Expected RUNNER_TEMP to be defined');
+    (0, assert_1.ok)(tempDirectory, 'Expected RUNNER_TEMP to be defined');
     return tempDirectory;
 }
 /**
@@ -3994,91 +4098,7 @@ function _unique(values) {
 
 /***/ }),
 
-/***/ 7701:
-/***/ ((module) => {
-
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-var byteToHex = [];
-for (var i = 0; i < 256; ++i) {
-  byteToHex[i] = (i + 0x100).toString(16).substr(1);
-}
-
-function bytesToUuid(buf, offset) {
-  var i = offset || 0;
-  var bth = byteToHex;
-  // join used to fix memory issue caused by concatenation: https://bugs.chromium.org/p/v8/issues/detail?id=3175#c4
-  return ([
-    bth[buf[i++]], bth[buf[i++]],
-    bth[buf[i++]], bth[buf[i++]], '-',
-    bth[buf[i++]], bth[buf[i++]], '-',
-    bth[buf[i++]], bth[buf[i++]], '-',
-    bth[buf[i++]], bth[buf[i++]], '-',
-    bth[buf[i++]], bth[buf[i++]],
-    bth[buf[i++]], bth[buf[i++]],
-    bth[buf[i++]], bth[buf[i++]]
-  ]).join('');
-}
-
-module.exports = bytesToUuid;
-
-
-/***/ }),
-
-/***/ 7269:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-// Unique ID creation requires a high quality random # generator.  In node.js
-// this is pretty straight-forward - we use the crypto API.
-
-var crypto = __nccwpck_require__(6113);
-
-module.exports = function nodeRNG() {
-  return crypto.randomBytes(16);
-};
-
-
-/***/ }),
-
-/***/ 7468:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-var rng = __nccwpck_require__(7269);
-var bytesToUuid = __nccwpck_require__(7701);
-
-function v4(options, buf, offset) {
-  var i = buf && offset || 0;
-
-  if (typeof(options) == 'string') {
-    buf = options === 'binary' ? new Array(16) : null;
-    options = null;
-  }
-  options = options || {};
-
-  var rnds = options.random || (options.rng || rng)();
-
-  // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-  rnds[6] = (rnds[6] & 0x0f) | 0x40;
-  rnds[8] = (rnds[8] & 0x3f) | 0x80;
-
-  // Copy bytes to buffer, if provided
-  if (buf) {
-    for (var ii = 0; ii < 16; ++ii) {
-      buf[i + ii] = rnds[ii];
-    }
-  }
-
-  return buf || bytesToUuid(rnds);
-}
-
-module.exports = v4;
-
-
-/***/ }),
-
-/***/ 5911:
+/***/ 9318:
 /***/ ((module, exports) => {
 
 exports = module.exports = SemVer
@@ -5728,27 +5748,27 @@ function coerce (version, options) {
 
 /***/ }),
 
-/***/ 4294:
+/***/ 770:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = __nccwpck_require__(4219);
+module.exports = __nccwpck_require__(218);
 
 
 /***/ }),
 
-/***/ 4219:
+/***/ 218:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-var net = __nccwpck_require__(1808);
-var tls = __nccwpck_require__(4404);
-var http = __nccwpck_require__(3685);
-var https = __nccwpck_require__(5687);
-var events = __nccwpck_require__(2361);
-var assert = __nccwpck_require__(9491);
-var util = __nccwpck_require__(3837);
+var net = __nccwpck_require__(9278);
+var tls = __nccwpck_require__(4756);
+var http = __nccwpck_require__(8611);
+var https = __nccwpck_require__(5692);
+var events = __nccwpck_require__(4434);
+var assert = __nccwpck_require__(2613);
+var util = __nccwpck_require__(9023);
 
 
 exports.httpOverHttp = httpOverHttp;
@@ -6008,36 +6028,36 @@ exports.debug = debug; // for test
 
 /***/ }),
 
-/***/ 1773:
+/***/ 6752:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const Client = __nccwpck_require__(3598)
-const Dispatcher = __nccwpck_require__(412)
-const errors = __nccwpck_require__(8045)
-const Pool = __nccwpck_require__(4634)
-const BalancedPool = __nccwpck_require__(7931)
-const Agent = __nccwpck_require__(7890)
-const util = __nccwpck_require__(3983)
+const Client = __nccwpck_require__(6197)
+const Dispatcher = __nccwpck_require__(992)
+const errors = __nccwpck_require__(8707)
+const Pool = __nccwpck_require__(5076)
+const BalancedPool = __nccwpck_require__(1093)
+const Agent = __nccwpck_require__(9965)
+const util = __nccwpck_require__(3440)
 const { InvalidArgumentError } = errors
-const api = __nccwpck_require__(4059)
-const buildConnector = __nccwpck_require__(2067)
-const MockClient = __nccwpck_require__(8687)
-const MockAgent = __nccwpck_require__(6771)
-const MockPool = __nccwpck_require__(6193)
-const mockErrors = __nccwpck_require__(888)
-const ProxyAgent = __nccwpck_require__(7858)
-const RetryHandler = __nccwpck_require__(2286)
-const { getGlobalDispatcher, setGlobalDispatcher } = __nccwpck_require__(1892)
-const DecoratorHandler = __nccwpck_require__(6930)
-const RedirectHandler = __nccwpck_require__(2860)
-const createRedirectInterceptor = __nccwpck_require__(8861)
+const api = __nccwpck_require__(6615)
+const buildConnector = __nccwpck_require__(9136)
+const MockClient = __nccwpck_require__(7365)
+const MockAgent = __nccwpck_require__(7501)
+const MockPool = __nccwpck_require__(4004)
+const mockErrors = __nccwpck_require__(2429)
+const ProxyAgent = __nccwpck_require__(2720)
+const RetryHandler = __nccwpck_require__(3573)
+const { getGlobalDispatcher, setGlobalDispatcher } = __nccwpck_require__(2581)
+const DecoratorHandler = __nccwpck_require__(8840)
+const RedirectHandler = __nccwpck_require__(8299)
+const createRedirectInterceptor = __nccwpck_require__(4415)
 
 let hasCrypto
 try {
-  __nccwpck_require__(6113)
+  __nccwpck_require__(6982)
   hasCrypto = true
 } catch {
   hasCrypto = false
@@ -6116,7 +6136,7 @@ if (util.nodeMajor > 16 || (util.nodeMajor === 16 && util.nodeMinor >= 8)) {
   let fetchImpl = null
   module.exports.fetch = async function fetch (resource) {
     if (!fetchImpl) {
-      fetchImpl = (__nccwpck_require__(4881).fetch)
+      fetchImpl = (__nccwpck_require__(2315).fetch)
     }
 
     try {
@@ -6129,20 +6149,20 @@ if (util.nodeMajor > 16 || (util.nodeMajor === 16 && util.nodeMinor >= 8)) {
       throw err
     }
   }
-  module.exports.Headers = __nccwpck_require__(554).Headers
-  module.exports.Response = __nccwpck_require__(7823).Response
-  module.exports.Request = __nccwpck_require__(8359).Request
-  module.exports.FormData = __nccwpck_require__(2015).FormData
-  module.exports.File = __nccwpck_require__(8511).File
-  module.exports.FileReader = __nccwpck_require__(1446).FileReader
+  module.exports.Headers = __nccwpck_require__(6349).Headers
+  module.exports.Response = __nccwpck_require__(8676).Response
+  module.exports.Request = __nccwpck_require__(5194).Request
+  module.exports.FormData = __nccwpck_require__(3073).FormData
+  module.exports.File = __nccwpck_require__(3041).File
+  module.exports.FileReader = __nccwpck_require__(2160).FileReader
 
-  const { setGlobalOrigin, getGlobalOrigin } = __nccwpck_require__(1246)
+  const { setGlobalOrigin, getGlobalOrigin } = __nccwpck_require__(5628)
 
   module.exports.setGlobalOrigin = setGlobalOrigin
   module.exports.getGlobalOrigin = getGlobalOrigin
 
-  const { CacheStorage } = __nccwpck_require__(7907)
-  const { kConstruct } = __nccwpck_require__(9174)
+  const { CacheStorage } = __nccwpck_require__(4738)
+  const { kConstruct } = __nccwpck_require__(296)
 
   // Cache & CacheStorage are tightly coupled with fetch. Even if it may run
   // in an older version of Node, it doesn't have any use without fetch.
@@ -6150,21 +6170,21 @@ if (util.nodeMajor > 16 || (util.nodeMajor === 16 && util.nodeMinor >= 8)) {
 }
 
 if (util.nodeMajor >= 16) {
-  const { deleteCookie, getCookies, getSetCookies, setCookie } = __nccwpck_require__(1724)
+  const { deleteCookie, getCookies, getSetCookies, setCookie } = __nccwpck_require__(3168)
 
   module.exports.deleteCookie = deleteCookie
   module.exports.getCookies = getCookies
   module.exports.getSetCookies = getSetCookies
   module.exports.setCookie = setCookie
 
-  const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(685)
+  const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(4322)
 
   module.exports.parseMIMEType = parseMIMEType
   module.exports.serializeAMimeType = serializeAMimeType
 }
 
 if (util.nodeMajor >= 18 && hasCrypto) {
-  const { WebSocket } = __nccwpck_require__(4284)
+  const { WebSocket } = __nccwpck_require__(5171)
 
   module.exports.WebSocket = WebSocket
 }
@@ -6183,20 +6203,20 @@ module.exports.mockErrors = mockErrors
 
 /***/ }),
 
-/***/ 7890:
+/***/ 9965:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { InvalidArgumentError } = __nccwpck_require__(8045)
-const { kClients, kRunning, kClose, kDestroy, kDispatch, kInterceptors } = __nccwpck_require__(2785)
-const DispatcherBase = __nccwpck_require__(4839)
-const Pool = __nccwpck_require__(4634)
-const Client = __nccwpck_require__(3598)
-const util = __nccwpck_require__(3983)
-const createRedirectInterceptor = __nccwpck_require__(8861)
-const { WeakRef, FinalizationRegistry } = __nccwpck_require__(6436)()
+const { InvalidArgumentError } = __nccwpck_require__(8707)
+const { kClients, kRunning, kClose, kDestroy, kDispatch, kInterceptors } = __nccwpck_require__(6443)
+const DispatcherBase = __nccwpck_require__(1)
+const Pool = __nccwpck_require__(5076)
+const Client = __nccwpck_require__(6197)
+const util = __nccwpck_require__(3440)
+const createRedirectInterceptor = __nccwpck_require__(4415)
+const { WeakRef, FinalizationRegistry } = __nccwpck_require__(3194)()
 
 const kOnConnect = Symbol('onConnect')
 const kOnDisconnect = Symbol('onDisconnect')
@@ -6339,11 +6359,11 @@ module.exports = Agent
 
 /***/ }),
 
-/***/ 7032:
+/***/ 158:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { addAbortListener } = __nccwpck_require__(3983)
-const { RequestAbortedError } = __nccwpck_require__(8045)
+const { addAbortListener } = __nccwpck_require__(3440)
+const { RequestAbortedError } = __nccwpck_require__(8707)
 
 const kListener = Symbol('kListener')
 const kSignal = Symbol('kSignal')
@@ -6400,16 +6420,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9744:
+/***/ 4660:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { AsyncResource } = __nccwpck_require__(852)
-const { InvalidArgumentError, RequestAbortedError, SocketError } = __nccwpck_require__(8045)
-const util = __nccwpck_require__(3983)
-const { addSignal, removeSignal } = __nccwpck_require__(7032)
+const { AsyncResource } = __nccwpck_require__(290)
+const { InvalidArgumentError, RequestAbortedError, SocketError } = __nccwpck_require__(8707)
+const util = __nccwpck_require__(3440)
+const { addSignal, removeSignal } = __nccwpck_require__(158)
 
 class ConnectHandler extends AsyncResource {
   constructor (opts, callback) {
@@ -6512,7 +6532,7 @@ module.exports = connect
 
 /***/ }),
 
-/***/ 8752:
+/***/ 6862:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -6522,16 +6542,16 @@ const {
   Readable,
   Duplex,
   PassThrough
-} = __nccwpck_require__(2781)
+} = __nccwpck_require__(2203)
 const {
   InvalidArgumentError,
   InvalidReturnValueError,
   RequestAbortedError
-} = __nccwpck_require__(8045)
-const util = __nccwpck_require__(3983)
-const { AsyncResource } = __nccwpck_require__(852)
-const { addSignal, removeSignal } = __nccwpck_require__(7032)
-const assert = __nccwpck_require__(9491)
+} = __nccwpck_require__(8707)
+const util = __nccwpck_require__(3440)
+const { AsyncResource } = __nccwpck_require__(290)
+const { addSignal, removeSignal } = __nccwpck_require__(158)
+const assert = __nccwpck_require__(2613)
 
 const kResume = Symbol('resume')
 
@@ -6769,21 +6789,21 @@ module.exports = pipeline
 
 /***/ }),
 
-/***/ 5448:
+/***/ 4043:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const Readable = __nccwpck_require__(3858)
+const Readable = __nccwpck_require__(9927)
 const {
   InvalidArgumentError,
   RequestAbortedError
-} = __nccwpck_require__(8045)
-const util = __nccwpck_require__(3983)
-const { getResolveErrorBodyCallback } = __nccwpck_require__(7474)
-const { AsyncResource } = __nccwpck_require__(852)
-const { addSignal, removeSignal } = __nccwpck_require__(7032)
+} = __nccwpck_require__(8707)
+const util = __nccwpck_require__(3440)
+const { getResolveErrorBodyCallback } = __nccwpck_require__(7655)
+const { AsyncResource } = __nccwpck_require__(290)
+const { addSignal, removeSignal } = __nccwpck_require__(158)
 
 class RequestHandler extends AsyncResource {
   constructor (opts, callback) {
@@ -6957,22 +6977,22 @@ module.exports.RequestHandler = RequestHandler
 
 /***/ }),
 
-/***/ 5395:
+/***/ 3560:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { finished, PassThrough } = __nccwpck_require__(2781)
+const { finished, PassThrough } = __nccwpck_require__(2203)
 const {
   InvalidArgumentError,
   InvalidReturnValueError,
   RequestAbortedError
-} = __nccwpck_require__(8045)
-const util = __nccwpck_require__(3983)
-const { getResolveErrorBodyCallback } = __nccwpck_require__(7474)
-const { AsyncResource } = __nccwpck_require__(852)
-const { addSignal, removeSignal } = __nccwpck_require__(7032)
+} = __nccwpck_require__(8707)
+const util = __nccwpck_require__(3440)
+const { getResolveErrorBodyCallback } = __nccwpck_require__(7655)
+const { AsyncResource } = __nccwpck_require__(290)
+const { addSignal, removeSignal } = __nccwpck_require__(158)
 
 class StreamHandler extends AsyncResource {
   constructor (opts, factory, callback) {
@@ -7185,17 +7205,17 @@ module.exports = stream
 
 /***/ }),
 
-/***/ 6923:
+/***/ 1882:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { InvalidArgumentError, RequestAbortedError, SocketError } = __nccwpck_require__(8045)
-const { AsyncResource } = __nccwpck_require__(852)
-const util = __nccwpck_require__(3983)
-const { addSignal, removeSignal } = __nccwpck_require__(7032)
-const assert = __nccwpck_require__(9491)
+const { InvalidArgumentError, RequestAbortedError, SocketError } = __nccwpck_require__(8707)
+const { AsyncResource } = __nccwpck_require__(290)
+const util = __nccwpck_require__(3440)
+const { addSignal, removeSignal } = __nccwpck_require__(158)
+const assert = __nccwpck_require__(2613)
 
 class UpgradeHandler extends AsyncResource {
   constructor (opts, callback) {
@@ -7298,22 +7318,22 @@ module.exports = upgrade
 
 /***/ }),
 
-/***/ 4059:
+/***/ 6615:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-module.exports.request = __nccwpck_require__(5448)
-module.exports.stream = __nccwpck_require__(5395)
-module.exports.pipeline = __nccwpck_require__(8752)
-module.exports.upgrade = __nccwpck_require__(6923)
-module.exports.connect = __nccwpck_require__(9744)
+module.exports.request = __nccwpck_require__(4043)
+module.exports.stream = __nccwpck_require__(3560)
+module.exports.pipeline = __nccwpck_require__(6862)
+module.exports.upgrade = __nccwpck_require__(1882)
+module.exports.connect = __nccwpck_require__(4660)
 
 
 /***/ }),
 
-/***/ 3858:
+/***/ 9927:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -7321,11 +7341,11 @@ module.exports.connect = __nccwpck_require__(9744)
 
 
 
-const assert = __nccwpck_require__(9491)
-const { Readable } = __nccwpck_require__(2781)
-const { RequestAbortedError, NotSupportedError, InvalidArgumentError } = __nccwpck_require__(8045)
-const util = __nccwpck_require__(3983)
-const { ReadableStreamFrom, toUSVString } = __nccwpck_require__(3983)
+const assert = __nccwpck_require__(2613)
+const { Readable } = __nccwpck_require__(2203)
+const { RequestAbortedError, NotSupportedError, InvalidArgumentError } = __nccwpck_require__(8707)
+const util = __nccwpck_require__(3440)
+const { ReadableStreamFrom, toUSVString } = __nccwpck_require__(3440)
 
 let Blob
 
@@ -7605,7 +7625,7 @@ function consumeEnd (consume) {
       resolve(dst.buffer)
     } else if (type === 'blob') {
       if (!Blob) {
-        Blob = (__nccwpck_require__(4300).Blob)
+        Blob = (__nccwpck_require__(181).Blob)
       }
       resolve(new Blob(body, { type: stream[kContentType] }))
     }
@@ -7643,14 +7663,14 @@ function consumeFinish (consume, err) {
 
 /***/ }),
 
-/***/ 7474:
+/***/ 7655:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const assert = __nccwpck_require__(9491)
+const assert = __nccwpck_require__(2613)
 const {
   ResponseStatusCodeError
-} = __nccwpck_require__(8045)
-const { toUSVString } = __nccwpck_require__(3983)
+} = __nccwpck_require__(8707)
+const { toUSVString } = __nccwpck_require__(3440)
 
 async function getResolveErrorBodyCallback ({ callback, body, contentType, statusCode, statusMessage, headers }) {
   assert(body)
@@ -7696,7 +7716,7 @@ module.exports = { getResolveErrorBodyCallback }
 
 /***/ }),
 
-/***/ 7931:
+/***/ 1093:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -7705,7 +7725,7 @@ module.exports = { getResolveErrorBodyCallback }
 const {
   BalancedPoolMissingUpstreamError,
   InvalidArgumentError
-} = __nccwpck_require__(8045)
+} = __nccwpck_require__(8707)
 const {
   PoolBase,
   kClients,
@@ -7713,10 +7733,10 @@ const {
   kAddClient,
   kRemoveClient,
   kGetDispatcher
-} = __nccwpck_require__(3198)
-const Pool = __nccwpck_require__(4634)
-const { kUrl, kInterceptors } = __nccwpck_require__(2785)
-const { parseOrigin } = __nccwpck_require__(3983)
+} = __nccwpck_require__(8640)
+const Pool = __nccwpck_require__(5076)
+const { kUrl, kInterceptors } = __nccwpck_require__(6443)
+const { parseOrigin } = __nccwpck_require__(3440)
 const kFactory = Symbol('factory')
 
 const kOptions = Symbol('options')
@@ -7894,24 +7914,24 @@ module.exports = BalancedPool
 
 /***/ }),
 
-/***/ 6101:
+/***/ 479:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kConstruct } = __nccwpck_require__(9174)
-const { urlEquals, fieldValues: getFieldValues } = __nccwpck_require__(2396)
-const { kEnumerableProperty, isDisturbed } = __nccwpck_require__(3983)
-const { kHeadersList } = __nccwpck_require__(2785)
-const { webidl } = __nccwpck_require__(1744)
-const { Response, cloneResponse } = __nccwpck_require__(7823)
-const { Request } = __nccwpck_require__(8359)
-const { kState, kHeaders, kGuard, kRealm } = __nccwpck_require__(5861)
-const { fetching } = __nccwpck_require__(4881)
-const { urlIsHttpHttpsScheme, createDeferredPromise, readAllBytes } = __nccwpck_require__(2538)
-const assert = __nccwpck_require__(9491)
-const { getGlobalDispatcher } = __nccwpck_require__(1892)
+const { kConstruct } = __nccwpck_require__(296)
+const { urlEquals, fieldValues: getFieldValues } = __nccwpck_require__(3993)
+const { kEnumerableProperty, isDisturbed } = __nccwpck_require__(3440)
+const { kHeadersList } = __nccwpck_require__(6443)
+const { webidl } = __nccwpck_require__(4222)
+const { Response, cloneResponse } = __nccwpck_require__(8676)
+const { Request } = __nccwpck_require__(5194)
+const { kState, kHeaders, kGuard, kRealm } = __nccwpck_require__(9710)
+const { fetching } = __nccwpck_require__(2315)
+const { urlIsHttpHttpsScheme, createDeferredPromise, readAllBytes } = __nccwpck_require__(5523)
+const assert = __nccwpck_require__(2613)
+const { getGlobalDispatcher } = __nccwpck_require__(2581)
 
 /**
  * @see https://w3c.github.io/ServiceWorker/#dfn-cache-batch-operation
@@ -8740,16 +8760,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 7907:
+/***/ 4738:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kConstruct } = __nccwpck_require__(9174)
-const { Cache } = __nccwpck_require__(6101)
-const { webidl } = __nccwpck_require__(1744)
-const { kEnumerableProperty } = __nccwpck_require__(3983)
+const { kConstruct } = __nccwpck_require__(296)
+const { Cache } = __nccwpck_require__(479)
+const { webidl } = __nccwpck_require__(4222)
+const { kEnumerableProperty } = __nccwpck_require__(3440)
 
 class CacheStorage {
   /**
@@ -8892,28 +8912,28 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9174:
+/***/ 296:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 module.exports = {
-  kConstruct: (__nccwpck_require__(2785).kConstruct)
+  kConstruct: (__nccwpck_require__(6443).kConstruct)
 }
 
 
 /***/ }),
 
-/***/ 2396:
+/***/ 3993:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const assert = __nccwpck_require__(9491)
-const { URLSerializer } = __nccwpck_require__(685)
-const { isValidHeaderName } = __nccwpck_require__(2538)
+const assert = __nccwpck_require__(2613)
+const { URLSerializer } = __nccwpck_require__(4322)
+const { isValidHeaderName } = __nccwpck_require__(5523)
 
 /**
  * @see https://url.spec.whatwg.org/#concept-url-equals
@@ -8962,7 +8982,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 3598:
+/***/ 6197:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -8972,14 +8992,14 @@ module.exports = {
 
 /* global WebAssembly */
 
-const assert = __nccwpck_require__(9491)
-const net = __nccwpck_require__(1808)
-const http = __nccwpck_require__(3685)
-const { pipeline } = __nccwpck_require__(2781)
-const util = __nccwpck_require__(3983)
-const timers = __nccwpck_require__(9459)
-const Request = __nccwpck_require__(2905)
-const DispatcherBase = __nccwpck_require__(4839)
+const assert = __nccwpck_require__(2613)
+const net = __nccwpck_require__(9278)
+const http = __nccwpck_require__(8611)
+const { pipeline } = __nccwpck_require__(2203)
+const util = __nccwpck_require__(3440)
+const timers = __nccwpck_require__(8804)
+const Request = __nccwpck_require__(4655)
+const DispatcherBase = __nccwpck_require__(1)
 const {
   RequestContentLengthMismatchError,
   ResponseContentLengthMismatchError,
@@ -8993,8 +9013,8 @@ const {
   HTTPParserError,
   ResponseExceededMaxSizeError,
   ClientDestroyedError
-} = __nccwpck_require__(8045)
-const buildConnector = __nccwpck_require__(2067)
+} = __nccwpck_require__(8707)
+const buildConnector = __nccwpck_require__(9136)
 const {
   kUrl,
   kReset,
@@ -9046,12 +9066,12 @@ const {
   kHTTP2BuildRequest,
   kHTTP2CopyHeaders,
   kHTTP1BuildRequest
-} = __nccwpck_require__(2785)
+} = __nccwpck_require__(6443)
 
 /** @type {import('http2')} */
 let http2
 try {
-  http2 = __nccwpck_require__(5158)
+  http2 = __nccwpck_require__(5675)
 } catch {
   // @ts-ignore
   http2 = { constants: {} }
@@ -9079,7 +9099,7 @@ const kClosedResolve = Symbol('kClosedResolve')
 const channels = {}
 
 try {
-  const diagnosticsChannel = __nccwpck_require__(7643)
+  const diagnosticsChannel = __nccwpck_require__(1637)
   channels.sendHeaders = diagnosticsChannel.channel('undici:client:sendHeaders')
   channels.beforeConnect = diagnosticsChannel.channel('undici:client:beforeConnect')
   channels.connectError = diagnosticsChannel.channel('undici:client:connectError')
@@ -9452,16 +9472,16 @@ function onHTTP2GoAway (code) {
   resume(client)
 }
 
-const constants = __nccwpck_require__(953)
-const createRedirectInterceptor = __nccwpck_require__(8861)
+const constants = __nccwpck_require__(2824)
+const createRedirectInterceptor = __nccwpck_require__(4415)
 const EMPTY_BUF = Buffer.alloc(0)
 
 async function lazyllhttp () {
-  const llhttpWasmData = process.env.JEST_WORKER_ID ? __nccwpck_require__(1145) : undefined
+  const llhttpWasmData = process.env.JEST_WORKER_ID ? __nccwpck_require__(3870) : undefined
 
   let mod
   try {
-    mod = await WebAssembly.compile(Buffer.from(__nccwpck_require__(5627), 'base64'))
+    mod = await WebAssembly.compile(Buffer.from(__nccwpck_require__(3434), 'base64'))
   } catch (e) {
     /* istanbul ignore next */
 
@@ -9469,7 +9489,7 @@ async function lazyllhttp () {
     // being enabled, but the occurring of this other error
     // * https://github.com/emscripten-core/emscripten/issues/11495
     // got me to remove that check to avoid breaking Node 12.
-    mod = await WebAssembly.compile(Buffer.from(llhttpWasmData || __nccwpck_require__(1145), 'base64'))
+    mod = await WebAssembly.compile(Buffer.from(llhttpWasmData || __nccwpck_require__(3870), 'base64'))
   }
 
   return await WebAssembly.instantiate(mod, {
@@ -11253,7 +11273,7 @@ module.exports = Client
 
 /***/ }),
 
-/***/ 6436:
+/***/ 3194:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -11261,7 +11281,7 @@ module.exports = Client
 
 /* istanbul ignore file: only for Node 12 */
 
-const { kConnected, kSize } = __nccwpck_require__(2785)
+const { kConnected, kSize } = __nccwpck_require__(6443)
 
 class CompatWeakRef {
   constructor (value) {
@@ -11309,7 +11329,7 @@ module.exports = function () {
 
 /***/ }),
 
-/***/ 663:
+/***/ 9237:
 /***/ ((module) => {
 
 "use strict";
@@ -11329,16 +11349,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1724:
+/***/ 3168:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { parseSetCookie } = __nccwpck_require__(4408)
-const { stringify, getHeadersList } = __nccwpck_require__(3121)
-const { webidl } = __nccwpck_require__(1744)
-const { Headers } = __nccwpck_require__(554)
+const { parseSetCookie } = __nccwpck_require__(8915)
+const { stringify, getHeadersList } = __nccwpck_require__(3834)
+const { webidl } = __nccwpck_require__(4222)
+const { Headers } = __nccwpck_require__(6349)
 
 /**
  * @typedef {Object} Cookie
@@ -11521,16 +11541,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 4408:
+/***/ 8915:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { maxNameValuePairSize, maxAttributeValueSize } = __nccwpck_require__(663)
-const { isCTLExcludingHtab } = __nccwpck_require__(3121)
-const { collectASequenceOfCodePointsFast } = __nccwpck_require__(685)
-const assert = __nccwpck_require__(9491)
+const { maxNameValuePairSize, maxAttributeValueSize } = __nccwpck_require__(9237)
+const { isCTLExcludingHtab } = __nccwpck_require__(3834)
+const { collectASequenceOfCodePointsFast } = __nccwpck_require__(4322)
+const assert = __nccwpck_require__(2613)
 
 /**
  * @description Parses the field-value attributes of a set-cookie header string.
@@ -11846,14 +11866,14 @@ module.exports = {
 
 /***/ }),
 
-/***/ 3121:
+/***/ 3834:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const assert = __nccwpck_require__(9491)
-const { kHeadersList } = __nccwpck_require__(2785)
+const assert = __nccwpck_require__(2613)
+const { kHeadersList } = __nccwpck_require__(6443)
 
 function isCTLExcludingHtab (value) {
   if (value.length === 0) {
@@ -12145,16 +12165,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 2067:
+/***/ 9136:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const net = __nccwpck_require__(1808)
-const assert = __nccwpck_require__(9491)
-const util = __nccwpck_require__(3983)
-const { InvalidArgumentError, ConnectTimeoutError } = __nccwpck_require__(8045)
+const net = __nccwpck_require__(9278)
+const assert = __nccwpck_require__(2613)
+const util = __nccwpck_require__(3440)
+const { InvalidArgumentError, ConnectTimeoutError } = __nccwpck_require__(8707)
 
 let tls // include tls conditionally since it is not always available
 
@@ -12237,7 +12257,7 @@ function buildConnector ({ allowH2, maxCachedSessions, socketPath, timeout, ...o
     let socket
     if (protocol === 'https:') {
       if (!tls) {
-        tls = __nccwpck_require__(4404)
+        tls = __nccwpck_require__(4756)
       }
       servername = servername || options.servername || util.getServerName(host) || null
 
@@ -12342,7 +12362,7 @@ module.exports = buildConnector
 
 /***/ }),
 
-/***/ 4462:
+/***/ 735:
 /***/ ((module) => {
 
 "use strict";
@@ -12468,7 +12488,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 8045:
+/***/ 8707:
 /***/ ((module) => {
 
 "use strict";
@@ -12706,7 +12726,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 2905:
+/***/ 4655:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -12715,10 +12735,10 @@ module.exports = {
 const {
   InvalidArgumentError,
   NotSupportedError
-} = __nccwpck_require__(8045)
-const assert = __nccwpck_require__(9491)
-const { kHTTP2BuildRequest, kHTTP2CopyHeaders, kHTTP1BuildRequest } = __nccwpck_require__(2785)
-const util = __nccwpck_require__(3983)
+} = __nccwpck_require__(8707)
+const assert = __nccwpck_require__(2613)
+const { kHTTP2BuildRequest, kHTTP2CopyHeaders, kHTTP1BuildRequest } = __nccwpck_require__(6443)
+const util = __nccwpck_require__(3440)
 
 // tokenRegExp and headerCharRegex have been lifted from
 // https://github.com/nodejs/node/blob/main/lib/_http_common.js
@@ -12748,7 +12768,7 @@ const channels = {}
 let extractBody
 
 try {
-  const diagnosticsChannel = __nccwpck_require__(7643)
+  const diagnosticsChannel = __nccwpck_require__(1637)
   channels.create = diagnosticsChannel.channel('undici:request:create')
   channels.bodySent = diagnosticsChannel.channel('undici:request:bodySent')
   channels.headers = diagnosticsChannel.channel('undici:request:headers')
@@ -12913,7 +12933,7 @@ class Request {
       }
 
       if (!extractBody) {
-        extractBody = (__nccwpck_require__(1472).extractBody)
+        extractBody = (__nccwpck_require__(8923).extractBody)
       }
 
       const [bodyStream, contentType] = extractBody(body)
@@ -13213,7 +13233,7 @@ module.exports = Request
 
 /***/ }),
 
-/***/ 2785:
+/***/ 6443:
 /***/ ((module) => {
 
 module.exports = {
@@ -13283,22 +13303,22 @@ module.exports = {
 
 /***/ }),
 
-/***/ 3983:
+/***/ 3440:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const assert = __nccwpck_require__(9491)
-const { kDestroyed, kBodyUsed } = __nccwpck_require__(2785)
-const { IncomingMessage } = __nccwpck_require__(3685)
-const stream = __nccwpck_require__(2781)
-const net = __nccwpck_require__(1808)
-const { InvalidArgumentError } = __nccwpck_require__(8045)
-const { Blob } = __nccwpck_require__(4300)
-const nodeUtil = __nccwpck_require__(3837)
-const { stringify } = __nccwpck_require__(3477)
-const { headerNameLowerCasedRecord } = __nccwpck_require__(4462)
+const assert = __nccwpck_require__(2613)
+const { kDestroyed, kBodyUsed } = __nccwpck_require__(6443)
+const { IncomingMessage } = __nccwpck_require__(8611)
+const stream = __nccwpck_require__(2203)
+const net = __nccwpck_require__(9278)
+const { InvalidArgumentError } = __nccwpck_require__(8707)
+const { Blob } = __nccwpck_require__(181)
+const nodeUtil = __nccwpck_require__(9023)
+const { stringify } = __nccwpck_require__(3480)
+const { headerNameLowerCasedRecord } = __nccwpck_require__(735)
 
 const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(v => Number(v))
 
@@ -13667,7 +13687,7 @@ async function * convertIterableToBuffer (iterable) {
 let ReadableStream
 function ReadableStreamFrom (iterable) {
   if (!ReadableStream) {
-    ReadableStream = (__nccwpck_require__(5356).ReadableStream)
+    ReadableStream = (__nccwpck_require__(3774).ReadableStream)
   }
 
   if (ReadableStream.from) {
@@ -13813,19 +13833,19 @@ module.exports = {
 
 /***/ }),
 
-/***/ 4839:
+/***/ 1:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const Dispatcher = __nccwpck_require__(412)
+const Dispatcher = __nccwpck_require__(992)
 const {
   ClientDestroyedError,
   ClientClosedError,
   InvalidArgumentError
-} = __nccwpck_require__(8045)
-const { kDestroy, kClose, kDispatch, kInterceptors } = __nccwpck_require__(2785)
+} = __nccwpck_require__(8707)
+const { kDestroy, kClose, kDispatch, kInterceptors } = __nccwpck_require__(6443)
 
 const kDestroyed = Symbol('destroyed')
 const kClosed = Symbol('closed')
@@ -14013,13 +14033,13 @@ module.exports = DispatcherBase
 
 /***/ }),
 
-/***/ 412:
+/***/ 992:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const EventEmitter = __nccwpck_require__(2361)
+const EventEmitter = __nccwpck_require__(4434)
 
 class Dispatcher extends EventEmitter {
   dispatch () {
@@ -14040,14 +14060,14 @@ module.exports = Dispatcher
 
 /***/ }),
 
-/***/ 1472:
+/***/ 8923:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const Busboy = __nccwpck_require__(727)
-const util = __nccwpck_require__(3983)
+const Busboy = __nccwpck_require__(9581)
+const util = __nccwpck_require__(3440)
 const {
   ReadableStreamFrom,
   isBlobLike,
@@ -14055,18 +14075,26 @@ const {
   readableStreamClose,
   createDeferredPromise,
   fullyReadBody
-} = __nccwpck_require__(2538)
-const { FormData } = __nccwpck_require__(2015)
-const { kState } = __nccwpck_require__(5861)
-const { webidl } = __nccwpck_require__(1744)
-const { DOMException, structuredClone } = __nccwpck_require__(1037)
-const { Blob, File: NativeFile } = __nccwpck_require__(4300)
-const { kBodyUsed } = __nccwpck_require__(2785)
-const assert = __nccwpck_require__(9491)
-const { isErrored } = __nccwpck_require__(3983)
-const { isUint8Array, isArrayBuffer } = __nccwpck_require__(9830)
-const { File: UndiciFile } = __nccwpck_require__(8511)
-const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(685)
+} = __nccwpck_require__(5523)
+const { FormData } = __nccwpck_require__(3073)
+const { kState } = __nccwpck_require__(9710)
+const { webidl } = __nccwpck_require__(4222)
+const { DOMException, structuredClone } = __nccwpck_require__(7326)
+const { Blob, File: NativeFile } = __nccwpck_require__(181)
+const { kBodyUsed } = __nccwpck_require__(6443)
+const assert = __nccwpck_require__(2613)
+const { isErrored } = __nccwpck_require__(3440)
+const { isUint8Array, isArrayBuffer } = __nccwpck_require__(8253)
+const { File: UndiciFile } = __nccwpck_require__(3041)
+const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(4322)
+
+let random
+try {
+  const crypto = __nccwpck_require__(7598)
+  random = (max) => crypto.randomInt(0, max)
+} catch {
+  random = (max) => Math.floor(Math.random(max))
+}
 
 let ReadableStream = globalThis.ReadableStream
 
@@ -14078,7 +14106,7 @@ const textDecoder = new TextDecoder()
 // https://fetch.spec.whatwg.org/#concept-bodyinit-extract
 function extractBody (object, keepalive = false) {
   if (!ReadableStream) {
-    ReadableStream = (__nccwpck_require__(5356).ReadableStream)
+    ReadableStream = (__nccwpck_require__(3774).ReadableStream)
   }
 
   // 1. Let stream be null.
@@ -14153,7 +14181,7 @@ function extractBody (object, keepalive = false) {
     // Set source to a copy of the bytes held by object.
     source = new Uint8Array(object.buffer.slice(object.byteOffset, object.byteOffset + object.byteLength))
   } else if (util.isFormDataLike(object)) {
-    const boundary = `----formdata-undici-0${`${Math.floor(Math.random() * 1e11)}`.padStart(11, '0')}`
+    const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, '0')}`
     const prefix = `--${boundary}\r\nContent-Disposition: form-data`
 
     /*! formdata-polyfill. MIT License. Jimmy Wärting <https://jimmy.warting.se/opensource> */
@@ -14299,7 +14327,7 @@ function extractBody (object, keepalive = false) {
 function safelyExtractBody (object, keepalive = false) {
   if (!ReadableStream) {
     // istanbul ignore next
-    ReadableStream = (__nccwpck_require__(5356).ReadableStream)
+    ReadableStream = (__nccwpck_require__(3774).ReadableStream)
   }
 
   // To safely extract a body and a `Content-Type` value from
@@ -14653,13 +14681,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1037:
+/***/ 7326:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { MessageChannel, receiveMessageOnPort } = __nccwpck_require__(1267)
+const { MessageChannel, receiveMessageOnPort } = __nccwpck_require__(8167)
 
 const corsSafeListedMethods = ['GET', 'HEAD', 'POST']
 const corsSafeListedMethodsSet = new Set(corsSafeListedMethods)
@@ -14812,12 +14840,12 @@ module.exports = {
 
 /***/ }),
 
-/***/ 685:
+/***/ 4322:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const assert = __nccwpck_require__(9491)
-const { atob } = __nccwpck_require__(4300)
-const { isomorphicDecode } = __nccwpck_require__(2538)
+const assert = __nccwpck_require__(2613)
+const { atob } = __nccwpck_require__(181)
+const { isomorphicDecode } = __nccwpck_require__(5523)
 
 const encoder = new TextEncoder()
 
@@ -15446,19 +15474,19 @@ module.exports = {
 
 /***/ }),
 
-/***/ 8511:
+/***/ 3041:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { Blob, File: NativeFile } = __nccwpck_require__(4300)
-const { types } = __nccwpck_require__(3837)
-const { kState } = __nccwpck_require__(5861)
-const { isBlobLike } = __nccwpck_require__(2538)
-const { webidl } = __nccwpck_require__(1744)
-const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(685)
-const { kEnumerableProperty } = __nccwpck_require__(3983)
+const { Blob, File: NativeFile } = __nccwpck_require__(181)
+const { types } = __nccwpck_require__(9023)
+const { kState } = __nccwpck_require__(9710)
+const { isBlobLike } = __nccwpck_require__(5523)
+const { webidl } = __nccwpck_require__(4222)
+const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(4322)
+const { kEnumerableProperty } = __nccwpck_require__(3440)
 const encoder = new TextEncoder()
 
 class File extends Blob {
@@ -15798,17 +15826,17 @@ module.exports = { File, FileLike, isFileLike }
 
 /***/ }),
 
-/***/ 2015:
+/***/ 3073:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { isBlobLike, toUSVString, makeIterator } = __nccwpck_require__(2538)
-const { kState } = __nccwpck_require__(5861)
-const { File: UndiciFile, FileLike, isFileLike } = __nccwpck_require__(8511)
-const { webidl } = __nccwpck_require__(1744)
-const { Blob, File: NativeFile } = __nccwpck_require__(4300)
+const { isBlobLike, toUSVString, makeIterator } = __nccwpck_require__(5523)
+const { kState } = __nccwpck_require__(9710)
+const { File: UndiciFile, FileLike, isFileLike } = __nccwpck_require__(3041)
+const { webidl } = __nccwpck_require__(4222)
+const { Blob, File: NativeFile } = __nccwpck_require__(181)
 
 /** @type {globalThis['File']} */
 const File = NativeFile ?? UndiciFile
@@ -16071,7 +16099,7 @@ module.exports = { FormData }
 
 /***/ }),
 
-/***/ 1246:
+/***/ 5628:
 /***/ ((module) => {
 
 "use strict";
@@ -16119,7 +16147,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 554:
+/***/ 6349:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -16127,16 +16155,16 @@ module.exports = {
 
 
 
-const { kHeadersList, kConstruct } = __nccwpck_require__(2785)
-const { kGuard } = __nccwpck_require__(5861)
-const { kEnumerableProperty } = __nccwpck_require__(3983)
+const { kHeadersList, kConstruct } = __nccwpck_require__(6443)
+const { kGuard } = __nccwpck_require__(9710)
+const { kEnumerableProperty } = __nccwpck_require__(3440)
 const {
   makeIterator,
   isValidHeaderName,
   isValidHeaderValue
-} = __nccwpck_require__(2538)
-const { webidl } = __nccwpck_require__(1744)
-const assert = __nccwpck_require__(9491)
+} = __nccwpck_require__(5523)
+const { webidl } = __nccwpck_require__(4222)
+const assert = __nccwpck_require__(2613)
 
 const kHeadersMap = Symbol('headers map')
 const kHeadersSortedMap = Symbol('headers map sorted')
@@ -16716,7 +16744,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 4881:
+/***/ 2315:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -16730,10 +16758,10 @@ const {
   makeAppropriateNetworkError,
   filterResponse,
   makeResponse
-} = __nccwpck_require__(7823)
-const { Headers } = __nccwpck_require__(554)
-const { Request, makeRequest } = __nccwpck_require__(8359)
-const zlib = __nccwpck_require__(9796)
+} = __nccwpck_require__(8676)
+const { Headers } = __nccwpck_require__(6349)
+const { Request, makeRequest } = __nccwpck_require__(5194)
+const zlib = __nccwpck_require__(3106)
 const {
   bytesMatch,
   makePolicyContainer,
@@ -16763,10 +16791,10 @@ const {
   urlIsLocal,
   urlIsHttpHttpsScheme,
   urlHasHttpsScheme
-} = __nccwpck_require__(2538)
-const { kState, kHeaders, kGuard, kRealm } = __nccwpck_require__(5861)
-const assert = __nccwpck_require__(9491)
-const { safelyExtractBody } = __nccwpck_require__(1472)
+} = __nccwpck_require__(5523)
+const { kState, kHeaders, kGuard, kRealm } = __nccwpck_require__(9710)
+const assert = __nccwpck_require__(2613)
+const { safelyExtractBody } = __nccwpck_require__(8923)
 const {
   redirectStatusSet,
   nullBodyStatus,
@@ -16774,16 +16802,16 @@ const {
   requestBodyHeader,
   subresourceSet,
   DOMException
-} = __nccwpck_require__(1037)
-const { kHeadersList } = __nccwpck_require__(2785)
-const EE = __nccwpck_require__(2361)
-const { Readable, pipeline } = __nccwpck_require__(2781)
-const { addAbortListener, isErrored, isReadable, nodeMajor, nodeMinor } = __nccwpck_require__(3983)
-const { dataURLProcessor, serializeAMimeType } = __nccwpck_require__(685)
-const { TransformStream } = __nccwpck_require__(5356)
-const { getGlobalDispatcher } = __nccwpck_require__(1892)
-const { webidl } = __nccwpck_require__(1744)
-const { STATUS_CODES } = __nccwpck_require__(3685)
+} = __nccwpck_require__(7326)
+const { kHeadersList } = __nccwpck_require__(6443)
+const EE = __nccwpck_require__(4434)
+const { Readable, pipeline } = __nccwpck_require__(2203)
+const { addAbortListener, isErrored, isReadable, nodeMajor, nodeMinor } = __nccwpck_require__(3440)
+const { dataURLProcessor, serializeAMimeType } = __nccwpck_require__(4322)
+const { TransformStream } = __nccwpck_require__(3774)
+const { getGlobalDispatcher } = __nccwpck_require__(2581)
+const { webidl } = __nccwpck_require__(4222)
+const { STATUS_CODES } = __nccwpck_require__(8611)
 const GET_OR_HEAD = ['GET', 'HEAD']
 
 /** @type {import('buffer').resolveObjectURL} */
@@ -17525,7 +17553,7 @@ function schemeFetch (fetchParams) {
     }
     case 'blob:': {
       if (!resolveObjectURL) {
-        resolveObjectURL = (__nccwpck_require__(4300).resolveObjectURL)
+        resolveObjectURL = (__nccwpck_require__(181).resolveObjectURL)
       }
 
       // 1. Let blobURLEntry be request’s current URL’s blob URL entry.
@@ -18524,7 +18552,7 @@ async function httpNetworkFetch (
   // cancelAlgorithm set to cancelAlgorithm, highWaterMark set to
   // highWaterMark, and sizeAlgorithm set to sizeAlgorithm.
   if (!ReadableStream) {
-    ReadableStream = (__nccwpck_require__(5356).ReadableStream)
+    ReadableStream = (__nccwpck_require__(3774).ReadableStream)
   }
 
   const stream = new ReadableStream(
@@ -18872,7 +18900,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 8359:
+/***/ 5194:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -18880,17 +18908,17 @@ module.exports = {
 
 
 
-const { extractBody, mixinBody, cloneBody } = __nccwpck_require__(1472)
-const { Headers, fill: fillHeaders, HeadersList } = __nccwpck_require__(554)
-const { FinalizationRegistry } = __nccwpck_require__(6436)()
-const util = __nccwpck_require__(3983)
+const { extractBody, mixinBody, cloneBody } = __nccwpck_require__(8923)
+const { Headers, fill: fillHeaders, HeadersList } = __nccwpck_require__(6349)
+const { FinalizationRegistry } = __nccwpck_require__(3194)()
+const util = __nccwpck_require__(3440)
 const {
   isValidHTTPToken,
   sameOrigin,
   normalizeMethod,
   makePolicyContainer,
   normalizeMethodRecord
-} = __nccwpck_require__(2538)
+} = __nccwpck_require__(5523)
 const {
   forbiddenMethodsSet,
   corsSafeListedMethodsSet,
@@ -18900,15 +18928,15 @@ const {
   requestCredentials,
   requestCache,
   requestDuplex
-} = __nccwpck_require__(1037)
+} = __nccwpck_require__(7326)
 const { kEnumerableProperty } = util
-const { kHeaders, kSignal, kState, kGuard, kRealm } = __nccwpck_require__(5861)
-const { webidl } = __nccwpck_require__(1744)
-const { getGlobalOrigin } = __nccwpck_require__(1246)
-const { URLSerializer } = __nccwpck_require__(685)
-const { kHeadersList, kConstruct } = __nccwpck_require__(2785)
-const assert = __nccwpck_require__(9491)
-const { getMaxListeners, setMaxListeners, getEventListeners, defaultMaxListeners } = __nccwpck_require__(2361)
+const { kHeaders, kSignal, kState, kGuard, kRealm } = __nccwpck_require__(9710)
+const { webidl } = __nccwpck_require__(4222)
+const { getGlobalOrigin } = __nccwpck_require__(5628)
+const { URLSerializer } = __nccwpck_require__(4322)
+const { kHeadersList, kConstruct } = __nccwpck_require__(6443)
+const assert = __nccwpck_require__(2613)
+const { getMaxListeners, setMaxListeners, getEventListeners, defaultMaxListeners } = __nccwpck_require__(4434)
 
 let TransformStream = globalThis.TransformStream
 
@@ -19395,7 +19423,7 @@ class Request {
 
       // 2. Set finalBody to the result of creating a proxy for inputBody.
       if (!TransformStream) {
-        TransformStream = (__nccwpck_require__(5356).TransformStream)
+        TransformStream = (__nccwpck_require__(3774).TransformStream)
       }
 
       // https://streams.spec.whatwg.org/#readablestream-create-a-proxy
@@ -19826,15 +19854,15 @@ module.exports = { Request, makeRequest }
 
 /***/ }),
 
-/***/ 7823:
+/***/ 8676:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { Headers, HeadersList, fill } = __nccwpck_require__(554)
-const { extractBody, cloneBody, mixinBody } = __nccwpck_require__(1472)
-const util = __nccwpck_require__(3983)
+const { Headers, HeadersList, fill } = __nccwpck_require__(6349)
+const { extractBody, cloneBody, mixinBody } = __nccwpck_require__(8923)
+const util = __nccwpck_require__(3440)
 const { kEnumerableProperty } = util
 const {
   isValidReasonPhrase,
@@ -19844,22 +19872,22 @@ const {
   serializeJavascriptValueToJSONString,
   isErrorLike,
   isomorphicEncode
-} = __nccwpck_require__(2538)
+} = __nccwpck_require__(5523)
 const {
   redirectStatusSet,
   nullBodyStatus,
   DOMException
-} = __nccwpck_require__(1037)
-const { kState, kHeaders, kGuard, kRealm } = __nccwpck_require__(5861)
-const { webidl } = __nccwpck_require__(1744)
-const { FormData } = __nccwpck_require__(2015)
-const { getGlobalOrigin } = __nccwpck_require__(1246)
-const { URLSerializer } = __nccwpck_require__(685)
-const { kHeadersList, kConstruct } = __nccwpck_require__(2785)
-const assert = __nccwpck_require__(9491)
-const { types } = __nccwpck_require__(3837)
+} = __nccwpck_require__(7326)
+const { kState, kHeaders, kGuard, kRealm } = __nccwpck_require__(9710)
+const { webidl } = __nccwpck_require__(4222)
+const { FormData } = __nccwpck_require__(3073)
+const { getGlobalOrigin } = __nccwpck_require__(5628)
+const { URLSerializer } = __nccwpck_require__(4322)
+const { kHeadersList, kConstruct } = __nccwpck_require__(6443)
+const assert = __nccwpck_require__(2613)
+const { types } = __nccwpck_require__(9023)
 
-const ReadableStream = globalThis.ReadableStream || (__nccwpck_require__(5356).ReadableStream)
+const ReadableStream = globalThis.ReadableStream || (__nccwpck_require__(3774).ReadableStream)
 const textEncoder = new TextEncoder('utf-8')
 
 // https://fetch.spec.whatwg.org/#response-class
@@ -20405,7 +20433,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5861:
+/***/ 9710:
 /***/ ((module) => {
 
 "use strict";
@@ -20423,18 +20451,18 @@ module.exports = {
 
 /***/ }),
 
-/***/ 2538:
+/***/ 5523:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { redirectStatusSet, referrerPolicySet: referrerPolicyTokens, badPortsSet } = __nccwpck_require__(1037)
-const { getGlobalOrigin } = __nccwpck_require__(1246)
-const { performance } = __nccwpck_require__(4074)
-const { isBlobLike, toUSVString, ReadableStreamFrom } = __nccwpck_require__(3983)
-const assert = __nccwpck_require__(9491)
-const { isUint8Array } = __nccwpck_require__(9830)
+const { redirectStatusSet, referrerPolicySet: referrerPolicyTokens, badPortsSet } = __nccwpck_require__(7326)
+const { getGlobalOrigin } = __nccwpck_require__(5628)
+const { performance } = __nccwpck_require__(2987)
+const { isBlobLike, toUSVString, ReadableStreamFrom } = __nccwpck_require__(3440)
+const assert = __nccwpck_require__(2613)
+const { isUint8Array } = __nccwpck_require__(8253)
 
 let supportedHashes = []
 
@@ -20443,7 +20471,7 @@ let supportedHashes = []
 let crypto
 
 try {
-  crypto = __nccwpck_require__(6113)
+  crypto = __nccwpck_require__(6982)
   const possibleRelevantHashes = ['sha256', 'sha384', 'sha512']
   supportedHashes = crypto.getHashes().filter((hash) => possibleRelevantHashes.includes(hash))
 /* c8 ignore next 3 */
@@ -21396,7 +21424,7 @@ let ReadableStream = globalThis.ReadableStream
 
 function isReadableStreamLike (stream) {
   if (!ReadableStream) {
-    ReadableStream = (__nccwpck_require__(5356).ReadableStream)
+    ReadableStream = (__nccwpck_require__(3774).ReadableStream)
   }
 
   return stream instanceof ReadableStream || (
@@ -21575,14 +21603,14 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1744:
+/***/ 4222:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { types } = __nccwpck_require__(3837)
-const { hasOwn, toUSVString } = __nccwpck_require__(2538)
+const { types } = __nccwpck_require__(9023)
+const { hasOwn, toUSVString } = __nccwpck_require__(5523)
 
 /** @type {import('../../types/webidl').Webidl} */
 const webidl = {}
@@ -22229,7 +22257,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 4854:
+/***/ 396:
 /***/ ((module) => {
 
 "use strict";
@@ -22527,7 +22555,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1446:
+/***/ 2160:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -22537,16 +22565,16 @@ const {
   staticPropertyDescriptors,
   readOperation,
   fireAProgressEvent
-} = __nccwpck_require__(7530)
+} = __nccwpck_require__(165)
 const {
   kState,
   kError,
   kResult,
   kEvents,
   kAborted
-} = __nccwpck_require__(9054)
-const { webidl } = __nccwpck_require__(1744)
-const { kEnumerableProperty } = __nccwpck_require__(3983)
+} = __nccwpck_require__(6812)
+const { webidl } = __nccwpck_require__(4222)
+const { kEnumerableProperty } = __nccwpck_require__(3440)
 
 class FileReader extends EventTarget {
   constructor () {
@@ -22879,13 +22907,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5504:
+/***/ 5976:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { webidl } = __nccwpck_require__(1744)
+const { webidl } = __nccwpck_require__(4222)
 
 const kState = Symbol('ProgressEvent state')
 
@@ -22965,7 +22993,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9054:
+/***/ 6812:
 /***/ ((module) => {
 
 "use strict";
@@ -22983,7 +23011,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 7530:
+/***/ 165:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -22995,14 +23023,14 @@ const {
   kResult,
   kAborted,
   kLastProgressEventFired
-} = __nccwpck_require__(9054)
-const { ProgressEvent } = __nccwpck_require__(5504)
-const { getEncoding } = __nccwpck_require__(4854)
-const { DOMException } = __nccwpck_require__(1037)
-const { serializeAMimeType, parseMIMEType } = __nccwpck_require__(685)
-const { types } = __nccwpck_require__(3837)
-const { StringDecoder } = __nccwpck_require__(1576)
-const { btoa } = __nccwpck_require__(4300)
+} = __nccwpck_require__(6812)
+const { ProgressEvent } = __nccwpck_require__(5976)
+const { getEncoding } = __nccwpck_require__(396)
+const { DOMException } = __nccwpck_require__(7326)
+const { serializeAMimeType, parseMIMEType } = __nccwpck_require__(4322)
+const { types } = __nccwpck_require__(9023)
+const { StringDecoder } = __nccwpck_require__(3193)
+const { btoa } = __nccwpck_require__(181)
 
 /** @type {PropertyDescriptor} */
 const staticPropertyDescriptors = {
@@ -23383,7 +23411,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1892:
+/***/ 2581:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -23392,8 +23420,8 @@ module.exports = {
 // We include a version number for the Dispatcher API. In case of breaking changes,
 // this version number must be increased to avoid conflicts.
 const globalDispatcher = Symbol.for('undici.globalDispatcher.1')
-const { InvalidArgumentError } = __nccwpck_require__(8045)
-const Agent = __nccwpck_require__(7890)
+const { InvalidArgumentError } = __nccwpck_require__(8707)
+const Agent = __nccwpck_require__(9965)
 
 if (getGlobalDispatcher() === undefined) {
   setGlobalDispatcher(new Agent())
@@ -23423,7 +23451,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 6930:
+/***/ 8840:
 /***/ ((module) => {
 
 "use strict";
@@ -23466,17 +23494,17 @@ module.exports = class DecoratorHandler {
 
 /***/ }),
 
-/***/ 2860:
+/***/ 8299:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const util = __nccwpck_require__(3983)
-const { kBodyUsed } = __nccwpck_require__(2785)
-const assert = __nccwpck_require__(9491)
-const { InvalidArgumentError } = __nccwpck_require__(8045)
-const EE = __nccwpck_require__(2361)
+const util = __nccwpck_require__(3440)
+const { kBodyUsed } = __nccwpck_require__(6443)
+const assert = __nccwpck_require__(2613)
+const { InvalidArgumentError } = __nccwpck_require__(8707)
+const EE = __nccwpck_require__(4434)
 
 const redirectableStatusCodes = [300, 301, 302, 303, 307, 308]
 
@@ -23695,14 +23723,14 @@ module.exports = RedirectHandler
 
 /***/ }),
 
-/***/ 2286:
+/***/ 3573:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const assert = __nccwpck_require__(9491)
+const assert = __nccwpck_require__(2613)
 
-const { kRetryHandlerDefaultRetry } = __nccwpck_require__(2785)
-const { RequestRetryError } = __nccwpck_require__(8045)
-const { isDisturbed, parseHeaders, parseRangeHeader } = __nccwpck_require__(3983)
+const { kRetryHandlerDefaultRetry } = __nccwpck_require__(6443)
+const { RequestRetryError } = __nccwpck_require__(8707)
+const { isDisturbed, parseHeaders, parseRangeHeader } = __nccwpck_require__(3440)
 
 function calculateRetryAfterHeader (retryAfter) {
   const current = Date.now()
@@ -24038,13 +24066,13 @@ module.exports = RetryHandler
 
 /***/ }),
 
-/***/ 8861:
+/***/ 4415:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const RedirectHandler = __nccwpck_require__(2860)
+const RedirectHandler = __nccwpck_require__(8299)
 
 function createRedirectInterceptor ({ maxRedirections: defaultMaxRedirections }) {
   return (dispatch) => {
@@ -24067,14 +24095,14 @@ module.exports = createRedirectInterceptor
 
 /***/ }),
 
-/***/ 953:
+/***/ 2824:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SPECIAL_HEADERS = exports.HEADER_STATE = exports.MINOR = exports.MAJOR = exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS = exports.TOKEN = exports.STRICT_TOKEN = exports.HEX = exports.URL_CHAR = exports.STRICT_URL_CHAR = exports.USERINFO_CHARS = exports.MARK = exports.ALPHANUM = exports.NUM = exports.HEX_MAP = exports.NUM_MAP = exports.ALPHA = exports.FINISH = exports.H_METHOD_MAP = exports.METHOD_MAP = exports.METHODS_RTSP = exports.METHODS_ICE = exports.METHODS_HTTP = exports.METHODS = exports.LENIENT_FLAGS = exports.FLAGS = exports.TYPE = exports.ERROR = void 0;
-const utils_1 = __nccwpck_require__(1891);
+const utils_1 = __nccwpck_require__(172);
 // C headers
 var ERROR;
 (function (ERROR) {
@@ -24352,7 +24380,7 @@ exports.SPECIAL_HEADERS = {
 
 /***/ }),
 
-/***/ 1145:
+/***/ 3870:
 /***/ ((module) => {
 
 module.exports = 'AGFzbQEAAAABMAhgAX8Bf2ADf39/AX9gBH9/f38Bf2AAAGADf39/AGABfwBgAn9/AGAGf39/f39/AALLAQgDZW52GHdhc21fb25faGVhZGVyc19jb21wbGV0ZQACA2VudhV3YXNtX29uX21lc3NhZ2VfYmVnaW4AAANlbnYLd2FzbV9vbl91cmwAAQNlbnYOd2FzbV9vbl9zdGF0dXMAAQNlbnYUd2FzbV9vbl9oZWFkZXJfZmllbGQAAQNlbnYUd2FzbV9vbl9oZWFkZXJfdmFsdWUAAQNlbnYMd2FzbV9vbl9ib2R5AAEDZW52GHdhc21fb25fbWVzc2FnZV9jb21wbGV0ZQAAA0ZFAwMEAAAFAAAAAAAABQEFAAUFBQAABgAAAAAGBgYGAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAAABAQcAAAUFAwABBAUBcAESEgUDAQACBggBfwFBgNQECwfRBSIGbWVtb3J5AgALX2luaXRpYWxpemUACRlfX2luZGlyZWN0X2Z1bmN0aW9uX3RhYmxlAQALbGxodHRwX2luaXQAChhsbGh0dHBfc2hvdWxkX2tlZXBfYWxpdmUAQQxsbGh0dHBfYWxsb2MADAZtYWxsb2MARgtsbGh0dHBfZnJlZQANBGZyZWUASA9sbGh0dHBfZ2V0X3R5cGUADhVsbGh0dHBfZ2V0X2h0dHBfbWFqb3IADxVsbGh0dHBfZ2V0X2h0dHBfbWlub3IAEBFsbGh0dHBfZ2V0X21ldGhvZAARFmxsaHR0cF9nZXRfc3RhdHVzX2NvZGUAEhJsbGh0dHBfZ2V0X3VwZ3JhZGUAEwxsbGh0dHBfcmVzZXQAFA5sbGh0dHBfZXhlY3V0ZQAVFGxsaHR0cF9zZXR0aW5nc19pbml0ABYNbGxodHRwX2ZpbmlzaAAXDGxsaHR0cF9wYXVzZQAYDWxsaHR0cF9yZXN1bWUAGRtsbGh0dHBfcmVzdW1lX2FmdGVyX3VwZ3JhZGUAGhBsbGh0dHBfZ2V0X2Vycm5vABsXbGxodHRwX2dldF9lcnJvcl9yZWFzb24AHBdsbGh0dHBfc2V0X2Vycm9yX3JlYXNvbgAdFGxsaHR0cF9nZXRfZXJyb3JfcG9zAB4RbGxodHRwX2Vycm5vX25hbWUAHxJsbGh0dHBfbWV0aG9kX25hbWUAIBJs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ADcDACAAQShqQgA3AwAgAEEgakIANwMAIABBEGpCADcDACAAQQhqQgA3AwAgAEHdATYCHEEAC3sBAX8CQCAAKAIMIgMNAAJAIAAoAgRFDQAgACABNgIECwJAIAAgASACEMSAgIAAIgMNACAAKAIMDwsgACADNgIcQQAhAyAAKAIEIgFFDQAgACABIAIgACgCCBGBgICAAAAiAUUNACAAIAI2AhQgACABNgIMIAEhAwsgAwvk8wEDDn8DfgR/I4CAgIAAQRBrIgMkgICAgAAgASEEIAEhBSABIQYgASEHIAEhCCABIQkgASEKIAEhCyABIQwgASENIAEhDiABIQ8CQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkAgACgCHCIQQX9qDt0B2gEB2QECAwQFBgcICQoLDA0O2AEPENcBERLWARMUFRYXGBkaG+AB3wEcHR7VAR8gISIjJCXUASYnKCkqKyzTAdIBLS7RAdABLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVG2wFHSElKzwHOAUvNAUzMAU1OT1BRUlNUVVZXWFlaW1xdXl9gYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4ABgQGCAYMBhAGFAYYBhwGIAYkB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QAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkAC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FCAAIBA2AgxBACEQDLIBCyAAKAIEIRAgAEEANgIEAkAgACAQIAEQp4CAgAAiEA0AIAEhAQxNCyAAQdMANgIcIAAgATYCFCAAIBA2AgxBACEQDLEBCyAAKAIEIRAgAEEANgIEAkAgACAQIAEQp4CAgAAiEA0AIAEhAQxRCyAAQeUANgIcIAAgATYCFCAAIBA2AgxBACEQDLABCyAAQQA2AhwgACABNgIUIABBxoqAgAA2AhAgAEEHNgIMQQAhEAyvAQsgACgCBCEQIABBADYCBAJAIAAgECABEKeAgIAAIhANACABIQEMSQsgAEHSADYCHCAAIAE2AhQgACAQNgIMQQAhEAyuAQsgACgCBCEQIABBADYCBAJAIAAgECABEKeAgIAAIhANACABIQEMSQsgAEHTADYCHCAAIAE2AhQgACAQNgIMQQAhEAytAQsgACgCBCEQIABBADYCBAJAIAAgECABEKeAgIAAIhANACABIQEMTQsgAEHlADYCHCAAIAE2AhQgACAQNgIMQQAhEAysAQsgAEEANgIcIAAgATYCFCAAQdyIgIAANgIQIABBBzYCDEEAIRAMqwELIBBBP0cNASABQQFqIQELQQUhEAyQAQtBACEQIABBADYCHCAAIAE2AhQgAEH9koCAADYCECAAQQc2AgwMqAELIAAoAgQhECAAQQA2AgQCQCAAIBAgARCngICAACIQDQAgASEBDEILIABB0gA2AhwgACABNgIUIAAgEDYCDEEAIRAMpwELIAAoAgQhECAAQQA2AgQCQCAAIBAgARCngICAACIQDQAgASEBDEILIABB0wA2AhwgACABNgIUIAAgEDYCDEEAIRAMpgELIAAoAgQhECAAQQA2AgQCQCAAIBAgARCngICAACIQDQAgASEBDEYLIABB5QA2AhwgACABNgIUIAAgEDYCDEEAIRAMpQELIAAoAgQhASAAQQA2AgQCQCAAIAEgFBCngICAACIBDQAgFCEBDD8LIABB0gA2AhwgACAUNgIUIAAgATYCDEEAIRAMpAELIAAoAgQhASAAQQA2AgQCQCAAIAEgFBCngICAACIBDQAgFCEBDD8LIABB0wA2AhwgACAUNgIUIAAgATYCDEEAIRAMowELIAAoAgQhASAAQQA2AgQCQCAAIAEgFBCngICAACIBDQAgFCEBDEMLIABB5QA2AhwgACAU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YWdlX2JlZ2luYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfZXh0ZW5zaW9uX3ZhbHVlYCBjYWxsYmFjayBlcnJvcgBgb25fc3RhdHVzX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fdmVyc2lvbl9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX3VybF9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX2NodW5rX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25faGVhZGVyX3ZhbHVlX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fbWVzc2FnZV9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX21ldGhvZF9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX2hlYWRlcl9maWVsZF9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX2NodW5rX2V4dGVuc2lvbl9uYW1lYCBjYWxsYmFjayBlcnJvcgBVbmV4cGVjdGVkIGNoYXIgaW4gdXJsIHNlcnZlcgBJbnZhbGlkIGhlYWRlciB2YWx1ZSBjaGFyAEludmFsaWQgaGVhZGVyIGZpZWxkIGNoYXIAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl92ZXJzaW9uAEludmFsaWQgbWlub3IgdmVyc2lvbgBJbnZhbGlkIG1ham9yIHZlcnNpb24ARXhwZWN0ZWQgc3BhY2UgYWZ0ZXIgdmVyc2lvbgBFeHBlY3RlZCBDUkxGIGFmdGVyIHZlcnNpb24ASW52YWxpZCBIVFRQIHZlcnNpb24ASW52YWxpZCBoZWFkZXIgdG9rZW4AU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl91cmwASW52YWxpZCBjaGFyYWN0ZXJzIGluIHVybABVbmV4cGVjdGVkIHN0YXJ0IGNoYXIgaW4gdXJsAERvdWJsZSBAIGluIHVybABFbXB0eSBDb250ZW50LUxlbmd0aABJbnZhbGlkIGNoYXJhY3RlciBpbiBDb250ZW50LUxlbmd0aABEdXBsaWNhdGUgQ29udGVudC1MZW5ndGgASW52YWxpZCBjaGFyIGluIHVybCBwYXRoAENvbnRlbnQtTGVuZ3RoIGNhbid0IGJlIHByZXNlbnQgd2l0aCBUcmFuc2Zlci1FbmNvZGluZwBJbnZhbGlkIGNoYXJhY3RlciBpbiBjaHVuayBzaXplAFNwYW4gY2FsbGJhY2sgZXJyb3IgaW4gb25faGVhZGVyX3ZhbHVlAFNwYW4gY2FsbGJhY2sgZXJyb3IgaW4gb25fY2h1bmtfZXh0ZW5zaW9uX3ZhbHVlAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIGV4dGVuc2lvbnMgdmFsdWUATWlzc2luZyBleHBlY3RlZCBMRiBhZnRlciBoZWFkZXIgdmFsdWUASW52YWxpZCBgVHJhbnNmZXItRW5jb2RpbmdgIGhlYWRlciB2YWx1ZQBJbnZhbGlkIGNoYXJhY3RlciBpbiBjaHVuayBleHRlbnNpb25zIHF1b3RlIHZhbHVlAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIGV4dGVuc2lvbnMgcXVvdGVkIHZhbHVlAFBhdXNlZCBieSBvbl9oZWFkZXJzX2NvbXBsZXRlAEludmFsaWQgRU9GIHN0YXRlAG9uX3Jlc2V0IHBhdXNlAG9uX2NodW5rX2hlYWRlciBwYXVzZQBvbl9tZXNzYWdlX2JlZ2luIHBhdXNlAG9uX2NodW5rX2V4dGVuc2lvbl92YWx1ZSBwYXVzZQBvbl9zdGF0dXNfY29tcGxldGUgcGF1c2UAb25fdmVyc2lvbl9jb21wbGV0ZSBwYXVzZQBvbl91cmxfY29tcGxldGUgcGF1c2UAb25fY2h1bmtfY29tcGxldGUgcGF1c2UAb25faGVhZGVyX3ZhbHVlX2NvbXBsZXRlIHBhdXNlAG9uX21lc3NhZ2VfY29tcGxldGUgcGF1c2UAb25fbWV0aG9kX2NvbXBsZXRlIHBhdXNlAG9uX2hlYWRlcl9maWVsZF9jb21wbGV0ZSBwYXVzZQBvbl9jaHVua19leHRlbnNpb25fbmFtZSBwYXVzZQBVbmV4cGVjdGVkIHNwYWNlIGFmdGVyIHN0YXJ0IGxpbmUAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9jaHVua19leHRlbnNpb25fbmFtZQBJbnZhbGlkIGNoYXJhY3RlciBpbiBjaHVuayBleHRlbnNpb25zIG5hbWUAUGF1c2Ugb24gQ09OTkVDVC9VcGdyYWRlAFBhdXNlIG9uIFBSSS9VcGdyYWRlAEV4cGVjdGVkIEhUVFAvMiBDb25uZWN0aW9uIFByZWZhY2UAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9tZXRob2QARXhwZWN0ZWQgc3BhY2UgYWZ0ZXIgbWV0aG9kAFNwYW4gY2FsbGJhY2sgZXJyb3IgaW4gb25faGVhZGVyX2ZpZWxkAFBhdXNlZABJbnZhbGlkIHdvcmQgZW5jb3VudGVyZWQASW52YWxpZCBtZXRob2QgZW5jb3VudGVyZWQAVW5leHBlY3RlZCBjaGFyIGluIHVybCBzY2hlbWEAUmVxdWVzdCBoYXMgaW52YWxpZCBgVHJhbnNmZXItRW5jb2RpbmdgAFNXSVRDSF9QUk9YWQBVU0VfUFJPWFkATUtBQ1RJVklUWQBVTlBST0NFU1NBQkxFX0VOVElUWQBDT1BZAE1PVkVEX1BFUk1BTkVOVExZAFRPT19FQVJMWQBOT1RJRlkARkFJTEVEX0RFUEVOREVOQ1kAQkFEX0dBVEVXQVkAUExBWQBQVVQAQ0hFQ0tPVVQAR0FURVdBWV9USU1FT1VUAFJFUVVFU1RfVElNRU9VVABORVRXT1JLX0NPTk5FQ1RfVElNRU9VVABDT05ORUNUSU9OX1RJTUVPVVQATE9HSU5fVElNRU9VVABORVRXT1JLX1JFQURfVElNRU9VVABQT1NUAE1JU0RJUkVDVEVEX1JFUVVFU1QAQ0xJRU5UX0NMT1NFRF9SRVFVRVNUAENMSUVOVF9DTE9TRURfTE9BRF9CQUxBTkNFRF9SRVFVRVNUAEJBRF9SRVFVRVNUAEhUVFBfUkVRVUVTVF9TRU5UX1RPX0hUVFBTX1BPUlQAUkVQT1JUAElNX0FfVEVBUE9UAFJFU0VUX0NPTlRFTlQATk9fQ09OVEVOVABQQVJUSUFMX0NPTlRFTlQASFBFX0lOVkFMSURfQ09OU1RBTlQASFBFX0NCX1JFU0VUAEdFVABIUEVfU1RSSUNUAENPTkZMSUNUAFRFTVBPUkFSWV9SRURJUkVDVABQRVJNQU5FTlRfUkVESVJFQ1QAQ09OTkVDVABNVUxUSV9TVEFUVVMASFBFX0lOVkFMSURfU1RBVFVTAFRPT19NQU5ZX1JFUVVFU1RTAEVBUkxZX0hJTlRTAFVOQVZBSUxBQkxFX0ZPUl9MRUdBTF9SRUFTT05TAE9QVElPTlMAU1dJVENISU5HX1BST1RPQ09MUwBWQVJJQU5UX0FMU09fTkVHT1RJQVRFUwBNVUxUSVBMRV9DSE9JQ0VTAElOVEVSTkFMX1NFUlZFUl9FUlJPUgBXRUJfU0VSVkVSX1VOS05PV05fRVJST1IAUkFJTEdVTl9FUlJPUgBJREVOVElUWV9QUk9WSURFUl9BVVRIRU5USUNBVElPTl9FUlJPUgBTU0xfQ0VSVElGSUNBVEVfRVJST1IASU5WQUxJRF9YX0ZPUldBUkRFRF9GT1IAU0VUX1BBUkFNRVRFUgBHRVRfUEFSQU1FVEVSAEhQRV9VU0VSAFNFRV9PVEhFUgBIUEVfQ0JfQ0hVTktfSEVBREVSAE1LQ0FMRU5EQVIAU0VUVVAAV0VCX1NFUlZFUl9JU19ET1dOAFRFQVJET1dOAEhQRV9DTE9TRURfQ09OTkVDVElPTgBIRVVSSVNUSUNfRVhQSVJBVElPTgBESVNDT05ORUNURURfT1BFUkFUSU9OAE5PTl9BVVRIT1JJVEFUSVZFX0lORk9STUFUSU9OAEhQRV9JTlZBTElEX1ZFUlNJT04ASFBFX0NCX01FU1NBR0VfQkVHSU4AU0lURV9JU19GUk9aRU4ASFBFX0lOVkFMSURfSEVBREVSX1RPS0VOAElOVkFMSURfVE9LRU4ARk9SQklEREVOAEVOSEFOQ0VfWU9VUl9DQUxNAEhQRV9JTlZBTElEX1VSTABCTE9DS0VEX0JZX1BBUkVOVEFMX0NPTlRST0wATUtDT0wAQUNMAEhQRV9JTlRFUk5BTABSRVFVRVNUX0hFQURFUl9GSUVMRFNfVE9PX0xBUkdFX1VOT0ZGSUNJQUwASFBFX09LAFVOTElOSwBVTkxPQ0sAUFJJAFJFVFJZX1dJVEgASFBFX0lOVkFMSURfQ09OVEVOVF9MRU5HVEgASFBFX1VORVhQRUNURURfQ09OVEVOVF9MRU5HVEgARkxVU0gAUFJPUFBBVENIAE0tU0VBUkNIAFVSSV9UT09fTE9ORwBQUk9DRVNTSU5HAE1JU0NFTExBTkVPVVNfUEVSU0lTVEVOVF9XQVJOSU5HAE1JU0NFTExBTkVPVVNfV0FSTklORwBIUEVfSU5WQUxJRF9UUkFOU0ZFUl9FTkNPRElORwBFeHBlY3RlZCBDUkxGAEhQRV9JTlZBTElEX0NIVU5LX1NJWkUATU9WRQBDT05USU5VRQBIUEVfQ0JfU1RBVFVTX0NPTVBMRVRFAEhQRV9DQl9IRUFERVJTX0NPTVBMRVRFAEhQRV9DQl9WRVJTSU9OX0NPTVBMRVRFAEhQRV9DQl9VUkxfQ09NUExFVEUASFBFX0NCX0NIVU5LX0NPTVBMRVRFAEhQRV9DQl9IRUFERVJfVkFMVUVfQ09NUExFVEUASFBFX0NCX0NIVU5LX0VYVEVOU0lPTl9WQUxVRV9DT01QTEVURQBIUEVfQ0JfQ0hVTktfRVhURU5TSU9OX05BTUVfQ09NUExFVEUASFBFX0NCX01FU1NBR0VfQ09NUExFVEUASFBFX0NCX01FVEhPRF9DT01QTEVURQBIUEVfQ0JfSEVBREVSX0ZJRUxEX0NPTVBMRVRFAERFTEVURQBIUEVfSU5WQUxJRF9FT0ZfU1RBVEUASU5WQUxJRF9TU0xfQ0VSVElGSUNBVEUAUEFVU0UATk9fUkVTUE9OU0UAVU5TVVBQT1JURURfTUVESUFfVFlQRQBHT05FAE5PVF9BQ0NFUFRBQkxFAFNFUlZJQ0VfVU5BVkFJTEFCTEUAUkFOR0VfTk9UX1NBVElTRklBQkxFAE9SSUdJTl9JU19VTlJFQUNIQUJMRQBSRVNQT05TRV9JU19TVEFMRQBQVVJHRQBNRVJHRQBSRVFVRVNUX0hFQURFUl9GSUVMRFNfVE9PX0xBUkdFAFJFUVVFU1RfSEVBREVSX1RPT19MQVJHRQBQQVlMT0FEX1RPT19MQVJHRQBJTlNVRkZJQ0lFTlRfU1RPUkFHRQBIUEVfUEFVU0VEX1VQR1JBREUASFBFX1BBVVNFRF9IMl9VUEdSQURFAFNPVVJDRQBBTk5PVU5DRQBUUkFDRQBIUEVfVU5FWFBFQ1RFRF9TUEFDRQBERVNDUklCRQBVTlNVQlNDUklCRQBSRUNPUkQASFBFX0lOVkFMSURfTUVUSE9EAE5PVF9GT1VORABQUk9QRklORABVTkJJTkQAUkVCSU5EAFVOQVVUSE9SSVpFRABNRVRIT0RfTk9UX0FMTE9XRUQASFRUUF9WRVJTSU9OX05PVF9TVVBQT1JURUQAQUxSRUFEWV9SRVBPUlRFRABBQ0NFUFRFRABOT1RfSU1QTEVNRU5URUQATE9PUF9ERVRFQ1RFRABIUEVfQ1JfRVhQRUNURUQASFBFX0xGX0VYUEVDVEVEAENSRUFURUQASU1fVVNFRABIUEVfUEFVU0VEAFRJTUVPVVRfT0NDVVJFRABQQVlNRU5UX1JFUVVJUkVEAFBSRUNPTkRJVElPTl9SRVFVSVJFRABQUk9YWV9BVVRIRU5USUNBVElPTl9SRVFVSVJFRABORVRXT1JLX0FVVEhFTlRJQ0FUSU9OX1JFUVVJUkVEAExFTkdUSF9SRVFVSVJFRABTU0xfQ0VSVElGSUNBVEVfUkVRVUlSRUQAVVBHUkFERV9SRVFVSVJFRABQQUdFX0VYUElSRUQAUFJFQ09ORElUSU9OX0ZBSUxFRABFWFBFQ1RBVElPTl9GQUlMRUQAUkVWQUxJREFUSU9OX0ZBSUxFRABTU0xfSEFORFNIQUtFX0ZBSUxFRABMT0NLRUQAVFJBTlNGT1JNQVRJT05fQVBQTElFRABOT1RfTU9ESUZJRUQATk9UX0VYVEVOREVEAEJBTkRXSURUSF9MSU1JVF9FWENFRURFRABTSVRFX0lTX09WRVJMT0FERUQASEVBRABFeHBlY3RlZCBIVFRQLwAAXhMAACYTAAAwEAAA8BcAAJ0TAAAVEgAAORcAAPASAAAKEAAAdRIAAK0SAACCEwAATxQAAH8QAACgFQAAIxQAAIkSAACLFAAATRUAANQRAADPFAAAEBgAAMkWAADcFgAAwREAAOAXAAC7FAAAdBQAAHwVAADlFAAACBcAAB8QAABlFQAAoxQAACgVAAACFQAAmRUAACwQAACLGQAATw8AANQOAABqEAAAzhAAAAIXAACJDgAAbhMAABwTAABmFAAAVhcAAMETAADNEwAAbBMAAGgXAABmFwAAXxcAACITAADODwAAaQ4AANgOAABjFgAAyxMAAKoOAAAoFwAAJhcAAMUTAABdFgAA6BEAAGcTAABlEwAA8hYAAHMTAAAdFwAA+RYAAPMRAADPDgAAzhUAAAwSAACzEQAApREAAGEQAAAyFwAAuxMAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAIDAgICAgIAAAICAAICAAICAgICAgICAgIABAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgACAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAACAAICAgICAAACAgACAgACAgICAgICAgICAAMABAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAgACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbG9zZWVlcC1hbGl2ZQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBY2h1bmtlZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEAAQEBAQEAAAEBAAEBAAEBAQEBAQEBAQEAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABlY3Rpb25lbnQtbGVuZ3Rob25yb3h5LWNvbm5lY3Rpb24AAAAAAAAAAAAAAAAAAAByYW5zZmVyLWVuY29kaW5ncGdyYWRlDQoNCg0KU00NCg0KVFRQL0NFL1RTUC8AAAAAAAAAAAAAAAABAgABAwAAAAAAAAAAAAAAAAAAAAAAAAQBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAQIAAQMAAAAAAAAAAAAAAAAAAAAAAAAEAQEFAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAQAAAgAAAAAAAAAAAAAAAAAAAAAAAAMEAAAEBAQEBAQEBAQEBAUEBAQEBAQEBAQEBAQABAAGBwQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEAAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwAAAAAAAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAIAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAAAAAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABOT1VOQ0VFQ0tPVVRORUNURVRFQ1JJQkVMVVNIRVRFQURTRUFSQ0hSR0VDVElWSVRZTEVOREFSVkVPVElGWVBUSU9OU0NIU0VBWVNUQVRDSEdFT1JESVJFQ1RPUlRSQ0hQQVJBTUVURVJVUkNFQlNDUklCRUFSRE9XTkFDRUlORE5LQ0tVQlNDUklCRUhUVFAvQURUUC8='
@@ -24360,7 +24388,7 @@ module.exports = 'AGFzbQEAAAABMAhgAX8Bf2ADf39/AX9gBH9/f38Bf2AAAGADf39/AGABfwBgAn
 
 /***/ }),
 
-/***/ 5627:
+/***/ 3434:
 /***/ ((module) => {
 
 module.exports = 'AGFzbQEAAAABMAhgAX8Bf2ADf39/AX9gBH9/f38Bf2AAAGADf39/AGABfwBgAn9/AGAGf39/f39/AALLAQgDZW52GHdhc21fb25faGVhZGVyc19jb21wbGV0ZQACA2VudhV3YXNtX29uX21lc3NhZ2VfYmVnaW4AAANlbnYLd2FzbV9vbl91cmwAAQNlbnYOd2FzbV9vbl9zdGF0dXMAAQNlbnYUd2FzbV9vbl9oZWFkZXJfZmllbGQAAQNlbnYUd2FzbV9vbl9oZWFkZXJfdmFsdWUAAQNlbnYMd2FzbV9vbl9ib2R5AAEDZW52GHdhc21fb25fbWVzc2FnZV9jb21wbGV0ZQAAA0ZFAwMEAAAFAAAAAAAABQEFAAUFBQAABgAAAAAGBgYGAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAAABAQcAAAUFAwABBAUBcAESEgUDAQACBggBfwFBgNQECwfRBSIGbWVtb3J5AgALX2luaXRpYWxpemUACRlfX2luZGlyZWN0X2Z1bmN0aW9uX3RhYmxlAQALbGxodHRwX2luaXQAChhsbGh0dHBfc2hvdWxkX2tlZXBfYWxpdmUAQQxsbGh0dHBfYWxsb2MADAZtYWxsb2MARgtsbGh0dHBfZnJlZQANBGZyZWUASA9sbGh0dHBfZ2V0X3R5cGUADhVsbGh0dHBfZ2V0X2h0dHBfbWFqb3IADxVsbGh0dHBfZ2V0X2h0dHBfbWlub3IAEBFsbGh0dHBfZ2V0X21ldGhvZAARFmxsaHR0cF9nZXRfc3RhdHVzX2NvZGUAEhJsbGh0dHBfZ2V0X3VwZ3JhZGUAEwxsbGh0dHBfcmVzZXQAFA5sbGh0dHBfZXhlY3V0ZQAVFGxsaHR0cF9zZXR0aW5nc19pbml0ABYNbGxodHRwX2ZpbmlzaAAXDGxsaHR0cF9wYXVzZQAYDWxsaHR0cF9yZXN1bWUAGRtsbGh0dHBfcmVzdW1lX2FmdGVyX3VwZ3JhZGUAGhBsbGh0dHBfZ2V0X2Vycm5vABsXbGxodHRwX2dldF9lcnJvcl9yZWFzb24AHBdsbGh0dHBfc2V0X2Vycm9yX3JlYXNvbgAdFGxsaHR0cF9nZXRfZXJyb3JfcG9zAB4RbGxodHRwX2Vycm5vX25hbWUAHxJsbGh0dHBfbWV0aG9kX25hbWUAIBJs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IAH9CwMAIABBMGogAf0LAwAgAEEgaiAB/QsDACAAQd0BNgIcQQALewEBfwJAIAAoAgwiAw0AAkAgACgCBEUNACAAIAE2AgQLAkAgACABIAIQxICAgAAiAw0AIAAoAgwPCyAAIAM2AhxBACEDIAAoAgQiAUUNACAAIAEgAiAAKAIIEYGAgIAAACIBRQ0AIAAgAjYCFCAAIAE2AgwgASEDCyADC+TzAQMOfwN+BH8jgICAgABBEGsiAySAgICAACABIQQgASEFIAEhBiABIQcgASEIIAEhCSABIQogASELIAEhDCABIQ0gASEOIAEhDwJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQCAAKAIcIhBBf2oO3QHaAQHZAQIDBAUGBwgJCgsMDQ7YAQ8Q1wEREtYBExQVFhcYGRob4AHfARwdHtUBHyAhIiMkJdQBJicoKSorLNMB0gEtLtEB0AEvMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUbbAUdISUrPAc4BS80BTMwBTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/gAGBAYIBgwGEAYUBhgGHAYgBiQGKAYsBjAGNAY4BjwGQAZEB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QAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAIBAOxwEAAQID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YWNrIGVycm9yAGBvbl9jaHVua19leHRlbnNpb25fdmFsdWVgIGNhbGxiYWNrIGVycm9yAGBvbl9zdGF0dXNfY29tcGxldGVgIGNhbGxiYWNrIGVycm9yAGBvbl92ZXJzaW9uX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fdXJsX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfY29tcGxldGVgIGNhbGxiYWNrIGVycm9yAGBvbl9oZWFkZXJfdmFsdWVfY29tcGxldGVgIGNhbGxiYWNrIGVycm9yAGBvbl9tZXNzYWdlX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fbWV0aG9kX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25faGVhZGVyX2ZpZWxkX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfZXh0ZW5zaW9uX25hbWVgIGNhbGxiYWNrIGVycm9yAFVuZXhwZWN0ZWQgY2hhciBpbiB1cmwgc2VydmVyAEludmFsaWQgaGVhZGVyIHZhbHVlIGNoYXIASW52YWxpZCBoZWFkZXIgZmllbGQgY2hhcgBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX3ZlcnNpb24ASW52YWxpZCBtaW5vciB2ZXJzaW9uAEludmFsaWQgbWFqb3IgdmVyc2lvbgBFeHBlY3RlZCBzcGFjZSBhZnRlciB2ZXJzaW9uAEV4cGVjdGVkIENSTEYgYWZ0ZXIgdmVyc2lvbgBJbnZhbGlkIEhUVFAgdmVyc2lvbgBJbnZhbGlkIGhlYWRlciB0b2tlbgBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX3VybABJbnZhbGlkIGNoYXJhY3RlcnMgaW4gdXJsAFVuZXhwZWN0ZWQgc3RhcnQgY2hhciBpbiB1cmwARG91YmxlIEAgaW4gdXJsAEVtcHR5IENvbnRlbnQtTGVuZ3RoAEludmFsaWQgY2hhcmFjdGVyIGluIENvbnRlbnQtTGVuZ3RoAER1cGxpY2F0ZSBDb250ZW50LUxlbmd0aABJbnZhbGlkIGNoYXIgaW4gdXJsIHBhdGgAQ29udGVudC1MZW5ndGggY2FuJ3QgYmUgcHJlc2VudCB3aXRoIFRyYW5zZmVyLUVuY29kaW5nAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIHNpemUAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9oZWFkZXJfdmFsdWUAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9jaHVua19leHRlbnNpb25fdmFsdWUASW52YWxpZCBjaGFyYWN0ZXIgaW4gY2h1bmsgZXh0ZW5zaW9ucyB2YWx1ZQBNaXNzaW5nIGV4cGVjdGVkIExGIGFmdGVyIGhlYWRlciB2YWx1ZQBJbnZhbGlkIGBUcmFuc2Zlci1FbmNvZGluZ2AgaGVhZGVyIHZhbHVlAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIGV4dGVuc2lvbnMgcXVvdGUgdmFsdWUASW52YWxpZCBjaGFyYWN0ZXIgaW4gY2h1bmsgZXh0ZW5zaW9ucyBxdW90ZWQgdmFsdWUAUGF1c2VkIGJ5IG9uX2hlYWRlcnNfY29tcGxldGUASW52YWxpZCBFT0Ygc3RhdGUAb25fcmVzZXQgcGF1c2UAb25fY2h1bmtfaGVhZGVyIHBhdXNlAG9uX21lc3NhZ2VfYmVnaW4gcGF1c2UAb25fY2h1bmtfZXh0ZW5zaW9uX3ZhbHVlIHBhdXNlAG9uX3N0YXR1c19jb21wbGV0ZSBwYXVzZQBvbl92ZXJzaW9uX2NvbXBsZXRlIHBhdXNlAG9uX3VybF9jb21wbGV0ZSBwYXVzZQBvbl9jaHVua19jb21wbGV0ZSBwYXVzZQBvbl9oZWFkZXJfdmFsdWVfY29tcGxldGUgcGF1c2UAb25fbWVzc2FnZV9jb21wbGV0ZSBwYXVzZQBvbl9tZXRob2RfY29tcGxldGUgcGF1c2UAb25faGVhZGVyX2ZpZWxkX2NvbXBsZXRlIHBhdXNlAG9uX2NodW5rX2V4dGVuc2lvbl9uYW1lIHBhdXNlAFVuZXhwZWN0ZWQgc3BhY2UgYWZ0ZXIgc3RhcnQgbGluZQBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX2NodW5rX2V4dGVuc2lvbl9uYW1lAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIGV4dGVuc2lvbnMgbmFtZQBQYXVzZSBvbiBDT05ORUNUL1VwZ3JhZGUAUGF1c2Ugb24gUFJJL1VwZ3JhZGUARXhwZWN0ZWQgSFRUUC8yIENvbm5lY3Rpb24gUHJlZmFjZQBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX21ldGhvZABFeHBlY3RlZCBzcGFjZSBhZnRlciBtZXRob2QAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9oZWFkZXJfZmllbGQAUGF1c2VkAEludmFsaWQgd29yZCBlbmNvdW50ZXJlZABJbnZhbGlkIG1ldGhvZCBlbmNvdW50ZXJlZABVbmV4cGVjdGVkIGNoYXIgaW4gdXJsIHNjaGVtYQBSZXF1ZXN0IGhhcyBpbnZhbGlkIGBUcmFuc2Zlci1FbmNvZGluZ2AAU1dJVENIX1BST1hZAFVTRV9QUk9YWQBNS0FDVElWSVRZAFVOUFJPQ0VTU0FCTEVfRU5USVRZAENPUFkATU9WRURfUEVSTUFORU5UTFkAVE9PX0VBUkxZAE5PVElGWQBGQUlMRURfREVQRU5ERU5DWQBCQURfR0FURVdBWQBQTEFZAFBVVABDSEVDS09VVABHQVRFV0FZX1RJTUVPVVQAUkVRVUVTVF9USU1FT1VUAE5FVFdPUktfQ09OTkVDVF9USU1FT1VUAENPTk5FQ1RJT05fVElNRU9VVABMT0dJTl9USU1FT1VUAE5FVFdPUktfUkVBRF9USU1FT1VUAFBPU1QATUlTRElSRUNURURfUkVRVUVTVABDTElFTlRfQ0xPU0VEX1JFUVVFU1QAQ0xJRU5UX0NMT1NFRF9MT0FEX0JBTEFOQ0VEX1JFUVVFU1QAQkFEX1JFUVVFU1QASFRUUF9SRVFVRVNUX1NFTlRfVE9fSFRUUFNfUE9SVABSRVBPUlQASU1fQV9URUFQT1QAUkVTRVRfQ09OVEVOVABOT19DT05URU5UAFBBUlRJQUxfQ09OVEVOVABIUEVfSU5WQUxJRF9DT05TVEFOVABIUEVfQ0JfUkVTRVQAR0VUAEhQRV9TVFJJQ1QAQ09ORkxJQ1QAVEVNUE9SQVJZX1JFRElSRUNUAFBFUk1BTkVOVF9SRURJUkVDVABDT05ORUNUAE1VTFRJX1NUQVRVUwBIUEVfSU5WQUxJRF9TVEFUVVMAVE9PX01BTllfUkVRVUVTVFMARUFSTFlfSElOVFMAVU5BVkFJTEFCTEVfRk9SX0xFR0FMX1JFQVNPTlMAT1BUSU9OUwBTV0lUQ0hJTkdfUFJPVE9DT0xTAFZBUklBTlRfQUxTT19ORUdPVElBVEVTAE1VTFRJUExFX0NIT0lDRVMASU5URVJOQUxfU0VSVkVSX0VSUk9SAFdFQl9TRVJWRVJfVU5LTk9XTl9FUlJPUgBSQUlMR1VOX0VSUk9SAElERU5USVRZX1BST1ZJREVSX0FVVEhFTlRJQ0FUSU9OX0VSUk9SAFNTTF9DRVJUSUZJQ0FURV9FUlJPUgBJTlZBTElEX1hfRk9SV0FSREVEX0ZPUgBTRVRfUEFSQU1FVEVSAEdFVF9QQVJBTUVURVIASFBFX1VTRVIAU0VFX09USEVSAEhQRV9DQl9DSFVOS19IRUFERVIATUtDQUxFTkRBUgBTRVRVUABXRUJfU0VSVkVSX0lTX0RPV04AVEVBUkRPV04ASFBFX0NMT1NFRF9DT05ORUNUSU9OAEhFVVJJU1RJQ19FWFBJUkFUSU9OAERJU0NPTk5FQ1RFRF9PUEVSQVRJT04ATk9OX0FVVEhPUklUQVRJVkVfSU5GT1JNQVRJT04ASFBFX0lOVkFMSURfVkVSU0lPTgBIUEVfQ0JfTUVTU0FHRV9CRUdJTgBTSVRFX0lTX0ZST1pFTgBIUEVfSU5WQUxJRF9IRUFERVJfVE9LRU4ASU5WQUxJRF9UT0tFTgBGT1JCSURERU4ARU5IQU5DRV9ZT1VSX0NBTE0ASFBFX0lOVkFMSURfVVJMAEJMT0NLRURfQllfUEFSRU5UQUxfQ09OVFJPTABNS0NPTABBQ0wASFBFX0lOVEVSTkFMAFJFUVVFU1RfSEVBREVSX0ZJRUxEU19UT09fTEFSR0VfVU5PRkZJQ0lBTABIUEVfT0sAVU5MSU5LAFVOTE9DSwBQUkkAUkVUUllfV0lUSABIUEVfSU5WQUxJRF9DT05URU5UX0xFTkdUSABIUEVfVU5FWFBFQ1RFRF9DT05URU5UX0xFTkdUSABGTFVTSABQUk9QUEFUQ0gATS1TRUFSQ0gAVVJJX1RPT19MT05HAFBST0NFU1NJTkcATUlTQ0VMTEFORU9VU19QRVJTSVNURU5UX1dBUk5JTkcATUlTQ0VMTEFORU9VU19XQVJOSU5HAEhQRV9JTlZBTElEX1RSQU5TRkVSX0VOQ09ESU5HAEV4cGVjdGVkIENSTEYASFBFX0lOVkFMSURfQ0hVTktfU0laRQBNT1ZFAENPTlRJTlVFAEhQRV9DQl9TVEFUVVNfQ09NUExFVEUASFBFX0NCX0hFQURFUlNfQ09NUExFVEUASFBFX0NCX1ZFUlNJT05fQ09NUExFVEUASFBFX0NCX1VSTF9DT01QTEVURQBIUEVfQ0JfQ0hVTktfQ09NUExFVEUASFBFX0NCX0hFQURFUl9WQUxVRV9DT01QTEVURQBIUEVfQ0JfQ0hVTktfRVhURU5TSU9OX1ZBTFVFX0NPTVBMRVRFAEhQRV9DQl9DSFVOS19FWFRFTlNJT05fTkFNRV9DT01QTEVURQBIUEVfQ0JfTUVTU0FHRV9DT01QTEVURQBIUEVfQ0JfTUVUSE9EX0NPTVBMRVRFAEhQRV9DQl9IRUFERVJfRklFTERfQ09NUExFVEUAREVMRVRFAEhQRV9JTlZBTElEX0VPRl9TVEFURQBJTlZBTElEX1NTTF9DRVJUSUZJQ0FURQBQQVVTRQBOT19SRVNQT05TRQBVTlNVUFBPUlRFRF9NRURJQV9UWVBFAEdPTkUATk9UX0FDQ0VQVEFCTEUAU0VSVklDRV9VTkFWQUlMQUJMRQBSQU5HRV9OT1RfU0FUSVNGSUFCTEUAT1JJR0lOX0lTX1VOUkVBQ0hBQkxFAFJFU1BPTlNFX0lTX1NUQUxFAFBVUkdFAE1FUkdFAFJFUVVFU1RfSEVBREVSX0ZJRUxEU19UT09fTEFSR0UAUkVRVUVTVF9IRUFERVJfVE9PX0xBUkdFAFBBWUxPQURfVE9PX0xBUkdFAElOU1VGRklDSUVOVF9TVE9SQUdFAEhQRV9QQVVTRURfVVBHUkFERQBIUEVfUEFVU0VEX0gyX1VQR1JBREUAU09VUkNFAEFOTk9VTkNFAFRSQUNFAEhQRV9VTkVYUEVDVEVEX1NQQUNFAERFU0NSSUJFAFVOU1VCU0NSSUJFAFJFQ09SRABIUEVfSU5WQUxJRF9NRVRIT0QATk9UX0ZPVU5EAFBST1BGSU5EAFVOQklORABSRUJJTkQAVU5BVVRIT1JJWkVEAE1FVEhPRF9OT1RfQUxMT1dFRABIVFRQX1ZFUlNJT05fTk9UX1NVUFBPUlRFRABBTFJFQURZX1JFUE9SVEVEAEFDQ0VQVEVEAE5PVF9JTVBMRU1FTlRFRABMT09QX0RFVEVDVEVEAEhQRV9DUl9FWFBFQ1RFRABIUEVfTEZfRVhQRUNURUQAQ1JFQVRFRABJTV9VU0VEAEhQRV9QQVVTRUQAVElNRU9VVF9PQ0NVUkVEAFBBWU1FTlRfUkVRVUlSRUQAUFJFQ09ORElUSU9OX1JFUVVJUkVEAFBST1hZX0FVVEhFTlRJQ0FUSU9OX1JFUVVJUkVEAE5FVFdPUktfQVVUSEVOVElDQVRJT05fUkVRVUlSRUQATEVOR1RIX1JFUVVJUkVEAFNTTF9DRVJUSUZJQ0FURV9SRVFVSVJFRABVUEdSQURFX1JFUVVJUkVEAFBBR0VfRVhQSVJFRABQUkVDT05ESVRJT05fRkFJTEVEAEVYUEVDVEFUSU9OX0ZBSUxFRABSRVZBTElEQVRJT05fRkFJTEVEAFNTTF9IQU5EU0hBS0VfRkFJTEVEAExPQ0tFRABUUkFOU0ZPUk1BVElPTl9BUFBMSUVEAE5PVF9NT0RJRklFRABOT1RfRVhURU5ERUQAQkFORFdJRFRIX0xJTUlUX0VYQ0VFREVEAFNJVEVfSVNfT1ZFUkxPQURFRABIRUFEAEV4cGVjdGVkIEhUVFAvAABeEwAAJhMAADAQAADwFwAAnRMAABUSAAA5FwAA8BIAAAoQAAB1EgAArRIAAIITAABPFAAAfxAAAKAVAAAjFAAAiRIAAIsUAABNFQAA1BEAAM8UAAAQGAAAyRYAANwWAADBEQAA4BcAALsUAAB0FAAAfBUAAOUUAAAIFwAAHxAAAGUVAACjFAAAKBUAAAIVAACZFQAALBAAAIsZAABPDwAA1A4AAGoQAADOEAAAAhcAAIkOAABuEwAAHBMAAGYUAABWFwAAwRMAAM0TAABsEwAAaBcAAGYXAABfFwAAIhMAAM4PAABpDgAA2A4AAGMWAADLEwAAqg4AACgXAAAmFwAAxRMAAF0WAADoEQAAZxMAAGUTAADyFgAAcxMAAB0XAAD5FgAA8xEAAM8OAADOFQAADBIAALMRAAClEQAAYRAAADIXAAC7EwAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAgMCAgICAgAAAgIAAgIAAgICAgICAgICAgAEAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgICAgIAAAICAAICAAICAgICAgICAgIAAwAEAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgACAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABsb3NlZWVwLWFsaXZlAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQFjaHVua2VkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQABAQEBAQAAAQEAAQEAAQEBAQEBAQEBAQAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVjdGlvbmVudC1sZW5ndGhvbnJveHktY29ubmVjdGlvbgAAAAAAAAAAAAAAAAAAAHJhbnNmZXItZW5jb2RpbmdwZ3JhZGUNCg0KDQpTTQ0KDQpUVFAvQ0UvVFNQLwAAAAAAAAAAAAAAAAECAAEDAAAAAAAAAAAAAAAAAAAAAAAABAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAABAgABAwAAAAAAAAAAAAAAAAAAAAAAAAQBAQUBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAABAAACAAAAAAAAAAAAAAAAAAAAAAAAAwQAAAQEBAQEBAQEBAQEBQQEBAQEBAQEBAQEBAAEAAYHBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQABAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAAAAAAAAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAgAAAAACAAAAAAAAAAAAAAAAAAAAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwAAAAAAAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE5PVU5DRUVDS09VVE5FQ1RFVEVDUklCRUxVU0hFVEVBRFNFQVJDSFJHRUNUSVZJVFlMRU5EQVJWRU9USUZZUFRJT05TQ0hTRUFZU1RBVENIR0VPUkRJUkVDVE9SVFJDSFBBUkFNRVRFUlVSQ0VCU0NSSUJFQVJET1dOQUNFSU5ETktDS1VCU0NSSUJFSFRUUC9BRFRQLw=='
@@ -24368,7 +24396,7 @@ module.exports = 'AGFzbQEAAAABMAhgAX8Bf2ADf39/AX9gBH9/f38Bf2AAAGADf39/AGABfwBgAn
 
 /***/ }),
 
-/***/ 1891:
+/***/ 172:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -24390,14 +24418,14 @@ exports.enumToMap = enumToMap;
 
 /***/ }),
 
-/***/ 6771:
+/***/ 7501:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kClients } = __nccwpck_require__(2785)
-const Agent = __nccwpck_require__(7890)
+const { kClients } = __nccwpck_require__(6443)
+const Agent = __nccwpck_require__(9965)
 const {
   kAgent,
   kMockAgentSet,
@@ -24408,14 +24436,14 @@ const {
   kGetNetConnect,
   kOptions,
   kFactory
-} = __nccwpck_require__(4347)
-const MockClient = __nccwpck_require__(8687)
-const MockPool = __nccwpck_require__(6193)
-const { matchValue, buildMockOptions } = __nccwpck_require__(9323)
-const { InvalidArgumentError, UndiciError } = __nccwpck_require__(8045)
-const Dispatcher = __nccwpck_require__(412)
-const Pluralizer = __nccwpck_require__(8891)
-const PendingInterceptorsFormatter = __nccwpck_require__(6823)
+} = __nccwpck_require__(1117)
+const MockClient = __nccwpck_require__(7365)
+const MockPool = __nccwpck_require__(4004)
+const { matchValue, buildMockOptions } = __nccwpck_require__(3397)
+const { InvalidArgumentError, UndiciError } = __nccwpck_require__(8707)
+const Dispatcher = __nccwpck_require__(992)
+const Pluralizer = __nccwpck_require__(1529)
+const PendingInterceptorsFormatter = __nccwpck_require__(6142)
 
 class FakeWeakRef {
   constructor (value) {
@@ -24569,15 +24597,15 @@ module.exports = MockAgent
 
 /***/ }),
 
-/***/ 8687:
+/***/ 7365:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { promisify } = __nccwpck_require__(3837)
-const Client = __nccwpck_require__(3598)
-const { buildMockDispatch } = __nccwpck_require__(9323)
+const { promisify } = __nccwpck_require__(9023)
+const Client = __nccwpck_require__(6197)
+const { buildMockDispatch } = __nccwpck_require__(3397)
 const {
   kDispatches,
   kMockAgent,
@@ -24586,10 +24614,10 @@ const {
   kOrigin,
   kOriginalDispatch,
   kConnected
-} = __nccwpck_require__(4347)
-const { MockInterceptor } = __nccwpck_require__(410)
-const Symbols = __nccwpck_require__(2785)
-const { InvalidArgumentError } = __nccwpck_require__(8045)
+} = __nccwpck_require__(1117)
+const { MockInterceptor } = __nccwpck_require__(1511)
+const Symbols = __nccwpck_require__(6443)
+const { InvalidArgumentError } = __nccwpck_require__(8707)
 
 /**
  * MockClient provides an API that extends the Client to influence the mockDispatches.
@@ -24636,13 +24664,13 @@ module.exports = MockClient
 
 /***/ }),
 
-/***/ 888:
+/***/ 2429:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { UndiciError } = __nccwpck_require__(8045)
+const { UndiciError } = __nccwpck_require__(8707)
 
 class MockNotMatchedError extends UndiciError {
   constructor (message) {
@@ -24661,13 +24689,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 410:
+/***/ 1511:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { getResponseData, buildKey, addMockDispatch } = __nccwpck_require__(9323)
+const { getResponseData, buildKey, addMockDispatch } = __nccwpck_require__(3397)
 const {
   kDispatches,
   kDispatchKey,
@@ -24675,9 +24703,9 @@ const {
   kDefaultTrailers,
   kContentLength,
   kMockDispatch
-} = __nccwpck_require__(4347)
-const { InvalidArgumentError } = __nccwpck_require__(8045)
-const { buildURL } = __nccwpck_require__(3983)
+} = __nccwpck_require__(1117)
+const { InvalidArgumentError } = __nccwpck_require__(8707)
+const { buildURL } = __nccwpck_require__(3440)
 
 /**
  * Defines the scope API for an interceptor reply
@@ -24875,15 +24903,15 @@ module.exports.MockScope = MockScope
 
 /***/ }),
 
-/***/ 6193:
+/***/ 4004:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { promisify } = __nccwpck_require__(3837)
-const Pool = __nccwpck_require__(4634)
-const { buildMockDispatch } = __nccwpck_require__(9323)
+const { promisify } = __nccwpck_require__(9023)
+const Pool = __nccwpck_require__(5076)
+const { buildMockDispatch } = __nccwpck_require__(3397)
 const {
   kDispatches,
   kMockAgent,
@@ -24892,10 +24920,10 @@ const {
   kOrigin,
   kOriginalDispatch,
   kConnected
-} = __nccwpck_require__(4347)
-const { MockInterceptor } = __nccwpck_require__(410)
-const Symbols = __nccwpck_require__(2785)
-const { InvalidArgumentError } = __nccwpck_require__(8045)
+} = __nccwpck_require__(1117)
+const { MockInterceptor } = __nccwpck_require__(1511)
+const Symbols = __nccwpck_require__(6443)
+const { InvalidArgumentError } = __nccwpck_require__(8707)
 
 /**
  * MockPool provides an API that extends the Pool to influence the mockDispatches.
@@ -24942,7 +24970,7 @@ module.exports = MockPool
 
 /***/ }),
 
-/***/ 4347:
+/***/ 1117:
 /***/ ((module) => {
 
 "use strict";
@@ -24973,27 +25001,27 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9323:
+/***/ 3397:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { MockNotMatchedError } = __nccwpck_require__(888)
+const { MockNotMatchedError } = __nccwpck_require__(2429)
 const {
   kDispatches,
   kMockAgent,
   kOriginalDispatch,
   kOrigin,
   kGetNetConnect
-} = __nccwpck_require__(4347)
-const { buildURL, nop } = __nccwpck_require__(3983)
-const { STATUS_CODES } = __nccwpck_require__(3685)
+} = __nccwpck_require__(1117)
+const { buildURL, nop } = __nccwpck_require__(3440)
+const { STATUS_CODES } = __nccwpck_require__(8611)
 const {
   types: {
     isPromise
   }
-} = __nccwpck_require__(3837)
+} = __nccwpck_require__(9023)
 
 function matchValue (match, value) {
   if (typeof match === 'string') {
@@ -25332,14 +25360,14 @@ module.exports = {
 
 /***/ }),
 
-/***/ 6823:
+/***/ 6142:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { Transform } = __nccwpck_require__(2781)
-const { Console } = __nccwpck_require__(6206)
+const { Transform } = __nccwpck_require__(2203)
+const { Console } = __nccwpck_require__(4236)
 
 /**
  * Gets the output of `console.table(…)` as a string.
@@ -25380,7 +25408,7 @@ module.exports = class PendingInterceptorsFormatter {
 
 /***/ }),
 
-/***/ 8891:
+/***/ 1529:
 /***/ ((module) => {
 
 "use strict";
@@ -25417,7 +25445,7 @@ module.exports = class Pluralizer {
 
 /***/ }),
 
-/***/ 8266:
+/***/ 4869:
 /***/ ((module) => {
 
 "use strict";
@@ -25542,16 +25570,16 @@ module.exports = class FixedQueue {
 
 /***/ }),
 
-/***/ 3198:
+/***/ 8640:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const DispatcherBase = __nccwpck_require__(4839)
-const FixedQueue = __nccwpck_require__(8266)
-const { kConnected, kSize, kRunning, kPending, kQueued, kBusy, kFree, kUrl, kClose, kDestroy, kDispatch } = __nccwpck_require__(2785)
-const PoolStats = __nccwpck_require__(9689)
+const DispatcherBase = __nccwpck_require__(1)
+const FixedQueue = __nccwpck_require__(4869)
+const { kConnected, kSize, kRunning, kPending, kQueued, kBusy, kFree, kUrl, kClose, kDestroy, kDispatch } = __nccwpck_require__(6443)
+const PoolStats = __nccwpck_require__(4622)
 
 const kClients = Symbol('clients')
 const kNeedDrain = Symbol('needDrain')
@@ -25744,10 +25772,10 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9689:
+/***/ 4622:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { kFree, kConnected, kPending, kQueued, kRunning, kSize } = __nccwpck_require__(2785)
+const { kFree, kConnected, kPending, kQueued, kRunning, kSize } = __nccwpck_require__(6443)
 const kPool = Symbol('pool')
 
 class PoolStats {
@@ -25785,7 +25813,7 @@ module.exports = PoolStats
 
 /***/ }),
 
-/***/ 4634:
+/***/ 5076:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -25797,14 +25825,14 @@ const {
   kNeedDrain,
   kAddClient,
   kGetDispatcher
-} = __nccwpck_require__(3198)
-const Client = __nccwpck_require__(3598)
+} = __nccwpck_require__(8640)
+const Client = __nccwpck_require__(6197)
 const {
   InvalidArgumentError
-} = __nccwpck_require__(8045)
-const util = __nccwpck_require__(3983)
-const { kUrl, kInterceptors } = __nccwpck_require__(2785)
-const buildConnector = __nccwpck_require__(2067)
+} = __nccwpck_require__(8707)
+const util = __nccwpck_require__(3440)
+const { kUrl, kInterceptors } = __nccwpck_require__(6443)
+const buildConnector = __nccwpck_require__(9136)
 
 const kOptions = Symbol('options')
 const kConnections = Symbol('connections')
@@ -25887,19 +25915,19 @@ module.exports = Pool
 
 /***/ }),
 
-/***/ 7858:
+/***/ 2720:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kProxy, kClose, kDestroy, kInterceptors } = __nccwpck_require__(2785)
-const { URL } = __nccwpck_require__(7310)
-const Agent = __nccwpck_require__(7890)
-const Pool = __nccwpck_require__(4634)
-const DispatcherBase = __nccwpck_require__(4839)
-const { InvalidArgumentError, RequestAbortedError } = __nccwpck_require__(8045)
-const buildConnector = __nccwpck_require__(2067)
+const { kProxy, kClose, kDestroy, kInterceptors } = __nccwpck_require__(6443)
+const { URL } = __nccwpck_require__(7016)
+const Agent = __nccwpck_require__(9965)
+const Pool = __nccwpck_require__(5076)
+const DispatcherBase = __nccwpck_require__(1)
+const { InvalidArgumentError, RequestAbortedError } = __nccwpck_require__(8707)
+const buildConnector = __nccwpck_require__(9136)
 
 const kAgent = Symbol('proxy agent')
 const kClient = Symbol('proxy client')
@@ -26084,7 +26112,7 @@ module.exports = ProxyAgent
 
 /***/ }),
 
-/***/ 9459:
+/***/ 8804:
 /***/ ((module) => {
 
 "use strict";
@@ -26189,27 +26217,27 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5354:
+/***/ 8550:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const diagnosticsChannel = __nccwpck_require__(7643)
-const { uid, states } = __nccwpck_require__(9188)
+const diagnosticsChannel = __nccwpck_require__(1637)
+const { uid, states } = __nccwpck_require__(5913)
 const {
   kReadyState,
   kSentClose,
   kByteParser,
   kReceivedClose
-} = __nccwpck_require__(7578)
-const { fireEvent, failWebsocketConnection } = __nccwpck_require__(5515)
-const { CloseEvent } = __nccwpck_require__(2611)
-const { makeRequest } = __nccwpck_require__(8359)
-const { fetching } = __nccwpck_require__(4881)
-const { Headers } = __nccwpck_require__(554)
-const { getGlobalDispatcher } = __nccwpck_require__(1892)
-const { kHeadersList } = __nccwpck_require__(2785)
+} = __nccwpck_require__(2933)
+const { fireEvent, failWebsocketConnection } = __nccwpck_require__(3574)
+const { CloseEvent } = __nccwpck_require__(6255)
+const { makeRequest } = __nccwpck_require__(5194)
+const { fetching } = __nccwpck_require__(2315)
+const { Headers } = __nccwpck_require__(6349)
+const { getGlobalDispatcher } = __nccwpck_require__(2581)
+const { kHeadersList } = __nccwpck_require__(6443)
 
 const channels = {}
 channels.open = diagnosticsChannel.channel('undici:websocket:open')
@@ -26219,7 +26247,7 @@ channels.socketError = diagnosticsChannel.channel('undici:websocket:socket_error
 /** @type {import('crypto')} */
 let crypto
 try {
-  crypto = __nccwpck_require__(6113)
+  crypto = __nccwpck_require__(6982)
 } catch {
 
 }
@@ -26488,7 +26516,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9188:
+/***/ 5913:
 /***/ ((module) => {
 
 "use strict";
@@ -26547,15 +26575,15 @@ module.exports = {
 
 /***/ }),
 
-/***/ 2611:
+/***/ 6255:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { webidl } = __nccwpck_require__(1744)
-const { kEnumerableProperty } = __nccwpck_require__(3983)
-const { MessagePort } = __nccwpck_require__(1267)
+const { webidl } = __nccwpck_require__(4222)
+const { kEnumerableProperty } = __nccwpck_require__(3440)
+const { MessagePort } = __nccwpck_require__(8167)
 
 /**
  * @see https://html.spec.whatwg.org/multipage/comms.html#messageevent
@@ -26858,18 +26886,18 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5444:
+/***/ 1237:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { maxUnsigned16Bit } = __nccwpck_require__(9188)
+const { maxUnsigned16Bit } = __nccwpck_require__(5913)
 
 /** @type {import('crypto')} */
 let crypto
 try {
-  crypto = __nccwpck_require__(6113)
+  crypto = __nccwpck_require__(6982)
 } catch {
 
 }
@@ -26939,18 +26967,18 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1688:
+/***/ 3171:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { Writable } = __nccwpck_require__(2781)
-const diagnosticsChannel = __nccwpck_require__(7643)
-const { parserStates, opcodes, states, emptyBuffer } = __nccwpck_require__(9188)
-const { kReadyState, kSentClose, kResponse, kReceivedClose } = __nccwpck_require__(7578)
-const { isValidStatusCode, failWebsocketConnection, websocketMessageReceived } = __nccwpck_require__(5515)
-const { WebsocketFrameSend } = __nccwpck_require__(5444)
+const { Writable } = __nccwpck_require__(2203)
+const diagnosticsChannel = __nccwpck_require__(1637)
+const { parserStates, opcodes, states, emptyBuffer } = __nccwpck_require__(5913)
+const { kReadyState, kSentClose, kResponse, kReceivedClose } = __nccwpck_require__(2933)
+const { isValidStatusCode, failWebsocketConnection, websocketMessageReceived } = __nccwpck_require__(3574)
+const { WebsocketFrameSend } = __nccwpck_require__(1237)
 
 // This code was influenced by ws released under the MIT license.
 // Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>
@@ -27291,7 +27319,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 7578:
+/***/ 2933:
 /***/ ((module) => {
 
 "use strict";
@@ -27311,15 +27339,15 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5515:
+/***/ 3574:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kReadyState, kController, kResponse, kBinaryType, kWebSocketURL } = __nccwpck_require__(7578)
-const { states, opcodes } = __nccwpck_require__(9188)
-const { MessageEvent, ErrorEvent } = __nccwpck_require__(2611)
+const { kReadyState, kController, kResponse, kBinaryType, kWebSocketURL } = __nccwpck_require__(2933)
+const { states, opcodes } = __nccwpck_require__(5913)
+const { MessageEvent, ErrorEvent } = __nccwpck_require__(6255)
 
 /* globals Blob */
 
@@ -27519,17 +27547,17 @@ module.exports = {
 
 /***/ }),
 
-/***/ 4284:
+/***/ 5171:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { webidl } = __nccwpck_require__(1744)
-const { DOMException } = __nccwpck_require__(1037)
-const { URLSerializer } = __nccwpck_require__(685)
-const { getGlobalOrigin } = __nccwpck_require__(1246)
-const { staticPropertyDescriptors, states, opcodes, emptyBuffer } = __nccwpck_require__(9188)
+const { webidl } = __nccwpck_require__(4222)
+const { DOMException } = __nccwpck_require__(7326)
+const { URLSerializer } = __nccwpck_require__(4322)
+const { getGlobalOrigin } = __nccwpck_require__(5628)
+const { staticPropertyDescriptors, states, opcodes, emptyBuffer } = __nccwpck_require__(5913)
 const {
   kWebSocketURL,
   kReadyState,
@@ -27538,14 +27566,14 @@ const {
   kResponse,
   kSentClose,
   kByteParser
-} = __nccwpck_require__(7578)
-const { isEstablished, isClosing, isValidSubprotocol, failWebsocketConnection, fireEvent } = __nccwpck_require__(5515)
-const { establishWebSocketConnection } = __nccwpck_require__(5354)
-const { WebsocketFrameSend } = __nccwpck_require__(5444)
-const { ByteParser } = __nccwpck_require__(1688)
-const { kEnumerableProperty, isBlobLike } = __nccwpck_require__(3983)
-const { getGlobalDispatcher } = __nccwpck_require__(1892)
-const { types } = __nccwpck_require__(3837)
+} = __nccwpck_require__(2933)
+const { isEstablished, isClosing, isValidSubprotocol, failWebsocketConnection, fireEvent } = __nccwpck_require__(3574)
+const { establishWebSocketConnection } = __nccwpck_require__(8550)
+const { WebsocketFrameSend } = __nccwpck_require__(1237)
+const { ByteParser } = __nccwpck_require__(3171)
+const { kEnumerableProperty, isBlobLike } = __nccwpck_require__(3440)
+const { getGlobalDispatcher } = __nccwpck_require__(2581)
+const { types } = __nccwpck_require__(9023)
 
 let experimentalWarned = false
 
@@ -28168,653 +28196,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5840:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-Object.defineProperty(exports, "v1", ({
-  enumerable: true,
-  get: function () {
-    return _v.default;
-  }
-}));
-Object.defineProperty(exports, "v3", ({
-  enumerable: true,
-  get: function () {
-    return _v2.default;
-  }
-}));
-Object.defineProperty(exports, "v4", ({
-  enumerable: true,
-  get: function () {
-    return _v3.default;
-  }
-}));
-Object.defineProperty(exports, "v5", ({
-  enumerable: true,
-  get: function () {
-    return _v4.default;
-  }
-}));
-Object.defineProperty(exports, "NIL", ({
-  enumerable: true,
-  get: function () {
-    return _nil.default;
-  }
-}));
-Object.defineProperty(exports, "version", ({
-  enumerable: true,
-  get: function () {
-    return _version.default;
-  }
-}));
-Object.defineProperty(exports, "validate", ({
-  enumerable: true,
-  get: function () {
-    return _validate.default;
-  }
-}));
-Object.defineProperty(exports, "stringify", ({
-  enumerable: true,
-  get: function () {
-    return _stringify.default;
-  }
-}));
-Object.defineProperty(exports, "parse", ({
-  enumerable: true,
-  get: function () {
-    return _parse.default;
-  }
-}));
-
-var _v = _interopRequireDefault(__nccwpck_require__(8628));
-
-var _v2 = _interopRequireDefault(__nccwpck_require__(6409));
-
-var _v3 = _interopRequireDefault(__nccwpck_require__(5122));
-
-var _v4 = _interopRequireDefault(__nccwpck_require__(9120));
-
-var _nil = _interopRequireDefault(__nccwpck_require__(5332));
-
-var _version = _interopRequireDefault(__nccwpck_require__(1595));
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(2746));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/***/ }),
-
-/***/ 4569:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('md5').update(bytes).digest();
-}
-
-var _default = md5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 5332:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = '00000000-0000-0000-0000-000000000000';
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 2746:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function parse(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  let v;
-  const arr = new Uint8Array(16); // Parse ########-....-....-....-............
-
-  arr[0] = (v = parseInt(uuid.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 0xff;
-  arr[2] = v >>> 8 & 0xff;
-  arr[3] = v & 0xff; // Parse ........-####-....-....-............
-
-  arr[4] = (v = parseInt(uuid.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 0xff; // Parse ........-....-####-....-............
-
-  arr[6] = (v = parseInt(uuid.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 0xff; // Parse ........-....-....-####-............
-
-  arr[8] = (v = parseInt(uuid.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 0xff; // Parse ........-....-....-....-############
-  // (Use "/" to avoid 32-bit truncation when bit-shifting high-order bytes)
-
-  arr[10] = (v = parseInt(uuid.slice(24, 36), 16)) / 0x10000000000 & 0xff;
-  arr[11] = v / 0x100000000 & 0xff;
-  arr[12] = v >>> 24 & 0xff;
-  arr[13] = v >>> 16 & 0xff;
-  arr[14] = v >>> 8 & 0xff;
-  arr[15] = v & 0xff;
-  return arr;
-}
-
-var _default = parse;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 814:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 807:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = rng;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const rnds8Pool = new Uint8Array(256); // # of random values to pre-allocate
-
-let poolPtr = rnds8Pool.length;
-
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    _crypto.default.randomFillSync(rnds8Pool);
-
-    poolPtr = 0;
-  }
-
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-/***/ }),
-
-/***/ 5274:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('sha1').update(bytes).digest();
-}
-
-var _default = sha1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 8950:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-const byteToHex = [];
-
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 0x100).toString(16).substr(1));
-}
-
-function stringify(arr, offset = 0) {
-  // Note: Be careful editing this code!  It's been tuned for performance
-  // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
-  const uuid = (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase(); // Consistency check for valid UUID.  If this throws, it's likely due to one
-  // of the following:
-  // - One or more input array values don't map to a hex octet (leading to
-  // "undefined" in the uuid)
-  // - Invalid input values for the RFC `version` or `variant` fields
-
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Stringified UUID is invalid');
-  }
-
-  return uuid;
-}
-
-var _default = stringify;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 8628:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(807));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// **`v1()` - Generate time-based UUID**
-//
-// Inspired by https://github.com/LiosK/UUID.js
-// and http://docs.python.org/library/uuid.html
-let _nodeId;
-
-let _clockseq; // Previous uuid creation time
-
-
-let _lastMSecs = 0;
-let _lastNSecs = 0; // See https://github.com/uuidjs/uuid for API details
-
-function v1(options, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options = options || {};
-  let node = options.node || _nodeId;
-  let clockseq = options.clockseq !== undefined ? options.clockseq : _clockseq; // node and clockseq need to be initialized to random values if they're not
-  // specified.  We do this lazily to minimize issues related to insufficient
-  // system entropy.  See #189
-
-  if (node == null || clockseq == null) {
-    const seedBytes = options.random || (options.rng || _rng.default)();
-
-    if (node == null) {
-      // Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
-      node = _nodeId = [seedBytes[0] | 0x01, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-
-    if (clockseq == null) {
-      // Per 4.2.2, randomize (14 bit) clockseq
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 0x3fff;
-    }
-  } // UUID timestamps are 100 nano-second units since the Gregorian epoch,
-  // (1582-10-15 00:00).  JSNumbers aren't precise enough for this, so
-  // time is handled internally as 'msecs' (integer milliseconds) and 'nsecs'
-  // (100-nanoseconds offset from msecs) since unix epoch, 1970-01-01 00:00.
-
-
-  let msecs = options.msecs !== undefined ? options.msecs : Date.now(); // Per 4.2.1.2, use count of uuid's generated during the current clock
-  // cycle to simulate higher resolution clock
-
-  let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1; // Time since last uuid creation (in msecs)
-
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 10000; // Per 4.2.1.2, Bump clockseq on clock regression
-
-  if (dt < 0 && options.clockseq === undefined) {
-    clockseq = clockseq + 1 & 0x3fff;
-  } // Reset nsecs if clock regresses (new clockseq) or we've moved onto a new
-  // time interval
-
-
-  if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
-    nsecs = 0;
-  } // Per 4.2.1.2 Throw error if too many uuids are requested
-
-
-  if (nsecs >= 10000) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq; // Per 4.1.4 - Convert from unix epoch to Gregorian epoch
-
-  msecs += 12219292800000; // `time_low`
-
-  const tl = ((msecs & 0xfffffff) * 10000 + nsecs) % 0x100000000;
-  b[i++] = tl >>> 24 & 0xff;
-  b[i++] = tl >>> 16 & 0xff;
-  b[i++] = tl >>> 8 & 0xff;
-  b[i++] = tl & 0xff; // `time_mid`
-
-  const tmh = msecs / 0x100000000 * 10000 & 0xfffffff;
-  b[i++] = tmh >>> 8 & 0xff;
-  b[i++] = tmh & 0xff; // `time_high_and_version`
-
-  b[i++] = tmh >>> 24 & 0xf | 0x10; // include version
-
-  b[i++] = tmh >>> 16 & 0xff; // `clock_seq_hi_and_reserved` (Per 4.2.2 - include variant)
-
-  b[i++] = clockseq >>> 8 | 0x80; // `clock_seq_low`
-
-  b[i++] = clockseq & 0xff; // `node`
-
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node[n];
-  }
-
-  return buf || (0, _stringify.default)(b);
-}
-
-var _default = v1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6409:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(5998));
-
-var _md = _interopRequireDefault(__nccwpck_require__(4569));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v3 = (0, _v.default)('v3', 0x30, _md.default);
-var _default = v3;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 5998:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = _default;
-exports.URL = exports.DNS = void 0;
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(2746));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function stringToBytes(str) {
-  str = unescape(encodeURIComponent(str)); // UTF8 escape
-
-  const bytes = [];
-
-  for (let i = 0; i < str.length; ++i) {
-    bytes.push(str.charCodeAt(i));
-  }
-
-  return bytes;
-}
-
-const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-exports.DNS = DNS;
-const URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
-exports.URL = URL;
-
-function _default(name, version, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    if (typeof value === 'string') {
-      value = stringToBytes(value);
-    }
-
-    if (typeof namespace === 'string') {
-      namespace = (0, _parse.default)(namespace);
-    }
-
-    if (namespace.length !== 16) {
-      throw TypeError('Namespace must be array-like (16 iterable integer values, 0-255)');
-    } // Compute hash of namespace and value, Per 4.3
-    // Future: Use spread syntax when supported on all platforms, e.g. `bytes =
-    // hashfunc([...namespace, ... value])`
-
-
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 0x0f | version;
-    bytes[8] = bytes[8] & 0x3f | 0x80;
-
-    if (buf) {
-      offset = offset || 0;
-
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-
-      return buf;
-    }
-
-    return (0, _stringify.default)(bytes);
-  } // Function#name is not settable on some platforms (#270)
-
-
-  try {
-    generateUUID.name = name; // eslint-disable-next-line no-empty
-  } catch (err) {} // For CommonJS default export support
-
-
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL;
-  return generateUUID;
-}
-
-/***/ }),
-
-/***/ 5122:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(807));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function v4(options, buf, offset) {
-  options = options || {};
-
-  const rnds = options.random || (options.rng || _rng.default)(); // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-
-
-  rnds[6] = rnds[6] & 0x0f | 0x40;
-  rnds[8] = rnds[8] & 0x3f | 0x80; // Copy bytes to buffer, if provided
-
-  if (buf) {
-    offset = offset || 0;
-
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-
-    return buf;
-  }
-
-  return (0, _stringify.default)(rnds);
-}
-
-var _default = v4;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 9120:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(5998));
-
-var _sha = _interopRequireDefault(__nccwpck_require__(5274));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v5 = (0, _v.default)('v5', 0x50, _sha.default);
-var _default = v5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6900:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _regex = _interopRequireDefault(__nccwpck_require__(814));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function validate(uuid) {
-  return typeof uuid === 'string' && _regex.default.test(uuid);
-}
-
-var _default = validate;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 1595:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function version(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  return parseInt(uuid.substr(14, 1), 16);
-}
-
-var _default = version;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 399:
+/***/ 1730:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -28835,21 +28217,31 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core = __importStar(__nccwpck_require__(2186));
-const toolCache = __importStar(__nccwpck_require__(7784));
-const promises_1 = __nccwpck_require__(3977);
-const openapi_json_1 = __importDefault(__nccwpck_require__(5402));
+const core = __importStar(__nccwpck_require__(7484));
+const toolCache = __importStar(__nccwpck_require__(3472));
+const promises_1 = __nccwpck_require__(1455);
+const openapi_json_1 = __importDefault(__nccwpck_require__(6225));
 const run = async () => {
     const { bin, url, semVer } = getUrl();
     const toolPath = toolCache.find("bencher", semVer);
@@ -28926,7 +28318,7 @@ run().catch((error) => {
 
 /***/ }),
 
-/***/ 9491:
+/***/ 2613:
 /***/ ((module) => {
 
 "use strict";
@@ -28934,7 +28326,7 @@ module.exports = require("assert");
 
 /***/ }),
 
-/***/ 852:
+/***/ 290:
 /***/ ((module) => {
 
 "use strict";
@@ -28942,7 +28334,7 @@ module.exports = require("async_hooks");
 
 /***/ }),
 
-/***/ 4300:
+/***/ 181:
 /***/ ((module) => {
 
 "use strict";
@@ -28950,7 +28342,7 @@ module.exports = require("buffer");
 
 /***/ }),
 
-/***/ 2081:
+/***/ 5317:
 /***/ ((module) => {
 
 "use strict";
@@ -28958,7 +28350,7 @@ module.exports = require("child_process");
 
 /***/ }),
 
-/***/ 6206:
+/***/ 4236:
 /***/ ((module) => {
 
 "use strict";
@@ -28966,7 +28358,7 @@ module.exports = require("console");
 
 /***/ }),
 
-/***/ 6113:
+/***/ 6982:
 /***/ ((module) => {
 
 "use strict";
@@ -28974,7 +28366,7 @@ module.exports = require("crypto");
 
 /***/ }),
 
-/***/ 7643:
+/***/ 1637:
 /***/ ((module) => {
 
 "use strict";
@@ -28982,7 +28374,7 @@ module.exports = require("diagnostics_channel");
 
 /***/ }),
 
-/***/ 2361:
+/***/ 4434:
 /***/ ((module) => {
 
 "use strict";
@@ -28990,7 +28382,7 @@ module.exports = require("events");
 
 /***/ }),
 
-/***/ 7147:
+/***/ 9896:
 /***/ ((module) => {
 
 "use strict";
@@ -28998,7 +28390,7 @@ module.exports = require("fs");
 
 /***/ }),
 
-/***/ 3685:
+/***/ 8611:
 /***/ ((module) => {
 
 "use strict";
@@ -29006,7 +28398,7 @@ module.exports = require("http");
 
 /***/ }),
 
-/***/ 5158:
+/***/ 5675:
 /***/ ((module) => {
 
 "use strict";
@@ -29014,7 +28406,7 @@ module.exports = require("http2");
 
 /***/ }),
 
-/***/ 5687:
+/***/ 5692:
 /***/ ((module) => {
 
 "use strict";
@@ -29022,7 +28414,7 @@ module.exports = require("https");
 
 /***/ }),
 
-/***/ 1808:
+/***/ 9278:
 /***/ ((module) => {
 
 "use strict";
@@ -29030,7 +28422,15 @@ module.exports = require("net");
 
 /***/ }),
 
-/***/ 5673:
+/***/ 7598:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:crypto");
+
+/***/ }),
+
+/***/ 8474:
 /***/ ((module) => {
 
 "use strict";
@@ -29038,7 +28438,7 @@ module.exports = require("node:events");
 
 /***/ }),
 
-/***/ 3977:
+/***/ 1455:
 /***/ ((module) => {
 
 "use strict";
@@ -29046,7 +28446,7 @@ module.exports = require("node:fs/promises");
 
 /***/ }),
 
-/***/ 4492:
+/***/ 7075:
 /***/ ((module) => {
 
 "use strict";
@@ -29054,7 +28454,7 @@ module.exports = require("node:stream");
 
 /***/ }),
 
-/***/ 7261:
+/***/ 7975:
 /***/ ((module) => {
 
 "use strict";
@@ -29062,7 +28462,7 @@ module.exports = require("node:util");
 
 /***/ }),
 
-/***/ 2037:
+/***/ 857:
 /***/ ((module) => {
 
 "use strict";
@@ -29070,7 +28470,7 @@ module.exports = require("os");
 
 /***/ }),
 
-/***/ 1017:
+/***/ 6928:
 /***/ ((module) => {
 
 "use strict";
@@ -29078,7 +28478,7 @@ module.exports = require("path");
 
 /***/ }),
 
-/***/ 4074:
+/***/ 2987:
 /***/ ((module) => {
 
 "use strict";
@@ -29086,7 +28486,7 @@ module.exports = require("perf_hooks");
 
 /***/ }),
 
-/***/ 3477:
+/***/ 3480:
 /***/ ((module) => {
 
 "use strict";
@@ -29094,7 +28494,7 @@ module.exports = require("querystring");
 
 /***/ }),
 
-/***/ 2781:
+/***/ 2203:
 /***/ ((module) => {
 
 "use strict";
@@ -29102,7 +28502,7 @@ module.exports = require("stream");
 
 /***/ }),
 
-/***/ 5356:
+/***/ 3774:
 /***/ ((module) => {
 
 "use strict";
@@ -29110,7 +28510,7 @@ module.exports = require("stream/web");
 
 /***/ }),
 
-/***/ 1576:
+/***/ 3193:
 /***/ ((module) => {
 
 "use strict";
@@ -29118,7 +28518,7 @@ module.exports = require("string_decoder");
 
 /***/ }),
 
-/***/ 9512:
+/***/ 3557:
 /***/ ((module) => {
 
 "use strict";
@@ -29126,7 +28526,7 @@ module.exports = require("timers");
 
 /***/ }),
 
-/***/ 4404:
+/***/ 4756:
 /***/ ((module) => {
 
 "use strict";
@@ -29134,7 +28534,7 @@ module.exports = require("tls");
 
 /***/ }),
 
-/***/ 7310:
+/***/ 7016:
 /***/ ((module) => {
 
 "use strict";
@@ -29142,7 +28542,7 @@ module.exports = require("url");
 
 /***/ }),
 
-/***/ 3837:
+/***/ 9023:
 /***/ ((module) => {
 
 "use strict";
@@ -29150,7 +28550,7 @@ module.exports = require("util");
 
 /***/ }),
 
-/***/ 9830:
+/***/ 8253:
 /***/ ((module) => {
 
 "use strict";
@@ -29158,7 +28558,7 @@ module.exports = require("util/types");
 
 /***/ }),
 
-/***/ 1267:
+/***/ 8167:
 /***/ ((module) => {
 
 "use strict";
@@ -29166,7 +28566,7 @@ module.exports = require("worker_threads");
 
 /***/ }),
 
-/***/ 9796:
+/***/ 3106:
 /***/ ((module) => {
 
 "use strict";
@@ -29174,19 +28574,19 @@ module.exports = require("zlib");
 
 /***/ }),
 
-/***/ 2960:
+/***/ 7182:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const WritableStream = (__nccwpck_require__(4492).Writable)
-const inherits = (__nccwpck_require__(7261).inherits)
+const WritableStream = (__nccwpck_require__(7075).Writable)
+const inherits = (__nccwpck_require__(7975).inherits)
 
-const StreamSearch = __nccwpck_require__(1142)
+const StreamSearch = __nccwpck_require__(4136)
 
-const PartStream = __nccwpck_require__(1620)
-const HeaderParser = __nccwpck_require__(2032)
+const PartStream = __nccwpck_require__(612)
+const HeaderParser = __nccwpck_require__(2271)
 
 const DASH = 45
 const B_ONEDASH = Buffer.from('-')
@@ -29258,7 +28658,7 @@ Dicer.prototype._write = function (data, encoding, cb) {
   if (this._headerFirst && this._isPreamble) {
     if (!this._part) {
       this._part = new PartStream(this._partOpts)
-      if (this._events.preamble) { this.emit('preamble', this._part) } else { this._ignore() }
+      if (this.listenerCount('preamble') !== 0) { this.emit('preamble', this._part) } else { this._ignore() }
     }
     const r = this._hparser.push(data)
     if (!this._inHeader && r !== undefined && r < data.length) { data = data.slice(r) } else { return cb() }
@@ -29315,7 +28715,7 @@ Dicer.prototype._oninfo = function (isMatch, data, start, end) {
       }
     }
     if (this._dashes === 2) {
-      if ((start + i) < end && this._events.trailer) { this.emit('trailer', data.slice(start + i, end)) }
+      if ((start + i) < end && this.listenerCount('trailer') !== 0) { this.emit('trailer', data.slice(start + i, end)) }
       this.reset()
       this._finished = true
       // no more parts will be added
@@ -29333,7 +28733,13 @@ Dicer.prototype._oninfo = function (isMatch, data, start, end) {
     this._part._read = function (n) {
       self._unpause()
     }
-    if (this._isPreamble && this._events.preamble) { this.emit('preamble', this._part) } else if (this._isPreamble !== true && this._events.part) { this.emit('part', this._part) } else { this._ignore() }
+    if (this._isPreamble && this.listenerCount('preamble') !== 0) {
+      this.emit('preamble', this._part)
+    } else if (this._isPreamble !== true && this.listenerCount('part') !== 0) {
+      this.emit('part', this._part)
+    } else {
+      this._ignore()
+    }
     if (!this._isPreamble) { this._inHeader = true }
   }
   if (data && start < end && !this._ignoreData) {
@@ -29389,17 +28795,17 @@ module.exports = Dicer
 
 /***/ }),
 
-/***/ 2032:
+/***/ 2271:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const EventEmitter = (__nccwpck_require__(5673).EventEmitter)
-const inherits = (__nccwpck_require__(7261).inherits)
-const getLimit = __nccwpck_require__(1467)
+const EventEmitter = (__nccwpck_require__(8474).EventEmitter)
+const inherits = (__nccwpck_require__(7975).inherits)
+const getLimit = __nccwpck_require__(2393)
 
-const StreamSearch = __nccwpck_require__(1142)
+const StreamSearch = __nccwpck_require__(4136)
 
 const B_DCRLF = Buffer.from('\r\n\r\n')
 const RE_CRLF = /\r\n/g
@@ -29497,14 +28903,14 @@ module.exports = HeaderParser
 
 /***/ }),
 
-/***/ 1620:
+/***/ 612:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const inherits = (__nccwpck_require__(7261).inherits)
-const ReadableStream = (__nccwpck_require__(4492).Readable)
+const inherits = (__nccwpck_require__(7975).inherits)
+const ReadableStream = (__nccwpck_require__(7075).Readable)
 
 function PartStream (opts) {
   ReadableStream.call(this, opts)
@@ -29518,7 +28924,7 @@ module.exports = PartStream
 
 /***/ }),
 
-/***/ 1142:
+/***/ 4136:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -29550,8 +28956,8 @@ module.exports = PartStream
  * Based heavily on the Streaming Boyer-Moore-Horspool C++ implementation
  * by Hongli Lai at: https://github.com/FooBarWidget/boyer-moore-horspool
  */
-const EventEmitter = (__nccwpck_require__(5673).EventEmitter)
-const inherits = (__nccwpck_require__(7261).inherits)
+const EventEmitter = (__nccwpck_require__(8474).EventEmitter)
+const inherits = (__nccwpck_require__(7975).inherits)
 
 function SBMH (needle) {
   if (typeof needle === 'string') {
@@ -29754,19 +29160,19 @@ module.exports = SBMH
 
 /***/ }),
 
-/***/ 727:
+/***/ 9581:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const WritableStream = (__nccwpck_require__(4492).Writable)
-const { inherits } = __nccwpck_require__(7261)
-const Dicer = __nccwpck_require__(2960)
+const WritableStream = (__nccwpck_require__(7075).Writable)
+const { inherits } = __nccwpck_require__(7975)
+const Dicer = __nccwpck_require__(7182)
 
-const MultipartParser = __nccwpck_require__(2183)
-const UrlencodedParser = __nccwpck_require__(8306)
-const parseParams = __nccwpck_require__(1854)
+const MultipartParser = __nccwpck_require__(1192)
+const UrlencodedParser = __nccwpck_require__(855)
+const parseParams = __nccwpck_require__(8929)
 
 function Busboy (opts) {
   if (!(this instanceof Busboy)) { return new Busboy(opts) }
@@ -29847,7 +29253,7 @@ module.exports.Dicer = Dicer
 
 /***/ }),
 
-/***/ 2183:
+/***/ 1192:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -29860,15 +29266,15 @@ module.exports.Dicer = Dicer
 //  * support limits.fieldNameSize
 //     -- this will require modifications to utils.parseParams
 
-const { Readable } = __nccwpck_require__(4492)
-const { inherits } = __nccwpck_require__(7261)
+const { Readable } = __nccwpck_require__(7075)
+const { inherits } = __nccwpck_require__(7975)
 
-const Dicer = __nccwpck_require__(2960)
+const Dicer = __nccwpck_require__(7182)
 
-const parseParams = __nccwpck_require__(1854)
-const decodeText = __nccwpck_require__(4619)
-const basename = __nccwpck_require__(8647)
-const getLimit = __nccwpck_require__(1467)
+const parseParams = __nccwpck_require__(8929)
+const decodeText = __nccwpck_require__(2747)
+const basename = __nccwpck_require__(692)
+const getLimit = __nccwpck_require__(2393)
 
 const RE_BOUNDARY = /^boundary$/i
 const RE_FIELD = /^form-data$/i
@@ -30016,7 +29422,7 @@ function Multipart (boy, cfg) {
 
         ++nfiles
 
-        if (!boy._events.file) {
+        if (boy.listenerCount('file') === 0) {
           self.parser._ignore()
           return
         }
@@ -30161,15 +29567,15 @@ module.exports = Multipart
 
 /***/ }),
 
-/***/ 8306:
+/***/ 855:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const Decoder = __nccwpck_require__(7100)
-const decodeText = __nccwpck_require__(4619)
-const getLimit = __nccwpck_require__(1467)
+const Decoder = __nccwpck_require__(1496)
+const decodeText = __nccwpck_require__(2747)
+const getLimit = __nccwpck_require__(2393)
 
 const RE_CHARSET = /^charset$/i
 
@@ -30359,7 +29765,7 @@ module.exports = UrlEncoded
 
 /***/ }),
 
-/***/ 7100:
+/***/ 1496:
 /***/ ((module) => {
 
 "use strict";
@@ -30421,7 +29827,7 @@ module.exports = Decoder
 
 /***/ }),
 
-/***/ 8647:
+/***/ 692:
 /***/ ((module) => {
 
 "use strict";
@@ -30443,7 +29849,7 @@ module.exports = function basename (path) {
 
 /***/ }),
 
-/***/ 4619:
+/***/ 2747:
 /***/ (function(module) {
 
 "use strict";
@@ -30545,7 +29951,7 @@ const decoders = {
     if (textDecoders.has(this.toString())) {
       try {
         return textDecoders.get(this).decode(data)
-      } catch (e) { }
+      } catch {}
     }
     return typeof data === 'string'
       ? data
@@ -30565,7 +29971,7 @@ module.exports = decodeText
 
 /***/ }),
 
-/***/ 1467:
+/***/ 2393:
 /***/ ((module) => {
 
 "use strict";
@@ -30589,14 +29995,14 @@ module.exports = function getLimit (limits, name, defaultLimit) {
 
 /***/ }),
 
-/***/ 1854:
+/***/ 8929:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 /* eslint-disable object-property-newline */
 
 
-const decodeText = __nccwpck_require__(4619)
+const decodeText = __nccwpck_require__(2747)
 
 const RE_ENCODED = /%[a-fA-F0-9][a-fA-F0-9]/g
 
@@ -30793,11 +30199,11 @@ module.exports = parseParams
 
 /***/ }),
 
-/***/ 5402:
+/***/ 6225:
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"openapi":"3.0.3","info":{"title":"Bencher API","version":"0.4.35"},"paths":{"/":{"get":{"tags":["server"],"operationId":"server_root_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"title":"Null","type":"string","enum":[null]}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["server","stats"],"operationId":"root_server_stats_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonServerStats"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"title":"Null","type":"string","enum":[null]}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/accept":{"post":{"tags":["auth","organizations"],"operationId":"auth_accept_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAccept"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthAck"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/confirm":{"post":{"tags":["auth"],"operationId":"auth_confirm_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonConfirm"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthUser"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/github":{"post":{"tags":["auth"],"operationId":"auth_github_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOAuth"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthUser"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/login":{"post":{"tags":["auth"],"operationId":"auth_login_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonLogin"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthAck"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/signup":{"post":{"tags":["auth"],"summary":"When a user signs up, a new personal organization is automatically created.","description":"Except when a user signs up with an invitation, then the user is just added to the inviting organization.","operationId":"auth_signup_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonSignup"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthAck"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/checkout":{"post":{"tags":["checkout"],"operationId":"checkouts_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewCheckout"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonCheckout"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations":{"get":{"tags":["organizations"],"summary":"List organizations","description":"List all organizations where the user is a member. The user must have `view` permissions for each organization. By default, the organizations are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of organizations.","operationId":"organizations_get","parameters":[{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/OrganizationsSort"}},{"in":"query","name":"name","description":"Filter by organization name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by organization name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOrganizations"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["organizations"],"summary":"Create an organization","description":"Create a new organization. The user must be authenticated to use this route. ➕ Bencher Plus: This route can be limited to admins on self-hosted instances.","operationId":"organization_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewOrganization"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOrganization"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}":{"get":{"tags":["organizations"],"summary":"View an organization","description":"View an organization where the user is a member. The user must have `view` permissions for the organization.","operationId":"organization_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOrganization"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["organizations"],"summary":"Delete an organization","description":"Delete an organization where the user is a member. The user must have `delete` permissions for the organization.","operationId":"organization_delete","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["organizations"],"summary":"Update an organization","description":"Update an organization where the user is a member. The user must have `edit` permissions for the organization. If updating the license, the user must have `manage` permissions for the organization.","operationId":"organization_patch","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateOrganization"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOrganization"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/allowed/{permission}":{"get":{"tags":["organizations","allowed"],"operationId":"org_allowed_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"permission","description":"The permission to check.","required":true,"schema":{"$ref":"#/components/schemas/OrganizationPermission"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAllowed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/members":{"get":{"tags":["organizations","members"],"summary":"List organization members","description":"List members for an organization. The user must have `view_role` permissions for the organization. By default, the members are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of members.","operationId":"org_members_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/OrgMembersSort"}},{"in":"query","name":"name","description":"Filter by user name, exact match.","schema":{"$ref":"#/components/schemas/UserName"}},{"in":"query","name":"search","description":"Search by user name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMembers"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["organizations","members"],"summary":"Invite a user to an organization","description":"Invite another user to become a member of an organization. The user must have `create_role` permissions for the organization. The invitee is sent an email with a link to accept the invitation, and they are not added to the organization until they accept the invitation.","operationId":"org_member_post","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewMember"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthAck"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/members/{user}":{"get":{"tags":["organizations","members"],"summary":"View an organization member","description":"View a member of an organization. The user must have `view_role` permissions for the organization.","operationId":"org_member_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"user","description":"The slug or UUID for an organization member.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMember"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["organizations","members"],"summary":"Remove an organization member","description":"Remove a member member of an organization. The user must have `delete_role` permissions for the organization.","operationId":"org_member_delete","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"user","description":"The slug or UUID for an organization member.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["organizations","members"],"summary":"Update an organization member","description":"Update the role for a member of an organization. The user must have `edit_role` permissions for the organization.","operationId":"org_member_patch","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"user","description":"The slug or UUID for an organization member.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateMember"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMember"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/plan":{"get":{"tags":["organizations","plan"],"operationId":"org_plan_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlan"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["organizations","plan"],"operationId":"org_plan_post","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewPlan"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlan"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["organizations","plan"],"operationId":"org_plan_delete","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"remote","schema":{"nullable":true,"type":"boolean"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/projects":{"get":{"tags":["organizations","projects"],"summary":"List organization projects","description":"List projects for an organization. The user must have `view` permissions for the organization. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of organization projects.","operationId":"org_projects_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/OrgProjectsSort"}},{"in":"query","name":"name","description":"Filter by project name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by project name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProjects"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["organizations","projects"],"summary":"Create a project for an organization","description":"Create a new project for an organization. The user must have `create` permissions for the organization. The new project will have a `main` branch, a `localhost` testbed, `latency` and `throughput` measures, and a threshold for both measures. ➕ Bencher Plus: The project visibility must be `public` unless the organization has a valid Bencher Plus subscription.","operationId":"org_project_post","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewProject"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProject"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/usage":{"get":{"tags":["organizations","usage"],"summary":"View organization metrics usage","description":"View the metrics usage of an organization. The user must have `manage` permissions for the organization. ➕ Bencher Plus: This endpoint offers an estimate of metered usage and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.","operationId":"org_usage_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUsage"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects":{"get":{"tags":["projects"],"summary":"List projects","description":"List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of projects.","operationId":"projects_get","parameters":[{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjectsSort"}},{"in":"query","name":"name","description":"Filter by project name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by project name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProjects"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}":{"get":{"tags":["projects"],"summary":"View a project","description":"View a project. If the user is not authenticated, then only a public project is available. If the user is authenticated, then any public project and any private project where the user has `view` permissions is available.","operationId":"project_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProject"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects"],"summary":"Delete a project","description":"Delete a project. The user must have `delete` permissions for the project.","operationId":"project_delete","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects"],"summary":"Update a project","description":"Update a project. The user must have `edit` permissions for the project.","operationId":"project_patch","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateProject"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProject"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/alerts":{"get":{"tags":["projects","alerts"],"summary":"List alerts for a project","description":"List all alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of alerts.","operationId":"proj_alerts_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjAlertsSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived alerts. If not set or set to `false`, only returns alerts with non-archived branches, testbeds, or measures.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"status","description":"Filter alerts by their status. If not set, returns all alerts.","schema":{"$ref":"#/components/schemas/AlertStatus"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAlerts"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/alerts/{alert}":{"get":{"tags":["projects","alerts"],"summary":"View an alert","description":"View an alert for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_alert_get","parameters":[{"in":"path","name":"alert","description":"The UUID for an alert.","required":true,"schema":{"$ref":"#/components/schemas/AlertUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAlert"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","alerts"],"summary":"Update an alert","description":"Update an alert for a project. The user must have `edit` permissions for the project. Use this endpoint to dismiss an alert.","operationId":"proj_alert_patch","parameters":[{"in":"path","name":"alert","description":"The UUID for an alert.","required":true,"schema":{"$ref":"#/components/schemas/AlertUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateAlert"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAlert"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/allowed/{permission}":{"get":{"tags":["projects","allowed"],"operationId":"proj_allowed_get","parameters":[{"in":"path","name":"permission","description":"The permission to check.","required":true,"schema":{"$ref":"#/components/schemas/ProjectPermission"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAllowed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/benchmarks":{"get":{"tags":["projects","benchmarks"],"summary":"List benchmarks for a project","description":"List all benchmarks for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the benchmarks are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of benchmarks.","operationId":"proj_benchmarks_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjBenchmarksSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived benchmarks. If not set or set to `false`, only returns non-archived benchmarks.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"name","description":"Filter by benchmark name, exact match.","schema":{"$ref":"#/components/schemas/BenchmarkName"}},{"in":"query","name":"search","description":"Search by benchmark name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBenchmarks"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","benchmarks"],"summary":"Create a benchmark","description":"Create a benchmark for a project. The user must have `create` permissions for the project.","operationId":"proj_benchmark_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewBenchmark"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBenchmark"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/benchmarks/{benchmark}":{"get":{"tags":["projects","benchmarks"],"summary":"View a benchmark","description":"View a benchmark for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_benchmark_get","parameters":[{"in":"path","name":"benchmark","description":"The slug or UUID for a benchmark.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBenchmark"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","benchmarks"],"summary":"Delete a benchmark","description":"Delete a benchmark for a project. The user must have `delete` permissions for the project. All reports that use this benchmark must be deleted first!","operationId":"proj_benchmark_delete","parameters":[{"in":"path","name":"benchmark","description":"The slug or UUID for a benchmark.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","benchmarks"],"summary":"Update a benchmark","description":"Update a benchmark for a project. The user must have `edit` permissions for the project.","operationId":"proj_benchmark_patch","parameters":[{"in":"path","name":"benchmark","description":"The slug or UUID for a benchmark.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateBenchmark"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBenchmark"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/branches":{"get":{"tags":["projects","branches"],"summary":"List branches for a project","description":"List all branches for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the branches are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of branches.","operationId":"proj_branches_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjBranchesSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived branches, if set to `true`. If not set or set to `false`, only returns non-archived branches.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"name","description":"Filter by branch name, exact match.","schema":{"$ref":"#/components/schemas/BranchName"}},{"in":"query","name":"search","description":"Search by branch name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBranches"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","branches"],"summary":"Create a branch","description":"Create a branch for a project. The user must have `create` permissions for the project.","operationId":"proj_branch_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewBranch"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBranch"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/branches/{branch}":{"get":{"tags":["projects","branches"],"summary":"View a branch","description":"View a branch for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_branch_get","parameters":[{"in":"path","name":"branch","description":"The slug or UUID for a branch.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"head","description":"View the branch with the specified head UUID. This can be used to view a branch with a historical head that has since been replaced by a new head. If not specified, then the current head is used.","schema":{"$ref":"#/components/schemas/HeadUuid"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBranch"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","branches"],"summary":"Delete a branch","description":"Delete a branch for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this branch must be deleted first!","operationId":"proj_branch_delete","parameters":[{"in":"path","name":"branch","description":"The slug or UUID for a branch.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","branches"],"summary":"Update a branch","description":"Update a branch for a project. The user must have `edit` permissions for the project.","operationId":"proj_branch_patch","parameters":[{"in":"path","name":"branch","description":"The slug or UUID for a branch.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateBranch"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBranch"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/measures":{"get":{"tags":["projects","measures"],"summary":"List measures for a project","description":"List all measures for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the measures are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of measures.","operationId":"proj_measures_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjMeasuresSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived measures if set to `true`. If not set or set to `false`, only returns non-archived measures.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"name","description":"Filter by measure name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by measure name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMeasures"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","measures"],"summary":"Create a measure","description":"Create a measure for a project. The user must have `create` permissions for the project.","operationId":"proj_measure_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewMeasure"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMeasure"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/measures/{measure}":{"get":{"tags":["projects","measures"],"summary":"View a measure","description":"View a measure for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_measure_get","parameters":[{"in":"path","name":"measure","description":"The slug or UUID for a measure.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMeasure"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","measures"],"summary":"Delete a measure","description":"Delete a measure for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this measure must be deleted first!","operationId":"proj_measure_delete","parameters":[{"in":"path","name":"measure","description":"The slug or UUID for a measure.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","measures"],"summary":"Update a measure","description":"Update a measure for a project. The user must have `edit` permissions for the project.","operationId":"proj_measure_patch","parameters":[{"in":"path","name":"measure","description":"The slug or UUID for a measure.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateMeasure"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMeasure"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/metrics/{metric}":{"get":{"tags":["projects","metrics"],"summary":"View a metric","description":"View a metric for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_metric_get","parameters":[{"in":"path","name":"metric","description":"The UUID for a metric.","required":true,"schema":{"$ref":"#/components/schemas/MetricUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOneMetric"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/perf":{"get":{"tags":["projects","perf"],"summary":"Query project performance metrics","description":"Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_perf_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"benchmarks","description":"A comma separated list of benchmark UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"branches","description":"A comma separated list of branch UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"end_time","description":"Search for metrics before the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"heads","description":"An optional comma separated list of branch head UUIDs. To not specify a particular branch head leave an empty entry in the list.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"measures","description":"A comma separated list of measure UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"start_time","description":"Search for metrics after the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"testbeds","description":"A comma separated list of testbed UUIDs to query.","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPerf"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/perf/img":{"get":{"tags":["projects","perf"],"summary":"Generate a dynamic image of project performance metrics","description":"Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_perf_img_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"benchmarks","description":"A comma separated list of benchmark UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"branches","description":"A comma separated list of branch UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"end_time","description":"Search for metrics before the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"heads","description":"An optional comma separated list of branch head UUIDs. To not specify a particular branch head leave an empty entry in the list.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"measures","description":"A comma separated list of measure UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"start_time","description":"Search for metrics after the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"testbeds","description":"A comma separated list of testbed UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"title","description":"The title for the perf plot. If not provided, the project name will be used.","schema":{"nullable":true,"type":"string"}}],"responses":{"default":{"description":"","content":{"*/*":{"schema":{}}}}}}},"/v0/projects/{project}/plots":{"get":{"tags":["projects","plots"],"summary":"List plots for a project","description":"List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the plots are sorted in their index order. The HTTP response header `X-Total-Count` contains the total number of plots.","operationId":"proj_plots_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjPlotsSort"}},{"in":"query","name":"search","description":"Search by plot title or UUID.","schema":{"$ref":"#/components/schemas/Search"}},{"in":"query","name":"title","description":"Filter by plot title, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlots"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","plots"],"summary":"Create a plot","description":"Create a plot for a project. The user must have `create` permissions for the project. A project can have a maximum of 64 plots at a time.","operationId":"proj_plot_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewPlot"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlot"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/plots/{plot}":{"get":{"tags":["projects","plots"],"summary":"View a plot","description":"View a plot for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_plot_get","parameters":[{"in":"path","name":"plot","description":"The UUID for a plot.","required":true,"schema":{"$ref":"#/components/schemas/PlotUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlot"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","plots"],"summary":"Delete a plot","description":"Delete a plot for a project. The user must have `delete` permissions for the project.","operationId":"proj_plot_delete","parameters":[{"in":"path","name":"plot","description":"The UUID for a plot.","required":true,"schema":{"$ref":"#/components/schemas/PlotUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","plots"],"summary":"Update a plot","description":"Update a plot for a project. The user must have `edit` permissions for the project.","operationId":"proj_plot_patch","parameters":[{"in":"path","name":"plot","description":"The UUID for a plot.","required":true,"schema":{"$ref":"#/components/schemas/PlotUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdatePlot"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlot"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/reports":{"get":{"tags":["projects","reports"],"summary":"List reports for a project","description":"List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the reports are sorted by date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of reports.","operationId":"proj_reports_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjReportsSort"}},{"in":"query","name":"archived","description":"If set to `true`, only return reports with an archived branch or testbed. If not set or set to `false`, only returns reports with non-archived branches and testbeds.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"branch","description":"Filter by branch UUID, slug, or name exact match.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"end_time","description":"Filter for reports before the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"start_time","description":"Filter for reports after the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"testbed","description":"Filter by testbed UUID, slug, or name exact match.","schema":{"nullable":true,"type":"string"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonReports"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","reports"],"summary":"Create a report","description":"Create a report for a project. The user must have `create` permissions for the project. If using the Bencher CLI, it is recommended to use the `bencher run` subcommand instead of trying to create a report manually.","operationId":"proj_report_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewReport"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonReport"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/reports/{report}":{"get":{"tags":["projects","reports"],"summary":"View a report","description":"View a report for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_report_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"report","description":"The UUID for a report.","required":true,"schema":{"$ref":"#/components/schemas/ReportUuid"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonReport"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","reports"],"summary":"Delete a report","description":"Delete a report for a project. The user must have `delete` permissions for the project. If there are no more reports for a branch version, then that version will be deleted. All later branch versions will have their version numbers decremented.","operationId":"proj_report_delete","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"report","description":"The UUID for a report.","required":true,"schema":{"$ref":"#/components/schemas/ReportUuid"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/testbeds":{"get":{"tags":["projects","testbeds"],"summary":"List testbeds for a project","description":"List all testbeds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the testbeds are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of testbeds.","operationId":"proj_testbeds_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjTestbedsSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived testbeds. If not set or set to `false`, only returns non-archived testbeds.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"name","description":"Filter by testbed name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by testbed name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTestbeds"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","testbeds"],"summary":"Create a testbed","description":"Create a testbed for a project. The user must have `create` permissions for the project.","operationId":"proj_testbed_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewTestbed"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTestbed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/testbeds/{testbed}":{"get":{"tags":["projects","testbeds"],"summary":"View a testbed","description":"View a testbed for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_testbed_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"testbed","description":"The slug or UUID for a testbed.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTestbed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","testbeds"],"summary":"Delete a testbed","description":"Delete a testbed for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this testbed must be deleted first!","operationId":"proj_testbed_delete","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"testbed","description":"The slug or UUID for a testbed.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","testbeds"],"summary":"Update a testbed","description":"Update a testbed for a project. The user must have `edit` permissions for the project.","operationId":"proj_testbed_patch","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"testbed","description":"The slug or UUID for a testbed.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateTestbed"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTestbed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/thresholds":{"get":{"tags":["projects","thresholds"],"summary":"List thresholds for a project","description":"List all thresholds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the thresholds are sorted by creation date time in chronological order. The HTTP response header `X-Total-Count` contains the total number of thresholds.","operationId":"proj_thresholds_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjThresholdsSort"}},{"in":"query","name":"archived","description":"If set to `true`, only return thresholds with an archived branch, testbed, or measure. If not set or set to `false`, only returns thresholds with non-archived branches, testbeds, and measures.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"branch","description":"Filter by branch name, exact match.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"measure","description":"Filter by measure name, exact match.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"testbed","description":"Filter by testbed name, exact match.","schema":{"nullable":true,"type":"string"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonThresholds"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","thresholds"],"summary":"Create a threshold","description":"Create a threshold for a project. The user must have `create` permissions for the project. There can only be one threshold for any unique combination of: branch, testbed, and measure.","operationId":"proj_threshold_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewThreshold"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonThreshold"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/thresholds/{threshold}":{"get":{"tags":["projects","thresholds"],"summary":"View a threshold","description":"View a threshold for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_threshold_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"threshold","description":"The UUID for a threshold.","required":true,"schema":{"$ref":"#/components/schemas/ThresholdUuid"}},{"in":"query","name":"model","description":"View the threshold with the specified model UUID. This can be used to view a threshold with a historical model that has since been replaced by a new model. If not specified, then the current model is used.","schema":{"$ref":"#/components/schemas/ModelUuid"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonThreshold"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"put":{"tags":["projects","thresholds"],"summary":"Update a threshold","description":"Update a threshold for a project. The user must have `edit` permissions for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active.","operationId":"proj_threshold_put","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"threshold","description":"The UUID for a threshold.","required":true,"schema":{"$ref":"#/components/schemas/ThresholdUuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateThreshold"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonThreshold"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","thresholds"],"summary":"Delete a threshold","description":"Delete a threshold for a project. The user must have `delete` permissions for the project. A thresholds must be deleted before its branch, testbed, or measure can be deleted.","operationId":"proj_threshold_delete","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"threshold","description":"The UUID for a threshold.","required":true,"schema":{"$ref":"#/components/schemas/ThresholdUuid"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/run":{"post":{"tags":["run","reports"],"summary":"Create a run","description":"Create a run. The user does not need have an account yet or be authenticated. The project may or may not exist yet.","operationId":"run_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewReport"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonReport"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/backup":{"post":{"tags":["server"],"summary":"Backup server","description":"Backup the API server database. The user must be an admin on the server to use this route.","operationId":"server_backup_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBackup"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBackupCreated"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/config":{"get":{"tags":["server"],"summary":"View server configuration","description":"View the API server configuration. The user must be an admin on the server to use this route.","operationId":"server_config_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonConfig"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"put":{"tags":["server"],"summary":"Update server configuration","description":"Update the API server configuration. The user must be an admin on the server to use this route. Updating the configuration will cause the server to restart.","operationId":"server_config_put","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateConfig"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonConfig"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/config/console":{"get":{"tags":["server"],"summary":"View console configuration","description":"View the Bencher Console configuration managed by the API server. This is a public route and does not require authentication.","operationId":"server_config_console_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonConsole"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/restart":{"post":{"tags":["server"],"summary":"Restart server","description":"Restart the API server. The user must be an admin on the server to use this route.","operationId":"server_restart_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonRestart"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"title":"Null","type":"string","enum":[null]}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/spec":{"get":{"tags":["server"],"summary":"View server OpenAPI specification","description":"View the API server OpenAPI specification. The OpenAPI specification can be used to generate API client code.","operationId":"server_spec_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonSpec"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/stats":{"get":{"tags":["server","stats"],"summary":"View server stats","description":"➕ Bencher Plus: View the API server stats. The user must be an admin on the server to use this route.","operationId":"server_stats_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonServerStats"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["server","stats"],"operationId":"server_stats_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonServerStats"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"title":"Null","type":"string","enum":[null]}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/version":{"get":{"tags":["server"],"summary":"View server version","description":"View the API server version. This is used to verify that the CLI and API server are compatible. It can also be used as a simple endpoint to verify that the server is running.","operationId":"server_version_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonApiVersion"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/users":{"get":{"tags":["users"],"summary":"List users","description":"List all users. The user must be an admin on the server to use this route. The HTTP response header `X-Total-Count` contains the total number of users.","operationId":"users_get","parameters":[{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/UsersSort"}},{"in":"query","name":"name","description":"Filter by user name, exact match.","schema":{"$ref":"#/components/schemas/UserName"}},{"in":"query","name":"search","description":"Search by user name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUsers"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/users/{user}":{"get":{"tags":["users"],"summary":"View a user","description":"View a user. Only the authenticated user themselves and server admins have access to this endpoint. To view users within your organization, use the organization members endpoints.","operationId":"user_get","parameters":[{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUser"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["users"],"summary":"Update a user","description":"Update a user. Only the authenticated user themselves and server admins have access to this endpoint. Some fields can only be updated by an admin. To manage users within your organization, use the organization members endpoints.","operationId":"user_patch","parameters":[{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateUser"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUser"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/users/{user}/tokens":{"get":{"tags":["users","tokens"],"summary":"List tokens for a user","description":"List all API tokens for a user. Only the authenticated user themselves and server admins have access to this endpoint. By default, the tokens are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of tokens.","operationId":"user_tokens_get","parameters":[{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/UserTokensSort"}},{"in":"query","name":"name","description":"Filter by token name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by token name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTokens"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["users","tokens"],"summary":"Create a token","description":"Create an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.","operationId":"user_token_post","parameters":[{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewToken"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonToken"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/users/{user}/tokens/{token}":{"get":{"tags":["users","tokens"],"summary":"View a token","description":"View an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.","operationId":"user_token_get","parameters":[{"in":"path","name":"token","description":"The UUID for a token.","required":true,"schema":{"type":"string","format":"uuid"}},{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonToken"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["users","tokens"],"summary":"Update a token","description":"Update an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.","operationId":"user_token_patch","parameters":[{"in":"path","name":"token","description":"The UUID for a token.","required":true,"schema":{"type":"string","format":"uuid"}},{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateToken"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonToken"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}}},"components":{"schemas":{"Adapter":{"type":"string","enum":["magic","json","rust","rust_bench","rust_criterion","rust_iai","rust_iai_callgrind","cpp","cpp_google","cpp_catch2","go","go_bench","java","java_jmh","c_sharp","c_sharp_dot_net","js","js_benchmark","js_time","python","python_asv","python_pytest","ruby","ruby_benchmark","shell","shell_hyperfine"]},"AlertStatus":{"oneOf":[{"description":"The alert is active.","type":"string","enum":["active"]},{"description":"The alert has been dismissed by a user.","type":"string","enum":["dismissed"]},{"description":"The alert has been silenced by the system.","type":"string","enum":["silenced"]}]},"AlertUuid":{"type":"string","format":"uuid"},"BenchmarkName":{"type":"string"},"BenchmarkUuid":{"type":"string","format":"uuid"},"BigInt":{"type":"integer","format":"uint64","minimum":0},"Boundary":{"type":"number","format":"double"},"BoundaryLimit":{"type":"string","enum":["lower","upper"]},"BranchName":{"type":"string"},"BranchUuid":{"type":"string","format":"uuid"},"CardBrand":{"type":"string","enum":["amex","diners","discover","jcb","mastercard","unionpay","visa","unknown"]},"DataStore":{"oneOf":[{"type":"object","properties":{"access_key_id":{"type":"string"},"access_point":{"type":"string"},"secret_access_key":{"$ref":"#/components/schemas/Secret"},"service":{"type":"string","enum":["aws_s3"]}},"required":["access_key_id","access_point","secret_access_key","service"]}]},"DateTime":{"type":"string","format":"date-time"},"Email":{"type":"string"},"Entitlements":{"type":"integer","format":"uint32","minimum":0},"Error":{"description":"Error information from a response.","type":"object","properties":{"error_code":{"type":"string"},"message":{"type":"string"},"request_id":{"type":"string"}},"required":["message","request_id"]},"ExpirationMonth":{"type":"integer","format":"int32"},"ExpirationYear":{"type":"integer","format":"int32"},"GitHash":{"type":"string"},"HeadUuid":{"type":"string","format":"uuid"},"IfExists":{"type":"string","enum":["fail","truncate","append"]},"Index":{"type":"integer","format":"uint8","minimum":0},"Iteration":{"type":"integer","format":"uint32","minimum":0},"JsonAccept":{"type":"object","properties":{"invite":{"$ref":"#/components/schemas/Jwt"}},"required":["invite"]},"JsonAlert":{"type":"object","properties":{"benchmark":{"$ref":"#/components/schemas/JsonBenchmark"},"boundary":{"$ref":"#/components/schemas/JsonBoundary"},"created":{"$ref":"#/components/schemas/DateTime"},"iteration":{"$ref":"#/components/schemas/Iteration"},"limit":{"$ref":"#/components/schemas/BoundaryLimit"},"metric":{"$ref":"#/components/schemas/JsonMetric"},"modified":{"$ref":"#/components/schemas/DateTime"},"report":{"$ref":"#/components/schemas/ReportUuid"},"status":{"$ref":"#/components/schemas/AlertStatus"},"threshold":{"$ref":"#/components/schemas/JsonThreshold"},"uuid":{"$ref":"#/components/schemas/AlertUuid"}},"required":["benchmark","boundary","created","iteration","limit","metric","modified","report","status","threshold","uuid"]},"JsonAlerts":{"type":"array","items":{"$ref":"#/components/schemas/JsonAlert"}},"JsonAllowed":{"type":"object","properties":{"allowed":{"type":"boolean"}},"required":["allowed"]},"JsonApiVersion":{"type":"object","properties":{"version":{"type":"string"}},"required":["version"]},"JsonAuthAck":{"type":"object","properties":{"email":{"$ref":"#/components/schemas/Email"}},"required":["email"]},"JsonAuthUser":{"type":"object","properties":{"creation":{"$ref":"#/components/schemas/DateTime"},"expiration":{"$ref":"#/components/schemas/DateTime"},"token":{"$ref":"#/components/schemas/Jwt"},"user":{"$ref":"#/components/schemas/JsonUser"}},"required":["creation","expiration","token","user"]},"JsonAverage":{"type":"string","enum":["mean","median"]},"JsonBackup":{"type":"object","properties":{"compress":{"nullable":true,"description":"Compress the database backup with gzip. This operation runs first.","type":"boolean"},"data_store":{"nullable":true,"description":"Save the database backup to this data store. This operation runs second.","allOf":[{"$ref":"#/components/schemas/JsonDataStore"}]},"rm":{"nullable":true,"description":"Remove the local copy of the database backup. This operation runs third.","type":"boolean"}}},"JsonBackupCreated":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"}},"required":["created"]},"JsonBenchmark":{"type":"object","properties":{"archived":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"created":{"$ref":"#/components/schemas/DateTime"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/BenchmarkName"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/BenchmarkUuid"}},"required":["created","modified","name","project","slug","uuid"]},"JsonBenchmarks":{"type":"array","items":{"$ref":"#/components/schemas/JsonBenchmark"}},"JsonBilling":{"type":"object","properties":{"products":{"$ref":"#/components/schemas/JsonProducts"},"secret_key":{"$ref":"#/components/schemas/Secret"}},"required":["products","secret_key"]},"JsonBingIndex":{"type":"object","properties":{"key":{"$ref":"#/components/schemas/NonEmpty"},"key_location":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Url"}]}},"required":["key"]},"JsonBoundary":{"type":"object","properties":{"baseline":{"nullable":true,"type":"number","format":"double"},"lower_limit":{"nullable":true,"type":"number","format":"double"},"upper_limit":{"nullable":true,"type":"number","format":"double"}}},"JsonBranch":{"type":"object","properties":{"archived":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"created":{"$ref":"#/components/schemas/DateTime"},"head":{"$ref":"#/components/schemas/JsonHead"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/BranchName"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/BranchUuid"}},"required":["created","head","modified","name","project","slug","uuid"]},"JsonBranches":{"type":"array","items":{"$ref":"#/components/schemas/JsonBranch"}},"JsonCardDetails":{"type":"object","properties":{"brand":{"$ref":"#/components/schemas/CardBrand"},"exp_month":{"$ref":"#/components/schemas/ExpirationMonth"},"exp_year":{"$ref":"#/components/schemas/ExpirationYear"},"last_four":{"$ref":"#/components/schemas/LastFour"}},"required":["brand","exp_month","exp_year","last_four"]},"JsonCheckout":{"type":"object","properties":{"session":{"type":"string"},"url":{"type":"string"}},"required":["session","url"]},"JsonCloud":{"type":"object","properties":{"billing":{"$ref":"#/components/schemas/JsonBilling"},"index":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonIndex"}]},"license_pem":{"$ref":"#/components/schemas/Secret"},"sentry":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Secret"}]}},"required":["billing","license_pem"]},"JsonCohort":{"type":"object","properties":{"month":{"type":"integer","format":"uint64","minimum":0},"total":{"type":"integer","format":"uint64","minimum":0},"week":{"type":"integer","format":"uint64","minimum":0}},"required":["month","total","week"]},"JsonCohortAvg":{"type":"object","properties":{"month":{"type":"number","format":"double"},"total":{"type":"number","format":"double"},"week":{"type":"number","format":"double"}},"required":["month","total","week"]},"JsonConfig":{"type":"object","properties":{"console":{"$ref":"#/components/schemas/JsonConsole"},"database":{"$ref":"#/components/schemas/JsonDatabase"},"logging":{"$ref":"#/components/schemas/JsonLogging"},"plus":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonPlus"}]},"security":{"$ref":"#/components/schemas/JsonSecurity"},"server":{"$ref":"#/components/schemas/JsonServer2"},"smtp":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonSmtp"}]}},"required":["console","database","logging","security","server"]},"JsonConfirm":{"type":"object","properties":{"token":{"$ref":"#/components/schemas/Jwt"}},"required":["token"]},"JsonConsole":{"type":"object","properties":{"url":{"description":"The URL for the Bencher Console UI.","allOf":[{"$ref":"#/components/schemas/Url"}]}},"required":["url"]},"JsonCustomer":{"type":"object","properties":{"email":{"$ref":"#/components/schemas/Email"},"name":{"$ref":"#/components/schemas/NonEmpty"},"uuid":{"$ref":"#/components/schemas/UserUuid"}},"required":["email","name","uuid"]},"JsonDataStore":{"type":"string","enum":["aws_s3"]},"JsonDatabase":{"type":"object","properties":{"data_store":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DataStore"}]},"file":{"type":"string"}},"required":["file"]},"JsonFold":{"type":"string","enum":["min","max","mean","median"]},"JsonGitHub":{"type":"object","properties":{"client_id":{"$ref":"#/components/schemas/NonEmpty"},"client_secret":{"$ref":"#/components/schemas/Secret"}},"required":["client_id","client_secret"]},"JsonGoogleIndex":{"type":"object","properties":{"client_email":{"$ref":"#/components/schemas/NonEmpty"},"private_key":{"$ref":"#/components/schemas/Secret"},"token_uri":{"$ref":"#/components/schemas/NonEmpty"}},"required":["client_email","private_key","token_uri"]},"JsonHead":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"replaced":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"start_point":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonStartPoint"}]},"uuid":{"$ref":"#/components/schemas/HeadUuid"},"version":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonVersion"}]}},"required":["created","uuid"]},"JsonIndex":{"type":"object","properties":{"bing":{"$ref":"#/components/schemas/JsonBingIndex"},"google":{"$ref":"#/components/schemas/JsonGoogleIndex"}},"required":["bing","google"]},"JsonLicense":{"type":"object","properties":{"entitlements":{"$ref":"#/components/schemas/Entitlements"},"expiration":{"$ref":"#/components/schemas/DateTime"},"issued_at":{"$ref":"#/components/schemas/DateTime"},"key":{"$ref":"#/components/schemas/Jwt"},"level":{"$ref":"#/components/schemas/PlanLevel"},"organization":{"$ref":"#/components/schemas/OrganizationUuid"},"self_hosted":{"type":"boolean"}},"required":["entitlements","expiration","issued_at","key","level","organization","self_hosted"]},"JsonLitestream":{"type":"object","properties":{"busy_timeout":{"nullable":true,"description":"The database busy timeout in milliseconds","type":"integer","format":"uint32","minimum":0},"replicas":{"description":"Disaster recovery replicas","type":"array","items":{"$ref":"#/components/schemas/JsonReplica"}}},"required":["replicas"]},"JsonLogging":{"type":"object","properties":{"log":{"$ref":"#/components/schemas/ServerLog"},"name":{"type":"string"}},"required":["log","name"]},"JsonLogin":{"type":"object","properties":{"email":{"$ref":"#/components/schemas/Email"},"invite":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Jwt"}]},"plan":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/PlanLevel"}]}},"required":["email"]},"JsonMeasure":{"type":"object","properties":{"archived":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"created":{"$ref":"#/components/schemas/DateTime"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"units":{"$ref":"#/components/schemas/ResourceName"},"uuid":{"$ref":"#/components/schemas/MeasureUuid"}},"required":["created","modified","name","project","slug","units","uuid"]},"JsonMeasures":{"type":"array","items":{"$ref":"#/components/schemas/JsonMeasure"}},"JsonMember":{"type":"object","properties":{"created":{"description":"The date time the member was created.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"email":{"description":"The member email.","allOf":[{"$ref":"#/components/schemas/Email"}]},"modified":{"description":"The date time the member was last modified.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"name":{"description":"The member user name.","allOf":[{"$ref":"#/components/schemas/UserName"}]},"role":{"description":"The member organization role.","allOf":[{"$ref":"#/components/schemas/OrganizationRole"}]},"slug":{"description":"The member slug.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"uuid":{"description":"The member UUID.","allOf":[{"$ref":"#/components/schemas/UserUuid"}]}},"required":["created","email","modified","name","role","slug","uuid"]},"JsonMembers":{"type":"array","items":{"$ref":"#/components/schemas/JsonMember"}},"JsonMetric":{"type":"object","properties":{"lower_value":{"nullable":true,"type":"number","format":"double"},"upper_value":{"nullable":true,"type":"number","format":"double"},"uuid":{"$ref":"#/components/schemas/MetricUuid"},"value":{"type":"number","format":"double"}},"required":["uuid","value"]},"JsonModel":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"lower_boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Boundary"}]},"max_sample_size":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"min_sample_size":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"replaced":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"test":{"$ref":"#/components/schemas/ModelTest"},"upper_boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Boundary"}]},"uuid":{"$ref":"#/components/schemas/ModelUuid"},"window":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["created","test","uuid"]},"JsonNewBenchmark":{"type":"object","properties":{"name":{"description":"The name of the benchmark. Maximum length is 1,024 characters.","allOf":[{"$ref":"#/components/schemas/BenchmarkName"}]},"slug":{"nullable":true,"description":"The preferred slug for the benchmark. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["name"]},"JsonNewBranch":{"type":"object","properties":{"name":{"description":"The name of the branch. Maximum length is 256 characters.","allOf":[{"$ref":"#/components/schemas/BranchName"}]},"slug":{"nullable":true,"description":"The preferred slug for the branch. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"start_point":{"nullable":true,"description":"The start point for the new branch. Historical branch versions from the start point branch will be shallow copied over to the new branch head. That is, historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their base branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.","allOf":[{"$ref":"#/components/schemas/JsonNewStartPoint"}]}},"required":["name"]},"JsonNewCheckout":{"type":"object","properties":{"entitlements":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Entitlements"}]},"level":{"$ref":"#/components/schemas/PlanLevel"},"organization":{"$ref":"#/components/schemas/ResourceId"},"self_hosted":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/OrganizationUuid"}]}},"required":["level","organization"]},"JsonNewMeasure":{"type":"object","properties":{"name":{"description":"The name of the measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred slug for the measure. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"units":{"description":"The units of measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]}},"required":["name","units"]},"JsonNewMember":{"type":"object","properties":{"email":{"description":"The email for the invitee. This will be used to both send the invite and to create the user account if they do not exist.","allOf":[{"$ref":"#/components/schemas/Email"}]},"name":{"nullable":true,"description":"The user name for the invitee.","allOf":[{"$ref":"#/components/schemas/UserName"}]},"role":{"description":"The organization role for the invitee.","allOf":[{"$ref":"#/components/schemas/OrganizationRole"}]}},"required":["email","role"]},"JsonNewOrganization":{"type":"object","properties":{"name":{"description":"The name of the organization. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred slug for the organization. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["name"]},"JsonNewPlan":{"type":"object","properties":{"checkout":{"$ref":"#/components/schemas/NonEmpty"},"entitlements":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Entitlements"}]},"level":{"$ref":"#/components/schemas/PlanLevel"},"remote":{"nullable":true,"type":"boolean"},"self_hosted":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/OrganizationUuid"}]}},"required":["checkout","level"]},"JsonNewPlot":{"type":"object","properties":{"benchmarks":{"description":"The benchmarks to include in the plot. At least one benchmark must be specified.","type":"array","items":{"$ref":"#/components/schemas/BenchmarkUuid"}},"branches":{"description":"The branches to include in the plot. At least one branch must be specified.","type":"array","items":{"$ref":"#/components/schemas/BranchUuid"}},"index":{"nullable":true,"description":"The index of the plot. Maximum index is 64.","allOf":[{"$ref":"#/components/schemas/Index"}]},"lower_boundary":{"description":"Display lower boundary limits.","type":"boolean"},"lower_value":{"description":"Display metric lower values.","type":"boolean"},"measures":{"description":"The measures to include in the plot. At least one measure must be specified.","type":"array","items":{"$ref":"#/components/schemas/MeasureUuid"}},"testbeds":{"description":"The testbeds to include in the plot. At least one testbed must be specified.","type":"array","items":{"$ref":"#/components/schemas/TestbedUuid"}},"title":{"nullable":true,"description":"The title of the plot. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"upper_boundary":{"description":"Display upper boundary limits.","type":"boolean"},"upper_value":{"description":"Display metric upper values.","type":"boolean"},"window":{"description":"The window of time for the plot, in seconds. Metrics outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]},"x_axis":{"description":"The x-axis to use for the plot.","allOf":[{"$ref":"#/components/schemas/XAxis"}]}},"required":["benchmarks","branches","lower_boundary","lower_value","measures","testbeds","upper_boundary","upper_value","window","x_axis"]},"JsonNewProject":{"type":"object","properties":{"name":{"description":"The name of the project. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred slug for the project. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"url":{"nullable":true,"description":"The URL for the project. If the project is public, the URL will be accessible listed on its Perf Page.","allOf":[{"$ref":"#/components/schemas/Url"}]},"visibility":{"nullable":true,"description":"➕ Bencher Plus: Set the visibility of the project. Creating a `private` project requires a valid Bencher Plus subscription.","allOf":[{"$ref":"#/components/schemas/Visibility"}]}},"required":["name"]},"JsonNewReport":{"type":"object","properties":{"branch":{"description":"Branch UUID, slug, or name. If the branch does not exist, it will be created.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"end_time":{"description":"End time for the report. Must be an ISO 8601 formatted string.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"hash":{"nullable":true,"description":"Full `git` commit hash. All reports with the same `git` commit hash will be considered part of the same branch version. This can be useful for tracking the performance of a specific commit across multiple testbeds.","allOf":[{"$ref":"#/components/schemas/GitHash"}]},"results":{"description":"An array of benchmarks results.","type":"array","items":{"type":"string"}},"settings":{"nullable":true,"description":"Settings for how to handle the report.","allOf":[{"$ref":"#/components/schemas/JsonReportSettings"}]},"start_point":{"nullable":true,"description":"The start point for the report branch. If the branch does not exist, the start point will be used to create a new branch. If the branch already exists and the start point is not provided, the current branch will be used. If the branch already exists and the start point provided is different, a new branch head will be created from the new start point. If a new branch or new branch head is created with a start point, historical branch versions from the start point branch will be shallow copied over to the new branch. That is, historical metrics data for the start point branch will appear in queries for the branch. For example, pull request branches often use their base branch as their start point branch. If a new branch is created, it is not kept in sync with the start point branch.","allOf":[{"$ref":"#/components/schemas/JsonUpdateStartPoint"}]},"start_time":{"description":"Start time for the report. Must be an ISO 8601 formatted string.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"testbed":{"description":"Testbed UUID, slug, or name. If the testbed does not exist, it will be created.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"thresholds":{"nullable":true,"description":"Thresholds to use for the branch, testbed, and measures in the report. If a threshold does not exist, it will be created. If a threshold exists and the model is different, it will be updated with the new model. If a measure name or slug is provided, the measure will be created if it does not exist.","allOf":[{"$ref":"#/components/schemas/JsonReportThresholds"}]}},"required":["branch","end_time","results","start_time","testbed"]},"JsonNewStartPoint":{"type":"object","properties":{"branch":{"description":"The UUID, slug, or name of the branch to use as the start point.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"clone_thresholds":{"nullable":true,"description":"If set to `true`, the thresholds from the start point branch will be deep copied to the new branch. This can be useful for pull request branches that should have the same thresholds as their target branch. Requires the `branch` field to be set.","type":"boolean"},"hash":{"nullable":true,"description":"The full `git` hash of the branch to use as the start point. Requires the `branch` field to be set.","allOf":[{"$ref":"#/components/schemas/GitHash"}]},"max_versions":{"nullable":true,"description":"The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 255. Requires the `branch` field to be set.","type":"integer","format":"uint32","minimum":0}},"required":["branch"]},"JsonNewTestbed":{"type":"object","properties":{"name":{"description":"The name of the testbed. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred slug for the testbed. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["name"]},"JsonNewThreshold":{"type":"object","properties":{"branch":{"description":"The UUID, slug, or name of the threshold branch.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"lower_boundary":{"nullable":true,"description":"The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"max_sample_size":{"nullable":true,"description":"The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"measure":{"description":"The UUID, slug, or name of the threshold measure.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"min_sample_size":{"nullable":true,"description":"The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"test":{"description":"The test used by the threshold model to calculate the baseline and boundary limits.","allOf":[{"$ref":"#/components/schemas/ModelTest"}]},"testbed":{"description":"The UUID, slug, or name of the threshold testbed.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"upper_boundary":{"nullable":true,"description":"The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"window":{"nullable":true,"description":"The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["branch","measure","test","testbed"]},"JsonNewToken":{"type":"object","properties":{"name":{"description":"The name of the token. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"ttl":{"nullable":true,"description":"The time-to-live (TTL) for the token in seconds. If not provided, the token will not expire for over 128 years.","type":"integer","format":"uint32","minimum":0}},"required":["name"]},"JsonOAuth":{"type":"object","properties":{"code":{"$ref":"#/components/schemas/Secret"},"invite":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Jwt"}]},"plan":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/PlanLevel"}]}},"required":["code"]},"JsonOneMetric":{"type":"object","properties":{"alert":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonPerfAlert"}]},"benchmark":{"$ref":"#/components/schemas/JsonBenchmark"},"boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonBoundary"}]},"branch":{"$ref":"#/components/schemas/JsonBranch"},"end_time":{"$ref":"#/components/schemas/DateTime"},"iteration":{"$ref":"#/components/schemas/Iteration"},"measure":{"$ref":"#/components/schemas/JsonMeasure"},"metric":{"$ref":"#/components/schemas/JsonMetric"},"report":{"$ref":"#/components/schemas/ReportUuid"},"start_time":{"$ref":"#/components/schemas/DateTime"},"testbed":{"$ref":"#/components/schemas/JsonTestbed"},"threshold":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonThresholdModel"}]},"uuid":{"$ref":"#/components/schemas/MetricUuid"}},"required":["benchmark","branch","end_time","iteration","measure","metric","report","start_time","testbed","uuid"]},"JsonOrganization":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"license":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Jwt"}]},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/OrganizationUuid"}},"required":["created","modified","name","slug","uuid"]},"JsonOrganizationPatch":{"type":"object","properties":{"license":{"nullable":true,"description":"➕ Bencher Plus: The new license for the organization. Set to `null` to remove the current license.","allOf":[{"$ref":"#/components/schemas/Jwt"}]},"name":{"nullable":true,"description":"The new name of the organization. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the organization. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}}},"JsonOrganizationPatchNull":{"type":"object","properties":{"license":{"type":"string","enum":[null]},"name":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["license"]},"JsonOrganizations":{"type":"array","items":{"$ref":"#/components/schemas/JsonOrganization"}},"JsonPerf":{"type":"object","properties":{"end_time":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"project":{"$ref":"#/components/schemas/JsonProject"},"results":{"type":"array","items":{"$ref":"#/components/schemas/JsonPerfMetrics"}},"start_time":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]}},"required":["project","results"]},"JsonPerfAlert":{"type":"object","properties":{"limit":{"$ref":"#/components/schemas/BoundaryLimit"},"modified":{"$ref":"#/components/schemas/DateTime"},"status":{"$ref":"#/components/schemas/AlertStatus"},"uuid":{"$ref":"#/components/schemas/AlertUuid"}},"required":["limit","modified","status","uuid"]},"JsonPerfMetric":{"type":"object","properties":{"alert":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonPerfAlert"}]},"boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonBoundary"}]},"end_time":{"$ref":"#/components/schemas/DateTime"},"iteration":{"$ref":"#/components/schemas/Iteration"},"metric":{"$ref":"#/components/schemas/JsonMetric"},"report":{"$ref":"#/components/schemas/ReportUuid"},"start_time":{"$ref":"#/components/schemas/DateTime"},"threshold":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonThresholdModel"}]},"version":{"$ref":"#/components/schemas/JsonVersion"}},"required":["end_time","iteration","metric","report","start_time","version"]},"JsonPerfMetrics":{"type":"object","properties":{"benchmark":{"$ref":"#/components/schemas/JsonBenchmark"},"branch":{"$ref":"#/components/schemas/JsonBranch"},"measure":{"$ref":"#/components/schemas/JsonMeasure"},"metrics":{"type":"array","items":{"$ref":"#/components/schemas/JsonPerfMetric"}},"testbed":{"$ref":"#/components/schemas/JsonTestbed"}},"required":["benchmark","branch","measure","metrics","testbed"]},"JsonPlan":{"type":"object","properties":{"card":{"$ref":"#/components/schemas/JsonCardDetails"},"current_period_end":{"$ref":"#/components/schemas/DateTime"},"current_period_start":{"$ref":"#/components/schemas/DateTime"},"customer":{"$ref":"#/components/schemas/JsonCustomer"},"level":{"$ref":"#/components/schemas/PlanLevel"},"license":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonLicense"}]},"organization":{"$ref":"#/components/schemas/OrganizationUuid"},"status":{"$ref":"#/components/schemas/PlanStatus"},"unit_amount":{"$ref":"#/components/schemas/BigInt"}},"required":["card","current_period_end","current_period_start","customer","level","organization","status","unit_amount"]},"JsonPlot":{"type":"object","properties":{"benchmarks":{"type":"array","items":{"$ref":"#/components/schemas/BenchmarkUuid"}},"branches":{"type":"array","items":{"$ref":"#/components/schemas/BranchUuid"}},"created":{"$ref":"#/components/schemas/DateTime"},"lower_boundary":{"type":"boolean"},"lower_value":{"type":"boolean"},"measures":{"type":"array","items":{"$ref":"#/components/schemas/MeasureUuid"}},"modified":{"$ref":"#/components/schemas/DateTime"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"testbeds":{"type":"array","items":{"$ref":"#/components/schemas/TestbedUuid"}},"title":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"upper_boundary":{"type":"boolean"},"upper_value":{"type":"boolean"},"uuid":{"$ref":"#/components/schemas/PlotUuid"},"window":{"$ref":"#/components/schemas/Window"},"x_axis":{"$ref":"#/components/schemas/XAxis"}},"required":["benchmarks","branches","created","lower_boundary","lower_value","measures","modified","project","testbeds","upper_boundary","upper_value","uuid","window","x_axis"]},"JsonPlotPatch":{"type":"object","properties":{"index":{"nullable":true,"description":"The new index for the plot. Maximum index is 64.","allOf":[{"$ref":"#/components/schemas/Index"}]},"title":{"nullable":true,"description":"The new title of the plot. Set to `null` to remove the current title. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"window":{"nullable":true,"description":"The window of time for the plot, in seconds. Metrics outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]}}},"JsonPlotPatchNull":{"type":"object","properties":{"index":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Index"}]},"title":{"type":"string","enum":[null]},"window":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["title"]},"JsonPlots":{"type":"array","items":{"$ref":"#/components/schemas/JsonPlot"}},"JsonPlus":{"type":"object","properties":{"cloud":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCloud"}]},"github":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonGitHub"}]},"litestream":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonLitestream"}]},"stats":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonStats"}]}}},"JsonProduct":{"type":"object","properties":{"id":{"type":"string"},"licensed":{"type":"object","additionalProperties":{"type":"string"}},"metered":{"type":"object","additionalProperties":{"type":"string"}}},"required":["id","licensed","metered"]},"JsonProducts":{"type":"object","properties":{"enterprise":{"$ref":"#/components/schemas/JsonProduct"},"team":{"$ref":"#/components/schemas/JsonProduct"}},"required":["enterprise","team"]},"JsonProject":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"organization":{"$ref":"#/components/schemas/OrganizationUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"url":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Url"}]},"uuid":{"$ref":"#/components/schemas/ProjectUuid"},"visibility":{"$ref":"#/components/schemas/Visibility"}},"required":["created","modified","name","organization","slug","uuid","visibility"]},"JsonProjectPatch":{"type":"object","properties":{"name":{"nullable":true,"description":"The new name of the project. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the project. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"url":{"nullable":true,"description":"The new URL of the project. Set to `null` to remove the current URL.","allOf":[{"$ref":"#/components/schemas/Url"}]},"visibility":{"nullable":true,"description":"➕ Bencher Plus: Set the new visibility of the project. Moving to a `private` project requires a valid Bencher Plus subscription.","allOf":[{"$ref":"#/components/schemas/Visibility"}]}}},"JsonProjectPatchNull":{"type":"object","properties":{"name":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Slug"}]},"url":{"type":"string","enum":[null]},"visibility":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Visibility"}]}},"required":["url"]},"JsonProjects":{"type":"array","items":{"$ref":"#/components/schemas/JsonProject"}},"JsonPubUser":{"type":"object","properties":{"name":{"$ref":"#/components/schemas/UserName"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/UserUuid"}},"required":["name","slug","uuid"]},"JsonRemoveModel":{"type":"object","properties":{"test":{"type":"string","enum":[null]}},"required":["test"]},"JsonReplica":{"oneOf":[{"type":"object","properties":{"path":{"type":"string"},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["file"]},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["path","scheme"]},{"type":"object","properties":{"host":{"type":"string"},"key_path":{"nullable":true,"type":"string"},"password":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Secret"}]},"path":{"nullable":true,"type":"string"},"port":{"type":"integer","format":"uint16","minimum":0},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["sftp"]},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"user":{"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["host","port","scheme","user"]},{"type":"object","properties":{"access_key_id":{"type":"string"},"bucket":{"type":"string"},"endpoint":{"nullable":true,"type":"string"},"path":{"nullable":true,"type":"string"},"region":{"nullable":true,"type":"string"},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["s3"]},"secret_access_key":{"$ref":"#/components/schemas/Secret"},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["access_key_id","bucket","scheme","secret_access_key"]},{"type":"object","properties":{"account_key":{"$ref":"#/components/schemas/Secret"},"account_name":{"type":"string"},"bucket":{"type":"string"},"path":{"type":"string"},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["abs"]},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["account_key","account_name","bucket","path","scheme"]},{"type":"object","properties":{"bucket":{"type":"string"},"path":{"nullable":true,"type":"string"},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["gcs"]},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["bucket","scheme"]}]},"JsonReport":{"type":"object","properties":{"adapter":{"$ref":"#/components/schemas/Adapter"},"alerts":{"type":"array","items":{"$ref":"#/components/schemas/JsonAlert"}},"branch":{"$ref":"#/components/schemas/JsonBranch"},"created":{"$ref":"#/components/schemas/DateTime"},"end_time":{"$ref":"#/components/schemas/DateTime"},"project":{"$ref":"#/components/schemas/JsonProject"},"results":{"type":"array","items":{"type":"array","items":{"$ref":"#/components/schemas/JsonReportResult"}}},"start_time":{"$ref":"#/components/schemas/DateTime"},"testbed":{"$ref":"#/components/schemas/JsonTestbed"},"user":{"$ref":"#/components/schemas/JsonPubUser"},"uuid":{"$ref":"#/components/schemas/ReportUuid"}},"required":["adapter","alerts","branch","created","end_time","project","results","start_time","testbed","user","uuid"]},"JsonReportMeasure":{"type":"object","properties":{"boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonBoundary"}]},"measure":{"$ref":"#/components/schemas/JsonMeasure"},"metric":{"$ref":"#/components/schemas/JsonMetric"},"threshold":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonThresholdModel"}]}},"required":["measure","metric"]},"JsonReportResult":{"type":"object","properties":{"benchmark":{"$ref":"#/components/schemas/JsonBenchmark"},"iteration":{"$ref":"#/components/schemas/Iteration"},"measures":{"type":"array","items":{"$ref":"#/components/schemas/JsonReportMeasure"}}},"required":["benchmark","iteration","measures"]},"JsonReportSettings":{"type":"object","properties":{"adapter":{"nullable":true,"description":"The benchmark harness adapter for parsing the benchmark results. If no adapter is specified, then the Magic adapter will be used.","allOf":[{"$ref":"#/components/schemas/Adapter"}]},"average":{"nullable":true,"description":"Benchmark harness suggested central tendency (ie average). Some benchmarking harnesses provide multiple averages, such as mean and median.","allOf":[{"$ref":"#/components/schemas/JsonAverage"}]},"fold":{"nullable":true,"description":"Fold multiple results into a single result using the selected operation. This can be useful for taking the min, max, mean, or median of the benchmark results.","allOf":[{"$ref":"#/components/schemas/JsonFold"}]}}},"JsonReportThresholds":{"type":"object","properties":{"models":{"nullable":true,"description":"Map of measure UUID, slug, or name to the threshold model to use. If a measure name or slug is provided, the measure will be created if it does not exist.","type":"object","additionalProperties":{"$ref":"#/components/schemas/Model"}},"reset":{"nullable":true,"description":"Reset all thresholds for the branch and testbed. Any models present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed.","type":"boolean"}}},"JsonReports":{"type":"array","items":{"$ref":"#/components/schemas/JsonReport"}},"JsonRestart":{"type":"object","properties":{"delay":{"nullable":true,"description":"The delay in seconds before the server restarts. Defaults to 3 seconds, if not specified.","type":"integer","format":"uint64","minimum":0}}},"JsonSecurity":{"type":"object","properties":{"issuer":{"nullable":true,"type":"string"},"secret_key":{"$ref":"#/components/schemas/Secret"}},"required":["secret_key"]},"JsonServer":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"uuid":{"$ref":"#/components/schemas/ServerUuid"},"version":{"nullable":true,"type":"string"}},"required":["created","uuid"]},"JsonServer2":{"type":"object","properties":{"bind_address":{"type":"string"},"request_body_max_bytes":{"type":"integer","format":"uint","minimum":0},"tls":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonTls"}]}},"required":["bind_address","request_body_max_bytes"]},"JsonServerStats":{"type":"object","properties":{"active_projects":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]},"admins":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonUsers"}]},"metrics":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]},"metrics_per_report":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohortAvg"}]},"organizations":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonOrganizations"}]},"projects":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]},"reports":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]},"reports_per_project":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohortAvg"}]},"server":{"$ref":"#/components/schemas/JsonServer"},"timestamp":{"$ref":"#/components/schemas/DateTime"},"top_projects":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonTopCohort"}]},"users":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]}},"required":["server","timestamp"]},"JsonSignup":{"type":"object","properties":{"email":{"$ref":"#/components/schemas/Email"},"i_agree":{"description":"I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)","type":"boolean"},"invite":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Jwt"}]},"name":{"$ref":"#/components/schemas/UserName"},"plan":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/PlanLevel"}]},"slug":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["email","i_agree","name"]},"JsonSmtp":{"type":"object","properties":{"from_email":{"$ref":"#/components/schemas/Email"},"from_name":{"$ref":"#/components/schemas/ResourceName"},"hostname":{"$ref":"#/components/schemas/ResourceName"},"port":{"nullable":true,"type":"integer","format":"uint16","minimum":0},"secret":{"$ref":"#/components/schemas/Secret"},"starttls":{"nullable":true,"type":"boolean"},"username":{"$ref":"#/components/schemas/ResourceName"}},"required":["from_email","from_name","hostname","secret","username"]},"JsonSpec":{},"JsonStartPoint":{"type":"object","properties":{"branch":{"$ref":"#/components/schemas/BranchUuid"},"head":{"$ref":"#/components/schemas/HeadUuid"},"version":{"$ref":"#/components/schemas/JsonVersion"}},"required":["branch","head","version"]},"JsonStats":{"type":"object","properties":{"enabled":{"nullable":true,"type":"boolean"},"offset":{"nullable":true,"type":"integer","format":"uint32","minimum":0}}},"JsonTestbed":{"type":"object","properties":{"archived":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"created":{"$ref":"#/components/schemas/DateTime"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/TestbedUuid"}},"required":["created","modified","name","project","slug","uuid"]},"JsonTestbeds":{"type":"array","items":{"$ref":"#/components/schemas/JsonTestbed"}},"JsonThreshold":{"type":"object","properties":{"branch":{"$ref":"#/components/schemas/JsonBranch"},"created":{"$ref":"#/components/schemas/DateTime"},"measure":{"$ref":"#/components/schemas/JsonMeasure"},"model":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonModel"}]},"modified":{"$ref":"#/components/schemas/DateTime"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"testbed":{"$ref":"#/components/schemas/JsonTestbed"},"uuid":{"$ref":"#/components/schemas/ThresholdUuid"}},"required":["branch","created","measure","modified","project","testbed","uuid"]},"JsonThresholdModel":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"model":{"$ref":"#/components/schemas/JsonModel"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"uuid":{"$ref":"#/components/schemas/ThresholdUuid"}},"required":["created","model","project","uuid"]},"JsonThresholds":{"type":"array","items":{"$ref":"#/components/schemas/JsonThreshold"}},"JsonTls":{"oneOf":[{"type":"object","properties":{"cert_file":{"type":"string"},"key_file":{"type":"string"},"type":{"type":"string","enum":["as_file"]}},"required":["cert_file","key_file","type"]},{"type":"object","properties":{"certs":{"type":"array","items":{"type":"integer","format":"uint8","minimum":0}},"key":{"type":"array","items":{"type":"integer","format":"uint8","minimum":0}},"type":{"type":"string","enum":["as_bytes"]}},"required":["certs","key","type"]}]},"JsonToken":{"type":"object","properties":{"creation":{"$ref":"#/components/schemas/DateTime"},"expiration":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"token":{"$ref":"#/components/schemas/Jwt"},"user":{"$ref":"#/components/schemas/UserUuid"},"uuid":{"$ref":"#/components/schemas/TokenUuid"}},"required":["creation","expiration","name","token","user","uuid"]},"JsonTokens":{"type":"array","items":{"$ref":"#/components/schemas/JsonToken"}},"JsonTopCohort":{"type":"object","properties":{"month":{"type":"array","items":{"$ref":"#/components/schemas/JsonTopProject"}},"total":{"type":"array","items":{"$ref":"#/components/schemas/JsonTopProject"}},"week":{"type":"array","items":{"$ref":"#/components/schemas/JsonTopProject"}}},"required":["month","total","week"]},"JsonTopProject":{"type":"object","properties":{"metrics":{"type":"integer","format":"uint64","minimum":0},"name":{"$ref":"#/components/schemas/ResourceName"},"percentage":{"type":"number","format":"double"},"uuid":{"$ref":"#/components/schemas/ProjectUuid"}},"required":["metrics","name","percentage","uuid"]},"JsonUpdateAlert":{"type":"object","properties":{"status":{"nullable":true,"description":"The new status of the alert.","allOf":[{"$ref":"#/components/schemas/UpdateAlertStatus"}]}}},"JsonUpdateBenchmark":{"type":"object","properties":{"archived":{"nullable":true,"description":"Set whether the benchmark is archived.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the benchmark. Maximum length is 1,024 characters.","allOf":[{"$ref":"#/components/schemas/BenchmarkName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the benchmark. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}}},"JsonUpdateBranch":{"type":"object","properties":{"archived":{"nullable":true,"description":"Set whether the branch is archived.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the branch. Maximum length is 256 characters.","allOf":[{"$ref":"#/components/schemas/BranchName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the branch. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"start_point":{"nullable":true,"description":"The new start point for the branch.","allOf":[{"$ref":"#/components/schemas/JsonUpdateStartPoint"}]}}},"JsonUpdateConfig":{"type":"object","properties":{"config":{"$ref":"#/components/schemas/JsonConfig"},"delay":{"nullable":true,"type":"integer","format":"uint64","minimum":0}},"required":["config"]},"JsonUpdateMeasure":{"type":"object","properties":{"archived":{"nullable":true,"description":"Set whether the measure is archived.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"units":{"nullable":true,"description":"The new units of measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]}}},"JsonUpdateMember":{"type":"object","properties":{"role":{"nullable":true,"description":"The new organization role for the member.","allOf":[{"$ref":"#/components/schemas/OrganizationRole"}]}}},"JsonUpdateModel":{"type":"object","properties":{"lower_boundary":{"nullable":true,"description":"The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"max_sample_size":{"nullable":true,"description":"The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"min_sample_size":{"nullable":true,"description":"The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"test":{"description":"The test used by the threshold model to calculate the baseline and boundary limits.","allOf":[{"$ref":"#/components/schemas/ModelTest"}]},"upper_boundary":{"nullable":true,"description":"The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"window":{"nullable":true,"description":"The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["test"]},"JsonUpdateOrganization":{"anyOf":[{"$ref":"#/components/schemas/JsonOrganizationPatch"},{"$ref":"#/components/schemas/JsonOrganizationPatchNull"}]},"JsonUpdatePlot":{"anyOf":[{"$ref":"#/components/schemas/JsonPlotPatch"},{"$ref":"#/components/schemas/JsonPlotPatchNull"}]},"JsonUpdateProject":{"anyOf":[{"$ref":"#/components/schemas/JsonProjectPatch"},{"$ref":"#/components/schemas/JsonProjectPatchNull"}]},"JsonUpdateStartPoint":{"type":"object","properties":{"branch":{"nullable":true,"description":"The UUID, slug, or name of the branch to use as the start point.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"clone_thresholds":{"nullable":true,"description":"If set to `true`, the thresholds from the start point branch will be deep copied to the branch. This can be useful for pull request branches that should have the same thresholds as their target branch. Requires the `branch` field to be set.","type":"boolean"},"hash":{"nullable":true,"description":"The full git hash of the branch to use as the start point. Requires the `branch` field to be set.","allOf":[{"$ref":"#/components/schemas/GitHash"}]},"max_versions":{"nullable":true,"description":"The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 255. Requires the `branch` field to be set.","type":"integer","format":"uint32","minimum":0},"reset":{"nullable":true,"description":"Reset the branch head to an empty state. If the start point `branch` is specified, the new branch head will begin at that start point. Otherwise, the branch head will be reset to an empty state.","type":"boolean"}}},"JsonUpdateTestbed":{"type":"object","properties":{"archived":{"nullable":true,"description":"Set whether the testbed is archived.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the testbed. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the testbed. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}}},"JsonUpdateThreshold":{"anyOf":[{"$ref":"#/components/schemas/JsonUpdateModel"},{"$ref":"#/components/schemas/JsonRemoveModel"}]},"JsonUpdateToken":{"type":"object","properties":{"name":{"nullable":true,"description":"The new name of the token. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]}}},"JsonUpdateUser":{"type":"object","properties":{"admin":{"nullable":true,"description":"Update whether the user is an admin. Must be an admin to update this field.","type":"boolean"},"email":{"nullable":true,"description":"The new email for the user.","allOf":[{"$ref":"#/components/schemas/Email"}]},"locked":{"nullable":true,"description":"Update whether the user is locked. Must be an admin to update this field.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the user. Maximum length is 64 characters. May only contain alphanumeric characters, non-leading or trailing spaces, and the following characters: , . - \'","allOf":[{"$ref":"#/components/schemas/UserName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the user. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}}},"JsonUsage":{"type":"object","properties":{"end_time":{"description":"The end time of the usage.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"kind":{"description":"The kind of usage.","allOf":[{"$ref":"#/components/schemas/UsageKind"}]},"license":{"nullable":true,"description":"The organization license.","allOf":[{"$ref":"#/components/schemas/JsonLicense"}]},"organization":{"description":"The organization UUID.","allOf":[{"$ref":"#/components/schemas/OrganizationUuid"}]},"plan":{"nullable":true,"description":"The organization plan.","allOf":[{"$ref":"#/components/schemas/JsonPlan"}]},"start_time":{"description":"The start time of the usage.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"usage":{"nullable":true,"description":"The metrics usage amount.","type":"integer","format":"uint32","minimum":0}},"required":["end_time","kind","organization","start_time"]},"JsonUser":{"type":"object","properties":{"admin":{"type":"boolean"},"email":{"$ref":"#/components/schemas/Email"},"locked":{"type":"boolean"},"name":{"$ref":"#/components/schemas/UserName"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/UserUuid"}},"required":["admin","email","locked","name","slug","uuid"]},"JsonUsers":{"type":"array","items":{"$ref":"#/components/schemas/JsonUser"}},"JsonVersion":{"type":"object","properties":{"hash":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/GitHash"}]},"number":{"$ref":"#/components/schemas/VersionNumber"}},"required":["number"]},"Jwt":{"type":"string"},"LastFour":{"type":"string"},"LogLevel":{"type":"string","enum":["trace","debug","info","warn","error","critical"]},"MeasureUuid":{"type":"string","format":"uuid"},"MetricUuid":{"type":"string","format":"uuid"},"Model":{"type":"object","properties":{"lower_boundary":{"nullable":true,"description":"The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"max_sample_size":{"nullable":true,"description":"The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"min_sample_size":{"nullable":true,"description":"The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"test":{"description":"The test used by the threshold model to calculate the baseline and boundary limits.","allOf":[{"$ref":"#/components/schemas/ModelTest"}]},"upper_boundary":{"nullable":true,"description":"The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"window":{"nullable":true,"description":"The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["test"]},"ModelTest":{"type":"string","enum":["static","percentage","z_score","t_test","log_normal","iqr","delta_iqr"]},"ModelUuid":{"type":"string","format":"uuid"},"NameId":{"type":"string"},"NonEmpty":{"type":"string"},"OrganizationRole":{"oneOf":[{"description":"The organization leader role.","type":"string","enum":["leader"]}]},"OrganizationUuid":{"type":"string","format":"uuid"},"PlanLevel":{"type":"string","enum":["free","team","enterprise"]},"PlanStatus":{"type":"string","enum":["active","canceled","incomplete","incomplete_expired","past_due","paused","trialing","unpaid"]},"PlotUuid":{"type":"string","format":"uuid"},"ProjectUuid":{"type":"string","format":"uuid"},"ReportUuid":{"type":"string","format":"uuid"},"ResourceId":{"type":"string"},"ResourceName":{"type":"string"},"SampleSize":{"type":"integer","format":"uint32","minimum":0},"Secret":{"type":"string"},"ServerLog":{"oneOf":[{"type":"object","properties":{"stderr_terminal":{"type":"object","properties":{"level":{"$ref":"#/components/schemas/LogLevel"}},"required":["level"]}},"required":["stderr_terminal"],"additionalProperties":false},{"type":"object","properties":{"file":{"type":"object","properties":{"if_exists":{"$ref":"#/components/schemas/IfExists"},"level":{"$ref":"#/components/schemas/LogLevel"},"path":{"type":"string"}},"required":["if_exists","level","path"]}},"required":["file"],"additionalProperties":false}]},"ServerUuid":{"type":"string","format":"uuid"},"Slug":{"type":"string"},"TestbedUuid":{"type":"string","format":"uuid"},"ThresholdUuid":{"type":"string","format":"uuid"},"TokenUuid":{"type":"string","format":"uuid"},"UpdateAlertStatus":{"oneOf":[{"description":"The alert is active.","type":"string","enum":["active"]},{"description":"The alert has been dismissed by a user.","type":"string","enum":["dismissed"]}]},"Url":{"type":"string"},"UsageKind":{"oneOf":[{"description":"Bencher Cloud (Free)","type":"string","enum":["cloud_free"]},{"description":"Bencher Cloud (Metered)","type":"string","enum":["cloud_metered"]},{"description":"Bencher Cloud (Licensed)","type":"string","enum":["cloud_licensed"]},{"description":"Bencher Self-Hosted (Licensed) via Bencher Cloud","type":"string","enum":["cloud_self_hosted_licensed"]},{"description":"Bencher Self-Hosted (Free)","type":"string","enum":["self_hosted_free"]},{"description":"Bencher Self-Hosted (Licensed)","type":"string","enum":["self_hosted_licensed"]}]},"UserName":{"type":"string"},"UserUuid":{"type":"string","format":"uuid"},"VersionNumber":{"type":"integer","format":"uint32","minimum":0},"Visibility":{"type":"string","enum":["public","private"]},"Window":{"type":"integer","format":"uint32","minimum":0},"XAxis":{"type":"string","enum":["date_time","version"]},"JsonDirection":{"type":"string","enum":["asc","desc"]},"OrganizationsSort":{"oneOf":[{"description":"Sort by organization name.","type":"string","enum":["name"]}]},"Search":{"type":"string"},"OrganizationPermission":{"type":"string","enum":["view","create","edit","delete","manage","view_role","create_role","edit_role","delete_role"]},"OrgMembersSort":{"oneOf":[{"description":"Sort by user name.","type":"string","enum":["name"]}]},"OrgProjectsSort":{"oneOf":[{"description":"Sort by project name.","type":"string","enum":["name"]}]},"ProjectsSort":{"oneOf":[{"description":"Sort by project name.","type":"string","enum":["name"]}]},"ProjAlertsSort":{"oneOf":[{"description":"Sort by alert creation date time.","type":"string","enum":["created"]},{"description":"Sort by alert modified date time.","type":"string","enum":["modified"]}]},"ProjectPermission":{"type":"string","enum":["view","create","edit","delete","manage","view_role","create_role","edit_role","delete_role"]},"ProjBenchmarksSort":{"oneOf":[{"description":"Sort by benchmark name.","type":"string","enum":["name"]}]},"ProjBranchesSort":{"oneOf":[{"description":"Sort by branch name.","type":"string","enum":["name"]}]},"ProjMeasuresSort":{"oneOf":[{"description":"Sort by measure name.","type":"string","enum":["name"]}]},"DateTimeMillis":{"$ref":"#/components/schemas/TimestampMillis"},"TimestampMillis":{"type":"integer","format":"int64"},"ProjPlotsSort":{"oneOf":[{"description":"Sort by plot index.","type":"string","enum":["index"]},{"description":"Sort by plot title.","type":"string","enum":["title"]}]},"ProjReportsSort":{"oneOf":[{"description":"Sort by date time.","type":"string","enum":["date_time"]}]},"ProjTestbedsSort":{"oneOf":[{"description":"Sort by testbed name.","type":"string","enum":["name"]}]},"ProjThresholdsSort":{"oneOf":[{"description":"Sort by threshold creation date time.","type":"string","enum":["created"]},{"description":"Sort by threshold modified date time.","type":"string","enum":["modified"]}]},"UsersSort":{"oneOf":[{"description":"Sort by user name.","type":"string","enum":["name"]}]},"UserTokensSort":{"oneOf":[{"description":"Sort by token name.","type":"string","enum":["name"]}]}},"responses":{"Error":{"description":"Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}}},"tags":[{"name":"alerts","description":"Alerts"},{"name":"allowed"},{"name":"auth","description":"Auth"},{"name":"benchmarks","description":"Benchmarks"},{"name":"branches","description":"Branches"},{"name":"checkout"},{"name":"measures","description":"Measures"},{"name":"members"},{"name":"metrics","description":"Metrics"},{"name":"models","description":"Models"},{"name":"organizations","description":"Organizations"},{"name":"perf","description":"Perf Metrics"},{"name":"plan"},{"name":"plots","description":"Plots"},{"name":"projects","description":"Projects"},{"name":"reports","description":"Reports"},{"name":"run"},{"name":"server","description":"Server"},{"name":"stats"},{"name":"testbeds","description":"Testbeds"},{"name":"thresholds","description":"Thresholds"},{"name":"tokens","description":"API Tokens"},{"name":"usage"},{"name":"users","description":"Users"}]}');
+module.exports = /*#__PURE__*/JSON.parse('{"openapi":"3.0.3","info":{"title":"Bencher API","version":"0.4.35"},"paths":{"/":{"get":{"tags":["server"],"operationId":"server_root_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"title":"Null","type":"string","enum":[null]}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["server","stats"],"operationId":"root_server_stats_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonServerStats"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"title":"Null","type":"string","enum":[null]}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/accept":{"post":{"tags":["auth","organizations"],"operationId":"auth_accept_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAccept"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthAck"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/confirm":{"post":{"tags":["auth"],"operationId":"auth_confirm_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonConfirm"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthUser"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/github":{"post":{"tags":["auth"],"operationId":"auth_github_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOAuth"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthUser"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/login":{"post":{"tags":["auth"],"operationId":"auth_login_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonLogin"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthAck"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/auth/signup":{"post":{"tags":["auth"],"summary":"When a user signs up, a new personal organization is automatically created.","description":"Except when a user signs up with an invitation, then the user is just added to the inviting organization.","operationId":"auth_signup_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonSignup"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthAck"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/checkout":{"post":{"tags":["checkout"],"operationId":"checkouts_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewCheckout"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonCheckout"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations":{"get":{"tags":["organizations"],"summary":"List organizations","description":"List all organizations where the user is a member. The user must have `view` permissions for each organization. By default, the organizations are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of organizations.","operationId":"organizations_get","parameters":[{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/OrganizationsSort"}},{"in":"query","name":"name","description":"Filter by organization name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by organization name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOrganizations"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["organizations"],"summary":"Create an organization","description":"Create a new organization. The user must be authenticated to use this route. ➕ Bencher Plus: This route can be limited to admins on self-hosted instances.","operationId":"organization_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewOrganization"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOrganization"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}":{"get":{"tags":["organizations"],"summary":"View an organization","description":"View an organization where the user is a member. The user must have `view` permissions for the organization.","operationId":"organization_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOrganization"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["organizations"],"summary":"Delete an organization","description":"Delete an organization where the user is a member. The user must have `delete` permissions for the organization.","operationId":"organization_delete","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["organizations"],"summary":"Update an organization","description":"Update an organization where the user is a member. The user must have `edit` permissions for the organization. If updating the license, the user must have `manage` permissions for the organization.","operationId":"organization_patch","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateOrganization"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOrganization"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/allowed/{permission}":{"get":{"tags":["organizations","allowed"],"operationId":"org_allowed_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"permission","description":"The permission to check.","required":true,"schema":{"$ref":"#/components/schemas/OrganizationPermission"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAllowed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/members":{"get":{"tags":["organizations","members"],"summary":"List organization members","description":"List members for an organization. The user must have `view_role` permissions for the organization. By default, the members are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of members.","operationId":"org_members_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/OrgMembersSort"}},{"in":"query","name":"name","description":"Filter by user name, exact match.","schema":{"$ref":"#/components/schemas/UserName"}},{"in":"query","name":"search","description":"Search by user name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMembers"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["organizations","members"],"summary":"Invite a user to an organization","description":"Invite another user to become a member of an organization. The user must have `create_role` permissions for the organization. The invitee is sent an email with a link to accept the invitation, and they are not added to the organization until they accept the invitation.","operationId":"org_member_post","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewMember"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAuthAck"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/members/{user}":{"get":{"tags":["organizations","members"],"summary":"View an organization member","description":"View a member of an organization. The user must have `view_role` permissions for the organization.","operationId":"org_member_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"user","description":"The slug or UUID for an organization member.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMember"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["organizations","members"],"summary":"Remove an organization member","description":"Remove a member member of an organization. The user must have `delete_role` permissions for the organization.","operationId":"org_member_delete","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"user","description":"The slug or UUID for an organization member.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["organizations","members"],"summary":"Update an organization member","description":"Update the role for a member of an organization. The user must have `edit_role` permissions for the organization.","operationId":"org_member_patch","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"user","description":"The slug or UUID for an organization member.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateMember"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMember"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/plan":{"get":{"tags":["organizations","plan"],"operationId":"org_plan_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlan"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["organizations","plan"],"operationId":"org_plan_post","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewPlan"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlan"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["organizations","plan"],"operationId":"org_plan_delete","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"remote","schema":{"nullable":true,"type":"boolean"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/projects":{"get":{"tags":["organizations","projects"],"summary":"List organization projects","description":"List projects for an organization. The user must have `view` permissions for the organization. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of organization projects.","operationId":"org_projects_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/OrgProjectsSort"}},{"in":"query","name":"name","description":"Filter by project name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by project name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProjects"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["organizations","projects"],"summary":"Create a project for an organization","description":"Create a new project for an organization. The user must have `create` permissions for the organization. The new project will have a `main` branch, a `localhost` testbed, `latency` and `throughput` measures, and a threshold for both measures. ➕ Bencher Plus: The project visibility must be `public` unless the organization has a valid Bencher Plus subscription.","operationId":"org_project_post","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewProject"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProject"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/organizations/{organization}/usage":{"get":{"tags":["organizations","usage"],"summary":"View organization metrics usage","description":"View the metrics usage of an organization. The user must have `manage` permissions for the organization. ➕ Bencher Plus: This endpoint offers an estimate of metered usage and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.","operationId":"org_usage_get","parameters":[{"in":"path","name":"organization","description":"The slug or UUID for an organization.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUsage"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects":{"get":{"tags":["projects"],"summary":"List projects","description":"List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of projects.","operationId":"projects_get","parameters":[{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjectsSort"}},{"in":"query","name":"name","description":"Filter by project name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by project name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProjects"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}":{"get":{"tags":["projects"],"summary":"View a project","description":"View a project. If the user is not authenticated, then only a public project is available. If the user is authenticated, then any public project and any private project where the user has `view` permissions is available.","operationId":"project_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProject"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects"],"summary":"Delete a project","description":"Delete a project. The user must have `delete` permissions for the project.","operationId":"project_delete","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects"],"summary":"Update a project","description":"Update a project. The user must have `edit` permissions for the project.","operationId":"project_patch","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateProject"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonProject"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/alerts":{"get":{"tags":["projects","alerts"],"summary":"List alerts for a project","description":"List all alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of alerts.","operationId":"proj_alerts_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjAlertsSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived alerts. If not set or set to `false`, only returns alerts with non-archived branches, testbeds, or measures.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"status","description":"Filter alerts by their status. If not set, returns all alerts.","schema":{"$ref":"#/components/schemas/AlertStatus"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAlerts"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/alerts/{alert}":{"get":{"tags":["projects","alerts"],"summary":"View an alert","description":"View an alert for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_alert_get","parameters":[{"in":"path","name":"alert","description":"The UUID for an alert.","required":true,"schema":{"$ref":"#/components/schemas/AlertUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAlert"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","alerts"],"summary":"Update an alert","description":"Update an alert for a project. The user must have `edit` permissions for the project. Use this endpoint to dismiss an alert.","operationId":"proj_alert_patch","parameters":[{"in":"path","name":"alert","description":"The UUID for an alert.","required":true,"schema":{"$ref":"#/components/schemas/AlertUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateAlert"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAlert"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/allowed/{permission}":{"get":{"tags":["projects","allowed"],"operationId":"proj_allowed_get","parameters":[{"in":"path","name":"permission","description":"The permission to check.","required":true,"schema":{"$ref":"#/components/schemas/ProjectPermission"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonAllowed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/benchmarks":{"get":{"tags":["projects","benchmarks"],"summary":"List benchmarks for a project","description":"List all benchmarks for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the benchmarks are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of benchmarks.","operationId":"proj_benchmarks_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjBenchmarksSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived benchmarks. If not set or set to `false`, only returns non-archived benchmarks.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"name","description":"Filter by benchmark name, exact match.","schema":{"$ref":"#/components/schemas/BenchmarkName"}},{"in":"query","name":"search","description":"Search by benchmark name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBenchmarks"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","benchmarks"],"summary":"Create a benchmark","description":"Create a benchmark for a project. The user must have `create` permissions for the project.","operationId":"proj_benchmark_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewBenchmark"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBenchmark"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/benchmarks/{benchmark}":{"get":{"tags":["projects","benchmarks"],"summary":"View a benchmark","description":"View a benchmark for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_benchmark_get","parameters":[{"in":"path","name":"benchmark","description":"The slug or UUID for a benchmark.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBenchmark"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","benchmarks"],"summary":"Delete a benchmark","description":"Delete a benchmark for a project. The user must have `delete` permissions for the project. All reports that use this benchmark must be deleted first!","operationId":"proj_benchmark_delete","parameters":[{"in":"path","name":"benchmark","description":"The slug or UUID for a benchmark.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","benchmarks"],"summary":"Update a benchmark","description":"Update a benchmark for a project. The user must have `edit` permissions for the project.","operationId":"proj_benchmark_patch","parameters":[{"in":"path","name":"benchmark","description":"The slug or UUID for a benchmark.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateBenchmark"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBenchmark"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/branches":{"get":{"tags":["projects","branches"],"summary":"List branches for a project","description":"List all branches for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the branches are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of branches.","operationId":"proj_branches_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjBranchesSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived branches, if set to `true`. If not set or set to `false`, only returns non-archived branches.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"name","description":"Filter by branch name, exact match.","schema":{"$ref":"#/components/schemas/BranchName"}},{"in":"query","name":"search","description":"Search by branch name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBranches"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","branches"],"summary":"Create a branch","description":"Create a branch for a project. The user must have `create` permissions for the project.","operationId":"proj_branch_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewBranch"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBranch"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/branches/{branch}":{"get":{"tags":["projects","branches"],"summary":"View a branch","description":"View a branch for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_branch_get","parameters":[{"in":"path","name":"branch","description":"The slug or UUID for a branch.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"head","description":"View the branch with the specified head UUID. This can be used to view a branch with a historical head that has since been replaced by a new head. If not specified, then the current head is used.","schema":{"$ref":"#/components/schemas/HeadUuid"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBranch"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","branches"],"summary":"Delete a branch","description":"Delete a branch for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this branch must be deleted first!","operationId":"proj_branch_delete","parameters":[{"in":"path","name":"branch","description":"The slug or UUID for a branch.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","branches"],"summary":"Update a branch","description":"Update a branch for a project. The user must have `edit` permissions for the project.","operationId":"proj_branch_patch","parameters":[{"in":"path","name":"branch","description":"The slug or UUID for a branch.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateBranch"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBranch"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/measures":{"get":{"tags":["projects","measures"],"summary":"List measures for a project","description":"List all measures for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the measures are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of measures.","operationId":"proj_measures_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjMeasuresSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived measures if set to `true`. If not set or set to `false`, only returns non-archived measures.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"name","description":"Filter by measure name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by measure name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMeasures"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","measures"],"summary":"Create a measure","description":"Create a measure for a project. The user must have `create` permissions for the project.","operationId":"proj_measure_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewMeasure"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMeasure"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/measures/{measure}":{"get":{"tags":["projects","measures"],"summary":"View a measure","description":"View a measure for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_measure_get","parameters":[{"in":"path","name":"measure","description":"The slug or UUID for a measure.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMeasure"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","measures"],"summary":"Delete a measure","description":"Delete a measure for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this measure must be deleted first!","operationId":"proj_measure_delete","parameters":[{"in":"path","name":"measure","description":"The slug or UUID for a measure.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","measures"],"summary":"Update a measure","description":"Update a measure for a project. The user must have `edit` permissions for the project.","operationId":"proj_measure_patch","parameters":[{"in":"path","name":"measure","description":"The slug or UUID for a measure.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateMeasure"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonMeasure"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/metrics/{metric}":{"get":{"tags":["projects","metrics"],"summary":"View a metric","description":"View a metric for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_metric_get","parameters":[{"in":"path","name":"metric","description":"The UUID for a metric.","required":true,"schema":{"$ref":"#/components/schemas/MetricUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonOneMetric"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/perf":{"get":{"tags":["projects","perf"],"summary":"Query project performance metrics","description":"Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_perf_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"benchmarks","description":"A comma separated list of benchmark UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"branches","description":"A comma separated list of branch UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"end_time","description":"Search for metrics before the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"heads","description":"An optional comma separated list of branch head UUIDs. To not specify a particular branch head leave an empty entry in the list.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"measures","description":"A comma separated list of measure UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"start_time","description":"Search for metrics after the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"testbeds","description":"A comma separated list of testbed UUIDs to query.","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPerf"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/perf/img":{"get":{"tags":["projects","perf"],"summary":"Generate a dynamic image of project performance metrics","description":"Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_perf_img_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"benchmarks","description":"A comma separated list of benchmark UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"branches","description":"A comma separated list of branch UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"end_time","description":"Search for metrics before the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"heads","description":"An optional comma separated list of branch head UUIDs. To not specify a particular branch head leave an empty entry in the list.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"measures","description":"A comma separated list of measure UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"start_time","description":"Search for metrics after the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"testbeds","description":"A comma separated list of testbed UUIDs to query.","required":true,"schema":{"type":"string"}},{"in":"query","name":"title","description":"The title for the perf plot. If not provided, the project name will be used.","schema":{"nullable":true,"type":"string"}}],"responses":{"default":{"description":"","content":{"*/*":{"schema":{}}}}}}},"/v0/projects/{project}/plots":{"get":{"tags":["projects","plots"],"summary":"List plots for a project","description":"List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the plots are sorted in their index order. The HTTP response header `X-Total-Count` contains the total number of plots.","operationId":"proj_plots_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjPlotsSort"}},{"in":"query","name":"search","description":"Search by plot title or UUID.","schema":{"$ref":"#/components/schemas/Search"}},{"in":"query","name":"title","description":"Filter by plot title, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlots"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","plots"],"summary":"Create a plot","description":"Create a plot for a project. The user must have `create` permissions for the project. A project can have a maximum of 64 plots at a time.","operationId":"proj_plot_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewPlot"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlot"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/plots/{plot}":{"get":{"tags":["projects","plots"],"summary":"View a plot","description":"View a plot for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_plot_get","parameters":[{"in":"path","name":"plot","description":"The UUID for a plot.","required":true,"schema":{"$ref":"#/components/schemas/PlotUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlot"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","plots"],"summary":"Delete a plot","description":"Delete a plot for a project. The user must have `delete` permissions for the project.","operationId":"proj_plot_delete","parameters":[{"in":"path","name":"plot","description":"The UUID for a plot.","required":true,"schema":{"$ref":"#/components/schemas/PlotUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","plots"],"summary":"Update a plot","description":"Update a plot for a project. The user must have `edit` permissions for the project.","operationId":"proj_plot_patch","parameters":[{"in":"path","name":"plot","description":"The UUID for a plot.","required":true,"schema":{"$ref":"#/components/schemas/PlotUuid"}},{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdatePlot"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonPlot"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/reports":{"get":{"tags":["projects","reports"],"summary":"List reports for a project","description":"List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the reports are sorted by date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of reports.","operationId":"proj_reports_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjReportsSort"}},{"in":"query","name":"archived","description":"If set to `true`, only return reports with an archived branch or testbed. If not set or set to `false`, only returns reports with non-archived branches and testbeds.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"branch","description":"Filter by branch UUID, slug, or name exact match.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"end_time","description":"Filter for reports before the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"start_time","description":"Filter for reports after the given date time in milliseconds.","schema":{"$ref":"#/components/schemas/DateTimeMillis"}},{"in":"query","name":"testbed","description":"Filter by testbed UUID, slug, or name exact match.","schema":{"nullable":true,"type":"string"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonReports"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","reports"],"summary":"Create a report","description":"Create a report for a project. The user must have `create` permissions for the project. If using the Bencher CLI, it is recommended to use the `bencher run` subcommand instead of trying to create a report manually.","operationId":"proj_report_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewReport"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonReport"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/reports/{report}":{"get":{"tags":["projects","reports"],"summary":"View a report","description":"View a report for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_report_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"report","description":"The UUID for a report.","required":true,"schema":{"$ref":"#/components/schemas/ReportUuid"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonReport"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","reports"],"summary":"Delete a report","description":"Delete a report for a project. The user must have `delete` permissions for the project. If there are no more reports for a branch version, then that version will be deleted. All later branch versions will have their version numbers decremented.","operationId":"proj_report_delete","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"report","description":"The UUID for a report.","required":true,"schema":{"$ref":"#/components/schemas/ReportUuid"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/testbeds":{"get":{"tags":["projects","testbeds"],"summary":"List testbeds for a project","description":"List all testbeds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the testbeds are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of testbeds.","operationId":"proj_testbeds_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjTestbedsSort"}},{"in":"query","name":"archived","description":"If set to `true`, only returns archived testbeds. If not set or set to `false`, only returns non-archived testbeds.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"name","description":"Filter by testbed name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by testbed name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTestbeds"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","testbeds"],"summary":"Create a testbed","description":"Create a testbed for a project. The user must have `create` permissions for the project.","operationId":"proj_testbed_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewTestbed"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTestbed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/testbeds/{testbed}":{"get":{"tags":["projects","testbeds"],"summary":"View a testbed","description":"View a testbed for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_testbed_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"testbed","description":"The slug or UUID for a testbed.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTestbed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","testbeds"],"summary":"Delete a testbed","description":"Delete a testbed for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this testbed must be deleted first!","operationId":"proj_testbed_delete","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"testbed","description":"The slug or UUID for a testbed.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["projects","testbeds"],"summary":"Update a testbed","description":"Update a testbed for a project. The user must have `edit` permissions for the project.","operationId":"proj_testbed_patch","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"testbed","description":"The slug or UUID for a testbed.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateTestbed"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTestbed"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/thresholds":{"get":{"tags":["projects","thresholds"],"summary":"List thresholds for a project","description":"List all thresholds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the thresholds are sorted by creation date time in chronological order. The HTTP response header `X-Total-Count` contains the total number of thresholds.","operationId":"proj_thresholds_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/ProjThresholdsSort"}},{"in":"query","name":"archived","description":"If set to `true`, only return thresholds with an archived branch, testbed, or measure. If not set or set to `false`, only returns thresholds with non-archived branches, testbeds, and measures.","schema":{"nullable":true,"type":"boolean"}},{"in":"query","name":"branch","description":"Filter by branch name, exact match.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"measure","description":"Filter by measure name, exact match.","schema":{"nullable":true,"type":"string"}},{"in":"query","name":"testbed","description":"Filter by testbed name, exact match.","schema":{"nullable":true,"type":"string"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonThresholds"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["projects","thresholds"],"summary":"Create a threshold","description":"Create a threshold for a project. The user must have `create` permissions for the project. There can only be one threshold for any unique combination of: branch, testbed, and measure.","operationId":"proj_threshold_post","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewThreshold"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonThreshold"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/projects/{project}/thresholds/{threshold}":{"get":{"tags":["projects","thresholds"],"summary":"View a threshold","description":"View a threshold for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.","operationId":"proj_threshold_get","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"threshold","description":"The UUID for a threshold.","required":true,"schema":{"$ref":"#/components/schemas/ThresholdUuid"}},{"in":"query","name":"model","description":"View the threshold with the specified model UUID. This can be used to view a threshold with a historical model that has since been replaced by a new model. If not specified, then the current model is used.","schema":{"$ref":"#/components/schemas/ModelUuid"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonThreshold"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"put":{"tags":["projects","thresholds"],"summary":"Update a threshold","description":"Update a threshold for a project. The user must have `edit` permissions for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active.","operationId":"proj_threshold_put","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"threshold","description":"The UUID for a threshold.","required":true,"schema":{"$ref":"#/components/schemas/ThresholdUuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateThreshold"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonThreshold"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"delete":{"tags":["projects","thresholds"],"summary":"Delete a threshold","description":"Delete a threshold for a project. The user must have `delete` permissions for the project. A thresholds must be deleted before its branch, testbed, or measure can be deleted.","operationId":"proj_threshold_delete","parameters":[{"in":"path","name":"project","description":"The slug or UUID for a project.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"path","name":"threshold","description":"The UUID for a threshold.","required":true,"schema":{"$ref":"#/components/schemas/ThresholdUuid"}}],"responses":{"204":{"description":"successful deletion","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/run":{"post":{"tags":["run","reports"],"summary":"Create a run","description":"Create a run. The user does not need have an account yet or be authenticated. The project may or may not exist yet.","operationId":"run_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewReport"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonReport"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/backup":{"post":{"tags":["server"],"summary":"Backup server","description":"Backup the API server database. The user must be an admin on the server to use this route.","operationId":"server_backup_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBackup"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonBackupCreated"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/config":{"get":{"tags":["server"],"summary":"View server configuration","description":"View the API server configuration. The user must be an admin on the server to use this route.","operationId":"server_config_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonConfig"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"put":{"tags":["server"],"summary":"Update server configuration","description":"Update the API server configuration. The user must be an admin on the server to use this route. Updating the configuration will cause the server to restart.","operationId":"server_config_put","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateConfig"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonConfig"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/config/console":{"get":{"tags":["server"],"summary":"View console configuration","description":"View the Bencher Console configuration managed by the API server. This is a public route and does not require authentication.","operationId":"server_config_console_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonConsole"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/restart":{"post":{"tags":["server"],"summary":"Restart server","description":"Restart the API server. The user must be an admin on the server to use this route.","operationId":"server_restart_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonRestart"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"title":"Null","type":"string","enum":[null]}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/spec":{"get":{"tags":["server"],"summary":"View server OpenAPI specification","description":"View the API server OpenAPI specification. The OpenAPI specification can be used to generate API client code.","operationId":"server_spec_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonSpec"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/stats":{"get":{"tags":["server","stats"],"summary":"View server stats","description":"➕ Bencher Plus: View the API server stats. The user must be an admin on the server to use this route.","operationId":"server_stats_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonServerStats"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["server","stats"],"operationId":"server_stats_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonServerStats"}}},"required":true},"responses":{"202":{"description":"successfully enqueued operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"title":"Null","type":"string","enum":[null]}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/server/version":{"get":{"tags":["server"],"summary":"View server version","description":"View the API server version. This is used to verify that the CLI and API server are compatible. It can also be used as a simple endpoint to verify that the server is running.","operationId":"server_version_get","responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonApiVersion"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/users":{"get":{"tags":["users"],"summary":"List users","description":"List all users. The user must be an admin on the server to use this route. The HTTP response header `X-Total-Count` contains the total number of users.","operationId":"users_get","parameters":[{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/UsersSort"}},{"in":"query","name":"name","description":"Filter by user name, exact match.","schema":{"$ref":"#/components/schemas/UserName"}},{"in":"query","name":"search","description":"Search by user name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUsers"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/users/{user}":{"get":{"tags":["users"],"summary":"View a user","description":"View a user. Only the authenticated user themselves and server admins have access to this endpoint. To view users within your organization, use the organization members endpoints.","operationId":"user_get","parameters":[{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUser"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["users"],"summary":"Update a user","description":"Update a user. Only the authenticated user themselves and server admins have access to this endpoint. Some fields can only be updated by an admin. To manage users within your organization, use the organization members endpoints.","operationId":"user_patch","parameters":[{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateUser"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUser"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/users/{user}/tokens":{"get":{"tags":["users","tokens"],"summary":"List tokens for a user","description":"List all API tokens for a user. Only the authenticated user themselves and server admins have access to this endpoint. By default, the tokens are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of tokens.","operationId":"user_tokens_get","parameters":[{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}},{"in":"query","name":"direction","description":"The direction to sort by. If not specified, the default sort direction is used.","schema":{"$ref":"#/components/schemas/JsonDirection"}},{"in":"query","name":"page","description":"The page number to return. If not specified, the first page is returned.","schema":{"nullable":true,"type":"integer","format":"uint32","minimum":0}},{"in":"query","name":"per_page","description":"The number of items to return per page. If not specified, the default number of items per page (8) is used.","schema":{"nullable":true,"type":"integer","format":"uint8","minimum":0}},{"in":"query","name":"sort","description":"The field to sort by. If not specified, the default sort field is used.","schema":{"$ref":"#/components/schemas/UserTokensSort"}},{"in":"query","name":"name","description":"Filter by token name, exact match.","schema":{"$ref":"#/components/schemas/ResourceName"}},{"in":"query","name":"search","description":"Search by token name, slug, or UUID.","schema":{"$ref":"#/components/schemas/Search"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonTokens"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"post":{"tags":["users","tokens"],"summary":"Create a token","description":"Create an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.","operationId":"user_token_post","parameters":[{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonNewToken"}}},"required":true},"responses":{"201":{"description":"successful creation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonToken"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}},"/v0/users/{user}/tokens/{token}":{"get":{"tags":["users","tokens"],"summary":"View a token","description":"View an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.","operationId":"user_token_get","parameters":[{"in":"path","name":"token","description":"The UUID for a token.","required":true,"schema":{"type":"string","format":"uuid"}},{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonToken"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}},"patch":{"tags":["users","tokens"],"summary":"Update a token","description":"Update an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.","operationId":"user_token_patch","parameters":[{"in":"path","name":"token","description":"The UUID for a token.","required":true,"schema":{"type":"string","format":"uuid"}},{"in":"path","name":"user","description":"The slug or UUID for a user.","required":true,"schema":{"$ref":"#/components/schemas/ResourceId"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonUpdateToken"}}},"required":true},"responses":{"200":{"description":"successful operation","headers":{"access-control-allow-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-methods":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-allow-origin":{"style":"simple","required":true,"schema":{"type":"string"}},"access-control-expose-headers":{"style":"simple","required":true,"schema":{"type":"string"}},"x-total-count":{"style":"simple","required":true,"schema":{"type":"string"}}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/JsonToken"}}}},"4XX":{"$ref":"#/components/responses/Error"},"5XX":{"$ref":"#/components/responses/Error"}}}}},"components":{"schemas":{"Adapter":{"type":"string","enum":["magic","json","rust","rust_bench","rust_criterion","rust_iai","rust_iai_callgrind","cpp","cpp_google","cpp_catch2","go","go_bench","java","java_jmh","c_sharp","c_sharp_dot_net","js","js_benchmark","js_time","python","python_asv","python_pytest","ruby","ruby_benchmark","shell","shell_hyperfine"]},"AlertStatus":{"oneOf":[{"description":"The alert is active.","type":"string","enum":["active"]},{"description":"The alert has been dismissed by a user.","type":"string","enum":["dismissed"]},{"description":"The alert has been silenced by the system.","type":"string","enum":["silenced"]}]},"AlertUuid":{"type":"string","format":"uuid"},"BenchmarkName":{"type":"string"},"BenchmarkUuid":{"type":"string","format":"uuid"},"BigInt":{"type":"integer","format":"uint64","minimum":0},"Boundary":{"type":"number","format":"double"},"BoundaryLimit":{"type":"string","enum":["lower","upper"]},"BranchName":{"type":"string"},"BranchUuid":{"type":"string","format":"uuid"},"CardBrand":{"type":"string","enum":["amex","diners","discover","jcb","mastercard","unionpay","visa","unknown"]},"DataStore":{"oneOf":[{"type":"object","properties":{"access_key_id":{"type":"string"},"access_point":{"type":"string"},"secret_access_key":{"$ref":"#/components/schemas/Secret"},"service":{"type":"string","enum":["aws_s3"]}},"required":["access_key_id","access_point","secret_access_key","service"]}]},"DateTime":{"type":"string","format":"date-time"},"Email":{"type":"string"},"Entitlements":{"type":"integer","format":"uint32","minimum":0},"Error":{"description":"Error information from a response.","type":"object","properties":{"error_code":{"type":"string"},"message":{"type":"string"},"request_id":{"type":"string"}},"required":["message","request_id"]},"ExpirationMonth":{"type":"integer","format":"int32"},"ExpirationYear":{"type":"integer","format":"int32"},"GitHash":{"type":"string"},"HeadUuid":{"type":"string","format":"uuid"},"IfExists":{"type":"string","enum":["fail","truncate","append"]},"Index":{"type":"integer","format":"uint8","minimum":0},"Iteration":{"type":"integer","format":"uint32","minimum":0},"JsonAccept":{"type":"object","properties":{"invite":{"$ref":"#/components/schemas/Jwt"}},"required":["invite"]},"JsonAlert":{"type":"object","properties":{"benchmark":{"$ref":"#/components/schemas/JsonBenchmark"},"boundary":{"$ref":"#/components/schemas/JsonBoundary"},"created":{"$ref":"#/components/schemas/DateTime"},"iteration":{"$ref":"#/components/schemas/Iteration"},"limit":{"$ref":"#/components/schemas/BoundaryLimit"},"metric":{"$ref":"#/components/schemas/JsonMetric"},"modified":{"$ref":"#/components/schemas/DateTime"},"report":{"$ref":"#/components/schemas/ReportUuid"},"status":{"$ref":"#/components/schemas/AlertStatus"},"threshold":{"$ref":"#/components/schemas/JsonThreshold"},"uuid":{"$ref":"#/components/schemas/AlertUuid"}},"required":["benchmark","boundary","created","iteration","limit","metric","modified","report","status","threshold","uuid"]},"JsonAlerts":{"type":"array","items":{"$ref":"#/components/schemas/JsonAlert"}},"JsonAllowed":{"type":"object","properties":{"allowed":{"type":"boolean"}},"required":["allowed"]},"JsonApiVersion":{"type":"object","properties":{"version":{"type":"string"}},"required":["version"]},"JsonAuthAck":{"type":"object","properties":{"email":{"$ref":"#/components/schemas/Email"}},"required":["email"]},"JsonAuthUser":{"type":"object","properties":{"creation":{"$ref":"#/components/schemas/DateTime"},"expiration":{"$ref":"#/components/schemas/DateTime"},"token":{"$ref":"#/components/schemas/Jwt"},"user":{"$ref":"#/components/schemas/JsonUser"}},"required":["creation","expiration","token","user"]},"JsonAverage":{"type":"string","enum":["mean","median"]},"JsonBackup":{"type":"object","properties":{"compress":{"nullable":true,"description":"Compress the database backup with gzip. This operation runs first.","type":"boolean"},"data_store":{"nullable":true,"description":"Save the database backup to this data store. This operation runs second.","allOf":[{"$ref":"#/components/schemas/JsonDataStore"}]},"rm":{"nullable":true,"description":"Remove the local copy of the database backup. This operation runs third.","type":"boolean"}}},"JsonBackupCreated":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"}},"required":["created"]},"JsonBenchmark":{"type":"object","properties":{"archived":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"created":{"$ref":"#/components/schemas/DateTime"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/BenchmarkName"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/BenchmarkUuid"}},"required":["created","modified","name","project","slug","uuid"]},"JsonBenchmarks":{"type":"array","items":{"$ref":"#/components/schemas/JsonBenchmark"}},"JsonBilling":{"type":"object","properties":{"products":{"$ref":"#/components/schemas/JsonProducts"},"secret_key":{"$ref":"#/components/schemas/Secret"}},"required":["products","secret_key"]},"JsonBingIndex":{"type":"object","properties":{"key":{"$ref":"#/components/schemas/NonEmpty"},"key_location":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Url"}]}},"required":["key"]},"JsonBoundary":{"type":"object","properties":{"baseline":{"nullable":true,"type":"number","format":"double"},"lower_limit":{"nullable":true,"type":"number","format":"double"},"upper_limit":{"nullable":true,"type":"number","format":"double"}}},"JsonBranch":{"type":"object","properties":{"archived":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"created":{"$ref":"#/components/schemas/DateTime"},"head":{"$ref":"#/components/schemas/JsonHead"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/BranchName"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/BranchUuid"}},"required":["created","head","modified","name","project","slug","uuid"]},"JsonBranches":{"type":"array","items":{"$ref":"#/components/schemas/JsonBranch"}},"JsonCardDetails":{"type":"object","properties":{"brand":{"$ref":"#/components/schemas/CardBrand"},"exp_month":{"$ref":"#/components/schemas/ExpirationMonth"},"exp_year":{"$ref":"#/components/schemas/ExpirationYear"},"last_four":{"$ref":"#/components/schemas/LastFour"}},"required":["brand","exp_month","exp_year","last_four"]},"JsonCheckout":{"type":"object","properties":{"session":{"type":"string"},"url":{"type":"string"}},"required":["session","url"]},"JsonCloud":{"type":"object","properties":{"billing":{"$ref":"#/components/schemas/JsonBilling"},"index":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonIndex"}]},"license_pem":{"$ref":"#/components/schemas/Secret"},"sentry":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Secret"}]}},"required":["billing","license_pem"]},"JsonCohort":{"type":"object","properties":{"month":{"type":"integer","format":"uint64","minimum":0},"total":{"type":"integer","format":"uint64","minimum":0},"week":{"type":"integer","format":"uint64","minimum":0}},"required":["month","total","week"]},"JsonCohortAvg":{"type":"object","properties":{"month":{"type":"number","format":"double"},"total":{"type":"number","format":"double"},"week":{"type":"number","format":"double"}},"required":["month","total","week"]},"JsonConfig":{"type":"object","properties":{"console":{"$ref":"#/components/schemas/JsonConsole"},"database":{"$ref":"#/components/schemas/JsonDatabase"},"logging":{"$ref":"#/components/schemas/JsonLogging"},"plus":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonPlus"}]},"security":{"$ref":"#/components/schemas/JsonSecurity"},"server":{"$ref":"#/components/schemas/JsonServer2"},"smtp":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonSmtp"}]}},"required":["console","database","logging","security","server"]},"JsonConfirm":{"type":"object","properties":{"token":{"$ref":"#/components/schemas/Jwt"}},"required":["token"]},"JsonConsole":{"type":"object","properties":{"url":{"description":"The URL for the Bencher Console UI.","allOf":[{"$ref":"#/components/schemas/Url"}]}},"required":["url"]},"JsonCustomer":{"type":"object","properties":{"email":{"$ref":"#/components/schemas/Email"},"name":{"$ref":"#/components/schemas/NonEmpty"},"uuid":{"$ref":"#/components/schemas/UserUuid"}},"required":["email","name","uuid"]},"JsonDataStore":{"type":"string","enum":["aws_s3"]},"JsonDatabase":{"type":"object","properties":{"data_store":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DataStore"}]},"file":{"type":"string"}},"required":["file"]},"JsonFold":{"type":"string","enum":["min","max","mean","median"]},"JsonGitHub":{"type":"object","properties":{"client_id":{"$ref":"#/components/schemas/NonEmpty"},"client_secret":{"$ref":"#/components/schemas/Secret"}},"required":["client_id","client_secret"]},"JsonGoogleIndex":{"type":"object","properties":{"client_email":{"$ref":"#/components/schemas/NonEmpty"},"private_key":{"$ref":"#/components/schemas/Secret"},"token_uri":{"$ref":"#/components/schemas/NonEmpty"}},"required":["client_email","private_key","token_uri"]},"JsonHead":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"replaced":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"start_point":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonStartPoint"}]},"uuid":{"$ref":"#/components/schemas/HeadUuid"},"version":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonVersion"}]}},"required":["created","uuid"]},"JsonIndex":{"type":"object","properties":{"bing":{"$ref":"#/components/schemas/JsonBingIndex"},"google":{"$ref":"#/components/schemas/JsonGoogleIndex"}},"required":["bing","google"]},"JsonLicense":{"type":"object","properties":{"entitlements":{"$ref":"#/components/schemas/Entitlements"},"expiration":{"$ref":"#/components/schemas/DateTime"},"issued_at":{"$ref":"#/components/schemas/DateTime"},"key":{"$ref":"#/components/schemas/Jwt"},"level":{"$ref":"#/components/schemas/PlanLevel"},"organization":{"$ref":"#/components/schemas/OrganizationUuid"},"self_hosted":{"type":"boolean"}},"required":["entitlements","expiration","issued_at","key","level","organization","self_hosted"]},"JsonLitestream":{"type":"object","properties":{"busy_timeout":{"nullable":true,"description":"The database busy timeout in milliseconds","type":"integer","format":"uint32","minimum":0},"replicas":{"description":"Disaster recovery replicas","type":"array","items":{"$ref":"#/components/schemas/JsonReplica"}}},"required":["replicas"]},"JsonLogging":{"type":"object","properties":{"log":{"$ref":"#/components/schemas/ServerLog"},"name":{"type":"string"}},"required":["log","name"]},"JsonLogin":{"type":"object","properties":{"email":{"$ref":"#/components/schemas/Email"},"invite":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Jwt"}]},"plan":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/PlanLevel"}]}},"required":["email"]},"JsonMeasure":{"type":"object","properties":{"archived":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"created":{"$ref":"#/components/schemas/DateTime"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"units":{"$ref":"#/components/schemas/ResourceName"},"uuid":{"$ref":"#/components/schemas/MeasureUuid"}},"required":["created","modified","name","project","slug","units","uuid"]},"JsonMeasures":{"type":"array","items":{"$ref":"#/components/schemas/JsonMeasure"}},"JsonMember":{"type":"object","properties":{"created":{"description":"The date time the member was created.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"email":{"description":"The member email.","allOf":[{"$ref":"#/components/schemas/Email"}]},"modified":{"description":"The date time the member was last modified.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"name":{"description":"The member user name.","allOf":[{"$ref":"#/components/schemas/UserName"}]},"role":{"description":"The member organization role.","allOf":[{"$ref":"#/components/schemas/OrganizationRole"}]},"slug":{"description":"The member slug.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"uuid":{"description":"The member UUID.","allOf":[{"$ref":"#/components/schemas/UserUuid"}]}},"required":["created","email","modified","name","role","slug","uuid"]},"JsonMembers":{"type":"array","items":{"$ref":"#/components/schemas/JsonMember"}},"JsonMetric":{"type":"object","properties":{"lower_value":{"nullable":true,"type":"number","format":"double"},"upper_value":{"nullable":true,"type":"number","format":"double"},"uuid":{"$ref":"#/components/schemas/MetricUuid"},"value":{"type":"number","format":"double"}},"required":["uuid","value"]},"JsonModel":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"lower_boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Boundary"}]},"max_sample_size":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"min_sample_size":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"replaced":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"test":{"$ref":"#/components/schemas/ModelTest"},"upper_boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Boundary"}]},"uuid":{"$ref":"#/components/schemas/ModelUuid"},"window":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["created","test","uuid"]},"JsonNewBenchmark":{"type":"object","properties":{"name":{"description":"The name of the benchmark. Maximum length is 1,024 characters.","allOf":[{"$ref":"#/components/schemas/BenchmarkName"}]},"slug":{"nullable":true,"description":"The preferred slug for the benchmark. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["name"]},"JsonNewBranch":{"type":"object","properties":{"name":{"description":"The name of the branch. Maximum length is 256 characters.","allOf":[{"$ref":"#/components/schemas/BranchName"}]},"slug":{"nullable":true,"description":"The preferred slug for the branch. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"start_point":{"nullable":true,"description":"The start point for the new branch. Historical branch versions from the start point branch will be shallow copied over to the new branch head. That is, historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their base branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.","allOf":[{"$ref":"#/components/schemas/JsonNewStartPoint"}]}},"required":["name"]},"JsonNewCheckout":{"type":"object","properties":{"entitlements":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Entitlements"}]},"level":{"$ref":"#/components/schemas/PlanLevel"},"organization":{"$ref":"#/components/schemas/ResourceId"},"self_hosted":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/OrganizationUuid"}]}},"required":["level","organization"]},"JsonNewMeasure":{"type":"object","properties":{"name":{"description":"The name of the measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred slug for the measure. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"units":{"description":"The units of measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]}},"required":["name","units"]},"JsonNewMember":{"type":"object","properties":{"email":{"description":"The email for the invitee. This will be used to both send the invite and to create the user account if they do not exist.","allOf":[{"$ref":"#/components/schemas/Email"}]},"name":{"nullable":true,"description":"The user name for the invitee.","allOf":[{"$ref":"#/components/schemas/UserName"}]},"role":{"description":"The organization role for the invitee.","allOf":[{"$ref":"#/components/schemas/OrganizationRole"}]}},"required":["email","role"]},"JsonNewOrganization":{"type":"object","properties":{"name":{"description":"The name of the organization. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred slug for the organization. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["name"]},"JsonNewPlan":{"type":"object","properties":{"checkout":{"$ref":"#/components/schemas/NonEmpty"},"entitlements":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Entitlements"}]},"level":{"$ref":"#/components/schemas/PlanLevel"},"remote":{"nullable":true,"type":"boolean"},"self_hosted":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/OrganizationUuid"}]}},"required":["checkout","level"]},"JsonNewPlot":{"type":"object","properties":{"benchmarks":{"description":"The benchmarks to include in the plot. At least one benchmark must be specified.","type":"array","items":{"$ref":"#/components/schemas/BenchmarkUuid"}},"branches":{"description":"The branches to include in the plot. At least one branch must be specified.","type":"array","items":{"$ref":"#/components/schemas/BranchUuid"}},"index":{"nullable":true,"description":"The index of the plot. Maximum index is 64.","allOf":[{"$ref":"#/components/schemas/Index"}]},"lower_boundary":{"description":"Display lower boundary limits.","type":"boolean"},"lower_value":{"description":"Display metric lower values.","type":"boolean"},"measures":{"description":"The measures to include in the plot. At least one measure must be specified.","type":"array","items":{"$ref":"#/components/schemas/MeasureUuid"}},"testbeds":{"description":"The testbeds to include in the plot. At least one testbed must be specified.","type":"array","items":{"$ref":"#/components/schemas/TestbedUuid"}},"title":{"nullable":true,"description":"The title of the plot. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"upper_boundary":{"description":"Display upper boundary limits.","type":"boolean"},"upper_value":{"description":"Display metric upper values.","type":"boolean"},"window":{"description":"The window of time for the plot, in seconds. Metrics outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]},"x_axis":{"description":"The x-axis to use for the plot.","allOf":[{"$ref":"#/components/schemas/XAxis"}]}},"required":["benchmarks","branches","lower_boundary","lower_value","measures","testbeds","upper_boundary","upper_value","window","x_axis"]},"JsonNewProject":{"type":"object","properties":{"name":{"description":"The name of the project. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred slug for the project. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"url":{"nullable":true,"description":"The URL for the project. If the project is public, the URL will be accessible listed on its Perf Page.","allOf":[{"$ref":"#/components/schemas/Url"}]},"visibility":{"nullable":true,"description":"➕ Bencher Plus: Set the visibility of the project. Creating a `private` project requires a valid Bencher Plus subscription.","allOf":[{"$ref":"#/components/schemas/Visibility"}]}},"required":["name"]},"JsonNewReport":{"type":"object","properties":{"branch":{"description":"Branch UUID, slug, or name. If the branch does not exist, it will be created.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"end_time":{"description":"End time for the report. Must be an ISO 8601 formatted string.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"hash":{"nullable":true,"description":"Full `git` commit hash. All reports with the same `git` commit hash will be considered part of the same branch version. This can be useful for tracking the performance of a specific commit across multiple testbeds.","allOf":[{"$ref":"#/components/schemas/GitHash"}]},"results":{"description":"An array of benchmarks results.","type":"array","items":{"type":"string"}},"settings":{"nullable":true,"description":"Settings for how to handle the report.","allOf":[{"$ref":"#/components/schemas/JsonReportSettings"}]},"start_point":{"nullable":true,"description":"The start point for the report branch. If the branch does not exist, the start point will be used to create a new branch. If the branch already exists and the start point is not provided, the current branch will be used. If the branch already exists and the start point provided is different, a new branch head will be created from the new start point. If a new branch or new branch head is created with a start point, historical branch versions from the start point branch will be shallow copied over to the new branch. That is, historical metrics data for the start point branch will appear in queries for the branch. For example, pull request branches often use their base branch as their start point branch. If a new branch is created, it is not kept in sync with the start point branch.","allOf":[{"$ref":"#/components/schemas/JsonUpdateStartPoint"}]},"start_time":{"description":"Start time for the report. Must be an ISO 8601 formatted string.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"testbed":{"description":"Testbed UUID, slug, or name. If the testbed does not exist, it will be created.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"thresholds":{"nullable":true,"description":"Thresholds to use for the branch, testbed, and measures in the report. If a threshold does not exist, it will be created. If a threshold exists and the model is different, it will be updated with the new model. If a measure name or slug is provided, the measure will be created if it does not exist.","allOf":[{"$ref":"#/components/schemas/JsonReportThresholds"}]}},"required":["branch","end_time","results","start_time","testbed"]},"JsonNewStartPoint":{"type":"object","properties":{"branch":{"description":"The UUID, slug, or name of the branch to use as the start point.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"clone_thresholds":{"nullable":true,"description":"If set to `true`, the thresholds from the start point branch will be deep copied to the new branch. This can be useful for pull request branches that should have the same thresholds as their target branch. Requires the `branch` field to be set.","type":"boolean"},"hash":{"nullable":true,"description":"The full `git` hash of the branch to use as the start point. Requires the `branch` field to be set.","allOf":[{"$ref":"#/components/schemas/GitHash"}]},"max_versions":{"nullable":true,"description":"The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 255. Requires the `branch` field to be set.","type":"integer","format":"uint32","minimum":0}},"required":["branch"]},"JsonNewTestbed":{"type":"object","properties":{"name":{"description":"The name of the testbed. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred slug for the testbed. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["name"]},"JsonNewThreshold":{"type":"object","properties":{"branch":{"description":"The UUID, slug, or name of the threshold branch.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"lower_boundary":{"nullable":true,"description":"The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"max_sample_size":{"nullable":true,"description":"The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"measure":{"description":"The UUID, slug, or name of the threshold measure.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"min_sample_size":{"nullable":true,"description":"The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"test":{"description":"The test used by the threshold model to calculate the baseline and boundary limits.","allOf":[{"$ref":"#/components/schemas/ModelTest"}]},"testbed":{"description":"The UUID, slug, or name of the threshold testbed.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"upper_boundary":{"nullable":true,"description":"The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"window":{"nullable":true,"description":"The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["branch","measure","test","testbed"]},"JsonNewToken":{"type":"object","properties":{"name":{"description":"The name of the token. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"ttl":{"nullable":true,"description":"The time-to-live (TTL) for the token in seconds. If not provided, the token will not expire for over 128 years.","type":"integer","format":"uint32","minimum":0}},"required":["name"]},"JsonOAuth":{"type":"object","properties":{"code":{"$ref":"#/components/schemas/Secret"},"invite":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Jwt"}]},"plan":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/PlanLevel"}]}},"required":["code"]},"JsonOneMetric":{"type":"object","properties":{"alert":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonPerfAlert"}]},"benchmark":{"$ref":"#/components/schemas/JsonBenchmark"},"boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonBoundary"}]},"branch":{"$ref":"#/components/schemas/JsonBranch"},"end_time":{"$ref":"#/components/schemas/DateTime"},"iteration":{"$ref":"#/components/schemas/Iteration"},"measure":{"$ref":"#/components/schemas/JsonMeasure"},"metric":{"$ref":"#/components/schemas/JsonMetric"},"report":{"$ref":"#/components/schemas/ReportUuid"},"start_time":{"$ref":"#/components/schemas/DateTime"},"testbed":{"$ref":"#/components/schemas/JsonTestbed"},"threshold":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonThresholdModel"}]},"uuid":{"$ref":"#/components/schemas/MetricUuid"}},"required":["benchmark","branch","end_time","iteration","measure","metric","report","start_time","testbed","uuid"]},"JsonOrganization":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"license":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Jwt"}]},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/OrganizationUuid"}},"required":["created","modified","name","slug","uuid"]},"JsonOrganizationPatch":{"type":"object","properties":{"license":{"nullable":true,"description":"➕ Bencher Plus: The new license for the organization. Set to `null` to remove the current license.","allOf":[{"$ref":"#/components/schemas/Jwt"}]},"name":{"nullable":true,"description":"The new name of the organization. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the organization. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}}},"JsonOrganizationPatchNull":{"type":"object","properties":{"license":{"type":"string","enum":[null]},"name":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["license"]},"JsonOrganizations":{"type":"array","items":{"$ref":"#/components/schemas/JsonOrganization"}},"JsonPerf":{"type":"object","properties":{"end_time":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"project":{"$ref":"#/components/schemas/JsonProject"},"results":{"type":"array","items":{"$ref":"#/components/schemas/JsonPerfMetrics"}},"start_time":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]}},"required":["project","results"]},"JsonPerfAlert":{"type":"object","properties":{"limit":{"$ref":"#/components/schemas/BoundaryLimit"},"modified":{"$ref":"#/components/schemas/DateTime"},"status":{"$ref":"#/components/schemas/AlertStatus"},"uuid":{"$ref":"#/components/schemas/AlertUuid"}},"required":["limit","modified","status","uuid"]},"JsonPerfMetric":{"type":"object","properties":{"alert":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonPerfAlert"}]},"boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonBoundary"}]},"end_time":{"$ref":"#/components/schemas/DateTime"},"iteration":{"$ref":"#/components/schemas/Iteration"},"metric":{"$ref":"#/components/schemas/JsonMetric"},"report":{"$ref":"#/components/schemas/ReportUuid"},"start_time":{"$ref":"#/components/schemas/DateTime"},"threshold":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonThresholdModel"}]},"version":{"$ref":"#/components/schemas/JsonVersion"}},"required":["end_time","iteration","metric","report","start_time","version"]},"JsonPerfMetrics":{"type":"object","properties":{"benchmark":{"$ref":"#/components/schemas/JsonBenchmark"},"branch":{"$ref":"#/components/schemas/JsonBranch"},"measure":{"$ref":"#/components/schemas/JsonMeasure"},"metrics":{"type":"array","items":{"$ref":"#/components/schemas/JsonPerfMetric"}},"testbed":{"$ref":"#/components/schemas/JsonTestbed"}},"required":["benchmark","branch","measure","metrics","testbed"]},"JsonPlan":{"type":"object","properties":{"card":{"$ref":"#/components/schemas/JsonCardDetails"},"current_period_end":{"$ref":"#/components/schemas/DateTime"},"current_period_start":{"$ref":"#/components/schemas/DateTime"},"customer":{"$ref":"#/components/schemas/JsonCustomer"},"level":{"$ref":"#/components/schemas/PlanLevel"},"license":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonLicense"}]},"organization":{"$ref":"#/components/schemas/OrganizationUuid"},"status":{"$ref":"#/components/schemas/PlanStatus"},"unit_amount":{"$ref":"#/components/schemas/BigInt"}},"required":["card","current_period_end","current_period_start","customer","level","organization","status","unit_amount"]},"JsonPlot":{"type":"object","properties":{"benchmarks":{"type":"array","items":{"$ref":"#/components/schemas/BenchmarkUuid"}},"branches":{"type":"array","items":{"$ref":"#/components/schemas/BranchUuid"}},"created":{"$ref":"#/components/schemas/DateTime"},"lower_boundary":{"type":"boolean"},"lower_value":{"type":"boolean"},"measures":{"type":"array","items":{"$ref":"#/components/schemas/MeasureUuid"}},"modified":{"$ref":"#/components/schemas/DateTime"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"testbeds":{"type":"array","items":{"$ref":"#/components/schemas/TestbedUuid"}},"title":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"upper_boundary":{"type":"boolean"},"upper_value":{"type":"boolean"},"uuid":{"$ref":"#/components/schemas/PlotUuid"},"window":{"$ref":"#/components/schemas/Window"},"x_axis":{"$ref":"#/components/schemas/XAxis"}},"required":["benchmarks","branches","created","lower_boundary","lower_value","measures","modified","project","testbeds","upper_boundary","upper_value","uuid","window","x_axis"]},"JsonPlotPatch":{"type":"object","properties":{"index":{"nullable":true,"description":"The new index for the plot. Maximum index is 64.","allOf":[{"$ref":"#/components/schemas/Index"}]},"title":{"nullable":true,"description":"The new title of the plot. Set to `null` to remove the current title. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"window":{"nullable":true,"description":"The window of time for the plot, in seconds. Metrics outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]}}},"JsonPlotPatchNull":{"type":"object","properties":{"index":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Index"}]},"title":{"type":"string","enum":[null]},"window":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["title"]},"JsonPlots":{"type":"array","items":{"$ref":"#/components/schemas/JsonPlot"}},"JsonPlus":{"type":"object","properties":{"cloud":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCloud"}]},"github":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonGitHub"}]},"litestream":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonLitestream"}]},"stats":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonStats"}]}}},"JsonProduct":{"type":"object","properties":{"id":{"type":"string"},"licensed":{"type":"object","additionalProperties":{"type":"string"}},"metered":{"type":"object","additionalProperties":{"type":"string"}}},"required":["id","licensed","metered"]},"JsonProducts":{"type":"object","properties":{"enterprise":{"$ref":"#/components/schemas/JsonProduct"},"team":{"$ref":"#/components/schemas/JsonProduct"}},"required":["enterprise","team"]},"JsonProject":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"organization":{"$ref":"#/components/schemas/OrganizationUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"url":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Url"}]},"uuid":{"$ref":"#/components/schemas/ProjectUuid"},"visibility":{"$ref":"#/components/schemas/Visibility"}},"required":["created","modified","name","organization","slug","uuid","visibility"]},"JsonProjectPatch":{"type":"object","properties":{"name":{"nullable":true,"description":"The new name of the project. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the project. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"url":{"nullable":true,"description":"The new URL of the project. Set to `null` to remove the current URL.","allOf":[{"$ref":"#/components/schemas/Url"}]},"visibility":{"nullable":true,"description":"➕ Bencher Plus: Set the new visibility of the project. Moving to a `private` project requires a valid Bencher Plus subscription.","allOf":[{"$ref":"#/components/schemas/Visibility"}]}}},"JsonProjectPatchNull":{"type":"object","properties":{"name":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Slug"}]},"url":{"type":"string","enum":[null]},"visibility":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Visibility"}]}},"required":["url"]},"JsonProjects":{"type":"array","items":{"$ref":"#/components/schemas/JsonProject"}},"JsonPubUser":{"type":"object","properties":{"name":{"$ref":"#/components/schemas/UserName"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/UserUuid"}},"required":["name","slug","uuid"]},"JsonRemoveModel":{"type":"object","properties":{"test":{"type":"string","enum":[null]}},"required":["test"]},"JsonReplica":{"oneOf":[{"type":"object","properties":{"path":{"type":"string"},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["file"]},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["path","scheme"]},{"type":"object","properties":{"host":{"type":"string"},"key_path":{"nullable":true,"type":"string"},"password":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Secret"}]},"path":{"nullable":true,"type":"string"},"port":{"type":"integer","format":"uint16","minimum":0},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["sftp"]},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"user":{"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["host","port","scheme","user"]},{"type":"object","properties":{"access_key_id":{"type":"string"},"bucket":{"type":"string"},"endpoint":{"nullable":true,"type":"string"},"path":{"nullable":true,"type":"string"},"region":{"nullable":true,"type":"string"},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["s3"]},"secret_access_key":{"$ref":"#/components/schemas/Secret"},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["access_key_id","bucket","scheme","secret_access_key"]},{"type":"object","properties":{"account_key":{"$ref":"#/components/schemas/Secret"},"account_name":{"type":"string"},"bucket":{"type":"string"},"path":{"type":"string"},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["abs"]},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["account_key","account_name","bucket","path","scheme"]},{"type":"object","properties":{"bucket":{"type":"string"},"path":{"nullable":true,"type":"string"},"retention":{"nullable":true,"type":"string"},"retention_check_interval":{"nullable":true,"type":"string"},"scheme":{"type":"string","enum":["gcs"]},"snapshot_interval":{"nullable":true,"type":"string"},"sync_interval":{"nullable":true,"type":"string"},"validation_interval":{"nullable":true,"type":"string"}},"required":["bucket","scheme"]}]},"JsonReport":{"type":"object","properties":{"adapter":{"$ref":"#/components/schemas/Adapter"},"alerts":{"type":"array","items":{"$ref":"#/components/schemas/JsonAlert"}},"branch":{"$ref":"#/components/schemas/JsonBranch"},"created":{"$ref":"#/components/schemas/DateTime"},"end_time":{"$ref":"#/components/schemas/DateTime"},"project":{"$ref":"#/components/schemas/JsonProject"},"results":{"type":"array","items":{"type":"array","items":{"$ref":"#/components/schemas/JsonReportResult"}}},"start_time":{"$ref":"#/components/schemas/DateTime"},"testbed":{"$ref":"#/components/schemas/JsonTestbed"},"user":{"$ref":"#/components/schemas/JsonPubUser"},"uuid":{"$ref":"#/components/schemas/ReportUuid"}},"required":["adapter","alerts","branch","created","end_time","project","results","start_time","testbed","user","uuid"]},"JsonReportMeasure":{"type":"object","properties":{"boundary":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonBoundary"}]},"measure":{"$ref":"#/components/schemas/JsonMeasure"},"metric":{"$ref":"#/components/schemas/JsonMetric"},"threshold":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonThresholdModel"}]}},"required":["measure","metric"]},"JsonReportResult":{"type":"object","properties":{"benchmark":{"$ref":"#/components/schemas/JsonBenchmark"},"iteration":{"$ref":"#/components/schemas/Iteration"},"measures":{"type":"array","items":{"$ref":"#/components/schemas/JsonReportMeasure"}}},"required":["benchmark","iteration","measures"]},"JsonReportSettings":{"type":"object","properties":{"adapter":{"nullable":true,"description":"The benchmark harness adapter for parsing the benchmark results. If no adapter is specified, then the Magic adapter will be used.","allOf":[{"$ref":"#/components/schemas/Adapter"}]},"average":{"nullable":true,"description":"Benchmark harness suggested central tendency (ie average). Some benchmarking harnesses provide multiple averages, such as mean and median.","allOf":[{"$ref":"#/components/schemas/JsonAverage"}]},"fold":{"nullable":true,"description":"Fold multiple results into a single result using the selected operation. This can be useful for taking the min, max, mean, or median of the benchmark results.","allOf":[{"$ref":"#/components/schemas/JsonFold"}]}}},"JsonReportThresholds":{"type":"object","properties":{"models":{"nullable":true,"description":"Map of measure UUID, slug, or name to the threshold model to use. If a measure name or slug is provided, the measure will be created if it does not exist.","type":"object","additionalProperties":{"$ref":"#/components/schemas/Model"}},"reset":{"nullable":true,"description":"Reset all thresholds for the branch and testbed. Any models present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed.","type":"boolean"}}},"JsonReports":{"type":"array","items":{"$ref":"#/components/schemas/JsonReport"}},"JsonRestart":{"type":"object","properties":{"delay":{"nullable":true,"description":"The delay in seconds before the server restarts. Defaults to 3 seconds, if not specified.","type":"integer","format":"uint64","minimum":0}}},"JsonSecurity":{"type":"object","properties":{"issuer":{"nullable":true,"type":"string"},"secret_key":{"$ref":"#/components/schemas/Secret"}},"required":["secret_key"]},"JsonServer":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"uuid":{"$ref":"#/components/schemas/ServerUuid"},"version":{"nullable":true,"type":"string"}},"required":["created","uuid"]},"JsonServer2":{"type":"object","properties":{"bind_address":{"type":"string"},"request_body_max_bytes":{"type":"integer","format":"uint","minimum":0},"tls":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonTls"}]}},"required":["bind_address","request_body_max_bytes"]},"JsonServerStats":{"type":"object","properties":{"active_projects":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]},"admins":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonUsers"}]},"metrics":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]},"metrics_per_report":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohortAvg"}]},"organizations":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonOrganizations"}]},"projects":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]},"reports":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]},"reports_per_project":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohortAvg"}]},"server":{"$ref":"#/components/schemas/JsonServer"},"timestamp":{"$ref":"#/components/schemas/DateTime"},"top_projects":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonTopCohort"}]},"users":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonCohort"}]}},"required":["server","timestamp"]},"JsonSignup":{"type":"object","properties":{"email":{"$ref":"#/components/schemas/Email"},"i_agree":{"description":"I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)","type":"boolean"},"invite":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Jwt"}]},"name":{"$ref":"#/components/schemas/UserName"},"plan":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/PlanLevel"}]},"slug":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/Slug"}]}},"required":["email","i_agree","name"]},"JsonSmtp":{"type":"object","properties":{"from_email":{"$ref":"#/components/schemas/Email"},"from_name":{"$ref":"#/components/schemas/ResourceName"},"hostname":{"$ref":"#/components/schemas/ResourceName"},"port":{"nullable":true,"type":"integer","format":"uint16","minimum":0},"secret":{"$ref":"#/components/schemas/Secret"},"starttls":{"nullable":true,"type":"boolean"},"username":{"$ref":"#/components/schemas/ResourceName"}},"required":["from_email","from_name","hostname","secret","username"]},"JsonSpec":{},"JsonStartPoint":{"type":"object","properties":{"branch":{"$ref":"#/components/schemas/BranchUuid"},"head":{"$ref":"#/components/schemas/HeadUuid"},"version":{"$ref":"#/components/schemas/JsonVersion"}},"required":["branch","head","version"]},"JsonStats":{"type":"object","properties":{"enabled":{"nullable":true,"type":"boolean"},"offset":{"nullable":true,"type":"integer","format":"uint32","minimum":0}}},"JsonTestbed":{"type":"object","properties":{"archived":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/DateTime"}]},"created":{"$ref":"#/components/schemas/DateTime"},"modified":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/TestbedUuid"}},"required":["created","modified","name","project","slug","uuid"]},"JsonTestbeds":{"type":"array","items":{"$ref":"#/components/schemas/JsonTestbed"}},"JsonThreshold":{"type":"object","properties":{"branch":{"$ref":"#/components/schemas/JsonBranch"},"created":{"$ref":"#/components/schemas/DateTime"},"measure":{"$ref":"#/components/schemas/JsonMeasure"},"model":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/JsonModel"}]},"modified":{"$ref":"#/components/schemas/DateTime"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"testbed":{"$ref":"#/components/schemas/JsonTestbed"},"uuid":{"$ref":"#/components/schemas/ThresholdUuid"}},"required":["branch","created","measure","modified","project","testbed","uuid"]},"JsonThresholdModel":{"type":"object","properties":{"created":{"$ref":"#/components/schemas/DateTime"},"model":{"$ref":"#/components/schemas/JsonModel"},"project":{"$ref":"#/components/schemas/ProjectUuid"},"uuid":{"$ref":"#/components/schemas/ThresholdUuid"}},"required":["created","model","project","uuid"]},"JsonThresholds":{"type":"array","items":{"$ref":"#/components/schemas/JsonThreshold"}},"JsonTls":{"oneOf":[{"type":"object","properties":{"cert_file":{"type":"string"},"key_file":{"type":"string"},"type":{"type":"string","enum":["as_file"]}},"required":["cert_file","key_file","type"]},{"type":"object","properties":{"certs":{"type":"array","items":{"type":"integer","format":"uint8","minimum":0}},"key":{"type":"array","items":{"type":"integer","format":"uint8","minimum":0}},"type":{"type":"string","enum":["as_bytes"]}},"required":["certs","key","type"]}]},"JsonToken":{"type":"object","properties":{"creation":{"$ref":"#/components/schemas/DateTime"},"expiration":{"$ref":"#/components/schemas/DateTime"},"name":{"$ref":"#/components/schemas/ResourceName"},"token":{"$ref":"#/components/schemas/Jwt"},"user":{"$ref":"#/components/schemas/UserUuid"},"uuid":{"$ref":"#/components/schemas/TokenUuid"}},"required":["creation","expiration","name","token","user","uuid"]},"JsonTokens":{"type":"array","items":{"$ref":"#/components/schemas/JsonToken"}},"JsonTopCohort":{"type":"object","properties":{"month":{"type":"array","items":{"$ref":"#/components/schemas/JsonTopProject"}},"total":{"type":"array","items":{"$ref":"#/components/schemas/JsonTopProject"}},"week":{"type":"array","items":{"$ref":"#/components/schemas/JsonTopProject"}}},"required":["month","total","week"]},"JsonTopProject":{"type":"object","properties":{"metrics":{"type":"integer","format":"uint64","minimum":0},"name":{"$ref":"#/components/schemas/ResourceName"},"percentage":{"type":"number","format":"double"},"uuid":{"$ref":"#/components/schemas/ProjectUuid"}},"required":["metrics","name","percentage","uuid"]},"JsonUpdateAlert":{"type":"object","properties":{"status":{"nullable":true,"description":"The new status of the alert.","allOf":[{"$ref":"#/components/schemas/UpdateAlertStatus"}]}}},"JsonUpdateBenchmark":{"type":"object","properties":{"archived":{"nullable":true,"description":"Set whether the benchmark is archived.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the benchmark. Maximum length is 1,024 characters.","allOf":[{"$ref":"#/components/schemas/BenchmarkName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the benchmark. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}}},"JsonUpdateBranch":{"type":"object","properties":{"archived":{"nullable":true,"description":"Set whether the branch is archived.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the branch. Maximum length is 256 characters.","allOf":[{"$ref":"#/components/schemas/BranchName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the branch. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"start_point":{"nullable":true,"description":"The new start point for the branch.","allOf":[{"$ref":"#/components/schemas/JsonUpdateStartPoint"}]}}},"JsonUpdateConfig":{"type":"object","properties":{"config":{"$ref":"#/components/schemas/JsonConfig"},"delay":{"nullable":true,"type":"integer","format":"uint64","minimum":0}},"required":["config"]},"JsonUpdateMeasure":{"type":"object","properties":{"archived":{"nullable":true,"description":"Set whether the measure is archived.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]},"units":{"nullable":true,"description":"The new units of measure. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]}}},"JsonUpdateMember":{"type":"object","properties":{"role":{"nullable":true,"description":"The new organization role for the member.","allOf":[{"$ref":"#/components/schemas/OrganizationRole"}]}}},"JsonUpdateModel":{"type":"object","properties":{"lower_boundary":{"nullable":true,"description":"The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"max_sample_size":{"nullable":true,"description":"The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"min_sample_size":{"nullable":true,"description":"The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"test":{"description":"The test used by the threshold model to calculate the baseline and boundary limits.","allOf":[{"$ref":"#/components/schemas/ModelTest"}]},"upper_boundary":{"nullable":true,"description":"The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"window":{"nullable":true,"description":"The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["test"]},"JsonUpdateOrganization":{"anyOf":[{"$ref":"#/components/schemas/JsonOrganizationPatch"},{"$ref":"#/components/schemas/JsonOrganizationPatchNull"}]},"JsonUpdatePlot":{"anyOf":[{"$ref":"#/components/schemas/JsonPlotPatch"},{"$ref":"#/components/schemas/JsonPlotPatchNull"}]},"JsonUpdateProject":{"anyOf":[{"$ref":"#/components/schemas/JsonProjectPatch"},{"$ref":"#/components/schemas/JsonProjectPatchNull"}]},"JsonUpdateStartPoint":{"type":"object","properties":{"branch":{"nullable":true,"description":"The UUID, slug, or name of the branch to use as the start point.","allOf":[{"$ref":"#/components/schemas/NameId"}]},"clone_thresholds":{"nullable":true,"description":"If set to `true`, the thresholds from the start point branch will be deep copied to the branch. This can be useful for pull request branches that should have the same thresholds as their target branch. Requires the `branch` field to be set.","type":"boolean"},"hash":{"nullable":true,"description":"The full git hash of the branch to use as the start point. Requires the `branch` field to be set.","allOf":[{"$ref":"#/components/schemas/GitHash"}]},"max_versions":{"nullable":true,"description":"The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 255. Requires the `branch` field to be set.","type":"integer","format":"uint32","minimum":0},"reset":{"nullable":true,"description":"Reset the branch head to an empty state. If the start point `branch` is specified, the new branch head will begin at that start point. Otherwise, the branch head will be reset to an empty state.","type":"boolean"}}},"JsonUpdateTestbed":{"type":"object","properties":{"archived":{"nullable":true,"description":"Set whether the testbed is archived.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the testbed. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the testbed. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}}},"JsonUpdateThreshold":{"anyOf":[{"$ref":"#/components/schemas/JsonUpdateModel"},{"$ref":"#/components/schemas/JsonRemoveModel"}]},"JsonUpdateToken":{"type":"object","properties":{"name":{"nullable":true,"description":"The new name of the token. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/ResourceName"}]}}},"JsonUpdateUser":{"type":"object","properties":{"admin":{"nullable":true,"description":"Update whether the user is an admin. Must be an admin to update this field.","type":"boolean"},"email":{"nullable":true,"description":"The new email for the user.","allOf":[{"$ref":"#/components/schemas/Email"}]},"locked":{"nullable":true,"description":"Update whether the user is locked. Must be an admin to update this field.","type":"boolean"},"name":{"nullable":true,"description":"The new name of the user. Maximum length is 64 characters. May only contain alphanumeric characters, non-leading or trailing spaces, and the following characters: , . - \'","allOf":[{"$ref":"#/components/schemas/UserName"}]},"slug":{"nullable":true,"description":"The preferred new slug for the user. Maximum length is 64 characters.","allOf":[{"$ref":"#/components/schemas/Slug"}]}}},"JsonUsage":{"type":"object","properties":{"end_time":{"description":"The end time of the usage.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"kind":{"description":"The kind of usage.","allOf":[{"$ref":"#/components/schemas/UsageKind"}]},"license":{"nullable":true,"description":"The organization license.","allOf":[{"$ref":"#/components/schemas/JsonLicense"}]},"organization":{"description":"The organization UUID.","allOf":[{"$ref":"#/components/schemas/OrganizationUuid"}]},"plan":{"nullable":true,"description":"The organization plan.","allOf":[{"$ref":"#/components/schemas/JsonPlan"}]},"start_time":{"description":"The start time of the usage.","allOf":[{"$ref":"#/components/schemas/DateTime"}]},"usage":{"nullable":true,"description":"The metrics usage amount.","type":"integer","format":"uint32","minimum":0}},"required":["end_time","kind","organization","start_time"]},"JsonUser":{"type":"object","properties":{"admin":{"type":"boolean"},"email":{"$ref":"#/components/schemas/Email"},"locked":{"type":"boolean"},"name":{"$ref":"#/components/schemas/UserName"},"slug":{"$ref":"#/components/schemas/Slug"},"uuid":{"$ref":"#/components/schemas/UserUuid"}},"required":["admin","email","locked","name","slug","uuid"]},"JsonUsers":{"type":"array","items":{"$ref":"#/components/schemas/JsonUser"}},"JsonVersion":{"type":"object","properties":{"hash":{"nullable":true,"allOf":[{"$ref":"#/components/schemas/GitHash"}]},"number":{"$ref":"#/components/schemas/VersionNumber"}},"required":["number"]},"Jwt":{"type":"string"},"LastFour":{"type":"string"},"LogLevel":{"type":"string","enum":["trace","debug","info","warn","error","critical"]},"MeasureUuid":{"type":"string","format":"uuid"},"MetricUuid":{"type":"string","format":"uuid"},"Model":{"type":"object","properties":{"lower_boundary":{"nullable":true,"description":"The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"max_sample_size":{"nullable":true,"description":"The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"min_sample_size":{"nullable":true,"description":"The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.","allOf":[{"$ref":"#/components/schemas/SampleSize"}]},"test":{"description":"The test used by the threshold model to calculate the baseline and boundary limits.","allOf":[{"$ref":"#/components/schemas/ModelTest"}]},"upper_boundary":{"nullable":true,"description":"The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.","allOf":[{"$ref":"#/components/schemas/Boundary"}]},"window":{"nullable":true,"description":"The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.","allOf":[{"$ref":"#/components/schemas/Window"}]}},"required":["test"]},"ModelTest":{"type":"string","enum":["static","percentage","z_score","t_test","log_normal","iqr","delta_iqr"]},"ModelUuid":{"type":"string","format":"uuid"},"NameId":{"type":"string"},"NonEmpty":{"type":"string"},"OrganizationRole":{"oneOf":[{"description":"The organization leader role.","type":"string","enum":["leader"]}]},"OrganizationUuid":{"type":"string","format":"uuid"},"PlanLevel":{"type":"string","enum":["free","team","enterprise"]},"PlanStatus":{"type":"string","enum":["active","canceled","incomplete","incomplete_expired","past_due","paused","trialing","unpaid"]},"PlotUuid":{"type":"string","format":"uuid"},"ProjectUuid":{"type":"string","format":"uuid"},"ReportUuid":{"type":"string","format":"uuid"},"ResourceId":{"type":"string"},"ResourceName":{"type":"string"},"SampleSize":{"type":"integer","format":"uint32","minimum":0},"Secret":{"type":"string"},"ServerLog":{"oneOf":[{"type":"object","properties":{"stderr_terminal":{"type":"object","properties":{"level":{"$ref":"#/components/schemas/LogLevel"}},"required":["level"]}},"required":["stderr_terminal"],"additionalProperties":false},{"type":"object","properties":{"file":{"type":"object","properties":{"if_exists":{"$ref":"#/components/schemas/IfExists"},"level":{"$ref":"#/components/schemas/LogLevel"},"path":{"type":"string"}},"required":["if_exists","level","path"]}},"required":["file"],"additionalProperties":false}]},"ServerUuid":{"type":"string","format":"uuid"},"Slug":{"type":"string"},"TestbedUuid":{"type":"string","format":"uuid"},"ThresholdUuid":{"type":"string","format":"uuid"},"TokenUuid":{"type":"string","format":"uuid"},"UpdateAlertStatus":{"oneOf":[{"description":"The alert is active.","type":"string","enum":["active"]},{"description":"The alert has been dismissed by a user.","type":"string","enum":["dismissed"]}]},"Url":{"type":"string"},"UsageKind":{"oneOf":[{"description":"Bencher Cloud (Free)","type":"string","enum":["cloud_free"]},{"description":"Bencher Cloud (Metered)","type":"string","enum":["cloud_metered"]},{"description":"Bencher Cloud (Licensed)","type":"string","enum":["cloud_licensed"]},{"description":"Bencher Self-Hosted (Licensed) via Bencher Cloud","type":"string","enum":["cloud_self_hosted_licensed"]},{"description":"Bencher Self-Hosted (Free)","type":"string","enum":["self_hosted_free"]},{"description":"Bencher Self-Hosted (Licensed)","type":"string","enum":["self_hosted_licensed"]}]},"UserName":{"type":"string"},"UserUuid":{"type":"string","format":"uuid"},"VersionNumber":{"type":"integer","format":"uint32","minimum":0},"Visibility":{"type":"string","enum":["public","private"]},"Window":{"type":"integer","format":"uint32","minimum":0},"XAxis":{"type":"string","enum":["date_time","version"]},"JsonDirection":{"type":"string","enum":["asc","desc"]},"OrganizationsSort":{"oneOf":[{"description":"Sort by organization name.","type":"string","enum":["name"]}]},"Search":{"type":"string"},"OrganizationPermission":{"type":"string","enum":["view","create","edit","delete","manage","view_role","create_role","edit_role","delete_role"]},"OrgMembersSort":{"oneOf":[{"description":"Sort by user name.","type":"string","enum":["name"]}]},"OrgProjectsSort":{"oneOf":[{"description":"Sort by project name.","type":"string","enum":["name"]}]},"ProjectsSort":{"oneOf":[{"description":"Sort by project name.","type":"string","enum":["name"]}]},"ProjAlertsSort":{"oneOf":[{"description":"Sort by alert creation date time.","type":"string","enum":["created"]},{"description":"Sort by alert modified date time.","type":"string","enum":["modified"]}]},"ProjectPermission":{"type":"string","enum":["view","create","edit","delete","manage","view_role","create_role","edit_role","delete_role"]},"ProjBenchmarksSort":{"oneOf":[{"description":"Sort by benchmark name.","type":"string","enum":["name"]}]},"ProjBranchesSort":{"oneOf":[{"description":"Sort by branch name.","type":"string","enum":["name"]}]},"ProjMeasuresSort":{"oneOf":[{"description":"Sort by measure name.","type":"string","enum":["name"]}]},"DateTimeMillis":{"$ref":"#/components/schemas/TimestampMillis"},"TimestampMillis":{"type":"integer","format":"int64"},"ProjPlotsSort":{"oneOf":[{"description":"Sort by plot index.","type":"string","enum":["index"]},{"description":"Sort by plot title.","type":"string","enum":["title"]}]},"ProjReportsSort":{"oneOf":[{"description":"Sort by date time.","type":"string","enum":["date_time"]}]},"ProjTestbedsSort":{"oneOf":[{"description":"Sort by testbed name.","type":"string","enum":["name"]}]},"ProjThresholdsSort":{"oneOf":[{"description":"Sort by threshold creation date time.","type":"string","enum":["created"]},{"description":"Sort by threshold modified date time.","type":"string","enum":["modified"]}]},"UsersSort":{"oneOf":[{"description":"Sort by user name.","type":"string","enum":["name"]}]},"UserTokensSort":{"oneOf":[{"description":"Sort by token name.","type":"string","enum":["name"]}]}},"responses":{"Error":{"description":"Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}}},"tags":[{"name":"alerts","description":"Alerts"},{"name":"allowed"},{"name":"auth","description":"Auth"},{"name":"benchmarks","description":"Benchmarks"},{"name":"branches","description":"Branches"},{"name":"checkout"},{"name":"measures","description":"Measures"},{"name":"members"},{"name":"metrics","description":"Metrics"},{"name":"models","description":"Models"},{"name":"organizations","description":"Organizations"},{"name":"perf","description":"Perf Metrics"},{"name":"plan"},{"name":"plots","description":"Plots"},{"name":"projects","description":"Projects"},{"name":"reports","description":"Reports"},{"name":"run"},{"name":"server","description":"Server"},{"name":"stats"},{"name":"testbeds","description":"Testbeds"},{"name":"thresholds","description":"Thresholds"},{"name":"tokens","description":"API Tokens"},{"name":"usage"},{"name":"users","description":"Users"}]}');
 
 /***/ })
 
@@ -30843,7 +30249,7 @@ module.exports = JSON.parse('{"openapi":"3.0.3","info":{"title":"Bencher API","v
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(399);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(1730);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()
