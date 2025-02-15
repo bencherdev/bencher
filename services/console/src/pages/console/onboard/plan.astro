@@ -9,35 +9,38 @@ import OnboardPlan from "../../../components/console/onboard/OnboardPlan";
 import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
 import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
 import ConsoleFallbackPricingTable from "../../../components/pricing/ConsoleFallbackPricingTable";
+import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
 ---
 
 <BaseLayout
   title="Activate Your Plan"
   description="Invite collaborators to your project on Bencher"
 >
-<div slot="navbar" />
+  <div slot="navbar" />
 
-<OnboardPlan client:only="solid-js" apiUrl={BENCHER_API_URL} isBencherCloud={IS_BENCHER_CLOUD}>
-  <div slot="fallback">
-    <OnboardStepsFallback step={OnboardStep.PLAN} />
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column is-half">
-            <div class="content has-text-centered">
-              <h1 class="title is-1">Activate your account</h1>
-              <h2 class="subtitle is-4">
-                All plans come with a 30-day money-back guarantee.
-              </h2>
+  <OnboardPlan client:only="solid-js" apiUrl={BENCHER_API_URL} isBencherCloud={IS_BENCHER_CLOUD}>
+    <div slot="fallback">
+      <OnboardStepsFallback step={OnboardStep.PLAN} />
+      <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column is-half">
+              <div class="content has-text-centered">
+                <h1 class="title is-1">Activate your account</h1>
+                <h2 class="subtitle is-4">
+                  All plans come with a 30-day money-back guarantee.
+                </h2>
+              </div>
+              <br />
+              <ConsoleFallbackPricingTable hideFree={true} />
             </div>
-            <br />
-            <ConsoleFallbackPricingTable hideFree={true} />
           </div>
         </div>
-      </div>
-    </section>
-  </div>
-</OnboardPlan>
+      </section>
+    </div>
+  </OnboardPlan>
 
-<div slot="footer" />
+  <div slot="footer" />
+
+  <ThemeScript />
 </BaseLayout>

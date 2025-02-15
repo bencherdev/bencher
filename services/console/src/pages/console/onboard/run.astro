@@ -11,6 +11,7 @@ import OnboardRun from "../../../components/console/onboard/OnboardRun";
 import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
 import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
 import Collection from "../../../util/collection";
+import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
 
 const collection = Collection.onboard;
 const cloudPage = await getEntry(collection, "en/install-cli");
@@ -24,66 +25,68 @@ const { Content } = IS_BENCHER_CLOUD
   title="Track Your Benchmarks"
   description="Track your benchmarks with Bencher"
 >
-<div slot="navbar" />
+  <div slot="navbar" />
 
-<OnboardRun client:only="solid-js" apiUrl={BENCHER_API_URL} isBencherCloud={IS_BENCHER_CLOUD}>
-  <div slot="fallback">
-    <OnboardStepsFallback step={OnboardStep.RUN} />
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column is-half">
-            <div class="content has-text-centered">
-              <h1 class="title is-1">Track your benchmarks</h1>
-              <h2 class="subtitle is-4">
-                Install the Bencher CLI and run your first benchmarks.
-              </h2>
-              <figure class="frame">
-                <pre data-language="plaintext">
-                </pre>
-                <button
-                  class="button is-fullwidth"
-                  title="Copy command to clipboard"
+  <OnboardRun client:only="solid-js" apiUrl={BENCHER_API_URL} isBencherCloud={IS_BENCHER_CLOUD}>
+    <div slot="fallback">
+      <OnboardStepsFallback step={OnboardStep.RUN} />
+      <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column is-half">
+              <div class="content has-text-centered">
+                <h1 class="title is-1">Track your benchmarks</h1>
+                <h2 class="subtitle is-4">
+                  Install the Bencher CLI and run your first benchmarks.
+                </h2>
+                <figure class="frame">
+                  <pre data-language="plaintext">
+                  </pre>
+                  <button
+                    class="button is-fullwidth"
+                    title="Copy command to clipboard"
+                  >
+                    <span class="icon-text">
+                      <span class="icon">
+                        <i class="far fa-copy" />
+                      </span>
+                      <span>Copy to Clipboard</span>
+                    </span>
+                  </button>
+                </figure>
+                <br />
+                <br />
+                <a
+                  class="button is-primary is-fullwidth"
                 >
                   <span class="icon-text">
+                    <span>Next Step</span>
                     <span class="icon">
-                      <i class="far fa-copy" />
+                      <i class="fas fa-chevron-right" />
                     </span>
-                    <span>Copy to Clipboard</span>
                   </span>
-                </button>
-              </figure>
-              <br />
-              <br />
-              <a
-                class="button is-primary is-fullwidth"
-              >
-                <span class="icon-text">
-                  <span>Next Step</span>
-                  <span class="icon">
-                    <i class="fas fa-chevron-right" />
-                  </span>
-                </span>
-              </a>
+                </a>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
-  </div>
-</OnboardRun>
+      </section>
+    </div>
+  </OnboardRun>
 
-<section class="section">
-  <div class="continer">
-    <div class="columns is-centered">
-      <div class="column is-half">
-        <div class="content">
-          <Content />
+  <section class="section">
+    <div class="continer">
+      <div class="columns is-centered">
+        <div class="column is-half">
+          <div class="content">
+            <Content />
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<div slot="footer" />
+  <div slot="footer" />
+
+  <ThemeScript />
 </BaseLayout>

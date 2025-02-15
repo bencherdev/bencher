@@ -4,6 +4,9 @@ import {
 	BENCHER_WORDMARK_LIGHT,
 } from "../../../util/ext";
 
+// https://bulma.io/documentation/features/dark-mode/
+export const DATA_THEME = "data-theme";
+
 export const BENCHER_THEME_KEY = "BENCHER_THEME";
 export const LIGHT_THEME = "light";
 export const DARK_THEME = "dark";

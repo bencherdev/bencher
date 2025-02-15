@@ -7,60 +7,63 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import OnboardToken from "../../../components/console/onboard/OnboardToken";
 import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
 import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
+import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
 ---
 
 <BaseLayout
   title="API Token"
   description="Setup a new API token for Bencher"
 >
-<div slot="navbar" />
+  <div slot="navbar" />
 
-<OnboardToken client:only="solid-js" apiUrl={BENCHER_API_URL} >
-  <div slot="fallback">
-    <OnboardStepsFallback step={OnboardStep.API_TOKEN} />
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column is-half">
-            <div class="content has-text-centered">
-              <h1 class="title is-1">Use this API token</h1>
-              <h2 class="subtitle is-4">
-                Authenticate with Bencher using this API token.
-              </h2>
-              <figure class="frame">
-                <pre data-language="plaintext">
-                </pre>
-                <button
-                  class="button is-fullwidth"
-                  title="Copy API token to clipboard"
+  <OnboardToken client:only="solid-js" apiUrl={BENCHER_API_URL} >
+    <div slot="fallback">
+      <OnboardStepsFallback step={OnboardStep.API_TOKEN} />
+      <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column is-half">
+              <div class="content has-text-centered">
+                <h1 class="title is-1">Use this API token</h1>
+                <h2 class="subtitle is-4">
+                  Authenticate with Bencher using this API token.
+                </h2>
+                <figure class="frame">
+                  <pre data-language="plaintext">
+                  </pre>
+                  <button
+                    class="button is-fullwidth"
+                    title="Copy API token to clipboard"
+                  >
+                    <span class="icon-text">
+                      <span class="icon">
+                        <i class="far fa-copy" />
+                      </span>
+                      <span>Copy to Clipboard</span>
+                    </span>
+                  </button>
+                </figure>
+                <br />
+                <br />
+                <a
+                  class="button is-primary is-fullwidth"
                 >
                   <span class="icon-text">
+                    <span>Next Step</span>
                     <span class="icon">
-                      <i class="far fa-copy" />
+                      <i class="fas fa-chevron-right" />
                     </span>
-                    <span>Copy to Clipboard</span>
                   </span>
-                </button>
-              </figure>
-              <br />
-              <br />
-              <a
-                class="button is-primary is-fullwidth"
-              >
-                <span class="icon-text">
-                  <span>Next Step</span>
-                  <span class="icon">
-                    <i class="fas fa-chevron-right" />
-                  </span>
-                </span>
-              </a>
+                </a>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
-  </div>
-</OnboardToken>
+      </section>
+    </div>
+  </OnboardToken>
 
-<div slot="footer" />
+  <div slot="footer" />
+
+  <ThemeScript />
 </BaseLayout>

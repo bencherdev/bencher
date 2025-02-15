@@ -7,36 +7,28 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import OnboardInvite from "../../../components/console/onboard/OnboardInvite";
 import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
 import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
+import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
 ---
 
 <BaseLayout
   title="Invite Your Collaborators"
   description="Invite collaborators to your project on Bencher"
 >
-<div slot="navbar" />
+  <div slot="navbar" />
 
-<OnboardInvite client:only="solid-js" apiUrl={BENCHER_API_URL}>
-  <div slot="fallback">
-    <OnboardStepsFallback step={OnboardStep.INVITE} />
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column is-half">
-            <div class="content has-text-centered">
-              <h1 class="title is-1">Invite your collaborators</h1>
-              <h2 class="subtitle is-4">
-                Add collaborators as members of your organization.
-              </h2>
-              <form>
-                <div class="field">
-                  <div class="control has-icons-left has-icons-right">
-                    <span class="icon is-small is-left">
-                    </span>
-                    <input
-                      class="input"
-                    />
-                  </div>
-                  </div>
+  <OnboardInvite client:only="solid-js" apiUrl={BENCHER_API_URL}>
+    <div slot="fallback">
+      <OnboardStepsFallback step={OnboardStep.INVITE} />
+      <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column is-half">
+              <div class="content has-text-centered">
+                <h1 class="title is-1">Invite your collaborators</h1>
+                <h2 class="subtitle is-4">
+                  Add collaborators as members of your organization.
+                </h2>
+                <form>
                   <div class="field">
                     <div class="control has-icons-left has-icons-right">
                       <span class="icon is-small is-left">
@@ -46,33 +38,44 @@ import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInn
                       />
                     </div>
                     </div>
-                <button
+                    <div class="field">
+                      <div class="control has-icons-left has-icons-right">
+                        <span class="icon is-small is-left">
+                        </span>
+                        <input
+                          class="input"
+                        />
+                      </div>
+                      </div>
+                  <button
+                    class="button is-primary is-fullwidth"
+                    title="Send invite to collaborator"
+                    disabled={true}
+                  >
+                    Send Invite
+                  </button>
+                </form>
+                <br />
+                <br />
+                <a
                   class="button is-primary is-fullwidth"
-                  title="Send invite to collaborator"
-                  disabled={true}
                 >
-                  Send Invite
-                </button>
-              </form>
-              <br />
-              <br />
-              <a
-                class="button is-primary is-fullwidth"
-              >
-                <span class="icon-text">
-                  <span>Next Step</span>
-                  <span class="icon">
-                    <i class="fas fa-chevron-right" />
+                  <span class="icon-text">
+                    <span>Next Step</span>
+                    <span class="icon">
+                      <i class="fas fa-chevron-right" />
+                    </span>
                   </span>
-                </span>
-              </a>
+                </a>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
-  </div>
-</OnboardInvite>
+      </section>
+    </div>
+  </OnboardInvite>
 
-<div slot="footer" />
+  <div slot="footer" />
+
+  <ThemeScript />
 </BaseLayout>
