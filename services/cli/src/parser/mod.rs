@@ -127,7 +127,7 @@ pub struct CliBackend {
 
     /// Allow insecure connections to a host (Bencher Self-Hosted only)
     #[cfg(feature = "plus")]
-    #[clap(long)]
+    #[clap(long, value_name = "HOST")]
     pub allow_insecure_host: Option<Vec<TrustedHost>>,
 
     /// Load TLS certificates from the platform's native certificate store
