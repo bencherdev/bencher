@@ -88,6 +88,7 @@ const Pinned = (props: {
 			user={props.user}
 			project_slug={props.project_slug}
 			plot={props.plot}
+			embed={{ key: true }}
 		>
 			<div class="box">
 				<PinnedButtons
