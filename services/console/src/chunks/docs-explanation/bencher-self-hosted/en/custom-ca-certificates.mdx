@@ -23,7 +23,7 @@ containing the certificate followed by the private key.
 Finally, if you're using a setup in which you want to trust a self-signed certificate
 or otherwise disable certificate verification,
 you can instruct `bencher` to allow insecure connections to dedicated hosts via
-[the `insecure-host` flag][insecure host].
+[the `--insecure-host` flag][insecure host].
 This flag is only applicable to HTTPS connections, as HTTP connections are inherently insecure.
 
 **WARNING**: nly use `--insecure-host` in a secure network with verified sources,
