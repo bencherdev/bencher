@@ -1,6 +1,9 @@
 use bencher_json::{ResourceId, ResourceName, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
+use super::CliPagination;
+#[cfg(feature = "plus")]
+use super::ElidedOption;
 use crate::parser::CliBackend;
 
 pub mod member;
@@ -8,9 +11,7 @@ pub mod plan;
 pub mod usage;
 
 #[cfg(feature = "plus")]
-use self::usage::CliOrganizationUsage;
-
-use super::{CliPagination, ElidedOption};
+use usage::CliOrganizationUsage;
 
 #[derive(Subcommand, Debug)]
 pub enum CliOrganization {

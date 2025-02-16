@@ -11062,6 +11062,10 @@
           "hostname": {
             "$ref": "#/components/schemas/ResourceName"
           },
+          "insecure_host": {
+            "nullable": true,
+            "type": "boolean"
+          },
           "port": {
             "nullable": true,
             "type": "integer",

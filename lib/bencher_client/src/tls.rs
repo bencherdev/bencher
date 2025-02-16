@@ -1,4 +1,3 @@
-#![cfg(feature = "plus")]
 // https://github.com/astral-sh/uv/blob/591f38c25e577d29bb4fd0dde7cdb614f3129bfc/crates/uv-client/src/tls.rs
 
 use reqwest::Identity;

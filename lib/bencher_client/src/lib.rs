@@ -16,9 +16,7 @@ pub use bencher_json as json;
 pub use client::{BencherClient, BencherClientBuilder, ClientError, ErrorResponse};
 pub use codegen::*;
 
-#[cfg(feature = "plus")]
 pub const SSL_CERT_FILE: &str = "SSL_CERT_FILE";
-#[cfg(feature = "plus")]
 pub const SSL_CLIENT_CERT: &str = "SSL_CLIENT_CERT";
 
 macro_rules! from_client {

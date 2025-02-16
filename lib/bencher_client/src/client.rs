@@ -7,7 +7,6 @@ use reqwest::ClientBuilder;
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::time::{sleep, Duration};
 
-#[cfg(feature = "plus")]
 use crate::{SSL_CERT_FILE, SSL_CLIENT_CERT};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -20,9 +19,7 @@ const DEFAULT_RETRY_AFTER: u64 = 1;
 pub struct BencherClient {
     pub host: url::Url,
     pub token: Option<Jwt>,
-    #[cfg(feature = "plus")]
     pub insecure_host: bool,
-    #[cfg(feature = "plus")]
     pub native_tls: bool,
     pub timeout: Duration,
     pub attempts: usize,
@@ -85,9 +82,7 @@ impl BencherClient {
         BencherClientBuilder {
             host: Some(self.host),
             token: self.token,
-            #[cfg(feature = "plus")]
             insecure_host: Some(self.insecure_host),
-            #[cfg(feature = "plus")]
             native_tls: Some(self.native_tls),
             timeout: Some(self.timeout),
             attempts: Some(self.attempts),
@@ -259,13 +254,11 @@ impl BencherClient {
             client_builder = client_builder.default_headers(headers);
         }
 
-        #[cfg(feature = "plus")]
         let client_builder = self.client_builder_tls(client_builder);
 
         Ok(client_builder)
     }
 
-    #[cfg(feature = "plus")]
     fn client_builder_tls(&self, mut client_builder: ClientBuilder) -> ClientBuilder {
         if self.insecure_host {
             client_builder = client_builder.danger_accept_invalid_certs(true);
@@ -292,7 +285,6 @@ impl BencherClient {
     }
 
     // Check for the presence of an `SSL_CERT_FILE`.
-    #[cfg(feature = "plus")]
     fn cert_file_exists(&self) -> bool {
         use std::path::Path;
         env::var_os(SSL_CERT_FILE).is_some_and(|path| {
@@ -352,9 +344,7 @@ impl std::fmt::Display for ErrorResponse {
 pub struct BencherClientBuilder {
     host: Option<url::Url>,
     token: Option<Jwt>,
-    #[cfg(feature = "plus")]
     insecure_host: Option<bool>,
-    #[cfg(feature = "plus")]
     native_tls: Option<bool>,
     timeout: Option<Duration>,
     attempts: Option<usize>,
@@ -384,7 +374,6 @@ impl BencherClientBuilder {
         self
     }
 
-    #[cfg(feature = "plus")]
     #[must_use]
     /// Set allow insecure host
     pub fn insecure_host(mut self, insecure_host: bool) -> Self {
@@ -392,7 +381,6 @@ impl BencherClientBuilder {
         self
     }
 
-    #[cfg(feature = "plus")]
     #[must_use]
     /// Set the JWT token
     pub fn native_tls(mut self, native_tls: bool) -> Self {
@@ -445,9 +433,7 @@ impl BencherClientBuilder {
         let Self {
             host,
             token,
-            #[cfg(feature = "plus")]
             insecure_host,
-            #[cfg(feature = "plus")]
             native_tls,
             timeout,
             attempts,
@@ -458,9 +444,7 @@ impl BencherClientBuilder {
         BencherClient {
             host: host.unwrap_or_else(|| BENCHER_API_URL.clone()),
             token,
-            #[cfg(feature = "plus")]
             insecure_host: insecure_host.unwrap_or_default(),
-            #[cfg(feature = "plus")]
             native_tls: native_tls.unwrap_or_default(),
             timeout: timeout.unwrap_or(DEFAULT_TIMEOUT),
             attempts: attempts.unwrap_or(DEFAULT_ATTEMPTS),

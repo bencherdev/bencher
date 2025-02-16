@@ -123,13 +123,11 @@ pub struct CliBackend {
     #[clap(long, env = "BENCHER_API_TOKEN")]
     pub token: Option<Jwt>,
 
-    /// Allow insecure connections to a host
-    #[cfg(feature = "plus")]
+    /// Allow insecure connections to an HTTPS host
     #[clap(long)]
     pub insecure_host: bool,
 
     /// Load TLS certificates from the platform's native certificate store
-    #[cfg(feature = "plus")]
     #[clap(long)]
     pub native_tls: bool,
 
