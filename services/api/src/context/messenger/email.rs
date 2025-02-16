@@ -4,7 +4,7 @@ use bencher_json::system::config::JsonSmtp;
 use bencher_json::Secret;
 use mail_send::{mail_builder::MessageBuilder, SmtpClientBuilder};
 use slog::{error, trace, Logger};
-use tokio::sync::RwLock;
+use tokio::sync::Mutex;
 
 use super::body::FmtBody;
 use super::Message;
@@ -12,7 +12,7 @@ use crate::config::DEFAULT_SMTP_PORT;
 
 #[derive(Debug, Clone)]
 pub struct Email {
-    client: Arc<RwLock<Client>>,
+    client: Arc<Mutex<Client>>,
     from_name: Option<String>,
     from_email: String,
 }
@@ -38,7 +38,7 @@ impl From<JsonSmtp> for Email {
             secret,
         };
         Self {
-            client: Arc::new(RwLock::new(client_builder.into())),
+            client: Arc::new(Mutex::new(client_builder.into())),
             from_name: Some(from_name.into()),
             from_email: from_email.into(),
         }
@@ -78,7 +78,7 @@ impl Email {
         let send_log = log.clone();
         let send_client = self.client.clone();
         tokio::spawn(async move {
-            let mut client = send_client.write().await;
+            let mut client = send_client.lock().await;
             match client.send(&send_log, message_builder).await {
                 Ok(()) => trace!(send_log, "Email sent email from {from_email} to {to_email}"),
                 Err(err) => {
