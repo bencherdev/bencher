@@ -22,6 +22,7 @@ impl From<JsonSmtp> for Email {
         let JsonSmtp {
             hostname,
             port,
+            insecure_host,
             starttls,
             username,
             secret,
@@ -34,6 +35,7 @@ impl From<JsonSmtp> for Email {
             client: Arc::new(RwLock::new(Client::new(
                 hostname.into(),
                 port.unwrap_or(DEFAULT_SMTP_PORT),
+                insecure_host.unwrap_or_default(),
                 starttls.unwrap_or(true),
                 username.into(),
                 secret,
@@ -94,6 +96,7 @@ impl Email {
 struct Client {
     hostname: String,
     port: u16,
+    insecure_host: bool,
     starttls: bool,
     username: String,
     secret: Secret,
@@ -114,13 +117,21 @@ impl fmt::Debug for Client {
 }
 
 impl Client {
-    fn new(hostname: String, port: u16, starttls: bool, username: String, secret: Secret) -> Self {
+    fn new(
+        hostname: String,
+        port: u16,
+        insecure_host: bool,
+        starttls: bool,
+        username: String,
+        secret: Secret,
+    ) -> Self {
         Self {
             hostname,
             port,
+            insecure_host,
+            starttls,
             username,
             secret,
-            starttls,
             inner: None,
         }
     }
@@ -128,9 +139,15 @@ impl Client {
     // Connect to an SMTP relay server over TLS and
     // authenticate using the provided credentials.
     fn new_client_builder(&self) -> SmtpClientBuilder<String> {
-        SmtpClientBuilder::new(self.hostname.clone(), self.port)
-            .credentials((self.username.clone(), String::from(self.secret.clone())))
+        let mut builder = SmtpClientBuilder::new(self.hostname.clone(), self.port);
+
+        if self.insecure_host {
+            builder = builder.allow_invalid_certs();
+        }
+
+        builder
             .implicit_tls(!self.starttls)
+            .credentials((self.username.clone(), String::from(self.secret.clone())))
     }
 
     async fn send(

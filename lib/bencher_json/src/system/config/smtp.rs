@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct JsonSmtp {
     pub hostname: ResourceName,
     pub port: Option<u16>,
+    pub insecure_host: Option<bool>,
     pub starttls: Option<bool>,
     pub username: ResourceName,
     pub secret: Secret,
