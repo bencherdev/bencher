@@ -1,6 +1,10 @@
 ## Pending `v0.4.36`
 - Fix CORS failures when API server returns an error
 - Catch errors when Console WASM fails to load
+- Add `--insecure-host` flag to `bencher` CLI to allow insecure connections to Bencher Self-Hosted API servers
+- Add `--native-tls` flag to `bencher` CLI to load TLS certificates from the platform's native certificate store
+- Add `--timeout` option to `bencher` CLI to set the timeout for all API requests
+- Add `smtp.insecure_host` option to Bencher Self-Hosted API server configuration to allow insecure connections to SMTP servers (Thank you [@btoic](https://github.com/btoic))
 
 ## `v0.4.35`
 - Add "Dismiss All" Alerts button to Console UI
