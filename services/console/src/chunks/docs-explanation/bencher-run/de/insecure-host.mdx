@@ -1,0 +1,13 @@
+### `--insecure-host`
+
+<br />
+
+Optional: Erlaubt unsichere Verbindung zum Bencher API-Server.
+
+Dieses Flag ist nützlich, wenn Sie sich mit einer Bencher Self-Hosted-Instanz
+verbinden, die über ein selbstsigniertes Zertifikat oder ein Zertifikat verfügt, das nicht im Systemzertifikatsspeicher enthalten ist. Es ist nur auf HTTPS-Verbindungen anwendbar, da HTTP-Verbindungen von Natur aus unsicher sind.
+
+**WARNUNG**: Verwenden Sie `--insecure-host` nur in einem sicheren Netzwerk mit verifizierten Quellen,
+da es die SSL-Verifizierung umgeht und Sie [Man-in-the-Middle-Angriffen][wikipedia mitm] aussetzen könnte.
+
+[wikipedia mitm]: https://de.wikipedia.org/wiki/Man-in-the-Middle-Angriff

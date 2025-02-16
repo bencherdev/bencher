@@ -1,15 +1,14 @@
 ## `smtp`
 
-Dieser Abschnitt spezifiziert eine [SMTP](https://de.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol) Dienstkonfiguration.
-Der gesamte Abschnitt ist optional.
-Wird er nicht angegeben, werden alle Nachrichten stattdessen an `logging` geschickt.
+Dieser Abschnitt spezifiziert eine [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)-Dienstkonfiguration. Der gesamte Abschnitt ist optional. Wenn nicht angegeben, werden alle Nachrichten stattdessen an `logging` gesendet.
 
-|    Name    |          Beispiel          | Standard | Erforderlich |                                               Beschreibung                                                |
-| :--------: | :------------------------: | :------: | :----------: | :-------------------------------------------------------------------------------------------------------: |
-|  hostname  |      "mailbonobo.com"      |   ---    |      Ja      |                                        Gibt den SMTP-Hostname an.                                         |
-|    port    |            587             |   587    |     Nein     |                                          Gibt den SMTP-Port an.                                           |
-|  starttls  |            true            |   true   |     Nein     |                  Kontrolliert, ob die SMTP-Verbindung das STARTTLS-Protokoll verwendet.                   |
-|  username  |         "bencher"          |   ---    |      Ja      |                                 Gibt den Benutzernamen beim SMTP-Host an.                                 |
-|   secret   | "WM3F2u9cqSNdBPLfy9sJ5kk9" |   ---    |      Ja      | Gibt das Geheimnis für den Benutzernamen beim SMTP-Host an. Im Protokoll erscheint es als `************`. |
-| from_name  |         "Bencher"          |   ---    |      Ja      |                    Gibt den Namen an, der im Absenderbereich aller E-Mails erscheint.                     |
-| from_email | "info@bencher.example.com" |   ---    |      Ja      |                    Gibt die E-Mail an, die im Absenderbereich aller E-Mails erscheint.                    |
+|     Name      |          Beispiel          | Standard | Erforderlich |                                                                   Beschreibung                                                                   |
+| :-----------: | :------------------------: | :------: | :----------: | :----------------------------------------------------------------------------------------------------------------------------------------------: |
+|   hostname    |      "mailbonobo.com"      |   ---    |      Ja      |                                                         Spezifiziert den SMTP-Hostname.                                                          |
+|     port      |            587             |   587    |     Nein     |                                                           Spezifiziert den SMTP-Port.                                                            |
+| insecure_host |            ---             |  false   |     Nein     |                                    Bestimmt, ob die SMTP-Verbindung ungültige TLS-Zertifikate zulassen kann.                                     |
+|   starttls    |            true            |   true   |     Nein     |                                        Bestimmt, ob die SMTP-Verbindung das STARTTLS-Protokoll verwendet.                                        |
+|   username    |         "bencher"          |   ---    |      Ja      |                                                  Spezifiziert den Benutzernamen beim SMTP-Host.                                                  |
+|    secret     | "WM3F2u9cqSNdBPLfy9sJ5kk9" |   ---    |      Ja      | Spezifiziert das Geheimnis für den Benutzernamen beim SMTP-Host. Wann immer es protokolliert wird, erscheint es verschleiert als `************`. |
+|   from_name   |         "Bencher"          |   ---    |      Ja      |                                  Spezifiziert den Namen, der im Absender-Bereich aller E-Mails angezeigt wird.                                   |
+|  from_email   | "info@bencher.example.com" |   ---    |      Ja      |                              Spezifiziert die E-Mail-Adresse, die im Absender-Bereich aller E-Mails angezeigt wird.                              |

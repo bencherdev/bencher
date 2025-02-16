@@ -1,0 +1,19 @@
+## カスタムCA証明書
+
+デフォルトでは、`bencher` CLIはバンドルされた[`webpki-roots`クレート][webpki-roots]から証明書を読み込みます。`webpki-roots`はMozillaからの信頼できる一連の信頼ルートであり、それを`bencher`に含めることで移植性とパフォーマンスが向上します。特にmacOSでは、システムの信頼ストアを読み込むと著しい遅延が発生するため、これが当てはまります。
+
+しかし、いくつかのケースでは、プラットフォームのネイティブな証明書ストアを使用したい場合があります。特に、必須のプロキシや自己署名のBencher自社ホスト接続のために、システムの証明書ストアに含まれる企業の信頼ルートに依存している場合です。このような場合、`bencher`をシステムの信頼ストアを使用するように命令するには、[`--native-tls`フラグ][native tls]を指定して`bencher`を実行してください。
+
+証明書への直接パスが必要な場合は、`SSL_CERT_FILE`環境変数に証明書バンドルのパスを設定し、システムの信頼ストアではなくそのファイルを`bencher`に使用させます。これは、特にCI環境ではシステムの信頼ストアが利用できない場合に多く見られます。
+
+クライアント証明書認証（mTLS）を希望する場合、`SSL_CLIENT_CERT`環境変数に、証明書とそれに続く秘密鍵を含むPEM形式のファイルのパスを設定してください。
+
+最後に、自己署名の証明書を信頼するか、証明書の検証を無効にする設定を使用している場合、[`--insecure-host`フラグ][insecure host]を使用して、専用のホストへの安全でない接続を`bencher`に許可することができます。このフラグは、HTTP接続が本質的に安全ではないため、HTTPS接続にのみ適用されます。
+
+**警告**: `--insecure-host`は、SSLの検証を回避し、中間者攻撃[man-in-the-middle attacks][wikipedia mitm]にさらされる可能性があるため、確認されたソースを持つ安全なネットワークでのみ使用してください。
+
+[wikipedia mitm]: https://ja.wikipedia.org/wiki/%E4%B8%AD%E9%96%93%E8%80%85%E6%94%BB%E6%92%83
+[webpki-roots]: https://github.com/rustls/webpki-roots
+
+[native tls]: /ja/docs/explanation/bencher-run/#--native-tls
+[insecure host]: /ja/docs/explanation/bencher-run/#--insecure-host

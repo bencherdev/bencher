@@ -1,0 +1,36 @@
+## Certificados CA personalizados
+
+Por padrão, o CLI `bencher` carrega certificados do crate [`webpki-roots`][webpki-roots] incluído.
+Os `webpki-roots` são um conjunto confiável de raízes de confiança da Mozilla,
+e incluí-los no `bencher` melhora a portabilidade e o desempenho.
+Isso é especialmente verdadeiro no macOS, onde a leitura do repositório de confiança do sistema gera um atraso significativo.
+
+No entanto, em alguns casos, você pode querer usar o repositório de certificados nativo da plataforma,
+especialmente se você depende de uma raiz de confiança corporativa incluída no repositório de certificados do seu sistema
+para um proxy obrigatório ou conexões Bencher Self-Hosted com certificados autoassinados.
+Para instruir o `bencher` a usar o repositório de confiança do sistema, execute o `bencher` com o
+[flag `--native-tls`][native tls].
+
+Se um caminho direto para o certificado for necessário,
+defina a variável de ambiente `SSL_CERT_FILE` para o caminho do pacote de certificados,
+para instruir o `bencher` a usar esse arquivo em vez do repositório de confiança do sistema.
+Isso é comum em ambientes de CI onde o repositório de confiança do sistema não está disponível.
+
+Se a autenticação por certificado de cliente (mTLS) for desejada,
+defina a variável de ambiente `SSL_CLIENT_CERT` para o caminho do arquivo em formato PEM
+contendo o certificado seguido pela chave privada.
+
+Finalmente, se você estiver usando uma configuração em que deseja confiar em um certificado autoassinado
+ou de outra forma desativar a verificação de certificados,
+você pode instruir o `bencher` a permitir conexões inseguras para hosts dedicados através do
+[flag `--insecure-host`][insecure host].
+Este flag é aplicável apenas para conexões HTTPS, pois conexões HTTP são inerentemente inseguras.
+
+**AVISO**: Use `--insecure-host` apenas em uma rede segura com fontes verificadas,
+pois ele ignora a verificação SSL e pode expô-lo a [ataques man-in-the-middle][wikipedia mitm].
+
+[wikipedia mitm]: https://pt.wikipedia.org/wiki/Ataque_man-in-the-middle
+[webpki-roots]: https://github.com/rustls/webpki-roots
+
+[native tls]: /pt/docs/explanation/bencher-run/#--native-tls
+[insecure host]: /pt/docs/explanation/bencher-run/#--insecure-host

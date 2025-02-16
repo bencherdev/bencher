@@ -1,0 +1,19 @@
+## 自定义 CA 证书
+
+默认情况下，`bencher` CLI 从捆绑的 [`webpki-roots` crate][webpki-roots] 加载证书。`webpki-roots` 是来自 Mozilla 的一组可靠信任根，将它们包含在 `bencher` 中可以提高可移植性和性能。这在 macOS 上尤其如此，因为读取系统信任存储会导致显著延迟。
+
+然而，在某些情况下，你可能希望使用平台的原生证书存储，特别是当你依赖于一个包含在系统证书存储中的企业信任根，用于一个强制性的代理或自签名的 Bencher 自托管连接。要指示 `bencher` 使用系统的信任存储，请使用 [`--native-tls` 标志][native tls] 运行 `bencher`。
+
+如果需要证书的直接路径，请将 `SSL_CERT_FILE` 环境变量设置为证书捆绑包的路径，以指示 `bencher` 使用该文件而不是系统的信任存储。在 CI 环境中，系统的信任存储不可用时通常会出现这种情况。
+
+如果需要客户端证书验证（mTLS），请将 `SSL_CLIENT_CERT` 环境变量设置为包含证书的 PEM 格式文件的路径，后跟私钥。
+
+最后，如果你正在使用一个希望信任自签名证书或其他禁用证书验证的设置，可以通过 [`--insecure-host` 标志][insecure host] 指示 `bencher` 允许与特定主机的不安全连接。此标志仅适用于 HTTPS 连接，因为 HTTP 连接本质上是不安全的。
+
+**警告**：仅在一个安全网络中使用 `--insecure-host` 与经过验证的来源，因为它绕过了 SSL 验证，可能使你暴露于[中间人攻击][wikipedia mitm]。
+
+[wikipedia mitm]: https://zh.wikipedia.org/wiki/%E4%B8%AD%E9%97%B4%E4%BA%BA%E6%94%BB%E5%87%BB
+[webpki-roots]: https://github.com/rustls/webpki-roots
+
+[native tls]: /zh/docs/explanation/bencher-run/#--native-tls
+[insecure host]: /zh/docs/explanation/bencher-run/#--insecure-host

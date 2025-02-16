@@ -1,0 +1,36 @@
+## Certificats CA personnalisés
+
+Par défaut, l'interface CLI `bencher` charge les certificats depuis le crate [`webpki-roots`][webpki-roots] inclus.
+Les `webpki-roots` sont un ensemble de racines de confiance fiables provenant de Mozilla,
+et les inclure dans `bencher` améliore la portabilité et la performance.
+Cela est particulièrement vrai sur macOS, où lire le magasin de confiance du système entraîne un retard significatif.
+
+Cependant, dans certains cas, vous pourriez vouloir utiliser le magasin de certificats natif de la plateforme,
+en particulier si vous dépendez d'une racine de confiance d'entreprise incluse dans le magasin de certificats de votre système
+pour un proxy obligatoire ou des connexions auto-hébergées de Bencher avec un certificat auto-signé.
+Pour instruire `bencher` à utiliser le magasin de confiance du système, exécutez `bencher` avec
+[le drapeau `--native-tls`][native tls].
+
+Si un chemin direct vers le certificat est requis,
+définissez la variable d'environnement `SSL_CERT_FILE` au chemin de l'ensemble de certificats,
+pour instruire `bencher` d'utiliser ce fichier à la place du magasin de confiance du système.
+C'est souvent le cas dans les environnements CI où le magasin de confiance du système n'est pas disponible.
+
+Si l'authentification par certificat client (mTLS) est souhaitée,
+définissez la variable d'environnement `SSL_CLIENT_CERT` au chemin du fichier au format PEM
+contenant le certificat suivi de la clé privée.
+
+Enfin, si vous utilisez une configuration dans laquelle vous souhaitez faire confiance à un certificat auto-signé
+ou désactiver d'une autre manière la vérification du certificat,
+vous pouvez instruire `bencher` pour permettre des connexions non sécurisées à des hôtes dédiés via
+[le drapeau `--insecure-host`][insecure host].
+Ce drapeau est uniquement applicable aux connexions HTTPS, car les connexions HTTP sont intrinsèquement non sécurisées.
+
+**AVERTISSEMENT** : utilisez uniquement `--insecure-host` dans un réseau sécurisé avec des sources vérifiées,
+car cela contourne la vérification SSL et pourrait vous exposer à des [attaques de type homme du milieu][wikipedia mitm].
+
+[wikipedia mitm]: https://fr.wikipedia.org/wiki/Attaque_de_l%27homme_du_milieu
+[webpki-roots]: https://github.com/rustls/webpki-roots
+
+[native tls]: /fr/docs/explanation/bencher-run/#--native-tls
+[insecure host]: /fr/docs/explanation/bencher-run/#--insecure-host

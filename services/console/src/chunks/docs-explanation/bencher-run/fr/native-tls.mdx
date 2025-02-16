@@ -1,0 +1,16 @@
+### `--native-tls`
+
+<br />
+
+Optionnel : Charger des certificats TLS à partir du magasin de certificats natif de la plateforme.
+
+Par défaut, `bencher` charge les certificats à partir de la caisse [`webpki-roots` intégrée][webpki-roots].
+Les `webpki-roots` sont un ensemble fiable de racines de confiance de Mozilla,
+et les inclure dans `bencher` améliore la portabilité et les performances.
+C'est particulièrement vrai sur macOS, où la lecture du magasin de confiance système entraîne un délai important.
+
+Cependant, dans certains cas, vous pouvez vouloir utiliser le magasin de certificats natif de la plateforme,
+surtout si vous dépendez d'une racine de confiance d'entreprise incluse dans votre magasin de certificats système
+pour un proxy obligatoire ou des connexions auto-signées Bencher Self-Hosted.
+
+[webpki-roots]: https://github.com/rustls/webpki-roots

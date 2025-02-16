@@ -1,15 +1,14 @@
 ## `smtp`
 
-本节指定了一个 [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol) 服务配置。
-整个部分是可选的。
-如果未指定，则所有消息将发送到 `logging`。
+本节指定了[SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)服务配置。整个部分是可选的。如果未指定，所有消息将被发送到`logging`。
 
-|    名称    |            例子            | 默认值 | 必选项 |                                说明                                 |
-| :--------: | :------------------------: | :----: | :----: | :-----------------------------------------------------------------: |
-|  hostname  |      "mailbonobo.com"      |  ---   |   是   |                         指定 SMTP 主机名。                          |
-|    port    |            587             |  587   |   否   |                          指定 SMTP 端口。                           |
-|  starttls  |            true            |  true  |   否   |               控制 SMTP 连接是否使用 STARTTLS 协议。                |
-|  username  |         "bencher"          |  ---   |   是   |                      指定 SMTP 主机的用户名。                       |
-|   secret   | "WM3F2u9cqSNdBPLfy9sJ5kk9" |  ---   |   是   | 指定 SMTP 主机的用户密钥。当进行记录时，它将显示为 `************`。 |
-| from_name  |         "Bencher"          |  ---   |   是   |               指定将出现在所有邮件发件人部分的名称。                |
-| from_email | "info@bencher.example.com" |  ---   |   是   |             指定将出现在所有邮件发件人部分的电子邮件。              |
+|     名称      |            示例            | 默认值 | 必需  |                           描述                           |
+| :-----------: | :------------------------: | :----: | :---: | :------------------------------------------------------: |
+|   hostname    |      "mailbonobo.com"      |  ---   |  是   |                     指定SMTP主机名。                     |
+|     port      |            587             |  587   |  否   |                      指定SMTP端口。                      |
+| insecure_host |            ---             | false  |  否   |           控制SMTP连接是否允许无效的TLS证书。            |
+|   starttls    |            true            |  true  |  否   |            控制SMTP连接是否使用STARTTLS协议。            |
+|   username    |         "bencher"          |  ---   |  是   |                  指定SMTP主机的用户名。                  |
+|    secret     | "WM3F2u9cqSNdBPLfy9sJ5kk9" |  ---   |  是   | 指定SMTP主机用户名的密码。记录时将显示为`************`。 |
+|   from_name   |         "Bencher"          |  ---   |  是   |        指定在所有电子邮件的发件人部分显示的名称。        |
+|  from_email   | "info@bencher.example.com" |  ---   |  是   |        指定在所有电子邮件的发件人部分显示的邮箱。        |

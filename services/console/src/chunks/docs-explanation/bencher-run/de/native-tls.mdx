@@ -1,0 +1,16 @@
+### `--native-tls`
+
+<br />
+
+Optional: TLS-Zertifikate aus dem nativen Zertifikatspeicher der Plattform laden.
+
+Standardmäßig lädt `bencher` Zertifikate aus dem gebündelten [`webpki-roots`-Crate][webpki-roots].
+Die `webpki-roots` sind eine zuverlässige Sammlung von Vertrauensankern von Mozilla,
+und das Einbinden in `bencher` verbessert die Portabilität und Leistung.
+Dies gilt insbesondere für macOS, wo das Auslesen des systemeigenen Vertrauensspeichers eine erhebliche Verzögerung mit sich bringt.
+
+In einigen Fällen möchten Sie jedoch möglicherweise den nativen Zertifikatspeicher der Plattform verwenden,
+insbesondere wenn Sie sich auf einen unternehmensinternen Vertrauensanker verlassen, der in Ihrem Systemzertifikatspeicher enthalten ist,
+für einen obligatorischen Proxy oder selbstsignierte Bencher Self-Hosted-Verbindungen.
+
+[webpki-roots]: https://github.com/rustls/webpki-roots

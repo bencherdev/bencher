@@ -1,0 +1,14 @@
+### `--insecure-host`
+
+<br />
+
+Opcional: Permitir conexión insegura al servidor API de Bencher.
+
+Esta bandera es útil cuando te estás conectando a una instancia de Bencher Self-Hosted
+con un certificado autofirmado o un certificado que no está incluido en el almacén de certificados del sistema.
+Solo es aplicable a conexiones HTTPS, ya que las conexiones HTTP son inherentemente inseguras.
+
+**ADVERTENCIA**: Solo usa `--insecure-host` en una red segura con fuentes verificadas,
+ya que omite la verificación SSL y podría exponerte a [ataques de intermediario][wikipedia mitm].
+
+[wikipedia mitm]: https://es.wikipedia.org/wiki/Ataque_de_intermediario

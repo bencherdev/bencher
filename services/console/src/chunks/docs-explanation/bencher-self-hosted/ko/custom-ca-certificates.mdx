@@ -1,0 +1,19 @@
+## 커스텀 CA 인증서
+
+기본적으로, `bencher` CLI는 번들된 [`webpki-roots` 크레이트][webpki-roots]에서 인증서를 로드합니다. `webpki-roots`는 Mozilla에서 제공하는 신뢰 가능한 루트 세트이며, 이를 `bencher`에 포함시키면 이식성과 성능이 향상됩니다. 특히, macOS에서는 시스템 신뢰 스토어를 읽을 때 상당한 지연이 발생합니다.
+
+그러나 경우에 따라, 플랫폼의 기본 인증서 스토어를 사용하고 싶을 수 있습니다. 특히 시스템의 인증서 스토어에 포함된 기업 신뢰 루트를 의존하는 경우, 필수 프록시 또는 자체 서명된 Bencher 셀프 호스팅 연결을 위해 이와 같은 설정이 유용할 수 있습니다. `bencher`가 시스템의 신뢰 스토어를 사용하도록 하려면, [the `--native-tls` flag][native tls]를 사용하여 `bencher`를 실행하십시오.
+
+인증서로의 직접 경로가 필요한 경우, `SSL_CERT_FILE` 환경 변수를 인증서 번들의 경로로 설정하여 시스템 신뢰 스토어 대신 해당 파일을 사용하도록 `bencher`에 지시하십시오. 이는 주로 시스템의 신뢰 스토어가 제공되지 않는 CI 환경에서 자주 발생합니다.
+
+클라이언트 인증서 인증(mTLS)이 필요한 경우, `SSL_CLIENT_CERT` 환경 변수를 PEM 형식 파일의 경로로 설정하십시오. 이 파일에는 인증서와 개인 키가 함께 포함되어 있습니다.
+
+마지막으로, 자가 서명된 인증서를 신뢰하거나 인증서 검증을 비활성화하려는 경우 설정이 있는 경우, [the `--insecure-host` flag][insecure host]를 사용하여 특정 호스트로의 불안전한 연결을 허용하도록 `bencher`에 지시할 수 있습니다. 이 플래그는 HTTPS 연결에만 적용되며, HTTP 연결은 본질적으로 불안전합니다.
+
+**경고**: `--insecure-host`는 SSL 검증을 우회하여 [중간자 공격][wikipedia mitm]에 노출될 수 있으므로, 인증된 소스와의 안전한 네트워크에서만 사용하십시오.
+
+[wikipedia mitm]: https://ko.wikipedia.org/wiki/%EC%A4%91%EA%B0%84%EC%9E%90_%EA%B3%B5%EA%B2%A9
+[webpki-roots]: https://github.com/rustls/webpki-roots
+
+[native tls]: /ko/docs/explanation/bencher-run/#--native-tls
+[insecure host]: /ko/docs/explanation/bencher-run/#--insecure-host

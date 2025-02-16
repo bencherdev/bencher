@@ -1,0 +1,36 @@
+## Benutzerdefinierte CA-Zertifikate
+
+Standardmäßig lädt das `bencher` CLI Zertifikate aus dem mitgelieferten [`webpki-roots`-Crate][webpki-roots].
+Die `webpki-roots` sind ein zuverlässiger Satz von Vertrauensankern von Mozilla,
+und deren Einbeziehung in `bencher` verbessert die Portabilität und Leistung.
+Dies gilt insbesondere für macOS, wo das Lesen des System-Vertrauensspeichers zu einer erheblichen Verzögerung führt.
+
+In einigen Fällen möchten Sie jedoch möglicherweise den nativen Zertifikatspeicher der Plattform verwenden,
+insbesondere wenn Sie auf einen Unternehmens-Vertrauensanker angewiesen sind, der in Ihrem Systemzertifikatspeicher enthalten ist
+für einen obligatorischen Proxy oder selbstsignierte Verbindungen mit Bencher Self-Hosted.
+Um `bencher` anzuweisen, den Vertrauensspeicher des Systems zu verwenden, führen Sie `bencher` mit
+[dem `--native-tls`-Flag][native tls] aus.
+
+Wenn ein direkter Pfad zum Zertifikat erforderlich ist,
+setzen Sie die Umgebungsvariable `SSL_CERT_FILE` auf den Pfad des Zertifikat-Pakets,
+um `bencher` anzuweisen, diese Datei anstelle des System-Vertrauensspeichers zu verwenden.
+Dies ist häufig der Fall in CI-Umgebungen, in denen der System-Vertrauensspeicher nicht verfügbar ist.
+
+Wenn eine Client-Zertifikatsauthentifizierung (mTLS) gewünscht ist,
+setzen Sie die Umgebungsvariable `SSL_CLIENT_CERT` auf den Pfad der PEM-formatierten Datei,
+die das Zertifikat gefolgt von dem privaten Schlüssel enthält.
+
+Wenn Sie schließlich eine Konfiguration verwenden, in der Sie einem selbstsignierten Zertifikat vertrauen möchten
+oder die Zertifikatsüberprüfung anderweitig deaktivieren möchten,
+können Sie `bencher` anweisen, unsichere Verbindungen zu dedizierten Hosts über
+[das `--insecure-host`-Flag][insecure host] zuzulassen.
+Dieses Flag gilt nur für HTTPS-Verbindungen, da HTTP-Verbindungen von Natur aus unsicher sind.
+
+**WARNUNG**: Verwenden Sie `--insecure-host` nur in einem sicheren Netzwerk mit geprüften Quellen,
+da es die SSL-Überprüfung umgeht und Sie [Man-in-the-Middle-Angriffen][wikipedia mitm] aussetzen könnte.
+
+[wikipedia mitm]: https://de.wikipedia.org/wiki/Man-in-the-Middle-Angriff
+[webpki-roots]: https://github.com/rustls/webpki-roots
+
+[native tls]: /de/docs/explanation/bencher-run/#--native-tls
+[insecure host]: /de/docs/explanation/bencher-run/#--insecure-host

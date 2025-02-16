@@ -1,0 +1,36 @@
+## Certificados CA personalizados
+
+Por defecto, la CLI de `bencher` carga certificados del crate incluido [`webpki-roots`][webpki-roots].
+Los `webpki-roots` son un conjunto confiable de raíces de confianza de Mozilla,
+e incluirlos en `bencher` mejora la portabilidad y el rendimiento.
+Esto es especialmente cierto en macOS, donde leer el almacén de confianza del sistema incurre en un retraso significativo.
+
+Sin embargo, en algunos casos, puede que desees utilizar el almacén de certificados nativo de la plataforma,
+especialmente si dependes de una raíz de confianza corporativa que está incluida en el almacén de certificados de tu sistema
+para un proxy obligatorio o conexiones de Bencher Self-Hosted autofirmadas.
+Para instruir a `bencher` a utilizar el almacén de confianza del sistema, ejecuta `bencher` con
+[la bandera `--native-tls`][native tls].
+
+Si se requiere una ruta directa al certificado,
+establece la variable de entorno `SSL_CERT_FILE` con la ruta del paquete de certificados,
+para instruir a `bencher` a usar ese archivo en lugar del almacén de confianza del sistema.
+Esto suele ser el caso en entornos de CI donde no está disponible el almacén de confianza del sistema.
+
+Si se desea autenticación de certificado de cliente (mTLS),
+establece la variable de entorno `SSL_CLIENT_CERT` con la ruta del archivo en formato PEM
+que contiene el certificado seguido de la clave privada.
+
+Finalmente, si estás usando una configuración en la que deseas confiar en un certificado autofirmado
+o desactivar la verificación de certificados,
+puedes instruir a `bencher` para permitir conexiones inseguras a hosts dedicados mediante
+[la bandera `--insecure-host`][insecure host].
+Esta bandera solo es aplicable a conexiones HTTPS, ya que las conexiones HTTP son inherentemente inseguras.
+
+**ADVERTENCIA**: Solo usa `--insecure-host` en una red segura con fuentes verificadas,
+ya que omite la verificación de SSL y podría exponerte a [ataques de intermediario][wikipedia mitm].
+
+[wikipedia mitm]: https://es.wikipedia.org/wiki/Ataque_de_intermediario
+[webpki-roots]: https://github.com/rustls/webpki-roots
+
+[native tls]: /es/docs/explanation/bencher-run/#--native-tls
+[insecure host]: /es/docs/explanation/bencher-run/#--insecure-host

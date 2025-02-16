@@ -1,0 +1,11 @@
+### `--native-tls`
+
+<br />
+
+선택 사항: 플랫폼의 기본 인증서 저장소에서 TLS 인증서를 로드합니다.
+
+기본적으로 `bencher`는 포함된 [`webpki-roots` crate][webpki-roots]에서 인증서를 로드합니다. `webpki-roots`는 Mozilla의 신뢰할 수 있는 루트 세트이며, 이를 `bencher`에 포함하면 이식성과 성능이 향상됩니다. 특히 macOS에서는 시스템 신뢰 저장소를 읽는 데 상당한 지연이 발생하므로 더욱 그렇습니다.
+
+그러나 일부 경우 플랫폼의 기본 인증서 저장소를 사용하고자 할 수 있습니다. 특히 필수 프록시나 자체 서명된 Bencher Self-Hosted 연결을 위해 시스템의 인증서 저장소에 포함된 기업 신뢰 루트를 사용하는 경우가 그러합니다.
+
+[webpki-roots]: https://github.com/rustls/webpki-roots

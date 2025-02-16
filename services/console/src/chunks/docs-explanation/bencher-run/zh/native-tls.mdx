@@ -1,0 +1,13 @@
+### `--native-tls`
+
+<br />
+
+可选：从平台的本地证书存储加载TLS证书。
+
+默认情况下，`bencher` 从捆绑的 [`webpki-roots` crate][webpki-roots] 加载证书。
+`webpki-roots` 是一套来自 Mozilla 的可靠信任根，将它们包括在 `bencher` 中可以提高可移植性和性能。
+在 macOS 上尤其如此，因为读取系统信任存储会导致显著的延迟。
+
+然而，在某些情况下，您可能希望使用平台的本地证书存储，特别是当您依赖于系统证书存储中包含的公司信任根时，以用于强制代理或自签名的 Bencher 自托管连接。
+
+[webpki-roots]: https://github.com/rustls/webpki-roots

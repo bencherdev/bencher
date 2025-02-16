@@ -1,0 +1,11 @@
+### `--insecure-host`
+
+<br />
+
+オプション: Bencher API サーバーへの安全でない接続を許可します。
+
+このフラグは、自己署名証明書やシステムの証明書ストアに含まれていない証明書を使用する、Bencher Self-Hosted インスタンスに接続する際に便利です。HTTPS 接続にのみ適用されます。HTTP 接続は本質的に安全でないためです。
+
+**警告**: `--insecure-host` を使用するのは、信頼できる情報源がある安全なネットワーク内でのみにしてください。SSL 検証をバイパスするため、[中間者攻撃][wikipedia mitm] にさらされる可能性があります。
+
+[wikipedia mitm]: https://ja.wikipedia.org/wiki/%E4%B8%AD%E9%96%93%E8%80%85%E6%94%BB%E6%92%83
