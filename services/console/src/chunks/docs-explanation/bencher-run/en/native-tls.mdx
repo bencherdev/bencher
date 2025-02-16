@@ -4,7 +4,7 @@
 
 Optional: Load TLS certificates from the platform's native certificate store.
 
-By default, `bencher` loads certificates from the bundled [`webpki-roots` crate](webpki-roots).
+By default, `bencher` loads certificates from the bundled [`webpki-roots` crate][webpki-roots].
 The `webpki-roots` are a reliable set of trust roots from Mozilla,
 and including them in `bencher` improves portability and performance.
 This is especially true on macOS, where reading the system trust store incurs a significant delay.

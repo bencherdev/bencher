@@ -259,6 +259,7 @@ impl BencherClient {
         Ok(client_builder)
     }
 
+    // https://github.com/astral-sh/uv/blob/591f38c25e577d29bb4fd0dde7cdb614f3129bfc/crates/uv-client/src/base_client.rs#L264
     fn client_builder_tls(&self, mut client_builder: ClientBuilder) -> ClientBuilder {
         if self.insecure_host {
             client_builder = client_builder.danger_accept_invalid_certs(true);
@@ -284,7 +285,7 @@ impl BencherClient {
         client_builder
     }
 
-    // Check for the presence of an `SSL_CERT_FILE`.
+    // https://github.com/astral-sh/uv/blob/591f38c25e577d29bb4fd0dde7cdb614f3129bfc/crates/uv-client/src/base_client.rs#L186
     fn cert_file_exists(&self) -> bool {
         use std::path::Path;
         env::var_os(SSL_CERT_FILE).is_some_and(|path| {
