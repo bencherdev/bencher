@@ -12,9 +12,9 @@ use crate::config::DEFAULT_SMTP_PORT;
 
 #[derive(Debug, Clone)]
 pub struct Email {
+    client: Arc<RwLock<Client>>,
     from_name: Option<String>,
     from_email: String,
-    client: Arc<RwLock<Client>>,
 }
 
 impl From<JsonSmtp> for Email {
@@ -29,17 +29,18 @@ impl From<JsonSmtp> for Email {
             from_name,
             from_email,
         } = smtp;
+        let client_builder = ClientBuilder {
+            hostname: hostname.into(),
+            port: port.unwrap_or(DEFAULT_SMTP_PORT),
+            insecure_host: insecure_host.unwrap_or_default(),
+            starttls: starttls.unwrap_or(true),
+            username: username.into(),
+            secret,
+        };
         Self {
+            client: Arc::new(RwLock::new(client_builder.into())),
             from_name: Some(from_name.into()),
             from_email: from_email.into(),
-            client: Arc::new(RwLock::new(Client::new(
-                hostname.into(),
-                port.unwrap_or(DEFAULT_SMTP_PORT),
-                insecure_host.unwrap_or_default(),
-                starttls.unwrap_or(true),
-                username.into(),
-                secret,
-            ))),
         }
     }
 }
@@ -93,52 +94,19 @@ impl Email {
     }
 }
 
-struct Client {
+#[derive(Debug, Clone)]
+struct ClientBuilder {
     hostname: String,
     port: u16,
     insecure_host: bool,
     starttls: bool,
     username: String,
     secret: Secret,
-    inner: Option<mail_send::SmtpClient<tokio_rustls::client::TlsStream<tokio::net::TcpStream>>>,
 }
 
-impl fmt::Debug for Client {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Client")
-            .field("hostname", &self.hostname)
-            .field("port", &self.port)
-            .field("starttls", &self.starttls)
-            .field("username", &self.username)
-            .field("secret", &"************")
-            .field("inner", &if self.inner.is_some() { "Some" } else { "None" })
-            .finish()
-    }
-}
-
-impl Client {
-    fn new(
-        hostname: String,
-        port: u16,
-        insecure_host: bool,
-        starttls: bool,
-        username: String,
-        secret: Secret,
-    ) -> Self {
-        Self {
-            hostname,
-            port,
-            insecure_host,
-            starttls,
-            username,
-            secret,
-            inner: None,
-        }
-    }
-
-    // Connect to an SMTP relay server over TLS and
-    // authenticate using the provided credentials.
-    fn new_client_builder(&self) -> SmtpClientBuilder<String> {
+impl ClientBuilder {
+    // Connect to an SMTP relay server and authenticate using the provided credentials.
+    fn build(&self) -> SmtpClientBuilder<String> {
         let mut builder = SmtpClientBuilder::new(self.hostname.clone(), self.port);
 
         if self.insecure_host {
@@ -149,25 +117,57 @@ impl Client {
             .implicit_tls(!self.starttls)
             .credentials((self.username.clone(), String::from(self.secret.clone())))
     }
+}
 
+struct Client {
+    builder: ClientBuilder,
+    handle: Option<mail_send::SmtpClient<tokio_rustls::client::TlsStream<tokio::net::TcpStream>>>,
+}
+
+impl fmt::Debug for Client {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Client")
+            .field("client_builder", &self.builder)
+            .field(
+                "handle",
+                &if self.handle.is_some() {
+                    "Connected"
+                } else {
+                    "Disconnected"
+                },
+            )
+            .finish()
+    }
+}
+
+impl From<ClientBuilder> for Client {
+    fn from(builder: ClientBuilder) -> Self {
+        Self {
+            builder,
+            handle: None,
+        }
+    }
+}
+
+impl Client {
     async fn send(
         &mut self,
         log: &Logger,
         message_builder: MessageBuilder<'_>,
     ) -> Result<(), mail_send::Error> {
         // If there isn't a client or if the client is no longer connected, create a new one.
-        let client = if let Some(client) = self.inner.as_mut() {
+        let client = if let Some(client) = self.handle.as_mut() {
             if client.noop().await.is_ok() {
                 client
             } else {
                 slog::debug!(log, "Refreshing client");
-                let new_client = self.new_client_builder().connect().await?;
-                self.inner.insert(new_client)
+                let new_client = self.builder.build().connect().await?;
+                self.handle.insert(new_client)
             }
         } else {
             slog::debug!(log, "Creating new client");
-            let new_client = self.new_client_builder().connect().await?;
-            self.inner.insert(new_client)
+            let new_client = self.builder.build().connect().await?;
+            self.handle.insert(new_client)
         };
 
         client.send(message_builder).await
