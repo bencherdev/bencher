@@ -5,6 +5,12 @@ import Pagination, { PaginationSize } from "../../site/Pagination";
 import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
 import * as Sentry from "@sentry/astro";
+import Field from "../Field";
+import FieldKind from "../kind";
+import { toCapitalized } from "../../../config/util";
+import { debounce } from "@solid-primitives/scheduled";
+import { DEBOUNCE_DELAY } from "../../../util/valid";
+import { DEFAULT_PAGE, DEFAULT_PER_PAGE } from "../../console/perf/PerfPanel";
 
 export type RadioValue = string;
 
@@ -21,20 +27,31 @@ export interface RadioConfig {
 	icon: string;
 	option_key: string;
 	value_key: string;
-	url: (params: undefined | Params, per_page: number, page: number) => string;
+	url: (params: undefined | Params, per_page: number, page: number, search: undefined | string) => string;
 	help?: string;
 	validate: (value: string) => boolean;
 }
 
 const Radio = (props: Props) => {
 	const params = createMemo(() => props.params);
-	const per_page = createMemo(() => 8);
-	const [page, setPage] = createSignal(1);
+
+	const per_page = createMemo(() => DEFAULT_PER_PAGE);
+	const [page, setPage] = createSignal(DEFAULT_PAGE);
+
+	const [search, setSearch] = createSignal<undefined | string>();
+	const handleSearch = (_key: string, search: string, _valid: boolean) => debounce(
+		(search: string) => {
+			console.log(search);
+			setPage(DEFAULT_PAGE);
+			setSearch(search);
+		return;},
+		DEBOUNCE_DELAY,
+	)(search);
 
 	const [totalCount, setTotalCount] = createSignal(0);
 	const fetcher = createMemo(() => {
 		return {
-			url: props.config?.url(params(), per_page(), page()),
+			url: props.config?.url(params(), per_page(), page(), search()),
 			token: authUser()?.token,
 		};
 	});
@@ -58,6 +75,17 @@ const Radio = (props: Props) => {
 
 	return (
 		<>
+		<nav class="level is-mobile">
+			<Field
+				kind={FieldKind.SEARCH}
+				fieldKey="search"
+				value={search() ?? ""}
+				config={{
+					placeholder: `Search ${toCapitalized(props.config?.name ?? "")}`,
+				}}
+				handleField={handleSearch}
+			/>
+			</nav>
 			<nav class="level is-mobile">
 				<div class="level-left">
 					<div class="level-item">
@@ -76,7 +104,7 @@ const Radio = (props: Props) => {
 													<div class="level-item">
 														<input
 															type="radio"
-															name={data()?.name}
+															name={props.config?.name}
 															checked={
 																props.value === datum[props.config?.value_key]
 															}
@@ -97,13 +125,6 @@ const Radio = (props: Props) => {
 									</>
 								)}
 							</For>
-							{dataLength() === 0 && page() !== 1 && (
-								<BackButton
-									name={props.config?.name}
-									page={page()}
-									handlePage={setPage}
-								/>
-							)}
 						</div>
 					</div>
 				</div>
@@ -121,25 +142,6 @@ const Radio = (props: Props) => {
 				</div>
 			</div>
 		</>
-	);
-};
-
-const BackButton = (props: {
-	name: string;
-	page: number;
-	handlePage: (page: number) => void;
-}) => {
-	return (
-		<button
-			class="button is-primary is-small is-fullwidth"
-			type="button"
-			onMouseDown={(e) => {
-				e.preventDefault();
-				props.handlePage(props.page - 1);
-			}}
-		>
-			That's all the {props.name}. Go back.
-		</button>
 	);
 };
 

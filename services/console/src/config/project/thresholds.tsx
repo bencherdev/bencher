@@ -14,10 +14,14 @@ const paginationUrl = (
 	dimension: string,
 	per_page: number,
 	page: number,
+	search: undefined | string
 ) => {
 	const searchParams = new URLSearchParams();
 	searchParams.set("per_page", per_page?.toString());
 	searchParams.set("page", page?.toString());
+	if (search) {
+		searchParams.set("search", search.trim());
+	}
 	const url = `/v0/projects/${
 		params?.project
 	}/${dimension}?${searchParams.toString()}`;
@@ -30,24 +34,24 @@ const THRESHOLD_FIELDS = {
 		icon: "fas fa-code-branch",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: undefined | Params, per_page: number, page: number) =>
-			paginationUrl(params, "branches", per_page, page),
+		url: (params: undefined | Params, per_page: number, page: number, search: undefined | string) =>
+			paginationUrl(params, "branches", per_page, page, search),
 	},
 	testbed: {
 		name: "testbeds",
 		icon: "fas fa-server",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: undefined | Params, per_page: number, page: number) =>
-			paginationUrl(params, "testbeds", per_page, page),
+		url: (params: undefined | Params, per_page: number, page: number,  search: undefined | string) =>
+			paginationUrl(params, "testbeds", per_page, page, search),
 	},
 	measure: {
 		name: "measures",
 		icon: "fas fa-shapes",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: undefined | Params, per_page: number, page: number) =>
-			paginationUrl(params, "measures", per_page, page),
+		url: (params: undefined | Params, per_page: number, page: number,  search: undefined | string) =>
+			paginationUrl(params, "measures", per_page, page, search),
 	},
 };
 

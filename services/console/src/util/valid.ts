@@ -27,7 +27,7 @@ import bencher_valid_init, {
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
-export const DEBOUNCE_DELAY = 250;
+export const DEBOUNCE_DELAY = 10;
 
 export type InitValid = undefined | InitOutput;
 
