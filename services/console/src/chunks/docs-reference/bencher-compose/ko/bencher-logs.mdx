@@ -1,0 +1,19 @@
+import BencherLogsCmd from "../bencher-logs-cmd.mdx";
+import LogsService from "./cli/logs-service.mdx";
+import Help from "./cli/help.mdx";
+
+## `bencher logs`
+
+`bencher up`이 [the `--detach` flag][detach flag]으로 실행된 경우, Bencher Self-Hosted 컨테이너의 출력을 봅니다. 이는 [`docker compose logs`][docker compose logs]를 실행하는 것과 유사합니다.
+
+<BencherLogsCmd />
+
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+
+[detach flag]: #--detach
+
+<LogsService />
+
+### 옵션
+
+<Help />

@@ -1,0 +1,57 @@
+---
+title: "Bencher Compose"
+description: "Configurar o Bencher Self-Hosted usando uma funcionalidade semelhante ao Docker Compose no Bencher CLI"
+heading: "Bencher Compose"
+published: "2025-02-16T21:33:00Z"
+modified: "2025-02-16T21:33:00Z"
+sortOrder: 4
+---
+
+import BencherUp from "../../../chunks/docs-reference/bencher-compose/pt/bencher-up.mdx";
+import BencherLogs from "../../../chunks/docs-reference/bencher-compose/pt/bencher-logs.mdx";
+import BencherDown from "../../../chunks/docs-reference/bencher-compose/pt/bencher-down.mdx";
+import DockerCompose from "../../../chunks/docs-reference/bencher-compose/pt/docker-compose.mdx";
+
+A maneira mais fácil de implantar o [Bencher Self-Hosted][bencher self hosted] é usando um tríptico de subcomandos do `bencher` CLI:
+
+- [`bencher up`][bencher up]: Inicie os contêineres do Bencher Self-Hosted.
+  Isto é semelhante a executar [`docker compose up`][docker compose up].
+- [`bencher logs`][bencher logs]: Veja a saída dos contêineres do Bencher Self-Hosted,
+  se `bencher up` foi executado com [a flag `--detach`][detach flag].
+  Isto é semelhante a executar [`docker compose logs`][docker compose logs].
+- [`bencher down`][bencher down]: Pare e remova os contêineres do Bencher Self-Hosted,
+  se `bencher up` foi executado com [a flag `--detach`][detach flag].
+  Isto é semelhante a executar [`docker compose down`][docker compose down].
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[bencher self hosted]: /pt/docs/explanation/bencher-self-hosted/
+
+[bencher up]: #bencher-up
+[bencher logs]: #bencher-logs
+[bencher down]: #bencher-down
+[detach flag]: #--detach
+
+<hr />
+
+<div class="box">
+  <BencherUp />
+</div>
+
+<hr />
+
+<div class="box">
+  <BencherLogs />
+</div>
+
+<hr />
+
+<div class="box">
+  <BencherDown />
+</div>
+
+<hr />
+
+<DockerCompose />

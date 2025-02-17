@@ -1,0 +1,21 @@
+import BencherDownCmd from "../bencher-down-cmd.mdx";
+import DownService from "./cli/down-service.mdx";
+import Help from "./cli/help.mdx";
+
+## `bencher down`
+
+Bencher Self-Hosted 컨테이너를 중지하고 제거합니다,
+`bencher up`이 [`--detach` 플래그][detach flag]로 실행된 경우.
+이는 [`docker compose down`][docker compose down]을 실행하는 것과 유사합니다.
+
+<BencherDownCmd />
+
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[detach flag]: #--detach
+
+<DownService />
+
+### 옵션
+
+<Help />

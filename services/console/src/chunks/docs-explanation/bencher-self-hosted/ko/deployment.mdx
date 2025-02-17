@@ -1,43 +1,58 @@
-import DockerCompose from "../docker-compose.mdx";
-import BencherUp from "./bencher-up.mdx";
-import BencherLogs from "./bencher-logs.mdx";
-import BencherDown from "./bencher-down.mdx";
+import BencherUp from "../../../docs-reference/bencher-compose/ko/bencher-up.mdx";
+import BencherLogs from "../../../docs-reference/bencher-compose/ko/bencher-logs.mdx";
+import BencherDown from "../../../docs-reference/bencher-compose/ko/bencher-down.mdx";
+import DockerCompose from "../../../docs-reference/bencher-compose/docker-compose.mdx";
 
 ## 배포
 
-Bencher Self-Hosted를 배포하는 가장 쉬운 방법은 `bencher` CLI 하위 명령어의 삼중체를 사용하는 것입니다:
+Bencher Self-Hosted를 배포하는 가장 쉬운 방법은 `bencher` CLI 하위 명령어 세 가지를 사용하는 것입니다:
 
-- [`bencher up`][bencher up]: Bencher Self-Hosted 컨테이너를 시작합니다.
-  이는 [`docker compose up`][docker compose up]을 실행하는 것과 유사합니다.
-- [`bencher logs`][bencher logs]: Bencher Self-Hosted 컨테이너의 출력을 봅니다,
-  만약 `bencher up`이 [the `--detach` flag][detach flag]와 함께 실행되었다면.
-  이는 [`docker compose logs`][docker compose logs]를 실행하는 것과 유사합니다.
-- [`bencher down`][bencher down]: Bencher Self-Hosted 컨테이너를 중지하고 제거합니다,
-  만약 `bencher up`이 [the `--detach` flag][detach flag]와 함께 실행되었다면.
-  이는 [`docker compose down`][docker compose down]을 실행하는 것과 유사합니다.
+<ul>
+  <li>
+    <details>
+      <summary><code>bencher up</code></summary>
+      <br />
+      <div class="box">
+        <BencherUp />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher logs</code></summary>
+      <br />
+      <div class="box">
+        <BencherLogs />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher down</code></summary>
+      <br />
+      <div class="box">
+        <BencherDown />
+      </div>
+    </details>
+  </li>
+</ul>
 
-[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
-[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
-[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+자세한 내용은 [Bencher Compose][bencher compose] 레퍼런스를 참조하세요.
 
-[bencher up]: #bencher-up
-[bencher logs]: #bencher-logs
-[bencher down]: #bencher-down
-[detach flag]: #--detach
+[bencher compose]: /ko/docs/reference/bencher-compose/
 
-<div class="box">
-  <BencherUp />
-</div>
+또는, `docker compose`를 사용하여 컨테이너를 조율할 수도 있습니다.
 
-<div class="box">
-  <BencherLogs />
-</div>
+<details>
+  <summary><code>docker-compose.yml</code></summary>
+  <br />
+  <div class="box">
+    <DockerCompose />
+  </div>
+</details>
 
-<div class="box">
-  <BencherDown />
-</div>
+<br />
 
-또는, `docker compose`를 사용하여 컨테이너를 오케스트레이션할 수 있습니다.
-다음은 `docker-compose.yml` 파일의 예시입니다:
+더 많은 정보를 보려면 [Docker Compose][docker compose] 참조 예제를 확인하세요.
 
-<DockerCompose />
+[docker compose]: /ko/docs/reference/bencher-compose/#docker-compose

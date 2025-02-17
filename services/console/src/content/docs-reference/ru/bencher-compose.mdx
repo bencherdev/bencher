@@ -1,0 +1,57 @@
+---
+title: "Bencher Compose"
+description: "Настройка Bencher Self-Hosted с использованием функциональности Docker Compose в Bencher CLI"
+heading: "Bencher Compose"
+published: "2025-02-16T21:33:00Z"
+modified: "2025-02-16T21:33:00Z"
+sortOrder: 4
+---
+
+import BencherUp from "../../../chunks/docs-reference/bencher-compose/ru/bencher-up.mdx";
+import BencherLogs from "../../../chunks/docs-reference/bencher-compose/ru/bencher-logs.mdx";
+import BencherDown from "../../../chunks/docs-reference/bencher-compose/ru/bencher-down.mdx";
+import DockerCompose from "../../../chunks/docs-reference/bencher-compose/ru/docker-compose.mdx";
+
+Самый простой способ развернуть [Bencher Self-Hosted][bencher self hosted] — использовать триптих подкоманд `bencher` CLI:
+
+- [`bencher up`][bencher up]: Поднять контейнеры Bencher Self-Hosted.
+  Это похоже на выполнение команды [`docker compose up`][docker compose up].
+- [`bencher logs`][bencher logs]: Просмотр вывода из контейнеров Bencher Self-Hosted,
+  если `bencher up` была выполнена с использованием [флага `--detach`][detach flag].
+  Это похоже на выполнение команды [`docker compose logs`][docker compose logs].
+- [`bencher down`][bencher down]: Остановить и удалить контейнеры Bencher Self-Hosted,
+  если `bencher up` была выполнена с использованием [флага `--detach`][detach flag].
+  Это похоже на выполнение команды [`docker compose down`][docker compose down].
+
+[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[bencher self hosted]: /ru/docs/explanation/bencher-self-hosted/
+
+[bencher up]: #bencher-up
+[bencher logs]: #bencher-logs
+[bencher down]: #bencher-down
+[detach flag]: #--detach
+
+<hr />
+
+<div class="box">
+  <BencherUp />
+</div>
+
+<hr />
+
+<div class="box">
+  <BencherLogs />
+</div>
+
+<hr />
+
+<div class="box">
+  <BencherDown />
+</div>
+
+<hr />
+
+<DockerCompose />

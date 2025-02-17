@@ -1,43 +1,58 @@
-import DockerCompose from "../docker-compose.mdx";
-import BencherUp from "./bencher-up.mdx";
-import BencherLogs from "./bencher-logs.mdx";
-import BencherDown from "./bencher-down.mdx";
+import BencherUp from "../../../docs-reference/bencher-compose/ja/bencher-up.mdx";
+import BencherLogs from "../../../docs-reference/bencher-compose/ja/bencher-logs.mdx";
+import BencherDown from "../../../docs-reference/bencher-compose/ja/bencher-down.mdx";
+import DockerCompose from "../../../docs-reference/bencher-compose/docker-compose.mdx";
 
-## デプロイ
+## デプロイメント
 
-Bencher Self-Hosted をデプロイする最も簡単な方法は、`bencher` CLI のサブコマンドの三連画です：
+ベンチャーセルフホステッドをデプロイする最も簡単な方法は、`bencher` CLI のサブコマンドの三連画を使用することです：
 
-- [`bencher up`][bencher up]: Bencher Self-Hosted のコンテナを起動します。
-  これは [`docker compose up`][docker compose up] を実行するのと似ています。
-- [`bencher logs`][bencher logs]: Bencher Self-Hosted のコンテナからの出力を表示します。
-  これは `bencher up` が[ `--detach` フラグ][detach flag] で実行された場合に必要です。
-  これは [`docker compose logs`][docker compose logs] を実行するのと似ています。
-- [`bencher down`][bencher down]: Bencher Self-Hosted のコンテナを停止して削除します。
-  これは `bencher up` が[ `--detach` フラグ][detach flag] で実行された場合に必要です。
-  これは [`docker compose down`][docker compose down] を実行するのと似ています。
+<ul>
+  <li>
+    <details>
+      <summary><code>bencher up</code></summary>
+      <br />
+      <div class="box">
+        <BencherUp />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher logs</code></summary>
+      <br />
+      <div class="box">
+        <BencherLogs />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher down</code></summary>
+      <br />
+      <div class="box">
+        <BencherDown />
+      </div>
+    </details>
+  </li>
+</ul>
 
-[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
-[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
-[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+詳細については、[ベンチャーコンポーズ][bencher compose] リファレンスを参照してください。
 
-[bencher up]: #bencher-up
-[bencher logs]: #bencher-logs
-[bencher down]: #bencher-down
-[detach flag]: #--detach
+[bencher compose]: /ja/docs/reference/bencher-compose/
 
-<div class="box">
-  <BencherUp />
-</div>
+あるいは、単に `docker compose` を使用してコンテナをオーケストレーションすることもできます。
 
-<div class="box">
-  <BencherLogs />
-</div>
+<details>
+  <summary><code>docker-compose.yml</code></summary>
+  <br />
+  <div class="box">
+    <DockerCompose />
+  </div>
+</details>
 
-<div class="box">
-  <BencherDown />
-</div>
+<br />
 
-あるいは、`docker compose` を使用してコンテナをオーケストレーションすることもできます。
-以下は `docker-compose.yml` ファイルの例です：
+詳細な情報については、[Docker コンポーズ][docker compose] リファレンス例を参照してください。
 
-<DockerCompose />
+[docker compose]: /ja/docs/reference/bencher-compose/#docker-compose

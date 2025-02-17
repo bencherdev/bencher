@@ -1,0 +1,21 @@
+import BencherDownCmd from "../bencher-down-cmd.mdx";
+import DownService from "./cli/down-service.mdx";
+import Help from "./cli/help.mdx";
+
+## `bencher down`
+
+Stop and remove the Bencher Self-Hosted containers,
+if `bencher up` was run with [the `--detach` flag][detach flag].
+This is similar to running [`docker compose down`][docker compose down].
+
+<BencherDownCmd />
+
+[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+
+[detach flag]: #--detach
+
+<DownService />
+
+### Options
+
+<Help />

@@ -1,43 +1,58 @@
-import DockerCompose from "../docker-compose.mdx";
-import BencherUp from "./bencher-up.mdx";
-import BencherLogs from "./bencher-logs.mdx";
-import BencherDown from "./bencher-down.mdx";
+import BencherUp from "../../../docs-reference/bencher-compose/zh/bencher-up.mdx";
+import BencherLogs from "../../../docs-reference/bencher-compose/zh/bencher-logs.mdx";
+import BencherDown from "../../../docs-reference/bencher-compose/zh/bencher-down.mdx";
+import DockerCompose from "../../../docs-reference/bencher-compose/docker-compose.mdx";
 
 ## 部署
 
-部署 Bencher 自托管的最简单方法是使用一系列 `bencher` CLI 子命令：
+部署 Bencher 自托管的最简单方法是使用 `bencher` CLI 子命令的三联屏：
 
-- [`bencher up`][bencher up]：启动 Bencher 自托管容器。
-  这类似于运行 [`docker compose up`][docker compose up]。
-- [`bencher logs`][bencher logs]：查看 Bencher 自托管容器的输出，
-  如果 `bencher up` 是以 [`--detach` 标志][detach flag]运行。
-  这类似于运行 [`docker compose logs`][docker compose logs]。
-- [`bencher down`][bencher down]：停止并移除 Bencher 自托管容器，
-  如果 `bencher up` 是以 [`--detach` 标志][detach flag]运行。
-  这类似于运行 [`docker compose down`][docker compose down]。
+<ul>
+  <li>
+    <details>
+      <summary><code>bencher up</code></summary>
+      <br />
+      <div class="box">
+        <BencherUp />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher logs</code></summary>
+      <br />
+      <div class="box">
+        <BencherLogs />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher down</code></summary>
+      <br />
+      <div class="box">
+        <BencherDown />
+      </div>
+    </details>
+  </li>
+</ul>
 
-[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
-[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
-[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+有关更多详情，请参阅 [Bencher Compose][bencher compose] 参考文档。
 
-[bencher up]: #bencher-up
-[bencher logs]: #bencher-logs
-[bencher down]: #bencher-down
-[detach flag]: #--detach
+[bencher compose]: /zh/docs/reference/bencher-compose/
 
-<div class="box">
-  <BencherUp />
-</div>
+或者，您也可以仅使用 `docker compose` 来协调这些容器。
 
-<div class="box">
-  <BencherLogs />
-</div>
+<details>
+  <summary><code>docker-compose.yml</code></summary>
+  <br />
+  <div class="box">
+    <DockerCompose />
+  </div>
+</details>
 
-<div class="box">
-  <BencherDown />
-</div>
+<br />
 
-或者，您也可以仅使用 `docker compose` 来编排容器。
-这是一个 `docker-compose.yml` 文件的示例：
+有关更多详情，请参阅 [Docker Compose][docker compose] 参考示例。
 
-<DockerCompose />
+[docker compose]: /zh/docs/reference/bencher-compose/#docker-compose

@@ -1,0 +1,21 @@
+import BencherLogsCmd from "../bencher-logs-cmd.mdx";
+import LogsService from "./cli/logs-service.mdx";
+import Help from "./cli/help.mdx";
+
+## `bencher logs`
+
+Zeigen Sie die Ausgabe von den Bencher Self-Hosted Containern an,
+wenn `bencher up` mit [dem `--detach`-Flag][detach flag] ausgeführt wurde.
+Dies ist ähnlich dem Ausführen von [`docker compose logs`][docker compose logs].
+
+<BencherLogsCmd />
+
+[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
+
+[detach flag]: #--detach
+
+<LogsService />
+
+### Optionen
+
+<Help />

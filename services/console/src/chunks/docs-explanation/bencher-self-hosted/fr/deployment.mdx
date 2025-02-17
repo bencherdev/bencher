@@ -1,41 +1,58 @@
-import DockerCompose from "../docker-compose.mdx";
-import BencherUp from "./bencher-up.mdx";
-import BencherLogs from "./bencher-logs.mdx";
-import BencherDown from "./bencher-down.mdx";
+import BencherUp from "../../../docs-reference/bencher-compose/fr/bencher-up.mdx";
+import BencherLogs from "../../../docs-reference/bencher-compose/fr/bencher-logs.mdx";
+import BencherDown from "../../../docs-reference/bencher-compose/fr/bencher-down.mdx";
+import DockerCompose from "../../../docs-reference/bencher-compose/docker-compose.mdx";
 
 ## Déploiement
 
-Le moyen le plus simple de déployer Bencher Self-Hosted est d'utiliser un triptyque de sous-commandes CLI `bencher` :
+La façon la plus simple de déployer Bencher Self-Hosted est d'utiliser un triptyque de sous-commandes CLI `bencher` :
 
-- [`bencher up`][bencher up] : Démarre les conteneurs Bencher Self-Hosted.
-  Cela ressemble à l'exécution de [`docker compose up`][docker compose up].
-- [`bencher logs`][bencher logs] : Affiche la sortie des conteneurs Bencher Self-Hosted, si `bencher up` a été exécuté avec [le drapeau `--detach`][detach flag].
-  Cela ressemble à l'exécution de [`docker compose logs`][docker compose logs].
-- [`bencher down`][bencher down] : Arrête et supprime les conteneurs Bencher Self-Hosted, si `bencher up` a été exécuté avec [le drapeau `--detach`][detach flag].
-  Cela ressemble à l'exécution de [`docker compose down`][docker compose down].
+<ul>
+  <li>
+    <details>
+      <summary><code>bencher up</code></summary>
+      <br />
+      <div class="box">
+        <BencherUp />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher logs</code></summary>
+      <br />
+      <div class="box">
+        <BencherLogs />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher down</code></summary>
+      <br />
+      <div class="box">
+        <BencherDown />
+      </div>
+    </details>
+  </li>
+</ul>
 
-[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
-[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
-[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+Voir la référence [Bencher Compose][bencher compose] pour plus de détails.
 
-[bencher up]: #bencher-up
-[bencher logs]: #bencher-logs
-[bencher down]: #bencher-down
-[detach flag]: #--detach
-
-<div class="box">
-  <BencherUp />
-</div>
-
-<div class="box">
-  <BencherLogs />
-</div>
-
-<div class="box">
-  <BencherDown />
-</div>
+[bencher compose]: /fr/docs/reference/bencher-compose/
 
 Alternativement, vous pouvez simplement utiliser `docker compose` pour orchestrer les conteneurs.
-Voici un exemple de fichier `docker-compose.yml` :
 
-<DockerCompose />
+<details>
+  <summary><code>docker-compose.yml</code></summary>
+  <br />
+  <div class="box">
+    <DockerCompose />
+  </div>
+</details>
+
+<br />
+
+Voir l'exemple de référence [Docker Compose][docker compose] pour plus de détails.
+
+[docker compose]: /fr/docs/reference/bencher-compose/#docker-compose

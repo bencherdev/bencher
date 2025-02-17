@@ -1,43 +1,58 @@
-import DockerCompose from "../docker-compose.mdx";
-import BencherUp from "./bencher-up.mdx";
-import BencherLogs from "./bencher-logs.mdx";
-import BencherDown from "./bencher-down.mdx";
+import BencherUp from "../../../docs-reference/bencher-compose/ru/bencher-up.mdx";
+import BencherLogs from "../../../docs-reference/bencher-compose/ru/bencher-logs.mdx";
+import BencherDown from "../../../docs-reference/bencher-compose/ru/bencher-down.mdx";
+import DockerCompose from "../../../docs-reference/bencher-compose/docker-compose.mdx";
 
 ## Развертывание
 
-Самый простой способ развернуть Bencher Self-Hosted — использовать триптих подкоманд CLI `bencher`:
+Самый простой способ развернуть Bencher Self-Hosted - это использовать триптих подкоманд CLI `bencher`:
 
-- [`bencher up`][bencher up]: Запустить контейнеры Bencher Self-Hosted.
-  Это похоже на выполнение команды [`docker compose up`][docker compose up].
-- [`bencher logs`][bencher logs]: Просмотр вывода из контейнеров Bencher Self-Hosted,
-  если `bencher up` был выполнен с [флагом `--detach`][detach flag].
-  Это похоже на выполнение команды [`docker compose logs`][docker compose logs].
-- [`bencher down`][bencher down]: Остановить и удалить контейнеры Bencher Self-Hosted,
-  если `bencher up` был выполнен с [флагом `--detach`][detach flag].
-  Это похоже на выполнение команды [`docker compose down`][docker compose down].
+<ul>
+  <li>
+    <details>
+      <summary><code>bencher up</code></summary>
+      <br />
+      <div class="box">
+        <BencherUp />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher logs</code></summary>
+      <br />
+      <div class="box">
+        <BencherLogs />
+      </div>
+    </details>
+  </li>
+  <li>
+    <details>
+      <summary><code>bencher down</code></summary>
+      <br />
+      <div class="box">
+        <BencherDown />
+      </div>
+    </details>
+  </li>
+</ul>
 
-[docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
-[docker compose logs]: https://docs.docker.com/reference/cli/docker/compose/logs/
-[docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/
+См. справочник [Bencher Compose][bencher compose] для получения дополнительной информации.
 
-[bencher up]: #bencher-up
-[bencher logs]: #bencher-logs
-[bencher down]: #bencher-down
-[detach flag]: #--detach
+[bencher compose]: /ru/docs/reference/bencher-compose/
 
-<div class="box">
-  <BencherUp />
-</div>
+В качестве альтернативы, вы можете просто использовать `docker compose` для организации контейнеров.
 
-<div class="box">
-  <BencherLogs />
-</div>
+<details>
+  <summary><code>docker-compose.yml</code></summary>
+  <br />
+  <div class="box">
+    <DockerCompose />
+  </div>
+</details>
 
-<div class="box">
-  <BencherDown />
-</div>
+<br />
 
-В качестве альтернативы, вы можете использовать `docker compose` для оркестрации контейнеров.
-Это пример файла `docker-compose.yml`:
+См. пример в справочнике [Docker Compose][docker compose] для получения дополнительной информации.
 
-<DockerCompose />
+[docker compose]: /ru/docs/reference/bencher-compose/#docker-compose

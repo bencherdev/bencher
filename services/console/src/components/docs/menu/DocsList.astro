@@ -56,15 +56,17 @@ const { lang } = Astro.props;
       <li>
         <a href={`/${langPath(lang)}docs/api/`}>REST API</a>
       </li>
+    ),
+    suffix: (
       <li>
         <a href={`/${langPath(lang)}docs/reference/architecture/`}>{architecture(lang)}</a>
       </li>
       <li>
         <a href={`/${langPath(lang)}docs/reference/schema/`}>{schema(lang)}</a>
       </li>
-    ),
+    )
   }
-].map(({ label, collection, content, prefix }) => (
+].map(({ label, collection, content, prefix, suffix }) => (
   <p class="menu-label">{label}</p>
   <ul class="menu-list">
     {prefix}
@@ -75,5 +77,6 @@ const { lang } = Astro.props;
         </li>
       ))
     }
+    {suffix}
   </ul>
 ))}
