@@ -782,6 +782,9 @@ jobs:
         working-directory: ./services/console
         run: npm run netlify
       - name: Test Links
+        # If there are timeouts checking links,
+        # this step can take a long time to fail.
+        timeout-minutes: 3
         continue-on-error: true
         uses: lycheeverse/lychee-action@v2.3.0
         with:
