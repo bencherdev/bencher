@@ -5,6 +5,7 @@
 	"scripts": {
 		"fmt": "npx biome format --write .",
 		"lint": "npx biome lint .",
+		"knip": "knip",
 		"typeshare": "typeshare --version | grep -q 'typeshare 1.13.2' && typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
 		"wasm": "./build_wasm.sh",
 		"copy": "cp -r ../cli/templates/output ./public/download && cp ../api/openapi.json ./public/download/openapi.json",
@@ -51,6 +52,7 @@
 		"@biomejs/biome": "^1.9.4",
 		"@types/d3": "^7.4.3",
 		"hast-util-from-html-isomorphic": "^2.0.0",
+		"knip": "^5.44.1",
 		"rehype-autolink-headings": "^7.1.0",
 		"rehype-slug": "^6.0.0",
 		"sass": "^1.84.0",

@@ -1,0 +1,21 @@
+{
+    "entry": [
+        "{index,cli,main}.{js,cjs,mjs,jsx,ts,cts,mts,tsx}",
+        "src/{index,cli,main}.{js,cjs,mjs,jsx,ts,cts,mts,tsx}"
+    ],
+    "project": [
+        "**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}!"
+    ],
+    "astro": {
+        "entry": [
+            "astro.config.{js,cjs,mjs,ts}",
+            "src/content/config.ts",
+            "src/content.config.ts",
+            "src/pages/**/*.{astro,mdx,js,ts}",
+            "src/content/**/*.mdx",
+            "src/chunks/**/*.mdx",
+            "src/middleware.{js,ts}",
+            "src/actions/index.{js,ts}"
+        ]
+    }
+}
