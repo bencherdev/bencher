@@ -1,9 +1,9 @@
-import type { JsonThreshold } from "../../../../types/bencher";
+import type { JsonThreshold, ModelTest } from "../../../../types/bencher";
 import { BRANCH_ICON } from "../../../../config/project/branches";
 import { TESTBED_ICON } from "../../../../config/project/testbeds";
 import { MEASURE_ICON } from "../../../../config/project/measures";
 import DimensionLabel from "./DimensionLabel";
-import { MODEL_TEST_ICON } from "../../../field/kinds/Model";
+import { fmtModelTest, MODEL_TEST_ICON } from "../../../field/kinds/Model";
 
 export const ThresholdRow = (props: { threshold: JsonThreshold }) => {
 	return (
@@ -19,7 +19,7 @@ export const ThresholdRow = (props: { threshold: JsonThreshold }) => {
 			/>
 			<DimensionLabel
 				icon={MODEL_TEST_ICON}
-				name={props.threshold?.model?.test ?? "No model"}
+				name={fmtModelTest(props.threshold?.model?.test as ModelTest) ?? "No model"}
 			/>
 		</div>
 	);

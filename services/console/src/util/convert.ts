@@ -1,4 +1,4 @@
-import { PlanLevel } from "../types/bencher";
+import { ModelTest, PlanLevel } from "../types/bencher";
 
 export const dateTimeMillis = (date_str: undefined | string) => {
 	if (date_str === undefined) {

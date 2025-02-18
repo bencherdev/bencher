@@ -13,7 +13,7 @@ import { authUser } from "../../../../../util/auth";
 import { prettyPrintFloat } from "../../../../../util/convert";
 import { httpGet } from "../../../../../util/http";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
-import { testFragment } from "../../../../field/kinds/Model";
+import { fmtModelTest, testFragment } from "../../../../field/kinds/Model";
 import type CardConfig from "./CardConfig";
 
 export interface Props {
@@ -439,26 +439,7 @@ const ModelTestCard = (props: Props) => {
 			class="icon-text has-text-link"
 		>
 			<span>
-				{(() => {
-					switch (props.value) {
-						case ModelTest.Static:
-							return "Static";
-						case ModelTest.Percentage:
-							return "Percentage";
-						case ModelTest.ZScore:
-							return "z-score";
-						case ModelTest.TTest:
-							return "t-test";
-						case ModelTest.LogNormal:
-							return "Log Normal";
-						case ModelTest.Iqr:
-							return "Interquartile Range (IQR)";
-						case ModelTest.DeltaIqr:
-							return "Delta Interquartile Range (ΔIQR)";
-						default:
-							return `${props.value}`;
-					}
-				})()}
+				{fmtModelTest(props.value as ModelTest)}
 			</span>
 			<span class="icon">
 				<i class="fas fa-book-open" />
