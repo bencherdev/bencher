@@ -3,11 +3,20 @@ import { isAllowedProjectDelete } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 
+export const REPORT_ICON = "far fa-list-alt";
+
 const reportsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Reports",
+			title: (
+				<span class="icon-text">
+					<span class="icon">
+						<i class={REPORT_ICON} />
+					</span>
+					<div>&nbsp;Reports</div>
+				</span>
+			),
 			buttons: [
 				{ kind: Button.DATE_TIME },
 				{ kind: Button.ARCHIVED },

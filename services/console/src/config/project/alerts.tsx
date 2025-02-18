@@ -11,7 +11,14 @@ const alertsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Alerts",
+			title: (
+				<span class="icon-text">
+					<span class="icon">
+						<i class={ALERT_ICON} />
+					</span>
+					<div>&nbsp;Alerts</div>
+				</span>
+			),
 			buttons: [
 				{ kind: Button.DISMISS_ALL },
 				{ kind: Button.ARCHIVED },

@@ -9,6 +9,13 @@ import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
 import { PubResourceKind } from "../../components/perf/util";
 
+export const THRESHOLD_ICON = (
+	<span class="fa-stack fa-2x" style="font-size: 0.75em;">
+		<i class="fas fa-walking fa-stack-1x" />
+		<i class="fas fa-ban fa-stack-2x" />
+	</span>
+);
+
 const paginationUrl = (
 	params: undefined | Params,
 	dimension: string,
@@ -71,7 +78,16 @@ const thresholdsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Thresholds",
+			title: (
+				<div class="level is-mobile">
+					<div class="level-left">
+						<div class="level-item">
+							{THRESHOLD_ICON}
+							&nbsp;Thresholds
+						</div>
+					</div>
+				</div>
+			),
 			buttons: [
 				{ kind: Button.ARCHIVED },
 				{

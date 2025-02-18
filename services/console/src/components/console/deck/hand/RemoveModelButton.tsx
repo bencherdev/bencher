@@ -4,6 +4,7 @@ import type { JsonAuthUser, JsonThreshold } from "../../../../types/bencher";
 import { httpPut } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { validJwt } from "../../../../util/valid";
+import { THRESHOLD_ICON } from "../../../../config/project/thresholds";
 
 export interface Props {
 	apiUrl: string;
@@ -64,10 +65,7 @@ const RemoveModelButton = (props: Props) => {
 						sendRemove();
 					}}
 				>
-					<span class="fa-stack fa-2x" style="font-size: 0.75em;">
-						<i class="fas fa-walking fa-stack-1x" />
-						<i class="fas fa-ban fa-stack-2x" />
-					</span>
+					{THRESHOLD_ICON}
 					<span>&nbsp;Reset Threshold</span>
 				</button>
 			</div>
