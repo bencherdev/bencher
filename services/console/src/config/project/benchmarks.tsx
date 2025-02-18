@@ -33,7 +33,15 @@ const benchmarksConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Benchmarks",
+			title: (
+				<span class="icon-text">
+					<span class="icon">
+						<i class={BENCHMARK_ICON} />
+					</span>
+					<div>&nbsp;Benchmarks</div>
+				</span>
+			),
+			name: "Benchmarks",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{ kind: Button.ARCHIVED },

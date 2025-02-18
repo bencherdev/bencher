@@ -4,7 +4,6 @@ import {
 	type Accessor,
 	For,
 	Match,
-	type Resource,
 	Show,
 	Switch,
 	createMemo,
@@ -13,7 +12,7 @@ import {
 import { Button } from "../../../config/types";
 import { AlertStatus, type JsonAlert } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
-import { X_TOTAL_COUNT, apiUrl, httpGet, httpPatch } from "../../../util/http";
+import { X_TOTAL_COUNT, httpGet, httpPatch } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { pathname } from "../../../util/url";
 import Field from "../../field/Field";
@@ -38,6 +37,7 @@ export interface Props {
 
 export interface TableHeaderConfig {
 	title: string;
+	name?: string;
 	buttons: TableButton[];
 }
 
@@ -63,6 +63,7 @@ const TableHeader = (props: Props) => {
 							search={props.search}
 							archived={props.archived}
 							title={title}
+							name={props.config?.name}
 							button={button}
 							handleRefresh={props.handleRefresh}
 							handleStartTime={props.handleStartTime}
@@ -92,6 +93,7 @@ const TableHeaderButton = (props: {
 	search: Accessor<undefined | string>;
 	archived: Accessor<undefined | string>;
 	title: string;
+	name: undefined | string;
 	button: TableButton;
 	handleRefresh: () => void;
 	handleStartTime: (start_time: string) => void;
@@ -122,7 +124,7 @@ const TableHeaderButton = (props: {
 						fieldKey="search"
 						value={props.search() ?? ""}
 						config={{
-							placeholder: `Search ${props.title}`,
+							placeholder: `Search ${props.name}`,
 						}}
 						handleField={(_key, search, _valid) =>
 							props.handleSearch(search as string)

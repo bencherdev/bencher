@@ -42,7 +42,15 @@ const branchesConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Branches",
+			title: (
+				<span class="icon-text">
+					<span class="icon">
+						<i class={BRANCH_ICON} />
+					</span>
+					<div>&nbsp;Branches</div>
+				</span>
+			),
+			name: "Branches",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{ kind: Button.ARCHIVED },

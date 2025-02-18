@@ -438,9 +438,7 @@ const ModelTestCard = (props: Props) => {
 			target="_blank"
 			class="icon-text has-text-link"
 		>
-			<span>
-				{fmtModelTest(props.value as ModelTest)}
-			</span>
+			<span>{fmtModelTest(props.value as ModelTest)}</span>
 			<span class="icon">
 				<i class="fas fa-book-open" />
 			</span>

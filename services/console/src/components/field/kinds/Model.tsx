@@ -117,7 +117,6 @@ const STATISTIC_FIELDS = {
 	},
 };
 
-
 export const fmtModelTest = (test: ModelTest) => {
 	switch (test) {
 		case ModelTest.Static:

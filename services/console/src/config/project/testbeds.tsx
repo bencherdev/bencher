@@ -42,7 +42,15 @@ const testbedsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Testbeds",
+			title: (
+				<span class="icon-text">
+					<span class="icon">
+						<i class={TESTBED_ICON} />
+					</span>
+					<div>&nbsp;Testbeds</div>
+				</span>
+			),
+			name: "Testbeds",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{ kind: Button.ARCHIVED },

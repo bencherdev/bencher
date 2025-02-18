@@ -48,7 +48,15 @@ const measuresConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Measures",
+			title: (
+				<span class="icon-text">
+					<span class="icon">
+						<i class={MEASURE_ICON} />
+					</span>
+					<div>&nbsp;Measures</div>
+				</span>
+			),
+			name: "Measures",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{ kind: Button.ARCHIVED },
