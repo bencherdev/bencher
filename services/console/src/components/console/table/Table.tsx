@@ -11,13 +11,17 @@ import { Row } from "../../../config/types";
 import { fmtDateTime } from "../../../config/util";
 import {
 	AlertStatus,
+	type JsonAlert,
 	type JsonReport,
+	type JsonThreshold,
 	type Slug,
 } from "../../../types/bencher";
 import { fmtValues } from "../../../util/resource";
 import { BACK_PARAM, encodePath, pathname } from "../../../util/url";
-import { ReportRowFields } from "../perf/plot/tab/ReportsTab";
 import FallbackTable from "./FallbackTable";
+import ReportRow from "./rows/ReportRow";
+import ThresholdRow from "./rows/ThresholdRow";
+import AlertRow from "./rows/AlertRow";
 
 export enum TableState {
 	LOADING = 0,
@@ -73,29 +77,14 @@ const Table = (props: Props) => {
 							onMouseDown={(_e) => rowEffect(props.config?.row?.button, datum)}
 						>
 							<Switch fallback={rowText(props.config?.row, datum)}>
-								<Match when={datum?.status === AlertStatus.Active}>
-									<span class="icon-text">
-										<span class="icon has-text-primary">
-											<i class="far fa-bell" />
-										</span>
-										<span>{rowText(props.config?.row, datum)}</span>
-									</span>
-								</Match>
-								<Match
-									when={
-										datum?.status === AlertStatus.Dismissed ||
-										datum?.status === AlertStatus.Silenced
-									}
-								>
-									<span class="icon-text">
-										<span class="icon">
-											<i class="far fa-bell-slash" />
-										</span>
-										<span>{rowText(props.config?.row, datum)}</span>
-									</span>
-								</Match>
 								<Match when={props.config?.row?.kind === Row.REPORT}>
-									<ReportRowFields report={datum as JsonReport} />
+									<ReportRow report={datum as JsonReport} />
+								</Match>
+								<Match when={props.config?.row?.kind === Row.THRESHOLD}>
+									<ThresholdRow threshold={datum as JsonThreshold} />
+								</Match>
+								<Match when={props.config?.row?.kind === Row.ALERT}>
+									<AlertRow alert={datum as JsonAlert} />
 								</Match>
 							</Switch>
 						</a>

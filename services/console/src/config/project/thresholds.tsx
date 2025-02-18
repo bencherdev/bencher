@@ -14,7 +14,7 @@ const paginationUrl = (
 	dimension: string,
 	per_page: number,
 	page: number,
-	search: undefined | string
+	search: undefined | string,
 ) => {
 	const searchParams = new URLSearchParams();
 	searchParams.set("per_page", per_page?.toString());
@@ -34,24 +34,36 @@ const THRESHOLD_FIELDS = {
 		icon: "fas fa-code-branch",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: undefined | Params, per_page: number, page: number, search: undefined | string) =>
-			paginationUrl(params, "branches", per_page, page, search),
+		url: (
+			params: undefined | Params,
+			per_page: number,
+			page: number,
+			search: undefined | string,
+		) => paginationUrl(params, "branches", per_page, page, search),
 	},
 	testbed: {
 		name: "testbeds",
 		icon: "fas fa-server",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: undefined | Params, per_page: number, page: number,  search: undefined | string) =>
-			paginationUrl(params, "testbeds", per_page, page, search),
+		url: (
+			params: undefined | Params,
+			per_page: number,
+			page: number,
+			search: undefined | string,
+		) => paginationUrl(params, "testbeds", per_page, page, search),
 	},
 	measure: {
 		name: "measures",
 		icon: "fas fa-shapes",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: undefined | Params, per_page: number, page: number,  search: undefined | string) =>
-			paginationUrl(params, "measures", per_page, page, search),
+		url: (
+			params: undefined | Params,
+			per_page: number,
+			page: number,
+			search: undefined | string,
+		) => paginationUrl(params, "measures", per_page, page, search),
 	},
 };
 
@@ -89,26 +101,7 @@ const thresholdsConfig = {
 				text: "Add a Threshold",
 			},
 			row: {
-				keys: [
-					["branch", "name"],
-					["testbed", "name"],
-					["measure", "name"],
-				],
-				items: [
-					{
-						kind: Row.NESTED_TEXT,
-						keys: ["branch", "name"],
-					},
-					{},
-					{
-						kind: Row.NESTED_TEXT,
-						keys: ["testbed", "name"],
-					},
-					{
-						kind: Row.NESTED_TEXT,
-						keys: ["measure", "name"],
-					},
-				],
+				kind: Row.THRESHOLD,
 				button: {
 					text: "View",
 					path: viewUuidPath,

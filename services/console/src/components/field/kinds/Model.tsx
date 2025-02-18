@@ -13,6 +13,8 @@ import FieldKind from "../kind";
 import { createStore } from "solid-js/store";
 import Field from "../Field";
 
+export const MODEL_TEST_ICON = "fas fa-vial";
+
 export type InputValue = string | number | null | undefined;
 
 export interface Props {
@@ -34,7 +36,7 @@ export interface StatisticConfig {
 
 const STATISTIC_FIELDS = {
 	test: {
-		icon: "fas fa-vial",
+		icon: MODEL_TEST_ICON,
 	},
 	static_lower_boundary: {
 		type: "input",

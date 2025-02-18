@@ -27,7 +27,12 @@ export interface RadioConfig {
 	icon: string;
 	option_key: string;
 	value_key: string;
-	url: (params: undefined | Params, per_page: number, page: number, search: undefined | string) => string;
+	url: (
+		params: undefined | Params,
+		per_page: number,
+		page: number,
+		search: undefined | string,
+	) => string;
 	help?: string;
 	validate: (value: string) => boolean;
 }
@@ -39,14 +44,13 @@ const Radio = (props: Props) => {
 	const [page, setPage] = createSignal(DEFAULT_PAGE);
 
 	const [search, setSearch] = createSignal<undefined | string>();
-	const handleSearch = (_key: string, search: string, _valid: boolean) => debounce(
-		(search: string) => {
+	const handleSearch = (_key: string, search: string, _valid: boolean) =>
+		debounce((search: string) => {
 			console.log(search);
 			setPage(DEFAULT_PAGE);
 			setSearch(search);
-		return;},
-		DEBOUNCE_DELAY,
-	)(search);
+			return;
+		}, DEBOUNCE_DELAY)(search);
 
 	const [totalCount, setTotalCount] = createSignal(0);
 	const fetcher = createMemo(() => {
@@ -75,16 +79,16 @@ const Radio = (props: Props) => {
 
 	return (
 		<>
-		<nav class="level is-mobile">
-			<Field
-				kind={FieldKind.SEARCH}
-				fieldKey="search"
-				value={search() ?? ""}
-				config={{
-					placeholder: `Search ${toCapitalized(props.config?.name ?? "")}`,
-				}}
-				handleField={handleSearch}
-			/>
+			<nav class="level is-mobile">
+				<Field
+					kind={FieldKind.SEARCH}
+					fieldKey="search"
+					value={search() ?? ""}
+					config={{
+						placeholder: `Search ${toCapitalized(props.config?.name ?? "")}`,
+					}}
+					handleField={handleSearch}
+				/>
 			</nav>
 			<nav class="level is-mobile">
 				<div class="level-left">

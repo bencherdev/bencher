@@ -26,9 +26,9 @@ import {
 } from "../../../../../util/valid";
 import Pagination, { PaginationSize } from "../../../../site/Pagination";
 import { DEFAULT_PAGE, REPORTS_PER_PAGE } from "../../../perf/PerfPanel";
-import { ReportRowFields } from "../../../perf/plot/tab/ReportsTab";
 import { TableState } from "../../../table/Table";
 import { PAGE_PARAM, PER_PAGE_PARAM } from "../../../table/TablePanel";
+import ReportRow from "../../../table/rows/ReportRow";
 
 export interface Props {
 	isConsole?: boolean;
@@ -146,7 +146,7 @@ const ReportTableCard = (props: Props) => {
 									props.params?.project
 								}/reports/${report?.uuid}?${BACK_PARAM}=${encodePath()}`}
 							>
-								<ReportRowFields report={report} />
+								<ReportRow report={report} />
 							</a>
 						)}
 					</For>

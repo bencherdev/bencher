@@ -1,16 +1,9 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import {
-	createMemo,
-	createResource,
-} from "solid-js";
-import {
-	type JsonAuthUser,
-	type JsonProject,
-} from "../../types/bencher";
+import { createMemo, createResource } from "solid-js";
+import { type JsonAuthUser, type JsonProject } from "../../types/bencher";
 import { httpGet } from "../../util/http";
 import { type InitValid, init_valid, validJwt } from "../../util/valid";
-
 
 interface Props {
 	apiUrl: string;
@@ -56,7 +49,12 @@ const ProjectsLink = (props: Props) => {
 	const [organization] = createResource<string>(orgFetcher, fetchOrg);
 
 	return (
-		<a class="navbar-item" href={`/console/organizations/${organization()}/projects`}>Projects</a>
+		<a
+			class="navbar-item"
+			href={`/console/organizations/${organization()}/projects`}
+		>
+			Projects
+		</a>
 	);
 };
 

@@ -128,6 +128,8 @@ export enum Row {
 	SELECT = "select",
 	NESTED_TEXT = "nested_text",
 	REPORT = "report",
+	THRESHOLD = "threshold",
+	ALERT = "alert",
 }
 
 export enum Card {

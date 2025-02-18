@@ -37,30 +37,7 @@ const alertsConfig = {
 				text: "Learn about Thresholds & Alerts",
 			},
 			row: {
-				keys: [
-					["threshold", "branch", "name"],
-					["threshold", "testbed", "name"],
-					["benchmark", "name"],
-					["threshold", "measure", "name"],
-				],
-				items: [
-					{
-						kind: Row.TEXT,
-						key: "status",
-					},
-					{
-						kind: Row.NESTED_TEXT,
-						keys: ["threshold", "branch", "name"],
-					},
-					{
-						kind: Row.NESTED_TEXT,
-						keys: ["threshold", "testbed", "name"],
-					},
-					{
-						kind: Row.NESTED_TEXT,
-						keys: ["threshold", "measure", "name"],
-					},
-				],
+				kind: Row.ALERT,
 				button: {
 					text: "View",
 					path: viewUuidPath,
