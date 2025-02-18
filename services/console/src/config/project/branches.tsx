@@ -15,6 +15,7 @@ import {
 	Operation,
 	ReportDimension,
 	Row,
+	ThresholdDimension,
 } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 
@@ -186,6 +187,10 @@ const branchesConfig = {
 				{
 					kind: Card.REPORT_TABLE,
 					dimension: ReportDimension.BRANCH,
+				},
+				{
+					kind: Card.THRESHOLD_TABLE,
+					dimension: ThresholdDimension.BRANCH,
 				},
 			],
 			buttons: [

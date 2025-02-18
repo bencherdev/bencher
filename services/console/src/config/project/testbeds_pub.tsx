@@ -1,6 +1,12 @@
 import type { Params } from "astro";
 import { PubResourceKind } from "../../components/perf/util";
-import { Button, Card, Display, ReportDimension } from "../types";
+import {
+	Button,
+	Card,
+	Display,
+	ReportDimension,
+	ThresholdDimension,
+} from "../types";
 
 const testbedsPubConfig = {
 	resource: PubResourceKind.Testbed,
@@ -39,6 +45,10 @@ const testbedsPubConfig = {
 			{
 				kind: Card.REPORT_TABLE,
 				dimension: ReportDimension.TESTBED,
+			},
+			{
+				kind: Card.THRESHOLD_TABLE,
+				dimension: ThresholdDimension.TESTBED,
 			},
 		],
 	},

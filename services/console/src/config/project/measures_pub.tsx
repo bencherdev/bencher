@@ -1,5 +1,5 @@
 import type { Params } from "astro";
-import { Button, Card, Display } from "../types";
+import { Button, Card, Display, ThresholdDimension } from "../types";
 import { PubResourceKind } from "../../components/perf/util";
 
 const measuresPubConfig = {
@@ -41,6 +41,10 @@ const measuresPubConfig = {
 				label: "Measure Units",
 				key: "units",
 				display: Display.RAW,
+			},
+			{
+				kind: Card.THRESHOLD_TABLE,
+				dimension: ThresholdDimension.MEASURE,
 			},
 		],
 	},

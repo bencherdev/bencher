@@ -1,6 +1,12 @@
 import type { Params } from "astro";
 import { PubResourceKind } from "../../components/perf/util";
-import { Button, Card, Display, ReportDimension } from "../types";
+import {
+	Button,
+	Card,
+	Display,
+	ReportDimension,
+	ThresholdDimension,
+} from "../types";
 
 const branchesPubConfig = {
 	resource: PubResourceKind.Branch,
@@ -47,6 +53,10 @@ const branchesPubConfig = {
 			{
 				kind: Card.REPORT_TABLE,
 				dimension: ReportDimension.BRANCH,
+			},
+			{
+				kind: Card.THRESHOLD_TABLE,
+				dimension: ThresholdDimension.BRANCH,
 			},
 		],
 	},

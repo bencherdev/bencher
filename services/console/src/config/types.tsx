@@ -137,6 +137,7 @@ export enum Card {
 	NESTED_FIELD = "nested_field",
 	REPORT = "report",
 	REPORT_TABLE = "report_table",
+	THRESHOLD_TABLE = "threshold_table",
 }
 
 export enum Display {
@@ -161,6 +162,12 @@ export enum Display {
 export enum ReportDimension {
 	BRANCH = "branch",
 	TESTBED = "testbed",
+}
+
+export enum ThresholdDimension {
+	BRANCH = "branch",
+	TESTBED = "testbed",
+	MEASURE = "measure",
 }
 
 export enum PerfTab {

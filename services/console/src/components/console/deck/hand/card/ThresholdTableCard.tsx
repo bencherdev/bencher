@@ -4,18 +4,19 @@ import {
 	For,
 	Match,
 	type Resource,
+	Show,
 	Switch,
 	createMemo,
 	createResource,
 	createSignal,
 } from "solid-js";
-import { ReportDimension } from "../../../../../config/types";
+import { ThresholdDimension } from "../../../../../config/types";
 import { resourcePath } from "../../../../../config/util";
 import type {
 	JsonAuthUser,
 	JsonBranch,
-	JsonReport,
 	JsonTestbed,
+	JsonThreshold,
 } from "../../../../../types/bencher";
 import { X_TOTAL_COUNT, httpGet } from "../../../../../util/http";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
@@ -28,18 +29,18 @@ import Pagination, { PaginationSize } from "../../../../site/Pagination";
 import { DEFAULT_PAGE, REPORTS_PER_PAGE } from "../../../perf/PerfPanel";
 import { TableState } from "../../../table/Table";
 import { PAGE_PARAM, PER_PAGE_PARAM } from "../../../table/TablePanel";
-import ReportRow from "../../../table/rows/ReportRow";
+import ThresholdRow from "../../../table/rows/ThresholdRow";
 
 export interface Props {
 	isConsole?: boolean;
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	dimension: ReportDimension;
+	dimension: ThresholdDimension;
 	value: Resource<JsonBranch | JsonTestbed>;
 }
 
-const ReportTableCard = (props: Props) => {
+const ThresholdTableCard = (props: Props) => {
 	const [bencher_valid] = createResource(init_valid);
 
 	const per_page = () => REPORTS_PER_PAGE;
@@ -62,7 +63,7 @@ const ReportTableCard = (props: Props) => {
 			token: props.user?.token,
 		};
 	});
-	async function getReports<T>(fetcher: {
+	async function getThresholds<T>(fetcher: {
 		bencher_valid: InitValid;
 		value: JsonBranch | JsonTestbed;
 		pagination: { per_page: number; page: number };
@@ -88,15 +89,18 @@ const ReportTableCard = (props: Props) => {
 			searchParams.set("archived", "true");
 		}
 		switch (props.dimension) {
-			case ReportDimension.BRANCH:
+			case ThresholdDimension.BRANCH:
 				searchParams.set("branch", fetcher.value?.uuid);
 				break;
-			case ReportDimension.TESTBED:
+			case ThresholdDimension.TESTBED:
 				searchParams.set("testbed", fetcher.value?.uuid);
+				break;
+			case ThresholdDimension.MEASURE:
+				searchParams.set("measure", fetcher.value?.uuid);
 				break;
 		}
 
-		const path = `/v0/projects/${props.params?.project}/reports?${searchParams.toString()}`;
+		const path = `/v0/projects/${props.params?.project}/thresholds?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				setState(resp?.data.length === 0 ? TableState.EMPTY : TableState.OK);
@@ -109,12 +113,12 @@ const ReportTableCard = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	}
-	const [reports] = createResource<JsonReport[]>(fetcher, getReports);
-	const reportDataLength = createMemo(() => reports()?.length);
+	const [thresholds] = createResource<JsonThreshold[]>(fetcher, getThresholds);
+	const thresholdDataLength = createMemo(() => thresholds()?.length);
 
 	return (
 		<div class="box" style="margin-top: 2rem">
-			<h2 class="title is-4">Recent Reports</h2>
+			<h2 class="title is-4">Thresholds</h2>
 			<Switch>
 				<Match when={state() === TableState.LOADING}>
 					<For each={Array(per_page())}>
@@ -133,20 +137,31 @@ const ReportTableCard = (props: Props) => {
 				</Match>
 				<Match when={state() === TableState.EMPTY}>
 					<div class="box" style="margin-bottom: 1rem;">
-						<p>🐰 No reports found</p>
+						<p>🐰 No thresholds found</p>
+						<Show when={props.isConsole}>
+							<br />
+							<a
+								class="button"
+								href={`${resourcePath(props.isConsole)}/${
+									props.params?.project
+								}/thresholds/add?${BACK_PARAM}=${encodePath()}`}
+							>
+								Create a Threshold
+							</a>
+						</Show>
 					</div>
 				</Match>
 				<Match when={state() === TableState.OK}>
-					<For each={reports()}>
-						{(report) => (
+					<For each={thresholds()}>
+						{(threshold) => (
 							<a
 								class="box"
 								style="margin-bottom: 1rem;"
 								href={`${resourcePath(props.isConsole)}/${
 									props.params?.project
-								}/reports/${report?.uuid}?${BACK_PARAM}=${encodePath()}`}
+								}/thresholds/${threshold?.uuid}?${BACK_PARAM}=${encodePath()}`}
 							>
-								<ReportRow report={report} />
+								<ThresholdRow threshold={threshold} />
 							</a>
 						)}
 					</For>
@@ -154,7 +169,7 @@ const ReportTableCard = (props: Props) => {
 						<div class="container">
 							<Pagination
 								size={PaginationSize.SMALL}
-								data_len={reportDataLength}
+								data_len={thresholdDataLength}
 								per_page={per_page}
 								page={page}
 								total_count={totalCount}
@@ -165,7 +180,7 @@ const ReportTableCard = (props: Props) => {
 				</Match>
 				<Match when={state() === TableState.ERR}>
 					<div class="box" style="margin-bottom: 1rem;">
-						<p>🐰 Eek! Failed to load reports.</p>
+						<p>🐰 Eek! Failed to load thresholds.</p>
 					</div>
 				</Match>
 			</Switch>
@@ -173,4 +188,4 @@ const ReportTableCard = (props: Props) => {
 	);
 };
 
-export default ReportTableCard;
+export default ThresholdTableCard;

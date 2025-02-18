@@ -7,6 +7,7 @@ import type CardConfig from "./CardConfig";
 import FieldCard from "./FieldCard";
 import ReportCard from "./ReportCard";
 import ReportTableCard from "./ReportTableCard";
+import ThresholdTableCard from "./ThresholdTableCard";
 
 export interface Props {
 	isConsole: boolean;
@@ -70,6 +71,16 @@ const DeckCard = (props: Props) => {
 				</Match>
 				<Match when={props.card?.kind === Card.REPORT_TABLE}>
 					<ReportTableCard
+						isConsole={props.isConsole}
+						apiUrl={props.apiUrl}
+						params={props.params}
+						user={props.user}
+						dimension={props.card?.dimension}
+						value={props.data}
+					/>
+				</Match>
+				<Match when={props.card?.kind === Card.THRESHOLD_TABLE}>
+					<ThresholdTableCard
 						isConsole={props.isConsole}
 						apiUrl={props.apiUrl}
 						params={props.params}

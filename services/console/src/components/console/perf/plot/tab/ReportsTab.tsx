@@ -5,7 +5,7 @@ import { MEASURE_ICON } from "../../../../../config/project/measures";
 import { TESTBED_ICON } from "../../../../../config/project/testbeds";
 import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime, resourcePath } from "../../../../../config/util";
-import { type JsonReport } from "../../../../../types/bencher";
+import type { JsonReport } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import DateRange from "../../../../field/kinds/DateRange";
 import { type Theme, themeText } from "../../../../navbar/theme/theme";

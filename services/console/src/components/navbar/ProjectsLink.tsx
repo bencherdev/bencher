@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
 import { createMemo, createResource } from "solid-js";
-import { type JsonAuthUser, type JsonProject } from "../../types/bencher";
+import type { JsonAuthUser, JsonProject } from "../../types/bencher";
 import { httpGet } from "../../util/http";
 import { type InitValid, init_valid, validJwt } from "../../util/valid";
 

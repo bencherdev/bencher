@@ -7,7 +7,15 @@ import {
 	isAllowedProjectEdit,
 } from "../../util/auth";
 import { validResourceName, validSlug } from "../../util/valid";
-import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
+import {
+	ActionButton,
+	Button,
+	Card,
+	Display,
+	Operation,
+	Row,
+	ThresholdDimension,
+} from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 
 export const MEASURE_ICON = "fas fa-shapes";
@@ -198,6 +206,10 @@ const measuresConfig = {
 						validate: true,
 						config: MEASURE_FIELDS.units,
 					},
+				},
+				{
+					kind: Card.THRESHOLD_TABLE,
+					dimension: ThresholdDimension.MEASURE,
 				},
 			],
 			buttons: [

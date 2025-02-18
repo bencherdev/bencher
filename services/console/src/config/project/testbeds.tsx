@@ -15,6 +15,7 @@ import {
 	Operation,
 	ReportDimension,
 	Row,
+	ThresholdDimension,
 } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 
@@ -177,6 +178,10 @@ const testbedsConfig = {
 				{
 					kind: Card.REPORT_TABLE,
 					dimension: ReportDimension.TESTBED,
+				},
+				{
+					kind: Card.THRESHOLD_TABLE,
+					dimension: ThresholdDimension.TESTBED,
 				},
 			],
 			buttons: [

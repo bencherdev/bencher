@@ -28,25 +28,27 @@ const ProjectMenu = (props: Props) => {
 		bencher_valid: InitValid;
 		project_slug: string;
 		token: string;
-	}): Promise<number> => {
-		const DEFAULT_ALERT_COUNT = 0;
+	}) => {
 		if (
 			!fetcher.bencher_valid ||
 			!fetcher.project_slug ||
 			!validJwt(fetcher.token)
 		) {
-			return DEFAULT_ALERT_COUNT;
+			return;
 		}
 		const pathname = `/v0/projects/${fetcher.project_slug}/alerts?per_page=0&status=active`;
 		return await httpGet(props.apiUrl, pathname, authUser()?.token)
-			.then((resp) => resp?.headers?.[X_TOTAL_COUNT] ?? 0)
+			.then((resp) => resp?.headers?.[X_TOTAL_COUNT])
 			.catch((error) => {
 				console.error(error);
 				Sentry.captureException(error);
-				return DEFAULT_ALERT_COUNT;
+				return;
 			});
 	};
-	const [active_alerts] = createResource<number>(fetcher, getAlerts);
+	const [active_alerts] = createResource<undefined | number>(
+		fetcher,
+		getAlerts,
+	);
 
 	return <ProjectMenuInner project={project} active_alerts={active_alerts} />;
 };
