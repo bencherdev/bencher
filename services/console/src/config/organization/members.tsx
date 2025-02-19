@@ -170,6 +170,7 @@ const MembersConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
+			icon: MEMBER_ICON,
 			path: parentPath,
 			path_to: "Organization Members",
 			buttons: [{ kind: Button.REFRESH }],

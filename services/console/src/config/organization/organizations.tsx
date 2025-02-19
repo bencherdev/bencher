@@ -12,12 +12,14 @@ import { ActionButton, Button, Card, Display, Row } from "../types";
 import { Operation } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 
+const ORGANIZATION_ICON = "fas fa-sitemap";
+
 const ORGANIZATION_FIELDS = {
 	name: {
 		label: "Name",
 		type: "text",
 		placeholder: "Organization Name",
-		icon: "fas fa-project-diagram",
+		icon: ORGANIZATION_ICON,
 		help: "Must be a non-empty string",
 		validate: validResourceName,
 	},
@@ -105,6 +107,7 @@ const organizationsConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
+			icon: ORGANIZATION_ICON,
 			path: (pathname: string) => `${parentPath(pathname)}/projects`,
 			path_to: "Organizations",
 			buttons: [{ kind: Button.REFRESH }],
