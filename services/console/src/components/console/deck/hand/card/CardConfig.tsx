@@ -7,6 +7,7 @@ export interface CardConfig {
 	label: string;
 	key?: string;
 	keys?: string[];
+	icon?: string;
 	display: Display;
 	field: PosterFieldConfig;
 	is_allowed: (

@@ -14,6 +14,7 @@ import { prettyPrintFloat } from "../../../../../util/convert";
 import { httpGet } from "../../../../../util/http";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { fmtModelTest, testFragment } from "../../../../field/kinds/Model";
+import IconTitle from "../../../../site/IconTitle";
 import type CardConfig from "./CardConfig";
 
 export interface Props {
@@ -48,8 +49,16 @@ const ViewCard = (props: Props) => {
 						}
 					})()}`}
 				>
-					{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
-					<label class="label">{props.card?.label}</label>
+					<Show
+						when={props.card?.icon}
+						/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */
+						fallback={<label class="label">{props.card?.label}</label>}
+					>
+						{/* biome-ignore lint/a11y/noLabelWithoutControl: bulma form */}
+						<label class="label">
+							<IconTitle icon={props.card?.icon} title={props.card?.label} />
+						</label>
+					</Show>
 				</div>
 				<div class="field-body">
 					<div class="field is-expanded">
