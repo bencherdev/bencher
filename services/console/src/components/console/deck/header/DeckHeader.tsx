@@ -72,7 +72,9 @@ const DeckHeader = (props: Props) => {
 			</div>
 			<div class="column">
 				<div class="content has-text-centered">
-					<h3 class="title is-3">{title()}</h3>
+					<h3 class="title is-3" style="word-break: break-word;">
+						{title()}
+					</h3>
 				</div>
 			</div>
 

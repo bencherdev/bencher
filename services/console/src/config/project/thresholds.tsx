@@ -88,6 +88,7 @@ const thresholdsConfig = {
 					</div>
 				</div>
 			),
+			name: "Thresholds",
 			buttons: [
 				{ kind: Button.ARCHIVED },
 				{

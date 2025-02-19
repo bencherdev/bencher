@@ -59,6 +59,7 @@ const MembersConfig = {
 		operation: Operation.LIST,
 		header: {
 			title: <IconTitle icon={MEMBER_ICON} title="Members" />,
+			name: "Members",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{

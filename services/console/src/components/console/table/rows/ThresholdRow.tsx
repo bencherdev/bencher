@@ -20,7 +20,7 @@ export const ThresholdRow = (props: { threshold: JsonThreshold }) => {
 			<DimensionLabel
 				icon={MODEL_TEST_ICON}
 				name={
-					fmtModelTest(props.threshold?.model?.test as ModelTest) ?? "No model"
+					fmtModelTest(props.threshold?.model?.test as ModelTest) ?? "No Model"
 				}
 			/>
 		</div>

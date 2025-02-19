@@ -46,7 +46,7 @@ export const AlertRow = (props: { alert: JsonAlert }) => {
 			/>
 			<DimensionLabel
 				icon={MODEL_TEST_ICON}
-				name={props.alert?.threshold?.model?.test ?? "No model"}
+				name={props.alert?.threshold?.model?.test ?? "No Model"}
 			/>
 		</div>
 	);

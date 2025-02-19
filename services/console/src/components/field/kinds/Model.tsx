@@ -134,7 +134,7 @@ export const fmtModelTest = (test: ModelTest) => {
 		case ModelTest.DeltaIqr:
 			return "Delta Interquartile Range (ΔIQR)";
 		default:
-			return "Unknown";
+			return "No Model";
 	}
 };
 

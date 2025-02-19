@@ -1,4 +1,5 @@
 import FieldKind from "../../components/field/kind";
+import IconTitle from "../../components/site/IconTitle";
 import type { JsonOrganization } from "../../types/bencher";
 import {
 	isAllowedOrganizationDelete,
@@ -45,7 +46,8 @@ const organizationsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Organizations",
+			title: <IconTitle icon={ORGANIZATION_ICON} title="Organizations" />,
+			name: "Organizations",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{

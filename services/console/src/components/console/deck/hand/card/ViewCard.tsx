@@ -7,7 +7,7 @@ import {
 	Adapter,
 	type JsonBranch,
 	type JsonProject,
-	ModelTest,
+	type ModelTest,
 } from "../../../../../types/bencher";
 import { authUser } from "../../../../../util/auth";
 import { prettyPrintFloat } from "../../../../../util/convert";

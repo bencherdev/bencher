@@ -7,13 +7,13 @@ import IconTitle from "../../components/site/IconTitle";
 
 export const ALERT_ICON = "fas fa-bell";
 export const ALERT_OFF_ICON = "far fa-bell-slash";
-export const ALERT_FALLBACK_ICON = "far fa-bell";
 
 const alertsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
 			title: <IconTitle icon={ALERT_ICON} title="Alerts" />,
+			name: "Alerts",
 			buttons: [
 				{ kind: Button.DISMISS_ALL },
 				{ kind: Button.ARCHIVED },

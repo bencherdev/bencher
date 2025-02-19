@@ -59,6 +59,7 @@ const projectsConfig = {
 		operation: Operation.LIST,
 		header: {
 			title: <IconTitle icon={PROJECT_ICON} title="Projects" />,
+			name: "Projects",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{

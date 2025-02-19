@@ -11,6 +11,7 @@ const reportsConfig = {
 		operation: Operation.LIST,
 		header: {
 			title: <IconTitle icon={REPORT_ICON} title="Reports" />,
+			name: "Reports",
 			buttons: [
 				{ kind: Button.DATE_TIME },
 				{ kind: Button.ARCHIVED },
