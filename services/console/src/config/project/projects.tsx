@@ -10,11 +10,13 @@ import { validResourceName, validOptionUrl, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";
 
+const PROJECT_ICON = "fas fa-project-diagram";
+
 const PROJECT_FIELDS = {
 	name: {
 		type: "text",
 		placeholder: "Project Name",
-		icon: "fas fa-project-diagram",
+		icon: PROJECT_ICON,
 		help: "Must be non-empty string",
 		validate: validResourceName,
 	},
@@ -55,7 +57,14 @@ const projectsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Projects",
+			title: (
+				<span class="icon-text">
+					<span class="icon">
+						<i class={PROJECT_ICON} />
+					</span>
+					<div>&nbsp;Projects</div>
+				</span>
+			),
 			buttons: [
 				{ kind: Button.SEARCH },
 				{

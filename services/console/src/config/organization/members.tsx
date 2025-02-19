@@ -9,11 +9,13 @@ import {
 } from "../../util/auth";
 import FieldKind from "../../components/field/kind";
 
+const MEMBER_ICON = "fas fa-user";
+
 export const MEMBER_FIELDS = {
 	name: {
 		type: "text",
 		placeholder: "Member Name",
-		icon: "fas fa-user",
+		icon: MEMBER_ICON,
 		help: "May only use: letters, numbers, contained spaces, apostrophes, periods, commas, and dashes",
 		validate: validUserName,
 	},
@@ -55,7 +57,14 @@ const MembersConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Organization Members",
+			title: (
+				<span class="icon-text">
+					<span class="icon">
+						<i class={MEMBER_ICON} />
+					</span>
+					<div>&nbsp;Members</div>
+				</span>
+			),
 			buttons: [
 				{ kind: Button.SEARCH },
 				{

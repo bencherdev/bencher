@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { BENCHER_API_URL } from "astro:env/server";
+import { IS_BENCHER_CLOUD } from "astro:env/client";
 
 import OrgLayout from "../../../../layouts/console/OrgLayout.astro";
 import BillingPanel from "../../../../components/console/billing/BillingPanel";
@@ -11,5 +12,10 @@ const title = "Billing";
 ---
 
 <OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
-  <BillingPanel client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} />
+  <BillingPanel
+    client:only="solid-js"
+    apiUrl={BENCHER_API_URL}
+    isBencherCloud={IS_BENCHER_CLOUD}
+    params={params}
+  />
 </OrgLayout>

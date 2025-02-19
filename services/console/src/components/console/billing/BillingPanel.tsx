@@ -80,7 +80,7 @@ const BillingPanel = (props: Props) => {
 				// console.log(resp.data);
 				return resp?.data;
 			})
-			.catch((error) => {
+			.catch((_error) => {
 				// This is not an error because it is expected
 				// console.log(error);
 				return null;
