@@ -261,7 +261,7 @@ impl ReportComment {
         html.push_str("<tbody>");
 
         for alert in &self.json_report.alerts {
-            let (factor, units) = {
+            let (factor, units, units_symbol) = {
                 let mut min = alert.metric.value;
                 if let Some(lower_limit) = alert.boundary.lower_limit {
                     min = min.min(lower_limit);
@@ -270,7 +270,11 @@ impl ReportComment {
                     min = min.min(upper_limit);
                 }
                 let units = Units::new(min.into(), alert.threshold.measure.units.clone());
-                (units.scale_factor(), units.scale_units())
+                (
+                    units.scale_factor(),
+                    units.scale_units(),
+                    units.scale_units_symbol(),
+                )
             };
 
             html.push_str("<tr>");
@@ -293,7 +297,7 @@ impl ReportComment {
                 alert.metric.value,
                 alert.boundary.baseline,
                 factor,
-                &units,
+                &units_symbol,
                 true,
             );
             if self.has_lower_boundary_alert() {
@@ -302,7 +306,7 @@ impl ReportComment {
                     alert.metric.value,
                     alert.boundary.lower_limit,
                     factor,
-                    &units,
+                    &units_symbol,
                     alert.limit == BoundaryLimit::Lower,
                 );
             }
@@ -312,7 +316,7 @@ impl ReportComment {
                     alert.metric.value,
                     alert.boundary.upper_limit,
                     factor,
-                    &units,
+                    &units_symbol,
                     alert.limit == BoundaryLimit::Upper,
                 );
             }
@@ -329,14 +333,14 @@ impl ReportComment {
         ));
         html.push_str("<br />");
         html.push_str(&format!(
-            "🚨 <a href=\"{url}\">alert ({status})</a>",
-            url = self.resource_url(Resource::Alert(alert.uuid)),
-            status = alert_status(alert),
+            "🚷 <a href=\"{url}\">threshold</a>",
+            url = self.resource_url(Resource::Threshold(alert.threshold.uuid)),
         ));
         html.push_str("<br />");
         html.push_str(&format!(
-            "🚷 <a href=\"{url}\">threshold</a>",
-            url = self.resource_url(Resource::Threshold(alert.threshold.uuid)),
+            "🚨 <a href=\"{url}\">alert ({status})</a>",
+            url = self.resource_url(Resource::Alert(alert.uuid)),
+            status = alert_status(alert),
         ));
         html.push_str("</td>");
     }
@@ -441,9 +445,9 @@ impl ReportComment {
                 name = result.benchmark.name,
             ));
             for (measure, boundary_limits) in mbl {
-                let (factor, units) = {
+                let (factor, units_symbol) = {
                     let units = Units::new(boundary_limits.min.into(), measure.units.clone());
-                    (units.scale_factor(), units.scale_units())
+                    (units.scale_factor(), units.scale_units_symbol())
                 };
 
                 let report_measure = result
@@ -469,7 +473,7 @@ impl ReportComment {
                         report_measure.metric.value,
                         report_measure.boundary.and_then(|b| b.baseline),
                         factor,
-                        &units,
+                        &units_symbol,
                         alert.is_some(),
                     );
                 } else {
@@ -482,7 +486,7 @@ impl ReportComment {
                             report_measure.metric.value,
                             report_measure.boundary.and_then(|b| b.lower_limit),
                             factor,
-                            &units,
+                            &units_symbol,
                             alert.is_some_and(|a| a.limit == BoundaryLimit::Lower),
                         );
                     } else {
@@ -496,7 +500,7 @@ impl ReportComment {
                             report_measure.metric.value,
                             report_measure.boundary.and_then(|b| b.upper_limit),
                             factor,
-                            &units,
+                            &units_symbol,
                             alert.is_some_and(|a| a.limit == BoundaryLimit::Upper),
                         );
                     } else {
@@ -526,14 +530,6 @@ impl ReportComment {
                 Some(boundary_limits)
             )
         ));
-        if let Some(alert) = alert {
-            html.push_str("<br />");
-            html.push_str(&format!(
-                "🚨 <a href=\"{url}\">view alert ({status})</a>",
-                url = self.resource_url(Resource::Alert(alert.uuid)),
-                status = alert_status(alert),
-            ));
-        }
         if let Some(threshold) = &report_measure.threshold {
             html.push_str("<br />");
             html.push_str(&format!(
@@ -543,6 +539,14 @@ impl ReportComment {
         } else {
             html.push_str("<br />");
             html.push_str("⚠️ NO THRESHOLD");
+        }
+        if let Some(alert) = alert {
+            html.push_str("<br />");
+            html.push_str(&format!(
+                "🚨 <a href=\"{url}\">view alert ({status})</a>",
+                url = self.resource_url(Resource::Alert(alert.uuid)),
+                status = alert_status(alert),
+            ));
         }
         html.push_str("</td>");
     }
@@ -802,19 +806,18 @@ fn value_cell(
     value: OrderedFloat<f64>,
     baseline: Option<OrderedFloat<f64>>,
     factor: OrderedFloat<f64>,
-    units: &str,
+    units_symbol: &str,
     bold: bool,
 ) {
     fn value_cell_inner(
         value: OrderedFloat<f64>,
         baseline: Option<OrderedFloat<f64>>,
         factor: OrderedFloat<f64>,
-        units: &str,
+        units_symbol: &str,
     ) -> String {
         let mut cell = Units::format_float((value / factor).into());
-        let short_units = short_units(units);
-        if let Some(short_units) = &short_units {
-            cell.push_str(short_units);
+        if !units_symbol.is_empty() {
+            cell.push_str(&format!(" {units_symbol}"));
         }
 
         if let Some(baseline) = baseline {
@@ -832,8 +835,8 @@ fn value_cell(
             cell.push_str(&format!("({plus}{percent}%)"));
             cell.push_str("</summary>");
             cell.push_str(&format!("Baseline: {baseline}"));
-            if let Some(short_units) = &short_units {
-                cell.push_str(short_units);
+            if !units_symbol.is_empty() {
+                cell.push_str(&format!(" {units_symbol}"));
             }
             cell.push_str("</details>");
         }
@@ -845,10 +848,10 @@ fn value_cell(
     if bold {
         html.push_str(&format!(
             "<b>{}</b>",
-            value_cell_inner(value, baseline, factor, units)
+            value_cell_inner(value, baseline, factor, units_symbol)
         ));
     } else {
-        html.push_str(&value_cell_inner(value, baseline, factor, units));
+        html.push_str(&value_cell_inner(value, baseline, factor, units_symbol));
     }
     html.push_str("</td>");
 }
@@ -858,7 +861,7 @@ fn lower_limit_cell(
     value: OrderedFloat<f64>,
     lower_limit: Option<OrderedFloat<f64>>,
     factor: OrderedFloat<f64>,
-    units: &str,
+    units_symbol: &str,
     bold: bool,
 ) {
     let Some(limit) = lower_limit else {
@@ -872,7 +875,7 @@ fn lower_limit_cell(
         0.0.into()
     };
 
-    limit_cell(html, limit, percent, factor, units, bold);
+    limit_cell(html, limit, percent, factor, units_symbol, bold);
 }
 
 fn upper_limit_cell(
@@ -880,7 +883,7 @@ fn upper_limit_cell(
     value: OrderedFloat<f64>,
     upper_limit: Option<OrderedFloat<f64>>,
     factor: OrderedFloat<f64>,
-    units: &str,
+    units_symbol: &str,
     bold: bool,
 ) {
     let Some(limit) = upper_limit else {
@@ -894,7 +897,7 @@ fn upper_limit_cell(
         0.0.into()
     };
 
-    limit_cell(html, limit, percent, factor, units, bold);
+    limit_cell(html, limit, percent, factor, units_symbol, bold);
 }
 
 fn limit_cell(
@@ -902,18 +905,18 @@ fn limit_cell(
     limit: OrderedFloat<f64>,
     percent: OrderedFloat<f64>,
     factor: OrderedFloat<f64>,
-    units: &str,
+    units_symbol: &str,
     bold: bool,
 ) {
     fn limit_cell_inner(
         limit: OrderedFloat<f64>,
         percent: OrderedFloat<f64>,
         factor: OrderedFloat<f64>,
-        units: &str,
+        units_symbol: &str,
     ) -> String {
         let mut cell = Units::format_float((limit / factor).into());
-        if let Some(short_units) = short_units(units) {
-            cell.push_str(&short_units);
+        if !units_symbol.is_empty() {
+            cell.push_str(&format!(" {units_symbol}"));
         }
         let percent = Units::format_float(percent.into());
         cell.push_str(&format!("<br />({percent}%)"));
@@ -927,19 +930,12 @@ fn limit_cell(
         // where the row cells are vertically aligned to each other.
         html.push_str(&format!(
             "<b>{}<br /><br /></b>",
-            limit_cell_inner(limit, percent, factor, units)
+            limit_cell_inner(limit, percent, factor, units_symbol)
         ));
     } else {
-        html.push_str(&limit_cell_inner(limit, percent, factor, units));
+        html.push_str(&limit_cell_inner(limit, percent, factor, units_symbol));
     }
     html.push_str("</td>");
-}
-
-fn short_units(units: &str) -> Option<String> {
-    units
-        .split_once('(')
-        .and_then(|(_, delimited)| delimited.split_once(')'))
-        .map(|(units, _)| format!(" {units}"))
 }
 
 #[derive(Clone, Copy)]

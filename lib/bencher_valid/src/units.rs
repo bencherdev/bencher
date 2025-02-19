@@ -29,6 +29,10 @@ impl Units {
         self.scale.units(self.units.as_ref())
     }
 
+    pub fn scale_units_symbol(&self) -> String {
+        self.scale.units_symbol(self.units.as_ref())
+    }
+
     pub fn format_float(number: f64) -> String {
         Self::format_number(number, false)
     }
@@ -103,6 +107,15 @@ impl Scale {
             Scale::OneE(scale) => scale.units(units),
         }
     }
+
+    fn units_symbol(&self, units: &str) -> String {
+        match self {
+            Scale::Nanos(scale) => scale.units_symbol(),
+            Scale::Secs(scale) => scale.units_symbol(),
+            Scale::Byte(scale) => scale.units_symbol(),
+            Scale::OneE(scale) => scale.units_symbol(units),
+        }
+    }
 }
 
 #[repr(u64)]
@@ -134,6 +147,18 @@ impl ScaleNanos {
         }
         .to_owned()
     }
+
+    fn units_symbol(self) -> String {
+        match self {
+            ScaleNanos::Nanos => "ns",
+            ScaleNanos::Micros => "µs",
+            ScaleNanos::Millis => "ms",
+            ScaleNanos::Seconds => "s",
+            ScaleNanos::Minutes => "m",
+            ScaleNanos::Hours => "h",
+        }
+        .to_owned()
+    }
 }
 
 #[repr(u64)]
@@ -156,6 +181,15 @@ impl ScaleSecs {
             ScaleSecs::Seconds => "seconds (s)",
             ScaleSecs::Minutes => "minutes (m)",
             ScaleSecs::Hours => "hours (h)",
+        }
+        .to_owned()
+    }
+
+    fn units_symbol(self) -> String {
+        match self {
+            ScaleSecs::Seconds => "s",
+            ScaleSecs::Minutes => "m",
+            ScaleSecs::Hours => "h",
         }
         .to_owned()
     }
@@ -190,6 +224,18 @@ impl ScaleBytes {
         }
         .to_owned()
     }
+
+    fn units_symbol(self) -> String {
+        match self {
+            ScaleBytes::Byte => "B",
+            ScaleBytes::Kilo => "KB",
+            ScaleBytes::Mega => "MB",
+            ScaleBytes::Giga => "GB",
+            ScaleBytes::Tera => "TB",
+            ScaleBytes::Peta => "PB",
+        }
+        .to_owned()
+    }
 }
 
 #[repr(u64)]
@@ -209,15 +255,52 @@ impl From<ScaleOneE> for Scale {
     }
 }
 
+const X_THREE: &str = "x 1e3";
+const X_SIX: &str = "x 1e6";
+const X_NINE: &str = "x 1e9";
+const X_TWELVE: &str = "x 1e12";
+const X_FIFTEEN: &str = "x 1e15";
+
 impl ScaleOneE {
     fn units(self, units: &str) -> String {
         match self {
             ScaleOneE::One => units.to_owned(),
-            ScaleOneE::Three => format!("1e3 x {units}"),
-            ScaleOneE::Six => format!("1e6 x {units}"),
-            ScaleOneE::Nine => format!("1e9 x {units}"),
-            ScaleOneE::Twelve => format!("1e12 x {units}"),
-            ScaleOneE::Fifteen => format!("1e15 x {units}"),
+            ScaleOneE::Three => format!("{units} {X_THREE}"),
+            ScaleOneE::Six => format!("{units} {X_SIX}"),
+            ScaleOneE::Nine => format!("{units} {X_NINE}"),
+            ScaleOneE::Twelve => format!("{units} {X_TWELVE}"),
+            ScaleOneE::Fifteen => format!("{units} {X_FIFTEEN}"),
+        }
+    }
+
+    fn units_symbol(self, units: &str) -> String {
+        #[inline]
+        fn units_symbol(units: &str) -> Option<String> {
+            units
+                .split_once('(')
+                .and_then(|(_, delimited)| delimited.split_once(')'))
+                .map(|(symbol, _)| symbol.to_owned())
+        }
+
+        if let Some(symbol) = units_symbol(units) {
+            match self {
+                ScaleOneE::One => symbol,
+                ScaleOneE::Three => format!("{symbol} {X_THREE}"),
+                ScaleOneE::Six => format!("{symbol} {X_SIX}"),
+                ScaleOneE::Nine => format!("{symbol} {X_NINE}"),
+                ScaleOneE::Twelve => format!("{symbol} {X_TWELVE}"),
+                ScaleOneE::Fifteen => format!("{symbol} {X_FIFTEEN}"),
+            }
+        } else {
+            match self {
+                ScaleOneE::One => "",
+                ScaleOneE::Three => X_THREE,
+                ScaleOneE::Six => X_SIX,
+                ScaleOneE::Nine => X_NINE,
+                ScaleOneE::Twelve => X_TWELVE,
+                ScaleOneE::Fifteen => X_FIFTEEN,
+            }
+            .to_owned()
         }
     }
 }
@@ -232,6 +315,12 @@ pub fn scale_factor(min: f64, units: &str) -> u64 {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn scale_units(min: f64, units: &str) -> String {
     Scale::new(min, units).units(units)
+}
+
+#[allow(dead_code)]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub fn scale_units_symbol(min: f64, units: &str) -> String {
+    Scale::new(min, units).units_symbol(units)
 }
 
 enum Position {

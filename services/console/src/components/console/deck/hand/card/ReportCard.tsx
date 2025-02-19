@@ -1,13 +1,5 @@
 import type { Params } from "astro";
-import {
-	type Accessor,
-	For,
-	Match,
-	type Resource,
-	Show,
-	Switch,
-	createMemo,
-} from "solid-js";
+import { type Accessor, For, type Resource, Show, createMemo } from "solid-js";
 import { perfPath, resourcePath } from "../../../../../config/util";
 import {
 	AlertStatus,
@@ -23,7 +15,11 @@ import {
 	type JsonThreshold,
 } from "../../../../../types/bencher";
 import { dateTimeMillis, prettyPrintFloat } from "../../../../../util/convert";
-import { scale_factor, scale_units } from "../../../../../util/scale";
+import {
+	scale_factor,
+	scale_units,
+	scale_units_symbol,
+} from "../../../../../util/scale";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 
 export interface Props {
@@ -183,6 +179,10 @@ const ReportCard = (props: Props) => {
 												min,
 												alert?.threshold?.measure?.units,
 											);
+											const units_symbol = scale_units_symbol(
+												min,
+												alert?.threshold?.measure?.units,
+											);
 
 											return (
 												<tr>
@@ -223,16 +223,6 @@ const ReportCard = (props: Props) => {
 														>
 															plot
 														</a>
-														<br />🚨{" "}
-														<a
-															href={alertUrl(
-																props.isConsole,
-																props.params?.project,
-																alert,
-															)}
-														>
-															alert ({alertStatus(alert)})
-														</a>
 														<br />🚷{" "}
 														<a
 															href={thresholdUrl(
@@ -243,12 +233,22 @@ const ReportCard = (props: Props) => {
 														>
 															threshold
 														</a>
+														<br />🚨{" "}
+														<a
+															href={alertUrl(
+																props.isConsole,
+																props.params?.project,
+																alert,
+															)}
+														>
+															alert ({alertStatus(alert)})
+														</a>
 													</td>
 													<ValueCell
 														value={value}
 														baseline={baseline}
 														factor={factor}
-														units={units}
+														units_symbol={units_symbol}
 														bold
 													/>
 													<Show when={hasLowerBoundaryAlert()}>
@@ -256,7 +256,7 @@ const ReportCard = (props: Props) => {
 															value={value}
 															lowerLimit={lowerLimit}
 															factor={factor}
-															units={units}
+															units_symbol={units_symbol}
 															bold={alert?.limit === BoundaryLimit.Lower}
 														/>
 													</Show>
@@ -265,7 +265,7 @@ const ReportCard = (props: Props) => {
 															value={value}
 															upperLimit={upperLimit}
 															factor={factor}
-															units={units}
+															units_symbol={units_symbol}
 															bold={alert?.limit === BoundaryLimit.Upper}
 														/>
 													</Show>
@@ -381,7 +381,7 @@ const ReportCard = (props: Props) => {
 																	boundaryLimits.min,
 																	measure.units,
 																);
-																const units = scale_units(
+																const units_symbol = scale_units_symbol(
 																	boundaryLimits.min,
 																	measure.units,
 																);
@@ -433,52 +433,41 @@ const ReportCard = (props: Props) => {
 																				>
 																					view plot
 																				</a>
-																				<Switch>
-																					<Match when={alert}>
-																						<br />
-																						{"🚨"}{" "}
-																						<a
-																							href={alertUrl(
-																								props.isConsole,
-																								props.params?.project,
-																								alert as JsonAlert,
-																							)}
-																						>
-																							view alert (
-																							{alertStatus(alert as JsonAlert)})
-																						</a>
-																						<br />
-																						{"🚷"}{" "}
-																						<a
-																							href={thresholdUrl(
-																								props.isConsole,
-																								props.params?.project,
-																								alert?.threshold as JsonThreshold,
-																							)}
-																						>
-																							view threshold
-																						</a>
-																					</Match>
-																					<Match
-																						when={reportMeasure?.threshold}
+																				<Show
+																					when={reportMeasure?.threshold}
+																					fallback={
+																						<>
+																							<br />
+																							{"⚠️ NO THRESHOLD"}
+																						</>
+																					}
+																				>
+																					<br />
+																					{"🚷"}{" "}
+																					<a
+																						href={thresholdUrl(
+																							props.isConsole,
+																							props.params?.project,
+																							reportMeasure?.threshold as JsonThreshold,
+																						)}
 																					>
-																						<br />
-																						{"🚷"}{" "}
-																						<a
-																							href={thresholdUrl(
-																								props.isConsole,
-																								props.params?.project,
-																								reportMeasure?.threshold as JsonThreshold,
-																							)}
-																						>
-																							view threshold
-																						</a>
-																					</Match>
-																					<Match when={true}>
-																						<br />
-																						{"⚠️ NO THRESHOLD"}
-																					</Match>
-																				</Switch>
+																						view threshold
+																					</a>
+																				</Show>
+																				<Show when={alert}>
+																					<br />
+																					{"🚨"}{" "}
+																					<a
+																						href={alertUrl(
+																							props.isConsole,
+																							props.params?.project,
+																							alert as JsonAlert,
+																						)}
+																					>
+																						view alert (
+																						{alertStatus(alert as JsonAlert)})
+																					</a>
+																				</Show>
 																			</Show>
 																		</td>
 																		<Show
@@ -489,7 +478,7 @@ const ReportCard = (props: Props) => {
 																				value={value as number}
 																				baseline={baseline}
 																				factor={factor}
-																				units={units}
+																				units_symbol={units_symbol}
 																				bold={!!alert}
 																			/>
 																		</Show>
@@ -498,7 +487,7 @@ const ReportCard = (props: Props) => {
 																				value={value as number}
 																				lowerLimit={lowerLimit}
 																				factor={factor}
-																				units={units}
+																				units_symbol={units_symbol}
 																				bold={
 																					alert?.limit === BoundaryLimit.Lower
 																				}
@@ -509,7 +498,7 @@ const ReportCard = (props: Props) => {
 																				value={value as number}
 																				upperLimit={upperLimit}
 																				factor={factor}
-																				units={units}
+																				units_symbol={units_symbol}
 																				bold={
 																					alert?.limit === BoundaryLimit.Upper
 																				}
@@ -538,14 +527,14 @@ const ValueCell = (props: {
 	value: number;
 	baseline: null | undefined | number;
 	factor: number;
-	units: string;
+	units_symbol: string;
 	bold: boolean;
 }) => {
 	const ValueCellInner = (props: {
 		value: number;
 		baseline: null | undefined | number;
 		factor: number;
-		units: string;
+		units_symbol: string;
 	}) => {
 		if (typeof props.value !== "number") {
 			return <></>;
@@ -558,12 +547,10 @@ const ValueCell = (props: {
 					: 0.0
 				: null;
 
-		const short_units = shortUnits(props.units);
-
 		return (
 			<>
 				{prettyPrintFloat(props.value / props.factor)}
-				{short_units}
+				<Show when={props.units_symbol}> {props.units_symbol}</Show>
 				<Show when={percent !== null}>
 					<br />
 					<details>
@@ -573,7 +560,7 @@ const ValueCell = (props: {
 						</summary>
 						Baseline:{" "}
 						{prettyPrintFloat((props.baseline as number) / props.factor)}
-						{short_units}
+						<Show when={props.units_symbol}> {props.units_symbol}</Show>
 					</details>
 				</Show>
 			</>
@@ -589,7 +576,7 @@ const ValueCell = (props: {
 						value={props.value}
 						baseline={props.baseline}
 						factor={props.factor}
-						units={props.units}
+						units_symbol={props.units_symbol}
 					/>
 				}
 			>
@@ -598,7 +585,7 @@ const ValueCell = (props: {
 						value={props.value}
 						baseline={props.baseline}
 						factor={props.factor}
-						units={props.units}
+						units_symbol={props.units_symbol}
 					/>
 				</b>
 			</Show>
@@ -610,7 +597,7 @@ const LowerLimitCell = (props: {
 	value: number;
 	lowerLimit: null | undefined | number;
 	factor: number;
-	units: string;
+	units_symbol: string;
 	bold: boolean;
 }) => {
 	if (
@@ -631,7 +618,7 @@ const LowerLimitCell = (props: {
 			limit={props.lowerLimit}
 			percent={percent}
 			factor={props.factor}
-			units={props.units}
+			units_symbol={props.units_symbol}
 			bold={props.bold}
 		/>
 	);
@@ -641,7 +628,7 @@ const UpperLimitCell = (props: {
 	value: number;
 	upperLimit: null | undefined | number;
 	factor: number;
-	units: string;
+	units_symbol: string;
 	bold: boolean;
 }) => {
 	if (
@@ -662,7 +649,7 @@ const UpperLimitCell = (props: {
 			limit={props.upperLimit}
 			percent={percent}
 			factor={props.factor}
-			units={props.units}
+			units_symbol={props.units_symbol}
 			bold={props.bold}
 		/>
 	);
@@ -672,20 +659,19 @@ const LimitCell = (props: {
 	limit: number;
 	percent: number;
 	factor: number;
-	units: string;
+	units_symbol: string;
 	bold: boolean;
 }) => {
 	const LimitCellInner = (props: {
 		limit: number;
 		percent: number;
 		factor: number;
-		units: string;
+		units_symbol: string;
 	}) => {
-		const short_units = shortUnits(props.units);
 		return (
 			<>
 				{prettyPrintFloat(props.limit / props.factor)}
-				{short_units}
+				<Show when={props.units_symbol}> {props.units_symbol}</Show>
 				<br />({prettyPrintFloat(props.percent)}%)
 			</>
 		);
@@ -700,7 +686,7 @@ const LimitCell = (props: {
 						limit={props.limit}
 						percent={props.percent}
 						factor={props.factor}
-						units={props.units}
+						units_symbol={props.units_symbol}
 					/>
 				}
 			>
@@ -709,17 +695,12 @@ const LimitCell = (props: {
 						limit={props.limit}
 						percent={props.percent}
 						factor={props.factor}
-						units={props.units}
+						units_symbol={props.units_symbol}
 					/>
 				</b>
 			</Show>
 		</td>
 	);
-};
-
-const shortUnits = (units: string): string => {
-	const match = units.match(/\(([^)]+)\)/)?.[1];
-	return match ? ` ${match}` : "";
 };
 
 // 30 days
