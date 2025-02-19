@@ -248,6 +248,7 @@ const ReportCard = (props: Props) => {
 														value={value}
 														baseline={baseline}
 														factor={factor}
+														units={units}
 														bold
 													/>
 													<Show when={hasLowerBoundaryAlert()}>
@@ -255,6 +256,7 @@ const ReportCard = (props: Props) => {
 															value={value}
 															lowerLimit={lowerLimit}
 															factor={factor}
+															units={units}
 															bold={alert?.limit === BoundaryLimit.Lower}
 														/>
 													</Show>
@@ -263,6 +265,7 @@ const ReportCard = (props: Props) => {
 															value={value}
 															upperLimit={upperLimit}
 															factor={factor}
+															units={units}
 															bold={alert?.limit === BoundaryLimit.Upper}
 														/>
 													</Show>
@@ -378,6 +381,10 @@ const ReportCard = (props: Props) => {
 																	boundaryLimits.min,
 																	measure.units,
 																);
+																const units = scale_units(
+																	boundaryLimits.min,
+																	measure.units,
+																);
 
 																const reportMeasure = result.measures.find(
 																	(report_measure) =>
@@ -482,6 +489,7 @@ const ReportCard = (props: Props) => {
 																				value={value as number}
 																				baseline={baseline}
 																				factor={factor}
+																				units={units}
 																				bold={!!alert}
 																			/>
 																		</Show>
@@ -490,6 +498,7 @@ const ReportCard = (props: Props) => {
 																				value={value as number}
 																				lowerLimit={lowerLimit}
 																				factor={factor}
+																				units={units}
 																				bold={
 																					alert?.limit === BoundaryLimit.Lower
 																				}
@@ -500,6 +509,7 @@ const ReportCard = (props: Props) => {
 																				value={value as number}
 																				upperLimit={upperLimit}
 																				factor={factor}
+																				units={units}
 																				bold={
 																					alert?.limit === BoundaryLimit.Upper
 																				}
@@ -528,12 +538,14 @@ const ValueCell = (props: {
 	value: number;
 	baseline: null | undefined | number;
 	factor: number;
+	units: string;
 	bold: boolean;
 }) => {
 	const ValueCellInner = (props: {
 		value: number;
 		baseline: null | undefined | number;
 		factor: number;
+		units: string;
 	}) => {
 		if (typeof props.value !== "number") {
 			return <></>;
@@ -546,9 +558,12 @@ const ValueCell = (props: {
 					: 0.0
 				: null;
 
+		const short_units = shortUnits(props.units);
+
 		return (
 			<>
 				{prettyPrintFloat(props.value / props.factor)}
+				{short_units}
 				<Show when={percent !== null}>
 					<br />
 					<details>
@@ -558,6 +573,7 @@ const ValueCell = (props: {
 						</summary>
 						Baseline:{" "}
 						{prettyPrintFloat((props.baseline as number) / props.factor)}
+						{short_units}
 					</details>
 				</Show>
 			</>
@@ -573,6 +589,7 @@ const ValueCell = (props: {
 						value={props.value}
 						baseline={props.baseline}
 						factor={props.factor}
+						units={props.units}
 					/>
 				}
 			>
@@ -581,6 +598,7 @@ const ValueCell = (props: {
 						value={props.value}
 						baseline={props.baseline}
 						factor={props.factor}
+						units={props.units}
 					/>
 				</b>
 			</Show>
@@ -592,6 +610,7 @@ const LowerLimitCell = (props: {
 	value: number;
 	lowerLimit: null | undefined | number;
 	factor: number;
+	units: string;
 	bold: boolean;
 }) => {
 	if (
@@ -612,6 +631,7 @@ const LowerLimitCell = (props: {
 			limit={props.lowerLimit}
 			percent={percent}
 			factor={props.factor}
+			units={props.units}
 			bold={props.bold}
 		/>
 	);
@@ -621,6 +641,7 @@ const UpperLimitCell = (props: {
 	value: number;
 	upperLimit: null | undefined | number;
 	factor: number;
+	units: string;
 	bold: boolean;
 }) => {
 	if (
@@ -641,6 +662,7 @@ const UpperLimitCell = (props: {
 			limit={props.upperLimit}
 			percent={percent}
 			factor={props.factor}
+			units={props.units}
 			bold={props.bold}
 		/>
 	);
@@ -650,18 +672,24 @@ const LimitCell = (props: {
 	limit: number;
 	percent: number;
 	factor: number;
+	units: string;
 	bold: boolean;
 }) => {
 	const LimitCellInner = (props: {
 		limit: number;
 		percent: number;
 		factor: number;
-	}) => (
-		<>
-			{prettyPrintFloat(props.limit / props.factor)}
-			<br />({prettyPrintFloat(props.percent)}%)
-		</>
-	);
+		units: string;
+	}) => {
+		const short_units = shortUnits(props.units);
+		return (
+			<>
+				{prettyPrintFloat(props.limit / props.factor)}
+				{short_units}
+				<br />({prettyPrintFloat(props.percent)}%)
+			</>
+		);
+	};
 
 	return (
 		<td>
@@ -672,6 +700,7 @@ const LimitCell = (props: {
 						limit={props.limit}
 						percent={props.percent}
 						factor={props.factor}
+						units={props.units}
 					/>
 				}
 			>
@@ -680,11 +709,17 @@ const LimitCell = (props: {
 						limit={props.limit}
 						percent={props.percent}
 						factor={props.factor}
+						units={props.units}
 					/>
 				</b>
 			</Show>
 		</td>
 	);
+};
+
+const shortUnits = (units: string): string => {
+	const match = units.match(/\(([^)]+)\)/)?.[1];
+	return match ? ` ${match}` : "";
 };
 
 // 30 days

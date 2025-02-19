@@ -293,6 +293,7 @@ impl ReportComment {
                 alert.metric.value,
                 alert.boundary.baseline,
                 factor,
+                &units,
                 true,
             );
             if self.has_lower_boundary_alert() {
@@ -301,6 +302,7 @@ impl ReportComment {
                     alert.metric.value,
                     alert.boundary.lower_limit,
                     factor,
+                    &units,
                     alert.limit == BoundaryLimit::Lower,
                 );
             }
@@ -310,6 +312,7 @@ impl ReportComment {
                     alert.metric.value,
                     alert.boundary.upper_limit,
                     factor,
+                    &units,
                     alert.limit == BoundaryLimit::Upper,
                 );
             }
@@ -438,8 +441,10 @@ impl ReportComment {
                 name = result.benchmark.name,
             ));
             for (measure, boundary_limits) in mbl {
-                let factor =
-                    Units::new(boundary_limits.min.into(), measure.units.clone()).scale_factor();
+                let (factor, units) = {
+                    let units = Units::new(boundary_limits.min.into(), measure.units.clone());
+                    (units.scale_factor(), units.scale_units())
+                };
 
                 let report_measure = result
                     .measures
@@ -464,6 +469,7 @@ impl ReportComment {
                         report_measure.metric.value,
                         report_measure.boundary.and_then(|b| b.baseline),
                         factor,
+                        &units,
                         alert.is_some(),
                     );
                 } else {
@@ -476,6 +482,7 @@ impl ReportComment {
                             report_measure.metric.value,
                             report_measure.boundary.and_then(|b| b.lower_limit),
                             factor,
+                            &units,
                             alert.is_some_and(|a| a.limit == BoundaryLimit::Lower),
                         );
                     } else {
@@ -489,6 +496,7 @@ impl ReportComment {
                             report_measure.metric.value,
                             report_measure.boundary.and_then(|b| b.upper_limit),
                             factor,
+                            &units,
                             alert.is_some_and(|a| a.limit == BoundaryLimit::Upper),
                         );
                     } else {
@@ -794,14 +802,20 @@ fn value_cell(
     value: OrderedFloat<f64>,
     baseline: Option<OrderedFloat<f64>>,
     factor: OrderedFloat<f64>,
+    units: &str,
     bold: bool,
 ) {
     fn value_cell_inner(
         value: OrderedFloat<f64>,
         baseline: Option<OrderedFloat<f64>>,
         factor: OrderedFloat<f64>,
+        units: &str,
     ) -> String {
         let mut cell = Units::format_float((value / factor).into());
+        let short_units = short_units(units);
+        if let Some(short_units) = &short_units {
+            cell.push_str(short_units);
+        }
 
         if let Some(baseline) = baseline {
             let percent = if value.is_normal() && baseline.is_normal() {
@@ -818,6 +832,9 @@ fn value_cell(
             cell.push_str(&format!("({plus}{percent}%)"));
             cell.push_str("</summary>");
             cell.push_str(&format!("Baseline: {baseline}"));
+            if let Some(short_units) = &short_units {
+                cell.push_str(short_units);
+            }
             cell.push_str("</details>");
         }
 
@@ -828,10 +845,10 @@ fn value_cell(
     if bold {
         html.push_str(&format!(
             "<b>{}</b>",
-            value_cell_inner(value, baseline, factor)
+            value_cell_inner(value, baseline, factor, units)
         ));
     } else {
-        html.push_str(&value_cell_inner(value, baseline, factor));
+        html.push_str(&value_cell_inner(value, baseline, factor, units));
     }
     html.push_str("</td>");
 }
@@ -841,6 +858,7 @@ fn lower_limit_cell(
     value: OrderedFloat<f64>,
     lower_limit: Option<OrderedFloat<f64>>,
     factor: OrderedFloat<f64>,
+    units: &str,
     bold: bool,
 ) {
     let Some(limit) = lower_limit else {
@@ -854,7 +872,7 @@ fn lower_limit_cell(
         0.0.into()
     };
 
-    limit_cell(html, limit, percent, factor, bold);
+    limit_cell(html, limit, percent, factor, units, bold);
 }
 
 fn upper_limit_cell(
@@ -862,6 +880,7 @@ fn upper_limit_cell(
     value: OrderedFloat<f64>,
     upper_limit: Option<OrderedFloat<f64>>,
     factor: OrderedFloat<f64>,
+    units: &str,
     bold: bool,
 ) {
     let Some(limit) = upper_limit else {
@@ -875,7 +894,7 @@ fn upper_limit_cell(
         0.0.into()
     };
 
-    limit_cell(html, limit, percent, factor, bold);
+    limit_cell(html, limit, percent, factor, units, bold);
 }
 
 fn limit_cell(
@@ -883,14 +902,19 @@ fn limit_cell(
     limit: OrderedFloat<f64>,
     percent: OrderedFloat<f64>,
     factor: OrderedFloat<f64>,
+    units: &str,
     bold: bool,
 ) {
     fn limit_cell_inner(
         limit: OrderedFloat<f64>,
         percent: OrderedFloat<f64>,
         factor: OrderedFloat<f64>,
+        units: &str,
     ) -> String {
         let mut cell = Units::format_float((limit / factor).into());
+        if let Some(short_units) = short_units(units) {
+            cell.push_str(&short_units);
+        }
         let percent = Units::format_float(percent.into());
         cell.push_str(&format!("<br />({percent}%)"));
         cell
@@ -898,14 +922,24 @@ fn limit_cell(
 
     html.push_str("<td>");
     if bold {
+        // The two extra line breaks are here to make the text line up
+        // with the value cell on GitHub,
+        // where the row cells are vertically aligned to each other.
         html.push_str(&format!(
-            "<b>{}</b>",
-            limit_cell_inner(limit, percent, factor)
+            "<b>{}<br /><br /></b>",
+            limit_cell_inner(limit, percent, factor, units)
         ));
     } else {
-        html.push_str(&limit_cell_inner(limit, percent, factor));
+        html.push_str(&limit_cell_inner(limit, percent, factor, units));
     }
     html.push_str("</td>");
+}
+
+fn short_units(units: &str) -> Option<String> {
+    units
+        .split_once('(')
+        .and_then(|(_, delimited)| delimited.split_once(')'))
+        .map(|(units, _)| format!(" {units}"))
 }
 
 #[derive(Clone, Copy)]
