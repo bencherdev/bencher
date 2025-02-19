@@ -6,7 +6,7 @@ import DimensionLabel from "./DimensionLabel";
 import { MODEL_TEST_ICON } from "../../../field/kinds/Model";
 import { Match, Switch } from "solid-js";
 
-export const ThresholdRow = (props: { alert: JsonAlert }) => {
+export const AlertRow = (props: { alert: JsonAlert }) => {
 	return (
 		<div>
 			<Switch>
@@ -15,7 +15,7 @@ export const ThresholdRow = (props: { alert: JsonAlert }) => {
 						<span class="icon has-text-primary">
 							<i class="far fa-bell" />
 						</span>
-						<span>{fmtStatus(props.alert?.status)}</span>
+						<span>{fmtAlertStatus(props.alert?.status)}</span>
 					</span>
 				</Match>
 				<Match
@@ -28,7 +28,7 @@ export const ThresholdRow = (props: { alert: JsonAlert }) => {
 						<span class="icon">
 							<i class="far fa-bell-slash" />
 						</span>
-						<span>{fmtStatus(props.alert?.status)}</span>
+						<span>{fmtAlertStatus(props.alert?.status)}</span>
 					</span>
 				</Match>
 			</Switch>
@@ -52,7 +52,7 @@ export const ThresholdRow = (props: { alert: JsonAlert }) => {
 	);
 };
 
-const fmtStatus = (status: AlertStatus) => {
+export const fmtAlertStatus = (status: AlertStatus) => {
 	switch (status) {
 		case AlertStatus.Active:
 			return "Active";
@@ -65,4 +65,4 @@ const fmtStatus = (status: AlertStatus) => {
 	}
 };
 
-export default ThresholdRow;
+export default AlertRow;

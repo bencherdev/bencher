@@ -3,22 +3,17 @@ import { PubResourceKind } from "../../components/perf/util";
 import { isAllowedProjectEdit } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
+import IconTitle from "../../components/site/IconTitle";
 
 export const ALERT_ICON = "fas fa-bell";
 export const ALERT_OFF_ICON = "far fa-bell-slash";
+export const ALERT_FALLBACK_ICON = "far fa-bell";
 
 const alertsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: (
-				<span class="icon-text">
-					<span class="icon">
-						<i class={ALERT_ICON} />
-					</span>
-					<div>&nbsp;Alerts</div>
-				</span>
-			),
+			title: <IconTitle icon={ALERT_ICON} title="Alerts" />,
 			buttons: [
 				{ kind: Button.DISMISS_ALL },
 				{ kind: Button.ARCHIVED },

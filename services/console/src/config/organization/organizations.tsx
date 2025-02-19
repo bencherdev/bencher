@@ -107,7 +107,6 @@ const organizationsConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
-			icon: ORGANIZATION_ICON,
 			path: (pathname: string) => `${parentPath(pathname)}/projects`,
 			path_to: "Organizations",
 			buttons: [{ kind: Button.REFRESH }],

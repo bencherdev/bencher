@@ -9,6 +9,7 @@ import {
 import { validResourceName, validOptionUrl, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";
+import IconTitle from "../../components/site/IconTitle";
 
 const PROJECT_ICON = "fas fa-project-diagram";
 
@@ -57,14 +58,7 @@ const projectsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: (
-				<span class="icon-text">
-					<span class="icon">
-						<i class={PROJECT_ICON} />
-					</span>
-					<div>&nbsp;Projects</div>
-				</span>
-			),
+			title: <IconTitle icon={PROJECT_ICON} title="Projects" />,
 			buttons: [
 				{ kind: Button.SEARCH },
 				{

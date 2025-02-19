@@ -18,6 +18,7 @@ import {
 	ThresholdDimension,
 } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
+import IconTitle from "../../components/site/IconTitle";
 
 export const TESTBED_ICON = "fas fa-server";
 
@@ -42,14 +43,7 @@ const testbedsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: (
-				<span class="icon-text">
-					<span class="icon">
-						<i class={TESTBED_ICON} />
-					</span>
-					<div>&nbsp;Testbeds</div>
-				</span>
-			),
+			title: <IconTitle icon={TESTBED_ICON} title="Testbeds" />,
 			name: "Testbeds",
 			buttons: [
 				{ kind: Button.SEARCH },

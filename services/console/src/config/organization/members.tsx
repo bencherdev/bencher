@@ -8,6 +8,7 @@ import {
 	isAllowedOrganizationDeleteRole,
 } from "../../util/auth";
 import FieldKind from "../../components/field/kind";
+import IconTitle from "../../components/site/IconTitle";
 
 const MEMBER_ICON = "fas fa-user";
 
@@ -57,14 +58,7 @@ const MembersConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: (
-				<span class="icon-text">
-					<span class="icon">
-						<i class={MEMBER_ICON} />
-					</span>
-					<div>&nbsp;Members</div>
-				</span>
-			),
+			title: <IconTitle icon={MEMBER_ICON} title="Members" />,
 			buttons: [
 				{ kind: Button.SEARCH },
 				{
@@ -170,7 +164,6 @@ const MembersConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
-			icon: MEMBER_ICON,
 			path: parentPath,
 			path_to: "Organization Members",
 			buttons: [{ kind: Button.REFRESH }],

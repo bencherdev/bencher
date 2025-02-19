@@ -2,6 +2,7 @@ import type { Params } from "astro";
 import { isAllowedProjectDelete } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
+import IconTitle from "../../components/site/IconTitle";
 
 export const REPORT_ICON = "far fa-list-alt";
 
@@ -9,14 +10,7 @@ const reportsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: (
-				<span class="icon-text">
-					<span class="icon">
-						<i class={REPORT_ICON} />
-					</span>
-					<div>&nbsp;Reports</div>
-				</span>
-			),
+			title: <IconTitle icon={REPORT_ICON} title="Reports" />,
 			buttons: [
 				{ kind: Button.DATE_TIME },
 				{ kind: Button.ARCHIVED },

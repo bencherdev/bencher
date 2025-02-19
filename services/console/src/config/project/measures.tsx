@@ -17,6 +17,7 @@ import {
 	ThresholdDimension,
 } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
+import IconTitle from "../../components/site/IconTitle";
 
 export const MEASURE_ICON = "fas fa-shapes";
 
@@ -48,14 +49,7 @@ const measuresConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: (
-				<span class="icon-text">
-					<span class="icon">
-						<i class={MEASURE_ICON} />
-					</span>
-					<div>&nbsp;Measures</div>
-				</span>
-			),
+			title: <IconTitle icon={MEASURE_ICON} title="Measures" />,
 			name: "Measures",
 			buttons: [
 				{ kind: Button.SEARCH },

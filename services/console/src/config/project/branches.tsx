@@ -18,6 +18,7 @@ import {
 	ThresholdDimension,
 } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
+import IconTitle from "../../components/site/IconTitle";
 
 export const BRANCH_ICON = "fas fa-code-branch";
 
@@ -42,14 +43,7 @@ const branchesConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: (
-				<span class="icon-text">
-					<span class="icon">
-						<i class={BRANCH_ICON} />
-					</span>
-					<div>&nbsp;Branches</div>
-				</span>
-			),
+			title: <IconTitle icon={BRANCH_ICON} title="Branches" />,
 			name: "Branches",
 			buttons: [
 				{ kind: Button.SEARCH },

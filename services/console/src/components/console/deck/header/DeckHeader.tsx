@@ -3,10 +3,11 @@ import {
 	type Accessor,
 	For,
 	type Resource,
+	Show,
 	createEffect,
 	createMemo,
 } from "solid-js";
-import type { JsonAuthUser } from "../../../../types/bencher";
+import { AlertStatus, type JsonAuthUser } from "../../../../types/bencher";
 import { fmtValues, setPageTitle } from "../../../../util/resource";
 import { decodePath, pathname } from "../../../../util/url";
 import DeckHeaderButton, {
@@ -14,6 +15,8 @@ import DeckHeaderButton, {
 } from "./DeckHeaderButton";
 import { Display } from "../../../../config/types";
 import { fmtDateTime } from "../../../../config/util";
+import IconTitle from "../../../site/IconTitle";
+import { fmtAlertStatus } from "../../table/rows/AlertRow";
 
 export interface Props {
 	apiUrl: string;
@@ -28,6 +31,7 @@ export interface Props {
 export interface DeckHeaderConfig {
 	key: string;
 	keys?: string[][];
+	icon?: string | ((data: object) => string);
 	display?: Display;
 	path: (pathname: string) => string;
 	path_to: string;
@@ -68,9 +72,7 @@ const DeckHeader = (props: Props) => {
 			</div>
 			<div class="column">
 				<div class="content has-text-centered">
-					<h3 class="title is-3" style="word-break: break-word;">
-						{title()}
-					</h3>
+					<h3 class="title is-3">{title()}</h3>
 				</div>
 			</div>
 
