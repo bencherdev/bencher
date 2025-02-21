@@ -11,6 +11,7 @@ const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
 const GITHUB_EVENT_NAME: &str = "GITHUB_EVENT_NAME";
 const GITHUB_SHA: &str = "GITHUB_SHA";
+const GITHUB_API_URL: &str = "GITHUB_API_URL";
 const GITHUB_STEP_SUMMARY: &str = "GITHUB_STEP_SUMMARY";
 
 const PULL_REQUEST: &str = "pull_request";
@@ -74,6 +75,8 @@ pub enum GitHubError {
     BadFullName(String),
     #[error("GitHub Action event repository full name is not of the form `owner/repo`: ({0})")]
     InvalidFullName(String),
+    #[error("Failed to parse GitHub API URL: {0}")]
+    BaseUri(octocrab::Error),
     #[error("Failed to authenticate as GitHub Action: {0}")]
     Auth(octocrab::Error),
     #[error("Failed to list GitHub PR comments: {0}")]
@@ -203,7 +206,7 @@ impl GitHubActions {
                         docker_env(GITHUB_EVENT_NAME)
                     );
             return self
-                .create_github_check(report_comment, &event_str, &event)
+                .create_github_check(report_comment, log, &event_str, &event)
                 .await;
         };
 
@@ -227,6 +230,7 @@ impl GitHubActions {
     async fn create_github_check(
         &self,
         report_comment: &ReportComment,
+        log: bool,
         event_str: &str,
         event: &serde_json::Value,
     ) -> Result<(), GitHubError> {
@@ -247,8 +251,12 @@ impl GitHubActions {
             annotations: Vec::new(),
             images: Vec::new(),
         };
-        let check = Octocrab::builder()
-            .user_access_token(self.token.clone())
+
+        let mut builder = Octocrab::builder().user_access_token(self.token.clone());
+        if let Some(url) = github_api_url(log) {
+            builder = builder.base_uri(url).map_err(GitHubError::BaseUri)?;
+        }
+        let check = builder
             .build()
             .map_err(GitHubError::Auth)?
             .checks(owner, repo)
@@ -286,10 +294,11 @@ impl GitHubActions {
         let full_name = repository_full_name(event_str, event)?;
         let (owner, repo) = split_full_name(full_name)?;
 
-        let github_client = Octocrab::builder()
-            .user_access_token(self.token.clone())
-            .build()
-            .map_err(GitHubError::Auth)?;
+        let mut builder = Octocrab::builder().user_access_token(self.token.clone());
+        if let Some(url) = github_api_url(log) {
+            builder = builder.base_uri(url).map_err(GitHubError::BaseUri)?;
+        }
+        let github_client = builder.build().map_err(GitHubError::Auth)?;
 
         // Get the comment ID if it exists
         let comment_id = get_comment(
@@ -418,4 +427,17 @@ pub async fn get_comment(
 fn is_permissions_error(err: &octocrab::Error) -> bool {
     err.to_string()
         .contains("Resource not accessible by integration")
+}
+
+fn github_api_url(log: bool) -> Option<String> {
+    if let Ok(url) = std::env::var(GITHUB_API_URL) {
+        Some(url)
+    } else {
+        cli_eprintln_quietable!(
+            log,
+            "Failed to get GitHub API URL, defaulting to `https://api.github.com`\n{}",
+            docker_env(GITHUB_API_URL)
+        );
+        None
+    }
 }
