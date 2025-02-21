@@ -1,0 +1,153 @@
+---
+title: "Tokenless"
+description: "Continuous Benchmarking is a software development practice where members of a team benchmark their code frequently and catch performance regressions in CI"
+heading: "What is Continuous Benchmarking?"
+published: "2023-08-12T16:07:00Z"
+modified: "2024-03-27T07:50:00Z"
+sortOrder: 99
+draft: true
+---
+
+The goal here is to be able to run:
+
+```bash
+bencher run my command
+```
+
+And then everything "just works".
+
+Need to be able to correlate multiple runs together.
+This is where having the "project hash", that is the root hash of the git repo, is important.
+If not available, then need to come up with some way to deterministically create a hash based on the users local env.
+
+These projects will be labeled as "unclaimed" and will be available for anyone to claim.
+
+Once a project is claimed, if it is still public then others can still post to branches
+that are not "protected". This is a branch that has a colon in the name, like `fork:main`.
+
+If user specifies `--project` and the project does not exist,
+this should be used as the name for a new project.
+If `--project` is not set, then the parent directory for the git repository should be used as the project name.
+If there is no git repo to get the initial hash, then get the current user (maybe?) and use that as the project name.
+
+If the user is authenticated, then the project should be created 
+
+
+## Project Resolution
+
+Interpreting `--project`:
+
+1. Project UUID - must exist
+2. Project name + project hash
+3. Project slug
+4. If no project set, project hash (if available)
+5. Project name + project hash (not exist per #2)=> Create project
+
+
+`--project goop`
+
+1. Is there a project hash provided?
+   1. Yes: Check to see if it matches
+
+Issue: There is a claimed project named `goop` with a hash of `1234` owned by Alice.
+Bob creates an unclaimed project named `goop` with a hash of `1234`.
+How can Bob claim his project and not break his CI workflow?
+
+
+So maybe we just simplify and just have `--project` still just be the slug or UUID.
+If it is a UUID, then it must exist.
+If it is a slug, then check to see if it already exits.
+If it does exist, check to see if it is claimed.
+If it is claimed, then the user needs to be authenticated and have access to the project.
+If it is not claimed, then anyone can post to it.
+
+The key to making `bencher run my command` work is therefore to
+come up with a way to create a deterministic yet unique project slug
+for unclaimed projects.
+
+No project set. Creating a new one for you!
+
+git project name + short git project hash (b5dedb0751d6dd3b27fa23db7ad33b2e25d3e4b5 => b5dedb0) + machine id
+
+first 7 characters of the git project hash
+
+It isn't really worth adding tokenless support until we create a GitHub App
+and have folks move over to that instead of `--github-actions`.
+All the same hoops would still be needed for the github actions token to have the right permissions.
+
+
+1. UUID
+2. Project name + project hash (if available)
+3. Project slug (if authorized and project hash but not yet set, then update)
+4. If no project set, project hash (if available)
+5. Project name + project hash (not exist per #2)=> Create project
+
+If there is no git repo to get the initial hash, then just come up with some way to deterministically create a hash based on the users local env.
+
+If #3 is found and the project hash is provided (that is #2 failed) and the project does NOT have a hash set yet, then update the project to set the hash to the hash provided.
+
+So either project, project hash, or both need to be set
+
+So this is really going to need to be a triplet:
+
+- project (UUID, slug, name)
+- project hash
+- is unclaimed
+
+Basically, we want to always allow an anonymous user to post under a project name + project hash. If there is another claimed project with that matching pair, then need to create another new unclaimed project with the same pair.
+
+But how do you distinguish between random user trying things out and a tokenless CI workflow?
+
+The burden should be on the CI workflow, not the newest user. Maybe a --tokenless flag?
+
+## Branches
+
+
+
+## Tokens
+
+When do I need a token?
+
+For private repositories, all uploads require a token.
+
+For public repositories, a token is required if the upload is for a commit on a protected branch and the repository owner has not disabled token authentication for public repositories.
+
+A protected branch corresponds to an actual branch in if your repository (like main or master). An unprotected branch is any branch with a colon-separated prefix on it (like forkname:main or pr300:master).
+
+The prefix for an unprotected branch name is something a CI job comes up with when it sends requests to Codecov and is not actually part of the repository or its branches.
+
+Uploading without a token
+
+Codecov does not require a token for an upload when either of the following conditions are true:
+
+    the repository is public and the organization has disabled token authentication for public repositories
+
+or
+
+    the repository is public and the upload is for a commit that is on an "unprotected" branch (like forkname:main)
+
+Disabling Token Authentication for Public Repositories
+
+Available on >v5.0 of the codecov-action or v>0.9 of the codecov-cli
+
+This setting is only visible to admin users, and you must be an admin to change this setting. Codecov inherits admin status from your git provider; an admin on your git provider is also an admin on Codecov.
+
+Existing organizations will have tokens Required by default, but new organizations will start with tokens Not required. The setting is on the Global Upload Token tab of the Settings page.
+
+If you wish to do a tokenless upload, there is no need to generate or set any tokens or secrets on your project or your workflow. You can still send in a token, but if the request qualifies as a tokenless upload, the token sent with your request will not be checked.
+Commits on Unprotected Branches
+
+# This is clever, but I don't think it is what we want to do.
+# For one, most/all usage is through the CLI, so this would have to always be manual at this point.
+# We would also have to slacken the BranchName test to allow for a colon in the branch name.
+# ... okay, it is pretty elegant and similar to what GitHub does with forks.
+# I think this is the way to go.
+A protected branch corresponds to a permanent branch in your repository (like main or master). An unprotected branch is any branch with a colon-separated prefix on it (like forkname:main or pr300:master).
+
+Projects that accept contributions from forks can add a prefix to the contribution's branch name and send uploads to Codecov without having to expose any CI secrets.
+
+Starting on >v4.0 of the codecov-action, the branch name on pull requests from forks is automatically modified to include a :. Codecov should work smoothly on pull requests from forks out of the box.
+
+If you're using the official CI action for another CI provider, or your CI jobs use the Codecov CLI directly, your CI jobs will need to come up with an unprotected branch name on their own. This could be based on the PR number, the username of the fork's author, or something else.
+
+https://docs.codecov.com/docs/codecov-tokens
