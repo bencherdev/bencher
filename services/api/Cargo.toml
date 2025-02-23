@@ -60,7 +60,7 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
 async-compression = { version = "0.4", features = ["tokio", "gzip"] }
 aws-credential-types = "1.2"
-aws-sdk-s3 = { version = "1.57", features = ["behavior-version-latest"] }
+aws-sdk-s3 = { version = "1.76", features = ["behavior-version-latest"] }
 css-inline = "0.14"
 diesel_migrations = "2.2"
 # https://github.com/stalwartlabs/mail-send/blob/962518a299c5b6da5c44d9f4e090a10d14e8a236/Cargo.toml#L37
