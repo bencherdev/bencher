@@ -185,18 +185,23 @@ impl Ranged for RangedCoord {
     }
 }
 
-impl From<RangedCoordf64> for RangedCoord {
-    fn from(coord: RangedCoordf64) -> Self {
-        Self::Linear(coord)
+impl From<Range<f64>> for RangedCoord {
+    fn from(range: Range<f64>) -> Self {
+        let relative_difference = if range.start == 0.0 {
+            range.end
+        } else {
+            range.end / range.start
+        };
+        let use_log_scaling = relative_difference >= 10.0;
+        if use_log_scaling {
+            let range_coord: LogCoord<f64> = range.log_scale().into();
+            RangedCoord::Log(range_coord)
+        } else {
+            let range_coord: RangedCoordf64 = range.into();
+            RangedCoord::Linear(range_coord)
+        }
     }
 }
-
-impl From<LogCoord<f64>> for RangedCoord {
-    fn from(coord: LogCoord<f64>) -> Self {
-        Self::Log(coord)
-    }
-}
-
 
 // https://github.com/plotters-rs/plotters/blob/v0.3.7/plotters/examples/two-scales.rs
 #[allow(clippy::large_enum_variant, clippy::type_complexity)]
@@ -223,21 +228,7 @@ impl<'b> Chart<'b> {
         perf_data: &PerfData,
         plot_area: &DrawingArea<BitMapBackend<'b>, Shift>,
     ) -> Result<Self, PlotError> {
-        // Determine if a log scale should be used
-        let left_y_range = perf_data.left_y_range();
-        let relative_difference = if left_y_range.start == 0.0 {
-            left_y_range.end
-        } else {
-            left_y_range.end / left_y_range.start
-        };
-        let use_left_y_log_scaling = relative_difference >= 10.0;
-        let left_y_range = if use_left_y_log_scaling {
-            let range: LogCoord<f64> = left_y_range.log_scale().into(); 
-            RangedCoord::from(range)
-        } else {
-            let range: RangedCoordf64 = left_y_range.into();
-            RangedCoord::from(range)
-        };
+        let left_y_range = RangedCoord::from(perf_data.left_y_range());
         let chart_context = ChartBuilder::on(plot_area)
             .x_label_area_size(40)
             .y_label_area_size(perf_data.left_y_label_area_size()?)
@@ -248,20 +239,7 @@ impl<'b> Chart<'b> {
             .build_cartesian_2d(perf_data.x_range(), left_y_range)?;
 
         Ok(if let Some(right_y_range) = perf_data.right_y_range() {
-            // Determine if a log scale should be used
-            let relative_difference = if right_y_range.start == 0.0 {
-                right_y_range.end
-            } else {
-                right_y_range.end / right_y_range.start
-            };
-            let use_right_y_log_scaling = relative_difference >= 10.0;
-            let right_y_range = if use_right_y_log_scaling {
-                let range: LogCoord<f64> = right_y_range.log_scale().into();
-                RangedCoord::from(range)
-            } else {
-                let range: RangedCoordf64 = right_y_range.into();
-                RangedCoord::from(range)
-            };
+            let right_y_range = RangedCoord::from(right_y_range);
             Self::Dual(chart_context.set_secondary_coord(perf_data.x_range(), right_y_range))
         } else {
             Self::Single(chart_context)
@@ -883,7 +861,7 @@ mod test {
             .unwrap();
         save_jpeg(&plot_buffer, "decimal");
     }
-    
+
     #[test]
     fn test_plot_empty() {
         let plot = LinePlot::new();
