@@ -828,14 +828,19 @@ mod test {
         serde_json::from_str(PERF_DOT_JSON).expect("Failed to serialize perf JSON")
     });
 
+    pub const PERF_LOG_DOT_JSON: &str = include_str!("../perf_log.json");
+    static JSON_PERF_LOG: LazyLock<JsonPerf> = LazyLock::new(|| {
+        serde_json::from_str(PERF_LOG_DOT_JSON).expect("Failed to serialize perf log JSON")
+    });
+
     pub const PERF_DUAL_AXES_DOT_JSON: &str = include_str!("../perf_dual_axes.json");
     static JSON_PERF_DUAL_AXES: LazyLock<JsonPerf> = LazyLock::new(|| {
-        serde_json::from_str(PERF_DUAL_AXES_DOT_JSON).expect("Failed to serialize perf JSON")
+        serde_json::from_str(PERF_DUAL_AXES_DOT_JSON).expect("Failed to serialize perf dual axes JSON")
     });
 
     pub const DECIMAL_DOT_JSON: &str = include_str!("../decimal.json");
     static JSON_PERF_DECIMAL: LazyLock<JsonPerf> = LazyLock::new(|| {
-        serde_json::from_str(DECIMAL_DOT_JSON).expect("Failed to serialize perf JSON")
+        serde_json::from_str(DECIMAL_DOT_JSON).expect("Failed to serialize decimal JSON")
     });
 
     fn save_jpeg(jpeg: &[u8], name: &str) {
@@ -850,6 +855,15 @@ mod test {
             .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF)
             .unwrap();
         save_jpeg(&plot_buffer, "perf");
+    }
+
+    #[test]
+    fn test_plot_log() {
+        let plot = LinePlot::new();
+        let plot_buffer = plot
+            .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF_LOG)
+            .unwrap();
+        save_jpeg(&plot_buffer, "perf_log");
     }
 
     #[test]
