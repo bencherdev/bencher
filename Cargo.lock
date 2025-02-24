@@ -994,6 +994,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_fingerprint"
+version = "0.4.37"
+
+[[package]]
 name = "bencher_github"
 version = "0.4.37"
 dependencies = [
