@@ -3,6 +3,7 @@ use std::{future::Future, pin::Pin};
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
 use bencher_json::{DateTime, JsonReport, NameId, ResourceId};
+use project::local_project;
 
 use crate::{
     bencher::backend::AuthBackend,
@@ -18,6 +19,7 @@ mod ci;
 mod error;
 mod fold;
 mod format;
+mod project;
 pub mod runner;
 mod sub_adapter;
 pub mod thresholds;
@@ -78,6 +80,7 @@ impl TryFrom<CliRun> for Run {
             dry_run,
             backend,
         } = run;
+        local_project();
         Ok(Self {
             project,
             branch: branch.try_into().map_err(RunError::Branch)?,

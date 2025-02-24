@@ -81,7 +81,7 @@ fn map_hash(CliRunHash { hash, no_hash }: CliRunHash) -> Option<GitHash> {
     Some(head_object.id.into())
 }
 
-fn find_repo() -> Option<gix::Repository> {
+pub fn find_repo() -> Option<gix::Repository> {
     let current_dir = std::env::current_dir().ok()?;
     for directory in current_dir.ancestors() {
         if let Ok(repo) = gix::open(directory) {
