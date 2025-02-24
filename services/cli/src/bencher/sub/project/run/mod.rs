@@ -15,6 +15,7 @@ mod adapter;
 mod average;
 mod branch;
 mod ci;
+mod context;
 mod error;
 mod fold;
 mod format;
@@ -186,6 +187,7 @@ impl Run {
             (start_time, end_time)
         };
 
+        context::context();
         let (branch, hash, start_point) = self.branch.clone().into();
         Ok(Some(JsonNewReport {
             branch,

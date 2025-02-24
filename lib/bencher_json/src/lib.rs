@@ -1,5 +1,6 @@
 use std::sync::LazyLock;
 
+pub use bencher_fingerprint::Fingerprint;
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
     Index, IqrBoundary, Jwt, Model, ModelTest, NameId, NameIdKind, NonEmpty, PercentageBoundary,

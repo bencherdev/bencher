@@ -1,0 +1,27 @@
+[package]
+name = "bencher_fingerprint"
+homepage.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+
+[features]
+client = ["dep:windows"]
+schema = ["dep:schemars"]
+
+[dependencies]
+derive_more.workspace = true
+schemars = { workspace = true, optional = true }
+serde.workspace = true
+thiserror.workspace = true
+typeshare.workspace = true
+uuid = { workspace = true, features = ["serde"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.60", optional = true, features = [
+    "System_Profile_SystemManufacturers",
+] }
+
+[lints]
+workspace = true

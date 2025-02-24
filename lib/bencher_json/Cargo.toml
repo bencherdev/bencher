@@ -8,14 +8,19 @@ publish = false
 
 [features]
 full = ["bencher_valid/full"]
-lite = ["bencher_valid/lite"]
+lite = ["bencher_fingerprint/client", "bencher_valid/lite"]
 db = ["diesel", "serde_yaml", "bencher_valid/db"]
 plus = ["bencher_valid/plus"]
-schema = ["dep:schemars", "ordered-float/schemars"]
+schema = [
+    "dep:schemars",
+    "ordered-float/schemars",
+    "bencher_fingerprint/schema",
+]
 table = ["dep:tabled"]
 
 [dependencies]
 # Workspace
+bencher_fingerprint.workspace = true
 bencher_valid = { workspace = true, features = ["schema"] }
 chrono = { workspace = true, features = ["serde"] }
 derive_more.workspace = true
