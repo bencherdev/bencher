@@ -5,7 +5,7 @@ impl crate::Fingerprint {
         windows::System::Profile::SystemManufacturers::SmbiosInformation::SerialNumber()
             .ok()
             .as_ref()
-            .and_then(|uuid| Uuid::parse_str(uuid).ok())
+            .and_then(|hstring| Uuid::parse_str(&hstring.to_string()).ok())
             .map(|uuid| uuid.as_u128())
             .map(Self)
     }
