@@ -6,7 +6,10 @@ authors.workspace = true
 edition.workspace = true
 license-file.workspace = true
 
-[target.'cfg(windows)'.dependencies]
+[target.'cfg(target_os = "macos")'.dependencies]
+uuid.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
 uuid.workspace = true
 windows = { version = "0.60", features = ["System_Profile"] }
 
