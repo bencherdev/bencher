@@ -11,7 +11,9 @@ uuid.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 uuid.workspace = true
-windows = { version = "0.60", features = ["System_Profile"] }
+windows = { version = "0.60", features = [
+    "System_Profile_SystemManufacturers",
+] }
 
 [lints]
 workspace = true
