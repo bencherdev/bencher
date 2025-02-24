@@ -941,6 +941,7 @@ dependencies = [
  "bencher_adapter",
  "bencher_client",
  "bencher_comment",
+ "bencher_fingerprint",
  "bencher_json",
  "bollard",
  "camino",
