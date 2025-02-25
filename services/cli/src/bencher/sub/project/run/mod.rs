@@ -187,8 +187,9 @@ impl Run {
             (start_time, end_time)
         };
 
-        context::context();
         let (branch, hash, start_point) = self.branch.clone().into();
+        let context = context::get_context();
+        println!("{context:?}");
         Ok(Some(JsonNewReport {
             branch,
             hash,
@@ -203,6 +204,7 @@ impl Run {
                 average: self.average,
                 fold: self.fold,
             }),
+            context: context.map(Into::into),
         }))
     }
 

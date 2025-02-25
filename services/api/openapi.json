@@ -9387,6 +9387,15 @@
               }
             ]
           },
+          "context": {
+            "nullable": true,
+            "description": "Context for the report.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportContext"
+              }
+            ]
+          },
           "end_time": {
             "description": "End time for the report. Must be an ISO 8601 formatted string.",
             "allOf": [
@@ -10730,6 +10739,13 @@
           "user",
           "uuid"
         ]
+      },
+      "JsonReportContext": {
+        "type": "object",
+        "additionalProperties": {
+          "nullable": true,
+          "type": "string"
+        }
       },
       "JsonReportMeasure": {
         "type": "object",

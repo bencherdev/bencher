@@ -48,7 +48,7 @@ pub use project::{
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
-    report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
+    report::{JsonNewReport, JsonReport, JsonReportContext, JsonReports, ReportUuid},
     testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
     JsonNewProject, JsonProject, JsonProjects, ProjectUuid,

@@ -51,6 +51,8 @@ pub struct JsonNewReport {
     pub results: Vec<String>,
     /// Settings for how to handle the report.
     pub settings: Option<JsonReportSettings>,
+    /// Context for the report.
+    pub context: Option<JsonReportContext>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,6 +80,31 @@ pub struct JsonReportSettings {
     /// Fold multiple results into a single result using the selected operation.
     /// This can be useful for taking the min, max, mean, or median of the benchmark results.
     pub fold: Option<JsonFold>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportContext(pub HashMap<String, Option<String>>);
+
+impl JsonReportContext {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(&mut self, key: String, value: Option<String>) -> Option<Option<String>> {
+        self.0.insert(key, value)
+    }
+
+    pub fn remove(&mut self, key: &str) -> Option<Option<String>> {
+        self.0.remove(key)
+    }
+}
+
+#[allow(clippy::implicit_hasher)]
+impl From<JsonReportContext> for HashMap<String, Option<String>> {
+    fn from(context: JsonReportContext) -> Self {
+        context.0
+    }
 }
 
 const MAGIC_INT: i32 = 0;

@@ -99,6 +99,7 @@ impl From<Create> for JsonNewReport {
                 average,
                 fold,
             }),
+            context: None,
         }
     }
 }
