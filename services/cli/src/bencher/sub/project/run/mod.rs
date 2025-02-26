@@ -201,7 +201,7 @@ impl Run {
                 average: self.average,
                 fold: self.fold,
             }),
-            context: Some(ReportContext::new().into()),
+            context: Some(ReportContext::current().into()),
         }))
     }
 

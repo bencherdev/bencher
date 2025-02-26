@@ -7,12 +7,12 @@ mod platform;
 pub use platform::Fingerprint;
 use platform::OperatingSystem;
 
-use crate::ReportContext;
+use crate::{ContextKey, ReportContext};
 
 const ROOT: &str = "root";
 
 impl ReportContext {
-    pub fn new() -> Self {
+    pub fn current() -> Self {
         get_context()
     }
 
@@ -42,28 +42,31 @@ fn git_context(context: &mut ReportContext) {
     };
 
     if let Some(repo_name) = repo_name(&repo) {
-        context.insert("/repo/name", repo_name);
+        context.insert(ContextKey::REPO_NAME, repo_name);
     }
 
     if let Some(root_commit) = repo_hash(&repo) {
-        context.insert("/repo/hash", root_commit);
+        context.insert(ContextKey::REPO_HASH, root_commit);
     }
 
     if let Some((branch_ref, branch_ref_name)) = branch_ref(&repo) {
-        context.insert("/branch/ref", branch_ref);
-        context.insert("/branch/ref/name", branch_ref_name);
+        context.insert(ContextKey::BRANCH_REF, branch_ref);
+        context.insert(ContextKey::BRANCH_REF_NAME, branch_ref_name);
     }
 
     if let Some(hash) = branch_hash(&repo) {
-        context.insert("/branch/hash", hash);
+        context.insert(ContextKey::BRANCH_HASH, hash);
     }
 }
 
 fn platform_context(context: &mut ReportContext) {
-    context.insert("/testbed/os", OperatingSystem::current().to_string());
+    context.insert(
+        ContextKey::TESTBED_OS,
+        OperatingSystem::current().to_string(),
+    );
 
     if let Some(fingerprint) = Fingerprint::current() {
-        context.insert("/testbed/fingerprint", fingerprint.to_string());
+        context.insert(ContextKey::TESTBED_FINGERPRINT, fingerprint.to_string());
     }
 }
 
@@ -96,12 +99,14 @@ fn repo_hash(repo: &Repository) -> Option<String> {
 }
 
 fn branch_ref(repo: &Repository) -> Option<(String, String)> {
-    repo.head().ok()?.referent_name().map(|name| {
-        (
+    if let Ok(Some(name)) = repo.head_name() {
+        Some((
             String::from_utf8_lossy(name.as_bstr()).to_string(),
             String::from_utf8_lossy(name.shorten()).to_string(),
-        )
-    })
+        ))
+    } else {
+        None
+    }
 }
 
 fn branch_hash(repo: &Repository) -> Option<String> {

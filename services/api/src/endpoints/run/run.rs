@@ -1,4 +1,4 @@
-use bencher_json::{JsonNewReport, JsonReport};
+use bencher_json::{JsonNewRun, JsonReport};
 
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
@@ -39,7 +39,7 @@ pub async fn run_options(_rqctx: RequestContext<ApiContext>) -> Result<CorsRespo
 pub async fn run_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
-    body: TypedBody<JsonNewReport>,
+    body: TypedBody<JsonNewRun>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner(), auth_user).await?;
@@ -49,7 +49,7 @@ pub async fn run_post(
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
-    json_report: JsonNewReport,
+    json_run: JsonNewRun,
     auth_user: Option<AuthUser>,
 ) -> Result<JsonReport, HttpError> {
     #[allow(clippy::unimplemented)]
@@ -62,5 +62,5 @@ async fn post_inner(
         Err(bad_request_error("pub run creation is not yet implemented"))
     };
     let auth_user = todo_pub_run_user(auth_user)?;
-    QueryReport::create(log, context, &query_project, json_report, &auth_user).await
+    QueryReport::create(log, context, &query_project, json_run.into(), &auth_user).await
 }

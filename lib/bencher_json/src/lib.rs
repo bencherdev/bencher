@@ -20,6 +20,7 @@ pub mod big_int;
 pub mod organization;
 pub mod pagination;
 pub mod project;
+pub mod run;
 pub mod system;
 pub(crate) mod typed_uuid;
 pub mod urlencoded;
@@ -53,6 +54,7 @@ pub use project::{
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
     JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
 };
+pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use system::{
     auth::JsonOAuth,

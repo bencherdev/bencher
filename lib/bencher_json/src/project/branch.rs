@@ -14,6 +14,12 @@ pub const START_POINT_MAX_VERSIONS: u32 = 255;
 
 pub const BRANCH_MAIN_STR: &str = "main";
 #[allow(clippy::expect_used)]
+pub static DEFAULT_BRANCH: LazyLock<NameId> = LazyLock::new(|| {
+    BRANCH_MAIN_STR
+        .parse()
+        .expect("Failed to parse branch name.")
+});
+#[allow(clippy::expect_used)]
 static BRANCH_MAIN: LazyLock<BranchName> = LazyLock::new(|| {
     BRANCH_MAIN_STR
         .parse()
