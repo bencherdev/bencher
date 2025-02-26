@@ -2,8 +2,10 @@ use std::process::Command;
 
 use uuid::Uuid;
 
+use crate::client::platform::OperatingSystem;
+
 impl crate::Fingerprint {
-    pub fn new() -> Option<Self> {
+    pub fn current() -> Option<Self> {
         Command::new("ioreg")
             .arg("-d2")
             .arg("-c")
@@ -22,5 +24,11 @@ impl crate::Fingerprint {
                 None
             })
             .map(Self)
+    }
+}
+
+impl OperatingSystem {
+    pub fn current() -> Self {
+        Self::Macos
     }
 }
