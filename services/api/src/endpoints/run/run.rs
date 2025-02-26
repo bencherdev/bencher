@@ -1,19 +1,19 @@
 use bencher_json::{JsonNewRun, JsonReport};
 
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use slog::Logger;
-
-use crate::{
+use bencher_schema::{
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Post, ResponseCreated},
-        Endpoint,
-    },
     error::bad_request_error,
     model::{
         project::{report::QueryReport, QueryProject},
         user::auth::{AuthUser, PubBearerToken},
     },
+};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use slog::Logger;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Post, ResponseCreated},
+    Endpoint,
 };
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]

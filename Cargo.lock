@@ -864,6 +864,7 @@ dependencies = [
  "bencher_plot",
  "bencher_rank",
  "bencher_rbac",
+ "bencher_schema",
  "bencher_token",
  "chrono",
  "css-inline",
@@ -915,8 +916,6 @@ name = "bencher_bing_index"
 version = "0.4.37"
 dependencies = [
  "reqwest",
- "serde",
- "serde_json",
  "thiserror 2.0.11",
  "url",
 ]
@@ -953,7 +952,6 @@ dependencies = [
  "octocrab",
  "progenitor-client",
  "rand 0.9.0",
- "reqwest",
  "serde",
  "serde_json",
  "tabled",
@@ -998,7 +996,6 @@ dependencies = [
 name = "bencher_context"
 version = "0.4.37"
 dependencies = [
- "derive_more 2.0.1",
  "gix",
  "schemars",
  "serde",
@@ -1016,7 +1013,6 @@ dependencies = [
  "octocrab",
  "serde",
  "thiserror 2.0.11",
- "url",
 ]
 
 [[package]]
@@ -1039,7 +1035,6 @@ version = "0.4.37"
 dependencies = [
  "bencher_context",
  "bencher_valid",
- "chrono",
  "derive_more 2.0.1",
  "diesel",
  "ordered-float",
@@ -1050,7 +1045,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "serde_yaml",
- "slug",
  "tabled",
  "thiserror 2.0.11",
  "typeshare",
@@ -1067,7 +1061,6 @@ dependencies = [
  "jsonwebtoken",
  "pretty_assertions",
  "serde",
- "serde_json",
  "thiserror 2.0.11",
 ]
 
@@ -1098,7 +1091,6 @@ name = "bencher_rank"
 version = "0.4.37"
 dependencies = [
  "diesel",
- "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -1112,6 +1104,57 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_schema"
+version = "0.4.37"
+dependencies = [
+ "async-compression",
+ "async-trait",
+ "aws-credential-types",
+ "aws-sdk-s3",
+ "bencher_adapter",
+ "bencher_billing",
+ "bencher_bing_index",
+ "bencher_boundary",
+ "bencher_github",
+ "bencher_google_index",
+ "bencher_json",
+ "bencher_license",
+ "bencher_logger",
+ "bencher_plot",
+ "bencher_rank",
+ "bencher_rbac",
+ "bencher_token",
+ "chrono",
+ "css-inline",
+ "derive_more 2.0.1",
+ "diesel",
+ "diesel_migrations",
+ "dropshot",
+ "http 1.2.0",
+ "jsonwebtoken",
+ "libsqlite3-sys",
+ "mail-send",
+ "ordered-float",
+ "oso",
+ "paste",
+ "rand 0.9.0",
+ "reqwest",
+ "schemars",
+ "sentry",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "serde_yaml",
+ "slog",
+ "slug",
+ "thiserror 2.0.11",
+ "tokio",
+ "tokio-rustls 0.26.1",
+ "url",
+ "uuid 1.13.1",
+]
+
+[[package]]
 name = "bencher_token"
 version = "0.4.37"
 dependencies = [
@@ -1120,7 +1163,6 @@ dependencies = [
  "jsonwebtoken",
  "serde",
  "thiserror 2.0.11",
- "uuid 1.13.1",
 ]
 
 [[package]]

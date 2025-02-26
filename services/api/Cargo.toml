@@ -10,6 +10,7 @@ publish = false
 default = ["plus", "sentry"]
 plus = [
     "bencher_json/plus",
+    "bencher_schema/plus",
     "dep:bencher_billing",
     "dep:bencher_bing_index",
     "dep:bencher_github",
@@ -17,7 +18,7 @@ plus = [
     "dep:bencher_license",
     "dep:reqwest",
 ]
-sentry = ["dep:sentry"]
+sentry = ["bencher_schema/sentry", "dep:sentry"]
 
 [dependencies]
 # Workspace
@@ -34,6 +35,7 @@ bencher_logger.workspace = true
 bencher_plot.workspace = true
 bencher_rank.workspace = true
 bencher_rbac.workspace = true
+bencher_schema.workspace = true
 bencher_token.workspace = true
 chrono.workspace = true
 derive_more.workspace = true

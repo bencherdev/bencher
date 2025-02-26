@@ -2,20 +2,9 @@ use bencher_json::{
     user::JsonUsers, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, Sanitize,
     UserName,
 };
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get, Patch, ResponseOk},
-        Endpoint,
-    },
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::user::{
         admin::AdminUser,
@@ -23,7 +12,17 @@ use crate::{
         same_user, QueryUser, UpdateUser,
     },
     schema,
-    util::{headers::TotalCount, search::Search},
+};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, Patch, ResponseOk},
+    Endpoint, Search, TotalCount,
 };
 
 pub type UsersPagination = JsonPagination<UsersSort>;

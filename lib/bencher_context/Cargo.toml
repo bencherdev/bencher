@@ -7,18 +7,19 @@ license-file.workspace = true
 publish = false
 
 [features]
-client = ["dep:windows"]
+client = ["dep:gix", "dep:uuid", "dep:windows"]
 schema = ["dep:schemars"]
 
 [dependencies]
 # Workspace
-derive_more.workspace = true
 schemars = { workspace = true, optional = true }
 serde.workspace = true
 typeshare.workspace = true
-uuid = { workspace = true, features = ["serde"] }
+uuid = { workspace = true, optional = true, features = ["serde"] }
 # Crate
-gix = { version = "0.70", default-features = false, features = ["revision"] }
+gix = { version = "0.70", optional = true, default-features = false, features = [
+    "revision",
+] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.60", optional = true, features = [

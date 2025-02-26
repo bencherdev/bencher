@@ -4,22 +4,9 @@ use bencher_json::{
     JsonPagination, ResourceId, ResourceName,
 };
 use bencher_rbac::organization::Permission;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
-        },
-        Endpoint,
-    },
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         organization::{
@@ -29,7 +16,19 @@ use crate::{
         user::auth::{AuthUser, BearerToken},
     },
     schema,
-    util::{headers::TotalCount, search::Search},
+};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::endpoints::{
+    endpoint::{
+        CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+    },
+    Endpoint, Search, TotalCount,
 };
 
 pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
@@ -328,7 +327,7 @@ async fn patch_inner(
         // All Bencher Cloud license updates should be handled via plans directly
         // Only Self-Hosted should be able to update the license
         if context.is_bencher_cloud {
-            return Err(crate::error::locked_error(
+            return Err(bencher_schema::error::locked_error(
                 "Direct license updates are not allowed on Bencher Cloud. Please update your plan instead.",
             ));
         }

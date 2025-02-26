@@ -1,3 +1,5 @@
+#![allow(unused_crate_dependencies)]
+
 use std::{io::ErrorKind, process::ExitCode};
 
 use bencher_cli::{CliError, RunError};

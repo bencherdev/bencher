@@ -7,7 +7,7 @@ use dropshot::{
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::util::headers::{CorsHeaders, TotalCount};
+use super::{CorsHeaders, TotalCount};
 
 pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<()>, CorsHeaders>;
 pub type ResponseOk<T> = HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>;

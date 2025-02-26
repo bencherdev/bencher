@@ -3,23 +3,9 @@ use bencher_json::{
     JsonAuthAck, JsonDirection, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
 };
 use bencher_rbac::organization::Permission;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-use slog::Logger;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
-    endpoints::{
-        endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseDeleted, ResponseOk,
-        },
-        Endpoint,
-    },
     error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err},
     model::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
@@ -29,7 +15,20 @@ use crate::{
         },
     },
     schema,
-    util::{headers::TotalCount, search::Search},
+};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+use slog::Logger;
+
+use crate::endpoints::{
+    endpoint::{
+        CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseDeleted, ResponseOk,
+    },
+    Endpoint, Search, TotalCount,
 };
 
 // TODO Custom max TTL

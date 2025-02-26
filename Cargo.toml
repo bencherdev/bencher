@@ -33,6 +33,7 @@ bencher_logger = { path = "lib/bencher_logger" }
 bencher_plot = { path = "lib/bencher_plot" }
 bencher_rank = { path = "lib/bencher_rank" }
 bencher_rbac = { path = "lib/bencher_rbac" }
+bencher_schema = { path = "lib/bencher_schema" }
 bencher_token = { path = "lib/bencher_token" }
 bencher_valid = { path = "lib/bencher_valid" }
 # plus
@@ -92,6 +93,7 @@ trivial_casts = "warn"
 trivial_numeric_casts = "warn"
 unsafe_code = "warn"
 unsafe_op_in_unsafe_fn = "warn"
+unused_crate_dependencies = "warn"
 unused_import_braces = "warn"
 unused_lifetimes = "warn"
 unused_macro_rules = "warn"

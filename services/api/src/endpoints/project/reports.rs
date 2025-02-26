@@ -8,22 +8,9 @@ use bencher_json::{
     JsonDirection, JsonNewReport, JsonPagination, JsonReport, JsonReports, ReportUuid, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{
-    dsl::count, BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
-    RunQueryDsl, SelectableHelper,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-use slog::Logger;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
-        Endpoint,
-    },
     error::{bad_request_error, resource_conflict_err, resource_not_found_err},
     model::{
         project::{
@@ -37,10 +24,22 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::{
-        headers::TotalCount,
-        name_id::{filter_branch_name_id, filter_testbed_name_id},
+};
+use diesel::{
+    dsl::count, BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
+    RunQueryDsl, SelectableHelper,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+use slog::Logger;
+
+use crate::{
+    endpoints::{
+        endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
+        Endpoint, TotalCount,
     },
+    macros::{filter_branch_name_id, filter_testbed_name_id},
 };
 
 #[derive(Deserialize, JsonSchema)]

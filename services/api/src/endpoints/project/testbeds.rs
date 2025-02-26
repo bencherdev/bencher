@@ -3,23 +3,9 @@ use bencher_json::{
     JsonTestbed, JsonTestbeds, ResourceId, ResourceName,
 };
 use bencher_rbac::project::Permission;
-use diesel::{
-    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
-    TextExpressionMethods,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
-        },
-        Endpoint,
-    },
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
@@ -29,7 +15,20 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::{headers::TotalCount, search::Search},
+};
+use diesel::{
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+    TextExpressionMethods,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::endpoints::{
+    endpoint::{
+        CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+    },
+    Endpoint, Search, TotalCount,
 };
 
 #[derive(Deserialize, JsonSchema)]

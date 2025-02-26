@@ -9,21 +9,9 @@ use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
     ReportUuid, ResourceId, TestbedUuid,
 };
-use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
-use schemars::JsonSchema;
-use serde::Deserialize;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::{ApiContext, DbConnection},
-    endpoints::{
-        endpoint::{CorsResponse, Get, ResponseOk},
-        Endpoint,
-    },
     error::{bad_request_error, resource_not_found_err},
     model::{
         project::{
@@ -40,6 +28,18 @@ use crate::{
         user::auth::{AuthUser, PubBearerToken},
     },
     schema, view,
+};
+use diesel::{
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, ResponseOk},
+    Endpoint,
 };
 
 pub mod img;

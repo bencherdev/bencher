@@ -6,14 +6,14 @@ use bencher_billing::Biller;
 use bencher_github::GitHub;
 use bencher_json::{
     is_bencher_cloud,
-    system::config::{JsonCloud, JsonPlus, JsonStats},
+    system::config::{JsonCloud, JsonPlus},
 };
 use bencher_license::Licensor;
 use chrono::NaiveTime;
 use tokio::runtime::Handle;
 use url::Url;
 
-use crate::context::Indexer;
+use bencher_schema::context::{Indexer, StatsSettings};
 
 // Run at 03:07:22 UTC by default (offset 11,242 seconds)
 #[allow(clippy::expect_used)]
@@ -40,12 +40,8 @@ pub enum PlusError {
     BencherCloud(Url),
     #[error("Failed to setup billing: {0}")]
     Billing(bencher_billing::BillingError),
-    #[error("Failed to parse Bing Index key location: {0}")]
-    KeyLocation(bencher_json::ValidError),
-    #[error("Bing Index failed: {0}")]
-    BingIndex(bencher_bing_index::BingIndexError),
-    #[error("Google Index failed: {0}")]
-    GoogleIndex(bencher_google_index::GoogleIndexError),
+    #[error("{0}")]
+    Index(#[from] bencher_schema::context::IndexError),
 }
 
 impl Plus {
@@ -104,31 +100,5 @@ impl Plus {
             biller,
             licensor,
         })
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct StatsSettings {
-    pub offset: NaiveTime,
-    pub enabled: bool,
-}
-
-impl Default for StatsSettings {
-    fn default() -> Self {
-        Self {
-            offset: *DEFAULT_STATS_OFFSET,
-            enabled: DEFAULT_STATS_ENABLED,
-        }
-    }
-}
-
-impl From<JsonStats> for StatsSettings {
-    fn from(json: JsonStats) -> Self {
-        let JsonStats { offset, enabled } = json;
-        let offset = offset
-            .and_then(|offset| NaiveTime::from_num_seconds_from_midnight_opt(offset, 0))
-            .unwrap_or(*DEFAULT_STATS_OFFSET);
-        let enabled = enabled.unwrap_or(DEFAULT_STATS_ENABLED);
-        Self { offset, enabled }
     }
 }

@@ -1,8 +1,8 @@
 use bencher_json::JsonSpec;
+use bencher_schema::context::ApiContext;
 use dropshot::{endpoint, HttpError, RequestContext};
 
 use crate::{
-    context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,

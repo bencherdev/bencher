@@ -11,7 +11,6 @@ bencher_valid.workspace = true
 octocrab.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-url.workspace = true
 # Crate
 oauth2 = "5.0"
 

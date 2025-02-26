@@ -2,6 +2,9 @@ pub mod adapters;
 pub mod error;
 pub mod results;
 
+#[cfg(test)]
+use criterion as _;
+
 use adapters::{
     c_sharp::{dot_net::AdapterCSharpDotNet, AdapterCSharp},
     cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle, AdapterCpp},

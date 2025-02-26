@@ -1,3 +1,5 @@
+#![allow(unused_crate_dependencies)]
+
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use bencher_adapter::{Adaptable, Settings};

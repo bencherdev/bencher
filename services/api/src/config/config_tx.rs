@@ -10,6 +10,9 @@ use bencher_json::{
     JsonConfig,
 };
 use bencher_rbac::init_rbac;
+use bencher_schema::context::{ApiContext, Database, DbConnection};
+#[cfg(feature = "plus")]
+use bencher_schema::model::server::QueryServer;
 use bencher_token::TokenKey;
 use diesel::{connection::SimpleConnection, Connection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -20,19 +23,13 @@ use dropshot::{
 use slog::{debug, error, info, Logger};
 use tokio::sync::mpsc::Sender;
 
-#[cfg(feature = "plus")]
-use crate::model::server::QueryServer;
-use crate::{
-    context::{ApiContext, Database, DbConnection},
-    endpoints::Api,
-};
-
 use super::Config;
 #[cfg(feature = "plus")]
 use super::{plus::Plus, DEFAULT_BUSY_TIMEOUT};
+use crate::endpoints::Api;
 
 const DATABASE_URL: &str = "DATABASE_URL";
-const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../lib/bencher_schema/migrations");
 
 pub struct ConfigTx {
     pub config: Config,
@@ -54,7 +51,7 @@ pub enum ConfigTxError {
     #[error("Failed to connect to database ({0}): {1}")]
     DatabaseConnection(String, diesel::ConnectionError),
     #[error("Failed to parse data store: {0}")]
-    DataStore(crate::context::DataStoreError),
+    DataStore(bencher_schema::context::DataStoreError),
     #[error("Failed to register endpoint: {0}")]
     Register(dropshot::ApiDescriptionRegisterError),
     #[error("Failed to create server: {0}")]

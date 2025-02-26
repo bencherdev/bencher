@@ -1,21 +1,9 @@
 use bencher_json::{
     project::report::Iteration, DateTime, JsonOneMetric, MetricUuid, ReportUuid, ResourceId,
 };
-use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
-};
-use dropshot::{endpoint, HttpError, Path, RequestContext};
-use schemars::JsonSchema;
-use serde::Deserialize;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get, ResponseOk},
-        Endpoint,
-    },
     error::resource_not_found_err,
     model::{
         project::{
@@ -32,6 +20,18 @@ use crate::{
         user::auth::{AuthUser, PubBearerToken},
     },
     schema, view,
+};
+use diesel::{
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
+use dropshot::{endpoint, HttpError, Path, RequestContext};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, ResponseOk},
+    Endpoint,
 };
 
 use super::perf::threshold_model_alert;

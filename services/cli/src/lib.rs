@@ -9,6 +9,7 @@ pub use bencher::{
 };
 pub use error::CliError;
 pub use parser::CliBencher;
+use tokio_rustls as _;
 
 pub const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 

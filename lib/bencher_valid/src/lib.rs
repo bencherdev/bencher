@@ -1,3 +1,5 @@
+#![allow(unused_crate_dependencies)]
+
 use std::str::FromStr;
 
 #[cfg(feature = "wasm")]

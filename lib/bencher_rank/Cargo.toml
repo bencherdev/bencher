@@ -8,7 +8,6 @@ publish = false
 
 [dependencies]
 diesel.workspace = true
-thiserror.workspace = true
 
 [lints]
 workspace = true

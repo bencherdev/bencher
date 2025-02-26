@@ -38,6 +38,7 @@ COPY lib/bencher_logger bencher_logger
 COPY lib/bencher_plot bencher_plot
 COPY lib/bencher_rank bencher_rank
 COPY lib/bencher_rbac bencher_rbac
+COPY lib/bencher_schema bencher_schema
 COPY lib/bencher_token bencher_token
 COPY lib/bencher_valid bencher_valid
 
@@ -65,10 +66,8 @@ WORKDIR /usr/src/bencher/services
 RUN cargo init cli
 
 WORKDIR /usr/src/bencher/services/api
-COPY services/api/migrations migrations
 COPY services/api/src src
 COPY services/api/Cargo.toml Cargo.toml
-COPY services/api/diesel.toml diesel.toml
 COPY services/api/openapi.json openapi.json
 
 RUN cargo build --release

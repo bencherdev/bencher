@@ -1,21 +1,21 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{system::auth::JsonOAuth, JsonAuthUser, JsonSignup, PlanLevel};
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use slog::Logger;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get, Post, ResponseAccepted},
-        Endpoint,
-    },
     error::{issue_error, payment_required_error, unauthorized_error},
     model::{
         organization::plan::LicenseUsage,
         user::{InsertUser, QueryUser},
     },
+};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use slog::Logger;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, Post, ResponseAccepted},
+    Endpoint,
 };
 
 use super::CLIENT_TOKEN_TTL;

@@ -1,18 +1,16 @@
-use bencher_json::JsonAuthAck;
-use bencher_json::JsonLogin;
-
+use bencher_json::{JsonAuthAck, JsonLogin};
+use bencher_schema::{
+    conn_lock,
+    context::{ApiContext, Body, ButtonBody, Message},
+    error::issue_error,
+    model::user::QueryUser,
+};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
 
-use crate::{
-    conn_lock,
-    context::{ApiContext, Body, ButtonBody, Message},
-    endpoints::{
-        endpoint::{CorsResponse, Post, ResponseAccepted},
-        Endpoint,
-    },
-    error::issue_error,
-    model::user::QueryUser,
+use crate::endpoints::{
+    endpoint::{CorsResponse, Post, ResponseAccepted},
+    Endpoint,
 };
 
 use super::AUTH_TOKEN_TTL;

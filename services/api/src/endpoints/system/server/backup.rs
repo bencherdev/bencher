@@ -1,24 +1,26 @@
 use std::{ffi::OsStr, path::PathBuf};
 
 use async_compression::tokio::write::GzipEncoder;
-use bencher_json::system::backup::JsonDataStore;
-use bencher_json::{DateTime, JsonBackup, JsonBackupCreated, JsonRestart};
+use bencher_json::{
+    system::backup::JsonDataStore, DateTime, JsonBackup, JsonBackupCreated, JsonRestart,
+};
+use bencher_schema::{
+    conn_lock,
+    context::ApiContext,
+    error::bad_request_error,
+    model::user::{admin::AdminUser, auth::BearerToken},
+};
 use chrono::Utc;
 use diesel::connection::SimpleConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use tokio::fs::remove_file;
-use tokio::io::{AsyncReadExt, BufWriter};
-use tokio::io::{AsyncWriteExt, BufReader};
+use tokio::{
+    fs::remove_file,
+    io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
+};
 
-use crate::{
-    conn_lock,
-    context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Post, ResponseCreated},
-        Endpoint,
-    },
-    error::bad_request_error,
-    model::user::{admin::AdminUser, auth::BearerToken},
+use crate::endpoints::{
+    endpoint::{CorsResponse, Post, ResponseCreated},
+    Endpoint,
 };
 
 const BUFFER_SIZE: usize = 1024;
@@ -81,7 +83,7 @@ pub enum BackupError {
     #[error("Failed to remove compressed file: {0}")]
     RmZipFile(std::io::Error),
     #[error("{0}")]
-    DataStore(crate::context::DataStoreError),
+    DataStore(bencher_schema::context::DataStoreError),
     #[error("No data store")]
     NoDataStore,
     #[error("Failed to remove file: {0}")]

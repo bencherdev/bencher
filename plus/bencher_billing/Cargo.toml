@@ -10,7 +10,6 @@ publish = false
 # Workspace
 bencher_json = { workspace = true, features = ["server", "plus"] }
 thiserror.workspace = true
-tokio = { workspace = true, features = ["rt", "macros"] }
 uuid.workspace = true
 # Crate
 async-stripe = { version = "0.39", features = ["runtime-tokio-hyper-rustls"] }
@@ -20,6 +19,7 @@ chrono.workspace = true
 literally.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [lints]
 workspace = true

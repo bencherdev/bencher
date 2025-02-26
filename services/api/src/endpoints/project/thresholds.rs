@@ -6,23 +6,9 @@ use bencher_json::{
     JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ResourceId, ThresholdUuid,
 };
 use bencher_rbac::project::Permission;
-use diesel::{
-    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{
-            CorsResponse, Delete, Get, Post, Put, ResponseCreated, ResponseDeleted, ResponseOk,
-        },
-        Endpoint,
-    },
     error::{
         bad_request_error, resource_conflict_err, resource_not_found_err, resource_not_found_error,
         BencherResource,
@@ -38,10 +24,23 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
-    util::{
-        headers::TotalCount,
-        name_id::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id},
+};
+use diesel::{
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::{
+    endpoints::{
+        endpoint::{
+            CorsResponse, Delete, Get, Post, Put, ResponseCreated, ResponseDeleted, ResponseOk,
+        },
+        Endpoint, TotalCount,
     },
+    macros::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id},
 };
 
 #[derive(Deserialize, JsonSchema)]

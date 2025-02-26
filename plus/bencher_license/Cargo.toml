@@ -13,7 +13,6 @@ chrono.workspace = true
 jsonwebtoken = { workspace = true, features = ["use_pem"] }
 thiserror.workspace = true
 serde.workspace = true
-serde_json.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true

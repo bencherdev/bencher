@@ -1,15 +1,15 @@
 use bencher_json::JsonRestart;
+use bencher_schema::{
+    context::ApiContext,
+    model::user::{admin::AdminUser, auth::BearerToken, UserId},
+};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::{error, warn, Logger};
 use tokio::sync::mpsc::Sender;
 
-use crate::{
-    context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Post, ResponseAccepted},
-        Endpoint,
-    },
-    model::user::{admin::AdminUser, auth::BearerToken, UserId},
+use crate::endpoints::{
+    endpoint::{CorsResponse, Post, ResponseAccepted},
+    Endpoint,
 };
 
 const DEFAULT_DELAY: u64 = 3;

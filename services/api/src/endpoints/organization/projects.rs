@@ -7,24 +7,11 @@ use bencher_json::{
     ResourceName,
 };
 use bencher_rbac::organization::Permission;
-use diesel::{
-    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
-    TextExpressionMethods,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-use slog::Logger;
-
 #[cfg(feature = "plus")]
-use crate::model::organization::plan::PlanKind;
-use crate::{
+use bencher_schema::model::organization::plan::PlanKind;
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get, Post, ResponseCreated, ResponseOk},
-        Endpoint,
-    },
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::{
         organization::QueryOrganization,
@@ -39,7 +26,19 @@ use crate::{
         user::auth::{AuthUser, BearerToken},
     },
     schema,
-    util::{headers::TotalCount, search::Search},
+};
+use diesel::{
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+    TextExpressionMethods,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+use slog::Logger;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, Post, ResponseCreated, ResponseOk},
+    Endpoint, Search, TotalCount,
 };
 
 #[derive(Deserialize, JsonSchema)]

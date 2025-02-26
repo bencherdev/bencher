@@ -1,17 +1,16 @@
-use bencher_json::system::auth::JsonAuthAck;
-use bencher_json::JsonSignup;
+use bencher_json::{system::auth::JsonAuthAck, JsonSignup};
+use bencher_schema::{
+    conn_lock,
+    context::{ApiContext, Body, ButtonBody, Message},
+    error::{forbidden_error, issue_error},
+    model::user::InsertUser,
+};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
 
-use crate::{
-    conn_lock,
-    context::{ApiContext, Body, ButtonBody, Message},
-    endpoints::{
-        endpoint::{CorsResponse, Post, ResponseAccepted},
-        Endpoint,
-    },
-    error::{forbidden_error, issue_error},
-    model::user::InsertUser,
+use crate::endpoints::{
+    endpoint::{CorsResponse, Post, ResponseAccepted},
+    Endpoint,
 };
 
 use super::AUTH_TOKEN_TTL;

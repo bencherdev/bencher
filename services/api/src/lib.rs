@@ -4,15 +4,8 @@ use bencher_json::JsonSpec;
 use std::sync::LazyLock;
 
 pub mod config;
-pub mod context;
 pub mod endpoints;
-pub mod error;
-pub mod model;
-#[allow(unused_qualifications)]
-pub mod schema;
-pub mod util;
-#[allow(unused_qualifications)]
-pub mod view;
+mod macros;
 
 pub const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 

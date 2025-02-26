@@ -6,18 +6,9 @@ use bencher_json::{
     DateTime, ResourceId,
 };
 use bencher_rbac::organization::Permission;
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
-        Endpoint,
-    },
     error::{
         forbidden_error, issue_error, resource_conflict_err, resource_conflict_error,
         resource_not_found_err, BencherResource,
@@ -31,6 +22,15 @@ use crate::{
         user::auth::AuthUser,
     },
     schema,
+};
+use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
+    Endpoint,
 };
 
 #[derive(Deserialize, JsonSchema)]

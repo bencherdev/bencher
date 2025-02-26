@@ -1,14 +1,14 @@
 use bencher_json::{system::auth::JsonAccept, JsonAuthAck};
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get, Post, ResponseAccepted},
-        Endpoint,
-    },
     model::user::auth::{AuthUser, BearerToken},
+};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, Post, ResponseAccepted},
+    Endpoint,
 };
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]

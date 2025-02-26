@@ -3,6 +3,18 @@ use bencher_json::{
     JsonDirection, JsonPagination, JsonProject, JsonProjects, ResourceId, ResourceName,
 };
 use bencher_rbac::project::Permission;
+#[cfg(feature = "plus")]
+use bencher_schema::model::organization::plan::PlanKind;
+use bencher_schema::{
+    conn_lock,
+    context::ApiContext,
+    error::{resource_conflict_err, resource_not_found_err},
+    model::{
+        project::{QueryProject, UpdateProject},
+        user::auth::{AuthUser, BearerToken, PubBearerToken},
+    },
+    schema,
+};
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
 };
@@ -11,22 +23,9 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
 
-#[cfg(feature = "plus")]
-use crate::model::organization::plan::PlanKind;
-use crate::{
-    conn_lock,
-    context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Delete, Get, Patch, ResponseDeleted, ResponseOk},
-        Endpoint,
-    },
-    error::{resource_conflict_err, resource_not_found_err},
-    model::{
-        project::{QueryProject, UpdateProject},
-        user::auth::{AuthUser, BearerToken, PubBearerToken},
-    },
-    schema,
-    util::{headers::TotalCount, search::Search},
+use crate::endpoints::{
+    endpoint::{CorsResponse, Delete, Get, Patch, ResponseDeleted, ResponseOk},
+    Endpoint, Search, TotalCount,
 };
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;

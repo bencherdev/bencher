@@ -2,20 +2,22 @@ use bencher_json::{
     system::config::{JsonConsole, JsonUpdateConfig},
     JsonConfig,
 };
+use bencher_schema::{
+    context::ApiContext,
+    error::{bad_request_error, issue_error},
+    model::user::{
+        admin::AdminUser,
+        auth::{AuthUser, BearerToken, PubBearerToken},
+    },
+};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
 
 use crate::{
     config::{Config, BENCHER_CONFIG},
-    context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Put, ResponseAccepted, ResponseOk},
         Endpoint,
-    },
-    error::{bad_request_error, issue_error},
-    model::user::{
-        admin::AdminUser,
-        auth::{AuthUser, BearerToken, PubBearerToken},
     },
 };
 

@@ -1,17 +1,20 @@
 #![allow(clippy::str_to_string)]
 
+use bencher_schema::context::ApiContext;
 use dropshot::{ApiDescription, ApiDescriptionRegisterError};
 
-pub mod endpoint;
-pub mod organization;
-pub mod project;
-pub mod run;
-pub mod system;
-pub mod user;
+mod endpoint;
+mod headers;
+mod organization;
+mod project;
+mod run;
+mod search;
+mod system;
+mod user;
 
 pub use endpoint::Endpoint;
-
-use crate::context::ApiContext;
+use headers::{CorsHeaders, TotalCount};
+use search::Search;
 
 pub struct Api;
 

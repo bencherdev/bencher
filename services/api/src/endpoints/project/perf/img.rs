@@ -3,17 +3,17 @@ use bencher_json::{
     JsonPerfQuery,
 };
 use bencher_plot::LinePlot;
+use bencher_schema::{
+    context::ApiContext,
+    error::{bad_request_error, issue_error},
+    model::user::auth::{AuthUser, PubBearerToken},
+};
 use dropshot::{endpoint, Body, HttpError, Path, Query, RequestContext};
 use http::Response;
 
-use crate::{
-    context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get},
-        Endpoint,
-    },
-    error::{bad_request_error, issue_error},
-    model::user::auth::{AuthUser, PubBearerToken},
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get},
+    Endpoint,
 };
 
 use super::ProjPerfParams;

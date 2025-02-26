@@ -5,15 +5,9 @@ use bencher_json::{
     system::payment::{JsonCheckout, JsonNewCheckout, JsonNewPayment, JsonPayment},
 };
 use bencher_rbac::organization::Permission;
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Post, ResponseCreated},
-        Endpoint,
-    },
     error::{forbidden_error, issue_error, resource_not_found_err},
     model::{
         organization::QueryOrganization,
@@ -22,6 +16,12 @@ use crate::{
             same_user,
         },
     },
+};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Post, ResponseCreated},
+    Endpoint,
 };
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]

@@ -1,15 +1,15 @@
 use bencher_json::{system::auth::JsonAuthUser, JsonConfirm};
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Post, ResponseOk},
-        Endpoint,
-    },
     error::{issue_error, unauthorized_error},
     model::user::QueryUser,
+};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Post, ResponseOk},
+    Endpoint,
 };
 
 use super::CLIENT_TOKEN_TTL;

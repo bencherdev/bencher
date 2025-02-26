@@ -1,21 +1,21 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::JsonServerStats;
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use slog::Logger;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
-        Endpoint,
-    },
     error::issue_error,
     model::{
         server::QueryServer,
         user::{admin::AdminUser, auth::BearerToken},
     },
+};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use slog::Logger;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
+    Endpoint,
 };
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]

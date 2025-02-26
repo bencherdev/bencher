@@ -1,19 +1,19 @@
 use bencher_json::{organization::OrganizationPermission, JsonAllowed, ResourceId};
-use dropshot::{endpoint, HttpError, Path, RequestContext};
-use schemars::JsonSchema;
-use serde::Deserialize;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get, ResponseOk},
-        Endpoint,
-    },
     model::{
         organization::{organization_role::Permission, QueryOrganization},
         user::auth::{AuthUser, BearerToken},
     },
+};
+use dropshot::{endpoint, HttpError, Path, RequestContext};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, ResponseOk},
+    Endpoint,
 };
 
 #[derive(Deserialize, JsonSchema)]

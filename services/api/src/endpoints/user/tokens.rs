@@ -2,21 +2,9 @@ use bencher_json::{
     user::token::JsonUpdateToken, JsonDirection, JsonNewToken, JsonPagination, JsonToken,
     JsonTokens, ResourceId, ResourceName,
 };
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
-};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
-use schemars::JsonSchema;
-use serde::Deserialize;
-use uuid::Uuid;
-
-use crate::{
+use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    endpoints::{
-        endpoint::{CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk},
-        Endpoint,
-    },
     error::{resource_conflict_err, resource_not_found_err},
     model::user::{
         auth::{AuthUser, BearerToken},
@@ -25,7 +13,18 @@ use crate::{
         QueryUser, UserId,
     },
     schema,
-    util::{headers::TotalCount, search::Search},
+};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
+use uuid::Uuid;
+
+use crate::endpoints::{
+    endpoint::{CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk},
+    Endpoint, Search, TotalCount,
 };
 
 #[derive(Deserialize, JsonSchema)]
