@@ -28,7 +28,7 @@ bencher_bing_index = { workspace = true, optional = true }
 bencher_boundary.workspace = true
 bencher_github = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }
-bencher_json = { workspace = true, features = ["full", "db", "schema"] }
+bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }
 bencher_logger.workspace = true
 bencher_plot.workspace = true

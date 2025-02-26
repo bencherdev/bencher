@@ -7,9 +7,9 @@ license-file.workspace = true
 publish = false
 
 [features]
-default = ["full"]
+default = ["server"]
 client = ["bencher_json/client"]
-full = ["bencher_json/full"]
+server = ["bencher_json/server"]
 
 [dependencies]
 bencher_json.workspace = true

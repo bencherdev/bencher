@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 client = ["dep:regex-lite"]
-full = ["dep:rand", "dep:regex"]
+server = ["dep:rand", "dep:regex"]
 db = ["dep:diesel"]
 plus = ["chrono/clock"]
 schema = ["dep:schemars", "ordered-float/schemars"]

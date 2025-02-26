@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 # Workspace
-bencher_json = { workspace = true, features = ["full"] }
+bencher_json = { workspace = true, features = ["server"] }
 literally.workspace = true
 ordered-float.workspace = true
 serde.workspace = true

@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 # Workspace
-bencher_json = { workspace = true, features = ["full", "plus"] }
+bencher_json = { workspace = true, features = ["server", "plus"] }
 chrono.workspace = true
 jsonwebtoken = { workspace = true, features = ["use_pem"] }
 thiserror.workspace = true

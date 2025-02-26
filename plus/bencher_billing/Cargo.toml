@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 # Workspace
-bencher_json = { workspace = true, features = ["full", "plus"] }
+bencher_json = { workspace = true, features = ["server", "plus"] }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 uuid.workspace = true

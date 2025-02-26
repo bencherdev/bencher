@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
 use derive_more::Display;
-#[cfg(all(feature = "full", not(feature = "client")))]
+#[cfg(all(feature = "server", not(feature = "client")))]
 use regex::Regex;
 #[cfg(feature = "client")]
 use regex_lite::Regex;

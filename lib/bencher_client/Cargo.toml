@@ -9,7 +9,7 @@ publish = false
 [features]
 default = ["client", "plus", "rustls-tls"]
 client = ["bencher_json/client"]
-full = ["bencher_json/full"]
+server = ["bencher_json/server"]
 plus = ["bencher_json/plus"]
 # Reqwest TLS
 native-tls = ["reqwest/native-tls"]
