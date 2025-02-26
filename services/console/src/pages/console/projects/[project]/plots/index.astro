@@ -9,7 +9,7 @@ import FallbackPlotsPanel from "../../../../../components/console/plots/Fallback
 
 const params = Astro.params;
 const title = "Project Plots";
-const redirect = `/perf/${params.project}${Astro.url.search}`;
+const redirect = `/perf/${params.project}/plots${Astro.url.search}`;
 ---
 
 <ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title} redirect={redirect}>

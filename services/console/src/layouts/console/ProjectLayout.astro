@@ -12,9 +12,10 @@ interface Props {
 }
 
 const { apiUrl, params, title, redirect } = Astro.props;
+const project_redirect = redirect ?? `/perf/${params.project}`;
 ---
 
-<ConsoleLayout apiUrl={apiUrl} params={params} title={title} redirect={redirect}>
+<ConsoleLayout apiUrl={apiUrl} params={params} title={title} redirect={project_redirect}>
   <ProjectMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params}>
 	<ProjectFallbackMenu slot="fallback" />
   </ProjectMenu>

@@ -11,9 +11,10 @@ import FallbackDeckPanel from "../../../../../components/console/deck/FallbackDe
 
 const params = Astro.params;
 const title = "View Benchmark";
+const redirect = `/perf/${params.project}/benchmarks/${params.benchmark}${Astro.url.search}`;
 ---
 
-<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title} redirect={redirect}>
   <DeckPanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
