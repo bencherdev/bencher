@@ -1,9 +1,9 @@
 use std::sync::LazyLock;
 
 use derive_more::Display;
-#[cfg(all(feature = "full", not(feature = "lite")))]
+#[cfg(all(feature = "full", not(feature = "client")))]
 use regex::Regex;
-#[cfg(feature = "lite")]
+#[cfg(feature = "client")]
 use regex_lite::Regex;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

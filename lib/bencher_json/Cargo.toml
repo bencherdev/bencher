@@ -7,8 +7,8 @@ license-file.workspace = true
 publish = false
 
 [features]
+client = ["bencher_context/client", "bencher_valid/client"]
 full = ["bencher_valid/full"]
-lite = ["bencher_context/client", "bencher_valid/lite"]
 db = ["diesel", "serde_yaml", "bencher_valid/db"]
 plus = ["bencher_valid/plus"]
 schema = ["dep:schemars", "bencher_context/schema", "ordered-float/schemars"]

@@ -10,8 +10,8 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [features]
+client = ["dep:regex-lite"]
 full = ["dep:rand", "dep:regex"]
-lite = ["dep:regex-lite"]
 db = ["dep:diesel"]
 plus = ["chrono/clock"]
 schema = ["dep:schemars", "ordered-float/schemars"]
@@ -20,7 +20,7 @@ wasm = [
     "dep:wasm-bindgen",
     "dep:serde_json",
     "chrono/wasmbind",
-    "lite",
+    "client",
 ]
 
 [dependencies]

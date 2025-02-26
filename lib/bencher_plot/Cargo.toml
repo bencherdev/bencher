@@ -8,8 +8,8 @@ publish = false
 
 [features]
 default = ["full"]
+client = ["bencher_json/client"]
 full = ["bencher_json/full"]
-lite = ["bencher_json/lite"]
 
 [dependencies]
 bencher_json.workspace = true

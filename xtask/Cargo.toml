@@ -23,7 +23,7 @@ plus = [
 # Workspace
 bencher_bing_index = { workspace = true, optional = true }
 bencher_client = { workspace = true, optional = true }
-bencher_json = { workspace = true, features = ["lite"] }
+bencher_json = { workspace = true, features = ["client"] }
 bencher_license = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }
 anyhow.workspace = true

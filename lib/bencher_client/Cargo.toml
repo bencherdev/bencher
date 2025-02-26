@@ -7,9 +7,9 @@ license-file.workspace = true
 publish = false
 
 [features]
-default = ["lite", "plus", "rustls-tls"]
+default = ["client", "plus", "rustls-tls"]
+client = ["bencher_json/client"]
 full = ["bencher_json/full"]
-lite = ["bencher_json/lite"]
 plus = ["bencher_json/plus"]
 # Reqwest TLS
 native-tls = ["reqwest/native-tls"]

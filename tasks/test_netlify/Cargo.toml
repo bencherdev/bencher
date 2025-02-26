@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 # Workspace
-bencher_json = { workspace = true, features = ["lite"] }
+bencher_json = { workspace = true, features = ["client"] }
 anyhow.workspace = true
 camino.workspace = true
 clap.workspace = true
