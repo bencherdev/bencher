@@ -9392,7 +9392,7 @@
             "description": "Context for the report.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonReportContext"
+                "$ref": "#/components/schemas/ReportContext"
               }
             ]
           },
@@ -10740,13 +10740,6 @@
           "uuid"
         ]
       },
-      "JsonReportContext": {
-        "type": "object",
-        "additionalProperties": {
-          "nullable": true,
-          "type": "string"
-        }
-      },
       "JsonReportMeasure": {
         "type": "object",
         "properties": {
@@ -12055,6 +12048,12 @@
       "ProjectUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "ReportContext": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
       },
       "ReportUuid": {
         "type": "string",

@@ -11,7 +11,7 @@ default = ["plus"]
 plus = ["bencher_client/plus", "bencher_comment/plus", "bencher_json/plus"]
 
 [build-dependencies]
-bencher_fingerprint = { workspace = true, features = ["client"] }
+bencher_context = { workspace = true, features = ["client"] }
 
 [dependencies]
 # Workspace

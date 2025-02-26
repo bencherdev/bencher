@@ -99,6 +99,7 @@ impl QueryReport {
         )
         .await?;
 
+        // TODO consider moving this to the beginning of the function
         // Check to see if the project is public or private
         // If private, then validate that there is an active subscription or license
         #[cfg(feature = "plus")]

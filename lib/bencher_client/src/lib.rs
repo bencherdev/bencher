@@ -32,7 +32,7 @@ macro_rules! from_client {
 }
 
 from_client!(
-    JsonReportContext,
+    ReportContext,
     BenchmarkName,
     Boundary,
     BranchName,

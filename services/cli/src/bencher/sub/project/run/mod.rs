@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, JsonReport, NameId, ResourceId};
+use bencher_json::{DateTime, JsonReport, NameId, ReportContext, ResourceId};
 
 use crate::{
     bencher::backend::AuthBackend,
@@ -15,7 +15,6 @@ mod adapter;
 mod average;
 mod branch;
 mod ci;
-mod context;
 mod error;
 mod fold;
 mod format;
@@ -188,8 +187,6 @@ impl Run {
         };
 
         let (branch, hash, start_point) = self.branch.clone().into();
-        let context = context::get_context();
-        println!("{context:?}");
         Ok(Some(JsonNewReport {
             branch,
             hash,
@@ -204,7 +201,7 @@ impl Run {
                 average: self.average,
                 fold: self.fold,
             }),
-            context: context.map(Into::into),
+            context: Some(ReportContext::new().into()),
         }))
     }
 

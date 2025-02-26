@@ -24,10 +24,6 @@ export type ExpirationMonth = number;
 
 export type ExpirationYear = number;
 
-export type Uuid = string;
-
-export type Fingerprint = string;
-
 export type GitHash = string;
 
 export type Index = number;
@@ -229,6 +225,8 @@ export type MeteredPlanId = string;
 
 export type NonEmpty = string;
 
+export type ReportContext = Record<string, string>;
+
 export type ResourceId = string;
 
 export type Secret = string;
@@ -236,6 +234,8 @@ export type Secret = string;
 export type Url = string;
 
 export type UserName = string;
+
+export type Uuid = string;
 
 export interface JsonAccept {
 	invite: Jwt;

@@ -1,5 +1,5 @@
 [package]
-name = "bencher_fingerprint"
+name = "bencher_context"
 homepage.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -11,12 +11,14 @@ client = ["dep:windows"]
 schema = ["dep:schemars"]
 
 [dependencies]
+# Workspace
 derive_more.workspace = true
 schemars = { workspace = true, optional = true }
 serde.workspace = true
-thiserror.workspace = true
 typeshare.workspace = true
 uuid = { workspace = true, features = ["serde"] }
+# Crate
+gix = { version = "0.70", default-features = false, features = ["revision"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.60", optional = true, features = [

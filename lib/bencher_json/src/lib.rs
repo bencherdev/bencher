@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-pub use bencher_fingerprint::Fingerprint;
+pub use bencher_context::ReportContext;
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
     Index, IqrBoundary, Jwt, Model, ModelTest, NameId, NameIdKind, NonEmpty, PercentageBoundary,
@@ -48,7 +48,7 @@ pub use project::{
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
-    report::{JsonNewReport, JsonReport, JsonReportContext, JsonReports, ReportUuid},
+    report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
     JsonNewProject, JsonProject, JsonProjects, ProjectUuid,

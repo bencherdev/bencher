@@ -7,6 +7,7 @@ WORKDIR /usr/src/bencher/lib
 RUN cargo init --lib bencher_adapter
 RUN cargo init --lib bencher_boundary
 RUN cargo init --lib bencher_comment
+RUN cargo init --lib bencher_context
 RUN cargo init --lib bencher_github
 RUN cargo init --lib bencher_json
 RUN cargo init --lib bencher_logger
