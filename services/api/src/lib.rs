@@ -1,5 +1,13 @@
 #![allow(clippy::result_large_err)]
 
+// Needed for distroless builds
+use libsqlite3_sys as _;
+// Needed for setting default provider
+use tokio_rustls as _;
+// Needed for binary
+use bencher_logger as _;
+use serde_yaml as _;
+
 use bencher_json::JsonSpec;
 use std::sync::LazyLock;
 

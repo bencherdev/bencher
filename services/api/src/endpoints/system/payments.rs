@@ -2,19 +2,16 @@
 
 use bencher_json::{
     organization::plan::DEFAULT_PRICE_NAME,
-    system::payment::{JsonCheckout, JsonNewCheckout, JsonNewPayment, JsonPayment},
+    system::payment::{JsonCheckout, JsonNewCheckout},
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    error::{forbidden_error, issue_error, resource_not_found_err},
+    error::{forbidden_error, issue_error},
     model::{
         organization::QueryOrganization,
-        user::{
-            auth::{AuthUser, BearerToken},
-            same_user,
-        },
+        user::auth::{AuthUser, BearerToken},
     },
 };
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -23,78 +20,6 @@ use crate::endpoints::{
     endpoint::{CorsResponse, Post, ResponseCreated},
     Endpoint,
 };
-
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
-#[endpoint {
-    method = OPTIONS,
-    path =  "/v0/payments",
-    tags = ["payments"]
-}]
-pub async fn payments_options(
-    _rqctx: RequestContext<ApiContext>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Post.into()]))
-}
-
-#[endpoint {
-    method = POST,
-    path =  "/v0/payments",
-    tags = ["payments"]
-}]
-pub async fn payments_post(
-    rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
-    body: TypedBody<JsonNewPayment>,
-) -> Result<ResponseCreated<JsonPayment>, HttpError> {
-    sentry::capture_message("Payments endpoint activated", sentry::Level::Info);
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
-        .await
-        .inspect_err(|e| {
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&e);
-        })?;
-    Ok(Post::pub_response_created(json))
-}
-
-async fn post_inner(
-    context: &ApiContext,
-    json_payment: JsonNewPayment,
-    auth_user: &AuthUser,
-) -> Result<JsonPayment, HttpError> {
-    let biller = context.biller()?;
-
-    same_user!(auth_user, context.rbac, json_payment.customer.uuid);
-
-    // Create a customer for the user
-    let customer_id = biller
-        .get_or_create_customer(&json_payment.customer)
-        .await
-        .map_err(resource_not_found_err!(Plan, json_payment.customer))?;
-
-    // Create a payment method for the user
-    let payment_method_id = biller
-        .create_payment_method(customer_id.clone(), json_payment.card)
-        .await
-        .map_err(resource_not_found_err!(Plan, &customer_id))?;
-
-    Ok(JsonPayment {
-        customer: customer_id.as_ref().parse().map_err(|e| {
-            issue_error(
-                "Failed to parse customer ID",
-                &format!("Failed to parse customer ID ({customer_id})."),
-                e,
-            )
-        })?,
-        payment_method: payment_method_id.as_ref().parse().map_err(|e| {
-            issue_error(
-                "Failed to parse payment method ID",
-                &format!("Failed to parse payment method ID ({payment_method_id})."),
-                e,
-            )
-        })?,
-    })
-}
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {

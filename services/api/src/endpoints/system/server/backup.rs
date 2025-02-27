@@ -86,8 +86,6 @@ pub enum BackupError {
     DataStore(bencher_schema::context::DataStoreError),
     #[error("No data store")]
     NoDataStore,
-    #[error("Failed to remove file: {0}")]
-    RmFile(std::io::Error),
 }
 
 async fn backup(

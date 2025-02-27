@@ -1,3 +1,5 @@
+#![allow(unused_crate_dependencies)]
+
 #[cfg(feature = "sentry")]
 use std::path::PathBuf;
 use std::sync::Arc;

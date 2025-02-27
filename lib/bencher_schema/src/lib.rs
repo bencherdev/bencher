@@ -1,5 +1,8 @@
 #![allow(clippy::result_large_err)]
 
+// Needed for distroless builds
+use libsqlite3_sys as _;
+
 pub mod context;
 pub mod error;
 pub mod headers;

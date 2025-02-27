@@ -29,8 +29,6 @@ bencher_github = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }
-bencher_logger.workspace = true
-bencher_plot.workspace = true
 bencher_rank.workspace = true
 bencher_rbac.workspace = true
 bencher_token.workspace = true
@@ -39,33 +37,23 @@ derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 http.workspace = true
-jsonwebtoken.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded.workspace = true
-serde_yaml.workspace = true
-ordered-float.workspace = true
 oso.workspace = true
-rand.workspace = true
 reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
 slog.workspace = true
-slug.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
 tokio-rustls.workspace = true
 url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
-async-compression = { version = "0.4", features = ["tokio", "gzip"] }
 aws-credential-types = "1.2"
 aws-sdk-s3 = { version = "1.57", features = ["behavior-version-latest"] }
 css-inline = "0.14"
-diesel_migrations = "2.2"
-# https://github.com/stalwartlabs/mail-send/blob/962518a299c5b6da5c44d9f4e090a10d14e8a236/Cargo.toml#L37
-# https://github.com/bencherdev/bencher/issues/525
 mail-send = "0.5"
-paste = "1.0"
 sentry = { version = "0.36", optional = true, default-features = false, features = [
     "reqwest",
     "rustls",
