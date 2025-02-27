@@ -45,7 +45,6 @@ url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
 async-compression = { version = "0.4", features = ["tokio", "gzip"] }
-diesel_migrations = "2.2"
 paste = "1.0"
 sentry = { version = "0.36", optional = true, default-features = false, features = [
     "reqwest",

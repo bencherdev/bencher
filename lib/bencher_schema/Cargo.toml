@@ -53,6 +53,7 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 aws-credential-types = "1.2"
 aws-sdk-s3 = { version = "1.57", features = ["behavior-version-latest"] }
 css-inline = "0.14"
+diesel_migrations = "2.2"
 mail-send = "0.5"
 sentry = { version = "0.36", optional = true, default-features = false, features = [
     "reqwest",

@@ -219,7 +219,7 @@ pub struct Delete;
 impl_method!(Delete, DELETE);
 
 impl Delete {
-    pub fn response_deleted<T>(auth: bool) -> ResponseDeleted {
+    pub fn response_deleted(auth: bool) -> ResponseDeleted {
         if auth {
             Self::auth_response_deleted()
         } else {

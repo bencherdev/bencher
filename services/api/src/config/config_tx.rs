@@ -15,7 +15,6 @@ use bencher_schema::context::{ApiContext, Database, DbConnection};
 use bencher_schema::model::server::QueryServer;
 use bencher_token::TokenKey;
 use diesel::{connection::SimpleConnection, Connection};
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
@@ -29,7 +28,6 @@ use super::{plus::Plus, DEFAULT_BUSY_TIMEOUT};
 use crate::endpoints::Api;
 
 const DATABASE_URL: &str = "DATABASE_URL";
-const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../lib/bencher_schema/migrations");
 
 pub struct ConfigTx {
     pub config: Config,
@@ -40,8 +38,8 @@ pub struct ConfigTx {
 pub enum ConfigTxError {
     #[error("Failed to create server logger: {0}")]
     CreateLogger(std::io::Error),
-    #[error("Failed to run database migrations: {0}")]
-    Migrations(Box<dyn std::error::Error + Send + Sync>),
+    #[error("{0}")]
+    Migrations(#[from] bencher_schema::MigrationError),
     #[error("Failed to run database pragma: {0}")]
     Pragma(diesel::result::Error),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
@@ -172,7 +170,7 @@ fn into_context(
     }
 
     info!(&log, "Running database migrations");
-    run_migrations(&mut database_connection)?;
+    bencher_schema::run_migrations(&mut database_connection)?;
 
     let data_store = if let Some(data_store) = json_database.data_store {
         Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
@@ -241,27 +239,6 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
     }
     debug!(log, "Setting \"{DATABASE_URL}\" to {database_path}");
     std::env::set_var(DATABASE_URL, database_path);
-}
-
-fn run_migrations(database: &mut DbConnection) -> Result<(), ConfigTxError> {
-    // It is not possible to enable or disable foreign key constraints in the middle of a multi-statement transaction
-    // (when SQLite is not in autocommit mode).
-    // Attempting to do so does not return an error; it simply has no effect.
-    // https://www.sqlite.org/foreignkeys.html#fk_enable
-    // Therefore, we must run all migrations with foreign key constraints disabled.
-    // Still use `PRAGMA foreign_keys = OFF` in the migration scripts to disable foreign key constraints when using the CLI.
-    database
-        .batch_execute("PRAGMA foreign_keys = OFF")
-        .map_err(ConfigTxError::Pragma)?;
-    database
-        .run_pending_migrations(MIGRATIONS)
-        .map(|_| ())
-        .map_err(ConfigTxError::Migrations)?;
-    database
-        .batch_execute("PRAGMA foreign_keys = ON")
-        .map_err(ConfigTxError::Pragma)?;
-
-    Ok(())
 }
 
 #[cfg(feature = "plus")]

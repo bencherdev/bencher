@@ -12,6 +12,7 @@ chrono.workspace = true
 jsonwebtoken.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+uuid = { workspace = true, features = ["v4"] }
 
 [lints]
 workspace = true

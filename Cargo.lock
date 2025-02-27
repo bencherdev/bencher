@@ -860,7 +860,6 @@ dependencies = [
  "bencher_token",
  "chrono",
  "diesel",
- "diesel_migrations",
  "dropshot",
  "http 1.2.0",
  "libsqlite3-sys",
@@ -1108,6 +1107,7 @@ dependencies = [
  "css-inline",
  "derive_more 2.0.1",
  "diesel",
+ "diesel_migrations",
  "dropshot",
  "http 1.2.0",
  "libsqlite3-sys",
@@ -1136,6 +1136,7 @@ dependencies = [
  "jsonwebtoken",
  "serde",
  "thiserror 2.0.11",
+ "uuid 1.13.1",
 ]
 
 [[package]]
