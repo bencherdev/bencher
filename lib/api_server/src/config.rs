@@ -1,3 +1,4 @@
+use bencher_config::{Config, BENCHER_CONFIG};
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Put, ResponseAccepted, ResponseOk};
 use bencher_json::{
     system::config::{JsonConsole, JsonUpdateConfig},
@@ -13,8 +14,6 @@ use bencher_schema::{
 };
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
-
-use crate::config::{Config, BENCHER_CONFIG};
 
 use super::restart::countdown;
 

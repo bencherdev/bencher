@@ -15,8 +15,12 @@ use bencher_token::DEFAULT_SECRET_KEY;
 use slog::{error, info, Logger};
 use url::Url;
 
-pub mod config_tx;
-pub mod plus;
+mod config_tx;
+mod plus;
+
+pub use config_tx::{ConfigTx, ConfigTxError};
+#[cfg(feature = "plus")]
+pub use plus::{Plus, PlusError};
 
 pub const API_NAME: &str = "Bencher API";
 

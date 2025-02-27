@@ -8,11 +8,18 @@ publish = false
 
 [features]
 default = ["plus"]
-plus = ["bencher_json/plus"]
+plus = [
+    "bencher_api/plus",
+    "bencher_config/plus",
+    "bencher_endpoint/plus",
+    "bencher_json/plus"
+]
 
 [dependencies]
 # Workspace
 bencher_api.workspace = true
+bencher_config.workspace = true
+bencher_endpoint.workspace = true
 bencher_json.workspace = true
 bencher_logger.workspace = true
 anyhow.workspace = true

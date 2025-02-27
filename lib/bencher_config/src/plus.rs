@@ -7,10 +7,9 @@ use bencher_json::{
     system::config::{JsonCloud, JsonPlus},
 };
 use bencher_license::Licensor;
+use bencher_schema::context::{Indexer, StatsSettings};
 use tokio::runtime::Handle;
 use url::Url;
-
-use bencher_schema::context::{Indexer, StatsSettings};
 
 pub struct Plus {
     pub github: Option<GitHub>,

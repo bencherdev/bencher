@@ -1,0 +1,39 @@
+[package]
+name = "bencher_config"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+plus = [
+    "bencher_endpoint/plus",
+    "bencher_json/plus",
+    "bencher_schema/plus",
+    "dep:bencher_billing",
+    "dep:bencher_github",
+    "dep:bencher_license",
+]
+sentry = ["bencher_schema/sentry"]
+
+[dependencies]
+bencher_billing = { workspace = true, optional = true }
+bencher_endpoint.workspace = true
+bencher_github = {workspace = true , optional = true}
+bencher_json.workspace = true
+bencher_license = {workspace = true, optional = true}
+bencher_rbac.workspace = true
+bencher_schema.workspace = true
+bencher_token.workspace = true
+diesel.workspace = true
+dropshot.workspace = true
+oso.workspace = true
+serde_json.workspace = true
+slog.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

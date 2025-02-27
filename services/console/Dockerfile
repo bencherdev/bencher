@@ -4,10 +4,19 @@ FROM rust:1.82.0-bookworm AS wasm-builder
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 WORKDIR /usr/src/bencher/lib
+RUN cargo init --lib api_auth
+RUN cargo init --lib api_checkout
+RUN cargo init --lib api_organizations
+RUN cargo init --lib api_projects
+RUN cargo init --lib api_run
+RUN cargo init --lib api_server
+RUN cargo init --lib api_users
 RUN cargo init --lib bencher_adapter
 RUN cargo init --lib bencher_boundary
 RUN cargo init --lib bencher_comment
+RUN cargo init --lib bencher_config
 RUN cargo init --lib bencher_context
+RUN cargo init --lib bencher_endpoint
 RUN cargo init --lib bencher_github
 RUN cargo init --lib bencher_json
 RUN cargo init --lib bencher_logger

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
 use bencher_json::system::config::{JsonLitestream, JsonPlus};
 use bencher_json::{
@@ -25,7 +26,6 @@ use tokio::sync::mpsc::Sender;
 use super::Config;
 #[cfg(feature = "plus")]
 use super::{plus::Plus, DEFAULT_BUSY_TIMEOUT};
-use crate::endpoints::Api;
 
 const DATABASE_URL: &str = "DATABASE_URL";
 
@@ -64,15 +64,21 @@ pub enum ConfigTxError {
 }
 
 impl ConfigTx {
-    pub async fn into_server(self) -> Result<HttpServer<ApiContext>, ConfigTxError> {
+    pub async fn into_server<R>(self) -> Result<HttpServer<ApiContext>, ConfigTxError>
+    where
+        R: Registrar,
+    {
         let log = into_log(self.config.0.logging.clone())?;
-        self.into_inner(&log).await.map_err(|e| {
+        self.into_inner::<R>(&log).await.map_err(|e| {
             error!(&log, "{e}");
             e
         })
     }
 
-    async fn into_inner(self, log: &Logger) -> Result<HttpServer<ApiContext>, ConfigTxError> {
+    async fn into_inner<R>(self, log: &Logger) -> Result<HttpServer<ApiContext>, ConfigTxError>
+    where
+        R: Registrar,
+    {
         let ConfigTx { config, restart_tx } = self;
 
         let Config(JsonConfig {
@@ -128,21 +134,25 @@ impl ConfigTx {
             query_server.spawn_stats(log.clone(), conn, context.stats, licensor, messenger);
         }
 
-        let mut api = ApiDescription::new();
+        let mut api_description = ApiDescription::new();
         debug!(log, "Registering server APIs");
-        Api::register(
-            &mut api,
+        R::register(
+            &mut api_description,
             true,
             #[cfg(feature = "plus")]
             context.is_bencher_cloud,
         )
         .map_err(ConfigTxError::Register)?;
 
-        Ok(
-            dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, context, log, tls)
-                .map_err(ConfigTxError::CreateServer)?
-                .start(),
+        Ok(dropshot::HttpServerStarter::new_with_tls(
+            &config_dropshot,
+            api_description,
+            context,
+            log,
+            tls,
         )
+        .map_err(ConfigTxError::CreateServer)?
+        .start())
     }
 }
 

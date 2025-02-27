@@ -28,10 +28,19 @@ WORKDIR /usr/src/bencher/.cargo
 COPY .cargo/config.toml config.toml
 
 WORKDIR /usr/src/bencher/lib
+COPY lib/api_auth api_auth
+COPY lib/api_checkout api_checkout
+COPY lib/api_organizations api_organizations
+COPY lib/api_projects api_projects
+COPY lib/api_run api_run
+COPY lib/api_server api_server
+COPY lib/api_users api_users
 COPY lib/bencher_adapter bencher_adapter
 COPY lib/bencher_boundary bencher_boundary
 COPY lib/bencher_comment bencher_comment
+COPY lib/bencher_config bencher_config
 COPY lib/bencher_context bencher_context
+COPY lib/bencher_endpoint bencher_endpoint
 COPY lib/bencher_github bencher_github
 COPY lib/bencher_json bencher_json
 COPY lib/bencher_logger bencher_logger

@@ -12652,7 +12652,8 @@
       "description": "Reports"
     },
     {
-      "name": "run"
+      "name": "run",
+      "description": "Run"
     },
     {
       "name": "server",

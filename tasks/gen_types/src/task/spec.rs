@@ -1,6 +1,7 @@
 use std::fs;
 
-use bencher_api::endpoints::Api;
+use bencher_api::api::Api;
+use bencher_endpoint::Registrar;
 use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 
 use crate::{parser::TaskSpec, API_VERSION};
@@ -42,6 +43,7 @@ impl Spec {
             allow_other_tags: false,
             policy: EndpointTagPolicy::AtLeastOne,
             tags: literally::hmap!{
+                "run" => TagDetails { description: Some("Run".into()), external_docs: None},
                 "auth" => TagDetails { description: Some("Auth".into()), external_docs: None},
                 "organizations" => TagDetails { description: Some("Organizations".into()), external_docs: None},
                 "projects" => TagDetails { description: Some("Projects".into()), external_docs: None},
@@ -60,7 +62,7 @@ impl Spec {
                 "tokens" => TagDetails { description: Some("API Tokens".into()), external_docs: None},
                 "server" => TagDetails { description: Some("Server".into()), external_docs: None},
         }})
-            .openapi(bencher_api::config::API_NAME, api_version)
+            .openapi(bencher_config::API_NAME, api_version)
             .write(&mut spec_file)
             ?;
 

@@ -4,10 +4,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use bencher_api::{
-    config::{config_tx::ConfigTx, Config},
-    API_VERSION,
-};
+use bencher_api::{api::Api, API_VERSION};
+use bencher_config::{Config, ConfigTx};
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonLitestream;
 #[cfg(feature = "sentry")]
@@ -24,12 +22,12 @@ pub enum ApiError {
     #[error("Failed to install default AWS credentials provider: {0:?}")]
     Rustls(Arc<CryptoProvider>),
     #[error("{0}")]
-    Config(bencher_api::config::ConfigError),
+    Config(bencher_config::ConfigError),
     #[cfg(feature = "plus")]
     #[error("{0}")]
     Litestream(#[from] LitestreamError),
     #[error("{0}")]
-    ConfigTxError(bencher_api::config::config_tx::ConfigTxError),
+    ConfigTxError(bencher_config::ConfigTxError),
     #[error("Unexpected empty shutdown signal. This is likely a bug. Please report it.")]
     EmptyShutdown,
     #[error("Shutting down server: {0}")]
@@ -246,7 +244,7 @@ fn run_api_server(
     let config_tx = ConfigTx { config, restart_tx };
     tokio::spawn(async move {
         config_tx
-            .into_server()
+            .into_server::<Api>()
             .await
             .map_err(ApiError::ConfigTxError)?
             .await

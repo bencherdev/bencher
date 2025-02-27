@@ -5,10 +5,12 @@ use dropshot::{
 
 mod endpoint;
 mod headers;
+mod registrar;
 mod total_count;
 
 pub use endpoint::{Delete, Endpoint, Get, Patch, Post, Put};
 pub use headers::CorsHeaders;
+pub use registrar::Registrar;
 pub use total_count::TotalCount;
 
 pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<()>, CorsHeaders>;

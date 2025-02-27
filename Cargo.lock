@@ -151,6 +151,111 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34ac096ce696dc2fcabef30516bb13c0a68a11d30131d3df6f04711467681b04"
 
 [[package]]
+name = "api_auth"
+version = "0.4.37"
+dependencies = [
+ "bencher_billing",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_schema",
+ "dropshot",
+ "slog",
+]
+
+[[package]]
+name = "api_checkout"
+version = "0.4.37"
+dependencies = [
+ "bencher_billing",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_rbac",
+ "bencher_schema",
+ "dropshot",
+ "sentry",
+]
+
+[[package]]
+name = "api_organizations"
+version = "0.4.37"
+dependencies = [
+ "bencher_billing",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_rbac",
+ "bencher_schema",
+ "diesel",
+ "dropshot",
+ "schemars",
+ "sentry",
+ "serde",
+ "slog",
+]
+
+[[package]]
+name = "api_projects"
+version = "0.4.37"
+dependencies = [
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_plot",
+ "bencher_rbac",
+ "bencher_schema",
+ "diesel",
+ "dropshot",
+ "http 1.2.0",
+ "schemars",
+ "sentry",
+ "serde",
+ "slog",
+]
+
+[[package]]
+name = "api_run"
+version = "0.4.37"
+dependencies = [
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_schema",
+ "dropshot",
+ "slog",
+]
+
+[[package]]
+name = "api_server"
+version = "0.4.37"
+dependencies = [
+ "async-compression",
+ "bencher_billing",
+ "bencher_config",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_schema",
+ "chrono",
+ "diesel",
+ "dropshot",
+ "serde_json",
+ "slog",
+ "thiserror 2.0.11",
+ "tokio",
+]
+
+[[package]]
+name = "api_users"
+version = "0.4.37"
+dependencies = [
+ "bencher_billing",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_schema",
+ "diesel",
+ "dropshot",
+ "schemars",
+ "serde",
+ "uuid 1.13.1",
+]
+
+[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -848,34 +953,26 @@ dependencies = [
 name = "bencher_api"
 version = "0.4.37"
 dependencies = [
- "async-compression",
- "bencher_billing",
+ "api_auth",
+ "api_checkout",
+ "api_organizations",
+ "api_projects",
+ "api_run",
+ "api_server",
+ "api_users",
+ "bencher_config",
  "bencher_endpoint",
- "bencher_github",
  "bencher_json",
- "bencher_license",
  "bencher_logger",
- "bencher_plot",
- "bencher_rbac",
  "bencher_schema",
- "bencher_token",
- "chrono",
- "diesel",
  "dropshot",
- "http 1.2.0",
  "libsqlite3-sys",
- "oso",
- "schemars",
  "sentry",
- "serde",
- "serde_json",
  "serde_yaml",
  "slog",
  "thiserror 2.0.11",
  "tokio",
  "tokio-rustls 0.26.1",
- "url",
- "uuid 1.13.1",
 ]
 
 [[package]]
@@ -971,6 +1068,28 @@ dependencies = [
  "bencher_json",
  "ordered-float",
  "serde_json",
+ "url",
+]
+
+[[package]]
+name = "bencher_config"
+version = "0.4.37"
+dependencies = [
+ "bencher_billing",
+ "bencher_endpoint",
+ "bencher_github",
+ "bencher_json",
+ "bencher_license",
+ "bencher_rbac",
+ "bencher_schema",
+ "bencher_token",
+ "diesel",
+ "dropshot",
+ "oso",
+ "serde_json",
+ "slog",
+ "thiserror 2.0.11",
+ "tokio",
  "url",
 ]
 
@@ -2881,6 +3000,8 @@ version = "0.4.37"
 dependencies = [
  "anyhow",
  "bencher_api",
+ "bencher_config",
+ "bencher_endpoint",
  "bencher_json",
  "bencher_logger",
  "clap",

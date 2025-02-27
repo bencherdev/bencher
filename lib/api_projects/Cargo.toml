@@ -1,0 +1,32 @@
+[package]
+name = "api_projects"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+plus = [
+    "bencher_endpoint/plus",
+    "bencher_json/plus",
+    "bencher_schema/plus",
+]
+sentry = ["bencher_schema/sentry", "dep:sentry"]
+
+[dependencies]
+bencher_endpoint.workspace = true
+bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_plot.workspace = true
+bencher_rbac.workspace = true
+bencher_schema.workspace = true
+diesel.workspace = true
+dropshot.workspace = true
+http.workspace = true
+schemars.workspace = true
+sentry = { workspace = true, optional = true }
+serde.workspace = true
+slog.workspace = true
+
+[lints]
+workspace = true

@@ -1,5 +1,5 @@
 [package]
-name = "bencher_endpoint"
+name = "api_run"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -8,16 +8,18 @@ publish = false
 
 [features]
 plus = [
+    "bencher_endpoint/plus",
+    "bencher_json/plus",
     "bencher_schema/plus",
 ]
+sentry = ["bencher_schema/sentry"]
 
 [dependencies]
+bencher_endpoint.workspace = true
+bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_schema.workspace = true
 dropshot.workspace = true
-http.workspace = true
-paste.workspace = true
-schemars.workspace = true
-serde.workspace = true
+slog.workspace = true
 
 [lints]
 workspace = true

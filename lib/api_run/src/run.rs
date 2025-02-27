@@ -1,6 +1,5 @@
-use bencher_json::{JsonNewRun, JsonReport};
-
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
+use bencher_json::{JsonNewRun, JsonReport};
 use bencher_schema::{
     context::ApiContext,
     error::bad_request_error,
