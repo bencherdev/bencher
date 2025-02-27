@@ -1,5 +1,6 @@
 #![cfg(feature = "plus")]
 
+use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
 use bencher_json::JsonServerStats;
 use bencher_schema::{
     conn_lock,
@@ -12,11 +13,6 @@ use bencher_schema::{
 };
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
-    Endpoint,
-};
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {

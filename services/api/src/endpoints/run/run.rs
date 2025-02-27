@@ -1,5 +1,6 @@
 use bencher_json::{JsonNewRun, JsonReport};
 
+use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_schema::{
     context::ApiContext,
     error::bad_request_error,
@@ -10,11 +11,6 @@ use bencher_schema::{
 };
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Post, ResponseCreated},
-    Endpoint,
-};
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {

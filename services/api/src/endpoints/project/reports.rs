@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+use bencher_endpoint::{
+    CorsResponse, Delete, Endpoint, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+    TotalCount,
+};
 use bencher_json::{
     project::{
         head::VersionNumber,
@@ -34,13 +38,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
 
-use crate::{
-    endpoints::{
-        endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
-        Endpoint, TotalCount,
-    },
-    macros::{filter_branch_name_id, filter_testbed_name_id},
-};
+use crate::macros::{filter_branch_name_id, filter_testbed_name_id};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportsParams {

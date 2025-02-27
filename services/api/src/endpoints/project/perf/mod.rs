@@ -1,3 +1,4 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     project::{
         alert::JsonPerfAlert,
@@ -36,11 +37,6 @@ use diesel::{
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, ResponseOk},
-    Endpoint,
-};
 
 pub mod img;
 

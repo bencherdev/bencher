@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 use bencher_billing::Biller;
 use bencher_github::GitHub;
 use bencher_json::{

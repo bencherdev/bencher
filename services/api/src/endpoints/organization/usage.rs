@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     organization::usage::{JsonUsage, UsageKind},
     DateTime, ResourceId,
@@ -21,11 +22,6 @@ use diesel::{BelongingToDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, ResponseOk},
-    Endpoint,
-};
 
 // 30 days
 const DEFAULT_USAGE_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);

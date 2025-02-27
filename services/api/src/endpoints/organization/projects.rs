@@ -1,10 +1,13 @@
+use bencher_endpoint::{
+    CorsResponse, Endpoint, Get, Post, ResponseCreated, ResponseOk, TotalCount,
+};
 use bencher_json::{
     project::{
         measure::built_in::default::{Latency, Throughput},
         ProjectRole,
     },
     DateTime, JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, ResourceId,
-    ResourceName,
+    ResourceName, Search,
 };
 use bencher_rbac::organization::Permission;
 #[cfg(feature = "plus")]
@@ -35,11 +38,6 @@ use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, Post, ResponseCreated, ResponseOk},
-    Endpoint, Search, TotalCount,
-};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsParams {

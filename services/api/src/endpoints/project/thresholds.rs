@@ -1,3 +1,7 @@
+use bencher_endpoint::{
+    CorsResponse, Delete, Endpoint, Get, Post, Put, ResponseCreated, ResponseDeleted, ResponseOk,
+    TotalCount,
+};
 use bencher_json::{
     project::threshold::{
         JsonNewThreshold, JsonRemoveModel, JsonThreshold, JsonThresholdQuery,
@@ -33,15 +37,7 @@ use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{
-    endpoints::{
-        endpoint::{
-            CorsResponse, Delete, Get, Post, Put, ResponseCreated, ResponseDeleted, ResponseOk,
-        },
-        Endpoint, TotalCount,
-    },
-    macros::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id},
-};
+use crate::macros::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdsParams {

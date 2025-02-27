@@ -1,12 +1,8 @@
+#[cfg(feature = "plus")]
+use bencher_endpoint::Post;
+use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_schema::context::ApiContext;
 use dropshot::{endpoint, HttpError, RequestContext};
-
-#[cfg(feature = "plus")]
-use crate::endpoints::endpoint::Post;
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, ResponseOk},
-    Endpoint,
-};
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {

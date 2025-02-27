@@ -27,6 +27,7 @@ bencher_boundary = { path = "lib/bencher_boundary" }
 bencher_client = { path = "lib/bencher_client" }
 bencher_comment = { path = "lib/bencher_comment" }
 bencher_context = { path = "lib/bencher_context" }
+bencher_endpoint = { path = "lib/bencher_endpoint" }
 bencher_github = { path = "lib/bencher_github" }
 bencher_json = { path = "lib/bencher_json" }
 bencher_logger = { path = "lib/bencher_logger" }
@@ -56,6 +57,7 @@ literally = "0.1"
 octocrab = "0.43"
 ordered-float = "4.6"
 oso = "0.27"
+paste = "1.0"
 pretty_assertions = "1.4"
 rand = "0.9"
 reqwest = { version = "0.12", default-features = false }

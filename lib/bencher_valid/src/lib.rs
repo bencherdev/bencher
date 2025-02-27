@@ -19,6 +19,7 @@ mod non_empty;
 mod plus;
 mod resource_id;
 mod resource_name;
+mod search;
 mod secret;
 mod slug;
 mod units;
@@ -52,6 +53,7 @@ pub use plus::{
 };
 pub use resource_id::{ResourceId, ResourceIdKind};
 pub use resource_name::ResourceName;
+pub use search::Search;
 pub use secret::Secret;
 pub use units::{Units, BYTES, NANOSECONDS, SECONDS};
 pub use user_name::UserName;

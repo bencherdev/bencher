@@ -1,3 +1,4 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonAuthAck, JsonLogin};
 use bencher_schema::{
     conn_lock,
@@ -7,11 +8,6 @@ use bencher_schema::{
 };
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Post, ResponseAccepted},
-    Endpoint,
-};
 
 use super::AUTH_TOKEN_TTL;
 use super::TOKEN_ARG;

@@ -1,6 +1,7 @@
 use std::{ffi::OsStr, path::PathBuf};
 
 use async_compression::tokio::write::GzipEncoder;
+use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{
     system::backup::JsonDataStore, DateTime, JsonBackup, JsonBackupCreated, JsonRestart,
 };
@@ -16,11 +17,6 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tokio::{
     fs::remove_file,
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
-};
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Post, ResponseCreated},
-    Endpoint,
 };
 
 const BUFFER_SIZE: usize = 1024;

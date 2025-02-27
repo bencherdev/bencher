@@ -1,15 +1,12 @@
-use std::fmt;
-
-use dropshot::HttpError;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::error::issue_error;
+use crate::TotalCount;
 
-pub const ALL_ORIGIN: &str = "*";
-const PUB_HEADERS: &str = "Content-Type";
-pub const AUTH_HEADERS: &str = "Content-Type, Authorization";
-pub const EXPOSE_HEADERS: &str = "X-Total-Count";
+const ALL_ORIGIN: &str = "*";
+const PUB_ALLOW_HEADERS: &str = "Content-Type";
+const AUTH_ALLOW_HEADERS: &str = "Content-Type, Authorization";
+const EXPOSE_HEADERS: &str = "X-Total-Count";
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -27,7 +24,7 @@ impl CorsHeaders {
         T: ToString,
     {
         let methods = methods_str(methods);
-        Self::new_origin_all(methods, AUTH_HEADERS.to_owned(), None)
+        Self::new_origin_all(methods, AUTH_ALLOW_HEADERS.to_owned(), None)
     }
 
     pub fn new_with_total_count<T>(methods: &[T], total_count: TotalCount) -> Self
@@ -35,14 +32,14 @@ impl CorsHeaders {
         T: ToString,
     {
         let methods = methods_str(methods);
-        Self::new_origin_all(methods, AUTH_HEADERS.to_owned(), Some(total_count))
+        Self::new_origin_all(methods, AUTH_ALLOW_HEADERS.to_owned(), Some(total_count))
     }
 
     pub fn new_pub<T>(methods: &T) -> Self
     where
         T: ToString,
     {
-        Self::new_origin_all(methods.to_string(), PUB_HEADERS.to_owned(), None)
+        Self::new_origin_all(methods.to_string(), PUB_ALLOW_HEADERS.to_owned(), None)
     }
 
     pub fn new_pub_with_total_count<T>(methods: &T, total_count: TotalCount) -> Self
@@ -51,7 +48,7 @@ impl CorsHeaders {
     {
         Self::new_origin_all(
             methods.to_string(),
-            PUB_HEADERS.to_owned(),
+            PUB_ALLOW_HEADERS.to_owned(),
             Some(total_count),
         )
     }
@@ -60,7 +57,7 @@ impl CorsHeaders {
     where
         T: ToString,
     {
-        Self::new_origin_all(methods.to_string(), AUTH_HEADERS.to_owned(), None)
+        Self::new_origin_all(methods.to_string(), AUTH_ALLOW_HEADERS.to_owned(), None)
     }
 
     pub fn new_auth_with_total_count<T>(methods: &T, total_count: TotalCount) -> Self
@@ -69,7 +66,7 @@ impl CorsHeaders {
     {
         Self::new_origin_all(
             methods.to_string(),
-            AUTH_HEADERS.to_owned(),
+            AUTH_ALLOW_HEADERS.to_owned(),
             Some(total_count),
         )
     }
@@ -94,33 +91,4 @@ where
         .map(ToString::to_string)
         .collect::<Vec<String>>()
         .join(", ")
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
-pub struct TotalCount(u32);
-
-impl TryFrom<i64> for TotalCount {
-    type Error = HttpError;
-
-    fn try_from(total_count: i64) -> Result<Self, Self::Error> {
-        match u32::try_from(total_count) {
-            Ok(total_count) => Ok(TotalCount(total_count)),
-            Err(err) => Err(issue_error(
-                "Failed to count resource total.",
-                &format!("Failed to count resource total: {total_count}"),
-                err,
-            )),
-        }
-    }
-}
-
-impl fmt::Display for TotalCount {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl TotalCount {
-    pub const ZERO: Self = TotalCount(0);
-    pub const ONE: Self = TotalCount(1);
 }

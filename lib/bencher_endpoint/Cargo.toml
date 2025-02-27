@@ -1,0 +1,18 @@
+[package]
+name = "bencher_endpoint"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[dependencies]
+bencher_schema.workspace = true
+dropshot.workspace = true
+http.workspace = true
+paste.workspace = true
+schemars.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

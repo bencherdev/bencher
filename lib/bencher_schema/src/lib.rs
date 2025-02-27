@@ -1,14 +1,10 @@
 #![allow(clippy::result_large_err)]
 
-// Needed for distroless builds
-use libsqlite3_sys as _;
-
 use diesel::connection::SimpleConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 pub mod context;
 pub mod error;
-pub mod headers;
 pub mod macros;
 pub mod model;
 #[allow(unused_qualifications)]

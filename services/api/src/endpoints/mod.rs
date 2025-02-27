@@ -3,18 +3,11 @@
 use bencher_schema::context::ApiContext;
 use dropshot::{ApiDescription, ApiDescriptionRegisterError};
 
-mod endpoint;
-mod headers;
 mod organization;
 mod project;
 mod run;
-mod search;
 mod system;
 mod user;
-
-pub use endpoint::Endpoint;
-use headers::{CorsHeaders, TotalCount};
-use search::Search;
 
 pub struct Api;
 

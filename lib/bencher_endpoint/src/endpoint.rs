@@ -7,13 +7,10 @@ use dropshot::{
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use super::{CorsHeaders, TotalCount};
-
-pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<()>, CorsHeaders>;
-pub type ResponseOk<T> = HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>;
-pub type ResponseCreated<T> = HttpResponseHeaders<HttpResponseCreated<T>, CorsHeaders>;
-pub type ResponseAccepted<T> = HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>;
-pub type ResponseDeleted = HttpResponseHeaders<HttpResponseDeleted, CorsHeaders>;
+use crate::{
+    CorsHeaders, CorsResponse, ResponseAccepted, ResponseCreated, ResponseDeleted, ResponseOk,
+    TotalCount,
+};
 
 #[derive(Copy, Clone)]
 pub enum Endpoint {

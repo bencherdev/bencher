@@ -1,3 +1,4 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::JsonRestart;
 use bencher_schema::{
     context::ApiContext,
@@ -6,11 +7,6 @@ use bencher_schema::{
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::{error, warn, Logger};
 use tokio::sync::mpsc::Sender;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Post, ResponseAccepted},
-    Endpoint,
-};
 
 const DEFAULT_DELAY: u64 = 3;
 

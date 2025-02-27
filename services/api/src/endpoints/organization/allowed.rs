@@ -1,3 +1,4 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{organization::OrganizationPermission, JsonAllowed, ResourceId};
 use bencher_schema::{
     conn_lock,
@@ -10,11 +11,6 @@ use bencher_schema::{
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, ResponseOk},
-    Endpoint,
-};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgAllowedParams {

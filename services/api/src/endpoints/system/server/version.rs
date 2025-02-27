@@ -1,11 +1,7 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::JsonApiVersion;
 use bencher_schema::{context::ApiContext, API_VERSION};
 use dropshot::{endpoint, HttpError, RequestContext};
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, ResponseOk},
-    Endpoint,
-};
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {

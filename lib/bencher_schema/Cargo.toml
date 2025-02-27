@@ -37,8 +37,6 @@ derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 http.workspace = true
-schemars.workspace = true
-serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded.workspace = true
 oso.workspace = true
@@ -59,13 +57,6 @@ sentry = { version = "0.36", optional = true, default-features = false, features
     "reqwest",
     "rustls",
 ] }
-
-# https://github.com/diesel-rs/diesel/blob/ba2f567b038179d16cea939c0bcaaecc216ea947/diesel/Cargo.toml#L19
-# https://github.com/tauri-apps/tauri/discussions/6183
-# Always needed for Windows and all other targets when building a distroless image
-[dependencies.libsqlite3-sys]
-version = ">=0.17.2, <0.31.0"
-features = ["bundled"]
 
 [lints]
 workspace = true

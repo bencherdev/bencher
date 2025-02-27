@@ -1,3 +1,4 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::{
     project::perf::{JsonPerfImgQueryParams, JsonPerfQueryParams},
     JsonPerfQuery,
@@ -10,11 +11,6 @@ use bencher_schema::{
 };
 use dropshot::{endpoint, Body, HttpError, Path, Query, RequestContext};
 use http::Response;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get},
-    Endpoint,
-};
 
 use super::ProjPerfParams;
 

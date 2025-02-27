@@ -1,6 +1,7 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk, TotalCount};
 use bencher_json::{
     user::JsonUsers, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, Sanitize,
-    UserName,
+    Search, UserName,
 };
 use bencher_schema::{
     conn_lock,
@@ -19,11 +20,6 @@ use diesel::{
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, Patch, ResponseOk},
-    Endpoint, Search, TotalCount,
-};
 
 pub type UsersPagination = JsonPagination<UsersSort>;
 

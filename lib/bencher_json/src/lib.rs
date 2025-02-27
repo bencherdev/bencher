@@ -4,8 +4,8 @@ pub use bencher_context::ReportContext;
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
     Index, IqrBoundary, Jwt, Model, ModelTest, NameId, NameIdKind, NonEmpty, PercentageBoundary,
-    ResourceId, ResourceIdKind, ResourceName, SampleSize, Sanitize, Secret, Slug, Units, Url,
-    UserName, ValidError, Window,
+    ResourceId, ResourceIdKind, ResourceName, SampleSize, Sanitize, Search, Secret, Slug, Units,
+    Url, UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{

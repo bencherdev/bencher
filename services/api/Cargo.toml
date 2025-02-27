@@ -20,6 +20,7 @@ sentry = ["bencher_schema/sentry", "dep:sentry"]
 [dependencies]
 # Workspace
 bencher_billing = { workspace = true, optional = true }
+bencher_endpoint.workspace = true
 bencher_github = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }
@@ -45,7 +46,6 @@ url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
 async-compression = { version = "0.4", features = ["tokio", "gzip"] }
-paste = "1.0"
 sentry = { version = "0.36", optional = true, default-features = false, features = [
     "reqwest",
     "rustls",

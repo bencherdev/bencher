@@ -850,6 +850,7 @@ version = "0.4.37"
 dependencies = [
  "async-compression",
  "bencher_billing",
+ "bencher_endpoint",
  "bencher_github",
  "bencher_json",
  "bencher_license",
@@ -864,7 +865,6 @@ dependencies = [
  "http 1.2.0",
  "libsqlite3-sys",
  "oso",
- "paste",
  "schemars",
  "sentry",
  "serde",
@@ -984,6 +984,18 @@ dependencies = [
  "typeshare",
  "uuid 1.13.1",
  "windows 0.60.0",
+]
+
+[[package]]
+name = "bencher_endpoint"
+version = "0.4.37"
+dependencies = [
+ "bencher_schema",
+ "dropshot",
+ "http 1.2.0",
+ "paste",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -1110,13 +1122,10 @@ dependencies = [
  "diesel_migrations",
  "dropshot",
  "http 1.2.0",
- "libsqlite3-sys",
  "mail-send",
  "oso",
  "reqwest",
- "schemars",
  "sentry",
- "serde",
  "serde_json",
  "serde_urlencoded",
  "slog",

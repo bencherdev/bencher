@@ -1,3 +1,4 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseOk};
 use bencher_json::{system::auth::JsonAuthUser, JsonConfirm};
 use bencher_schema::{
     conn_lock,
@@ -6,11 +7,6 @@ use bencher_schema::{
     model::user::QueryUser,
 };
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Post, ResponseOk},
-    Endpoint,
-};
 
 use super::CLIENT_TOKEN_TTL;
 

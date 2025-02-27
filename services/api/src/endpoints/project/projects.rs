@@ -1,6 +1,9 @@
+use bencher_endpoint::{
+    CorsResponse, Delete, Endpoint, Get, Patch, ResponseDeleted, ResponseOk, TotalCount,
+};
 use bencher_json::{
     project::{JsonUpdateProject, Visibility},
-    JsonDirection, JsonPagination, JsonProject, JsonProjects, ResourceId, ResourceName,
+    JsonDirection, JsonPagination, JsonProject, JsonProjects, ResourceId, ResourceName, Search,
 };
 use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
@@ -22,11 +25,6 @@ use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Delete, Get, Patch, ResponseDeleted, ResponseOk},
-    Endpoint, Search, TotalCount,
-};
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;
 

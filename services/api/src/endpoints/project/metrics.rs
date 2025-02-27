@@ -1,3 +1,4 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     project::report::Iteration, DateTime, JsonOneMetric, MetricUuid, ReportUuid, ResourceId,
 };
@@ -28,11 +29,6 @@ use diesel::{
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::endpoints::{
-    endpoint::{CorsResponse, Get, ResponseOk},
-    Endpoint,
-};
 
 use super::perf::threshold_model_alert;
 
