@@ -7,9 +7,7 @@ license-file.workspace = true
 publish = false
 
 [features]
-plus = [
-    "bencher_schema/plus",
-]
+plus = ["bencher_schema/plus"]
 
 [dependencies]
 bencher_schema.workspace = true

@@ -8,12 +8,12 @@ publish = false
 
 [features]
 plus = [
+    "dep:bencher_billing",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_schema/plus",
-    "dep:bencher_billing",
 ]
-sentry = ["bencher_schema/sentry", "dep:sentry"]
+sentry = ["dep:sentry", "bencher_schema/sentry"]
 
 [dependencies]
 bencher_endpoint.workspace = true

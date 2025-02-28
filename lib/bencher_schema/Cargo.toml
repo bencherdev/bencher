@@ -8,13 +8,14 @@ publish = false
 
 [features]
 plus = [
-    "bencher_json/plus",
     "dep:bencher_billing",
     "dep:bencher_bing_index",
     "dep:bencher_github",
     "dep:bencher_google_index",
     "dep:bencher_license",
     "dep:reqwest",
+    "dep:serde_json",
+    "bencher_json/plus",
 ]
 sentry = ["dep:sentry"]
 
@@ -37,7 +38,7 @@ derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 http.workspace = true
-serde_json.workspace = true
+serde_json = {workspace = true, optional = true}
 serde_urlencoded.workspace = true
 oso.workspace = true
 reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }

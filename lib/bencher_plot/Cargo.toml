@@ -6,13 +6,8 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
-[features]
-default = ["server"]
-client = ["bencher_json/client"]
-server = ["bencher_json/server"]
-
 [dependencies]
-bencher_json.workspace = true
+bencher_json = {workspace = true, features = ["server"] }
 chrono.workspace = true
 ordered-float.workspace = true
 thiserror.workspace = true

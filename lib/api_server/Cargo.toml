@@ -18,7 +18,6 @@ sentry = ["bencher_config/sentry", "bencher_schema/sentry"]
 [dependencies]
 async-compression = { workspace = true, features = ["tokio", "gzip"] }
 bencher_endpoint.workspace = true
-bencher_billing = { workspace = true, optional = true }
 bencher_config.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_schema.workspace = true

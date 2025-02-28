@@ -12,11 +12,10 @@ plus = [
     "bencher_json/plus",
     "bencher_schema/plus",
 ]
-sentry = ["bencher_schema/sentry", "dep:sentry"]
+sentry = ["dep:sentry", "bencher_schema/sentry"]
 
 [dependencies]
 bencher_endpoint.workspace = true
-bencher_billing = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema"] }
 bencher_rbac.workspace = true
 bencher_schema.workspace = true

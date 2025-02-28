@@ -16,7 +16,6 @@ sentry = ["bencher_schema/sentry"]
 
 [dependencies]
 bencher_endpoint.workspace = true
-bencher_billing = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_schema.workspace = true
 diesel.workspace = true

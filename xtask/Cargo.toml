@@ -9,14 +9,14 @@ publish = false
 [features]
 default = ["plus"]
 plus = [
-    "bencher_json/plus",
-    "clap/env",
     "dep:async-openai",
     "dep:bencher_bing_index",
     "dep:bencher_client",
     "dep:bencher_license",
     "dep:bencher_google_index",
     "dep:notify-rust",
+    "bencher_json/plus",
+    "clap/env",
 ]
 
 [dependencies]

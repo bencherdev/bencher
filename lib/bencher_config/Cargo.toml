@@ -8,12 +8,12 @@ publish = false
 
 [features]
 plus = [
-    "bencher_endpoint/plus",
-    "bencher_json/plus",
-    "bencher_schema/plus",
     "dep:bencher_billing",
     "dep:bencher_github",
     "dep:bencher_license",
+    "bencher_endpoint/plus",
+    "bencher_json/plus",
+    "bencher_schema/plus",
 ]
 sentry = ["bencher_schema/sentry"]
 

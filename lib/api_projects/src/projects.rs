@@ -251,6 +251,7 @@ pub async fn project_patch(
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let context = rqctx.context();
     let json = patch_inner(
+        #[cfg(feature = "plus")]
         &rqctx.log,
         context,
         path_params.into_inner(),
@@ -262,7 +263,7 @@ pub async fn project_patch(
 }
 
 async fn patch_inner(
-    log: &Logger,
+    #[cfg(feature = "plus")] log: &Logger,
     context: &ApiContext,
     path_params: ProjectParams,
     json_project: JsonUpdateProject,
@@ -331,6 +332,7 @@ pub async fn project_delete(
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     delete_inner(
+        #[cfg(feature = "plus")]
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
@@ -341,7 +343,7 @@ pub async fn project_delete(
 }
 
 async fn delete_inner(
-    log: &Logger,
+    #[cfg(feature = "plus")] log: &Logger,
     context: &ApiContext,
     path_params: ProjectParams,
     auth_user: &AuthUser,

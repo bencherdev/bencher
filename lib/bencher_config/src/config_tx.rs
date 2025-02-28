@@ -15,7 +15,9 @@ use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::model::server::QueryServer;
 use bencher_token::TokenKey;
-use diesel::{connection::SimpleConnection, Connection};
+#[cfg(feature = "plus")]
+use diesel::connection::SimpleConnection;
+use diesel::Connection;
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,

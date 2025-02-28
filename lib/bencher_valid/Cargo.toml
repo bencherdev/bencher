@@ -12,15 +12,15 @@ crate-type = ["cdylib", "rlib"]
 [features]
 client = ["dep:regex-lite"]
 server = ["dep:rand", "dep:regex"]
+schema = ["dep:schemars", "ordered-float/schemars"]
 db = ["dep:diesel"]
 plus = ["chrono/clock"]
-schema = ["dep:schemars", "ordered-float/schemars"]
 wasm = [
+    "client",
     "dep:console_error_panic_hook",
     "dep:wasm-bindgen",
     "dep:serde_json",
     "chrono/wasmbind",
-    "client",
 ]
 
 [dependencies]
