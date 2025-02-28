@@ -7,8 +7,9 @@ mod platform;
 pub use platform::Fingerprint;
 use platform::OperatingSystem;
 
-use crate::{ContextKey, ReportContext};
+use crate::{ContextPath, ReportContext};
 
+const BENCHER_DEV: &str = "bencher.dev";
 const ROOT: &str = "root";
 
 impl ReportContext {
@@ -17,7 +18,7 @@ impl ReportContext {
     }
 
     fn insert(&mut self, path: &str, value: String) -> Option<String> {
-        let key = format!("bencher.dev{path}");
+        let key = format!("{BENCHER_DEV}{path}");
         self.0.insert(key, value)
     }
 }
@@ -42,31 +43,31 @@ fn git_context(context: &mut ReportContext) {
     };
 
     if let Some(repo_name) = repo_name(&repo) {
-        context.insert(ContextKey::REPO_NAME, repo_name);
+        context.insert(ContextPath::REPO_NAME, repo_name);
     }
 
     if let Some(root_commit) = repo_hash(&repo) {
-        context.insert(ContextKey::REPO_HASH, root_commit);
+        context.insert(ContextPath::REPO_HASH, root_commit);
     }
 
     if let Some((branch_ref, branch_ref_name)) = branch_ref(&repo) {
-        context.insert(ContextKey::BRANCH_REF, branch_ref);
-        context.insert(ContextKey::BRANCH_REF_NAME, branch_ref_name);
+        context.insert(ContextPath::BRANCH_REF, branch_ref);
+        context.insert(ContextPath::BRANCH_REF_NAME, branch_ref_name);
     }
 
     if let Some(hash) = branch_hash(&repo) {
-        context.insert(ContextKey::BRANCH_HASH, hash);
+        context.insert(ContextPath::BRANCH_HASH, hash);
     }
 }
 
 fn platform_context(context: &mut ReportContext) {
     context.insert(
-        ContextKey::TESTBED_OS,
+        ContextPath::TESTBED_OS,
         OperatingSystem::current().to_string(),
     );
 
     if let Some(fingerprint) = Fingerprint::current() {
-        context.insert(ContextKey::TESTBED_FINGERPRINT, fingerprint.to_string());
+        context.insert(ContextPath::TESTBED_FINGERPRINT, fingerprint.to_string());
     }
 }
 
