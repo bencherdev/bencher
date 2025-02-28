@@ -26,6 +26,7 @@ bencher_json = { workspace = true, features = ["client", "table"] }
 camino.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 clap = { workspace = true, features = ["env"] }
+gix = { workspace = true, features = ["revision"] }
 literally.workspace = true
 octocrab.workspace = true
 progenitor-client.workspace = true
@@ -40,7 +41,6 @@ url.workspace = true
 # Crate
 bollard = "0.18"
 futures-util = "0.3"
-gix = { version = "0.70", default-features = false, features = ["revision"] }
 
 [lints]
 workspace = true

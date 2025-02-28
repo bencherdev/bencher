@@ -12,14 +12,11 @@ schema = ["dep:schemars"]
 
 [dependencies]
 # Workspace
+gix = { workspace = true, optional = true, features = ["revision"] }
 schemars = { workspace = true, optional = true }
 serde.workspace = true
 typeshare.workspace = true
 uuid = { workspace = true, optional = true, features = ["serde"] }
-# Crate
-gix = { version = "0.70", optional = true, default-features = false, features = [
-    "revision",
-] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.60", optional = true, features = [
