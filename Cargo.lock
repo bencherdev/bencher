@@ -214,6 +214,7 @@ version = "0.4.37"
 dependencies = [
  "bencher_endpoint",
  "bencher_json",
+ "bencher_rbac",
  "bencher_schema",
  "dropshot",
  "slog",

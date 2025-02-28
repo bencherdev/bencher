@@ -45,7 +45,7 @@ pub struct QueryMeasure {
 
 impl QueryMeasure {
     fn_eq_resource_id!(measure);
-    fn_from_resource_id!(measure, Measure);
+    fn_from_resource_id!(project_id, ProjectId, measure, Measure);
 
     fn_eq_name_id!(ResourceName, measure);
     fn_from_name_id!(measure, Measure);

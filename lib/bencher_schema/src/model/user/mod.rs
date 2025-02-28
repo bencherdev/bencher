@@ -56,7 +56,7 @@ pub struct QueryUser {
 
 impl QueryUser {
     fn_eq_resource_id!(user);
-    fn_from_resource_id!(user, User, true);
+    fn_from_resource_id!(user, User);
 
     fn_get!(user, UserId);
     fn_get_id!(user, UserId, UserUuid);

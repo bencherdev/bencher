@@ -36,8 +36,24 @@ macro_rules! fn_eq_resource_id {
 pub(crate) use fn_eq_resource_id;
 
 macro_rules! fn_from_resource_id {
-    // The `root` parameter is just a kludge to distinguish between top level and project level resources
-    ($table:ident, $resource:ident, $root:expr) => {
+    ($parent:ident, $parent_type:ty, $table:ident, $resource:ident) => {
+        #[allow(unused_qualifications)]
+        pub fn from_resource_id(
+            conn: &mut crate::context::DbConnection,
+            parent: $parent_type,
+            resource_id: &bencher_json::ResourceId,
+        ) -> Result<Self, HttpError> {
+            schema::$table::table
+                .filter(schema::$table::$parent.eq(parent))
+                .filter(Self::eq_resource_id(resource_id)?)
+                .first::<Self>(conn)
+                .map_err(crate::error::resource_not_found_err!(
+                    $resource,
+                    (parent, resource_id)
+                ))
+        }
+    };
+    ($table:ident, $resource:ident) => {
         #[allow(unused_qualifications)]
         pub fn from_resource_id(
             conn: &mut crate::context::DbConnection,
@@ -49,23 +65,6 @@ macro_rules! fn_from_resource_id {
                 .map_err(crate::error::resource_not_found_err!(
                     $resource,
                     resource_id
-                ))
-        }
-    };
-    ($table:ident, $resource:ident) => {
-        #[allow(unused_qualifications)]
-        pub fn from_resource_id(
-            conn: &mut crate::context::DbConnection,
-            project_id: crate::model::project::ProjectId,
-            resource_id: &bencher_json::ResourceId,
-        ) -> Result<Self, HttpError> {
-            schema::$table::table
-                .filter(schema::$table::project_id.eq(project_id))
-                .filter(Self::eq_resource_id(resource_id)?)
-                .first::<Self>(conn)
-                .map_err(crate::error::resource_not_found_err!(
-                    $resource,
-                    (project_id, resource_id)
                 ))
         }
     };

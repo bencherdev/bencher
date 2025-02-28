@@ -1,9 +1,11 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{JsonNewRun, JsonReport};
+use bencher_json::{project, system::auth, JsonNewRun, JsonReport, NameIdKind, ResourceName};
 use bencher_schema::{
+    conn_lock,
     context::ApiContext,
-    error::bad_request_error,
+    error::{bad_request_error, forbidden_error},
     model::{
+        organization::QueryOrganization,
         project::{report::QueryReport, QueryProject},
         user::auth::{AuthUser, PubBearerToken},
     },
@@ -47,11 +49,13 @@ async fn post_inner(
     json_run: JsonNewRun,
     auth_user: Option<AuthUser>,
 ) -> Result<JsonReport, HttpError> {
-    #[allow(clippy::unimplemented)]
-    let todo_pub_run_project = || -> Result<QueryProject, HttpError> {
-        Err(bad_request_error("pub run creation is not yet implemented"))
-    };
-    let query_project = todo_pub_run_project()?;
+    let query_project = QueryProject::get_or_create(
+        context,
+        json_run.organization.as_ref(),
+        json_run.project.as_ref(),
+        auth_user.as_ref(),
+    )
+    .await?;
     #[allow(clippy::unimplemented)]
     let todo_pub_run_user = |_auth_user: Option<AuthUser>| -> Result<AuthUser, HttpError> {
         Err(bad_request_error("pub run creation is not yet implemented"))

@@ -2,25 +2,29 @@ use std::string::ToString;
 
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility},
-    DateTime, JsonNewProject, JsonProject, ProjectUuid, ResourceId, ResourceName, Slug, Url,
+    DateTime, JsonNewProject, JsonProject, NameId, NameIdKind, ProjectUuid, ResourceId,
+    ResourceName, Slug, Url,
 };
 use bencher_rbac::{project::Permission, Organization, Project};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use crate::{
+    conn_lock,
     context::{DbConnection, Rbac},
     error::{
-        assert_parentage, forbidden_error, resource_not_found_error, unauthorized_error,
-        BencherResource,
+        assert_parentage, bad_request_error, conflict_error, forbidden_error,
+        resource_conflict_err, resource_not_found_err, resource_not_found_error,
+        unauthorized_error, BencherResource,
     },
     macros::{
-        fn_get::{fn_get, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
+    ApiContext,
 };
 
 use super::organization::OrganizationId;
@@ -57,10 +61,111 @@ pub struct QueryProject {
 
 impl QueryProject {
     fn_eq_resource_id!(project);
-    fn_from_resource_id!(project, Project, true);
+    fn_from_resource_id!(project, Project);
 
     fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
+    fn_from_uuid!(
+        organization_id,
+        OrganizationId,
+        project,
+        ProjectUuid,
+        Project
+    );
+
+    pub async fn get_or_create(
+        context: &ApiContext,
+        organization: &ResourceId,
+        project: &NameId,
+        auth_user: &AuthUser,
+    ) -> Result<ProjectId, HttpError> {
+        let query_organization =
+            QueryOrganization::from_resource_id(conn_lock!(context), organization)?;
+        let query_project =
+            Self::get_or_create_inner(context, &query_organization, project, auth_user).await?;
+        Ok(query_project.id)
+    }
+
+    async fn get_or_create_inner(
+        context: &ApiContext,
+        query_organization: &QueryOrganization,
+        project: &NameId,
+        auth_user: &AuthUser,
+    ) -> Result<Self, HttpError> {
+        let Ok(kind) = NameIdKind::<ResourceName>::try_from(project) else {
+            return Err(bad_request_error(format!(
+                "Project ({project}) must be a valid UUID, slug, or name"
+            )));
+        };
+        let query_project = match kind {
+            NameIdKind::Uuid(uuid) => {
+                QueryProject::from_uuid(conn_lock!(context), query_organization.id, uuid.into())?
+            },
+            NameIdKind::Slug(slug) => {
+                if let Ok(query_project) = schema::project::table
+                    .filter(schema::project::organization_id.eq(query_organization.id))
+                    .filter(schema::project::slug.eq(&slug))
+                    .first::<Self>(conn_lock!(context))
+                {
+                    query_project
+                } else {
+                    let new_project = JsonNewProject {
+                        name: slug.clone().into(),
+                        slug: Some(slug.clone()),
+                        url: None,
+                        visibility: None,
+                    };
+                    Self::create(context, query_organization, new_project, auth_user).await?
+                }
+            },
+            NameIdKind::Name(name) => {
+                if let Ok(query_project) = schema::project::table
+                    .filter(schema::project::organization_id.eq(query_organization.id))
+                    .filter(schema::project::name.eq(&name))
+                    .first::<Self>(conn_lock!(context))
+                {
+                    query_project
+                } else {
+                    let new_project = JsonNewProject {
+                        name,
+                        slug: None,
+                        url: None,
+                        visibility: None,
+                    };
+                    Self::create(context, query_organization, new_project, auth_user).await?
+                }
+            },
+        };
+
+        Ok(query_project)
+    }
+
+    async fn create(
+        context: &ApiContext,
+        query_organization: &QueryOrganization,
+        new_project: JsonNewProject,
+        auth_user: &AuthUser,
+    ) -> Result<Self, HttpError> {
+        let insert_project =
+            InsertProject::from_json(conn_lock!(context), query_organization, new_project)?;
+
+        // Check to see if user has permission to create a project within the organization
+        context
+            .rbac
+            .is_allowed_organization(
+                auth_user,
+                bencher_rbac::organization::Permission::Create,
+                &insert_project,
+            )
+            .map_err(forbidden_error)?;
+
+        let conn = conn_lock!(context);
+        diesel::insert_into(project_table::table)
+            .values(&insert_project)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Project, &insert_project))?;
+        Self::from_uuid(conn, query_organization.id, insert_project.uuid)
+    }
 
     pub fn is_public(&self) -> bool {
         self.visibility.is_public()

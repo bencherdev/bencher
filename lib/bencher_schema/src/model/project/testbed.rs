@@ -39,7 +39,7 @@ pub struct QueryTestbed {
 
 impl QueryTestbed {
     fn_eq_resource_id!(testbed);
-    fn_from_resource_id!(testbed, Testbed);
+    fn_from_resource_id!(project_id, ProjectId, testbed, Testbed);
 
     fn_eq_name_id!(ResourceName, testbed);
     fn_from_name_id!(testbed, Testbed);

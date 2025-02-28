@@ -41,7 +41,7 @@ pub struct QueryOrganization {
 
 impl QueryOrganization {
     fn_eq_resource_id!(organization);
-    fn_from_resource_id!(organization, Organization, true);
+    fn_from_resource_id!(organization, Organization);
 
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);

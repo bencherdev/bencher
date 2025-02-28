@@ -17,6 +17,7 @@ sentry = ["bencher_schema/sentry"]
 [dependencies]
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_rbac.workspace = true
 bencher_schema.workspace = true
 dropshot.workspace = true
 slog.workspace = true
