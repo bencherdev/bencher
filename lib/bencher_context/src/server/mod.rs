@@ -7,6 +7,39 @@ mod base36;
 
 #[allow(clippy::multiple_inherent_impl)]
 impl RunContext {
+    fn get(&self, path: &str) -> Option<&String> {
+        let key = Self::key(path);
+        self.0.get(&key)
+    }
+
+    pub fn repo_name(&self) -> Option<&str> {
+        self.get(ContextPath::REPO_NAME).map(String::as_str)
+    }
+
+    pub fn repo_hash(&self) -> Option<&str> {
+        self.get(ContextPath::REPO_HASH).map(String::as_str)
+    }
+
+    pub fn branch_ref(&self) -> Option<&str> {
+        self.get(ContextPath::BRANCH_REF).map(String::as_str)
+    }
+
+    pub fn branch_ref_name(&self) -> Option<&str> {
+        self.get(ContextPath::BRANCH_REF_NAME).map(String::as_str)
+    }
+
+    pub fn branch_hash(&self) -> Option<&str> {
+        self.get(ContextPath::BRANCH_HASH).map(String::as_str)
+    }
+
+    pub fn testbed_os(&self) -> Option<&str> {
+        self.get(ContextPath::TESTBED_OS).map(String::as_str)
+    }
+
+    pub fn testbed_fingerprint(&self) -> Option<Uuid> {
+        self.get(ContextPath::TESTBED_FINGERPRINT)?.parse().ok()
+    }
+
     pub fn slug(&self) -> Slug {
         // + 42 chars
         let name = self.repo_name().map(truncate_name).unwrap_or_default();
@@ -27,34 +60,6 @@ impl RunContext {
         let slug = format!("{name} {hash} {fingerprint}");
         debug_assert!(slug.len() <= MAX_LEN, "Slug is too long: {slug}");
         Slug::new(slug)
-    }
-
-    pub fn repo_name(&self) -> Option<&str> {
-        self.0.get(ContextPath::REPO_NAME).map(String::as_str)
-    }
-
-    pub fn repo_hash(&self) -> Option<&str> {
-        self.0.get(ContextPath::REPO_HASH).map(String::as_str)
-    }
-
-    pub fn branch_ref(&self) -> Option<&str> {
-        self.0.get(ContextPath::BRANCH_REF).map(String::as_str)
-    }
-
-    pub fn branch_ref_name(&self) -> Option<&str> {
-        self.0.get(ContextPath::BRANCH_REF_NAME).map(String::as_str)
-    }
-
-    pub fn branch_hash(&self) -> Option<&str> {
-        self.0.get(ContextPath::BRANCH_HASH).map(String::as_str)
-    }
-
-    pub fn testbed_os(&self) -> Option<&str> {
-        self.0.get(ContextPath::TESTBED_OS).map(String::as_str)
-    }
-
-    pub fn testbed_fingerprint(&self) -> Option<Uuid> {
-        self.0.get(ContextPath::TESTBED_FINGERPRINT)?.parse().ok()
     }
 }
 

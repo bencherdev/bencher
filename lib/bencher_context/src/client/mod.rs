@@ -9,16 +9,16 @@ use platform::OperatingSystem;
 
 use crate::{ContextPath, RunContext};
 
-const BENCHER_DEV: &str = "bencher.dev";
 const ROOT: &str = "root";
 
+#[allow(clippy::multiple_inherent_impl)]
 impl RunContext {
     pub fn current() -> Self {
         get_context()
     }
 
     fn insert(&mut self, path: &str, value: String) -> Option<String> {
-        let key = format!("{BENCHER_DEV}{path}");
+        let key = Self::key(path);
         self.0.insert(key, value)
     }
 }
