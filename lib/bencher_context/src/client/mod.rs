@@ -7,12 +7,12 @@ mod platform;
 pub use platform::Fingerprint;
 use platform::OperatingSystem;
 
-use crate::{ContextPath, ReportContext};
+use crate::{ContextPath, RunContext};
 
 const BENCHER_DEV: &str = "bencher.dev";
 const ROOT: &str = "root";
 
-impl ReportContext {
+impl RunContext {
     pub fn current() -> Self {
         get_context()
     }
@@ -24,20 +24,20 @@ impl ReportContext {
 }
 
 #[allow(clippy::implicit_hasher)]
-impl From<ReportContext> for HashMap<String, String> {
-    fn from(context: ReportContext) -> Self {
+impl From<RunContext> for HashMap<String, String> {
+    fn from(context: RunContext) -> Self {
         context.0
     }
 }
 
-pub fn get_context() -> ReportContext {
-    let mut context = ReportContext::default();
+pub fn get_context() -> RunContext {
+    let mut context = RunContext::default();
     git_context(&mut context);
     platform_context(&mut context);
     context
 }
 
-fn git_context(context: &mut ReportContext) {
+fn git_context(context: &mut RunContext) {
     let Some(repo) = find_repo() else {
         return;
     };
@@ -60,7 +60,7 @@ fn git_context(context: &mut ReportContext) {
     }
 }
 
-fn platform_context(context: &mut ReportContext) {
+fn platform_context(context: &mut RunContext) {
     context.insert(
         ContextPath::TESTBED_OS,
         OperatingSystem::current().to_string(),

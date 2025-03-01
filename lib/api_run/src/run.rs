@@ -1,6 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{
-    project, system::auth, JsonNewRun, JsonReport, NameIdKind, ReportContext, ResourceName,
+    project, system::auth, JsonNewRun, JsonReport, NameIdKind, ResourceName, RunContext,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -70,7 +70,7 @@ async fn post_inner(
             (auth_user, query_project)
         },
         (Some(_auth_user), Some(_organization), None) => {
-            let _project_slug = json_run.context.as_ref().map(ReportContext::slug);
+            let _project_slug = json_run.context.as_ref().map(RunContext::slug);
             return Err(bad_request_error("Not yet supported"));
         },
         _ => return Err(bad_request_error("Not yet supported")),

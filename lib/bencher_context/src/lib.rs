@@ -15,7 +15,7 @@ pub use client::Fingerprint;
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct ReportContext(pub HashMap<String, String>);
+pub struct RunContext(pub HashMap<String, String>);
 
 struct ContextPath;
 

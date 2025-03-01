@@ -32,7 +32,7 @@ macro_rules! from_client {
 }
 
 from_client!(
-    ReportContext,
+    RunContext,
     BenchmarkName,
     Boundary,
     BranchName,

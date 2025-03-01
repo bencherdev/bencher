@@ -9392,7 +9392,7 @@
             "description": "Context for the report.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/ReportContext"
+                "$ref": "#/components/schemas/RunContext"
               }
             ]
           },
@@ -9489,7 +9489,7 @@
             "description": "Context for the report.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/ReportContext"
+                "$ref": "#/components/schemas/RunContext"
               }
             ]
           },
@@ -12163,12 +12163,6 @@
         "type": "string",
         "format": "uuid"
       },
-      "ReportContext": {
-        "type": "object",
-        "additionalProperties": {
-          "type": "string"
-        }
-      },
       "ReportUuid": {
         "type": "string",
         "format": "uuid"
@@ -12178,6 +12172,12 @@
       },
       "ResourceName": {
         "type": "string"
+      },
+      "RunContext": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
       },
       "SampleSize": {
         "type": "integer",

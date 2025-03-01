@@ -1,4 +1,4 @@
-use bencher_context::ReportContext;
+use bencher_context::RunContext;
 use bencher_valid::{DateTime, GitHash, ResourceId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -57,7 +57,7 @@ pub struct JsonNewRun {
     /// Settings for how to handle the results.
     pub settings: Option<JsonReportSettings>,
     /// Context for the report.
-    pub context: Option<ReportContext>,
+    pub context: Option<RunContext>,
 }
 
 impl From<JsonNewRun> for JsonNewReport {

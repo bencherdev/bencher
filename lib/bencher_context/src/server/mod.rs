@@ -1,12 +1,12 @@
 use bencher_valid::{Slug, MAX_LEN};
 use uuid::Uuid;
 
-use crate::{ContextPath, ReportContext};
+use crate::{ContextPath, RunContext};
 
 mod base36;
 
 #[allow(clippy::multiple_inherent_impl)]
-impl ReportContext {
+impl RunContext {
     pub fn slug(&self) -> Slug {
         // + 42 chars
         let name = self.repo_name().map(truncate_name).unwrap_or_default();

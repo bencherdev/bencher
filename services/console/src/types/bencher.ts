@@ -225,9 +225,9 @@ export type MeteredPlanId = string;
 
 export type NonEmpty = string;
 
-export type ReportContext = Record<string, string>;
-
 export type ResourceId = string;
+
+export type RunContext = Record<string, string>;
 
 export type Secret = string;
 
