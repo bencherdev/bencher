@@ -201,7 +201,8 @@ impl Run {
                 average: self.average,
                 fold: self.fold,
             }),
-            context: Some(RunContext::current().into()),
+            // TODO add context when we move over to JsonNewRun
+            // context: Some(RunContext::current().into()),
         }))
     }
 

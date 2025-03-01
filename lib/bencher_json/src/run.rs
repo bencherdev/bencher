@@ -95,6 +95,9 @@ impl From<JsonNewRun> for JsonNewReport {
                     .and_then(|ctx| ctx.testbed_os().and_then(|testbed| testbed.parse().ok()))
             })
             .unwrap_or_else(|| DEFAULT_TESTBED.clone());
+        // TODO eventually there should be a `ReportContext` type
+        // this type should include user defined context and system context
+        // Some of the bencher provided context should be filtered out, like the full fingerprint
         Self {
             branch,
             hash,
@@ -105,7 +108,6 @@ impl From<JsonNewRun> for JsonNewReport {
             end_time,
             results,
             settings,
-            context,
         }
     }
 }

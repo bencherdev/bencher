@@ -69,9 +69,22 @@ async fn post_inner(
             .map_err(|e| forbidden_error(e.to_string()))?;
             (auth_user, query_project)
         },
-        (Some(_auth_user), Some(_organization), None) => {
-            let _project_slug = json_run.context.as_ref().map(RunContext::slug);
-            return Err(bad_request_error("Not yet supported"));
+        (Some(auth_user), Some(organization), None) => {
+            let Some(project_slug) = json_run.context.as_ref().map(RunContext::slug) else {
+                return Err(bad_request_error(
+                    "The `project` field was not specified nor was a run `context` provided",
+                ));
+            };
+            let query_project = QueryProject::get_or_create_organization_project(
+                log,
+                context,
+                &auth_user,
+                organization,
+                &project_slug.into(),
+            )
+            .await
+            .map_err(|e| forbidden_error(e.to_string()))?;
+            (auth_user, query_project)
         },
         _ => return Err(bad_request_error("Not yet supported")),
     };

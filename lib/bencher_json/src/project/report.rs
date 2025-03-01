@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt};
 
-use bencher_context::RunContext;
 use bencher_valid::{DateTime, DateTimeMillis, GitHash, Model};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -52,8 +51,6 @@ pub struct JsonNewReport {
     pub results: Vec<String>,
     /// Settings for how to handle the report.
     pub settings: Option<JsonReportSettings>,
-    /// Context for the report.
-    pub context: Option<RunContext>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

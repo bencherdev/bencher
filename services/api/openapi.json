@@ -9387,15 +9387,6 @@
               }
             ]
           },
-          "context": {
-            "nullable": true,
-            "description": "Context for the report.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RunContext"
-              }
-            ]
-          },
           "end_time": {
             "description": "End time for the report. Must be an ISO 8601 formatted string.",
             "allOf": [
