@@ -69,7 +69,8 @@ impl QueryOrganization {
         permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, HttpError> {
         let query_organization = Self::from_resource_id(conn, organization)?;
-        query_organization.allowed(rbac, auth_user, permission)
+        query_organization.try_allowed(rbac, auth_user, permission)?;
+        Ok(query_organization)
     }
 
     pub fn is_allowed_id(
@@ -96,18 +97,18 @@ impl QueryOrganization {
         permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, HttpError> {
         let query_organization = Self::get(conn, organization_id)?;
-        query_organization.allowed(rbac, auth_user, permission)
+        query_organization.try_allowed(rbac, auth_user, permission)?;
+        Ok(query_organization)
     }
 
-    fn allowed(
-        self,
+    fn try_allowed(
+        &self,
         rbac: &Rbac,
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
-    ) -> Result<Self, HttpError> {
-        rbac.is_allowed_organization(auth_user, permission, &self)
-            .map_err(forbidden_error)?;
-        Ok(self)
+    ) -> Result<(), HttpError> {
+        rbac.is_allowed_organization(auth_user, permission, self)
+            .map_err(forbidden_error)
     }
 
     pub fn into_json(self) -> JsonOrganization {

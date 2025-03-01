@@ -13,9 +13,8 @@ use crate::{
     conn_lock,
     context::{DbConnection, Rbac},
     error::{
-        assert_parentage, bad_request_error, conflict_error, forbidden_error,
-        resource_conflict_err, resource_not_found_err, resource_not_found_error,
-        unauthorized_error, BencherResource,
+        assert_parentage, bad_request_error, forbidden_error, resource_conflict_err,
+        resource_not_found_error, unauthorized_error, BencherResource,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
@@ -75,23 +74,13 @@ impl QueryProject {
 
     pub async fn get_or_create(
         context: &ApiContext,
+        auth_user: &AuthUser,
         organization: &ResourceId,
         project: &NameId,
-        auth_user: &AuthUser,
-    ) -> Result<ProjectId, HttpError> {
+    ) -> Result<Self, HttpError> {
         let query_organization =
             QueryOrganization::from_resource_id(conn_lock!(context), organization)?;
-        let query_project =
-            Self::get_or_create_inner(context, &query_organization, project, auth_user).await?;
-        Ok(query_project.id)
-    }
 
-    async fn get_or_create_inner(
-        context: &ApiContext,
-        query_organization: &QueryOrganization,
-        project: &NameId,
-        auth_user: &AuthUser,
-    ) -> Result<Self, HttpError> {
         let Ok(kind) = NameIdKind::<ResourceName>::try_from(project) else {
             return Err(bad_request_error(format!(
                 "Project ({project}) must be a valid UUID, slug, or name"
@@ -115,7 +104,7 @@ impl QueryProject {
                         url: None,
                         visibility: None,
                     };
-                    Self::create(context, query_organization, new_project, auth_user).await?
+                    Self::create(context, &query_organization, new_project, auth_user).await?
                 }
             },
             NameIdKind::Name(name) => {
@@ -132,7 +121,7 @@ impl QueryProject {
                         url: None,
                         visibility: None,
                     };
-                    Self::create(context, query_organization, new_project, auth_user).await?
+                    Self::create(context, &query_organization, new_project, auth_user).await?
                 }
             },
         };
@@ -202,8 +191,7 @@ impl QueryProject {
         permission: Permission,
     ) -> Result<Self, HttpError> {
         let query_project = Self::from_resource_id(conn, project)?;
-        rbac.is_allowed_project(auth_user, permission, &query_project)
-            .map_err(forbidden_error)?;
+        query_project.try_allowed(rbac, auth_user, permission)?;
         Ok(query_project)
     }
 
@@ -234,12 +222,21 @@ impl QueryProject {
         } else if let Some(auth_user) = auth_user {
             // If there is an `AuthUser` then validate access
             // Verify that the user is allowed
-            rbac.is_allowed_project(auth_user, Permission::View, &query_project)
-                .map_err(forbidden_error)?;
+            query_project.try_allowed(rbac, auth_user, Permission::View)?;
             Ok(query_project)
         } else {
             Err(unauthorized_error(project))
         }
+    }
+
+    pub fn try_allowed(
+        &self,
+        rbac: &Rbac,
+        auth_user: &AuthUser,
+        permission: Permission,
+    ) -> Result<(), HttpError> {
+        rbac.is_allowed_project(auth_user, permission, self)
+            .map_err(forbidden_error)
     }
 
     #[cfg(feature = "plus")]

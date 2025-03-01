@@ -1,9 +1,10 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{project, system::auth, JsonNewRun, JsonReport, NameIdKind, ResourceName};
+use bencher_rbac::project::Permission;
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    error::{bad_request_error, forbidden_error},
+    error::{bad_request_error, forbidden_error, issue_error},
     model::{
         organization::QueryOrganization,
         project::{report::QueryReport, QueryProject},
@@ -39,27 +40,41 @@ pub async fn run_post(
     body: TypedBody<JsonNewRun>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner(), auth_user).await?;
+    let json = post_inner(&rqctx.log, rqctx.context(), auth_user, body.into_inner()).await?;
     Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
-    json_run: JsonNewRun,
     auth_user: Option<AuthUser>,
+    json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
-    let query_project = QueryProject::get_or_create(
-        context,
+    let (auth_user, query_project) = match (
+        auth_user,
         json_run.organization.as_ref(),
         json_run.project.as_ref(),
-        auth_user.as_ref(),
-    )
-    .await?;
-    #[allow(clippy::unimplemented)]
-    let todo_pub_run_user = |_auth_user: Option<AuthUser>| -> Result<AuthUser, HttpError> {
-        Err(bad_request_error("pub run creation is not yet implemented"))
+    ) {
+        (Some(auth_user), Some(organization), Some(project)) => {
+            let query_project =
+                QueryProject::get_or_create(context, &auth_user, organization, project)
+                    .await
+                    .map_err(|e| forbidden_error(e.to_string()))?;
+            (auth_user, query_project)
+        },
+        _ => return Err(bad_request_error("Not yet supported")),
     };
-    let auth_user = todo_pub_run_user(auth_user)?;
+
+    // Verify that the user is allowed
+    // This should always succeed if the logic above is correct
+    query_project
+        .try_allowed(&context.rbac, &auth_user, Permission::Create)
+        .map_err(|e| {
+            issue_error(
+                "Failed to check run permissions",
+                "Failed check the run permissions before creating a report",
+                e,
+            )
+        })?;
     QueryReport::create(log, context, &query_project, json_run.into(), &auth_user).await
 }
