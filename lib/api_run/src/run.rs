@@ -1,6 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{
-    project, system::auth, JsonNewRun, JsonReport, NameIdKind, ResourceName, RunContext,
+    project, system::auth, JsonNewOrganization, JsonNewRun, JsonReport, NameIdKind, ResourceName,
+    RunContext,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -58,15 +59,10 @@ async fn post_inner(
         json_run.project.as_ref(),
     ) {
         (Some(auth_user), Some(organization), Some(project)) => {
-            let query_project = QueryProject::get_or_create_organization_project(
-                log,
-                context,
-                &auth_user,
-                organization,
-                project,
-            )
-            .await
-            .map_err(|e| forbidden_error(e.to_string()))?;
+            let query_project =
+                QueryProject::get_or_create(log, context, &auth_user, organization, project)
+                    .await
+                    .map_err(|e| forbidden_error(e.to_string()))?;
             (auth_user, query_project)
         },
         (Some(auth_user), Some(organization), None) => {
@@ -75,11 +71,29 @@ async fn post_inner(
                     "The `project` field was not specified nor was a run `context` provided",
                 ));
             };
-            let query_project = QueryProject::get_or_create_organization_project(
+            let query_project = QueryProject::get_or_create(
                 log,
                 context,
                 &auth_user,
                 organization,
+                &project_slug.into(),
+            )
+            .await
+            .map_err(|e| forbidden_error(e.to_string()))?;
+            (auth_user, query_project)
+        },
+        (Some(auth_user), None, None) => {
+            let query_organization = QueryOrganization::get_or_create(context, &auth_user).await?;
+            let Some(project_slug) = json_run.context.as_ref().map(RunContext::slug) else {
+                return Err(bad_request_error(
+                    "The `project` field was not specified nor was a run `context` provided",
+                ));
+            };
+            let query_project = QueryProject::get_or_create(
+                log,
+                context,
+                &auth_user,
+                &query_organization.uuid.into(),
                 &project_slug.into(),
             )
             .await

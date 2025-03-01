@@ -3,9 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    organization::{member::OrganizationRole, JsonUpdateOrganization},
-    DateTime, JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations,
-    JsonPagination, ResourceId, ResourceName, Search,
+    organization::JsonUpdateOrganization, JsonDirection, JsonNewOrganization, JsonOrganization,
+    JsonOrganizations, JsonPagination, ResourceId, ResourceName, Search,
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
@@ -13,10 +12,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        organization::{
-            organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
-            UpdateOrganization,
-        },
+        organization::{QueryOrganization, UpdateOrganization},
         user::auth::{AuthUser, BearerToken},
     },
     schema,
@@ -164,7 +160,6 @@ fn get_ls_query<'q>(
 ///
 /// Create a new organization.
 /// The user must be authenticated to use this route.
-/// ➕ Bencher Plus: This route can be limited to admins on self-hosted instances.
 #[endpoint {
     method = POST,
     path = "/v0/organizations",
@@ -185,32 +180,8 @@ async fn post_inner(
     json_organization: JsonNewOrganization,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
-    // Create the organization
-    let insert_organization =
-        InsertOrganization::from_json(conn_lock!(context), json_organization)?;
-    diesel::insert_into(schema::organization::table)
-        .values(&insert_organization)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Organization, insert_organization))?;
-    let query_organization = schema::organization::table
-        .filter(schema::organization::uuid.eq(&insert_organization.uuid))
-        .first::<QueryOrganization>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Organization, insert_organization))?;
-
-    let timestamp = DateTime::now();
-    // Connect the user to the organization as a `Maintainer`
-    let insert_org_role = InsertOrganizationRole {
-        user_id: auth_user.id,
-        organization_id: query_organization.id,
-        role: OrganizationRole::Leader,
-        created: timestamp,
-        modified: timestamp,
-    };
-    diesel::insert_into(schema::organization_role::table)
-        .values(&insert_org_role)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
-
+    let query_organization =
+        QueryOrganization::create(context, auth_user, json_organization).await?;
     Ok(query_organization.into_json())
 }
 

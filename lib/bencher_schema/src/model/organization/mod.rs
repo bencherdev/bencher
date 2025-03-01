@@ -1,15 +1,20 @@
 use std::string::ToString;
 
 use bencher_json::{
-    organization::{JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization},
+    organization::{
+        member::OrganizationRole, JsonOrganizationPatch, JsonOrganizationPatchNull,
+        JsonUpdateOrganization,
+    },
     DateTime, JsonNewOrganization, JsonOrganization, Jwt, OrganizationUuid, ResourceId,
     ResourceName, Slug,
 };
 use bencher_rbac::Organization;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
+use organization_role::InsertOrganizationRole;
 
 use crate::{
+    conn_lock,
     context::{DbConnection, Rbac},
     error::{forbidden_error, resource_not_found_error, BencherResource},
     macros::{
@@ -18,7 +23,9 @@ use crate::{
         slug::ok_slug,
     },
     model::user::{auth::AuthUser, InsertUser},
+    resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
+    ApiContext,
 };
 
 pub mod member;
@@ -46,6 +53,58 @@ impl QueryOrganization {
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
+
+    pub async fn get_or_create(
+        context: &ApiContext,
+        auth_user: &AuthUser,
+    ) -> Result<Self, HttpError> {
+        let user_slug = &auth_user.user.slug;
+        if let Ok(query_organization) =
+            Self::from_resource_id(conn_lock!(context), &user_slug.clone().into())
+        {
+            return Ok(query_organization);
+        }
+
+        let json_organization = JsonNewOrganization {
+            name: auth_user.user.name.clone().into(),
+            slug: Some(user_slug.clone()),
+        };
+        Self::create(context, auth_user, json_organization).await
+    }
+
+    pub async fn create(
+        context: &ApiContext,
+        auth_user: &AuthUser,
+        json_organization: JsonNewOrganization,
+    ) -> Result<Self, HttpError> {
+        // Create the organization
+        let insert_organization =
+            InsertOrganization::from_json(conn_lock!(context), json_organization)?;
+        diesel::insert_into(schema::organization::table)
+            .values(&insert_organization)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Organization, insert_organization))?;
+        let query_organization = schema::organization::table
+            .filter(schema::organization::uuid.eq(&insert_organization.uuid))
+            .first::<QueryOrganization>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Organization, insert_organization))?;
+
+        let timestamp = DateTime::now();
+        // Connect the user to the organization as a `Leader`
+        let insert_org_role = InsertOrganizationRole {
+            user_id: auth_user.id,
+            organization_id: query_organization.id,
+            role: OrganizationRole::Leader,
+            created: timestamp,
+            modified: timestamp,
+        };
+        diesel::insert_into(schema::organization_role::table)
+            .values(&insert_org_role)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
+
+        Ok(query_organization)
+    }
 
     pub fn is_allowed_resource_id(
         conn: &mut DbConnection,

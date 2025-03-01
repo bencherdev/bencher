@@ -74,7 +74,7 @@ impl QueryProject {
         Project
     );
 
-    pub async fn get_or_create_organization_project(
+    pub async fn get_or_create(
         log: &Logger,
         context: &ApiContext,
         auth_user: &AuthUser,
