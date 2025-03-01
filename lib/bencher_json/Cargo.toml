@@ -9,7 +9,7 @@ publish = false
 [features]
 client = ["bencher_context/client", "bencher_valid/client"]
 table = ["dep:tabled"]
-server = ["bencher_valid/server"]
+server = ["bencher_context/server", "bencher_valid/server"]
 schema = ["dep:schemars", "bencher_context/schema", "ordered-float/schemars"]
 db = ["dep:diesel", "dep:serde_yaml", "bencher_valid/db"]
 plus = ["bencher_valid/plus"]

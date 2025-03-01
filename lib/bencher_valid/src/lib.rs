@@ -28,6 +28,8 @@ mod user_name;
 
 pub use crate::git_hash::GitHash;
 pub use crate::slug::Slug;
+#[cfg(feature = "server")]
+pub use crate::slug::BASE_36;
 pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
 pub use branch_name::BranchName;

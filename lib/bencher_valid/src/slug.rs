@@ -12,6 +12,9 @@ use serde::{
 
 use crate::{is_valid_len, ValidError, MAX_LEN};
 
+#[cfg(feature = "server")]
+pub const BASE_36: &str = "0123456789abcdefghijklmnopqrstuvwxyz";
+
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -115,7 +118,7 @@ impl Slug {
     pub fn rand_suffix() -> String {
         use rand::Rng;
 
-        const CHARSET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyz";
+        const CHARSET: &[u8] = BASE_36.as_bytes();
         let mut rng = rand::rng();
 
         (0..Self::RAND_LEN)

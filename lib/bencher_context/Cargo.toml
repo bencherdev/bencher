@@ -8,10 +8,12 @@ publish = false
 
 [features]
 client = ["dep:gix", "dep:uuid", "dep:windows"]
+server = ["bencher_valid/server"]
 schema = ["dep:schemars"]
 
 [dependencies]
 # Workspace
+bencher_valid = { workspace = true, optional = true }
 gix = { workspace = true, optional = true, features = ["revision"] }
 schemars = { workspace = true, optional = true }
 serde.workspace = true

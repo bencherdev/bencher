@@ -1094,6 +1094,7 @@ dependencies = [
 name = "bencher_context"
 version = "0.4.37"
 dependencies = [
+ "bencher_valid",
  "gix",
  "schemars",
  "serde",
