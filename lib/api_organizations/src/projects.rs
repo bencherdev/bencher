@@ -2,11 +2,8 @@ use bencher_endpoint::{
     CorsResponse, Endpoint, Get, Post, ResponseCreated, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    project::{
-        measure::built_in::default::{Latency, Throughput},
-        ProjectRole,
-    },
-    DateTime, JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, ResourceId,
+    project::measure::built_in::default::{Latency, Throughput},
+    JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, ResourceId,
     ResourceName, Search,
 };
 use bencher_rbac::organization::Permission;
@@ -15,16 +12,15 @@ use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
+    error::{resource_conflict_err, resource_not_found_err},
     model::{
         organization::QueryOrganization,
         project::{
             branch::InsertBranch,
             measure::{InsertMeasure, QueryMeasure},
-            project_role::InsertProjectRole,
             testbed::{InsertTestbed, QueryTestbed},
             threshold::InsertThreshold,
-            InsertProject, QueryProject,
+            QueryProject,
         },
         user::auth::{AuthUser, BearerToken},
     },
@@ -230,41 +226,9 @@ async fn post_inner(
         .await?;
     }
 
-    // Create the project
-    let insert_project =
-        InsertProject::from_json(conn_lock!(context), &query_organization, json_project)?;
-    slog::debug!(log, "Creating project: {insert_project:?}");
-
-    // Check to see if user has permission to create a project within the organization
-    context
-        .rbac
-        .is_allowed_organization(auth_user, Permission::Create, &insert_project)
-        .map_err(forbidden_error)?;
-
-    diesel::insert_into(schema::project::table)
-        .values(&insert_project)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Project, insert_project))?;
-    let query_project = schema::project::table
-        .filter(schema::project::uuid.eq(&insert_project.uuid))
-        .first::<QueryProject>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Project, insert_project))?;
-    slog::debug!(log, "Created project: {query_project:?}");
-
-    let timestamp = DateTime::now();
-    // Connect the user to the project as a `Maintainer`
-    let insert_proj_role = InsertProjectRole {
-        user_id: auth_user.id(),
-        project_id: query_project.id,
-        role: ProjectRole::Maintainer,
-        created: timestamp,
-        modified: timestamp,
-    };
-    diesel::insert_into(schema::project_role::table)
-        .values(&insert_proj_role)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
-    slog::debug!(log, "Added project role: {insert_proj_role:?}");
+    // Create a new project
+    let query_project =
+        QueryProject::create(log, context, auth_user, &query_organization, json_project).await?;
 
     // Add a `main` branch to the project
     let query_branch = InsertBranch::main(log, context, query_project.id).await?;
@@ -317,9 +281,6 @@ async fn post_inner(
         measure_id,
     )?;
     slog::debug!(log, "Added project threshold: {threshold_id}");
-
-    #[cfg(feature = "plus")]
-    context.update_index(log, &query_project).await;
 
     query_project.into_json(conn_lock!(context))
 }

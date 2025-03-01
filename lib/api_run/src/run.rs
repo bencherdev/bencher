@@ -56,12 +56,18 @@ async fn post_inner(
         json_run.project.as_ref(),
     ) {
         (Some(auth_user), Some(organization), Some(project)) => {
-            let query_project =
-                QueryProject::get_or_create(context, &auth_user, organization, project)
-                    .await
-                    .map_err(|e| forbidden_error(e.to_string()))?;
+            let query_project = QueryProject::get_or_create_organization_project(
+                log,
+                context,
+                &auth_user,
+                organization,
+                project,
+            )
+            .await
+            .map_err(|e| forbidden_error(e.to_string()))?;
             (auth_user, query_project)
         },
+        (Some(auth_user), Some(organization), None) => return Err(bad_request_error("todo")),
         _ => return Err(bad_request_error("Not yet supported")),
     };
 
