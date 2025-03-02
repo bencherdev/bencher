@@ -13,7 +13,7 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            testbed::{InsertTestbed, QueryTestbed, UpdateTestbed},
+            testbed::{QueryTestbed, UpdateTestbed},
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -219,19 +219,9 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_testbed =
-        InsertTestbed::from_json(conn_lock!(context), query_project.id, json_testbed.clone())?;
-
-    diesel::insert_into(schema::testbed::table)
-        .values(&insert_testbed)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
-
-    schema::testbed::table
-        .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
-        .first::<QueryTestbed>(conn_lock!(context))
+    QueryTestbed::create(context, query_project.id, json_testbed)
+        .await
         .map(|testbed| testbed.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(Testbed, insert_testbed))
 }
 
 #[derive(Deserialize, JsonSchema)]

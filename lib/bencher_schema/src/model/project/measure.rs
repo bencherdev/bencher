@@ -89,7 +89,7 @@ impl QueryMeasure {
         // Or recreate default measures if they were previously deleted
         let measure_str = measure.as_ref();
 
-        let measure = if let Some(measure) = built_in::default::Latency::from_str(measure_str)
+        let json_measure = if let Some(measure) = built_in::default::Latency::from_str(measure_str)
             .or_else(|| built_in::default::Throughput::from_str(measure_str))
             .or_else(|| built_in::json::BuildTime::from_str(measure_str))
             .or_else(|| built_in::json::FileSize::from_str(measure_str))
@@ -134,7 +134,16 @@ impl QueryMeasure {
             }
         };
 
-        let insert_measure = InsertMeasure::from_json(conn_lock!(context), project_id, measure)?;
+        Self::create(context, project_id, json_measure).await
+    }
+
+    pub async fn create(
+        context: &ApiContext,
+        project_id: ProjectId,
+        json_measure: JsonNewMeasure,
+    ) -> Result<Self, HttpError> {
+        let insert_measure =
+            InsertMeasure::from_json(conn_lock!(context), project_id, json_measure)?;
         diesel::insert_into(schema::measure::table)
             .values(&insert_measure)
             .execute(conn_lock!(context))

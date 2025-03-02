@@ -141,6 +141,19 @@ impl QueryBranch {
         InsertBranch::from_json(log, context, project_id, branch).await
     }
 
+    pub async fn create(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        json_branch: JsonNewBranch,
+    ) -> Result<Self, HttpError> {
+        Ok(
+            InsertBranch::from_json(log, context, project_id, json_branch)
+                .await?
+                .0,
+        )
+    }
+
     pub async fn update_start_point_if_changed(
         self,
         log: &Logger,

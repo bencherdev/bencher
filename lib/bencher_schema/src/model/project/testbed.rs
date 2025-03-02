@@ -82,7 +82,7 @@ impl QueryTestbed {
         let Ok(kind) = NameIdKind::<ResourceName>::try_from(testbed) else {
             return Err(http_error);
         };
-        let testbed = match kind {
+        let json_testbed = match kind {
             NameIdKind::Uuid(_) => return Err(http_error),
             NameIdKind::Slug(slug) => JsonNewTestbed {
                 name: slug.clone().into(),
@@ -90,7 +90,17 @@ impl QueryTestbed {
             },
             NameIdKind::Name(name) => JsonNewTestbed { name, slug: None },
         };
-        let insert_testbed = InsertTestbed::from_json(conn_lock!(context), project_id, testbed)?;
+
+        Self::create(context, project_id, json_testbed).await
+    }
+
+    pub async fn create(
+        context: &ApiContext,
+        project_id: ProjectId,
+        json_testbed: JsonNewTestbed,
+    ) -> Result<Self, HttpError> {
+        let insert_testbed =
+            InsertTestbed::from_json(conn_lock!(context), project_id, json_testbed)?;
         diesel::insert_into(schema::testbed::table)
             .values(&insert_testbed)
             .execute(conn_lock!(context))

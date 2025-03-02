@@ -89,9 +89,17 @@ impl QueryBenchmark {
             return Ok(benchmark);
         }
 
-        let benchmark = JsonNewBenchmark { name, slug: None };
+        let json_benchmark = JsonNewBenchmark { name, slug: None };
+        Self::create(context, project_id, json_benchmark).await
+    }
+
+    pub async fn create(
+        context: &ApiContext,
+        project_id: ProjectId,
+        json_benchmark: JsonNewBenchmark,
+    ) -> Result<Self, HttpError> {
         let insert_benchmark =
-            InsertBenchmark::from_json(conn_lock!(context), project_id, benchmark)?;
+            InsertBenchmark::from_json(conn_lock!(context), project_id, json_benchmark)?;
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn_lock!(context))

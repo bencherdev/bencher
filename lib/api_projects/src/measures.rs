@@ -13,7 +13,7 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            measure::{InsertMeasure, QueryMeasure, UpdateMeasure},
+            measure::{QueryMeasure, UpdateMeasure},
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -219,19 +219,9 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_measure =
-        InsertMeasure::from_json(conn_lock!(context), query_project.id, json_measure)?;
-
-    diesel::insert_into(schema::measure::table)
-        .values(&insert_measure)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Measure, insert_measure))?;
-
-    schema::measure::table
-        .filter(schema::measure::uuid.eq(&insert_measure.uuid))
-        .first::<QueryMeasure>(conn_lock!(context))
+    QueryMeasure::create(context, query_project.id, json_measure)
+        .await
         .map(|measure| measure.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(Measure, insert_measure))
 }
 
 #[derive(Deserialize, JsonSchema)]

@@ -14,7 +14,7 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            benchmark::{InsertBenchmark, QueryBenchmark, UpdateBenchmark},
+            benchmark::{QueryBenchmark, UpdateBenchmark},
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -220,19 +220,9 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_benchmark =
-        InsertBenchmark::from_json(conn_lock!(context), query_project.id, json_benchmark)?;
-
-    diesel::insert_into(schema::benchmark::table)
-        .values(&insert_benchmark)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Benchmark, insert_benchmark))?;
-
-    schema::benchmark::table
-        .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
-        .first::<QueryBenchmark>(conn_lock!(context))
+    QueryBenchmark::create(context, query_project.id, json_benchmark)
+        .await
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(Benchmark, insert_benchmark))
 }
 
 #[derive(Deserialize, JsonSchema)]

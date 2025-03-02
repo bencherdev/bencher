@@ -15,7 +15,7 @@ use bencher_schema::{
     },
     model::{
         project::{
-            branch::{head::QueryHead, InsertBranch, QueryBranch, UpdateBranch},
+            branch::{head::QueryHead, QueryBranch, UpdateBranch},
             QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -231,10 +231,9 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let (query_branch, _query_head) =
-        InsertBranch::from_json(log, context, query_project.id, json_branch).await?;
-
-    query_branch.into_json_for_project(conn_lock!(context), &query_project)
+    QueryBranch::create(log, context, query_project.id, json_branch)
+        .await?
+        .into_json_for_project(conn_lock!(context), &query_project)
 }
 
 #[derive(Deserialize, JsonSchema)]
