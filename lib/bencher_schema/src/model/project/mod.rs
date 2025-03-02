@@ -2,8 +2,8 @@ use std::string::ToString;
 
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, ProjectRole, Visibility},
-    DateTime, JsonNewProject, JsonProject, NameId, NameIdKind, ProjectUuid, ResourceId,
-    ResourceName, Slug, Url,
+    DateTime, JsonNewProject, JsonProject, ProjectUuid, ResourceId, ResourceIdKind, ResourceName,
+    Slug, Url,
 };
 use bencher_rbac::{project::Permission, Organization, Project};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -15,8 +15,8 @@ use crate::{
     conn_lock,
     context::{DbConnection, Rbac},
     error::{
-        assert_parentage, bad_request_error, forbidden_error, resource_conflict_err,
-        resource_not_found_error, unauthorized_error, BencherResource,
+        assert_parentage, forbidden_error, resource_conflict_err, resource_not_found_error,
+        unauthorized_error, BencherResource,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
@@ -78,58 +78,31 @@ impl QueryProject {
         log: &Logger,
         context: &ApiContext,
         auth_user: &AuthUser,
-        organization: &ResourceId,
-        project: &NameId,
+        project: &ResourceId,
     ) -> Result<Self, HttpError> {
-        let query_organization =
-            QueryOrganization::from_resource_id(conn_lock!(context), organization)?;
+        let query_project = Self::from_resource_id(conn_lock!(context), project);
 
-        let Ok(kind) = NameIdKind::<ResourceName>::try_from(project) else {
-            return Err(bad_request_error(format!(
-                "Project ({project}) must be a valid UUID, slug, or name"
-            )));
-        };
-        let query_project = match kind {
-            NameIdKind::Uuid(uuid) => {
-                QueryProject::from_uuid(conn_lock!(context), query_organization.id, uuid.into())?
-            },
-            NameIdKind::Slug(slug) => {
-                if let Ok(query_project) = schema::project::table
-                    .filter(schema::project::organization_id.eq(query_organization.id))
-                    .filter(schema::project::slug.eq(&slug))
-                    .first::<Self>(conn_lock!(context))
-                {
-                    query_project
-                } else {
-                    let json_project = JsonNewProject {
-                        name: slug.clone().into(),
-                        slug: Some(slug.clone()),
-                        url: None,
-                        visibility: None,
-                    };
-                    Self::create(log, context, auth_user, &query_organization, json_project).await?
-                }
-            },
-            NameIdKind::Name(name) => {
-                if let Ok(query_project) = schema::project::table
-                    .filter(schema::project::organization_id.eq(query_organization.id))
-                    .filter(schema::project::name.eq(&name))
-                    .first::<Self>(conn_lock!(context))
-                {
-                    query_project
-                } else {
-                    let json_project = JsonNewProject {
-                        name,
-                        slug: None,
-                        url: None,
-                        visibility: None,
-                    };
-                    Self::create(log, context, auth_user, &query_organization, json_project).await?
-                }
-            },
+        let http_error = match query_project {
+            Ok(project) => return Ok(project),
+            Err(e) => e,
         };
 
-        Ok(query_project)
+        let Ok(kind) = ResourceIdKind::try_from(project) else {
+            return Err(http_error);
+        };
+        let slug = match kind {
+            ResourceIdKind::Uuid(_) => return Err(http_error),
+            ResourceIdKind::Slug(slug) => slug,
+        };
+
+        let query_organization = QueryOrganization::get_or_create(context, auth_user).await?;
+        let json_project = JsonNewProject {
+            name: slug.clone().into(),
+            slug: Some(slug.clone()),
+            url: None,
+            visibility: None,
+        };
+        Self::create(log, context, auth_user, &query_organization, json_project).await
     }
 
     pub async fn create(

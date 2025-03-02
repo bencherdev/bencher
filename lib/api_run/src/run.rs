@@ -53,51 +53,23 @@ async fn post_inner(
     auth_user: Option<AuthUser>,
     json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
-    let (auth_user, query_project) = match (
-        auth_user,
-        json_run.organization.as_ref(),
-        json_run.project.as_ref(),
-    ) {
-        (Some(auth_user), Some(organization), Some(project)) => {
+    let (auth_user, query_project) = match (auth_user, json_run.project.as_ref()) {
+        (Some(auth_user), Some(project)) => {
+            let query_project = QueryProject::get_or_create(log, context, &auth_user, project)
+                .await
+                .map_err(|e| forbidden_error(e.to_string()))?;
+            (auth_user, query_project)
+        },
+        (Some(auth_user), None) => {
+            let Some(project_slug) = json_run.context.as_ref().map(RunContext::slug) else {
+                return Err(bad_request_error(
+                    "The `project` field was not specified nor was a run `context` provided",
+                ));
+            };
             let query_project =
-                QueryProject::get_or_create(log, context, &auth_user, organization, project)
+                QueryProject::get_or_create(log, context, &auth_user, &project_slug.into())
                     .await
                     .map_err(|e| forbidden_error(e.to_string()))?;
-            (auth_user, query_project)
-        },
-        (Some(auth_user), Some(organization), None) => {
-            let Some(project_slug) = json_run.context.as_ref().map(RunContext::slug) else {
-                return Err(bad_request_error(
-                    "The `project` field was not specified nor was a run `context` provided",
-                ));
-            };
-            let query_project = QueryProject::get_or_create(
-                log,
-                context,
-                &auth_user,
-                organization,
-                &project_slug.into(),
-            )
-            .await
-            .map_err(|e| forbidden_error(e.to_string()))?;
-            (auth_user, query_project)
-        },
-        (Some(auth_user), None, None) => {
-            let query_organization = QueryOrganization::get_or_create(context, &auth_user).await?;
-            let Some(project_slug) = json_run.context.as_ref().map(RunContext::slug) else {
-                return Err(bad_request_error(
-                    "The `project` field was not specified nor was a run `context` provided",
-                ));
-            };
-            let query_project = QueryProject::get_or_create(
-                log,
-                context,
-                &auth_user,
-                &query_organization.uuid.into(),
-                &project_slug.into(),
-            )
-            .await
-            .map_err(|e| forbidden_error(e.to_string()))?;
             (auth_user, query_project)
         },
         _ => return Err(bad_request_error("Not yet supported")),

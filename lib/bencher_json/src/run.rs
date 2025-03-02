@@ -16,13 +16,9 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewRun {
-    /// Organization UUID or slug.
-    /// If the organization is not provided, it will be created.
-    pub organization: Option<ResourceId>,
-    /// Project UUID, slug, or name.
+    /// Project UUID or slug.
     /// If the project is not provided or does not exist, it will be created.
-    /// If a name is provided, the `organization` field must also be provided.
-    pub project: Option<NameId>,
+    pub project: Option<ResourceId>,
     /// Branch UUID, slug, or name.
     /// If the branch is not provided or does not exist, it will be created.
     pub branch: Option<NameId>,
@@ -63,7 +59,6 @@ pub struct JsonNewRun {
 impl From<JsonNewRun> for JsonNewReport {
     fn from(run: JsonNewRun) -> Self {
         let JsonNewRun {
-            organization: _,
             project: _,
             branch,
             hash,

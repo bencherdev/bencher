@@ -714,7 +714,7 @@
           "organizations"
         ],
         "summary": "Create an organization",
-        "description": "Create a new organization. The user must be authenticated to use this route. ➕ Bencher Plus: This route can be limited to admins on self-hosted instances.",
+        "description": "Create a new organization. The user must be authenticated to use this route.",
         "operationId": "organization_post",
         "requestBody": {
           "content": {
@@ -9501,21 +9501,12 @@
               }
             ]
           },
-          "organization": {
+          "project": {
             "nullable": true,
-            "description": "Organization UUID or slug. If the organization is not provided, it will be created.",
+            "description": "Project UUID or slug. If the project is not provided or does not exist, it will be created.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceId"
-              }
-            ]
-          },
-          "project": {
-            "nullable": true,
-            "description": "Project UUID, slug, or name. If the project is not provided or does not exist, it will be created. If a name is provided, the `organization` field must also be provided.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NameId"
               }
             ]
           },
