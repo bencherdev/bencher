@@ -1,15 +1,10 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{
-    project, system::auth, JsonNewOrganization, JsonNewRun, JsonReport, NameIdKind, ResourceName,
-    RunContext,
-};
+use bencher_json::{JsonNewRun, JsonReport, RunContext};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    conn_lock,
     context::ApiContext,
     error::{bad_request_error, forbidden_error, issue_error},
     model::{
-        organization::QueryOrganization,
         project::{report::QueryReport, QueryProject},
         user::auth::{AuthUser, PubBearerToken},
     },
@@ -61,15 +56,25 @@ async fn post_inner(
             (auth_user, query_project)
         },
         (Some(auth_user), None) => {
-            let Some(project_slug) = json_run.context.as_ref().map(RunContext::slug) else {
+            let Some(project_name) = json_run.context.as_ref().and_then(RunContext::name) else {
                 return Err(bad_request_error(
-                    "The `project` field was not specified nor was a run `context` provided",
+                    "The `project` field was not specified nor was a run `context` provided for the name",
                 ));
             };
-            let query_project =
-                QueryProject::get_or_create(log, context, &auth_user, &project_slug.into())
-                    .await
-                    .map_err(|e| forbidden_error(e.to_string()))?;
+            let Some(project_slug) = json_run.context.as_ref().map(RunContext::slug) else {
+                return Err(bad_request_error(
+                    "The `project` field was not specified nor was a run `context` provided for the slug",
+                ));
+            };
+            let query_project = QueryProject::get_or_create_from_context(
+                log,
+                context,
+                &auth_user,
+                project_name,
+                project_slug,
+            )
+            .await
+            .map_err(|e| forbidden_error(e.to_string()))?;
             (auth_user, query_project)
         },
         _ => return Err(bad_request_error("Not yet supported")),

@@ -8,7 +8,7 @@ publish = false
 
 [features]
 client = ["dep:gix", "dep:uuid", "dep:windows"]
-server = ["dep:uuid", "bencher_valid/server"]
+server = ["dep:uuid", "bencher_valid/server", "uuid/v4"]
 schema = ["dep:schemars"]
 
 [dependencies]

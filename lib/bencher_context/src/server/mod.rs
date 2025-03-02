@@ -1,4 +1,4 @@
-use bencher_valid::{Slug, MAX_LEN};
+use bencher_valid::{ResourceName, Slug};
 use uuid::Uuid;
 
 use crate::{ContextPath, RunContext};
@@ -40,14 +40,32 @@ impl RunContext {
         self.get(ContextPath::TESTBED_FINGERPRINT)?.parse().ok()
     }
 
+    pub fn name(&self) -> Option<ResourceName> {
+        self.repo_name()
+            .map(truncate_name)
+            .or_else(|| {
+                self.repo_hash()
+                    .map(short_hash)
+                    .map(|hash| format!("Project ({hash})"))
+            })
+            .or_else(|| {
+                self.testbed_fingerprint()
+                    .map(base36::encode_uuid)
+                    .as_deref()
+                    .map(short_fingerprint)
+                    .map(|fingerprint| format!("My Project ({fingerprint})"))
+            })
+            .unwrap_or_else(|| {
+                let id = short_fingerprint(&base36::encode_uuid(Uuid::new_v4()));
+                format!("New Project ({id})")
+            })
+            .parse()
+            .ok()
+    }
+
     pub fn slug(&self) -> Slug {
-        // + 42 chars
-        let name = self.repo_name().map(truncate_name).unwrap_or_default();
-        // + 1 char (-)
-        // + 7 chars
+        let name = self.repo_name().map(short_name).unwrap_or_default();
         let hash = self.repo_hash().map(short_hash).unwrap_or_default();
-        // + 1 char (-)
-        // + 13 chars
         let fingerprint = self
             .testbed_fingerprint()
             .map(base36::encode_uuid)
@@ -58,19 +76,34 @@ impl RunContext {
         // in case any of the values are empty
         // they will essentially be ignored
         let slug = format!("{name} {hash} {fingerprint}");
-        debug_assert!(slug.len() <= MAX_LEN, "Slug is too long: {slug}");
+        debug_assert!(slug.len() <= Slug::MAX_LEN, "Slug is too long: {slug}");
         Slug::new(slug)
     }
 }
 
 fn truncate_name(name: &str) -> String {
-    name.chars().take(42).collect()
+    name.chars().take(ResourceName::MAX_LEN).collect()
+}
+
+const SHORT_NAME_LEN: usize = 42;
+const SHORT_HASH_LEN: usize = 7;
+const SHORT_FINGERPRINT_LEN: usize = 13;
+#[allow(dead_code)]
+const DASH_LEN: usize = 1;
+
+// Statically assert that the sum of the lengths of the short names
+// is less than or equal to the maximum length of a slug
+const _: [(); SHORT_NAME_LEN + DASH_LEN + SHORT_HASH_LEN + DASH_LEN + SHORT_FINGERPRINT_LEN] =
+    [(); Slug::MAX_LEN];
+
+fn short_name(name: &str) -> String {
+    name.chars().take(SHORT_NAME_LEN).collect()
 }
 
 fn short_hash(hash: &str) -> String {
-    hash.chars().take(7).collect()
+    hash.chars().take(SHORT_HASH_LEN).collect()
 }
 
 fn short_fingerprint(fingerprint: &str) -> String {
-    fingerprint.chars().take(13).collect()
+    fingerprint.chars().take(SHORT_FINGERPRINT_LEN).collect()
 }

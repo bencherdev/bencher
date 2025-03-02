@@ -15,8 +15,8 @@ use crate::{
     conn_lock,
     context::{DbConnection, Rbac},
     error::{
-        assert_parentage, forbidden_error, resource_conflict_err, resource_not_found_error,
-        unauthorized_error, BencherResource,
+        assert_parentage, forbidden_error, resource_conflict_err, resource_not_found_err,
+        resource_not_found_error, unauthorized_error, BencherResource,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
@@ -74,6 +74,13 @@ impl QueryProject {
         Project
     );
 
+    fn from_slug(conn: &mut DbConnection, slug: &Slug) -> Result<Self, HttpError> {
+        schema::project::table
+            .filter(schema::project::slug.eq(slug))
+            .first(conn)
+            .map_err(resource_not_found_err!(Project, slug.clone()))
+    }
+
     pub async fn get_or_create(
         log: &Logger,
         context: &ApiContext,
@@ -99,6 +106,27 @@ impl QueryProject {
         let json_project = JsonNewProject {
             name: slug.clone().into(),
             slug: Some(slug.clone()),
+            url: None,
+            visibility: None,
+        };
+        Self::create(log, context, auth_user, &query_organization, json_project).await
+    }
+
+    pub async fn get_or_create_from_context(
+        log: &Logger,
+        context: &ApiContext,
+        auth_user: &AuthUser,
+        project_name: ResourceName,
+        project_slug: Slug,
+    ) -> Result<Self, HttpError> {
+        if let Ok(query_project) = Self::from_slug(conn_lock!(context), &project_slug) {
+            return Ok(query_project);
+        }
+
+        let query_organization = QueryOrganization::get_or_create(context, auth_user).await?;
+        let json_project = JsonNewProject {
+            name: project_name,
+            slug: Some(project_slug),
             url: None,
             visibility: None,
         };
