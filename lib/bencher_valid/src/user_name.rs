@@ -82,6 +82,10 @@ impl Visitor<'_> for UserNameVisitor {
     }
 }
 
+impl UserName {
+    pub const MAX_LEN: usize = crate::MAX_LEN;
+}
+
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_user_name(name: &str) -> bool {
     if !is_valid_len(name) {

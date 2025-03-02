@@ -126,3 +126,7 @@ impl Visitor<'_> for NameIdVisitor {
         NameId::from_str(v).map_err(|_e| E::invalid_value(Unexpected::Str(v), &self))
     }
 }
+
+impl NameId {
+    pub const MAX_LEN: usize = crate::MAX_LEN;
+}

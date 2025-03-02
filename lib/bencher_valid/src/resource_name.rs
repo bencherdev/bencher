@@ -84,6 +84,10 @@ impl Visitor<'_> for ResourceNameVisitor {
     }
 }
 
+impl ResourceName {
+    pub const MAX_LEN: usize = crate::MAX_LEN;
+}
+
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_resource_name(resource_name: &str) -> bool {
     is_valid_len(resource_name)

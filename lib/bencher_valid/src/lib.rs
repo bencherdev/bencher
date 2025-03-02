@@ -60,7 +60,7 @@ pub use secret::Secret;
 pub use units::{Units, BYTES, NANOSECONDS, SECONDS};
 pub use user_name::UserName;
 
-pub const MAX_LEN: usize = 64;
+const MAX_LEN: usize = 64;
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen(start)]

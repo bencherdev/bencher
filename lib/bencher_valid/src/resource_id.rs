@@ -98,3 +98,7 @@ impl Visitor<'_> for ResourceIdVisitor {
         ResourceId::from_str(v).map_err(|_e| E::invalid_value(Unexpected::Str(v), &self))
     }
 }
+
+impl ResourceId {
+    pub const MAX_LEN: usize = crate::MAX_LEN;
+}

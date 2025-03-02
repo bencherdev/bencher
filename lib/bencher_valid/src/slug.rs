@@ -87,7 +87,8 @@ pub fn new_slug(slug: &str) -> String {
 }
 
 impl Slug {
-    pub const MAX: usize = MAX_LEN;
+    pub const MAX_LEN: usize = MAX_LEN;
+
     #[cfg(feature = "server")]
     const RAND_LEN: usize = 8;
 
@@ -96,8 +97,8 @@ impl Slug {
         S: AsRef<str>,
     {
         let new_slug = slug::slugify(&slug);
-        Self(if new_slug.len() > Self::MAX {
-            slug::slugify(new_slug.split_at(Slug::MAX).0)
+        Self(if new_slug.len() > Self::MAX_LEN {
+            slug::slugify(new_slug.chars().take(Self::MAX_LEN).collect::<String>())
         } else {
             new_slug
         })
@@ -136,9 +137,9 @@ impl Slug {
     #[cfg(feature = "server")]
     #[must_use]
     pub fn with_rand_suffix(self) -> Self {
-        let truncated = if self.as_ref().len() + 1 + Self::RAND_LEN > Self::MAX {
-            let mid = Self::MAX - (1 + Self::RAND_LEN);
-            slug::slugify(self.as_ref().split_at(mid).0)
+        let truncated = if self.as_ref().len() + 1 + Self::RAND_LEN > Self::MAX_LEN {
+            let mid = Self::MAX_LEN - (1 + Self::RAND_LEN);
+            slug::slugify(self.as_ref().chars().take(mid).collect::<String>())
         } else {
             self.0
         };

@@ -78,6 +78,10 @@ impl Visitor<'_> for NonEmptyVisitor {
     }
 }
 
+impl NonEmpty {
+    pub const MAX_LEN: usize = crate::MAX_LEN;
+}
+
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_non_empty(non_empty: &str) -> bool {
     crate::is_valid_non_empty(non_empty)

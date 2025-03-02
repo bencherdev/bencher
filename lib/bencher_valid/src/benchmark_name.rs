@@ -13,7 +13,7 @@ use serde::{
 use crate::ValidError;
 
 // In practice, this may need to be raised all the way up to 4096.
-pub(crate) const MAX_BENCHMARK_NAME_LEN: usize = 1024;
+const MAX_BENCHMARK_NAME_LEN: usize = 1024;
 
 const BENCHER_IGNORE_SNAKE_CASE: &str = "_bencher_ignore";
 const BENCHER_IGNORE_PASCAL_CASE: &str = "BencherIgnore";
@@ -30,18 +30,18 @@ pub struct BenchmarkName(String);
 crate::typed_string!(BenchmarkName);
 
 impl BenchmarkName {
+    pub const MAX_LEN: usize = MAX_BENCHMARK_NAME_LEN;
+
     pub fn try_push(&mut self, separator: char, other: &Self) -> Result<(), ValidError> {
-        let remaining_capacity = MAX_BENCHMARK_NAME_LEN
-            .checked_sub(self.0.len())
-            .unwrap_or_default();
+        let remaining_capacity = Self::MAX_LEN.checked_sub(self.0.len()).unwrap_or_default();
         if other.0.len() < remaining_capacity {
             self.0.push(separator);
             self.0.push_str(other.as_ref());
             debug_assert!(
-                self.0.len() <= MAX_BENCHMARK_NAME_LEN,
+                self.0.len() <= Self::MAX_LEN,
                 "Benchmark name length is {} but should be <= {}",
                 self.0.len(),
-                MAX_BENCHMARK_NAME_LEN
+                Self::MAX_LEN
             );
             Ok(())
         } else {
@@ -122,7 +122,7 @@ mod test {
 
     use crate::BenchmarkName;
 
-    use super::{is_valid_benchmark_name, MAX_BENCHMARK_NAME_LEN};
+    use super::is_valid_benchmark_name;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -142,8 +142,8 @@ mod test {
         let benchmark_name_len = benchmark_name.0.len();
         assert_eq!(benchmark_name_len, 10);
 
-        let other_benchmark_name_bytes: [u8; MAX_BENCHMARK_NAME_LEN - 11] =
-            [0; MAX_BENCHMARK_NAME_LEN - 11];
+        let other_benchmark_name_bytes: [u8; BenchmarkName::MAX_LEN - 11] =
+            [0; BenchmarkName::MAX_LEN - 11];
         let other_benchmark_name: BenchmarkName = std::str::from_utf8(&other_benchmark_name_bytes)
             .unwrap()
             .parse()
@@ -153,11 +153,11 @@ mod test {
         // 10 + 1 + 1013 = 1024
         assert_eq!(
             benchmark_name_len + 1 + other_benchmark_name_len,
-            MAX_BENCHMARK_NAME_LEN
+            BenchmarkName::MAX_LEN
         );
 
         benchmark_name.try_push('.', &other_benchmark_name).unwrap();
-        assert_eq!(benchmark_name.0.len(), MAX_BENCHMARK_NAME_LEN);
+        assert_eq!(benchmark_name.0.len(), BenchmarkName::MAX_LEN);
         is_valid_benchmark_name(&benchmark_name.0);
         assert_eq!(other_benchmark_name_len, other_benchmark_name.0.len());
     }
@@ -168,8 +168,8 @@ mod test {
         let benchmark_name_len = benchmark_name.0.len();
         assert_eq!(benchmark_name_len, 10);
 
-        let other_benchmark_name_bytes: [u8; MAX_BENCHMARK_NAME_LEN - 10] =
-            [0; MAX_BENCHMARK_NAME_LEN - 10];
+        let other_benchmark_name_bytes: [u8; BenchmarkName::MAX_LEN - 10] =
+            [0; BenchmarkName::MAX_LEN - 10];
         let other_benchmark_name: BenchmarkName = std::str::from_utf8(&other_benchmark_name_bytes)
             .unwrap()
             .parse()
@@ -179,7 +179,7 @@ mod test {
         // 10 + 1 + 1014 = 1025
         assert_eq!(
             benchmark_name_len + 1 + other_benchmark_name_len,
-            MAX_BENCHMARK_NAME_LEN + 1
+            BenchmarkName::MAX_LEN + 1
         );
 
         assert!(benchmark_name.try_push('.', &other_benchmark_name).is_err());
