@@ -38,7 +38,8 @@ derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 http.workspace = true
-serde_json = {workspace = true, optional = true}
+regex.workspace = true
+serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true
 oso.workspace = true
 reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }

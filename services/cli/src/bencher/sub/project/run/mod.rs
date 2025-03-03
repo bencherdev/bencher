@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, JsonReport, NameId, ResourceId, RunContext};
+use bencher_json::{DateTime, JsonReport, NameId, ResourceId};
 
 use crate::{
     bencher::backend::AuthBackend,

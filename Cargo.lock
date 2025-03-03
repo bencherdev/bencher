@@ -1241,6 +1241,7 @@ dependencies = [
  "http 1.2.0",
  "mail-send",
  "oso",
+ "regex",
  "reqwest",
  "sentry",
  "serde_json",

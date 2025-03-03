@@ -1,4 +1,4 @@
-use std::string::ToString;
+use std::{string::ToString, sync::LazyLock};
 
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, ProjectRole, Visibility},
@@ -6,17 +6,20 @@ use bencher_json::{
     Slug, Url,
 };
 use bencher_rbac::{project::Permission, Organization, Project};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
 use dropshot::HttpError;
 use project_role::InsertProjectRole;
+use regex::Regex;
 use slog::Logger;
 
 use crate::{
     conn_lock,
     context::{DbConnection, Rbac},
     error::{
-        assert_parentage, forbidden_error, resource_conflict_err, resource_not_found_err,
-        resource_not_found_error, unauthorized_error, BencherResource,
+        assert_parentage, forbidden_error, issue_error, resource_conflict_err,
+        resource_not_found_err, resource_not_found_error, unauthorized_error, BencherResource,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
@@ -42,6 +45,10 @@ pub mod testbed;
 pub mod threshold;
 
 crate::macros::typed_id::typed_id!(ProjectId);
+
+static UNIQUE_SUFFIX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\((\d+)\)$").expect("Failed to create regex for unique project suffix")
+});
 
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
@@ -124,6 +131,7 @@ impl QueryProject {
         }
 
         let query_organization = QueryOrganization::get_or_create(context, auth_user).await?;
+        let project_name = Self::unique_name(context, &query_organization, project_name).await?;
         let json_project = JsonNewProject {
             name: project_name,
             slug: Some(project_slug),
@@ -131,6 +139,82 @@ impl QueryProject {
             visibility: None,
         };
         Self::create(log, context, auth_user, &query_organization, json_project).await
+    }
+
+    async fn unique_name(
+        context: &ApiContext,
+        query_organization: &QueryOrganization,
+        project_name: ResourceName,
+    ) -> Result<ResourceName, HttpError> {
+        const SPACE_PAREN_LEN: usize = 3;
+        let max_name_len = ResourceName::MAX_LEN - i64::MAX.to_string().len() - SPACE_PAREN_LEN;
+
+        // This needs to happen before we escape the project name
+        // so we check the possibly truncated name for originality
+        let name_str = if project_name.as_ref().len() > max_name_len {
+            const ELLIPSES_LEN: usize = 3;
+            // The max length for a `usize` is 20 characters,
+            // so we don't have to worry about the number suffix being too long.
+            project_name
+                .as_ref()
+                .chars()
+                .take(max_name_len - ELLIPSES_LEN)
+                .chain(".".repeat(ELLIPSES_LEN).chars())
+                .collect::<String>()
+        } else {
+            project_name.to_string()
+        };
+
+        // Escape the project name for use in a regex pattern
+        let escaped_name = regex::escape(&name_str);
+        // Create a regex pattern to match the original project name or any subsequent projects with the same name
+        let pattern = format!(r"^{escaped_name} \(\d+\)$");
+
+        let Ok(highest_name) = schema::project::table
+            .filter(schema::project::organization_id.eq(query_organization.id))
+            .filter(
+                schema::project::name
+                    .eq(&project_name)
+                    .or(schema::project::name.like(&pattern)),
+            )
+            .select(schema::project::name)
+            .order(schema::project::name.desc())
+            .first::<ResourceName>(conn_lock!(context))
+        else {
+            // The project name is already unique
+            return Ok(project_name);
+        };
+
+        let next_number = if highest_name == project_name {
+            1
+        } else if let Some(caps) = UNIQUE_SUFFIX.captures(highest_name.as_ref()) {
+            let last_number: usize = caps
+                .get(1)
+                .and_then(|m| m.as_str().parse().ok())
+                .ok_or_else(|| {
+                    issue_error(
+                        "Failed to parse project number",
+                        &format!("Failed to parse number from project ({highest_name})"),
+                        highest_name,
+                    )
+                })?;
+            last_number + 1
+        } else {
+            return Err(issue_error(
+                "Failed to create new project number",
+                &format!("Failed to create new number for project ({project_name}) with highest project ({highest_name})"),
+                highest_name,
+            ));
+        };
+
+        let name_with_suffix = format!("{name_str} ({next_number})");
+        name_with_suffix.parse().map_err(|e| {
+            issue_error(
+                "Failed to create new project name",
+                &format!("Failed to create new project name ({name_with_suffix})",),
+                e,
+            )
+        })
     }
 
     pub async fn create(
