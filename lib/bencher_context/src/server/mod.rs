@@ -42,23 +42,7 @@ impl RunContext {
 
     pub fn name(&self) -> Option<ResourceName> {
         self.repo_name()
-            .map(truncate_name)
-            .or_else(|| {
-                self.repo_hash()
-                    .map(short_hash)
-                    .map(|hash| format!("Project ({hash})"))
-            })
-            .or_else(|| {
-                self.testbed_fingerprint()
-                    .map(base36::encode_uuid)
-                    .as_deref()
-                    .map(short_fingerprint)
-                    .map(|fingerprint| format!("My Project ({fingerprint})"))
-            })
-            .unwrap_or_else(|| {
-                let id = short_fingerprint(&base36::encode_uuid(Uuid::new_v4()));
-                format!("New Project ({id})")
-            })
+            .map_or_else(|| "Project".to_owned(), truncate_name)
             .parse()
             .ok()
     }
