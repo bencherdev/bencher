@@ -28,6 +28,8 @@ use crate::{
     ApiContext,
 };
 
+use super::user::QueryUser;
+
 pub mod member;
 pub mod organization_role;
 pub mod plan;
@@ -66,11 +68,9 @@ impl QueryOrganization {
             return Ok(query_organization);
         }
 
-        let json_organization = JsonNewOrganization {
-            name: auth_user.user.name.clone().into(),
-            slug: Some(user_slug.clone()),
-        };
-        Self::create(context, auth_user, json_organization).await
+        let insert_organization =
+            InsertOrganization::new(auth_user.user.name.clone().into(), user_slug.clone());
+        Self::create(context, auth_user, insert_organization).await
     }
 
     pub async fn get_or_create_from_project(
@@ -92,19 +92,32 @@ impl QueryOrganization {
             };
         }
 
-        let json_organization = JsonNewOrganization {
-            name: project_name.clone(),
-            slug: Some(project_slug.clone()),
-        };
-        Self::create_inner(context, json_organization).await
+        let insert_organization =
+            InsertOrganization::new(project_name.clone(), project_slug.clone());
+        Self::create_inner(context, insert_organization).await
     }
 
     pub async fn create(
         context: &ApiContext,
         auth_user: &AuthUser,
-        json_organization: JsonNewOrganization,
+        insert_organization: InsertOrganization,
     ) -> Result<Self, HttpError> {
-        let query_organization = Self::create_inner(context, json_organization).await?;
+        // Don't allow other users to create an organization with the same slug as another user.
+        // This is needed to make on-the-fly projects for an authenticated user work.
+        if insert_organization.slug != auth_user.user.slug
+            && !auth_user.is_admin(&context.rbac)
+            && QueryUser::from_resource_id(
+                conn_lock!(context),
+                &insert_organization.slug.clone().into(),
+            )
+            .is_ok()
+        {
+            return Err(forbidden_error(
+                "You cannot create an organization with the same slug as your user.",
+            ));
+        }
+
+        let query_organization = Self::create_inner(context, insert_organization).await?;
 
         let timestamp = DateTime::now();
         // Connect the user to the organization as a `Leader`
@@ -125,10 +138,8 @@ impl QueryOrganization {
 
     async fn create_inner(
         context: &ApiContext,
-        json_organization: JsonNewOrganization,
+        insert_organization: InsertOrganization,
     ) -> Result<Self, HttpError> {
-        let insert_organization =
-            InsertOrganization::from_json(conn_lock!(context), json_organization)?;
         diesel::insert_into(schema::organization::table)
             .values(&insert_organization)
             .execute(conn_lock!(context))
@@ -243,31 +254,29 @@ pub struct InsertOrganization {
 }
 
 impl InsertOrganization {
+    fn new(name: ResourceName, slug: Slug) -> Self {
+        let timestamp = DateTime::now();
+        Self {
+            uuid: OrganizationUuid::new(),
+            name,
+            slug,
+            created: timestamp,
+            modified: timestamp,
+        }
+    }
+
     pub fn from_json(
         conn: &mut DbConnection,
         organization: JsonNewOrganization,
     ) -> Result<Self, HttpError> {
         let JsonNewOrganization { name, slug } = organization;
         let slug = ok_slug!(conn, &name, slug, organization, QueryOrganization)?;
-        let timestamp = DateTime::now();
-        Ok(Self {
-            uuid: OrganizationUuid::new(),
-            name,
-            slug,
-            created: timestamp,
-            modified: timestamp,
-        })
+        Ok(Self::new(name, slug))
     }
 
     pub fn from_user(insert_user: &InsertUser) -> Self {
-        let timestamp = DateTime::now();
-        Self {
-            uuid: OrganizationUuid::new(),
-            name: insert_user.name.clone().into(),
-            slug: insert_user.slug.clone(),
-            created: timestamp,
-            modified: timestamp,
-        }
+        let InsertUser { name, slug, .. } = insert_user;
+        Self::new(name.clone().into(), slug.clone())
     }
 }
 

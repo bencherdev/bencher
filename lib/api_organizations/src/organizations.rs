@@ -12,7 +12,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        organization::{QueryOrganization, UpdateOrganization},
+        organization::{InsertOrganization, QueryOrganization, UpdateOrganization},
         user::auth::{AuthUser, BearerToken},
     },
     schema,
@@ -180,8 +180,10 @@ async fn post_inner(
     json_organization: JsonNewOrganization,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
+    let insert_organization =
+        InsertOrganization::from_json(conn_lock!(context), json_organization)?;
     let query_organization =
-        QueryOrganization::create(context, auth_user, json_organization).await?;
+        QueryOrganization::create(context, auth_user, insert_organization).await?;
     Ok(query_organization.into_json())
 }
 
