@@ -1,11 +1,11 @@
 use std::{future::Future, pin::Pin};
 
-use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
+use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, JsonReport, NameId, ResourceId};
+use bencher_json::{DateTime, JsonReport, NameId, ResourceId, RunContext};
 
 use crate::{
-    bencher::backend::AuthBackend,
+    bencher::backend::PubBackend,
     cli_eprintln_quietable, cli_println, cli_println_quietable,
     parser::run::{CliRun, CliRunOutput},
     CliError,
@@ -32,9 +32,9 @@ use super::project::report::Thresholds;
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Run {
-    project: ResourceId,
+    project: Option<ResourceId>,
     branch: Branch,
-    testbed: NameId,
+    testbed: Option<NameId>,
     adapter: Adapter,
     sub_adapter: SubAdapter,
     average: Option<JsonAverage>,
@@ -50,7 +50,7 @@ pub struct Run {
     runner: Runner,
     #[allow(clippy::struct_field_names)]
     dry_run: bool,
-    backend: AuthBackend,
+    backend: PubBackend,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -76,9 +76,9 @@ impl TryFrom<CliRun> for Run {
             backend,
         } = run;
         Ok(Self {
-            project,
+            project: project.map(Into::into),
             branch: branch.try_into().map_err(RunError::Branch)?,
-            testbed,
+            testbed: testbed.map(Into::into),
             adapter: adapter.into(),
             sub_adapter: (&cmd).into(),
             average: average.map(Into::into),
@@ -93,7 +93,7 @@ impl TryFrom<CliRun> for Run {
             ci: ci.try_into().map_err(RunError::Ci)?,
             runner: cmd.try_into()?,
             dry_run,
-            backend: AuthBackend::try_from(backend)?.log(false),
+            backend: PubBackend::try_from(backend)?.log(false),
         })
     }
 }
@@ -119,7 +119,7 @@ impl Run {
             ci.safety_check(self.log)?;
         }
 
-        let Some(json_new_report) = self.generate_report().await? else {
+        let Some(json_new_run) = self.generate_report().await? else {
             return Ok(());
         };
 
@@ -127,7 +127,7 @@ impl Run {
         cli_println_quietable!(
             self.log,
             "{}",
-            serde_json::to_string_pretty(&json_new_report).map_err(RunError::SerializeReport)?
+            serde_json::to_string_pretty(&json_new_run).map_err(RunError::SerializeReport)?
         );
 
         // If performing a dry run, don't actually send the report
@@ -135,7 +135,7 @@ impl Run {
             return Ok(());
         }
 
-        let sender = report_sender(self.project.clone(), json_new_report);
+        let sender = run_sender(json_new_run);
         let json_report: JsonReport = self
             .backend
             .send_with(sender)
@@ -152,7 +152,7 @@ impl Run {
         }
     }
 
-    async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
+    async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
         let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
@@ -184,11 +184,12 @@ impl Run {
         };
 
         let (branch, hash, start_point) = self.branch.clone().into();
-        Ok(Some(JsonNewReport {
+        Ok(Some(JsonNewRun {
+            project: self.project.clone().map(Into::into),
             branch,
             hash,
             start_point,
-            testbed: self.testbed.clone().into(),
+            testbed: self.testbed.clone().map(Into::into),
             thresholds: self.thresholds.clone().into(),
             start_time: start_time.into(),
             end_time: end_time.into(),
@@ -198,8 +199,7 @@ impl Run {
                 average: self.average,
                 fold: self.fold,
             }),
-            // TODO add context when we move over to JsonNewRun
-            // context: Some(RunContext::current().into()),
+            context: Some(RunContext::current().into()),
         }))
     }
 
@@ -242,20 +242,11 @@ type ReportResult = Pin<
             > + Send,
     >,
 >;
-fn report_sender(
-    project: ResourceId,
-    json_new_report: JsonNewReport,
+fn run_sender(
+    json_new_run: JsonNewRun,
 ) -> Box<dyn Fn(bencher_client::Client) -> ReportResult + Send> {
     Box::new(move |client: bencher_client::Client| {
-        let project = project.clone();
-        let json_new_report = json_new_report.clone();
-        Box::pin(async move {
-            client
-                .proj_report_post()
-                .project(project.clone())
-                .body(json_new_report.clone())
-                .send()
-                .await
-        })
+        let json_new_run = json_new_run.clone();
+        Box::pin(async move { client.run_post().body(json_new_run.clone()).send().await })
     })
 }

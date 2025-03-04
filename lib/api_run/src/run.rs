@@ -65,13 +65,16 @@ async fn post_inner(
         .await?
     };
 
-    if let Some(auth_user) = auth_user.as_ref() {
-        query_project.try_allowed(&context.rbac, auth_user, Permission::Create)?;
-    } else if !query_project.is_unclaimed(conn_lock!(context))? {
-        return Err(unauthorized_error(format!(
-            "This project ({}) has already been claimed.",
-            query_project.slug
-        )));
+    // If a project is unclaimed, don't check permissions
+    if !query_project.is_unclaimed(conn_lock!(context))? {
+        if let Some(auth_user) = auth_user.as_ref() {
+            query_project.try_allowed(&context.rbac, auth_user, Permission::Create)?;
+        } else {
+            return Err(unauthorized_error(format!(
+                "This project ({}) has already been claimed.",
+                query_project.slug
+            )));
+        }
     }
     QueryReport::create(
         log,

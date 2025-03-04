@@ -1,6 +1,4 @@
-use bencher_json::{
-    project::testbed::TESTBED_LOCALHOST_STR, DateTime, GitHash, NameId, ResourceId,
-};
+use bencher_json::{DateTime, GitHash, NameId, ResourceId};
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
@@ -15,15 +13,15 @@ use super::project::report::{
 pub struct CliRun {
     /// Project slug or UUID
     #[clap(long, env = "BENCHER_PROJECT")]
-    pub project: ResourceId,
+    pub project: Option<ResourceId>,
 
     #[clap(flatten)]
     pub branch: CliRunBranch,
 
     /// Testbed name, slug, or UUID.
     /// If a name or slug is provided, the testbed will be created if it does not exist.
-    #[clap(long, env = "BENCHER_TESTBED", default_value = TESTBED_LOCALHOST_STR)]
-    pub testbed: NameId,
+    #[clap(long, env = "BENCHER_TESTBED")]
+    pub testbed: Option<NameId>,
 
     /// Benchmark harness adapter
     #[clap(value_enum, long, env = "BENCHER_ADAPTER", default_value = "magic")]
@@ -83,8 +81,9 @@ pub struct CliRunBranch {
     #[clap(long, env = "BENCHER_BRANCH", alias = "if-branch")]
     pub branch: Option<NameId>,
 
-    #[clap(flatten)]
-    pub hash: CliRunHash,
+    /// `git` commit hash (default HEAD)
+    #[clap(long)]
+    pub hash: Option<GitHash>,
 
     /// Use the specified branch name, slug, or UUID as the start point for `branch`.
     /// If `branch` already exists and the start point is different, a new branch will be created.
@@ -115,24 +114,14 @@ pub struct CliRunBranch {
     pub start_point_reset: bool,
 
     /// Deprecated: Do not use. This will soon be removed.
-    #[clap(long, hide = true, alias = "else-branch", alias = "endif-branch")]
+    #[clap(
+        long,
+        hide = true,
+        alias = "else-branch",
+        alias = "endif-branch",
+        alias = "no-hash"
+    )]
     pub deprecated: bool,
-}
-
-#[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("run_hash")
-        .multiple(false)
-        .args(&["hash", "no_hash"]),
-))]
-pub struct CliRunHash {
-    /// `git` commit hash (default HEAD)
-    #[clap(long)]
-    pub hash: Option<GitHash>,
-
-    /// Do not try to find a `git` commit hash
-    #[clap(long)]
-    pub no_hash: bool,
 }
 
 #[derive(Args, Debug)]

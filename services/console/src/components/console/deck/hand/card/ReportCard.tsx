@@ -109,6 +109,7 @@ const ReportCard = (props: Props) => {
 							<a href="https://bencher.dev/docs/explanation/thresholds/">
 								the Threshold documentation
 							</a>
+							.
 						</p>
 					</Show>
 					<Show when={alertsCount() > 0}>

@@ -630,7 +630,7 @@ export enum Adapter {
 
 export interface JsonReport {
 	uuid: Uuid;
-	user: JsonPubUser;
+	user?: JsonPubUser;
 	project: JsonProject;
 	branch: JsonBranch;
 	testbed: JsonTestbed;

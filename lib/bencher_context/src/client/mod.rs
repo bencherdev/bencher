@@ -14,7 +14,10 @@ const ROOT: &str = "root";
 #[allow(clippy::multiple_inherent_impl)]
 impl RunContext {
     pub fn current() -> Self {
-        get_context()
+        let mut context = RunContext::default();
+        git_context(&mut context);
+        platform_context(&mut context);
+        context
     }
 
     fn insert(&mut self, path: &str, value: String) -> Option<String> {
@@ -28,13 +31,6 @@ impl From<RunContext> for HashMap<String, String> {
     fn from(context: RunContext) -> Self {
         context.0
     }
-}
-
-pub fn get_context() -> RunContext {
-    let mut context = RunContext::default();
-    git_context(&mut context);
-    platform_context(&mut context);
-    context
 }
 
 fn git_context(context: &mut RunContext) {

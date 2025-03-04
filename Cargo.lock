@@ -1023,7 +1023,6 @@ dependencies = [
  "chrono",
  "clap",
  "futures-util",
- "gix",
  "literally",
  "octocrab",
  "progenitor-client",
