@@ -46,6 +46,7 @@ pub mod threshold;
 
 crate::macros::typed_id::typed_id!(ProjectId);
 
+#[allow(clippy::expect_used)]
 static UNIQUE_SUFFIX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\((\d+)\)$").expect("Failed to create regex for unique project suffix")
 });
@@ -131,9 +132,9 @@ impl QueryProject {
         }
 
         let query_organization = QueryOrganization::get_or_create(context, auth_user).await?;
-        let project_name = Self::unique_name(context, &query_organization, project_name).await?;
+        let name = Self::unique_name(context, &query_organization, project_name).await?;
         let json_project = JsonNewProject {
-            name: project_name,
+            name,
             slug: Some(project_slug),
             url: None,
             visibility: None,
@@ -146,8 +147,9 @@ impl QueryProject {
         query_organization: &QueryOrganization,
         project_name: ResourceName,
     ) -> Result<ResourceName, HttpError> {
+        // ` (_)`
         const SPACE_PAREN_LEN: usize = 3;
-        let max_name_len = ResourceName::MAX_LEN - i64::MAX.to_string().len() - SPACE_PAREN_LEN;
+        let max_name_len = ResourceName::MAX_LEN - usize::MAX.to_string().len() - SPACE_PAREN_LEN;
 
         // This needs to happen before we escape the project name
         // so we check the possibly truncated name for originality
@@ -361,7 +363,7 @@ impl QueryProject {
         console_url
             .join(&path)
             .map_err(|e| {
-                crate::error::issue_error(
+                issue_error(
                     "Failed to create new perf URL.",
                     &format!("Failed to create new perf URL for {console_url} at {path}",),
                     e,

@@ -56,6 +56,7 @@ pub struct JsonNewRun {
     pub context: Option<RunContext>,
 }
 
+#[cfg(feature = "server")]
 impl From<JsonNewRun> for JsonNewReport {
     fn from(run: JsonNewRun) -> Self {
         let JsonNewRun {
