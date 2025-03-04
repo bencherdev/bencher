@@ -2,7 +2,7 @@ use bencher_json::{project::branch::BRANCH_MAIN_STR, GitHash, NameId};
 
 use crate::{
     bencher::sub::project::branch::start_point::StartPoint,
-    parser::project::run::{CliRunBranch, CliRunHash},
+    parser::run::{CliRunBranch, CliRunHash},
 };
 
 #[allow(clippy::struct_field_names)]

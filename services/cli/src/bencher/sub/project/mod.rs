@@ -9,6 +9,5 @@ pub mod plot;
 #[allow(clippy::module_inception)]
 pub mod project;
 pub mod report;
-pub mod run;
 pub mod testbed;
 pub mod threshold;

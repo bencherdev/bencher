@@ -1,11 +1,10 @@
-use bencher_json::{DateTime, GitHash, NameId, ReportUuid, ResourceId};
-use clap::{Parser, Subcommand, ValueEnum};
-
-use super::{
-    branch::CliStartPointUpdate,
-    run::{CliRunAdapter, CliRunAverage, CliRunFold, CliRunThresholds},
+use bencher_json::{
+    Boundary, DateTime, GitHash, NameId, ReportUuid, ResourceId, SampleSize, Window,
 };
-use crate::parser::{CliBackend, CliPagination};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+
+use super::{branch::CliStartPointUpdate, threshold::CliModelTest};
+use crate::parser::{CliBackend, CliPagination, ElidedOption};
 
 #[derive(Subcommand, Debug)]
 pub enum CliReport {
@@ -83,7 +82,7 @@ pub struct CliReportCreate {
     pub testbed: NameId,
 
     #[clap(flatten)]
-    pub thresholds: CliRunThresholds,
+    pub thresholds: CliReportThresholds,
 
     /// Start time (ISO 8601 formatted string)
     #[clap(long)]
@@ -99,18 +98,152 @@ pub struct CliReportCreate {
 
     /// Benchmark harness adapter
     #[clap(value_enum, long)]
-    pub adapter: Option<CliRunAdapter>,
+    pub adapter: Option<CliReportAdapter>,
 
     /// Benchmark harness suggested central tendency (ie average)
     #[clap(value_enum, long)]
-    pub average: Option<CliRunAverage>,
+    pub average: Option<CliReportAverage>,
 
     /// Fold multiple results into a single result
     #[clap(value_enum, long)]
-    pub fold: Option<CliRunFold>,
+    pub fold: Option<CliReportFold>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Args, Debug)]
+pub struct CliReportThresholds {
+    /// Threshold Measure name, slug, or UUID
+    /// When specifying multiple Thresholds, all of the same options must be used for each Threshold.
+    /// To ignore an option for a specific Threshold, use an underscore (`_`).
+    #[clap(long)]
+    pub threshold_measure: Vec<NameId>,
+
+    /// Threshold model test
+    #[clap(value_enum, long, requires = "threshold_measure")]
+    pub threshold_test: Vec<CliModelTest>,
+
+    /// Minimum sample size
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_min_sample_size: Vec<ElidedOption<SampleSize>>,
+
+    /// Maximum sample size
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_max_sample_size: Vec<ElidedOption<SampleSize>>,
+
+    /// Window size (seconds)
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_window: Vec<ElidedOption<Window>>,
+
+    /// Lower boundary
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_lower_boundary: Vec<ElidedOption<Boundary>>,
+
+    /// Upper boundary
+    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_upper_boundary: Vec<ElidedOption<Boundary>>,
+
+    /// Reset all unspecified Thresholds for the `branch` and `testbed`
+    /// If a Threshold already exists and is not specified, its current Model will be removed.
+    #[clap(long)]
+    pub thresholds_reset: bool,
+}
+
+/// Supported Adapters
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliReportAdapter {
+    /// 🪄 Magic
+    Magic,
+    /// {...} JSON
+    Json,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    CSharp,
+    /// #️⃣ C# `DotNet`
+    CSharpDotNet,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    Cpp,
+    /// ➕ C++ Catch2
+    CppCatch2,
+    /// ➕ C++ Google
+    CppGoogle,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    Go,
+    /// 🕳 Go Bench
+    GoBench,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    Java,
+    /// ☕️ Java JMH
+    JavaJmh,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    Js,
+    /// 🕸 JavaScript Benchmark
+    JsBenchmark,
+    /// 🕸 JavaScript Time
+    JsTime,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    Python,
+    /// 🐍 Python ASV
+    PythonAsv,
+    /// 🐍 Python Pytest
+    PythonPytest,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    Ruby,
+    /// ♦️ Ruby Benchmark
+    RubyBenchmark,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    Rust,
+    /// 🦀 Rust Bench
+    RustBench,
+    /// 🦀 Rust Criterion
+    RustCriterion,
+    /// 🦀 Rust Iai
+    RustIai,
+    /// 🦀 Rust Iai-Callgrind
+    RustIaiCallgrind,
+    // TODO remove in due time
+    #[clap(hide = true)]
+    Shell,
+    /// ❯_ Shell Hyperfine
+    ShellHyperfine,
+}
+
+/// Suggested Central Tendency (Average)
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliReportAverage {
+    /// Mean and standard deviation
+    Mean,
+    /// Median and interquartile range
+    Median,
+}
+
+/// Supported Fold Operations
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliReportFold {
+    /// Minimum value
+    Min,
+    /// Maximum value
+    Max,
+    /// Mean of values
+    Mean,
+    /// Median of values
+    Median,
 }
 
 #[derive(Parser, Debug)]

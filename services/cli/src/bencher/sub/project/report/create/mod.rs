@@ -7,14 +7,18 @@ use bencher_json::ResourceId;
 use crate::{
     bencher::{
         backend::AuthBackend,
-        sub::{
-            project::{branch::start_point::StartPoint, run::thresholds::Thresholds},
-            SubCmd,
-        },
+        sub::{project::branch::start_point::StartPoint, SubCmd},
     },
     parser::project::report::CliReportCreate,
     CliError,
 };
+
+mod adapter;
+mod average;
+mod fold;
+mod thresholds;
+
+pub use thresholds::{Thresholds, ThresholdsError};
 
 #[derive(Debug, Clone)]
 pub struct Create {

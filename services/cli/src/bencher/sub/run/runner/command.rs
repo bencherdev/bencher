@@ -7,7 +7,7 @@ use super::build_time::{BuildCommand, BuildTime};
 use super::file_path::FilePath;
 use super::file_size::FileSize;
 use super::{flag::Flag, output::Output, shell::Shell};
-use crate::{bencher::sub::RunError, parser::project::run::CliRunShell};
+use crate::{bencher::sub::RunError, parser::run::CliRunShell};
 use crate::{cli_eprintln_quietable, cli_println_quietable};
 
 #[derive(Debug, Clone)]

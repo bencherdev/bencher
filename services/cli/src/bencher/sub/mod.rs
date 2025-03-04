@@ -4,6 +4,7 @@ mod docker;
 mod mock;
 mod organization;
 mod project;
+mod run;
 mod sub_cmd;
 mod system;
 mod user;
@@ -24,15 +25,12 @@ use project::{
     plot::Plot,
     project::Project,
     report::Report,
-    run::Run,
     testbed::Testbed,
     threshold::Threshold,
 };
-pub use project::{
-    archive::ArchiveError,
-    run::{runner::output::Output, thresholds::ThresholdsError, RunError},
-    threshold::ThresholdError,
-};
+pub use project::{archive::ArchiveError, report::ThresholdsError, threshold::ThresholdError};
+use run::Run;
+pub use run::{runner::output::Output, RunError};
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};
 use user::{token::Token, user::User};

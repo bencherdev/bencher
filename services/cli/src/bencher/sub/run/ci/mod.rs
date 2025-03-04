@@ -2,7 +2,7 @@
 
 use bencher_comment::ReportComment;
 
-use crate::parser::project::run::CliRunCi;
+use crate::parser::run::CliRunCi;
 
 mod github_actions;
 

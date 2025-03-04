@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::parser::project::run::CliRunCommand;
+use crate::parser::run::CliRunCommand;
 
 mod build_time;
 pub mod command;

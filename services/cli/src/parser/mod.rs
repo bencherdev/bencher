@@ -7,6 +7,7 @@ pub mod docker;
 pub mod mock;
 pub mod organization;
 pub mod project;
+pub mod run;
 pub mod system;
 pub mod user;
 
@@ -16,8 +17,9 @@ use organization::{member::CliMember, CliOrganization};
 use project::{
     alert::CliAlert, archive::CliArchive, benchmark::CliBenchmark, branch::CliBranch,
     measure::CliMeasure, metric::CliMetric, perf::CliPerf, plot::CliPlot, report::CliReport,
-    run::CliRun, testbed::CliTestbed, threshold::CliThreshold, CliProject,
+    testbed::CliTestbed, threshold::CliThreshold, CliProject,
 };
+use run::CliRun;
 use system::{auth::CliAuth, server::CliServer};
 use user::{token::CliToken, CliUser};
 

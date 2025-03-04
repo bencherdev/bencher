@@ -7,7 +7,7 @@ use crate::{
     bencher::sub::project::threshold::model::Model,
     parser::{
         project::{
-            run::CliRunThresholds,
+            report::CliReportThresholds,
             threshold::{CliModel, CliModelTest},
         },
         ElidedOption,
@@ -44,11 +44,11 @@ pub enum ThresholdsError {
     ExtraUpperBoundaries(Vec<ElidedOption<Boundary>>),
 }
 
-impl TryFrom<CliRunThresholds> for Thresholds {
+impl TryFrom<CliReportThresholds> for Thresholds {
     type Error = ThresholdsError;
 
-    fn try_from(thresholds: CliRunThresholds) -> Result<Self, Self::Error> {
-        let CliRunThresholds {
+    fn try_from(thresholds: CliReportThresholds) -> Result<Self, Self::Error> {
+        let CliReportThresholds {
             threshold_measure,
             threshold_test,
             threshold_min_sample_size,

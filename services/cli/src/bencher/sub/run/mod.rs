@@ -7,20 +7,16 @@ use bencher_json::{DateTime, JsonReport, NameId, ResourceId};
 use crate::{
     bencher::backend::AuthBackend,
     cli_eprintln_quietable, cli_println, cli_println_quietable,
-    parser::project::run::{CliRun, CliRunOutput},
+    parser::run::{CliRun, CliRunOutput},
     CliError,
 };
 
-mod adapter;
-mod average;
 mod branch;
 mod ci;
 mod error;
-mod fold;
 mod format;
 pub mod runner;
 mod sub_adapter;
-pub mod thresholds;
 
 use branch::Branch;
 use ci::Ci;
@@ -28,9 +24,10 @@ pub use error::RunError;
 use format::Format;
 use runner::Runner;
 use sub_adapter::SubAdapter;
-use thresholds::Thresholds;
 
 use crate::bencher::SubCmd;
+
+use super::project::report::Thresholds;
 
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]

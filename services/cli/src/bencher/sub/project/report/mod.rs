@@ -5,6 +5,8 @@ mod delete;
 mod list;
 mod view;
 
+pub use create::{Thresholds, ThresholdsError};
+
 #[derive(Debug)]
 pub enum Report {
     List(list::List),
