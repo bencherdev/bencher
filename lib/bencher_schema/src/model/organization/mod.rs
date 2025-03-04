@@ -54,7 +54,7 @@ impl QueryOrganization {
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
 
-    pub async fn get_or_create(
+    pub async fn get_or_create_from_user(
         context: &ApiContext,
         auth_user: &AuthUser,
     ) -> Result<Self, HttpError> {
@@ -72,22 +72,30 @@ impl QueryOrganization {
         Self::create(context, auth_user, json_organization).await
     }
 
+    pub async fn get_or_create_from_context(
+        context: &ApiContext,
+        project_name: &ResourceName,
+        project_slug: &Slug,
+    ) -> Result<Self, HttpError> {
+        if let Ok(query_organization) =
+            Self::from_resource_id(conn_lock!(context), &project_slug.clone().into())
+        {
+            return Ok(query_organization);
+        }
+
+        let json_organization = JsonNewOrganization {
+            name: project_name.clone(),
+            slug: Some(project_slug.clone()),
+        };
+        Self::create_inner(context, json_organization).await
+    }
+
     pub async fn create(
         context: &ApiContext,
         auth_user: &AuthUser,
         json_organization: JsonNewOrganization,
     ) -> Result<Self, HttpError> {
-        // Create the organization
-        let insert_organization =
-            InsertOrganization::from_json(conn_lock!(context), json_organization)?;
-        diesel::insert_into(schema::organization::table)
-            .values(&insert_organization)
-            .execute(conn_lock!(context))
-            .map_err(resource_conflict_err!(Organization, insert_organization))?;
-        let query_organization = schema::organization::table
-            .filter(schema::organization::uuid.eq(&insert_organization.uuid))
-            .first::<QueryOrganization>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Organization, insert_organization))?;
+        let query_organization = Self::create_inner(context, json_organization).await?;
 
         let timestamp = DateTime::now();
         // Connect the user to the organization as a `Leader`
@@ -104,6 +112,22 @@ impl QueryOrganization {
             .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
         Ok(query_organization)
+    }
+
+    async fn create_inner(
+        context: &ApiContext,
+        json_organization: JsonNewOrganization,
+    ) -> Result<Self, HttpError> {
+        let insert_organization =
+            InsertOrganization::from_json(conn_lock!(context), json_organization)?;
+        diesel::insert_into(schema::organization::table)
+            .values(&insert_organization)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Organization, insert_organization))?;
+        schema::organization::table
+            .filter(schema::organization::uuid.eq(&insert_organization.uuid))
+            .first::<QueryOrganization>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Organization, insert_organization))
     }
 
     pub fn is_allowed_resource_id(

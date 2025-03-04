@@ -89,7 +89,7 @@ impl QueryProject {
             .map_err(resource_not_found_err!(Project, slug.clone()))
     }
 
-    pub async fn get_or_create(
+    pub async fn get_or_create_from_project(
         log: &Logger,
         context: &ApiContext,
         auth_user: &AuthUser,
@@ -110,7 +110,8 @@ impl QueryProject {
             ResourceIdKind::Slug(slug) => slug,
         };
 
-        let query_organization = QueryOrganization::get_or_create(context, auth_user).await?;
+        let query_organization =
+            QueryOrganization::get_or_create_from_user(context, auth_user).await?;
         let json_project = JsonNewProject {
             name: slug.clone().into(),
             slug: Some(slug.clone()),
@@ -131,7 +132,8 @@ impl QueryProject {
             return Ok(query_project);
         }
 
-        let query_organization = QueryOrganization::get_or_create(context, auth_user).await?;
+        let query_organization =
+            QueryOrganization::get_or_create_from_user(context, auth_user).await?;
         let name = Self::unique_name(context, &query_organization, project_name).await?;
         let json_project = JsonNewProject {
             name,
@@ -226,29 +228,18 @@ impl QueryProject {
         query_organization: &QueryOrganization,
         json_project: JsonNewProject,
     ) -> Result<Self, HttpError> {
-        let insert_project =
-            InsertProject::from_json(conn_lock!(context), query_organization, json_project)?;
-
         // Check to see if user has permission to create a project within the organization
         context
             .rbac
             .is_allowed_organization(
                 auth_user,
                 bencher_rbac::organization::Permission::Create,
-                &insert_project,
+                query_organization,
             )
             .map_err(forbidden_error)?;
 
-        diesel::insert_into(project_table::table)
-            .values(&insert_project)
-            .execute(conn_lock!(context))
-            .map_err(resource_conflict_err!(Project, &insert_project))?;
-        let query_project = Self::from_uuid(
-            conn_lock!(context),
-            query_organization.id,
-            insert_project.uuid,
-        )?;
-        slog::debug!(log, "Created project: {query_project:?}");
+        let query_project =
+            Self::create_inner(log, context, query_organization, json_project).await?;
 
         let timestamp = DateTime::now();
         // Connect the user to the project as a `Maintainer`
@@ -264,6 +255,28 @@ impl QueryProject {
             .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
         slog::debug!(log, "Added project role: {insert_proj_role:?}");
+
+        Ok(query_project)
+    }
+
+    async fn create_inner(
+        log: &Logger,
+        context: &ApiContext,
+        query_organization: &QueryOrganization,
+        json_project: JsonNewProject,
+    ) -> Result<Self, HttpError> {
+        let insert_project =
+            InsertProject::from_json(conn_lock!(context), query_organization, json_project)?;
+        diesel::insert_into(project_table::table)
+            .values(&insert_project)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Project, &insert_project))?;
+        let query_project = Self::from_uuid(
+            conn_lock!(context),
+            query_organization.id,
+            insert_project.uuid,
+        )?;
+        slog::debug!(log, "Created project: {query_project:?}");
 
         #[cfg(feature = "plus")]
         context.update_index(log, &query_project).await;

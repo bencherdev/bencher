@@ -50,7 +50,7 @@ async fn post_inner(
 ) -> Result<JsonReport, HttpError> {
     let query_project = match (auth_user.as_ref(), json_run.project.as_ref()) {
         (Some(auth_user), Some(project)) => {
-            QueryProject::get_or_create(log, context, auth_user, project)
+            QueryProject::get_or_create_from_project(log, context, auth_user, project)
                 .await
                 .map_err(|e| forbidden_error(e.to_string()))?
         },
