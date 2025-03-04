@@ -8,7 +8,7 @@ use bencher_json::{
     DateTime, JsonNewOrganization, JsonOrganization, Jwt, OrganizationUuid, ResourceId,
     ResourceName, Slug,
 };
-use bencher_rbac::Organization;
+use bencher_rbac::{organization::Permission, Organization};
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
 use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
@@ -62,6 +62,7 @@ impl QueryOrganization {
         if let Ok(query_organization) =
             Self::from_resource_id(conn_lock!(context), &user_slug.clone().into())
         {
+            query_organization.try_allowed(&context.rbac, auth_user, Permission::View)?;
             return Ok(query_organization);
         }
 
@@ -72,7 +73,7 @@ impl QueryOrganization {
         Self::create(context, auth_user, json_organization).await
     }
 
-    pub async fn get_or_create_from_context(
+    pub async fn get_or_create_from_project(
         context: &ApiContext,
         project_name: &ResourceName,
         project_slug: &Slug,
@@ -80,13 +81,9 @@ impl QueryOrganization {
         if let Ok(query_organization) =
             Self::from_resource_id(conn_lock!(context), &project_slug.clone().into())
         {
-            // Get the total number of members for the organization
-            let total_members =
-                QueryOrganizationRole::count(conn_lock!(context), query_organization.id)?;
-            // If the project is part of an organization that has zero members,
+            // If the project is part of an organization that is unclaimed,
             // then the project can have anonymous reports.
-            // That is, the project has not yet been claimed.
-            return if total_members == 0 {
+            return if query_organization.is_unclaimed(conn_lock!(context))? {
                 Ok(query_organization)
             } else {
                 Err(unauthorized_error(format!(
@@ -147,7 +144,7 @@ impl QueryOrganization {
         rbac: &Rbac,
         organization: &ResourceId,
         auth_user: &AuthUser,
-        permission: bencher_rbac::organization::Permission,
+        permission: Permission,
     ) -> Result<Self, HttpError> {
         // Do not leak information about organizations.
         // Always return the same error.
@@ -161,7 +158,7 @@ impl QueryOrganization {
         rbac: &Rbac,
         organization: &ResourceId,
         auth_user: &AuthUser,
-        permission: bencher_rbac::organization::Permission,
+        permission: Permission,
     ) -> Result<Self, HttpError> {
         let query_organization = Self::from_resource_id(conn, organization)?;
         query_organization.try_allowed(rbac, auth_user, permission)?;
@@ -173,7 +170,7 @@ impl QueryOrganization {
         rbac: &Rbac,
         organization_id: OrganizationId,
         auth_user: &AuthUser,
-        permission: bencher_rbac::organization::Permission,
+        permission: Permission,
     ) -> Result<Self, HttpError> {
         // Do not leak information about organizations.
         // Always return the same error.
@@ -189,7 +186,7 @@ impl QueryOrganization {
         rbac: &Rbac,
         organization_id: OrganizationId,
         auth_user: &AuthUser,
-        permission: bencher_rbac::organization::Permission,
+        permission: Permission,
     ) -> Result<Self, HttpError> {
         let query_organization = Self::get(conn, organization_id)?;
         query_organization.try_allowed(rbac, auth_user, permission)?;
@@ -200,10 +197,16 @@ impl QueryOrganization {
         &self,
         rbac: &Rbac,
         auth_user: &AuthUser,
-        permission: bencher_rbac::organization::Permission,
+        permission: Permission,
     ) -> Result<(), HttpError> {
         rbac.is_allowed_organization(auth_user, permission, self)
             .map_err(forbidden_error)
+    }
+
+    pub fn is_unclaimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
+        let total_members = QueryOrganizationRole::count(conn, self.id)?;
+        // If the organization that has zero members, then it is unclaimed.
+        Ok(total_members == 0)
     }
 
     pub fn into_json(self) -> JsonOrganization {

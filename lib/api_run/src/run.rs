@@ -2,8 +2,9 @@ use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{JsonNewRun, JsonReport, ResourceName, RunContext, Slug};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
+    conn_lock,
     context::ApiContext,
-    error::{bad_request_error, forbidden_error, issue_error},
+    error::{bad_request_error, unauthorized_error},
     model::{
         project::{report::QueryReport, QueryProject},
         user::auth::{AuthUser, PubBearerToken},
@@ -48,40 +49,29 @@ async fn post_inner(
     auth_user: Option<AuthUser>,
     json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
-    let query_project = match (auth_user.as_ref(), json_run.project.as_ref()) {
-        (Some(auth_user), Some(project)) => {
-            QueryProject::get_or_create(log, context, auth_user, project)
-                .await
-                .map_err(|e| forbidden_error(e.to_string()))?
-        },
-        (Some(auth_user), None) => {
-            let project_name = project_name(&json_run)?;
-            let project_slug = project_slug(&json_run)?;
-            QueryProject::get_or_create_from_context(
-                log,
-                context,
-                auth_user,
-                project_name,
-                project_slug,
-            )
-            .await
-            .map_err(|e| forbidden_error(e.to_string()))?
-        },
-        _ => return Err(bad_request_error("Not yet supported")),
+    let project_name_fn = || project_name(&json_run);
+    let project_slug_fn = || project_slug(&json_run);
+    let query_project = if let Some(project) = json_run.project.as_ref() {
+        QueryProject::get_or_create(log, context, auth_user.as_ref(), project, project_name_fn)
+            .await?
+    } else {
+        QueryProject::get_or_create_from_context(
+            log,
+            context,
+            auth_user.as_ref(),
+            project_name_fn,
+            project_slug_fn,
+        )
+        .await?
     };
 
-    // Verify that the user is allowed
-    // This should always succeed if the logic above is correct
     if let Some(auth_user) = auth_user.as_ref() {
-        query_project
-            .try_allowed(&context.rbac, auth_user, Permission::Create)
-            .map_err(|e| {
-                issue_error(
-                    "Failed to check run permissions",
-                    "Failed check the run permissions before creating a report",
-                    e,
-                )
-            })?;
+        query_project.try_allowed(&context.rbac, auth_user, Permission::Create)?;
+    } else if !query_project.is_unclaimed(conn_lock!(context))? {
+        return Err(unauthorized_error(format!(
+            "This project ({}) has already been claimed.",
+            query_project.slug
+        )));
     }
     QueryReport::create(
         log,

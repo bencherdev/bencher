@@ -89,12 +89,16 @@ impl QueryProject {
             .map_err(resource_not_found_err!(Project, slug.clone()))
     }
 
-    pub async fn get_or_create(
+    pub async fn get_or_create<NameFn>(
         log: &Logger,
         context: &ApiContext,
-        auth_user: &AuthUser,
+        auth_user: Option<&AuthUser>,
         project: &ResourceId,
-    ) -> Result<Self, HttpError> {
+        project_name_fn: NameFn,
+    ) -> Result<Self, HttpError>
+    where
+        NameFn: FnOnce() -> Result<ResourceName, HttpError>,
+    {
         let query_project = Self::from_resource_id(conn_lock!(context), project);
 
         let http_error = match query_project {
@@ -105,35 +109,52 @@ impl QueryProject {
         let Ok(kind) = ResourceIdKind::try_from(project) else {
             return Err(http_error);
         };
-        let slug = match kind {
+        let project_slug = match kind {
             ResourceIdKind::Uuid(_) => return Err(http_error),
             ResourceIdKind::Slug(slug) => slug,
         };
 
-        let query_organization =
-            QueryOrganization::get_or_create_from_user(context, auth_user).await?;
-        let json_project = JsonNewProject {
-            name: slug.clone().into(),
-            slug: Some(slug.clone()),
-            url: None,
-            visibility: None,
-        };
-        Self::create(log, context, auth_user, &query_organization, json_project).await
+        Self::get_or_create_inner(log, context, auth_user, project_name_fn, project_slug).await
     }
 
-    pub async fn get_or_create_from_context(
+    pub async fn get_or_create_from_context<NameFn, SlugFn>(
         log: &Logger,
         context: &ApiContext,
-        auth_user: &AuthUser,
-        project_name: ResourceName,
-        project_slug: Slug,
-    ) -> Result<Self, HttpError> {
+        auth_user: Option<&AuthUser>,
+        project_name_fn: NameFn,
+        project_slug_fn: SlugFn,
+    ) -> Result<Self, HttpError>
+    where
+        NameFn: FnOnce() -> Result<ResourceName, HttpError>,
+        SlugFn: FnOnce() -> Result<Slug, HttpError>,
+    {
+        let project_slug = project_slug_fn()?;
         if let Ok(query_project) = Self::from_slug(conn_lock!(context), &project_slug) {
             return Ok(query_project);
         }
 
-        let query_organization =
-            QueryOrganization::get_or_create_from_user(context, auth_user).await?;
+        Self::get_or_create_inner(log, context, auth_user, project_name_fn, project_slug).await
+    }
+
+    async fn get_or_create_inner<NameFn>(
+        log: &Logger,
+        context: &ApiContext,
+        auth_user: Option<&AuthUser>,
+        project_name_fn: NameFn,
+        project_slug: Slug,
+    ) -> Result<Self, HttpError>
+    where
+        NameFn: FnOnce() -> Result<ResourceName, HttpError>,
+    {
+        let project_name = project_name_fn()?;
+        let query_organization = if let Some(auth_user) = auth_user {
+            QueryOrganization::get_or_create_from_user(context, auth_user).await?
+        } else {
+            QueryOrganization::get_or_create_from_project(context, &project_name, &project_slug)
+                .await?
+        };
+        // The choice was either to relax the schema constraint to allow duplicate project names
+        // or to append a number to the project name to ensure uniqueness.
         let name = Self::unique_name(context, &query_organization, project_name).await?;
         let json_project = JsonNewProject {
             name,
@@ -142,7 +163,11 @@ impl QueryProject {
             visibility: None,
         };
 
-        Self::create(log, context, auth_user, &query_organization, json_project).await
+        if let Some(auth_user) = auth_user {
+            Self::create(log, context, auth_user, &query_organization, json_project).await
+        } else {
+            Self::create_inner(log, context, &query_organization, json_project).await
+        }
     }
 
     async fn unique_name(
@@ -366,6 +391,11 @@ impl QueryProject {
     ) -> Result<(), HttpError> {
         rbac.is_allowed_project(auth_user, permission, self)
             .map_err(forbidden_error)
+    }
+
+    pub fn is_unclaimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
+        let query_organization = QueryOrganization::get(conn, self.organization_id)?;
+        query_organization.is_unclaimed(conn)
     }
 
     #[cfg(feature = "plus")]
