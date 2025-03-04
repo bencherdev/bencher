@@ -3,6 +3,7 @@ use bencher_json::{
     DateTime, Jwt,
 };
 use bencher_token::TokenKey;
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use super::{OrganizationId, QueryOrganization};
@@ -10,7 +11,8 @@ use crate::{
     context::DbConnection,
     error::unauthorized_error,
     model::user::{QueryUser, UserId},
-    schema::organization_role as organization_role_table,
+    resource_not_found_err,
+    schema::{self, organization_role as organization_role_table},
 };
 
 crate::macros::typed_id::typed_id!(OrganizationRoleId);
@@ -23,6 +25,19 @@ pub struct QueryOrganizationRole {
     pub role: OrganizationRole,
     pub created: DateTime,
     pub modified: DateTime,
+}
+
+impl QueryOrganizationRole {
+    pub fn count(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+    ) -> Result<i64, HttpError> {
+        schema::organization_role::table
+            .filter(schema::organization_role::organization_id.eq(&organization_id))
+            .count()
+            .get_result(conn)
+            .map_err(resource_not_found_err!(OrganizationRole, organization_id))
+    }
 }
 
 #[derive(Debug, diesel::Insertable)]

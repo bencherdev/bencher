@@ -89,7 +89,7 @@ impl QueryProject {
             .map_err(resource_not_found_err!(Project, slug.clone()))
     }
 
-    pub async fn get_or_create_from_project(
+    pub async fn get_or_create(
         log: &Logger,
         context: &ApiContext,
         auth_user: &AuthUser,
@@ -141,6 +141,7 @@ impl QueryProject {
             url: None,
             visibility: None,
         };
+
         Self::create(log, context, auth_user, &query_organization, json_project).await
     }
 

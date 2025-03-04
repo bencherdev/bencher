@@ -11,12 +11,12 @@ use bencher_json::{
 use bencher_rbac::Organization;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
-use organization_role::InsertOrganizationRole;
+use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 
 use crate::{
     conn_lock,
     context::{DbConnection, Rbac},
-    error::{forbidden_error, resource_not_found_error, BencherResource},
+    error::{forbidden_error, resource_not_found_error, unauthorized_error, BencherResource},
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
@@ -80,7 +80,19 @@ impl QueryOrganization {
         if let Ok(query_organization) =
             Self::from_resource_id(conn_lock!(context), &project_slug.clone().into())
         {
-            return Ok(query_organization);
+            // Get the total number of members for the organization
+            let total_members =
+                QueryOrganizationRole::count(conn_lock!(context), query_organization.id)?;
+            // If the project is part of an organization that has zero members,
+            // then the project can have anonymous reports.
+            // That is, the project has not yet been claimed.
+            return if total_members == 0 {
+                Ok(query_organization)
+            } else {
+                Err(unauthorized_error(format!(
+                    "This project ({project_slug}) has already been claimed."
+                )))
+            };
         }
 
         let json_organization = JsonNewOrganization {

@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{JsonNewRun, JsonReport, RunContext};
+use bencher_json::{JsonNewRun, JsonReport, ResourceName, RunContext, Slug};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::ApiContext,
@@ -50,21 +50,13 @@ async fn post_inner(
 ) -> Result<JsonReport, HttpError> {
     let query_project = match (auth_user.as_ref(), json_run.project.as_ref()) {
         (Some(auth_user), Some(project)) => {
-            QueryProject::get_or_create_from_project(log, context, auth_user, project)
+            QueryProject::get_or_create(log, context, auth_user, project)
                 .await
                 .map_err(|e| forbidden_error(e.to_string()))?
         },
         (Some(auth_user), None) => {
-            let Some(project_name) = json_run.context.as_ref().and_then(RunContext::name) else {
-                return Err(bad_request_error(
-                    "The `project` field was not specified nor was a run `context` provided for the name",
-                ));
-            };
-            let Some(project_slug) = json_run.context.as_ref().map(RunContext::slug) else {
-                return Err(bad_request_error(
-                    "The `project` field was not specified nor was a run `context` provided for the slug",
-                ));
-            };
+            let project_name = project_name(&json_run)?;
+            let project_slug = project_slug(&json_run)?;
             QueryProject::get_or_create_from_context(
                 log,
                 context,
@@ -99,4 +91,28 @@ async fn post_inner(
         auth_user.as_ref(),
     )
     .await
+}
+
+fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {
+    json_run
+        .context
+        .as_ref()
+        .and_then(RunContext::name)
+        .ok_or_else(|| {
+            bad_request_error(
+            "The `project` field was not specified nor was a run `context` provided for the name",
+        )
+        })
+}
+
+fn project_slug(json_run: &JsonNewRun) -> Result<Slug, HttpError> {
+    json_run
+        .context
+        .as_ref()
+        .map(RunContext::slug)
+        .ok_or_else(|| {
+            bad_request_error(
+            "The `project` field was not specified nor was a run `context` provided for the slug",
+        )
+        })
 }
