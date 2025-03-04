@@ -52,7 +52,7 @@ crate::macros::typed_id::typed_id!(ReportId);
 pub struct QueryReport {
     pub id: ReportId,
     pub uuid: ReportUuid,
-    pub user_id: UserId,
+    pub user_id: Option<UserId>,
     pub project_id: ProjectId,
     pub head_id: HeadId,
     pub version_id: VersionId,
@@ -72,7 +72,7 @@ impl QueryReport {
         context: &ApiContext,
         query_project: &QueryProject,
         mut json_report: JsonNewReport,
-        auth_user: &AuthUser,
+        auth_user: Option<&AuthUser>,
     ) -> Result<JsonReport, HttpError> {
         let project_id = query_project.id;
 
@@ -126,7 +126,7 @@ impl QueryReport {
 
         // Create a new report and add it to the database
         let insert_report = InsertReport::from_json(
-            auth_user.id(),
+            auth_user.map(|u| u.id),
             project_id,
             head_id,
             version_id,
@@ -205,7 +205,11 @@ impl QueryReport {
         } = self;
 
         let query_project = QueryProject::get(conn_lock!(context), project_id)?;
-        let user = QueryUser::get(conn_lock!(context), user_id)?.into_pub_json();
+        let user = if let Some(user_id) = user_id {
+            Some(QueryUser::get(conn_lock!(context), user_id)?.into_pub_json())
+        } else {
+            None
+        };
         let branch =
             QueryBranch::get_json_for_report(context, &query_project, head_id, version_id).await?;
         let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
@@ -445,7 +449,7 @@ async fn get_report_alerts(
 #[diesel(table_name = report_table)]
 pub struct InsertReport {
     pub uuid: ReportUuid,
-    pub user_id: UserId,
+    pub user_id: Option<UserId>,
     pub project_id: ProjectId,
     pub head_id: HeadId,
     pub version_id: VersionId,
@@ -458,7 +462,7 @@ pub struct InsertReport {
 
 impl InsertReport {
     pub fn from_json(
-        user_id: UserId,
+        user_id: Option<UserId>,
         project_id: ProjectId,
         head_id: HeadId,
         version_id: VersionId,

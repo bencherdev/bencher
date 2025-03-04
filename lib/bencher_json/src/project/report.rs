@@ -302,7 +302,7 @@ crate::from_vec!(JsonReports[JsonReport]);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
     pub uuid: ReportUuid,
-    pub user: JsonPubUser,
+    pub user: Option<JsonPubUser>,
     pub project: JsonProject,
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,

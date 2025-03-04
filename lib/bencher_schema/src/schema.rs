@@ -226,7 +226,7 @@ diesel::table! {
     report (id) {
         id -> Integer,
         uuid -> Text,
-        user_id -> Integer,
+        user_id -> Nullable<Integer>,
         project_id -> Integer,
         head_id -> Integer,
         version_id -> Integer,

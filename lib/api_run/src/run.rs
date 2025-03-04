@@ -48,12 +48,11 @@ async fn post_inner(
     auth_user: Option<AuthUser>,
     json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
-    let (auth_user, query_project) = match (auth_user, json_run.project.as_ref()) {
+    let query_project = match (auth_user.as_ref(), json_run.project.as_ref()) {
         (Some(auth_user), Some(project)) => {
-            let query_project = QueryProject::get_or_create(log, context, &auth_user, project)
+            QueryProject::get_or_create(log, context, auth_user, project)
                 .await
-                .map_err(|e| forbidden_error(e.to_string()))?;
-            (auth_user, query_project)
+                .map_err(|e| forbidden_error(e.to_string()))?
         },
         (Some(auth_user), None) => {
             let Some(project_name) = json_run.context.as_ref().and_then(RunContext::name) else {
@@ -66,30 +65,38 @@ async fn post_inner(
                     "The `project` field was not specified nor was a run `context` provided for the slug",
                 ));
             };
-            let query_project = QueryProject::get_or_create_from_context(
+            QueryProject::get_or_create_from_context(
                 log,
                 context,
-                &auth_user,
+                auth_user,
                 project_name,
                 project_slug,
             )
             .await
-            .map_err(|e| forbidden_error(e.to_string()))?;
-            (auth_user, query_project)
+            .map_err(|e| forbidden_error(e.to_string()))?
         },
         _ => return Err(bad_request_error("Not yet supported")),
     };
 
     // Verify that the user is allowed
     // This should always succeed if the logic above is correct
-    query_project
-        .try_allowed(&context.rbac, &auth_user, Permission::Create)
-        .map_err(|e| {
-            issue_error(
-                "Failed to check run permissions",
-                "Failed check the run permissions before creating a report",
-                e,
-            )
-        })?;
-    QueryReport::create(log, context, &query_project, json_run.into(), &auth_user).await
+    if let Some(auth_user) = auth_user.as_ref() {
+        query_project
+            .try_allowed(&context.rbac, auth_user, Permission::Create)
+            .map_err(|e| {
+                issue_error(
+                    "Failed to check run permissions",
+                    "Failed check the run permissions before creating a report",
+                    e,
+                )
+            })?;
+    }
+    QueryReport::create(
+        log,
+        context,
+        &query_project,
+        json_run.into(),
+        auth_user.as_ref(),
+    )
+    .await
 }

@@ -294,7 +294,7 @@ async fn post_inner(
         auth_user,
         Permission::Create,
     )?;
-    QueryReport::create(log, context, &query_project, json_report, auth_user).await
+    QueryReport::create(log, context, &query_project, json_report, Some(auth_user)).await
 }
 
 #[derive(Deserialize, JsonSchema)]
