@@ -20,7 +20,7 @@ use bencher_schema::{
             measure::{InsertMeasure, QueryMeasure},
             testbed::{InsertTestbed, QueryTestbed},
             threshold::InsertThreshold,
-            QueryProject,
+            InsertProject, QueryProject,
         },
         user::auth::{AuthUser, BearerToken},
     },
@@ -226,9 +226,11 @@ async fn post_inner(
         .await?;
     }
 
+    let insert_project =
+        InsertProject::from_json(conn_lock!(context), &query_organization, json_project)?;
     // Create a new project
     let query_project =
-        QueryProject::create(log, context, auth_user, &query_organization, json_project).await?;
+        QueryProject::create(log, context, auth_user, &query_organization, insert_project).await?;
 
     // Add a `main` branch to the project
     let query_branch = InsertBranch::main(log, context, query_project.id).await?;

@@ -156,17 +156,12 @@ impl QueryProject {
         // The choice was either to relax the schema constraint to allow duplicate project names
         // or to append a number to the project name to ensure uniqueness.
         let name = Self::unique_name(context, &query_organization, project_name).await?;
-        let json_project = JsonNewProject {
-            name,
-            slug: Some(project_slug),
-            url: None,
-            visibility: None,
-        };
-
+        let insert_project =
+            InsertProject::new(query_organization.id, name, project_slug, None, None);
         if let Some(auth_user) = auth_user {
-            Self::create(log, context, auth_user, &query_organization, json_project).await
+            Self::create(log, context, auth_user, &query_organization, insert_project).await
         } else {
-            Self::create_inner(log, context, &query_organization, json_project).await
+            Self::create_inner(log, context, &query_organization, insert_project).await
         }
     }
 
@@ -252,7 +247,7 @@ impl QueryProject {
         context: &ApiContext,
         auth_user: &AuthUser,
         query_organization: &QueryOrganization,
-        json_project: JsonNewProject,
+        insert_project: InsertProject,
     ) -> Result<Self, HttpError> {
         // Check to see if user has permission to create a project within the organization
         context
@@ -265,7 +260,7 @@ impl QueryProject {
             .map_err(forbidden_error)?;
 
         let query_project =
-            Self::create_inner(log, context, query_organization, json_project).await?;
+            Self::create_inner(log, context, query_organization, insert_project).await?;
 
         let timestamp = DateTime::now();
         // Connect the user to the project as a `Maintainer`
@@ -289,10 +284,8 @@ impl QueryProject {
         log: &Logger,
         context: &ApiContext,
         query_organization: &QueryOrganization,
-        json_project: JsonNewProject,
+        insert_project: InsertProject,
     ) -> Result<Self, HttpError> {
-        let insert_project =
-            InsertProject::from_json(conn_lock!(context), query_organization, json_project)?;
         diesel::insert_into(project_table::table)
             .values(&insert_project)
             .execute(conn_lock!(context))
@@ -466,6 +459,26 @@ pub struct InsertProject {
 }
 
 impl InsertProject {
+    pub fn new(
+        organization_id: OrganizationId,
+        name: ResourceName,
+        slug: Slug,
+        url: Option<Url>,
+        visibility: Option<Visibility>,
+    ) -> Self {
+        let timestamp = DateTime::now();
+        Self {
+            uuid: ProjectUuid::new(),
+            organization_id,
+            name,
+            slug,
+            url,
+            visibility: visibility.unwrap_or_default(),
+            created: timestamp,
+            modified: timestamp,
+        }
+    }
+
     pub fn from_json(
         conn: &mut DbConnection,
         organization: &QueryOrganization,
@@ -478,17 +491,7 @@ impl InsertProject {
             visibility,
         } = project;
         let slug = ok_slug!(conn, &name, slug, project, QueryProject)?;
-        let timestamp = DateTime::now();
-        Ok(Self {
-            uuid: ProjectUuid::new(),
-            organization_id: organization.id,
-            name,
-            slug,
-            url,
-            visibility: visibility.unwrap_or_default(),
-            created: timestamp,
-            modified: timestamp,
-        })
+        Ok(Self::new(organization.id, name, slug, url, visibility))
     }
 }
 

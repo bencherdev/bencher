@@ -16,7 +16,9 @@ use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 use crate::{
     conn_lock,
     context::{DbConnection, Rbac},
-    error::{forbidden_error, resource_not_found_error, unauthorized_error, BencherResource},
+    error::{
+        forbidden_error, issue_error, resource_not_found_error, unauthorized_error, BencherResource,
+    },
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
@@ -64,7 +66,15 @@ impl QueryOrganization {
         if let Ok(query_organization) =
             Self::from_resource_id(conn_lock!(context), &user_slug.clone().into())
         {
-            query_organization.try_allowed(&context.rbac, auth_user, Permission::View)?;
+            query_organization
+                .try_allowed(&context.rbac, auth_user, Permission::View)
+                .map_err(|err| {
+                    issue_error(
+                        "User cannot view own organization",
+                        &format!("User ({user_slug}) cannot view own organization."),
+                        err,
+                    )
+                })?;
             return Ok(query_organization);
         }
 
@@ -113,7 +123,7 @@ impl QueryOrganization {
             .is_ok()
         {
             return Err(forbidden_error(
-                "You cannot create an organization with the same slug as your user.",
+                "You cannot create an organization with the same slug as a different user.",
             ));
         }
 
