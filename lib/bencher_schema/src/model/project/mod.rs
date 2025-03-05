@@ -386,9 +386,9 @@ impl QueryProject {
             .map_err(forbidden_error)
     }
 
-    pub fn is_unclaimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
+    pub fn is_claimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
         let query_organization = QueryOrganization::get(conn, self.organization_id)?;
-        query_organization.is_unclaimed(conn)
+        query_organization.is_claimed(conn)
     }
 
     #[cfg(feature = "plus")]

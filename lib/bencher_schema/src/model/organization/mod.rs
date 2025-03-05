@@ -91,14 +91,14 @@ impl QueryOrganization {
         if let Ok(query_organization) =
             Self::from_resource_id(conn_lock!(context), &project_slug.clone().into())
         {
-            // If the project is part of an organization that is unclaimed,
-            // then the project can have anonymous reports.
-            return if query_organization.is_unclaimed(conn_lock!(context))? {
-                Ok(query_organization)
-            } else {
+            // If the project is part of an organization that is claimed,
+            // then the project can not have anonymous reports.
+            return if query_organization.is_claimed(conn_lock!(context))? {
                 Err(unauthorized_error(format!(
                     "This project ({project_slug}) has already been claimed."
                 )))
+            } else {
+                Ok(query_organization)
             };
         }
 
@@ -224,10 +224,10 @@ impl QueryOrganization {
             .map_err(forbidden_error)
     }
 
-    pub fn is_unclaimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
+    pub fn is_claimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
         let total_members = QueryOrganizationRole::count(conn, self.id)?;
         // If the organization that has zero members, then it is unclaimed.
-        Ok(total_members == 0)
+        Ok(total_members > 0)
     }
 
     pub fn into_json(self) -> JsonOrganization {

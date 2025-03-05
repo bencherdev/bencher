@@ -66,7 +66,7 @@ async fn post_inner(
     };
 
     // If a project is unclaimed, don't check permissions
-    if !query_project.is_unclaimed(conn_lock!(context))? {
+    if query_project.is_claimed(conn_lock!(context))? {
         if let Some(auth_user) = auth_user.as_ref() {
             query_project.try_allowed(&context.rbac, auth_user, Permission::Create)?;
         } else {
