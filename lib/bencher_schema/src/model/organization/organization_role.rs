@@ -38,6 +38,18 @@ impl QueryOrganizationRole {
             .get_result(conn)
             .map_err(resource_not_found_err!(OrganizationRole, organization_id))
     }
+
+    pub fn claimed_at(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+    ) -> Result<DateTime, HttpError> {
+        schema::organization_role::table
+            .filter(schema::organization_role::organization_id.eq(&organization_id))
+            .select(schema::organization_role::created)
+            .order(schema::organization_role::created.asc())
+            .first(conn)
+            .map_err(resource_not_found_err!(OrganizationRole, organization_id))
+    }
 }
 
 #[derive(Debug, diesel::Insertable)]

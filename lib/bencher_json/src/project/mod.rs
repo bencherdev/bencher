@@ -67,6 +67,7 @@ pub struct JsonProject {
     pub visibility: Visibility,
     pub created: DateTime,
     pub modified: DateTime,
+    pub claimed: Option<DateTime>,
 }
 
 impl Display for JsonProject {

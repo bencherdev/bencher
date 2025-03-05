@@ -230,7 +230,12 @@ impl QueryOrganization {
         Ok(total_members > 0)
     }
 
-    pub fn into_json(self) -> JsonOrganization {
+    pub fn claimed_at(&self, conn: &mut DbConnection) -> Result<DateTime, HttpError> {
+        QueryOrganizationRole::claimed_at(conn, self.id)
+    }
+
+    pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {
+        let claimed = self.claimed_at(conn).ok();
         let Self {
             uuid,
             name,
@@ -249,6 +254,7 @@ impl QueryOrganization {
             license,
             created,
             modified,
+            claimed,
         }
     }
 }

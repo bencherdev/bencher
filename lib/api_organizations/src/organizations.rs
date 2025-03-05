@@ -100,10 +100,10 @@ async fn get_ls_inner(
         ))?;
 
     // Drop connection lock before iterating
-    let json_organizations = organizations
+    let json_organizations = conn_lock!(context, |conn| organizations
         .into_iter()
-        .map(QueryOrganization::into_json)
-        .collect();
+        .map(|org| org.into_json(conn))
+        .collect());
 
     let total_count = get_ls_query(context, auth_user, &pagination_params, &query_params)
         .count()
@@ -184,7 +184,7 @@ async fn post_inner(
         InsertOrganization::from_json(conn_lock!(context), json_organization)?;
     let query_organization =
         QueryOrganization::create(context, auth_user, insert_organization).await?;
-    Ok(query_organization.into_json())
+    Ok(query_organization.into_json(conn_lock!(context)))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -230,14 +230,16 @@ async fn get_one_inner(
     path_params: OrganizationParams,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
-    Ok(QueryOrganization::is_allowed_resource_id(
-        conn_lock!(context),
-        &context.rbac,
-        &path_params.organization,
-        auth_user,
-        Permission::View,
-    )?
-    .into_json())
+    conn_lock!(context, |conn| {
+        Ok(QueryOrganization::is_allowed_resource_id(
+            conn,
+            &context.rbac,
+            &path_params.organization,
+            auth_user,
+            Permission::View,
+        )?
+        .into_json(conn))
+    })
 }
 
 /// Update an organization
@@ -319,7 +321,11 @@ async fn patch_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Organization, update_organization))?;
 
-    Ok(QueryOrganization::get(conn_lock!(context), query_organization.id)?.into_json())
+    conn_lock!(context, |conn| Ok(QueryOrganization::get(
+        conn,
+        query_organization.id
+    )?
+    .into_json(conn)))
 }
 
 /// Delete an organization

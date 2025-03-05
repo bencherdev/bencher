@@ -42,7 +42,7 @@ pub fn get_stats(
                 .load::<QueryOrganization>(conn)
                 .map_err(resource_not_found_err!(Organization))?
                 .into_iter()
-                .map(QueryOrganization::into_json)
+                .map(|org| org.into_json(conn))
                 .collect(),
         )
     };

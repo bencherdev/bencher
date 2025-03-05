@@ -45,6 +45,7 @@ pub struct JsonOrganization {
     pub license: Option<bencher_valid::Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub claimed: Option<DateTime>,
 }
 
 // Unfortunately, we have to use a complex, custom type and deserializer here.

@@ -410,11 +410,16 @@ impl QueryProject {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, HttpError> {
-        let query_organization = QueryOrganization::get(conn, self.organization_id)?;
-        Ok(self.into_json_for_organization(&query_organization))
+        let query_organization: QueryOrganization =
+            QueryOrganization::get(conn, self.organization_id)?;
+        Ok(self.into_json_for_organization(conn, &query_organization))
     }
 
-    pub fn into_json_for_organization(self, organization: &QueryOrganization) -> JsonProject {
+    pub fn into_json_for_organization(
+        self,
+        conn: &mut DbConnection,
+        query_organization: &QueryOrganization,
+    ) -> JsonProject {
         let Self {
             uuid,
             organization_id,
@@ -428,19 +433,21 @@ impl QueryProject {
         } = self;
         assert_parentage(
             BencherResource::Organization,
-            organization.id,
+            query_organization.id,
             BencherResource::Project,
             organization_id,
         );
+        let claimed = query_organization.claimed_at(conn).ok();
         JsonProject {
             uuid,
-            organization: organization.uuid,
+            organization: query_organization.uuid,
             name,
             slug,
             url,
             visibility,
             created,
             modified,
+            claimed,
         }
     }
 }
