@@ -9,11 +9,20 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
+use crate::UserUuid;
+
 pub mod member;
 pub mod plan;
 pub mod usage;
 
 crate::typed_uuid::typed_uuid!(OrganizationUuid);
+
+// Create a personal organization for a user.
+impl From<UserUuid> for OrganizationUuid {
+    fn from(uuid: UserUuid) -> Self {
+        uuid::Uuid::from(uuid).into()
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

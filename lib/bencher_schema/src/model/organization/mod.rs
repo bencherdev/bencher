@@ -24,7 +24,7 @@ use crate::{
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
-    model::user::{auth::AuthUser, InsertUser},
+    model::user::auth::AuthUser,
     resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
     ApiContext,
@@ -54,6 +54,13 @@ impl QueryOrganization {
     fn_eq_resource_id!(organization);
     fn_from_resource_id!(organization, Organization);
 
+    pub fn from_uuid(conn: &mut DbConnection, uuid: OrganizationUuid) -> Result<Self, HttpError> {
+        schema::organization::table
+            .filter(schema::organization::uuid.eq(uuid))
+            .first(conn)
+            .map_err(resource_not_found_err!(Organization, uuid))
+    }
+
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
@@ -62,16 +69,15 @@ impl QueryOrganization {
         context: &ApiContext,
         auth_user: &AuthUser,
     ) -> Result<Self, HttpError> {
-        let user_slug = &auth_user.user.slug;
-        if let Ok(query_organization) =
-            Self::from_resource_id(conn_lock!(context), &user_slug.clone().into())
-        {
+        // The user's organization should be created with the user's UUID.
+        let user_uuid = auth_user.user.uuid;
+        if let Ok(query_organization) = Self::from_uuid(conn_lock!(context), user_uuid.into()) {
             query_organization
                 .try_allowed(&context.rbac, auth_user, Permission::View)
                 .map_err(|err| {
                     issue_error(
                         "User cannot view own organization",
-                        &format!("User ({user_slug}) cannot view own organization."),
+                        &format!("User ({user_uuid}) cannot view own organization."),
                         err,
                     )
                 })?;
@@ -79,7 +85,7 @@ impl QueryOrganization {
         }
 
         let insert_organization =
-            InsertOrganization::new(auth_user.user.name.clone().into(), user_slug.clone());
+            InsertOrganization::from_user(conn_lock!(context), &auth_user.user)?;
         Self::create(context, auth_user, insert_organization).await
     }
 
@@ -88,6 +94,7 @@ impl QueryOrganization {
         project_name: &ResourceName,
         project_slug: &Slug,
     ) -> Result<Self, HttpError> {
+        // The project organization should be created with the project's slug.
         if let Ok(query_organization) =
             Self::from_resource_id(conn_lock!(context), &project_slug.clone().into())
         {
@@ -271,9 +278,13 @@ pub struct InsertOrganization {
 
 impl InsertOrganization {
     fn new(name: ResourceName, slug: Slug) -> Self {
+        Self::new_inner(OrganizationUuid::new(), name, slug)
+    }
+
+    fn new_inner(uuid: OrganizationUuid, name: ResourceName, slug: Slug) -> Self {
         let timestamp = DateTime::now();
         Self {
-            uuid: OrganizationUuid::new(),
+            uuid,
             name,
             slug,
             created: timestamp,
@@ -290,9 +301,19 @@ impl InsertOrganization {
         Ok(Self::new(name, slug))
     }
 
-    pub fn from_user(insert_user: &InsertUser) -> Self {
-        let InsertUser { name, slug, .. } = insert_user;
-        Self::new(name.clone().into(), slug.clone())
+    pub fn from_user(conn: &mut DbConnection, query_user: &QueryUser) -> Result<Self, HttpError> {
+        let name = query_user.name.clone();
+        // Because users are now allowed to create arbitrary organizations,
+        // we need to check if the slug is already in use.
+        let slug = ok_slug!(
+            conn,
+            &name,
+            Some(query_user.slug.clone()),
+            organization,
+            QueryOrganization
+        )?;
+        // The user's organization should be created with the user's UUID.
+        Ok(Self::new_inner(query_user.uuid.into(), name.into(), slug))
     }
 }
 

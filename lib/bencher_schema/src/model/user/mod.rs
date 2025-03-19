@@ -58,6 +58,13 @@ impl QueryUser {
     fn_eq_resource_id!(user);
     fn_from_resource_id!(user, User);
 
+    fn from_uuid(conn: &mut DbConnection, uuid: UserUuid) -> Result<Self, HttpError> {
+        schema::user::table
+            .filter(schema::user::uuid.eq(uuid))
+            .first(conn)
+            .map_err(resource_not_found_err!(User, uuid))
+    }
+
     fn_get!(user, UserId);
     fn_get_id!(user, UserId, UserUuid);
     fn_get_uuid!(user, UserId, UserUuid);
@@ -221,23 +228,23 @@ impl InsertUser {
             .values(&insert_user)
             .execute(conn)
             .map_err(resource_conflict_err!(User, insert_user))?;
-        let user_id = QueryUser::get_id(conn, insert_user.uuid)?;
+        let query_user = QueryUser::from_uuid(conn, insert_user.uuid)?;
 
         let insert_org_role = if let Some(invite) = &json_signup.invite {
-            InsertOrganizationRole::from_jwt(conn, token_key, invite, user_id)?
+            InsertOrganizationRole::from_jwt(conn, token_key, invite, query_user.id)?
         } else {
             // Create an organization for the user
-            let insert_org = InsertOrganization::from_user(&insert_user);
+            let insert_organization = InsertOrganization::from_user(conn, &query_user)?;
             diesel::insert_into(schema::organization::table)
-                .values(&insert_org)
+                .values(&insert_organization)
                 .execute(conn)
-                .map_err(resource_conflict_err!(Organization, insert_org))?;
-            let organization_id = QueryOrganization::get_id(conn, insert_org.uuid)?;
+                .map_err(resource_conflict_err!(Organization, insert_organization))?;
+            let organization_id = QueryOrganization::get_id(conn, insert_organization.uuid)?;
 
             let timestamp = DateTime::now();
             // Connect the user to the organization as a `Leader`
             InsertOrganizationRole {
-                user_id,
+                user_id: query_user.id,
                 organization_id,
                 role: OrganizationRole::Leader,
                 created: timestamp,
