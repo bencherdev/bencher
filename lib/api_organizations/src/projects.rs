@@ -227,7 +227,7 @@ async fn post_inner(
     }
 
     let insert_project =
-        InsertProject::from_json(conn_lock!(context), &query_organization, json_project)?;
+        InsertProject::from_json(conn_lock!(context), &query_organization, json_project);
     // Create a new project
     let query_project =
         QueryProject::create(log, context, auth_user, &query_organization, insert_project).await?;
@@ -238,7 +238,7 @@ async fn post_inner(
     let branch_id = query_branch.id;
 
     // Add a `localhost` testbed to the project
-    let insert_testbed = InsertTestbed::localhost(conn_lock!(context), query_project.id)?;
+    let insert_testbed = InsertTestbed::localhost(conn_lock!(context), query_project.id);
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
         .execute(conn_lock!(context))
@@ -248,7 +248,7 @@ async fn post_inner(
 
     // Add a `latency` measure to the project
     let insert_measure =
-        InsertMeasure::from_measure::<Latency>(conn_lock!(context), query_project.id)?;
+        InsertMeasure::from_measure::<Latency>(conn_lock!(context), query_project.id);
     diesel::insert_into(schema::measure::table)
         .values(&insert_measure)
         .execute(conn_lock!(context))
@@ -267,7 +267,7 @@ async fn post_inner(
 
     // Add a `throughput` measure to the project
     let insert_measure =
-        InsertMeasure::from_measure::<Throughput>(conn_lock!(context), query_project.id)?;
+        InsertMeasure::from_measure::<Throughput>(conn_lock!(context), query_project.id);
     diesel::insert_into(schema::measure::table)
         .values(&insert_measure)
         .execute(conn_lock!(context))

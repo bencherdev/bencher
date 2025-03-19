@@ -100,7 +100,7 @@ impl QueryTestbed {
         json_testbed: JsonNewTestbed,
     ) -> Result<Self, HttpError> {
         let insert_testbed =
-            InsertTestbed::from_json(conn_lock!(context), project_id, json_testbed)?;
+            InsertTestbed::from_json(conn_lock!(context), project_id, json_testbed);
         diesel::insert_into(schema::testbed::table)
             .values(&insert_testbed)
             .execute(conn_lock!(context))
@@ -155,11 +155,11 @@ impl InsertTestbed {
         conn: &mut DbConnection,
         project_id: ProjectId,
         testbed: JsonNewTestbed,
-    ) -> Result<Self, HttpError> {
+    ) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
-        let slug = ok_slug!(conn, project_id, &name, slug, testbed, QueryTestbed)?;
+        let slug = ok_slug!(conn, project_id, &name, slug, testbed, QueryTestbed);
         let timestamp = DateTime::now();
-        Ok(Self {
+        Self {
             uuid: TestbedUuid::new(),
             project_id,
             name,
@@ -167,10 +167,10 @@ impl InsertTestbed {
             created: timestamp,
             modified: timestamp,
             archived: None,
-        })
+        }
     }
 
-    pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
+    pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json(conn, project_id, JsonNewTestbed::localhost())
     }
 }

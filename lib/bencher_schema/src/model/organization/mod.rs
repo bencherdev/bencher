@@ -85,7 +85,7 @@ impl QueryOrganization {
         }
 
         let insert_organization =
-            InsertOrganization::from_user(conn_lock!(context), &auth_user.user)?;
+            InsertOrganization::from_user(conn_lock!(context), &auth_user.user);
         Self::create(context, auth_user, insert_organization).await
     }
 
@@ -292,16 +292,13 @@ impl InsertOrganization {
         }
     }
 
-    pub fn from_json(
-        conn: &mut DbConnection,
-        organization: JsonNewOrganization,
-    ) -> Result<Self, HttpError> {
+    pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
-        let slug = ok_slug!(conn, &name, slug, organization, QueryOrganization)?;
-        Ok(Self::new(name, slug))
+        let slug = ok_slug!(conn, &name, slug, organization, QueryOrganization);
+        Self::new(name, slug)
     }
 
-    pub fn from_user(conn: &mut DbConnection, query_user: &QueryUser) -> Result<Self, HttpError> {
+    pub fn from_user(conn: &mut DbConnection, query_user: &QueryUser) -> Self {
         let name = query_user.name.clone();
         // Because users are now allowed to create arbitrary organizations,
         // we need to check if the slug is already in use.
@@ -311,9 +308,9 @@ impl InsertOrganization {
             Some(query_user.slug.clone()),
             organization,
             QueryOrganization
-        )?;
+        );
         // The user's organization should be created with the user's UUID.
-        Ok(Self::new_inner(query_user.uuid.into(), name.into(), slug))
+        Self::new_inner(query_user.uuid.into(), name.into(), slug)
     }
 }
 

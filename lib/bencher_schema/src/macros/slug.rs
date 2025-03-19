@@ -1,5 +1,4 @@
 use bencher_json::Slug;
-use dropshot::HttpError;
 
 use crate::{context::DbConnection, model::project::ProjectId};
 
@@ -11,16 +10,16 @@ pub fn validate_slug<S>(
     name: S,
     slug: Option<Slug>,
     exists: Box<SlugExistsFn>,
-) -> Result<Slug, HttpError>
+) -> Slug
 where
     S: AsRef<str> + std::fmt::Display,
 {
     let new_slug = Slug::unwrap_or_new(name, slug);
-    Ok(if exists(conn, project_id, new_slug.as_ref()) {
+    if exists(conn, project_id, new_slug.as_ref()) {
         new_slug.with_rand_suffix()
     } else {
         new_slug
-    })
+    }
 }
 
 macro_rules! ok_slug {

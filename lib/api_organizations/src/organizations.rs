@@ -180,8 +180,7 @@ async fn post_inner(
     json_organization: JsonNewOrganization,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
-    let insert_organization =
-        InsertOrganization::from_json(conn_lock!(context), json_organization)?;
+    let insert_organization = InsertOrganization::from_json(conn_lock!(context), json_organization);
     let query_organization =
         QueryOrganization::create(context, auth_user, insert_organization).await?;
     Ok(query_organization.into_json(conn_lock!(context)))

@@ -143,7 +143,7 @@ impl QueryMeasure {
         json_measure: JsonNewMeasure,
     ) -> Result<Self, HttpError> {
         let insert_measure =
-            InsertMeasure::from_json(conn_lock!(context), project_id, json_measure)?;
+            InsertMeasure::from_json(conn_lock!(context), project_id, json_measure);
         diesel::insert_into(schema::measure::table)
             .values(&insert_measure)
             .execute(conn_lock!(context))
@@ -197,10 +197,7 @@ pub struct InsertMeasure {
 }
 
 impl InsertMeasure {
-    pub fn from_measure<T: BuiltInMeasure>(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-    ) -> Result<Self, HttpError> {
+    pub fn from_measure<T: BuiltInMeasure>(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json(conn, project_id, T::new_json())
     }
 
@@ -208,11 +205,11 @@ impl InsertMeasure {
         conn: &mut DbConnection,
         project_id: ProjectId,
         measure: JsonNewMeasure,
-    ) -> Result<Self, HttpError> {
+    ) -> Self {
         let JsonNewMeasure { name, slug, units } = measure;
-        let slug = ok_slug!(conn, project_id, &name, slug, measure, QueryMeasure)?;
+        let slug = ok_slug!(conn, project_id, &name, slug, measure, QueryMeasure);
         let timestamp = DateTime::now();
-        Ok(Self {
+        Self {
             uuid: MeasureUuid::new(),
             project_id,
             name,
@@ -221,7 +218,7 @@ impl InsertMeasure {
             created: timestamp,
             modified: timestamp,
             archived: None,
-        })
+        }
     }
 }
 

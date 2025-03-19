@@ -342,22 +342,15 @@ pub struct InsertBranch {
 }
 
 impl InsertBranch {
-    pub async fn new(
-        context: &ApiContext,
+    pub fn new(
+        conn: &mut DbConnection,
         project_id: ProjectId,
         name: BranchName,
         slug: Option<Slug>,
-    ) -> Result<Self, HttpError> {
-        let slug = conn_lock!(context, |conn| ok_slug!(
-            conn,
-            project_id,
-            &name,
-            slug,
-            branch,
-            QueryBranch
-        )?);
+    ) -> Self {
+        let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch);
         let timestamp = DateTime::now();
-        Ok(Self {
+        Self {
             uuid: BranchUuid::new(),
             project_id,
             name,
@@ -366,7 +359,7 @@ impl InsertBranch {
             created: timestamp,
             modified: timestamp,
             archived: None,
-        })
+        }
     }
 
     pub async fn from_json(
@@ -382,7 +375,7 @@ impl InsertBranch {
         } = branch;
 
         // Create branch
-        let insert_branch = Self::new(context, project_id, name, slug).await?;
+        let insert_branch = Self::new(conn_lock!(context), project_id, name, slug);
         diesel::insert_into(schema::branch::table)
             .values(&insert_branch)
             .execute(conn_lock!(context))

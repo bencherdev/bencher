@@ -490,15 +490,15 @@ impl InsertProject {
         conn: &mut DbConnection,
         organization: &QueryOrganization,
         project: JsonNewProject,
-    ) -> Result<Self, HttpError> {
+    ) -> Self {
         let JsonNewProject {
             name,
             slug,
             url,
             visibility,
         } = project;
-        let slug = ok_slug!(conn, &name, slug, project, QueryProject)?;
-        Ok(Self::new(organization.id, name, slug, url, visibility))
+        let slug = ok_slug!(conn, &name, slug, project, QueryProject);
+        Self::new(organization.id, name, slug, url, visibility)
     }
 }
 

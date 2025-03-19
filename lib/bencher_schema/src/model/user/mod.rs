@@ -184,15 +184,10 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn new(
-        conn: &mut DbConnection,
-        name: UserName,
-        slug: Option<Slug>,
-        email: Email,
-    ) -> Result<Self, HttpError> {
-        let slug = ok_slug!(conn, &name, slug, user, QueryUser)?;
+    pub fn new(conn: &mut DbConnection, name: UserName, slug: Option<Slug>, email: Email) -> Self {
+        let slug = ok_slug!(conn, &name, slug, user, QueryUser);
         let timestamp = DateTime::now();
-        Ok(Self {
+        Self {
             uuid: UserUuid::new(),
             name,
             slug,
@@ -201,7 +196,7 @@ impl InsertUser {
             locked: false,
             created: timestamp,
             modified: timestamp,
-        })
+        }
     }
 
     pub fn from_json(
@@ -212,7 +207,7 @@ impl InsertUser {
         let JsonSignup {
             name, slug, email, ..
         } = json_signup.clone();
-        let mut insert_user = Self::new(conn, name, slug, email)?;
+        let mut insert_user = Self::new(conn, name, slug, email);
 
         let count = schema::user::table
             .select(count(schema::user::id))
@@ -234,7 +229,7 @@ impl InsertUser {
             InsertOrganizationRole::from_jwt(conn, token_key, invite, query_user.id)?
         } else {
             // Create an organization for the user
-            let insert_organization = InsertOrganization::from_user(conn, &query_user)?;
+            let insert_organization = InsertOrganization::from_user(conn, &query_user);
             diesel::insert_into(schema::organization::table)
                 .values(&insert_organization)
                 .execute(conn)

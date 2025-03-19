@@ -99,7 +99,7 @@ impl QueryBenchmark {
         json_benchmark: JsonNewBenchmark,
     ) -> Result<Self, HttpError> {
         let insert_benchmark =
-            InsertBenchmark::from_json(conn_lock!(context), project_id, json_benchmark)?;
+            InsertBenchmark::from_json(conn_lock!(context), project_id, json_benchmark);
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn_lock!(context))
@@ -154,11 +154,11 @@ impl InsertBenchmark {
         conn: &mut DbConnection,
         project_id: ProjectId,
         benchmark: JsonNewBenchmark,
-    ) -> Result<Self, HttpError> {
+    ) -> Self {
         let JsonNewBenchmark { name, slug } = benchmark;
-        let slug = ok_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark)?;
+        let slug = ok_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark);
         let timestamp = DateTime::now();
-        Ok(Self {
+        Self {
             uuid: BenchmarkUuid::new(),
             project_id,
             name,
@@ -166,7 +166,7 @@ impl InsertBenchmark {
             created: timestamp,
             modified: timestamp,
             archived: None,
-        })
+        }
     }
 }
 
