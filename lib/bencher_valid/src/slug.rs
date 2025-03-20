@@ -117,21 +117,40 @@ impl Slug {
 
     #[cfg(feature = "server")]
     pub fn rand_suffix() -> String {
+        use chrono::Utc;
         use rand::Rng;
 
+        const BASE: u64 = 36;
         const CHARSET: &[u8] = BASE_36.as_bytes();
-        let mut rng = rand::rng();
 
-        (0..Self::RAND_LEN)
-            .map(|_| {
-                let index = rng.random_range(0..CHARSET.len());
-                if let Some(c) = CHARSET.get(index).copied() {
-                    c as char
-                } else {
-                    '0'
-                }
-            })
-            .collect()
+        let now = Utc::now();
+        let mut timestamp = u64::try_from(now.timestamp()).unwrap_or_default();
+        let mut base36 = String::new();
+
+        while timestamp > 0 {
+            let remainder = timestamp % BASE;
+            #[allow(clippy::cast_possible_truncation)]
+            if let Some(c) = std::char::from_digit(remainder as u32, BASE as u32) {
+                base36.push(c);
+            }
+            timestamp /= BASE;
+        }
+        let mut base36 = base36.chars().rev().collect::<String>();
+
+        let mut rng = rand::rng();
+        let Some(remainder) = Self::RAND_LEN.checked_sub(base36.len()) else {
+            debug_assert!(false, "RAND_LEN is too small");
+            return base36;
+        };
+
+        for _ in 0..remainder {
+            let index = rng.random_range(0..CHARSET.len());
+            if let Some(c) = CHARSET.get(index).copied() {
+                base36.push(c as char);
+            }
+        }
+
+        base36
     }
 
     #[cfg(feature = "server")]
