@@ -9842,6 +9842,14 @@
       "JsonOrganization": {
         "type": "object",
         "properties": {
+          "claimed": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -10362,6 +10370,14 @@
       "JsonProject": {
         "type": "object",
         "properties": {
+          "claimed": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -10816,7 +10832,12 @@
             "$ref": "#/components/schemas/JsonTestbed"
           },
           "user": {
-            "$ref": "#/components/schemas/JsonPubUser"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPubUser"
+              }
+            ]
           },
           "uuid": {
             "$ref": "#/components/schemas/ReportUuid"
@@ -10832,7 +10853,6 @@
           "results",
           "start_time",
           "testbed",
-          "user",
           "uuid"
         ]
       },

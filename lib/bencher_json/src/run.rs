@@ -6,11 +6,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     project::{
-        branch::{JsonUpdateStartPoint, DEFAULT_BRANCH},
+        branch::JsonUpdateStartPoint,
         report::{JsonReportSettings, JsonReportThresholds},
-        testbed::DEFAULT_TESTBED,
     },
-    JsonNewReport, NameId,
+    NameId,
+};
+
+#[cfg(feature = "server")]
+use crate::{
+    project::{branch::DEFAULT_BRANCH, testbed::DEFAULT_TESTBED},
+    JsonNewReport,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -93,7 +98,7 @@ impl From<JsonNewRun> for JsonNewReport {
             .unwrap_or_else(|| DEFAULT_TESTBED.clone());
         // TODO eventually there should be a `ReportContext` type
         // this type should include user defined context and system context
-        // Some of the bencher provided context should be filtered out, like the full fingerprint
+        // Some of the Bencher provided context should be filtered out, like the full fingerprint
         Self {
             branch,
             hash,

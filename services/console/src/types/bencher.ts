@@ -493,6 +493,7 @@ export interface JsonOrganization {
 	license?: Jwt;
 	created: string;
 	modified: string;
+	claimed?: string;
 }
 
 export interface JsonPayment {
@@ -509,6 +510,7 @@ export interface JsonProject {
 	visibility: Visibility;
 	created: string;
 	modified: string;
+	claimed?: string;
 }
 
 export interface JsonPerfMetric {
