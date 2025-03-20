@@ -20,6 +20,7 @@ const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 // TODO Custom max TTL
 pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
+pub const CLAIM_TOKEN_TTL: u32 = 60;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MigrationError {

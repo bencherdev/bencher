@@ -45,6 +45,7 @@ import {
 	validU32,
 } from "../../../util/valid";
 import { themeSignal } from "../../navbar/theme/util";
+import ClaimBanner from "./ClaimBanner";
 import PerfFrame from "./PerfFrame";
 import PerfHeader from "./header/PerfHeader";
 import type { TabList } from "./plot/tab/PlotTab";
@@ -1202,6 +1203,14 @@ const PerfPanel = (props: Props) => {
 	return (
 		<>
 			<Show when={!props.isEmbed}>
+				<Show when={!project.loading && project().uuid && !project()?.claimed}>
+					<ClaimBanner
+						apiUrl={props.apiUrl}
+						user={user}
+						project={project}
+						project_slug={project_slug}
+					/>
+				</Show>
 				<PerfHeader
 					isConsole={props.isConsole === true}
 					apiUrl={props.apiUrl}

@@ -5,7 +5,7 @@ use bencher_valid::{PlanLevel, Secret};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::JsonUser;
+use crate::{JsonUser, OrganizationUuid};
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,6 +17,7 @@ pub struct JsonSignup {
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
+    pub claim: Option<OrganizationUuid>,
     /// I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)
     pub i_agree: bool,
 }
@@ -40,6 +41,7 @@ pub struct JsonOAuth {
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
+    pub claim: Option<OrganizationUuid>,
 }
 
 #[typeshare::typeshare]

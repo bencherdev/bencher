@@ -27,7 +27,7 @@ use crate::{
     model::user::auth::AuthUser,
     resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
-    ApiContext,
+    ApiContext, CLAIM_TOKEN_TTL,
 };
 
 use super::user::QueryUser;
@@ -239,6 +239,36 @@ impl QueryOrganization {
 
     pub fn claimed_at(&self, conn: &mut DbConnection) -> Result<DateTime, HttpError> {
         QueryOrganizationRole::claimed_at(conn, self.id)
+    }
+
+    pub async fn claim(
+        &self,
+        context: &ApiContext,
+        query_user: &QueryUser,
+    ) -> Result<Jwt, HttpError> {
+        if self.is_claimed(conn_lock!(context))? {
+            return Err(unauthorized_error(format!(
+                "This organization ({}) has already been claimed.",
+                self.uuid
+            )));
+        }
+
+        // Create an invite token to claim the organization
+        context
+            .token_key
+            .new_invite(
+                query_user.email.clone(),
+                CLAIM_TOKEN_TTL,
+                self.uuid,
+                OrganizationRole::Leader,
+            )
+            .map_err(|e| {
+                issue_error(
+                    "Failed to create new claim token",
+                    "Failed to create new claim token.",
+                    e,
+                )
+            })
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {

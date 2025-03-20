@@ -1,6 +1,12 @@
 import * as Sentry from "@sentry/astro";
 import { createMemo, createResource } from "solid-js";
-import type { JsonAuthUser, JsonOAuth } from "../../types/bencher";
+import type {
+	JsonAuthUser,
+	JsonOAuth,
+	Jwt,
+	PlanLevel,
+	Uuid,
+} from "../../types/bencher";
 import { authUser, setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
@@ -9,6 +15,7 @@ import {
 	type InitValid,
 	init_valid,
 	validJwt,
+	validOptionUuid,
 	validPlanLevel,
 } from "../../util/valid";
 import { PLAN_PARAM } from "./auth";
@@ -53,12 +60,14 @@ const AuthGitHub = (props: Props) => {
 			code: fetcher.code,
 		} as JsonOAuth;
 		const state = fetcher.state;
-		const setParams = [];
+		const setParams: [string, string][] = [];
 		if (validJwt(state)) {
-			oauth.invite = state;
+			oauth.invite = state as Jwt;
+		} else if (validOptionUuid(state)) {
+			oauth.claim = state as Uuid;
 		} else if (validPlanLevel(state)) {
-			oauth.plan = state;
-			setParams.push([PLAN_PARAM, state]);
+			oauth.plan = state as PlanLevel;
+			setParams.push([PLAN_PARAM, state as PlanLevel]);
 		}
 		return await httpPost(props.apiUrl, "/v0/auth/github", null, oauth)
 			.then((resp) => {

@@ -464,6 +464,7 @@ export interface JsonOAuth {
 	code: Secret;
 	plan?: PlanLevel;
 	invite?: Jwt;
+	claim?: Uuid;
 }
 
 export interface JsonPerfAlert {
@@ -653,6 +654,7 @@ export interface JsonSignup {
 	email: Email;
 	plan?: PlanLevel;
 	invite?: Jwt;
+	claim?: Uuid;
 	/** I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license) */
 	i_agree: boolean;
 }

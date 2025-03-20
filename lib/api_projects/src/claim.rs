@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{organization::member::OrganizationRole, JsonNewClaim, JsonProject, ResourceId};
+use bencher_json::{organization::member::OrganizationRole, JsonAccept, JsonNewClaim, ResourceId};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
@@ -13,6 +13,10 @@ use bencher_schema::{
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+
+// The claim token should be short-lived,
+// as it is meant to be used immediately after creation.
+const CLAIM_TOKEN_TTL: u32 = 60;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjClaimParams {
@@ -47,7 +51,7 @@ pub async fn proj_claim_post(
     bearer_token: BearerToken,
     path_params: Path<ProjClaimParams>,
     body: TypedBody<JsonNewClaim>,
-) -> Result<ResponseCreated<JsonProject>, HttpError> {
+) -> Result<ResponseCreated<JsonAccept>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
@@ -64,7 +68,7 @@ async fn post_inner(
     path_params: ProjClaimParams,
     _json_claim: JsonNewClaim,
     auth_user: AuthUser,
-) -> Result<JsonProject, HttpError> {
+) -> Result<JsonAccept, HttpError> {
     let query_project = QueryProject::from_resource_id(conn_lock!(context), &path_params.project)?;
     let query_organization =
         QueryOrganization::get(conn_lock!(context), query_project.organization_id)?;
@@ -80,7 +84,7 @@ async fn post_inner(
         .token_key
         .new_invite(
             auth_user.email.clone(),
-            60,
+            CLAIM_TOKEN_TTL,
             query_organization.uuid,
             OrganizationRole::Leader,
         )
@@ -91,9 +95,6 @@ async fn post_inner(
                 e,
             )
         })?;
-    auth_user
-        .user
-        .accept_invite(conn_lock!(context), &context.token_key, &invite)?;
 
-    Ok(query_project.into_json_for_organization(conn_lock!(context), &query_organization))
+    Ok(JsonAccept { invite })
 }

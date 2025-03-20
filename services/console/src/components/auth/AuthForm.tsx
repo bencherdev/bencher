@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/astro";
 import {
 	Show,
 	createEffect,
@@ -5,14 +6,13 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-
-import * as Sentry from "@sentry/astro";
 import { createStore } from "solid-js/store";
 import {
 	type JsonLogin,
 	type JsonSignup,
 	type Jwt,
 	PlanLevel,
+	type Uuid,
 } from "../../types/bencher";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
@@ -20,7 +20,13 @@ import { useSearchParams } from "../../util/url";
 import { init_valid, validJwt, validPlanLevel } from "../../util/valid";
 import Field, { type FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
-import { AUTH_FIELDS, EMAIL_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
+import {
+	AUTH_FIELDS,
+	CLAIM_PARAM,
+	EMAIL_PARAM,
+	INVITE_PARAM,
+	PLAN_PARAM,
+} from "./auth";
 
 export interface Props {
 	apiUrl: string;
@@ -37,6 +43,7 @@ const AuthForm = (props: Props) => {
 
 	const plan = () => searchParams[PLAN_PARAM]?.trim() as PlanLevel;
 	const invite = () => searchParams[INVITE_PARAM]?.trim() as Jwt;
+	const claim = () => searchParams[CLAIM_PARAM]?.trim() as Uuid;
 	const [form, setForm] = createStore(initForm());
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);
@@ -73,6 +80,7 @@ const AuthForm = (props: Props) => {
 		setSubmitting(true);
 		const plan_level = plan();
 		const invite_token = invite();
+		const claim_uuid = claim();
 
 		let authForm: JsonAuthForm;
 		if (props.newUser) {
@@ -81,6 +89,9 @@ const AuthForm = (props: Props) => {
 				email: form?.email?.value?.trim(),
 				i_agree: form?.consent?.value,
 			};
+			if (claim_uuid) {
+				signup.claim = claim_uuid;
+			}
 			authForm = signup;
 			if (!plan_level) {
 				setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });

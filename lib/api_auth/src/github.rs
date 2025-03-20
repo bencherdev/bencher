@@ -7,7 +7,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{issue_error, payment_required_error, unauthorized_error},
     model::{
-        organization::plan::LicenseUsage,
+        organization::{plan::LicenseUsage, QueryOrganization},
         user::{InsertUser, QueryUser},
     },
 };
@@ -79,6 +79,11 @@ async fn post_inner(
         query_user.check_is_locked()?;
         if let Some(invite) = &json_oauth.invite {
             query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
+        } else if let Some(organization_uuid) = json_oauth.claim {
+            let query_organization =
+                QueryOrganization::from_uuid(conn_lock!(context), organization_uuid)?;
+            let invite = query_organization.claim(context, &query_user).await?;
+            query_user.accept_invite(conn_lock!(context), &context.token_key, &invite)?;
         }
         query_user
     } else {
@@ -88,6 +93,7 @@ async fn post_inner(
             email: email.clone(),
             plan: json_oauth.plan,
             invite: json_oauth.invite.clone(),
+            claim: json_oauth.claim,
             i_agree: true,
         };
 

@@ -1,7 +1,7 @@
 use bencher_client::types::JsonSignup;
 #[cfg(feature = "plus")]
 use bencher_client::types::PlanLevel;
-use bencher_json::{Email, Jwt, Slug, UserName};
+use bencher_json::{Email, Jwt, OrganizationUuid, Slug, UserName};
 
 use crate::{
     bencher::{backend::PubBackend, sub::SubCmd},
@@ -17,6 +17,7 @@ pub struct Signup {
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
+    pub claim: Option<OrganizationUuid>,
     pub i_agree: bool,
     pub backend: PubBackend,
 }
@@ -32,6 +33,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             #[cfg(feature = "plus")]
             plan,
             invite,
+            claim,
             i_agree,
             backend,
         } = signup;
@@ -42,6 +44,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             #[cfg(feature = "plus")]
             plan: plan.map(Into::into),
             invite,
+            claim,
             i_agree,
             backend: backend.try_into()?,
         })
@@ -57,6 +60,7 @@ impl From<Signup> for JsonSignup {
             #[cfg(feature = "plus")]
             plan,
             invite,
+            claim,
             i_agree,
             ..
         } = signup;
@@ -69,6 +73,7 @@ impl From<Signup> for JsonSignup {
             #[cfg(not(feature = "plus"))]
             plan: None,
             invite: invite.map(Into::into),
+            claim: claim.map(Into::into),
             i_agree,
         }
     }

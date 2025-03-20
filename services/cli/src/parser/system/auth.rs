@@ -1,4 +1,4 @@
-use bencher_json::{Email, Jwt, Slug, UserName};
+use bencher_json::{Email, Jwt, OrganizationUuid, Slug, UserName};
 use clap::{Parser, Subcommand};
 
 #[cfg(feature = "plus")]
@@ -39,6 +39,10 @@ pub struct CliAuthSignup {
     /// User invitation JWT (JSON Web Token)
     #[clap(long)]
     pub invite: Option<Jwt>,
+
+    /// Organization UUID
+    #[clap(long, value_name = "UUID")]
+    pub claim: Option<OrganizationUuid>,
 
     /// I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)
     #[clap(long, required = true)]

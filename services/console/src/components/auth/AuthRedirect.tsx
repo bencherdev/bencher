@@ -1,16 +1,16 @@
+import * as Sentry from "@sentry/astro";
 import { Show, createMemo, createResource } from "solid-js";
-import Redirect from "../site/Redirect";
-import { authUser } from "../../util/auth";
-import { useSearchParams } from "../../util/url";
-import { INVITE_PARAM, PLAN_PARAM } from "./auth";
 import type {
-	JsonAuthAck,
 	JsonAccept,
+	JsonAuthAck,
 	JsonAuthUser,
 } from "../../types/bencher";
+import { authUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
-import * as Sentry from "@sentry/astro";
+import { useSearchParams } from "../../util/url";
+import Redirect from "../site/Redirect";
+import { INVITE_PARAM, PLAN_PARAM } from "./auth";
 
 const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 	const [searchParams, _setSearchParams] = useSearchParams();
@@ -39,7 +39,7 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 				navigateNotify(
 					NotifyKind.OK,
 					"Invitation accepted!",
-					"/console",
+					props.path,
 					[PLAN_PARAM],
 					null,
 				);

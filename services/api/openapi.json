@@ -3880,7 +3880,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonProject"
+                  "$ref": "#/components/schemas/JsonAccept"
                 }
               }
             }
@@ -9833,6 +9833,14 @@
       "JsonOAuth": {
         "type": "object",
         "properties": {
+          "claim": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationUuid"
+              }
+            ]
+          },
           "code": {
             "$ref": "#/components/schemas/Secret"
           },
@@ -11223,6 +11231,14 @@
       "JsonSignup": {
         "type": "object",
         "properties": {
+          "claim": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationUuid"
+              }
+            ]
+          },
           "email": {
             "$ref": "#/components/schemas/Email"
           },
