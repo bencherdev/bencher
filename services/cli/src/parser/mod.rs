@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bencher_json::{Jwt, Url, BENCHER_API_URL_STR};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
-pub mod docker;
+pub mod compose;
 pub mod mock;
 pub mod organization;
 pub mod project;
@@ -11,7 +11,7 @@ pub mod run;
 pub mod system;
 pub mod user;
 
-use docker::{CliDown, CliLogs, CliUp};
+use compose::{CliDown, CliLogs, CliUp};
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{

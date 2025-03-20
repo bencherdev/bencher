@@ -1,6 +1,6 @@
 use crate::{parser::CliSub, CliError};
 
-mod docker;
+mod compose;
 mod mock;
 mod organization;
 mod project;
@@ -9,8 +9,8 @@ mod sub_cmd;
 mod system;
 mod user;
 
-pub use docker::DockerError;
-use docker::{down::Down, logs::Logs, up::Up};
+pub use compose::DockerError;
+use compose::{down::Down, logs::Logs, up::Up};
 use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};

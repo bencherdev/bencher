@@ -1,6 +1,6 @@
 use crate::{
     bencher::sub::SubCmd,
-    parser::docker::{CliLogs, CliService},
+    parser::compose::{CliLogs, CliService},
     CliError,
 };
 use bollard::{

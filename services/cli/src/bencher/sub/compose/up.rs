@@ -10,11 +10,11 @@ use futures_util::TryStreamExt;
 use super::DockerError;
 use crate::{
     bencher::sub::{
-        docker::{down::stop_containers, logs::tail_container_logs, Container},
+        compose::{down::stop_containers, logs::tail_container_logs, Container},
         SubCmd,
     },
     cli_eprintln, cli_println,
-    parser::docker::{CliService, CliUp, CliUpPull},
+    parser::compose::{CliService, CliUp, CliUpPull},
     CliError,
 };
 
