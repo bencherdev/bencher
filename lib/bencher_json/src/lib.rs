@@ -40,6 +40,7 @@ pub use project::{
     benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
     branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonNewStartPoint},
+    claim::JsonNewClaim,
     head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
     measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
     metric::{

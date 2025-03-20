@@ -330,6 +330,9 @@ export interface JsonNewCheckout {
 	self_hosted?: Uuid;
 }
 
+export interface JsonNewClaim {
+}
+
 export enum OrganizationRole {
 	/** The organization leader role. */
 	Leader = "leader",

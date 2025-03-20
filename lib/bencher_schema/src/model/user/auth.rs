@@ -19,7 +19,7 @@ use oso::{PolarValue, ToPolar};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection, Rbac},
-    error::{bad_request_error, forbidden_error, BEARER_TOKEN_FORMAT},
+    error::{bad_request_error, BEARER_TOKEN_FORMAT},
     model::{organization::OrganizationId, project::ProjectId},
     schema,
 };
@@ -70,13 +70,9 @@ impl AuthUser {
 
         // Hold the connection for all permissions related queries
         let conn = conn_lock!(context);
-        let mut query_user = QueryUser::get_with_email(conn, email)?;
-        if query_user.locked {
-            query_user.sanitize();
-            return Err(forbidden_error(format!(
-                "User account is locked: {query_user:?}"
-            )));
-        }
+        let query_user = QueryUser::get_with_email(conn, email)?;
+        query_user.check_is_locked()?;
+
         let (org_ids, org_roles) = Self::organization_roles(conn, query_user.id, email)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, query_user.id, email)?;
 
@@ -86,6 +82,7 @@ impl AuthUser {
             organizations: org_roles,
             projects: proj_roles,
         };
+
         Ok(Self {
             user: query_user,
             organizations: org_ids,

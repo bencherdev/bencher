@@ -19,7 +19,7 @@ use bencher_schema::{
             QueryUser, UserId,
         },
     },
-    schema,
+    schema, INVITE_TOKEN_TTL,
 };
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
@@ -28,9 +28,6 @@ use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
-
-// TODO Custom max TTL
-pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMembersParams {

@@ -39,7 +39,6 @@ async fn post_inner(
     json_accept: JsonAccept,
     auth_user: AuthUser,
 ) -> Result<JsonAuthAck, HttpError> {
-    auth_user.user.check_is_locked()?;
     auth_user
         .user
         .accept_invite(conn_lock!(context), &context.token_key, &json_accept.invite)?;

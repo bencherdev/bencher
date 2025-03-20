@@ -18,6 +18,9 @@ pub const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
+// TODO Custom max TTL
+pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
+
 #[derive(Debug, thiserror::Error)]
 pub enum MigrationError {
     #[error("Failed to run database migrations: {0}")]

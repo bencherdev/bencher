@@ -2,6 +2,7 @@ mod alerts;
 mod allowed;
 mod benchmarks;
 mod branches;
+mod claim;
 mod measures;
 mod metrics;
 mod perf;
@@ -31,6 +32,12 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(projects::project_get)?;
         api_description.register(projects::project_patch)?;
         api_description.register(projects::project_delete)?;
+
+        // Project Claim
+        if http_options {
+            api_description.register(claim::proj_claim_options)?;
+        }
+        api_description.register(claim::proj_claim_post)?;
 
         // Project Permission
         if http_options {
