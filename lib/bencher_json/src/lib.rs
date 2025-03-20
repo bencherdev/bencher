@@ -31,6 +31,7 @@ pub use organization::{plan::JsonPlan, usage::JsonUsage};
 
 pub use big_int::BigInt;
 pub use organization::{
+    claim::JsonNewClaim,
     member::{JsonMember, JsonMembers},
     JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationUuid,
 };
@@ -40,7 +41,6 @@ pub use project::{
     benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
     branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonNewStartPoint},
-    claim::JsonNewClaim,
     head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
     measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
     metric::{

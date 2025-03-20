@@ -1,4 +1,5 @@
 mod allowed;
+mod claim;
 mod members;
 mod organizations;
 mod plan;
@@ -23,6 +24,12 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(organizations::organization_get)?;
         api_description.register(organizations::organization_patch)?;
         api_description.register(organizations::organization_delete)?;
+
+        // Project Claim
+        if http_options {
+            api_description.register(claim::org_claim_options)?;
+        }
+        api_description.register(claim::org_claim_post)?;
 
         // Organization Permission
         if http_options {

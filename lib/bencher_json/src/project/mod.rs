@@ -17,7 +17,6 @@ pub mod alert;
 pub mod benchmark;
 pub mod boundary;
 pub mod branch;
-pub mod claim;
 pub mod head;
 pub mod measure;
 pub mod metric;

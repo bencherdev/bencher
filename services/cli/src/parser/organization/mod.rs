@@ -6,10 +6,12 @@ use super::CliPagination;
 use super::ElidedOption;
 use crate::parser::CliBackend;
 
+pub mod claim;
 pub mod member;
 pub mod plan;
 pub mod usage;
 
+use claim::CliOrganizationClaim;
 #[cfg(feature = "plus")]
 use usage::CliOrganizationUsage;
 
@@ -30,6 +32,9 @@ pub enum CliOrganization {
     /// Delete an organization
     #[clap(alias = "rm")]
     Delete(CliOrganizationDelete),
+
+    /// Claim an organization
+    Claim(CliOrganizationClaim),
 
     /// Check organization permission
     Allowed(CliOrganizationAllowed),

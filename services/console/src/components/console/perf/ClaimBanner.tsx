@@ -1,10 +1,5 @@
 import * as Sentry from "@sentry/astro";
-import {
-	type Accessor,
-	type Resource,
-	createMemo,
-	createSignal,
-} from "solid-js";
+import { type Resource, createMemo, createSignal } from "solid-js";
 import type { JsonAuthUser, JsonProject } from "../../../types/bencher";
 import { httpPost } from "../../../util/http";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
@@ -15,7 +10,6 @@ interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
-	project_slug: Accessor<string | undefined>;
 }
 
 const ClaimBanner = (props: Props) => {
@@ -23,9 +17,8 @@ const ClaimBanner = (props: Props) => {
 
 	const claimProject = async () => {
 		const token = props.user?.token;
-		const project_slug = props.project_slug();
-		if (!props.apiUrl || !token || !project_slug) {
-			const organization_uuid = props.project()?.organization;
+		const organization_uuid = props.project()?.organization;
+		if (!props.apiUrl || !token) {
 			if (organization_uuid) {
 				const searchParams = new URLSearchParams();
 				searchParams.set(CLAIM_PARAM, organization_uuid);
@@ -35,15 +28,15 @@ const ClaimBanner = (props: Props) => {
 			return null;
 		}
 		setClaiming(true);
-		const path = `/v0/projects/${project_slug}/claim`;
+		const path = `/v0/organizations/${organization_uuid}/claim`;
 		return await httpPost(props.apiUrl, path, token, {})
-			.then((resp) => {
+			.then((_resp) => {
 				navigateNotify(
 					NotifyKind.OK,
-					"Invitation accepted!",
-					"/auth/signup",
+					"Project claimed!",
+					"/console",
 					null,
-					[["invite", resp?.data?.invite]],
+					null,
 				);
 			})
 			.catch((error) => {

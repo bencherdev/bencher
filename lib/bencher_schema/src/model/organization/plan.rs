@@ -268,7 +268,7 @@ impl PlanKind {
         licensor: &Licensor,
         project: &QueryProject,
     ) -> Result<Self, HttpError> {
-        let query_organization = QueryOrganization::get(conn, project.organization_id)?;
+        let query_organization = project.organization(conn)?;
         Self::new(
             conn,
             biller,
@@ -305,7 +305,7 @@ impl PlanKind {
         if visibility.is_public() {
             return Ok(());
         }
-        let query_organization = QueryOrganization::get(conn, query_project.organization_id)?;
+        let query_organization = query_project.organization(conn)?;
         Self::new(conn, biller, licensor, &query_organization, visibility).await?;
         Ok(())
     }

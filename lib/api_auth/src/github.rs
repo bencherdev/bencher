@@ -82,8 +82,7 @@ async fn post_inner(
         } else if let Some(organization_uuid) = json_oauth.claim {
             let query_organization =
                 QueryOrganization::from_uuid(conn_lock!(context), organization_uuid)?;
-            let invite = query_organization.claim(context, &query_user).await?;
-            query_user.accept_invite(conn_lock!(context), &context.token_key, &invite)?;
+            query_organization.claim(context, &query_user).await?;
         }
         query_user
     } else {

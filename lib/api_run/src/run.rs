@@ -65,8 +65,9 @@ async fn post_inner(
         .await?
     };
 
-    // If a project is unclaimed, don't check permissions
-    if query_project.is_claimed(conn_lock!(context))? {
+    let query_organization = query_project.organization(conn_lock!(context))?;
+    // If the organization is claimed, check permissions
+    if query_organization.is_claimed(conn_lock!(context))? {
         if let Some(auth_user) = auth_user.as_ref() {
             query_project.try_allowed(&context.rbac, auth_user, Permission::Create)?;
         } else {
@@ -75,6 +76,9 @@ async fn post_inner(
                 query_project.slug
             )));
         }
+    // If the organization is not claimed and the user is authenticated, claim it
+    } else if let Some(auth_user) = auth_user.as_ref() {
+        query_organization.claim(context, &auth_user.user).await?;
     }
     QueryReport::create(
         log,

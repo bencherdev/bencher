@@ -20,6 +20,11 @@ const TESTBED_SLUG: &str = "base";
 const MEASURE_ARG: &str = "--measure";
 const MEASURE_SLUG: &str = "screams";
 
+const REPO_NAME: &str = "bencher";
+const PROJECT_SLUG_PREFIX: &str = "bencher-2bbe1be-";
+const UNCLAIMED_SLUG: &str = "unclaimed";
+const CLAIMED_SLUG: &str = "claimed";
+
 const CLI_DIR: &str = "./services/cli";
 
 #[derive(Debug)]
@@ -103,8 +108,9 @@ impl SeedTest {
         cmd.args(["org", "view", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
-        let _json: bencher_json::JsonOrganization =
+        let json: bencher_json::JsonOrganization =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let muriel_bagge_org_uuid = json.uuid;
 
         // cargo run -- member invite --host http://localhost:61016 --token $BENCHER_API_TOKEN --name Courage --email courage@nowhere.com --role leader muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -1359,6 +1365,182 @@ impl SeedTest {
                 .as_ref(),
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         );
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // Anonymous report
+        // It should use the same on-the-fly project across multiple runs
+        let mut anonymous_project: Option<bencher_json::JsonProject> = None;
+        for _ in 0..3 {
+            let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+            let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+            cmd.args([
+                "run",
+                HOST_ARG,
+                host,
+                "--format",
+                "json",
+                "--quiet",
+                &bencher_cmd,
+                "mock",
+            ])
+            .current_dir(CLI_DIR);
+            let assert = cmd.assert().success();
+            let json: bencher_json::JsonReport =
+                serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+            if let Some(project) = &anonymous_project {
+                assert_eq!(json.project.uuid, project.uuid);
+                assert_eq!(json.project.organization, project.organization);
+                assert_eq!(json.project.name, project.name);
+                assert_eq!(json.project.slug, project.slug);
+                assert_eq!(json.project.claimed, project.claimed);
+            } else {
+                assert_eq!(json.project.name.as_ref(), REPO_NAME);
+                assert!(
+                    json.project.slug.as_ref().starts_with(PROJECT_SLUG_PREFIX),
+                    "{json:?}"
+                );
+                assert_eq!(
+                    json.project.slug.as_ref().len(),
+                    PROJECT_SLUG_PREFIX.len() + 13
+                );
+                assert_eq!(json.project.claimed, None);
+                anonymous_project.replace(json.project);
+            }
+        }
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // Anonymous report with project slug
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            PROJECT_ARG,
+            UNCLAIMED_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.slug.as_ref(), UNCLAIMED_SLUG);
+        assert_eq!(json.project.claimed, None);
+        let organization_uuid = json.project.organization;
+        let organization_uuid_str = organization_uuid.to_string();
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // Claim the organization
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "organization",
+            "claim",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            &organization_uuid_str,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonOrganization =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.uuid, organization_uuid);
+        assert_eq!(json.name.as_ref(), REPO_NAME);
+        assert_eq!(json.slug.as_ref(), UNCLAIMED_SLUG);
+        assert!(json.claimed.is_some(), "{json:?}");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // Claimed report with project slug
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            UNCLAIMED_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.project.organization, organization_uuid);
+        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.slug.as_ref(), UNCLAIMED_SLUG);
+        assert!(json.project.claimed.is_some(), "{json:?}");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // On-the-fly project for user
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let anonymous_project = anonymous_project.unwrap();
+        assert_eq!(json.project.organization, anonymous_project.organization);
+        assert_eq!(json.project.name, anonymous_project.name);
+        assert_eq!(json.project.slug, anonymous_project.slug);
+        assert!(json.project.claimed.is_some(), "{json:?}");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // On-the-fly project for user with project slug
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            CLAIMED_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.project.organization, muriel_bagge_org_uuid);
+        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.slug.as_ref(), CLAIMED_SLUG);
+        assert!(json.project.claimed.is_some(), "{json:?}");
 
         Ok(())
     }

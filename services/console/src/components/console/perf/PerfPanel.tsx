@@ -1204,12 +1204,7 @@ const PerfPanel = (props: Props) => {
 		<>
 			<Show when={!props.isEmbed}>
 				<Show when={!project.loading && project().uuid && !project()?.claimed}>
-					<ClaimBanner
-						apiUrl={props.apiUrl}
-						user={user}
-						project={project}
-						project_slug={project_slug}
-					/>
+					<ClaimBanner apiUrl={props.apiUrl} user={user} project={project} />
 				</Show>
 				<PerfHeader
 					isConsole={props.isConsole === true}

@@ -331,6 +331,7 @@ export interface JsonNewCheckout {
 }
 
 export interface JsonNewClaim {
+	empty?: undefined;
 }
 
 export enum OrganizationRole {

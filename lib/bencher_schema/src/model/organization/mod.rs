@@ -245,7 +245,7 @@ impl QueryOrganization {
         &self,
         context: &ApiContext,
         query_user: &QueryUser,
-    ) -> Result<Jwt, HttpError> {
+    ) -> Result<(), HttpError> {
         if self.is_claimed(conn_lock!(context))? {
             return Err(unauthorized_error(format!(
                 "This organization ({}) has already been claimed.",
@@ -254,7 +254,7 @@ impl QueryOrganization {
         }
 
         // Create an invite token to claim the organization
-        context
+        let invite = context
             .token_key
             .new_invite(
                 query_user.email.clone(),
@@ -268,7 +268,9 @@ impl QueryOrganization {
                     "Failed to create new claim token.",
                     e,
                 )
-            })
+            })?;
+
+        query_user.accept_invite(conn_lock!(context), &context.token_key, &invite)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {

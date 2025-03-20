@@ -11,6 +11,7 @@ use serde::{
 
 use crate::UserUuid;
 
+pub mod claim;
 pub mod member;
 pub mod plan;
 pub mod usage;

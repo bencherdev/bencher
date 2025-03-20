@@ -303,6 +303,10 @@ impl QueryProject {
         Ok(query_project)
     }
 
+    pub fn organization(&self, conn: &mut DbConnection) -> Result<QueryOrganization, HttpError> {
+        QueryOrganization::get(conn, self.organization_id)
+    }
+
     pub fn is_public(&self) -> bool {
         self.visibility.is_public()
     }
@@ -386,11 +390,6 @@ impl QueryProject {
             .map_err(forbidden_error)
     }
 
-    pub fn is_claimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
-        let query_organization = QueryOrganization::get(conn, self.organization_id)?;
-        query_organization.is_claimed(conn)
-    }
-
     #[cfg(feature = "plus")]
     pub fn perf_url(&self, console_url: &url::Url) -> Result<Option<url::Url>, HttpError> {
         if !self.is_public() {
@@ -410,8 +409,7 @@ impl QueryProject {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, HttpError> {
-        let query_organization: QueryOrganization =
-            QueryOrganization::get(conn, self.organization_id)?;
+        let query_organization = self.organization(conn)?;
         Ok(self.into_json_for_organization(conn, &query_organization))
     }
 
