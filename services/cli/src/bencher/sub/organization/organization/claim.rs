@@ -1,5 +1,3 @@
-#![cfg(feature = "plus")]
-
 use bencher_client::types::JsonNewClaim;
 use bencher_json::ResourceId;
 

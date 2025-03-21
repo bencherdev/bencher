@@ -21,7 +21,6 @@ const MEASURE_ARG: &str = "--measure";
 const MEASURE_SLUG: &str = "screams";
 
 const REPO_NAME: &str = "bencher";
-const PROJECT_SLUG_PREFIX: &str = "bencher-2bbe1be-";
 const UNCLAIMED_SLUG: &str = "unclaimed";
 const CLAIMED_SLUG: &str = "claimed";
 
@@ -1398,12 +1397,12 @@ impl SeedTest {
             } else {
                 assert_eq!(json.project.name.as_ref(), REPO_NAME);
                 assert!(
-                    json.project.slug.as_ref().starts_with(PROJECT_SLUG_PREFIX),
+                    json.project.slug.as_ref().starts_with(REPO_NAME),
                     "{json:?}"
                 );
                 assert_eq!(
                     json.project.slug.as_ref().len(),
-                    PROJECT_SLUG_PREFIX.len() + 13
+                    REPO_NAME.len() + 1 + 7 + 1 + 13
                 );
                 assert_eq!(json.project.claimed, None);
                 anonymous_project.replace(json.project);

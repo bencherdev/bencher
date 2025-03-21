@@ -72,7 +72,7 @@ async fn post_inner(
             query_project.try_allowed(&context.rbac, auth_user, Permission::Create)?;
         } else {
             return Err(unauthorized_error(format!(
-                "This project ({}) has already been claimed.",
+                "This project ({}) has already been claimed. Provide a valid API token (`--token`) to authenticate.",
                 query_project.slug
             )));
         }

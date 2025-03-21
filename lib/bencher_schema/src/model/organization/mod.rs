@@ -102,7 +102,7 @@ impl QueryOrganization {
             // then the project can not have anonymous reports.
             return if query_organization.is_claimed(conn_lock!(context))? {
                 Err(unauthorized_error(format!(
-                    "This project ({project_slug}) has already been claimed."
+                    "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
                 )))
             } else {
                 Ok(query_organization)
