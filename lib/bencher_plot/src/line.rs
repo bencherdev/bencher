@@ -1,10 +1,12 @@
-use std::sync::LazyLock;
-use std::{io::Cursor, ops::Range};
+use crate::PlotError;
 use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
 use bencher_json::{JsonMeasure, Units};
 use chrono::{DateTime, Duration, Utc};
 use image::{GenericImageView, ImageBuffer};
 use ordered_float::{FloatCore, OrderedFloat};
+use plotters::chart::{ChartContext, DualCoordChartContext};
+use plotters::coord::ranged1d::{DefaultFormatting, KeyPointHint};
+use plotters::prelude::{Cartesian2d, IntoLogRange, LogCoord, RangedDateTime};
 use plotters::{
     coord::{types::RangedCoordf64, Shift},
     prelude::{
@@ -14,10 +16,8 @@ use plotters::{
     series::LineSeries,
     style::{Color, FontFamily, RGBColor, ShapeStyle, WHITE},
 };
-use plotters::chart::{ChartContext, DualCoordChartContext};
-use plotters::coord::ranged1d::{DefaultFormatting, KeyPointHint};
-use plotters::prelude::{Cartesian2d, IntoLogRange, LogCoord, RangedDateTime};
-use crate::PlotError;
+use std::sync::LazyLock;
+use std::{io::Cursor, ops::Range};
 
 const IMG_WIDTH: u32 = 1024;
 const IMG_HEIGHT: u32 = 768;
@@ -187,18 +187,15 @@ impl Ranged for RangedCoord {
 
 impl From<Range<f64>> for RangedCoord {
     fn from(range: Range<f64>) -> Self {
-        let relative_difference = if range.start == 0.0 {
-            range.end
-        } else {
+        let relative_difference = if range.start.is_normal() {
             range.end / range.start
-        };
-        let use_log_scaling = relative_difference >= 10.0;
-        if use_log_scaling {
-            let range_coord: LogCoord<f64> = range.log_scale().into();
-            RangedCoord::Log(range_coord)
         } else {
-            let range_coord: RangedCoordf64 = range.into();
-            RangedCoord::Linear(range_coord)
+            range.end
+        };
+        if relative_difference < 10.0 {
+            RangedCoord::Linear(range.into())
+        } else {
+            RangedCoord::Log(range.log_scale().into())
         }
     }
 }
@@ -813,7 +810,8 @@ mod test {
 
     pub const PERF_DUAL_AXES_DOT_JSON: &str = include_str!("../perf_dual_axes.json");
     static JSON_PERF_DUAL_AXES: LazyLock<JsonPerf> = LazyLock::new(|| {
-        serde_json::from_str(PERF_DUAL_AXES_DOT_JSON).expect("Failed to serialize perf dual axes JSON")
+        serde_json::from_str(PERF_DUAL_AXES_DOT_JSON)
+            .expect("Failed to serialize perf dual axes JSON")
     });
 
     pub const DECIMAL_DOT_JSON: &str = include_str!("../decimal.json");
