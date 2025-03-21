@@ -1402,7 +1402,8 @@ impl SeedTest {
                 );
                 assert_eq!(
                     json.project.slug.as_ref().len(),
-                    REPO_NAME.len() + 1 + 7 + 1 + 13
+                    REPO_NAME.len() + 1 + 7 + 1 + 13,
+                    "{json:?}"
                 );
                 assert_eq!(json.project.claimed, None);
                 anonymous_project.replace(json.project);

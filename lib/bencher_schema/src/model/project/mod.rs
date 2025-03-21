@@ -155,7 +155,7 @@ impl QueryProject {
         };
         // The choice was either to relax the schema constraint to allow duplicate project names
         // or to append a number to the project name to ensure uniqueness.
-        let name = Self::unique_name(context, &query_organization, project_name).await?;
+        let name = Self::unique_name(log, context, &query_organization, project_name).await?;
         let insert_project =
             InsertProject::new(query_organization.id, name, project_slug, None, None);
         if let Some(auth_user) = auth_user {
@@ -177,6 +177,7 @@ impl QueryProject {
     }
 
     async fn unique_name(
+        log: &Logger,
         context: &ApiContext,
         query_organization: &QueryOrganization,
         project_name: ResourceName,
@@ -191,20 +192,24 @@ impl QueryProject {
             const ELLIPSES_LEN: usize = 3;
             // The max length for a `usize` is 20 characters,
             // so we don't have to worry about the number suffix being too long.
-            project_name
+            let name = project_name
                 .as_ref()
                 .chars()
                 .take(max_name_len - ELLIPSES_LEN)
                 .chain(".".repeat(ELLIPSES_LEN).chars())
-                .collect::<String>()
+                .collect::<String>();
+            slog::debug!(log, "Truncated project name: {name}");
+            name
         } else {
             project_name.to_string()
         };
 
-        // Escape the project name for use in a regex pattern
-        let escaped_name = regex::escape(&name_str);
+        // Escape the project name for use in a LIKE pattern
+        // https://www.sqlite.org/lang_expr.html#the_like_glob_regexp_match_and_extract_operators
+        let escaped_name = name_str.replace('%', r"\%").replace('_', r"\_");
         // Create a regex pattern to match the original project name or any subsequent projects with the same name
-        let pattern = format!(r"^{escaped_name} \(\d+\)$");
+        let pattern = format!(r"{escaped_name} (%)");
+        slog::debug!(log, "LIKE pattern: {pattern}");
 
         let Ok(highest_name) = schema::project::table
             .filter(schema::project::organization_id.eq(query_organization.id))
@@ -218,10 +223,12 @@ impl QueryProject {
             .first::<ResourceName>(conn_lock!(context))
         else {
             // The project name is already unique
+            slog::debug!(log, "Project name is unique: {project_name}");
             return Ok(project_name);
         };
 
         let next_number = if highest_name == project_name {
+            slog::debug!(log, "First project name duplicate: {highest_name}");
             1
         } else if let Some(caps) = UNIQUE_SUFFIX.captures(highest_name.as_ref()) {
             let last_number: usize = caps
@@ -234,6 +241,7 @@ impl QueryProject {
                         highest_name,
                     )
                 })?;
+            slog::debug!(log, "Multiple project name duplicates: {last_number}");
             last_number + 1
         } else {
             return Err(issue_error(
@@ -244,6 +252,7 @@ impl QueryProject {
         };
 
         let name_with_suffix = format!("{name_str} ({next_number})");
+        slog::debug!(log, "Unique project name: {name_with_suffix}");
         name_with_suffix.parse().map_err(|e| {
             issue_error(
                 "Failed to create new project name",
