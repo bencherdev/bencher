@@ -1542,6 +1542,64 @@ impl SeedTest {
         assert_eq!(json.project.slug.as_ref(), CLAIMED_SLUG);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // Another on-the-fly project for user with project slug
+        let bencher_one = "bencher-one";
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            bencher_one,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.project.organization, muriel_bagge_org_uuid);
+        assert_eq!(json.project.name.as_ref(), format!("{REPO_NAME} (1)"));
+        assert_eq!(json.project.slug.as_ref(), bencher_one);
+        assert!(json.project.claimed.is_some(), "{json:?}");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // Yet another on-the-fly project for user with project slug
+        let bencher_two = "bencher-two";
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            bencher_two,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.project.organization, muriel_bagge_org_uuid);
+        assert_eq!(json.project.name.as_ref(), format!("{REPO_NAME} (2)"));
+        assert_eq!(json.project.slug.as_ref(), bencher_two);
+        assert!(json.project.claimed.is_some(), "{json:?}");
+
         Ok(())
     }
 }
