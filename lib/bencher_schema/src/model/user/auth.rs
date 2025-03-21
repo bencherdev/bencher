@@ -3,7 +3,7 @@ use std::ops::Deref;
 use async_trait::async_trait;
 #[cfg(feature = "plus")]
 use bencher_json::system::payment::JsonCustomer;
-use bencher_json::{Email, Jwt, Sanitize};
+use bencher_json::{Jwt, Sanitize};
 use bencher_rbac::{
     server::Permission,
     user::{OrganizationRoles, ProjectRoles},
@@ -24,7 +24,7 @@ use crate::{
     schema,
 };
 
-use super::{QueryUser, UserId};
+use super::QueryUser;
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -71,10 +71,18 @@ impl AuthUser {
         // Hold the connection for all permissions related queries
         let conn = conn_lock!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
+        Self::load(conn, query_user)
+    }
+
+    pub fn reload(&self, conn: &mut DbConnection) -> Result<Self, HttpError> {
+        Self::load(conn, self.user.clone())
+    }
+
+    fn load(conn: &mut DbConnection, query_user: QueryUser) -> Result<Self, HttpError> {
         query_user.check_is_locked()?;
 
-        let (org_ids, org_roles) = Self::organization_roles(conn, query_user.id, email)?;
-        let (proj_ids, proj_roles) = Self::project_roles(conn, query_user.id, email)?;
+        let (org_ids, org_roles) = Self::organization_roles(conn, &query_user)?;
+        let (proj_ids, proj_roles) = Self::project_roles(conn, &query_user)?;
 
         let rbac = RbacUser {
             admin: query_user.admin,
@@ -93,11 +101,10 @@ impl AuthUser {
 
     fn organization_roles(
         conn: &mut DbConnection,
-        user_id: UserId,
-        email: &Email,
+        query_user: &QueryUser,
     ) -> Result<(Vec<OrganizationId>, OrganizationRoles), HttpError> {
         let roles = schema::organization_role::table
-            .filter(schema::organization_role::user_id.eq(user_id))
+            .filter(schema::organization_role::user_id.eq(query_user.id))
             .order(schema::organization_role::organization_id)
             .select((
                 schema::organization_role::organization_id,
@@ -107,7 +114,10 @@ impl AuthUser {
             .map_err(|e| {
                 crate::error::issue_error(
                     "User can't query organization roles",
-                    &format!("My user ({email}) on Bencher failed to query organization roles."),
+                    &format!(
+                        "My user ({email}) on Bencher failed to query organization roles.",
+                        email = query_user.email
+                    ),
                     e,
                 )
             })?;
@@ -120,7 +130,7 @@ impl AuthUser {
                 Err(e) => {
                     let _err = crate::error::issue_error(
                         "Failed to parse organization role",
-                        &format!("My user ({email}) on Bencher has an invalid organization role ({role})."),
+                        &format!("My user ({email}) on Bencher has an invalid organization role ({role}).", email = query_user.email),
                         e,
                     );
                     None
@@ -133,11 +143,10 @@ impl AuthUser {
 
     fn project_roles(
         conn: &mut DbConnection,
-        user_id: UserId,
-        email: &Email,
+        query_user: &QueryUser,
     ) -> Result<(Vec<OrgProjectId>, ProjectRoles), HttpError> {
         let roles = schema::project_role::table
-            .filter(schema::project_role::user_id.eq(user_id))
+            .filter(schema::project_role::user_id.eq(query_user.id))
             .inner_join(schema::project::table)
             .order(schema::project_role::project_id)
             .select((
@@ -149,7 +158,10 @@ impl AuthUser {
             .map_err(|e| {
                 crate::error::issue_error(
                     "User can't query project roles",
-                    &format!("My user ({email}) on Bencher failed to query project roles."),
+                    &format!(
+                        "My user ({email}) on Bencher failed to query project roles.",
+                        email = query_user.email
+                    ),
                     e,
                 )
             })?;
@@ -169,7 +181,8 @@ impl AuthUser {
                     let _err = crate::error::issue_error(
                         "Failed to parse project role",
                         &format!(
-                            "My user ({email}) on Bencher has an invalid project role ({role})."
+                            "My user ({email}) on Bencher has an invalid project role ({role}).",
+                            email = query_user.email
                         ),
                         e,
                     );

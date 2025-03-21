@@ -66,10 +66,14 @@ async fn post_inner(
     };
 
     let query_organization = query_project.organization(conn_lock!(context))?;
+    let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
     // If the organization is claimed, check permissions
-    if query_organization.is_claimed(conn_lock!(context))? {
+    if is_claimed {
         if let Some(auth_user) = auth_user.as_ref() {
-            query_project.try_allowed(&context.rbac, auth_user, Permission::Create)?;
+            // If the user is authenticated, then we may have created a new role for them.
+            // If so then we need to reload the permissions.
+            let auth_user = auth_user.reload(conn_lock!(context))?;
+            query_project.try_allowed(&context.rbac, &auth_user, Permission::Create)?;
         } else {
             return Err(unauthorized_error(format!(
                 "This project ({}) has already been claimed. Provide a valid API token (`--token`) to authenticate.",

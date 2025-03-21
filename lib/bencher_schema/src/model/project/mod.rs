@@ -159,7 +159,18 @@ impl QueryProject {
         let insert_project =
             InsertProject::new(query_organization.id, name, project_slug, None, None);
         if let Some(auth_user) = auth_user {
-            Self::create(log, context, auth_user, &query_organization, insert_project).await
+            // If the user is authenticated, then we may have created a new personal organization for them.
+            // If so then we need to reload the permissions.
+            // This is unlikely to be the case going forward, but it is needed for backwards compatibility.
+            let auth_user = auth_user.reload(conn_lock!(context))?;
+            Self::create(
+                log,
+                context,
+                &auth_user,
+                &query_organization,
+                insert_project,
+            )
+            .await
         } else {
             Self::create_inner(log, context, &query_organization, insert_project).await
         }
