@@ -29,6 +29,6 @@ impl crate::Fingerprint {
 
 impl OperatingSystem {
     pub fn current() -> Self {
-        Self::Macos
+        Self::MacOS
     }
 }

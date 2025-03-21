@@ -17,7 +17,7 @@ impl fmt::Display for Fingerprint {
 #[derive(Debug, Clone, Copy)]
 pub enum OperatingSystem {
     Linux,
-    Macos,
+    MacOS,
     Windows,
 }
 
@@ -28,7 +28,7 @@ impl fmt::Display for OperatingSystem {
             "{}",
             match self {
                 OperatingSystem::Linux => "Linux",
-                OperatingSystem::Macos => "Macos",
+                OperatingSystem::MacOS => "macOS",
                 OperatingSystem::Windows => "Windows",
             }
         )
