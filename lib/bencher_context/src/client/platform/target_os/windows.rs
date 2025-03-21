@@ -1,15 +1,61 @@
+use std::cmp;
+
 use uuid::Uuid;
+use windows::{
+    core::PCWSTR,
+    Win32::{
+        Foundation::HKEY_LOCAL_MACHINE,
+        System::Registry::{RegCloseKey, RegOpenKeyExW, RegQueryValueExW, KEY_READ},
+    },
+};
 
 use crate::client::platform::OperatingSystem;
 
 impl crate::Fingerprint {
     pub fn current() -> Option<Self> {
-        windows::System::Profile::SystemManufacturers::SmbiosInformation::SerialNumber()
-            .ok()
-            .as_ref()
-            .and_then(|uuid| Uuid::parse_str(&uuid.to_string().trim()).ok())
-            .map(Self)
+        serial_number().or_else(digital_product_id).map(Self)
     }
+}
+
+fn serial_number() -> Option<Uuid> {
+    windows::System::Profile::SystemManufacturers::SmbiosInformation::SerialNumber()
+        .ok()
+        .as_ref()
+        .and_then(|uuid| Uuid::parse_str(&uuid.to_string().trim()).ok())
+}
+
+fn digital_product_id() -> Option<Uuid> {
+    let sub_key = PCWSTR::from(
+        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\0"
+            .encode_utf16()
+            .collect::<Vec<u16>>()
+            .as_ptr(),
+    );
+    let hkey = RegOpenKeyExW(HKEY_LOCAL_MACHINE, sub_key, 0, KEY_READ).ok()?;
+    let value_name = PCWSTR::from(
+        "DigitalProductId\0"
+            .encode_utf16()
+            .collect::<Vec<u16>>()
+            .as_ptr(),
+    );
+    let mut data = vec![0u8; 256];
+    let mut data_size = data.len() as u32;
+    RegQueryValueExW(
+        hkey,
+        value_name,
+        None,
+        None,
+        Some(&mut data),
+        Some(&mut data_size),
+    )
+    .ok()?;
+    RegCloseKey(hkey);
+
+    let digital_product_id = data
+        .into_iter()
+        .take(cmp::min(data_size as usize, size_of::<uuid::Bytes>()))
+        .collect::<Vec<u8>>();
+    digital_product_id.try_into().ok().map(Uuid::from_bytes)
 }
 
 impl OperatingSystem {
