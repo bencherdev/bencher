@@ -13,6 +13,18 @@ impl fmt::Display for Fingerprint {
     }
 }
 
+#[cfg(all(
+    not(target_os = "linux"),
+    not(target_os = "macos"),
+    not(target_os = "windows")
+))]
+impl Fingerprint {
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn current() -> Option<Self> {
+        None
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum OperatingSystem {
