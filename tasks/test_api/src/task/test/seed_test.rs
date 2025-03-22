@@ -713,7 +713,6 @@ impl SeedTest {
                     PROJECT_SLUG,
                     BRANCH_ARG,
                     BRANCH_SLUG,
-                    "--no-hash",
                     TESTBED_ARG,
                     TESTBED_SLUG,
                     "--format",
