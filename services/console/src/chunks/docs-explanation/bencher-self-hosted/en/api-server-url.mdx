@@ -1,0 +1,31 @@
+import BencherRunCode from "../bencher-run-code.mdx";
+import BencherUpCode from "../bencher-up-code.mdx";
+
+## API Server URL
+
+When using Bencher Self-Hosted,
+you will need to set [the `--host` option][host option]
+to the URL of your Bencher API server
+for most `bencher` CLI subcommands.
+
+For example, if you were using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+with a Bencher API server at `https://api.bencher.example.com`
+then you could write something like this:
+
+<BencherRunCode />
+
+<br />
+
+If you running the Bencher Console server on a different host than the Bencher API server,
+you will also need to set [the `BENCHER_API_URL` environment variable][bencher api url environment variable]
+on the Bencher Console server to the remote URL for your Bencher API server.
+
+For example, if you are using the <code><a href="/docs/reference/bencher-compose/#bencher-up">bencher up</a></code> CLI subcommand
+to start the Bencher Console server with a Bencher API server running at `https://api.bencher.example.com`
+then you will need to set [the `--console-env` option][console env option] to the remote URL like this:
+
+<BencherUpCode />
+
+[host option]: /docs/explanation/bencher-run/#--host-url
+[bencher api url environment variable]: /docs/reference/console-config/
+[console env option]: /docs/reference/bencher-compose/#--console-env-key_value

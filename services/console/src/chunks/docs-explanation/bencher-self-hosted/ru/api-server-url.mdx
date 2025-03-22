@@ -1,0 +1,31 @@
+import BencherRunCode from "../bencher-run-code.mdx";
+import BencherUpCode from "../bencher-up-code.mdx";
+
+## URL API сервера
+
+При использовании Bencher Self-Hosted,
+вам нужно будет установить [параметр `--host`][host option]
+на URL вашего Bencher API сервера
+для большинства подкоманд CLI `bencher`.
+
+Например, если вы используете подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+с Bencher API сервером по адресу `https://api.bencher.example.com`,
+то вы можете написать что-то вроде этого:
+
+<BencherRunCode />
+
+<br />
+
+Если вы запускаете сервер Bencher Console на другом хосте, чем Bencher API сервер,
+вам также нужно будет установить [переменную окружения `BENCHER_API_URL`][bencher api url environment variable]
+на сервере Bencher Console на удаленный URL для вашего Bencher API сервера.
+
+Например, если вы используете подкоманду CLI <code><a href="/ru/docs/reference/bencher-compose/#bencher-up">bencher up</a></code>
+для запуска сервера Bencher Console с Bencher API сервером по адресу `https://api.bencher.example.com`,
+тогда вам нужно будет установить [параметр `--console-env`][console env option] на удаленный URL следующим образом:
+
+<BencherUpCode />
+
+[host option]: /ru/docs/explanation/bencher-run/#--host-url
+[bencher api url environment variable]: /ru/docs/reference/console-config/
+[console env option]: /ru/docs/reference/bencher-compose/#--console-env-key_value

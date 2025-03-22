@@ -1,0 +1,30 @@
+import BencherRunCode from "../bencher-run-code.mdx";
+import BencherUpCode from "../bencher-up-code.mdx";
+
+## APIサーバーURL
+
+Bencherセルフホスティングを使用する場合、
+ほとんどの`bencher` CLIサブコマンドで
+Bencher APIサーバーのURLに[`--host`オプション][host option]を設定する必要があります。
+
+例えば、`https://api.bencher.example.com`でBencher APIサーバーを使って
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する場合、
+次のように記述できます。
+
+<BencherRunCode />
+
+<br />
+
+Bencher ConsoleサーバーをBencher APIサーバーとは異なるホストで実行する場合、
+Bencher Consoleサーバーで
+Bencher APIサーバーのリモートURLに[`BENCHER_API_URL`環境変数][bencher api url environment variable]を設定する必要があります。
+
+例えば、`https://api.bencher.example.com`で稼働しているBencher APIサーバーで
+Bencher Consoleサーバーを起動するために<code><a href="/ja/docs/reference/bencher-compose/#bencher-up">bencher up</a></code> CLIサブコマンドを使用する場合、
+以下のようにリモートURLに[`--console-env`オプション][console env option]を設定する必要があります。
+
+<BencherUpCode />
+
+[host option]: /ja/docs/explanation/bencher-run/#--host-url
+[bencher api url environment variable]: /ja/docs/reference/console-config/
+[console env option]: /ja/docs/reference/bencher-compose/#--console-env-key_value

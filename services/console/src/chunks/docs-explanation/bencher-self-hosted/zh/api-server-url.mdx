@@ -1,0 +1,22 @@
+import BencherRunCode from "../bencher-run-code.mdx";
+import BencherUpCode from "../bencher-up-code.mdx";
+
+## API 服务器网址
+
+在使用 Bencher 自托管版本时，您需要为大多数 `bencher` CLI 子命令将 [`--host` 选项][host option] 设置为您的 Bencher API 服务器的网址。
+
+例如，如果您使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令并且 Bencher API 服务器位于 `https://api.bencher.example.com`，那么您可以这样写：
+
+<BencherRunCode />
+
+<br />
+
+如果您在不同的主机上运行 Bencher 控制台服务器和 Bencher API 服务器，您还需要在 Bencher 控制台服务器上设置 [`BENCHER_API_URL` 环境变量][bencher api url environment variable] 指向 Bencher API 服务器的远程网址。
+
+例如，如果您使用 <code><a href="/zh/docs/reference/bencher-compose/#bencher-up">bencher up</a></code> CLI 子命令启动 Bencher 控制台服务器，而 Bencher API 服务器运行在 `https://api.bencher.example.com` 上，那么您需要将 [`--console-env` 选项][console env option] 设置为远程网址，如下所示：
+
+<BencherUpCode />
+
+[host option]: /zh/docs/explanation/bencher-run/#--host-url
+[bencher api url environment variable]: /zh/docs/reference/console-config/
+[console env option]: /zh/docs/reference/bencher-compose/#--console-env-key_value

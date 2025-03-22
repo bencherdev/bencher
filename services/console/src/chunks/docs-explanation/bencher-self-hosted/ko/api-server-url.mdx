@@ -1,0 +1,30 @@
+import BencherRunCode from "../bencher-run-code.mdx";
+import BencherUpCode from "../bencher-up-code.mdx";
+
+## API 서버 URL
+
+Bencher 셀프 호스팅을 사용할 때,
+대부분의 `bencher` CLI 하위 명령어에 대해
+Bencher API 서버의 URL로 [the `--host` option][host option]을 설정해야 합니다.
+
+예를 들어, `https://api.bencher.example.com`에 Bencher API 서버가 있는 경우
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 사용하는 경우
+다음과 같이 쓸 수 있습니다:
+
+<BencherRunCode />
+
+<br />
+
+Bencher 콘솔 서버를 Bencher API 서버와 다른 호스트에서 실행하는 경우,
+Bencher 콘솔 서버에서 [the `BENCHER_API_URL` environment variable][bencher api url environment variable]을 
+Bencher API 서버의 원격 URL로 설정해야 합니다.
+
+예를 들어, `https://api.bencher.example.com`에서 실행 중인 Bencher API 서버와 Bencher 콘솔 서버를 시작하기 위해
+<code><a href="/ko/docs/reference/bencher-compose/#bencher-up">bencher up</a></code> CLI 하위 명령어를 사용하는 경우,
+다음과 같이 [the `--console-env` option][console env option]을 원격 URL로 설정해야 합니다:
+
+<BencherUpCode />
+
+[host option]: /ko/docs/explanation/bencher-run/#--host-url
+[bencher api url environment variable]: /ko/docs/reference/console-config/
+[console env option]: /ko/docs/reference/bencher-compose/#--console-env-key_value
