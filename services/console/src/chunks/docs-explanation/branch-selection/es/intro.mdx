@@ -1,19 +1,21 @@
-A Branch es la referencia `git` (es decir, el nombre de la rama o la etiqueta).
+Una Rama es la referencia `git` (es decir, el nombre de la rama o la etiqueta).
 Al usar el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
-selecciona una Branch con la opción `--branch` o la variable de entorno `BENCHER_BRANCH`.
-Por defecto, todos los proyectos comienzan con una Branch `main`, y
-`main` se utiliza por defecto si no se especifica.
+selecciona una Rama con la opción `--branch` o la variable de entorno `BENCHER_BRANCH`.
+El hash actual de `git` también se puede especificar con la opción `--hash`.
+Si no se especifica una Rama, se utiliza el nombre de la rama actual de `git` si está disponible.
+De lo contrario, se usa `main` como la Rama predeterminada.
+De manera similar, si no se especifica el hash de `git`, se utiliza el hash actual de `git` si está disponible.
 
-Cuando [Benchmarking Continuo][continuous benchmarking], es decir, benchmarking en CI,
-a menudo querrá crear o rebasar una `branch` sobre una Branch ya existente.
-Esto se llama un [Punto de Inicio de Branch][start point].
-Un Punto de Inicio es otra Branch en una versión específica (y `git` hash, si está disponible).
+Cuando se realiza [Benchmarking Continuo][continuous benchmarking], es decir, benchmarking en CI,
+a menudo querrás crear o hacer rebase de una `rama` en una Rama ya existente.
+Esto se llama un [Punto de Inicio][start point] de Rama.
+Un Punto de Inicio es otra Rama en una versión específica (y hash de `git`, si está disponible).
 Al usar el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
 selecciona un Punto de Inicio con la opción `--start-point`.
-Además, usa la opción `--start-point-hash` para especificar un `git` hash específico para el Punto de Inicio.
+Además, usa la opción `--start-point-hash` para especificar un hash de `git` específico para el Punto de Inicio.
 La cantidad de datos que se copian desde el Punto de Inicio se controla con la opción `--start-point-max-versions`.
-De manera similar, los [Umbrales][thresholds] pueden copiarse desde el Punto de Inicio con el flag `--start-point-clone-thresholds`.
-Para prevenir desviaciones, utiliza el flag `--start-point-reset` para siempre restablecer la Branch al Punto de Inicio.
+De manera similar, los [Umbrales][thresholds] pueden ser copiados desde el Punto de Inicio con el flag `--start-point-clone-thresholds`.
+Para prevenir desviaciones, usa el flag `--start-point-reset` para siempre reiniciar la Rama al Punto de Inicio.
 
 [continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
 [start point]: /es/docs/explanation/benchmarking/#start-point

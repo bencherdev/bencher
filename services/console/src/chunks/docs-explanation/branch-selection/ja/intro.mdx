@@ -1,6 +1,21 @@
-A Branch は `git` のリファレンス（つまり、ブランチ名やタグ）です。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用する際に、`--branch` オプションまたは `BENCHER_BRANCH` 環境変数でブランチを選択します。デフォルトでは、すべてのプロジェクトは `main` ブランチから始まり、それらの指定がない場合は `main` がデフォルトで使用されます。
+ブランチは`git`の参照（例えば、ブランチ名やタグ）です。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する際は、
+`--branch`オプションまたは`BENCHER_BRANCH`環境変数を使用してブランチを選択します。
+現在の`git`ハッシュも、`--hash`オプションで指定できます。
+ブランチが指定されていない場合は、利用可能であれば現在の`git`ブランチ名が使用されます。
+それ以外の場合、デフォルトのブランチとして`main`が使用されます。
+同様に、`git`ハッシュが指定されていない場合、利用可能であれば現在の`git`ハッシュが使用されます。
 
-[継続的ベンチマーキング][continuous benchmarking]、つまり CI でのベンチマーキングでは、既存のブランチ上に `branch` を作成またはリベースしたいことがよくあります。これをブランチ[スタートポイント][start point]と呼びます。スタートポイントは特定のバージョン（および利用可能であれば `git` ハッシュ）の別のブランチです。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用する際に、`--start-point` オプションでスタートポイントを選択します。さらに、`--start-point-hash` オプションを使ってスタートポイントの特定の `git` ハッシュを指定します。スタートポイントからコピーされるデータの量は、`--start-point-max-versions` オプションで制御します。同様に、[しきい値][thresholds]は `--start-point-clone-thresholds` フラグでスタートポイントからコピーできます。ドリフトを防ぐために、`--start-point-reset` フラグを使用してブランチを常にスタートポイントにリセットします。
+[継続的ベンチマーク][continuous benchmarking]、つまりCIでのベンチマークを行う際には、
+既存のブランチに新たにブランチを作成するか、またはそのブランチにリベースしたいことが多いです。
+これをブランチの[開始ポイント][start point]と呼びます。
+開始ポイントは、特定のバージョン（および利用可能であれば`git`ハッシュ）の他のブランチです。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する場合、
+`--start-point`オプションで開始ポイントを選択します。
+さらに、`--start-point-hash`オプションを使用して、開始ポイントの特定の`git`ハッシュを指定します。
+開始ポイントからコピーされるデータ量は、`--start-point-max-versions`オプションで制御されます。
+同様に、[しきい値][thresholds]を`--start-point-clone-thresholds`フラグで開始ポイントからコピーできます。
+ドリフトを防ぐために、`--start-point-reset`フラグを使用してブランチを常に開始ポイントにリセットします。
 
 [continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
 [start point]: /ja/docs/explanation/benchmarking/#start-point

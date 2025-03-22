@@ -1,8 +1,10 @@
 A Branch is the `git` ref (ie branch name or tag).
 When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
 select a Branch with the `--branch` option or the `BENCHER_BRANCH` environment variable.
-By default all projects start with a `main` Branch, and
-`main` is used by default if neither are specified.
+The current `git` hash can also be specified with the `--hash` option.
+If a Branch is not specified then the current `git` branch name is used if it is available.
+Otherwise, `main` is used as the default Branch.
+Similarly, if the `git` hash is not specified then the current `git` hash is used if it is available.
 
 When [Continuous Benchmarking][continuous benchmarking], that is benchmarking in CI,
 you will often want to create or rebase a `branch` on an already existing Branch.

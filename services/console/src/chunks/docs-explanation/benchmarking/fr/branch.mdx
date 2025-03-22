@@ -1,2 +1,6 @@
 ### Branche
-Une Branche est la référence `git` utilisée lors de l'exécution d'un Rapport (c'est-à-dire le nom de la branche ou le tag). Par défaut, tous les Projets commencent avec une Branche `main`. Lorsque vous utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>, `main` est la Branche par défaut si aucune n'est fournie. Voir [sélection de branche](/fr/docs/explanation/branch-selection/) pour un aperçu complet.
+Une Branche est la référence `git` utilisée lors de l'exécution d'un Rapport (c'est-à-dire le nom de la branche ou le tag).
+Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
+si une Branche n'est pas spécifiée, alors le nom de la branche `git` actuelle est utilisé s'il est disponible.
+Sinon, `main` est utilisé comme Branche par défaut.
+Voir [sélection de la branche](/fr/docs/explanation/branch-selection/) pour un aperçu complet.
