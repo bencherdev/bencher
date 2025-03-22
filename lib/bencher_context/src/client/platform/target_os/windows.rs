@@ -1,5 +1,4 @@
 use core::ffi::c_void;
-use std::cmp;
 
 use uuid::Uuid;
 use windows::{
@@ -32,7 +31,7 @@ fn digital_product_id() -> Option<Uuid> {
     let value_bytes = "DigitalProductId\0".encode_utf16().collect::<Vec<u16>>();
     let value = PCWSTR::from_raw(value_bytes.as_ptr());
 
-    let mut data = vec![0u8; 256];
+    let mut data = [0u8; 256];
     let mut data_size = data.len() as u32;
     // Safety: The accuracy of the data returned by `RegGetValueW` is not of any importance,
     // rather the consistency of the data is what is important.
@@ -52,11 +51,14 @@ fn digital_product_id() -> Option<Uuid> {
         .ok()?;
     }
 
+    // There appear to be quite a few zeroed out bytes at the beginning of the digital product ID.
+    // In order to ensure as much entropy as possible,
+    // we'll just sum all of the bytes together in a wrapping fashion.
     let digital_product_id = data
         .into_iter()
-        .take(cmp::min(data_size as usize, size_of::<uuid::Bytes>()))
-        .collect::<Vec<u8>>();
-    digital_product_id.try_into().ok().map(Uuid::from_bytes)
+        .take(data_size as usize)
+        .fold(0u128, |acc, byte| acc.overflowing_add(byte.into()).0);
+    Some(Uuid::from_u128(digital_product_id))
 }
 
 impl OperatingSystem {
