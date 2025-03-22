@@ -3,9 +3,9 @@ use std::cmp;
 use uuid::Uuid;
 use windows::{
     core::PCWSTR,
-    Win32::{
-        Foundation::HKEY_LOCAL_MACHINE,
-        System::Registry::{RegCloseKey, RegOpenKeyExW, RegQueryValueExW, KEY_READ},
+    System::Profile::SystemManufacturers::SmbiosInformation,
+    Win32::System::Registry::{
+        RegCloseKey, RegOpenKeyExW, RegQueryValueExW, HKEY_LOCAL_MACHINE, KEY_READ,
     },
 };
 
@@ -18,7 +18,7 @@ impl crate::Fingerprint {
 }
 
 fn serial_number() -> Option<Uuid> {
-    windows::System::Profile::SystemManufacturers::SmbiosInformation::SerialNumber()
+    SmbiosInformation::SerialNumber()
         .ok()
         .as_ref()
         .and_then(|uuid| Uuid::parse_str(&uuid.to_string().trim()).ok())
