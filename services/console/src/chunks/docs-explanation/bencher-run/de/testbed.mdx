@@ -2,7 +2,6 @@
 
 <br />
 
-Optional: Entweder die Option `--testbed` oder die Umgebungsvariable `BENCHER_TESTBED`
-kann auf den Slug oder UUID einer bereits existierenden Testplattform gesetzt werden.
-Wenn beide definiert sind, hat die Option `--testbed` Vorrang vor der Umgebungsvariable `BENCHER_TESTBED`.
-Wenn keine definiert sind, dann wird `localhost` als Standard-Testplattform verwendet.
+Optional: Entweder die Option `--testbed` oder die Umgebungsvariable `BENCHER_TESTBED` kann auf den Namen, den Slug oder die UUID für ein [Testbed][testbed] gesetzt werden. Wenn der angegebene Wert ein Name oder Slug ist und das Testbed noch nicht existiert, wird es für Sie erstellt. Wenn der angegebene Wert jedoch eine UUID ist, muss das Testbed bereits existieren. Wenn beide angegeben sind, hat die `--testbed` Option Vorrang vor der Umgebungsvariable `BENCHER_TESTBED`. Wenn keiner angegeben ist, wird `Linux`, `macOS` oder `Windows` verwendet, abhängig vom Host-Betriebssystem. Wenn das `bencher` CLI für ein anderes Betriebssystem kompiliert wurde, wird `localhost` als Standard-Testbed verwendet.
+
+[testbed]: /de/docs/explanation/benchmarking/#testbed

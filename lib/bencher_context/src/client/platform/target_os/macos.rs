@@ -28,7 +28,8 @@ impl crate::Fingerprint {
 }
 
 impl OperatingSystem {
-    pub fn current() -> Self {
-        Self::MacOS
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn current() -> Option<Self> {
+        Some(Self::MacOS)
     }
 }

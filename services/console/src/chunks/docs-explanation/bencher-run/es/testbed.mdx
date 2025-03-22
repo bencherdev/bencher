@@ -2,7 +2,13 @@
 
 <br />
 
-Opcional: La opción `--testbed` o la variable de entorno `BENCHER_TESTBED`
-pueden estar configuradas con el slug o UUID de un banco de pruebas ya existente.
-Si ambas están definidas, la opción `--testbed` tiene prioridad sobre la variable de entorno `BENCHER_TESTBED`.
-Si ninguna está definida, entonces `localhost` se usa como banco de pruebas predeterminado.
+Opcional: Se puede establecer la opción `--testbed` o la variable de entorno `BENCHER_TESTBED` al nombre, slug o UUID de un [Testbed][testbed].
+Si el valor especificado es un nombre o slug y el Testbed no existe ya, se creará para usted.
+Sin embargo, si el valor especificado es un UUID, entonces el Testbed debe existir ya.
+Si ambos son especificados, la opción `--testbed` tiene prioridad sobre la variable de entorno `BENCHER_TESTBED`.
+Si ninguno es especificado, entonces se usa `Linux`, `macOS` o `Windows`,
+basado en el sistema operativo del host.
+Si el CLI de `bencher` ha sido compilado para un sistema operativo diferente,
+entonces se usa `localhost` como el Testbed predeterminado.
+
+[testbed]: /es/docs/explanation/benchmarking/#testbed

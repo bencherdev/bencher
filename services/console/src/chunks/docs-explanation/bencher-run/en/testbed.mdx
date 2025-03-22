@@ -7,6 +7,9 @@ may be set to the name, slug, or UUID for a [Testbed][testbed].
 If the value specified is a name or slug and the Testbed does not already exist, it will be created for you.
 However, if the value specified is a UUID then the Testbed must already exist.
 If both are specified, the `--testbed` option takes precedence over the `BENCHER_TESTBED` environment variable.
-If neither are specified then `localhost` is used as the default testbed.
+If neither are specified then `Linux`, `macOS`, or `Windows` is used,
+based on the host operating system.
+If the `bencher` CLI has been compiled for a different operating system,
+then `localhost` is used as the default Testbed.
 
 [testbed]: /docs/explanation/benchmarking/#testbed

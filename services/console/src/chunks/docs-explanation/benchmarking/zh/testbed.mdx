@@ -1,4 +1,5 @@
 ### Testbed
-Testbed 是运行报告时使用的测试环境名称。
-默认情况下，所有项目都以 `localhost` Testbed 开头。
-当使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令时，如果未提供其他 Testbed，则默认 Testbed 为 `localhost`。
+Testbed 是运行报告时使用的测试环境的名称。
+使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令时，
+根据主机操作系统默认为 `Linux`、`macOS` 或 `Windows` 作为 Testbed。
+如果 `bencher` CLI 已经为不同的操作系统编译，则使用 `localhost`。

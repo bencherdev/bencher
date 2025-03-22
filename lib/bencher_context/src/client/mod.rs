@@ -57,10 +57,9 @@ fn git_context(context: &mut RunContext) {
 }
 
 fn platform_context(context: &mut RunContext) {
-    context.insert(
-        ContextPath::TESTBED_OS,
-        OperatingSystem::current().to_string(),
-    );
+    if let Some(os) = OperatingSystem::current() {
+        context.insert(ContextPath::TESTBED_OS, os.to_string());
+    }
 
     if let Some(fingerprint) = Fingerprint::current() {
         context.insert(ContextPath::TESTBED_FINGERPRINT, fingerprint.to_string());

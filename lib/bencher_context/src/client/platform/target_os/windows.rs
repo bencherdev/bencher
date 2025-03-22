@@ -60,7 +60,8 @@ fn digital_product_id() -> Option<Uuid> {
 }
 
 impl OperatingSystem {
-    pub fn current() -> Self {
-        Self::Windows
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn current() -> Option<Self> {
+        Some(Self::Windows)
     }
 }

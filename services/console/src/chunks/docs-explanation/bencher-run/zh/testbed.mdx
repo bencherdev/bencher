@@ -1,8 +1,12 @@
-### `--testbed <测试环境>`
+### `--testbed <TESTBED>`
 
 <br />
 
-可选：可以设置 `--testbed` 选项或 `BENCHER_TESTBED` 环境变量
-为已经存在的测试环境的 slug 或 UUID。
-如果两者都被定义，`--testbed` 选项优先于 `BENCHER_TESTBED` 环境变量。
-如果两者都未定义，则使用 `localhost` 作为默认测试环境。
+可选：可以通过 `--testbed` 选项或者 `BENCHER_TESTBED` 环境变量设定 [测试平台][testbed] 的名称、slug 或 UUID。
+如果指定的值是名称或 slug 且测试平台不存在，它将为您创建。
+然而，如果指定的值是 UUID，则测试平台必须已经存在。
+如果同时指定了这两个选项，`--testbed` 选项优先于 `BENCHER_TESTBED` 环境变量。
+如果两者都未指定，则基于主机操作系统，默认使用 `Linux`、`macOS` 或 `Windows`。
+如果 `bencher` CLI 被编译用于其他操作系统，则默认使用 `localhost` 作为测试平台。
+
+[testbed]: /zh/docs/explanation/benchmarking/#testbed

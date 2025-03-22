@@ -1,5 +1,6 @@
 ### Testbed
 A Testbed is the name of the testing environment used when running a Report.
-By default all Projects start with a `localhost` Testbed.
 When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
-`localhost` is the default Testbed if one is not provided.
+`Linux`, `macOS`, or `Windows` is used as the default Testbed based on the host operating system.
+If the `bencher` CLI has been compiled for a different operating system,
+then `localhost` is used.

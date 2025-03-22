@@ -22,7 +22,8 @@ fn parse_machine_id(path: &str) -> Option<Uuid> {
 }
 
 impl OperatingSystem {
-    pub fn current() -> Self {
-        Self::Linux
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn current() -> Option<Self> {
+        Some(Self::Linux)
     }
 }
