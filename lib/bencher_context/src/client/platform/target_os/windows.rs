@@ -1,3 +1,4 @@
+use core::ffi::c_void;
 use std::cmp;
 
 use uuid::Uuid;
@@ -33,17 +34,23 @@ fn digital_product_id() -> Option<Uuid> {
 
     let mut data = vec![0u8; 256];
     let mut data_size = data.len() as u32;
-    RegGetValueW(
-        HKEY_LOCAL_MACHINE,
-        sub_key,
-        value,
-        RRF_RT_ANY,
-        None,
-        Some(&mut data),
-        Some(&mut data_size),
-    )
-    .ok()
-    .ok()?;
+    // Safety: The accuracy of the data returned by `RegGetValueW` is not of any importance,
+    // rather the consistency of the data is what is important.
+    // https://learn.microsoft.com/en-us/windows/win32/api/winreg/nf-winreg-reggetvaluew
+    #[allow(unsafe_code)]
+    unsafe {
+        RegGetValueW(
+            HKEY_LOCAL_MACHINE,
+            sub_key,
+            value,
+            RRF_RT_ANY,
+            None,
+            Some(data.as_mut_ptr() as *mut c_void),
+            Some(&mut data_size),
+        )
+        .ok()
+        .ok()?;
+    }
 
     let digital_product_id = data
         .into_iter()
