@@ -4,9 +4,7 @@ use uuid::Uuid;
 use windows::{
     core::PCWSTR,
     System::Profile::SystemManufacturers::SmbiosInformation,
-    Win32::System::Registry::{
-        RegCloseKey, RegOpenKeyExW, RegQueryValueExW, HKEY_LOCAL_MACHINE, KEY_READ,
-    },
+    Win32::System::Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_ANY},
 };
 
 use crate::client::platform::OperatingSystem;
@@ -25,25 +23,27 @@ fn serial_number() -> Option<Uuid> {
 }
 
 fn digital_product_id() -> Option<Uuid> {
-    let key = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\0"
+    let sub_key_bytes = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\0"
         .encode_utf16()
         .collect::<Vec<u16>>();
-    let sub_key = PCWSTR::from_raw(key.as_ptr());
-    let hkey = RegOpenKeyExW(HKEY_LOCAL_MACHINE, sub_key, 0, KEY_READ).ok()?;
-    let value = "DigitalProductId\0".encode_utf16().collect::<Vec<u16>>();
-    let value_name = PCWSTR::from_raw(value.as_ptr());
+    let sub_key = PCWSTR::from_raw(sub_key_bytes.as_ptr());
+
+    let value_bytes = "DigitalProductId\0".encode_utf16().collect::<Vec<u16>>();
+    let value = PCWSTR::from_raw(value_bytes.as_ptr());
+
     let mut data = vec![0u8; 256];
     let mut data_size = data.len() as u32;
-    RegQueryValueExW(
-        hkey,
-        value_name,
-        None,
+    RegGetValueW(
+        HKEY_LOCAL_MACHINE,
+        sub_key,
+        value,
+        RRF_RT_ANY,
         None,
         Some(&mut data),
         Some(&mut data_size),
     )
+    .ok()
     .ok()?;
-    RegCloseKey(hkey);
 
     let digital_product_id = data
         .into_iter()
