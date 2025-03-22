@@ -7,8 +7,8 @@ license-file.workspace = true
 publish = false
 
 [features]
-client = ["dep:gix", "dep:uuid", "dep:windows"]
-server = ["dep:uuid", "bencher_valid/server", "uuid/v4"]
+client = ["dep:gix", "dep:uuid", "dep:windows", "bencher_valid/client"]
+server = ["bencher_valid/server"]
 schema = ["dep:schemars"]
 
 [dependencies]

@@ -1,9 +1,6 @@
 use bencher_valid::{ResourceName, Slug};
-use uuid::Uuid;
 
 use crate::{ContextPath, RunContext};
-
-mod base36;
 
 #[allow(clippy::multiple_inherent_impl)]
 impl RunContext {
@@ -36,8 +33,9 @@ impl RunContext {
         self.get(ContextPath::TESTBED_OS).map(String::as_str)
     }
 
-    pub fn testbed_fingerprint(&self) -> Option<Uuid> {
-        self.get(ContextPath::TESTBED_FINGERPRINT)?.parse().ok()
+    pub fn testbed_fingerprint(&self) -> Option<&str> {
+        self.get(ContextPath::TESTBED_FINGERPRINT)
+            .map(String::as_str)
     }
 
     pub fn name(&self) -> Option<ResourceName> {
@@ -52,8 +50,6 @@ impl RunContext {
         let hash = self.repo_hash().map(short_hash).unwrap_or_default();
         let fingerprint = self
             .testbed_fingerprint()
-            .map(base36::encode_uuid)
-            .as_deref()
             .map(short_fingerprint)
             .unwrap_or_default();
         // The spaces here are important,

@@ -12,7 +12,6 @@ use serde::{
 
 use crate::{is_valid_len, ValidError, MAX_LEN};
 
-#[cfg(feature = "server")]
 pub const BASE_36: &str = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 #[typeshare::typeshare]

@@ -2,6 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
+mod base36;
 mod target_os;
 
 #[derive(Debug, Clone, Copy)]
@@ -9,7 +10,7 @@ pub struct Fingerprint(Uuid);
 
 impl fmt::Display for Fingerprint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", base36::encode_uuid(self.0))
     }
 }
 

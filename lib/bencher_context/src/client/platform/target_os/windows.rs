@@ -53,11 +53,11 @@ fn digital_product_id() -> Option<Uuid> {
 
     // There appear to be quite a few zeroed out bytes at the beginning of the digital product ID.
     // In order to ensure as much entropy as possible,
-    // we'll just sum all of the bytes together in a wrapping fashion.
+    // we'll just shift all of the bits dropped by the leading bytes as needed.
     let digital_product_id = data
         .into_iter()
         .take(data_size as usize)
-        .fold(0u128, |acc, byte| acc.overflowing_add(byte.into()).0);
+        .fold(0u128, |acc, byte| (acc << 8) | u128::from(byte));
     Some(Uuid::from_u128(digital_product_id))
 }
 
