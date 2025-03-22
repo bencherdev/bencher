@@ -23,6 +23,7 @@ uuid = { workspace = true, optional = true, features = ["serde"] }
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.60", optional = true, features = [
     "System_Profile_SystemManufacturers",
+    "Win32",
 ] }
 
 [lints]

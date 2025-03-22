@@ -25,19 +25,13 @@ fn serial_number() -> Option<Uuid> {
 }
 
 fn digital_product_id() -> Option<Uuid> {
-    let sub_key = PCWSTR::from(
-        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\0"
-            .encode_utf16()
-            .collect::<Vec<u16>>()
-            .as_ptr(),
-    );
+    let key = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\0"
+        .encode_utf16()
+        .collect::<Vec<u16>>();
+    let sub_key = PCWSTR::from_raw(key.as_ptr());
     let hkey = RegOpenKeyExW(HKEY_LOCAL_MACHINE, sub_key, 0, KEY_READ).ok()?;
-    let value_name = PCWSTR::from(
-        "DigitalProductId\0"
-            .encode_utf16()
-            .collect::<Vec<u16>>()
-            .as_ptr(),
-    );
+    let value = "DigitalProductId\0".encode_utf16().collect::<Vec<u16>>();
+    let value_name = PCWSTR::from_raw(value.as_ptr());
     let mut data = vec![0u8; 256];
     let mut data_size = data.len() as u32;
     RegQueryValueExW(
