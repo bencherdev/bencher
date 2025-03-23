@@ -4,9 +4,11 @@ use gix::Repository;
 
 use crate::{ContextPath, RunContext};
 
-mod platform;
+mod fingerprint;
+mod operating_system;
 
-use platform::{Fingerprint, OperatingSystem};
+use fingerprint::Fingerprint;
+use operating_system::OperatingSystem;
 
 const ROOT: &str = "root";
 
@@ -15,7 +17,7 @@ impl RunContext {
     pub fn current() -> Self {
         let mut context = RunContext::default();
         git_context(&mut context);
-        platform_context(&mut context);
+        testbed_context(&mut context);
         context
     }
 
@@ -55,7 +57,7 @@ fn git_context(context: &mut RunContext) {
     }
 }
 
-fn platform_context(context: &mut RunContext) {
+fn testbed_context(context: &mut RunContext) {
     if let Some(os) = OperatingSystem::current() {
         context.insert(ContextPath::TESTBED_OS, os.to_string());
     }

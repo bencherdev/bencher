@@ -1,6 +1,5 @@
 use std::fmt;
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum OperatingSystem {
     Linux,
