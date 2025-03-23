@@ -1,7 +1,37 @@
+use std::fmt;
+
 use bencher_valid::BASE_36;
 use uuid::Uuid;
 
-pub fn encode_uuid(uuid: Uuid) -> String {
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "windows")]
+mod windows;
+
+#[derive(Debug, Clone, Copy)]
+pub struct Fingerprint(Uuid);
+
+impl fmt::Display for Fingerprint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", encode_uuid(self.0))
+    }
+}
+
+#[cfg(all(
+    not(target_os = "linux"),
+    not(target_os = "macos"),
+    not(target_os = "windows")
+))]
+impl Fingerprint {
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn current() -> Option<Self> {
+        None
+    }
+}
+
+fn encode_uuid(uuid: Uuid) -> String {
     const ENCODED_LEN: usize = 13;
 
     let base = BASE_36.len() as u64;

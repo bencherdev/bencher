@@ -2,8 +2,6 @@ use std::process::Command;
 
 use uuid::Uuid;
 
-use crate::client::platform::OperatingSystem;
-
 impl crate::Fingerprint {
     pub fn current() -> Option<Self> {
         Command::new("ioreg")
@@ -24,12 +22,5 @@ impl crate::Fingerprint {
                 None
             })
             .map(Self)
-    }
-}
-
-impl OperatingSystem {
-    #[allow(clippy::unnecessary_wraps)]
-    pub fn current() -> Option<Self> {
-        Some(Self::MacOS)
     }
 }

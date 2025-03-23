@@ -7,8 +7,6 @@ use windows::{
     Win32::System::Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_ANY},
 };
 
-use crate::client::platform::OperatingSystem;
-
 impl crate::Fingerprint {
     pub fn current() -> Option<Self> {
         serial_number().or_else(digital_product_id).map(Self)
@@ -59,11 +57,4 @@ fn digital_product_id() -> Option<Uuid> {
         .take(data_size as usize)
         .fold(0u128, |acc, byte| (acc << 8) | u128::from(byte));
     Some(Uuid::from_u128(digital_product_id))
-}
-
-impl OperatingSystem {
-    #[allow(clippy::unnecessary_wraps)]
-    pub fn current() -> Option<Self> {
-        Some(Self::Windows)
-    }
 }
