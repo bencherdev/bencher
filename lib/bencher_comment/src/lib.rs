@@ -63,6 +63,7 @@ impl ReportComment {
         let mut text = String::new();
         self.human_results_list(&mut text);
         self.human_alerts_list(&mut text);
+        self.human_unclaimed(&mut text);
         text
     }
 
@@ -112,6 +113,19 @@ impl ReportComment {
                 console_url = self.alert_perf_url(alert)
             ));
         }
+    }
+
+    fn human_unclaimed(&self, text: &mut String) {
+        if self.json_report.project.claimed.is_some() {
+            return;
+        }
+
+        let mut url = self.console_url.clone();
+        url.set_path("/auth/signup");
+        url.query_pairs_mut()
+            .append_pair("claim", &self.json_report.project.organization.to_string());
+
+        text.push_str(&format!("\n\nClaim this project: {url}"));
     }
 
     pub fn json(&self) -> Result<String, serde_json::Error> {
