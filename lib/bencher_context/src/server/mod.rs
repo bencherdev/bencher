@@ -45,7 +45,7 @@ impl RunContext {
             .ok()
     }
 
-    pub fn slug(&self) -> Slug {
+    pub fn slug(&self) -> Option<Slug> {
         let name = self.repo_name().map(short_name).unwrap_or_default();
         let hash = self.repo_hash().map(short_hash).unwrap_or_default();
         let fingerprint = self
@@ -57,7 +57,11 @@ impl RunContext {
         // they will essentially be ignored
         let slug = format!("{name} {hash} {fingerprint}");
         debug_assert!(slug.len() <= Slug::MAX_LEN, "Slug is too long: {slug}");
-        Slug::new(slug)
+        if slug.is_empty() {
+            None
+        } else {
+            Some(Slug::new(slug))
+        }
     }
 }
 

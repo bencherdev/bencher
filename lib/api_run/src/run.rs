@@ -110,7 +110,7 @@ fn project_slug(json_run: &JsonNewRun) -> Result<Slug, HttpError> {
     json_run
         .context
         .as_ref()
-        .map(RunContext::slug)
+        .and_then(RunContext::slug)
         .ok_or_else(|| {
             bad_request_error(
             "The `project` field was not specified nor was a run `context` provided for the slug",

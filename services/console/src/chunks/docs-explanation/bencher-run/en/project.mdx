@@ -2,6 +2,24 @@
 
 <br />
 
+Optional: Either the `--project` option or the `BENCHER_PROJECT` environment variable
+may be set to the slug or UUID for a Project.
+If the value specified is a slug and the Project does not already exist, it will be created for you.
+However, if the value specified is a UUID then the Project must already exist.
+If both are specified, the `--project` option takes precedence over the `BENCHER_PROJECT` environment variable.
+If neither are specified then a Project slug will be generated for you based on:
+
+1. The name of the parent directory for the `git` repository, if it is available.
+2. The root hash for the `git` repository, if it is available.
+3. A 13 digit alphanumeric fingerprint of your system, for supported operating systems.
+
+If neither are specified then `Linux`, `macOS`, or `Windows` is used,
+based on the host operating system.
+If the `bencher` CLI has been compiled for a different operating system,
+then `localhost` is used as the default Testbed.
+
 Either the `--project` option or the `BENCHER_PROJECT` environment variable
 must be set to the slug or UUID of an already existing project.
 If both are specified, the `--project` option takes precedence over the `BENCHER_PROJECT` environment variable.
+
+[project]: /docs/explanation/benchmarking/#project
