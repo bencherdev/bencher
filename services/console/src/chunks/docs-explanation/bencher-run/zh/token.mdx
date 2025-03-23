@@ -1,6 +1,9 @@
-### `--token <令牌>`
+### `--token <TOKEN>`
 
 <br />
 
-必须设置 `--token` 选项或 `BENCHER_API_TOKEN` 环境变量为有效的 API 令牌。
-如果两者都被定义，`--token` 选项优先于 `BENCHER_API_TOKEN` 环境变量。
+可选：可以通过 `--token` 选项或 `BENCHER_API_TOKEN` 环境变量来设置一个有效的 API 令牌。
+如果两者都指定了，则 `--token` 选项优先于 `BENCHER_API_TOKEN` 环境变量。
+如果两者都未指定，则项目必须是“未认领”的。
+也就是说，如果您已经“认领”了一个项目，则必须提供一个有效的 API 令牌。
+[点击这里创建一个 API 令牌](/console/users/tokens/add?back=L2RvY3MvemgvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0tdG9rZW4tdG9rZW4=)。

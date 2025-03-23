@@ -2,5 +2,8 @@
 
 <br />
 
-`--token`オプションまたは`BENCHER_API_TOKEN`環境変数のどちらかを有効なAPIトークンに設定する必要があります。
-両方が定義されている場合、`--token`オプションは`BENCHER_API_TOKEN`環境変数に優先します。
+オプション: `--token` オプションまたは `BENCHER_API_TOKEN` 環境変数のいずれかを設定して、有効な API トークンを指定できます。
+両方が指定されている場合、`--token` オプションが `BENCHER_API_TOKEN` 環境変数よりも優先されます。
+どちらも指定されていない場合、プロジェクトは `unclaimed` でなければなりません。
+つまり、すでにプロジェクトを `claimed` している場合、有効な API トークンを提供しなければなりません。
+[こちらをクリックして API トークンを作成してください](/console/users/tokens/add?back=L2phL2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0tdG9rZW4tdG9rZW4=)。
