@@ -29,6 +29,13 @@ pub mod threshold;
 
 crate::typed_uuid::typed_uuid!(ProjectUuid);
 
+// Create a project from an organization.
+impl From<OrganizationUuid> for ProjectUuid {
+    fn from(uuid: OrganizationUuid) -> Self {
+        uuid::Uuid::from(uuid).into()
+    }
+}
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

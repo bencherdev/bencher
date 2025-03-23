@@ -147,18 +147,14 @@ impl QueryProject {
         NameFn: FnOnce() -> Result<ResourceName, HttpError>,
     {
         let project_name = project_name_fn()?;
-        let query_organization = if let Some(auth_user) = auth_user {
-            QueryOrganization::get_or_create_from_user(context, auth_user).await?
-        } else {
-            QueryOrganization::get_or_create_from_project(context, &project_name, &project_slug)
-                .await?
-        };
-        // The choice was either to relax the schema constraint to allow duplicate project names
-        // or to append a number to the project name to ensure uniqueness.
-        let name = Self::unique_name(log, context, &query_organization, project_name).await?;
-        let insert_project =
-            InsertProject::new(query_organization.id, name, project_slug, None, None);
         if let Some(auth_user) = auth_user {
+            let query_organization =
+                QueryOrganization::get_or_create_from_user(context, auth_user).await?;
+            // The choice was either to relax the schema constraint to allow duplicate project names
+            // or to append a number to the project name to ensure uniqueness.
+            let name = Self::unique_name(log, context, &query_organization, project_name).await?;
+            let insert_project =
+                InsertProject::new(query_organization.id, name, project_slug, None, None);
             // If the user is authenticated, then we may have created a new personal organization for them.
             // If so then we need to reload the permissions.
             // This is unlikely to be the case going forward, but it is needed for backwards compatibility.
@@ -172,6 +168,18 @@ impl QueryProject {
             )
             .await
         } else {
+            let query_organization = QueryOrganization::get_or_create_from_project(
+                context,
+                &project_name,
+                &project_slug,
+            )
+            .await?;
+            // Currently, there is no semantic importance to having the organization and project have the same UUID.
+            // However, it seems like a good idea to keep them in sync for now.
+            // It makes identifying on-the-fly unclaimed projects easier, even after they have been claimed.
+            // This is okay since there should never be more than one project in an unclaimed "from project" organization.
+            let insert_project =
+                InsertProject::from_organization(&query_organization, project_name, project_slug);
             Self::create_inner(log, context, &query_organization, insert_project).await
         }
     }
@@ -491,9 +499,27 @@ impl InsertProject {
         url: Option<Url>,
         visibility: Option<Visibility>,
     ) -> Self {
+        Self::new_inner(
+            ProjectUuid::new(),
+            organization_id,
+            name,
+            slug,
+            url,
+            visibility,
+        )
+    }
+
+    fn new_inner(
+        uuid: ProjectUuid,
+        organization_id: OrganizationId,
+        name: ResourceName,
+        slug: Slug,
+        url: Option<Url>,
+        visibility: Option<Visibility>,
+    ) -> Self {
         let timestamp = DateTime::now();
         Self {
-            uuid: ProjectUuid::new(),
+            uuid,
             organization_id,
             name,
             slug,
@@ -517,6 +543,21 @@ impl InsertProject {
         } = project;
         let slug = ok_slug!(conn, &name, slug, project, QueryProject);
         Self::new(organization.id, name, slug, url, visibility)
+    }
+
+    fn from_organization(
+        query_organization: &QueryOrganization,
+        name: ResourceName,
+        slug: Slug,
+    ) -> Self {
+        Self::new_inner(
+            query_organization.uuid.into(),
+            query_organization.id,
+            name,
+            slug,
+            None,
+            None,
+        )
     }
 }
 

@@ -1394,6 +1394,10 @@ impl SeedTest {
                 assert_eq!(json.project.slug, project.slug);
                 assert_eq!(json.project.claimed, project.claimed);
             } else {
+                assert_eq!(
+                    json.project.uuid.as_ref(),
+                    json.project.organization.as_ref()
+                );
                 assert_eq!(json.project.name.as_ref(), REPO_NAME);
                 assert!(
                     json.project.slug.as_ref().starts_with(REPO_NAME),
