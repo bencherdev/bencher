@@ -2,6 +2,12 @@
 
 <br />
 
-La opción `--project` o la variable de entorno `BENCHER_PROJECT`
-deben estar configuradas con el slug o UUID de un proyecto ya existente.
-Si ambas están definidas, la opción `--project` tiene prioridad sobre la variable de entorno `BENCHER_PROJECT`.
+Opcional: Puede establecerse la opción `--project` o la variable de entorno `BENCHER_PROJECT` para el identificador o UUID de un Proyecto. Si el valor especificado es un identificador y el Proyecto no existe aún, se creará uno para usted. Sin embargo, si el valor especificado es un UUID, entonces el Proyecto debe existir previamente. Si ambos están especificados, la opción `--project` tiene prioridad sobre la variable de entorno `BENCHER_PROJECT`. Si ninguno de los dos está especificado, entonces se generará un identificador de Proyecto para usted basado en:
+
+1. El nombre del directorio principal del repositorio `git`, si está disponible.
+2. Un hash corto hexadecimal de 7 dígitos para el compromiso inicial del repositorio `git`, si está disponible.
+3. Una huella digital alfanumérica de 13 dígitos de la máquina local, para sistemas operativos compatibles.
+
+Por ejemplo, un identificador de Proyecto generado podría parecerse a: `project-abc4567-wxyz123456789`
+
+Cuando se crea un nuevo Proyecto para usted, ya sea que el identificador esté especificado o generado, el Proyecto debe pertenecer a una Organización. Si el usuario está autenticado, entonces el Proyecto se añade a la Organización personal de ese usuario. Si el usuario no está autenticado, el Proyecto se creará bajo una nueva Organización `no reclamada`. Esta Organización puede ser `reclamada` desde la página pública de rendimiento del Proyecto o utilizando el identificador del Proyecto mientras se está autenticado en una invocación posterior de `bencher run`.

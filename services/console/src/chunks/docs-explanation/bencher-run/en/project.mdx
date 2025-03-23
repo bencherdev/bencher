@@ -10,16 +10,14 @@ If both are specified, the `--project` option takes precedence over the `BENCHER
 If neither are specified then a Project slug will be generated for you based on:
 
 1. The name of the parent directory for the `git` repository, if it is available.
-2. The root hash for the `git` repository, if it is available.
-3. A 13 digit alphanumeric fingerprint of your system, for supported operating systems.
+2. A 7 digit hexadecimal short hash for the initial commit of the `git` repository, if it is available.
+3. A 13 digit alphanumeric fingerprint of the local machine, for supported operating systems.
 
-If neither are specified then `Linux`, `macOS`, or `Windows` is used,
-based on the host operating system.
-If the `bencher` CLI has been compiled for a different operating system,
-then `localhost` is used as the default Testbed.
+For example, a generated Project slug might look like: `project-abc4567-wxyz123456789`
 
-Either the `--project` option or the `BENCHER_PROJECT` environment variable
-must be set to the slug or UUID of an already existing project.
-If both are specified, the `--project` option takes precedence over the `BENCHER_PROJECT` environment variable.
-
-[project]: /docs/explanation/benchmarking/#project
+When a new Project is created for you, whether the slug is specified or generated,
+the Project has to belong to an Organization.
+If the user is authenticated, then the Project is added under that user's personal Organization.
+If the user is not authenticated, the Project will be created under a new `unclaimed` Organization.
+This Organization can then be `claimed` from the Project's public Perf Page
+or by using the Project slug while authenticated in a subsequent invocation of `bencher run`.

@@ -2,5 +2,22 @@
 
 <br />
 
-A opção `--project` ou a variável de ambiente `BENCHER_PROJECT` deve ser configurada para o slug ou UUID de um projeto já existente.
-Se ambos estiverem definidos, a opção `--project` tem precedência sobre a variável de ambiente `BENCHER_PROJECT`.
+Opcional: Ou a opção `--project` ou a variável de ambiente `BENCHER_PROJECT`
+pode ser configurada para o slug ou UUID de um Projeto.
+Se o valor especificado for um slug e o Projeto ainda não existir, ele será criado para você.
+No entanto, se o valor especificado for um UUID, o Projeto já deve existir.
+Se ambos estiverem especificados, a opção `--project` tem precedência sobre a variável de ambiente `BENCHER_PROJECT`.
+Se nenhum deles for especificado, então um slug de Projeto será gerado para você com base em:
+
+1. O nome do diretório pai do repositório `git`, se estiver disponível.
+2. Um hash hexadecimal curto de 7 dígitos para o commit inicial do repositório `git`, se estiver disponível.
+3. Uma impressão digital alfanumérica de 13 dígitos da máquina local, para sistemas operacionais suportados.
+
+Por exemplo, um slug de Projeto gerado pode ser: `project-abc4567-wxyz123456789`
+
+Quando um novo Projeto é criado para você, seja o slug especificado ou gerado,
+o Projeto deve pertencer a uma Organização.
+Se o usuário estiver autenticado, o Projeto é adicionado à Organização pessoal desse usuário.
+Se o usuário não estiver autenticado, o Projeto será criado em uma nova Organização `unclaimed`.
+Essa Organização pode então ser `reivindicada` da Página de Desempenho pública do Projeto
+ou usando o slug do Projeto enquanto autenticado em uma invocação subsequente de `bencher run`.
