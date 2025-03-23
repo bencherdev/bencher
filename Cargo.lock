@@ -1016,7 +1016,6 @@ dependencies = [
  "bencher_adapter",
  "bencher_client",
  "bencher_comment",
- "bencher_context",
  "bencher_json",
  "bollard",
  "camino",

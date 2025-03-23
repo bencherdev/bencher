@@ -2,7 +2,7 @@ use std::process::Command;
 
 use uuid::Uuid;
 
-impl crate::Fingerprint {
+impl super::Fingerprint {
     pub fn current() -> Option<Self> {
         Command::new("ioreg")
             .arg("-d2")

@@ -7,7 +7,7 @@ use windows::{
     Win32::System::Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_ANY},
 };
 
-impl crate::Fingerprint {
+impl super::Fingerprint {
     pub fn current() -> Option<Self> {
         serial_number().or_else(digital_product_id).map(Self)
     }

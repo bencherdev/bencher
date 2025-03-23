@@ -2,12 +2,11 @@ use std::collections::HashMap;
 
 use gix::Repository;
 
+use crate::{ContextPath, RunContext};
+
 mod platform;
 
-pub use platform::Fingerprint;
-use platform::OperatingSystem;
-
-use crate::{ContextPath, RunContext};
+use platform::{Fingerprint, OperatingSystem};
 
 const ROOT: &str = "root";
 

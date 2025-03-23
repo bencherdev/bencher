@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 const HEX_BASE: u32 = 16;
 
-impl crate::Fingerprint {
+impl super::Fingerprint {
     pub fn current() -> Option<Self> {
         parse_machine_id("/var/lib/dbus/machine-id")
             .or_else(|| parse_machine_id("/etc/machine-id"))

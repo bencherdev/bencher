@@ -9,9 +9,6 @@ mod client;
 #[cfg(feature = "server")]
 mod server;
 
-#[cfg(feature = "client")]
-pub use client::Fingerprint;
-
 const BENCHER_DEV: &str = "bencher.dev";
 const VERSION: &str = "v0";
 

@@ -31,9 +31,9 @@ impl Fingerprint {
     }
 }
 
+// The maximum number of characters for a base 36 encoded u64 is 13.
+const ENCODED_LEN: usize = 13;
 fn encode_uuid(uuid: Uuid) -> String {
-    const ENCODED_LEN: usize = 13;
-
     let base = BASE_36.len() as u64;
     let chars = BASE_36.chars().collect::<Vec<_>>();
 
