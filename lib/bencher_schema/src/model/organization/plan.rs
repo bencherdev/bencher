@@ -22,6 +22,9 @@ use crate::{
     schema::{self, plan as plan_table},
 };
 
+const UNCLAIMED_MAX_USAGE: u32 = 2_048;
+const CLAIMED_MAX_USAGE: u32 = 8_192;
+
 crate::macros::typed_id::typed_id!(PlanId);
 
 #[derive(
@@ -217,19 +220,29 @@ pub enum PlanKind {
 
 #[derive(Debug, thiserror::Error)]
 pub enum PlanKindError {
-    #[error("Organization ({organization:?}) has an inactive metered plan ({metered_plan_id})")]
+    #[error("Organization ({}) has an inactive metered plan ({metered_plan_id})", organization.uuid)]
     InactiveMeteredPlan {
         organization: QueryOrganization,
         metered_plan_id: MeteredPlanId,
     },
-    #[error("No plan (subscription or license) found for organization ({organization:?}) with private project ({visibility:?})")]
+    #[error("No plan (subscription or license) found for unclaimed organization ({}) that exceeds the daily usage limit. Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", organization.uuid)]
+    UnclaimedUsage {
+        organization: QueryOrganization,
+        visibility: Visibility,
+    },
+    #[error("No plan (subscription or license) found for claimed organization ({}) that exceeds the daily usage limit. Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", organization.uuid)]
+    ClaimedUsage {
+        organization: QueryOrganization,
+        visibility: Visibility,
+    },
+    #[error("No plan (subscription or license) found for organization ({}) with private project ({visibility:?})", organization.uuid)]
     NoPlan {
         organization: QueryOrganization,
         visibility: Visibility,
     },
     #[error("No Biller has been configured for the server")]
     NoBiller,
-    #[error("License usage exceeded for project ({project:?}). {prior_usage} + {usage} > {entitlements}")]
+    #[error("License usage exceeded for project ({}). {prior_usage} + {usage} > {entitlements}", project.uuid)]
     Overage {
         project: QueryProject,
         entitlements: Entitlements,
@@ -253,7 +266,23 @@ impl PlanKind {
         } else if let Some(license_usage) = LicenseUsage::get(conn, licensor, query_organization)? {
             Ok(Self::Licensed(license_usage))
         } else if visibility.is_public() {
-            Ok(Self::None)
+            let is_claimed = query_organization.is_claimed(conn)?;
+            let daily_usage = query_organization.daily_usage(conn)?;
+            match (is_claimed, daily_usage) {
+                (false, daily_usage) if daily_usage > UNCLAIMED_MAX_USAGE => {
+                    Err(payment_required_error(PlanKindError::UnclaimedUsage {
+                        organization: query_organization.clone(),
+                        visibility,
+                    }))
+                },
+                (true, daily_usage) if daily_usage > CLAIMED_MAX_USAGE => {
+                    Err(payment_required_error(PlanKindError::ClaimedUsage {
+                        organization: query_organization.clone(),
+                        visibility,
+                    }))
+                },
+                (_, _) => Ok(Self::None),
+            }
         } else {
             Err(payment_required_error(PlanKindError::NoPlan {
                 organization: query_organization.clone(),

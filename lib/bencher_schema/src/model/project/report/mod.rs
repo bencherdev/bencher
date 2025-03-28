@@ -74,6 +74,16 @@ impl QueryReport {
         mut json_report: JsonNewReport,
         auth_user: Option<&AuthUser>,
     ) -> Result<JsonReport, HttpError> {
+        // Check to see if the project is public or private
+        // If private, then validate that there is an active subscription or license
+        #[cfg(feature = "plus")]
+        let plan_kind = PlanKind::new_for_project(
+            conn_lock!(context),
+            context.biller.as_ref(),
+            &context.licensor,
+            query_project,
+        )
+        .await?;
         let project_id = query_project.id;
 
         // Get or create the branch and testbed
@@ -96,18 +106,6 @@ impl QueryReport {
             branch_id,
             testbed_id,
             json_report.thresholds.take(),
-        )
-        .await?;
-
-        // TODO consider moving this to the beginning of the function
-        // Check to see if the project is public or private
-        // If private, then validate that there is an active subscription or license
-        #[cfg(feature = "plus")]
-        let plan_kind = PlanKind::new_for_project(
-            conn_lock!(context),
-            context.biller.as_ref(),
-            &context.licensor,
-            query_project,
         )
         .await?;
 
