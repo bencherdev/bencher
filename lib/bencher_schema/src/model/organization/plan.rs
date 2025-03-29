@@ -22,8 +22,8 @@ use crate::{
     schema::{self, plan as plan_table},
 };
 
-const UNCLAIMED_MAX_USAGE: u32 = 2_048;
-const CLAIMED_MAX_USAGE: u32 = 8_192;
+const UNCLAIMED_MAX_USAGE: u32 = 1_024;
+const CLAIMED_MAX_USAGE: u32 = 2_048;
 
 crate::macros::typed_id::typed_id!(PlanId);
 
