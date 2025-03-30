@@ -862,7 +862,7 @@ jobs:
     runs-on: ubuntu-22.04
     # This will fail whenever Bencher Cloud is down
     continue-on-error: true
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs:
       # Lint
       - cargo_fmt
