@@ -220,7 +220,7 @@ pub enum PlanKind {
 
 #[derive(Debug, thiserror::Error)]
 pub enum PlanKindError {
-    #[error("Organization ({}) has an inactive metered plan ({metered_plan_id})", organization.uuid)]
+    #[error("Organization ({uuid}) has an inactive metered plan ({metered_plan_id})", uuid = organization.uuid)]
     InactiveMeteredPlan {
         organization: QueryOrganization,
         metered_plan_id: MeteredPlanId,
@@ -235,11 +235,8 @@ pub enum PlanKindError {
     UnclaimedUsage { organization: QueryOrganization },
     #[error("No plan (subscription or license) found for claimed organization ({uuid}) that exceeds the daily rate limit ({CLAIMED_MAX_USAGE}). Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", uuid = organization.uuid)]
     ClaimedUsage { organization: QueryOrganization },
-    #[error("No plan (subscription or license) found for organization ({uuid}) with private project ({visibility:?})", uuid = organization.uuid)]
-    NoPlan {
-        organization: QueryOrganization,
-        visibility: Visibility,
-    },
+    #[error("No plan (subscription or license) found for organization ({uuid}) with private project", uuid = organization.uuid)]
+    NoPlan { organization: QueryOrganization },
     #[error("No Biller has been configured for the server")]
     NoBiller,
     #[error("License usage exceeded for project ({uuid}). {prior_usage} + {usage} > {entitlements}", uuid = project.uuid)]
@@ -291,7 +288,6 @@ impl PlanKind {
         } else {
             Err(payment_required_error(PlanKindError::NoPlan {
                 organization: query_organization.clone(),
-                visibility,
             }))
         }
     }

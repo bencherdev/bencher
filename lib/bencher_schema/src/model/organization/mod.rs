@@ -119,21 +119,6 @@ impl QueryOrganization {
         auth_user: &AuthUser,
         insert_organization: InsertOrganization,
     ) -> Result<Self, HttpError> {
-        // Don't allow other users to create an organization with the same slug as another user.
-        // This is needed to make on-the-fly projects for an authenticated user work.
-        if insert_organization.slug != auth_user.user.slug
-            && !auth_user.is_admin(&context.rbac)
-            && QueryUser::from_resource_id(
-                conn_lock!(context),
-                &insert_organization.slug.clone().into(),
-            )
-            .is_ok()
-        {
-            return Err(forbidden_error(
-                "You cannot create an organization with the same slug as a different user.",
-            ));
-        }
-
         let query_organization = Self::create_inner(context, insert_organization).await?;
 
         let timestamp = DateTime::now();

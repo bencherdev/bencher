@@ -51,7 +51,7 @@ fn digital_product_id() -> Option<Uuid> {
 
     // There appear to be quite a few zeroed out bytes at the beginning of the digital product ID.
     // In order to ensure as much entropy as possible,
-    // we'll just shift all of the bits dropped by the leading bytes as needed.
+    // we'll just shift all of the bits dropping the leading bytes as needed.
     let digital_product_id = data
         .into_iter()
         .take(data_size as usize)

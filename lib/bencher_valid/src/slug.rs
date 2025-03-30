@@ -148,6 +148,12 @@ impl Slug {
                 base36.push(c as char);
             }
         }
+        debug_assert!(
+            base36.len() == Self::RAND_LEN,
+            "Slug length ({}) is not equal to RAND_LEN ({})",
+            base36.len(),
+            Self::RAND_LEN
+        );
 
         base36
     }
