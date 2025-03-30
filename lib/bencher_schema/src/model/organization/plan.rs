@@ -22,8 +22,8 @@ use crate::{
     schema::{self, plan as plan_table},
 };
 
-const UNCLAIMED_MAX_USAGE: u32 = 1_024;
-const CLAIMED_MAX_USAGE: u32 = 2_048;
+const UNCLAIMED_MAX_USAGE: u32 = u8::MAX as u32;
+const CLAIMED_MAX_USAGE: u32 = u16::MAX as u32;
 
 crate::macros::typed_id::typed_id!(PlanId);
 
@@ -225,24 +225,24 @@ pub enum PlanKindError {
         organization: QueryOrganization,
         metered_plan_id: MeteredPlanId,
     },
-    #[error("No plan (subscription or license) found for unclaimed organization ({}) that exceeds the daily usage limit. Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", organization.uuid)]
-    UnclaimedUsage {
+    #[error("License usage exceeded for organization ({uuid}). {usage} > {entitlements}", uuid = organization.uuid)]
+    LicensePlanOverage {
         organization: QueryOrganization,
-        visibility: Visibility,
+        entitlements: Entitlements,
+        usage: u32,
     },
-    #[error("No plan (subscription or license) found for claimed organization ({}) that exceeds the daily usage limit. Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", organization.uuid)]
-    ClaimedUsage {
-        organization: QueryOrganization,
-        visibility: Visibility,
-    },
-    #[error("No plan (subscription or license) found for organization ({}) with private project ({visibility:?})", organization.uuid)]
+    #[error("Unclaimed organization ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_MAX_USAGE}). Please, reduce your daily usage or claim the organization: https://bencher.dev/auth/signup?claim={uuid}", uuid = organization.uuid)]
+    UnclaimedUsage { organization: QueryOrganization },
+    #[error("No plan (subscription or license) found for claimed organization ({uuid}) that exceeds the daily rate limit ({CLAIMED_MAX_USAGE}). Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", uuid = organization.uuid)]
+    ClaimedUsage { organization: QueryOrganization },
+    #[error("No plan (subscription or license) found for organization ({uuid}) with private project ({visibility:?})", uuid = organization.uuid)]
     NoPlan {
         organization: QueryOrganization,
         visibility: Visibility,
     },
     #[error("No Biller has been configured for the server")]
     NoBiller,
-    #[error("License usage exceeded for project ({}). {prior_usage} + {usage} > {entitlements}", project.uuid)]
+    #[error("License usage exceeded for project ({uuid}). {prior_usage} + {usage} > {entitlements}", uuid = project.uuid)]
     Overage {
         project: QueryProject,
         entitlements: Entitlements,
@@ -264,21 +264,26 @@ impl PlanKind {
         {
             Ok(Self::Metered(metered_plan_id))
         } else if let Some(license_usage) = LicenseUsage::get(conn, licensor, query_organization)? {
+            if license_usage.usage > license_usage.entitlements.into() {
+                return Err(payment_required_error(PlanKindError::LicensePlanOverage {
+                    organization: query_organization.clone(),
+                    entitlements: license_usage.entitlements,
+                    usage: license_usage.usage,
+                }));
+            }
             Ok(Self::Licensed(license_usage))
         } else if visibility.is_public() {
             let is_claimed = query_organization.is_claimed(conn)?;
             let daily_usage = query_organization.daily_usage(conn)?;
             match (is_claimed, daily_usage) {
-                (false, daily_usage) if daily_usage > UNCLAIMED_MAX_USAGE => {
+                (false, daily_usage) if daily_usage >= UNCLAIMED_MAX_USAGE => {
                     Err(payment_required_error(PlanKindError::UnclaimedUsage {
                         organization: query_organization.clone(),
-                        visibility,
                     }))
                 },
-                (true, daily_usage) if daily_usage > CLAIMED_MAX_USAGE => {
+                (true, daily_usage) if daily_usage >= CLAIMED_MAX_USAGE => {
                     Err(payment_required_error(PlanKindError::ClaimedUsage {
                         organization: query_organization.clone(),
-                        visibility,
                     }))
                 },
                 (_, _) => Ok(Self::None),

@@ -1603,6 +1603,59 @@ impl SeedTest {
         assert_eq!(json.project.slug.as_ref(), bencher_two);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // Another unclaimed project
+        // 5 metics x 51 runs = 255 metrics
+        let unclaimed_max = "unclaimed-max";
+        for _ in 0..51 {
+            let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+            let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+            cmd.args([
+                "run",
+                HOST_ARG,
+                host,
+                PROJECT_ARG,
+                unclaimed_max,
+                "--format",
+                "json",
+                "--quiet",
+                &bencher_cmd,
+                "mock",
+            ])
+            .current_dir(CLI_DIR);
+            let assert = cmd.assert().success();
+            let json: bencher_json::JsonReport =
+                serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            assert_eq!(json.project.slug.as_ref(), unclaimed_max);
+            assert!(json.project.claimed.is_none(), "{json:?}");
+        }
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // This run should fail as we hit the rate limit
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            PROJECT_ARG,
+            unclaimed_max,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("Status: 402 Payment Required"),
+            "{output:?}"
+        );
+
         Ok(())
     }
 }

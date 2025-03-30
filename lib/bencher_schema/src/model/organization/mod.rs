@@ -275,31 +275,14 @@ impl QueryOrganization {
 
     #[cfg(feature = "plus")]
     pub fn daily_usage(&self, conn: &mut DbConnection) -> Result<u32, HttpError> {
-        const TODAY: i64 = 24 * 60 * 60;
-        let now = DateTime::now();
-        let timestamp = now.timestamp();
-        let today = timestamp - TODAY;
+        use std::time::Duration;
 
-        schema::metric::table
-            .inner_join(
-                schema::report_benchmark::table
-                    .inner_join(schema::report::table.inner_join(
-                        schema::project::table.inner_join(schema::organization::table),
-                    )),
-            )
-            .filter(schema::organization::id.eq(self.id))
-            .filter(schema::report::created.ge(today))
-            .count()
-            .get_result::<i64>(conn)
-            .map_err(resource_not_found_err!(Organization, &self))?
-            .try_into()
-            .map_err(|e| {
-                issue_error(
-                    "Failed to convert daily usage",
-                    "Failed to convert daily usage.",
-                    e,
-                )
-            })
+        use crate::model::project::metric::QueryMetric;
+
+        const DAY: Duration = Duration::from_secs(24 * 60 * 60);
+        let now = chrono::Utc::now();
+        let start_time = now - DAY;
+        QueryMetric::usage(conn, self.id, start_time.into(), now.into())
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {
