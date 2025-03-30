@@ -264,7 +264,7 @@ impl PlanKind {
         {
             Ok(Self::Metered(metered_plan_id))
         } else if let Some(license_usage) = LicenseUsage::get(conn, licensor, query_organization)? {
-            if license_usage.usage > license_usage.entitlements.into() {
+            if license_usage.usage >= license_usage.entitlements.into() {
                 return Err(payment_required_error(PlanKindError::LicensePlanOverage {
                     organization: query_organization.clone(),
                     entitlements: license_usage.entitlements,
