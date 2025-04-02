@@ -16,11 +16,12 @@ import Hosting from "../components/landing/Hosting.astro";
 import CallToAction from "../components/landing/CallToAction.astro";
 ---
 
-<BaseLayout
-  title={BENCHER_TITLE}
-  description={BENCHER_DESCRIPTION}
->
-  <SelfHostedRedirect client:only="solid-js" isBencherCloud={IS_BENCHER_CLOUD} path="/console" />
+<BaseLayout title={BENCHER_TITLE} description={BENCHER_DESCRIPTION}>
+  <SelfHostedRedirect
+    client:only="solid-js"
+    isBencherCloud={IS_BENCHER_CLOUD}
+    path="/console"
+  />
   <AuthRedirect client:only="solid-js" path="/console" />
   <section class="hero is-large">
     <div class="hero-body">
@@ -29,8 +30,8 @@ import CallToAction from "../components/landing/CallToAction.astro";
           <div class="content has-text-centered">
             <h1 class="title is-1">Catch Performance Regressions in CI</h1>
             <h2 class="subtitle is-4">
-              Detect and prevent performance regressions before they
-              make it to production with continuous benchmarking
+              Detect and prevent performance regressions before they make it to
+              production with continuous benchmarking
             </h2>
 
             <div class="columns is-centered">
@@ -62,17 +63,20 @@ import CallToAction from "../components/landing/CallToAction.astro";
     </div>
   </section>
 
-  <HowItWorks />
+  <!-- https://bulma.io/documentation/helpers/spacing-helpers/ -->
+  <section class="section p-3">
+    <HowItWorks />
 
-  <Showcase />
+    <Showcase />
 
-  <PRComment />
+    <PRComment />
 
-  <Toolbox />
+    <Toolbox />
 
-  <Customers />
+    <Customers />
 
-  <Hosting />
+    <Hosting />
 
-  <CallToAction />
+    <CallToAction />
+  </section>
 </BaseLayout>

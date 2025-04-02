@@ -141,76 +141,90 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 ---
 
 <aside class="menu is-sticky">
-  <LangButton lang={lang} tab={tab} collection={collection} slug={slug} />
-  <!-- Docs -->
-  <div class="tabs is-centered">
-    <ul>
-      {IS_BENCHER_CLOUD && <li id={DocsTab.Docs} class={tabClass(DocsTab.Docs, tab)}><a>Docs</a></li>}
-      <li id={DocsTab.Api} class={tabClass(DocsTab.Api, tab)}><a>API</a></li>
-      {IS_BENCHER_CLOUD && <li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}><a>Learn</a></li>}
-    </ul>
-  </div>
-  <nav id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>
-    <DocsList lang={lang} />
-  </nav>
-  <!-- API -->
-  <nav id={DocsMenuId.Api} style={displayStyle(DocsMenuId.Api, tab)}>
-    <ApiList lang={lang} />
-  </nav>
-  <!-- Learn -->
-  <nav id={DocsMenuId.Learn} style={displayStyle(DocsMenuId.Learn, tab)}>
-    <LearnList lang={lang} />
-  </nav>
+	<LangButton lang={lang} tab={tab} collection={collection} slug={slug} />
+	<!-- Docs -->
+	<div class="tabs is-centered">
+		<ul>
+			{
+				IS_BENCHER_CLOUD && (
+					<li id={DocsTab.Docs} class={tabClass(DocsTab.Docs, tab)}>
+						<a>Docs</a>
+					</li>
+				)
+			}
+			<li id={DocsTab.Api} class={tabClass(DocsTab.Api, tab)}>
+				<a>API</a>
+			</li>
+			{
+				IS_BENCHER_CLOUD && (
+					<li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}>
+						<a>Learn</a>
+					</li>
+				)
+			}
+		</ul>
+	</div>
+	<nav id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>
+		<DocsList lang={lang} />
+	</nav>
+	<!-- API -->
+	<nav id={DocsMenuId.Api} style={displayStyle(DocsMenuId.Api, tab)}>
+		<ApiList lang={lang} />
+	</nav>
+	<!-- Learn -->
+	<nav id={DocsMenuId.Learn} style={displayStyle(DocsMenuId.Learn, tab)}>
+		<LearnList lang={lang} />
+	</nav>
 </aside>
 <script>
-  import {DocsTab, DocsMenuId} from "./docs_tab";
+	import { DocsTab, DocsMenuId } from "./docs_tab";
 
-  // Find all buttons with the `alert` class on the page.
-  const docsTab = document.getElementById(DocsTab.Docs);
-  const apiTab = document.getElementById(DocsTab.Api);
-  const learnTab = document.getElementById(DocsTab.Learn);
+	// Find all buttons with the `alert` class on the page.
+	const docsTab = document.getElementById(DocsTab.Docs);
+	const apiTab = document.getElementById(DocsTab.Api);
+	const learnTab = document.getElementById(DocsTab.Learn);
 
-  const docsMenu = document.getElementById(DocsMenuId.Docs);
-  const apiMenu = document.getElementById(DocsMenuId.Api);
-  const learnMenu = document.getElementById(DocsMenuId.Learn);
+	const docsMenu = document.getElementById(DocsMenuId.Docs);
+	const apiMenu = document.getElementById(DocsMenuId.Api);
+	const learnMenu = document.getElementById(DocsMenuId.Learn);
 
-  function setDocs() {
-    docsTab?.classList.add("is-active");
-    apiTab?.classList.remove("is-active");
-    learnTab?.classList.remove("is-active");
+	function setDocs() {
+		docsTab?.classList.add("is-active");
+		apiTab?.classList.remove("is-active");
+		learnTab?.classList.remove("is-active");
 
-    docsMenu ? docsMenu.style.display = "block" : null;
-    apiMenu ? apiMenu.style.display = "none" : null;
-    learnMenu ? learnMenu.style.display = "none" : null;
-  }
+		docsMenu ? (docsMenu.style.display = "block") : null;
+		apiMenu ? (apiMenu.style.display = "none") : null;
+		learnMenu ? (learnMenu.style.display = "none") : null;
+	}
 
-  function setApi() {
-    docsTab?.classList.remove("is-active");
-    apiTab?.classList.add("is-active");
-    learnTab?.classList.remove("is-active");
+	function setApi() {
+		docsTab?.classList.remove("is-active");
+		apiTab?.classList.add("is-active");
+		learnTab?.classList.remove("is-active");
 
-    docsMenu ? docsMenu.style.display = "none" : null;
-    apiMenu ? apiMenu.style.display = "block" : null;
-    learnMenu ? learnMenu.style.display = "none" : null;
-  }
+		docsMenu ? (docsMenu.style.display = "none") : null;
+		apiMenu ? (apiMenu.style.display = "block") : null;
+		learnMenu ? (learnMenu.style.display = "none") : null;
+	}
 
-  function setLearn() {
-    docsTab?.classList.remove("is-active");
-    apiTab?.classList.remove("is-active");
-    learnTab?.classList.add("is-active");
+	function setLearn() {
+		docsTab?.classList.remove("is-active");
+		apiTab?.classList.remove("is-active");
+		learnTab?.classList.add("is-active");
 
-    docsMenu ? docsMenu.style.display = "none" : null;
-    apiMenu ? apiMenu.style.display = "none" : null;
-    learnMenu ? learnMenu.style.display = "block" : null;
-  }
+		docsMenu ? (docsMenu.style.display = "none") : null;
+		apiMenu ? (apiMenu.style.display = "none") : null;
+		learnMenu ? (learnMenu.style.display = "block") : null;
+	}
 
-  docsTab?.addEventListener("click", () => {
-    setDocs();
-  });
-  apiTab?.addEventListener("click", () => {
-    setApi();
-  });
-  learnTab?.addEventListener("click", () => {
-    setLearn();
-  });
+	docsTab?.addEventListener("click", () => {
+		setDocs();
+	});
+	apiTab?.addEventListener("click", () => {
+		setApi();
+	});
+	learnTab?.addEventListener("click", () => {
+		setLearn();
+	});
 </script>

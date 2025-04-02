@@ -50,51 +50,57 @@ const {
   author={author}
   canonical={canonical}
 >
-  <div class="columns is-reverse-mobile">
-    <div class="columns">
+  <!-- https://bulma.io/documentation/helpers/spacing-helpers/ -->
+  <section class="section p-3">
+    <div class="columns is-reverse-mobile">
       <div class="column is-narrow">
-        <DocsMenu tab={tab ?? DocsTab.Docs} lang={lang} collection={collection} slug={slug}/>
+        <DocsMenu
+          tab={tab ?? DocsTab.Docs}
+          lang={lang}
+          collection={collection}
+          slug={slug}
+        />
       </div>
-    </div>
-    <div class="column is-two-thirds">
-      <section class="section">
-        <div class="continer">
-          {
-            heading ? (
-              <div class="content">
-                <h1 class="title is-1">{heading}</h1>
-                { author === Author.everett &&
-                  <a class="subtitle level" href="/author/everett-pompeii">
-                    <div class="level-left">
-                      <div class="level is-mobile">
-                        <div class="level-item">
-                          <figure class="image is-32x32">
-                            <Image src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" class="is-rounded" width="32" height="32" alt="Everett Pompeii" />
-                          </figure>
-                        </div>
-                        <div class="level-item">
-                          <p>Everett Pompeii</p>
+      <div class="column is-two-thirds">
+        <section class="section">
+          <div class="continer">
+            {
+              heading ? (
+                <div class="content">
+                  <h1 class="title is-1">{heading}</h1>
+                  { author === Author.everett &&
+                    <a class="subtitle level" href="/author/everett-pompeii">
+                      <div class="level-left">
+                        <div class="level is-mobile">
+                          <div class="level-item">
+                            <figure class="image is-32x32">
+                              <Image src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" class="is-rounded" width="32" height="32" alt="Everett Pompeii" />
+                            </figure>
+                          </div>
+                          <div class="level-item">
+                            <p>Everett Pompeii</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </a>
-                }
-                <hr />
+                    </a>
+                  }
+                  <hr />
+                  <slot />
+                </div>
+              ) : (
                 <slot />
-              </div>
-            ) : (
-              <slot />
-            )
-          }
-          {published &&
-            <br />
-            <hr />
-            <p>Published: {fmtDateTime(published)}
-            {modified && modified !== published && <>| Last Updated: {fmtDateTime(modified)}</>}
-            </p>
-          }
-        </div>
-      </section>
+              )
+            }
+            {published &&
+              <br />
+              <hr />
+              <p>Published: {fmtDateTime(published)}
+              {modified && modified !== published && <>| Last Updated: {fmtDateTime(modified)}</>}
+              </p>
+            }
+          </div>
+        </section>
+      </div>
     </div>
-  </div>
+  </section>
 </BaseLayout>
