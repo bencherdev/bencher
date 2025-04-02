@@ -4,7 +4,7 @@ import ClientPlatform from "./ClientPlatform";
 import { Platform } from "../../util/platform";
 
 const LANGUAGES: string[][] = [
-	["devicon-cplusplus-line", "devicon-python-plain"],
+	["devicon-cplusplus-plain", "devicon-python-plain"],
 	["devicon-java-plain", "devicon-javascript-plain"],
 	["devicon-ruby-plain", "devicon-csharp-line"],
 	["devicon-go-original-wordmark", "devicon-rust-plain"],
@@ -17,39 +17,53 @@ const LANGUAGES: string[][] = [
 		<br />
 		<br />
 		<div class="columns is-centered is-vcentered">
-			{LANGUAGES.map(([left_icon, right_icon]) => (
-				<div class="column is-one-quarter">
-					<div class="columns is-mobile">
-						<div class="column is-half">
-							<span class="icon has-text-primary is-large">
-								<i class={`${left_icon} fa-5x`} />
-							</span>
-						</div>
-						<br />
-						<div class="column is-half">
-							<span class="icon has-text-primary is-large">
-								<i class={`${right_icon} fa-5x`} />
-							</span>
+			{
+				LANGUAGES.map(([left_icon, right_icon]) => (
+					<div class="column is-one-quarter">
+						<div class="columns is-mobile">
+							<div class="column is-half">
+								<span class="icon has-text-primary is-large">
+									<i class={`${left_icon} fa-5x`} />
+								</span>
+							</div>
+							<br />
+							<div class="column is-half">
+								<span class="icon has-text-primary is-large">
+									<i class={`${right_icon} fa-5x`} />
+								</span>
+							</div>
 						</div>
 					</div>
-				</div>
-			))}
+				))
+			}
 		</div>
 		<br />
 		<div class="columns is-centered is-vcentered">
 			<div class="column is-7">
 				<ClientPlatform client:only="solid-js" platform={Platform.Unix}>
-					<Code lang="bash" code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh" />
+					<Code
+						lang="bash"
+						code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh"
+					/>
 				</ClientPlatform>
-				<ClientPlatform client:only="solid-js" platform={Platform.Windows}>
-					<Code lang="powershell" code="irm https://bencher.dev/download/install-cli.ps1 | iex" />
+				<ClientPlatform
+					client:only="solid-js"
+					platform={Platform.Windows}
+				>
+					<Code
+						lang="powershell"
+						code="irm https://bencher.dev/download/install-cli.ps1 | iex"
+					/>
 				</ClientPlatform>
 			</div>
 		</div>
 		<br />
 		<div class="columns is-centered">
 			<div class="column is-one-third">
-				<a class="button is-primary is-large is-responsive is-fullwidth" href="/docs/tutorial/quick-start/">
+				<a
+					class="button is-primary is-large is-responsive is-fullwidth"
+					href="/docs/tutorial/quick-start/"
+				>
 					Learn More
 				</a>
 			</div>

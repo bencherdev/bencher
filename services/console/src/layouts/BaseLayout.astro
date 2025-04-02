@@ -110,7 +110,7 @@ const article = () => {
 };
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang={lang ?? defaultLang} data-theme={theme}>
   <head>
     <meta charset="UTF-8" />
@@ -119,9 +119,12 @@ const article = () => {
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
     <meta name="theme-color" content="#ffffff" />
-    <link rel="icon" href="/favicon.png" sizes="48x48" type="image/png">
-    <link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="https://s3.amazonaws.com/public.bencher.dev/img/apple-touch-icon.png"/>
+    <link rel="icon" href="/favicon.png" sizes="48x48" type="image/png" />
+    <link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+    <link
+      rel="apple-touch-icon"
+      href="https://s3.amazonaws.com/public.bencher.dev/img/apple-touch-icon.png"
+    />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <meta name="generator" content={Astro.generator} />
@@ -157,18 +160,19 @@ const article = () => {
     <!-- https://devicon.dev/ -->
     <link
       rel="preload"
-      href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/devicon.min.css"
       as="style"
       onload="this.onload = null; this.rel = 'stylesheet'"
     />
     <noscript>
       <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css"
+        href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/devicon.min.css"
       />
     </noscript>
     <!-- font awesome -->
-    <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
+    <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"
+    ></script>
     <!-- Google tag (gtag.js) -->
     <script
       type="text/partytown"
