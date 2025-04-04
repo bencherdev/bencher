@@ -1,3 +1,12 @@
-import BenchmarkHarness from "../../../../components/docs/BenchmarkHarness.tsx";
+import BenchmarkHarness from "../../../../components/adapter/BenchmarkHarness.tsx";
+import SelectedAdapter from "../../../../components/adapter/SelectedAdapter.tsx";
 
-<BenchmarkHarness />
+## Select your Benchmark Harness
+
+For more details, see the [benchmark harness adapters] documentation.
+
+[benchmark harness adapters]: /docs/explanation/adapters/
+
+<SelectedAdapter client:only="solid-js" />
+
+<BenchmarkHarness client:idle />
