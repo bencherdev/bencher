@@ -51,7 +51,7 @@ const getCachedTheme = () => {
 			case null:
 				return null;
 			default:
-				localStorage.removeItem(BENCHER_THEME_KEY);
+				removeTheme();
 		}
 	}
 	return null;
@@ -59,6 +59,9 @@ const getCachedTheme = () => {
 
 export const storeTheme = (theme: Theme) =>
 	window.localStorage.setItem(BENCHER_THEME_KEY, theme);
+
+export const removeTheme = () =>
+	window.localStorage.removeItem(BENCHER_THEME_KEY);
 
 export const themeText = (theme: Theme) => {
 	switch (theme) {

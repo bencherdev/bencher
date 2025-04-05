@@ -116,7 +116,14 @@ const LanguageBox = (props: {
 							>
 								{(adapter) => (
 									<li>
-										<a onMouseDown={(e) => {e.preventDefault(); storeAdapter(adapter);}}>{adapterName(adapter)}</a>
+										<a
+											onMouseDown={(e) => {
+												e.preventDefault();
+												storeAdapter(adapter);
+											}}
+										>
+											{adapterName(adapter)}
+										</a>
 									</li>
 								)}
 							</For>

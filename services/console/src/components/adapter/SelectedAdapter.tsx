@@ -1,19 +1,21 @@
-import { createSignal, Show } from "solid-js";
-import { getAdapter } from "./adapter";
+import { Show } from "solid-js";
+import { adapter, adapterName, removeAdapter } from "./adapter";
 
 const SelectedAdapter = () => {
-    const [adapter, setAdapter] = createSignal(getAdapter());
-
-    setInterval(() => {
-        const new_adapter = getAdapter();
-        if (new_adapter && new_adapter !== adapter()) {
-            setAdapter(new_adapter);
-        }
-    }, 100);
-
-    return <Show when={adapter()}>
-        <div>{adapter()}</div>
-    </Show>;
+	return (
+		<Show when={adapter()}>
+			<div class="notification mb-4">
+				<button
+					class="delete"
+					onMouseDown={(e) => {
+						e.preventDefault();
+						removeAdapter();
+					}}
+				/>
+				{adapterName(adapter())}
+			</div>
+		</Show>
+	);
 };
 
 export default SelectedAdapter;

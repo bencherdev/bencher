@@ -1,3 +1,4 @@
+import { createSignal } from "solid-js";
 import { Adapter } from "../../types/bencher";
 
 export const BENCHER_ADAPTER_KEY = "BENCHER_ADAPTER";
@@ -83,7 +84,7 @@ export const getAdapter = () => {
 			case null:
 				return null;
 			default:
-				localStorage.removeItem(BENCHER_ADAPTER_KEY);
+				removeAdapter();
 		}
 	}
 	return null;
@@ -91,3 +92,16 @@ export const getAdapter = () => {
 
 export const storeAdapter = (adapter: Adapter) =>
 	window.localStorage.setItem(BENCHER_ADAPTER_KEY, adapter);
+
+export const removeAdapter = () =>
+	window.localStorage.removeItem(BENCHER_ADAPTER_KEY);
+
+const [adapter_inner, setAdapter] = createSignal<Adapter | null>(getAdapter());
+setInterval(() => {
+	const new_adapter = getAdapter();
+	if (new_adapter !== adapter_inner()) {
+		setAdapter(new_adapter);
+	}
+}, 100);
+
+export const adapter = adapter_inner;
