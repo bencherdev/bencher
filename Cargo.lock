@@ -249,7 +249,7 @@ dependencies = [
  "dropshot",
  "schemars",
  "serde",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -627,7 +627,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "tracing",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -984,7 +984,7 @@ dependencies = [
  "rand 0.9.0",
  "thiserror 2.0.11",
  "tokio",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -1053,7 +1053,7 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "url",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -1097,7 +1097,7 @@ dependencies = [
  "schemars",
  "serde",
  "typeshare",
- "uuid 1.13.1",
+ "uuid 1.16.0",
  "windows 0.60.0",
 ]
 
@@ -1158,7 +1158,7 @@ dependencies = [
  "thiserror 2.0.11",
  "typeshare",
  "url",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -1209,7 +1209,7 @@ dependencies = [
  "bencher_json",
  "literally",
  "oso",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -1249,7 +1249,7 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.26.1",
  "url",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -1261,7 +1261,7 @@ dependencies = [
  "jsonwebtoken",
  "serde",
  "thiserror 2.0.11",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -1288,7 +1288,7 @@ dependencies = [
  "thiserror 2.0.11",
  "typeshare",
  "url",
- "uuid 1.13.1",
+ "uuid 1.16.0",
  "wasm-bindgen",
  "wasm-bindgen-test",
 ]
@@ -2085,7 +2085,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef552e6f588e446098f6ba40d89ac146c8c7b64aade83c051ee00bb5d2bc18d"
 dependencies = [
  "serde",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -2381,7 +2381,7 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.25.0",
  "toml",
- "uuid 1.13.1",
+ "uuid 1.16.0",
  "version_check",
  "waitgroup",
 ]
@@ -6559,7 +6559,7 @@ dependencies = [
  "rkyv_derive",
  "seahash",
  "tinyvec",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -6793,7 +6793,7 @@ dependencies = [
  "serde",
  "serde_json",
  "url",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -6966,7 +6966,7 @@ dependencies = [
  "thiserror 1.0.69",
  "time",
  "url",
- "uuid 1.13.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -8255,9 +8255,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.13.1"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ced87ca4be083373936a67f8de945faa23b6b42384bd5b64434850802c6dccd0"
+checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 dependencies = [
  "getrandom 0.3.1",
  "serde",
