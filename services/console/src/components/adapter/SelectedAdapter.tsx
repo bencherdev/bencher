@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
-import { adapter, adapterIcon, adapterName, removeAdapter } from "./adapter";
+import { adapter, adapterIcon, removeAdapter } from "./adapter";
 import type { Adapter } from "../../types/bencher";
+import { adapterName } from "./name";
 
 const SelectedAdapter = () => {
 	return (
