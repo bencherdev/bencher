@@ -95,13 +95,13 @@ const LanguageBox = (props: {
 						</div>
 					</div>
 				</div>
-				<button class="card-header-icon">
+				<button class="card-header-icon" type="button">
 					<span class="icon">
 						<Show
 							when={active()}
-							fallback={<i class="fas fa-angle-right" aria-hidden="true"></i>}
+							fallback={<i class="fas fa-angle-right" />}
 						>
-							<i class="fas fa-angle-down" aria-hidden="true"></i>
+							<i class="fas fa-angle-down" />
 						</Show>
 					</span>
 				</button>
@@ -116,14 +116,15 @@ const LanguageBox = (props: {
 							>
 								{(adapter) => (
 									<li>
-										<a
+										<div
+											style={{ cursor: "pointer" }}
 											onMouseDown={(e) => {
 												e.preventDefault();
 												storeAdapter(adapter);
 											}}
 										>
 											{adapterName(adapter)}
-										</a>
+										</div>
 									</li>
 								)}
 							</For>

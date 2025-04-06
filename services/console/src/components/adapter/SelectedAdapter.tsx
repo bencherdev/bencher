@@ -8,6 +8,7 @@ const SelectedAdapter = () => {
 			<div class="notification mb-4">
 				<button
 					class="delete"
+                    type="button"
 					onMouseDown={(e) => {
 						e.preventDefault();
 						removeAdapter();
