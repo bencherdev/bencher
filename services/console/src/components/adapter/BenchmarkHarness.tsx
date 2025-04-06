@@ -1,6 +1,8 @@
-import { createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { Adapter } from "../../types/bencher.ts";
 import { adapterName, storeAdapter } from "./adapter.ts";
+import { Theme } from "../navbar/theme/theme.tsx";
+import { themeSignal } from "../navbar/theme/util.tsx";
 
 const BenchmarkHarness = () => (
 	<div class="columns">
@@ -71,6 +73,7 @@ const LanguageBox = (props: {
 	name: string;
 	adapters: Adapter[];
 }) => {
+	const themeClass = createMemo(() => themeHover(themeSignal()));
 	const [active, setActive] = createSignal(false);
 
 	return (
@@ -112,16 +115,20 @@ const LanguageBox = (props: {
 								fallback={<li>No adapters available</li>}
 							>
 								{(adapter) => (
-									<li>
-										<div
-											style={{ cursor: "pointer" }}
-											onMouseDown={(e) => {
-												e.preventDefault();
-												storeAdapter(adapter);
-											}}
-										>
-											{adapterName(adapter)}
-										</div>
+									<li
+										style={{ cursor: "pointer" }}
+										onMouseEnter={(e) => {
+											e.currentTarget.classList.add(themeClass());
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.classList.remove(themeClass());
+										}}
+										onMouseDown={(e) => {
+											e.preventDefault();
+											storeAdapter(adapter);
+										}}
+									>
+										{adapterName(adapter)}
 									</li>
 								)}
 							</For>
@@ -131,6 +138,17 @@ const LanguageBox = (props: {
 			</Show>
 		</div>
 	);
+};
+
+export const themeHover = (theme: undefined | Theme) => {
+	switch (theme) {
+		case Theme.Light:
+			return "has-background-light";
+		case Theme.Dark:
+			return "has-background-dark";
+		default:
+			return "";
+	}
 };
 
 export default BenchmarkHarness;
