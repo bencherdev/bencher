@@ -1,0 +1,24 @@
+import BencherRun from "../../../../components/adapter/BencherRun.astro";
+import BencherRunOutput from "../bencher-run-output.mdx";
+
+## Track your Benchmarks
+
+We are now ready to track some benchmark results!
+To do so, we will use [the `bencher run` CLI subcommand][bencher run]
+to run your benchmarks and collect the results.
+
+Run: <BencherRun />
+
+You may need to modify the benchmark command to match your setup.
+If you don't have any benchmarks yet, you can just use [the `bencher mock` subcommand][bencher mock] to generate some mock data.
+If everything works as expected, the end of the output should look something like this:
+
+<BencherRunOutput />
+
+You can now view the results from each of the benchmarks in the browser.
+Click or copy and paste the links from `View results`.
+To [claim the project][claim project], click or copy and pase the `Claim this project` link into your browser.
+
+[bencher run]: /docs/explanation/bencher-run/
+[bencher mock]: /docs/reference/bencher-metric-format/#bencher-mock
+[claim project]: /docs/how-to/claim-project/
