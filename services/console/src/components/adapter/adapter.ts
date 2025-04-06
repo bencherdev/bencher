@@ -1,7 +1,9 @@
-import { createSignal } from "solid-js";
 import { Adapter } from "../../types/bencher";
+import { useSearchParams } from "../../util/url";
 
+const ADAPTER_PARAM = "adapter";
 export const BENCHER_ADAPTER_KEY = "BENCHER_ADAPTER";
+const CLEAR_ADAPTER = "";
 
 const JSON_ICON = "devicon-json-plain";
 const C_SHARP_ICON = "devicon-csharp-line";
@@ -49,46 +51,80 @@ export const adapterIcon = (adapter: Adapter) => {
 };
 
 export const getAdapter = () => {
-	if (typeof localStorage !== "undefined") {
-		const adapter = localStorage.getItem(BENCHER_ADAPTER_KEY);
-		switch (adapter) {
-			case Adapter.Json:
-			case Adapter.RustBench:
-			case Adapter.RustCriterion:
-			case Adapter.RustIai:
-			case Adapter.RustIaiCallgrind:
-			case Adapter.CppGoogle:
-			case Adapter.CppCatch2:
-			case Adapter.GoBench:
-			case Adapter.JavaJmh:
-			case Adapter.CSharpDotNet:
-			case Adapter.JsBenchmark:
-			case Adapter.JsTime:
-			case Adapter.PythonAsv:
-			case Adapter.PythonPytest:
-			case Adapter.RubyBenchmark:
-			case Adapter.ShellHyperfine:
-				return adapter;
-			case null:
-				return null;
-			default:
-				removeAdapter();
-		}
+	const adapter = getAdapterInner();
+	if (adapter === CLEAR_ADAPTER) {
+		clearAdapter();
+		return null;
 	}
+
+	const [searchParams, setSearchParams] = useSearchParams();
+	const adapterParam = searchParams[ADAPTER_PARAM];
+	if (validAdapter(adapterParam)) {
+		storeAdapterInner(adapterParam as Adapter);
+		return adapterParam as Adapter;
+	}
+
+	if (validAdapter(adapter)) {
+		setSearchParams({
+			[ADAPTER_PARAM]: adapter,
+		});
+		return adapter as Adapter;
+	}
+
+	setSearchParams({
+		[ADAPTER_PARAM]: null,
+	});
+	removeAdapterInner();
 	return null;
 };
 
-export const storeAdapter = (adapter: Adapter) =>
+export const setAdapter = (adapter: null | Adapter) => {
+	const [_searchParams, setSearchParams] = useSearchParams();
+	if (validAdapter(adapter)) {
+		setSearchParams({
+			[ADAPTER_PARAM]: adapter,
+		});
+		storeAdapterInner(adapter as Adapter);
+	} else {
+		clearAdapter();
+	}
+};
+
+export const clearAdapter = () => {
+	const [_searchParams, setSearchParams] = useSearchParams();
+	setSearchParams({
+		[ADAPTER_PARAM]: null,
+	});
+	storeAdapterInner(CLEAR_ADAPTER);
+};
+
+const validAdapter = (adapter: undefined | null | string | Adapter) => {
+	switch (adapter) {
+		case Adapter.Json:
+		case Adapter.RustBench:
+		case Adapter.RustCriterion:
+		case Adapter.RustIai:
+		case Adapter.RustIaiCallgrind:
+		case Adapter.CppGoogle:
+		case Adapter.CppCatch2:
+		case Adapter.GoBench:
+		case Adapter.JavaJmh:
+		case Adapter.CSharpDotNet:
+		case Adapter.JsBenchmark:
+		case Adapter.JsTime:
+		case Adapter.PythonAsv:
+		case Adapter.PythonPytest:
+		case Adapter.RubyBenchmark:
+		case Adapter.ShellHyperfine:
+			return true;
+		default:
+			return false;
+	}
+};
+
+const getAdapterInner = () => localStorage.getItem(BENCHER_ADAPTER_KEY);
+
+const storeAdapterInner = (adapter: Adapter | "") =>
 	localStorage.setItem(BENCHER_ADAPTER_KEY, adapter);
 
-export const removeAdapter = () => localStorage.removeItem(BENCHER_ADAPTER_KEY);
-
-const [adapter_inner, setAdapter] = createSignal<Adapter | null>(getAdapter());
-setInterval(() => {
-	const new_adapter = getAdapter();
-	if (new_adapter !== adapter_inner()) {
-		setAdapter(new_adapter);
-	}
-}, 100);
-
-export const adapter = adapter_inner;
+const removeAdapterInner = () => localStorage.removeItem(BENCHER_ADAPTER_KEY);

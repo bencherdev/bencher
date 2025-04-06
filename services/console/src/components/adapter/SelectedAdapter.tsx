@@ -1,7 +1,8 @@
 import { Show } from "solid-js";
-import { adapter, adapterIcon, removeAdapter } from "./adapter";
+import { adapterIcon, clearAdapter } from "./adapter";
 import type { Adapter } from "../../types/bencher";
 import { adapterName } from "./name";
+import { adapter } from "./util";
 
 const SelectedAdapter = () => {
 	return (
@@ -12,7 +13,7 @@ const SelectedAdapter = () => {
 					type="button"
 					onMouseDown={(e) => {
 						e.preventDefault();
-						removeAdapter();
+						clearAdapter();
 					}}
 				/>
 				<div class="columns is-mobile is-vcentered is-gapless">

@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { Adapter } from "../../types/bencher.ts";
-import { storeAdapter } from "./adapter.ts";
+import { setAdapter } from "./adapter.ts";
 import { Theme } from "../navbar/theme/theme.tsx";
 import { themeSignal } from "../navbar/theme/util.tsx";
 import { adapterName } from "./name.ts";
@@ -126,7 +126,7 @@ const LanguageBox = (props: {
 										}}
 										onMouseDown={(e) => {
 											e.preventDefault();
-											storeAdapter(adapter);
+											setAdapter(adapter);
 										}}
 									>
 										{adapterName(adapter)}
