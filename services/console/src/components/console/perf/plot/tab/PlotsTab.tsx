@@ -4,7 +4,7 @@ import { fmtDateTime } from "../../../../../config/util";
 import type { JsonPlot } from "../../../../../types/bencher";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
-import { type Theme, themeText } from "../../../../navbar/theme/theme";
+import { type Theme } from "../../../../navbar/theme/theme";
 import type { TabElement, TabList } from "./PlotTab";
 
 const PlotsTab = (props: {
@@ -38,8 +38,7 @@ const PlotsTab = (props: {
 						{(_) => (
 							<div class="panel-block is-block">
 								<div class="level">
-									{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
-									<a class={`level-left ${themeText(props.theme())}`}>
+									<div class="level-left">
 										<div class="level-item">
 											<div class="columns is-vcentered is-mobile">
 												<div class="column is-narrow">
@@ -50,7 +49,7 @@ const PlotsTab = (props: {
 												</div>
 											</div>
 										</div>
-									</a>
+									</div>
 								</div>
 							</div>
 						)}
@@ -89,9 +88,9 @@ const PlotRow = (props: {
 	return (
 		<div class="panel-block is-block">
 			<div class="level">
-				{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
-				<a
-					class={`level-left ${themeText(props.theme())}`}
+				<div
+					class="level-left"
+					style={{ cursor: "pointer" }}
 					onMouseDown={(_e) =>
 						props.handleChecked(props.index?.(), plot().uuid)
 					}
@@ -109,7 +108,7 @@ const PlotRow = (props: {
 							</div>
 						</div>
 					</div>
-				</a>
+				</div>
 				<Show when={props.isConsole}>
 					<div class="level-right">
 						<div class="level-item">

@@ -97,10 +97,7 @@ const LanguageBox = (props: {
 				</div>
 				<button class="card-header-icon" type="button">
 					<span class="icon">
-						<Show
-							when={active()}
-							fallback={<i class="fas fa-angle-right" />}
-						>
+						<Show when={active()} fallback={<i class="fas fa-angle-right" />}>
 							<i class="fas fa-angle-down" />
 						</Show>
 					</span>

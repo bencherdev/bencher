@@ -8,7 +8,7 @@ import { fmtDateTime, resourcePath } from "../../../../../config/util";
 import type { JsonReport } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import DateRange from "../../../../field/kinds/DateRange";
-import { type Theme, themeText } from "../../../../navbar/theme/theme";
+import { type Theme } from "../../../../navbar/theme/theme";
 import ReportCard, {} from "../../../deck/hand/card/ReportCard";
 import type { TabElement, TabList } from "./PlotTab";
 import TableReportRow from "../../../table/rows/ReportRow";
@@ -48,8 +48,7 @@ const ReportsTab = (props: {
 						{(_) => (
 							<div class="panel-block is-block">
 								<div class="columns is-vcentered">
-									{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
-									<a class={`column ${themeText(props.theme())}`}>
+									<div class="column">
 										<div class="columns is-vcentered is-mobile">
 											<div class="column is-narrow">
 												<span class="icon is-small">
@@ -64,7 +63,7 @@ const ReportsTab = (props: {
 												<DimensionLabel icon={MEASURE_ICON} name="⠀" />
 											</div>
 										</div>
-									</a>
+									</div>
 									<div class="column is-narrow">
 										{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
 										<a class="button is-fullwidth">
@@ -124,14 +123,15 @@ const ReportRow = (props: {
 	return (
 		<div id={report.uuid} class="panel-block is-block">
 			<div class="columns is-vcentered">
-				{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
-				<a
-					class={`column ${themeText(props.theme())}`}
+				<div
+					class="column"
 					title={`View Report from ${fmtDateTime(report?.start_time)}`}
-					disabled={!hasBenchmarks}
+					style={hasBenchmarks ? { cursor: "pointer" } : {}}
 					onMouseDown={(e) => {
 						e.preventDefault();
-						props.handleChecked(props.index(), report.uuid);
+						if (hasBenchmarks) {
+							props.handleChecked(props.index(), report.uuid);
+						}
 					}}
 				>
 					<div class="columns is-vcentered is-mobile">
@@ -157,7 +157,7 @@ const ReportRow = (props: {
 							<TableReportRow report={report} />
 						</div>
 					</div>
-				</a>
+				</div>
 				<div class="column is-narrow">
 					<ViewReportButton
 						project_slug={props.project_slug}

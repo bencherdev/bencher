@@ -10,7 +10,7 @@ import type {
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
-import { type Theme, themeText } from "../../../../navbar/theme/theme";
+import { type Theme } from "../../../../navbar/theme/theme";
 import type { TabElement, TabList } from "./PlotTab";
 
 const DimensionsTab = (props: {
@@ -77,7 +77,7 @@ const DimensionsTab = (props: {
 						{(_) => (
 							<div class="panel-block is-block">
 								<div class="level">
-									<div class={`level-left ${themeText(props.theme())}`}>
+									<div class="level-left">
 										<div class="level-item">
 											<div class="columns is-vcentered is-mobile">
 												<div class="column is-narrow">
@@ -135,7 +135,7 @@ const DimensionSelected = (props: {
 			{(dimension) => (
 				<div class="panel-block is-block">
 					<div class="level">
-						<div class={`level-left ${themeText(props.theme())}`}>
+						<div class="level-left">
 							<div class="level-item">
 								<div class="columns is-vcentered is-mobile">
 									<div class="column is-narrow">
@@ -190,12 +190,12 @@ const DimensionRow = (props: {
 	return (
 		<div class="panel-block is-block">
 			<div class="level">
-				{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
-				<a
-					class={`level-left ${themeText(props.theme())}`}
+				<div
+					class="level-left"
 					title={`${props.dimension?.checked ? "Remove" : "Add"} ${
 						resource?.name
 					}`}
+					style={{ cursor: "pointer" }}
 					onMouseDown={(_e) => props.handleChecked(props.index())}
 				>
 					<div class="level-item">
@@ -208,7 +208,7 @@ const DimensionRow = (props: {
 							</div>
 						</div>
 					</div>
-				</a>
+				</div>
 				<div class="level-right">
 					<div class="level-item">
 						<ViewDimensionButton

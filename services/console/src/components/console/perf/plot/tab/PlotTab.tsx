@@ -400,7 +400,7 @@ const TabName = (props: {
 	handleTab: (tab: PerfTab) => void;
 }) => {
 	return (
-		// biome-ignore lint/a11y/useValidAnchor: <explanation>
+		// biome-ignore lint/a11y/useValidAnchor: stateful link
 		<a
 			class={props.tab() === props.perfTab ? "is-active" : ""}
 			title={`View ${formatTab(props.perfTab)}`}
