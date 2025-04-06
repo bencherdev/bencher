@@ -8,7 +8,7 @@ import { fmtDateTime, resourcePath } from "../../../../../config/util";
 import type { JsonReport } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import DateRange from "../../../../field/kinds/DateRange";
-import { type Theme } from "../../../../navbar/theme/theme";
+import type { Theme } from "../../../../navbar/theme/theme";
 import ReportCard, {} from "../../../deck/hand/card/ReportCard";
 import type { TabElement, TabList } from "./PlotTab";
 import TableReportRow from "../../../table/rows/ReportRow";

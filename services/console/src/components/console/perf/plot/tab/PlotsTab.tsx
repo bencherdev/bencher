@@ -4,7 +4,7 @@ import { fmtDateTime } from "../../../../../config/util";
 import type { JsonPlot } from "../../../../../types/bencher";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
-import { type Theme } from "../../../../navbar/theme/theme";
+import type { Theme } from "../../../../navbar/theme/theme";
 import type { TabElement, TabList } from "./PlotTab";
 
 const PlotsTab = (props: {

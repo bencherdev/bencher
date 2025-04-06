@@ -10,7 +10,7 @@ import type {
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
-import { type Theme } from "../../../../navbar/theme/theme";
+import type { Theme } from "../../../../navbar/theme/theme";
 import type { TabElement, TabList } from "./PlotTab";
 
 const DimensionsTab = (props: {
