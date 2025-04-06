@@ -1,4 +1,4 @@
-import SelectedAdapter from "../../../../components/adapter/SelectedAdapter.tsx";
+import SelectedAdapter from "../../../../components/adapter/SelectedAdapter.astro";
 import BenchmarkHarness from "../../../../components/adapter/BenchmarkHarness.astro";
 
 ## Select your Benchmark Harness
@@ -7,6 +7,6 @@ For more details, see the [benchmark harness adapters] documentation.
 
 [benchmark harness adapters]: /docs/explanation/adapters/
 
-<SelectedAdapter client:only="solid-js" />
+<SelectedAdapter client:idle />
 
 <BenchmarkHarness client:idle />
