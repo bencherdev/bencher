@@ -91,10 +91,10 @@ export const getAdapter = () => {
 };
 
 export const storeAdapter = (adapter: Adapter) =>
-	window.localStorage.setItem(BENCHER_ADAPTER_KEY, adapter);
+	localStorage.setItem(BENCHER_ADAPTER_KEY, adapter);
 
 export const removeAdapter = () =>
-	window.localStorage.removeItem(BENCHER_ADAPTER_KEY);
+	localStorage.removeItem(BENCHER_ADAPTER_KEY);
 
 const [adapter_inner, setAdapter] = createSignal<Adapter | null>(getAdapter());
 setInterval(() => {

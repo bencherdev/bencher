@@ -58,10 +58,10 @@ const getCachedTheme = () => {
 };
 
 export const storeTheme = (theme: Theme) =>
-	window.localStorage.setItem(BENCHER_THEME_KEY, theme);
+	localStorage.setItem(BENCHER_THEME_KEY, theme);
 
 export const removeTheme = () =>
-	window.localStorage.removeItem(BENCHER_THEME_KEY);
+	localStorage.removeItem(BENCHER_THEME_KEY);
 
 export const themeText = (theme: Theme) => {
 	switch (theme) {

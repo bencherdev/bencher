@@ -29,7 +29,7 @@ export const defaultUser: JsonAuthUser = {
 
 export const setUser = (user: JsonAuthUser): boolean => {
 	if (validUser(user)) {
-		window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
+		localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
 		return true;
 	}
 	const err = `Invalid user: ${JSON.stringify(user)}`;
@@ -50,7 +50,7 @@ export const getUser = (): JsonAuthUser => {
 };
 
 export const getUserRaw = (): JsonAuthUser => {
-	const user_str = window.localStorage.getItem(BENCHER_USER_KEY);
+	const user_str = localStorage.getItem(BENCHER_USER_KEY);
 	if (!user_str) {
 		return defaultUser;
 	}
@@ -58,7 +58,7 @@ export const getUserRaw = (): JsonAuthUser => {
 };
 
 export const removeUser = () => {
-	window.localStorage.removeItem(BENCHER_USER_KEY);
+	localStorage.removeItem(BENCHER_USER_KEY);
 };
 
 const [authUsr, setAuthUsr] = createSignal<JsonAuthUser>(getUserRaw());
