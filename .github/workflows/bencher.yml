@@ -786,7 +786,7 @@ jobs:
         # this step can take a long time to fail.
         timeout-minutes: 3
         continue-on-error: true
-        uses: lycheeverse/lychee-action@v2.3.0
+        uses: lycheeverse/lychee-action@v2.4.0
         with:
           args: --config ./services/console/lychee.toml ./services/console/dist
 
