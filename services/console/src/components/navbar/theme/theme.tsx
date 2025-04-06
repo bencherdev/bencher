@@ -60,8 +60,7 @@ const getCachedTheme = () => {
 export const storeTheme = (theme: Theme) =>
 	localStorage.setItem(BENCHER_THEME_KEY, theme);
 
-export const removeTheme = () =>
-	localStorage.removeItem(BENCHER_THEME_KEY);
+export const removeTheme = () => localStorage.removeItem(BENCHER_THEME_KEY);
 
 export const themeText = (theme: Theme) => {
 	switch (theme) {
