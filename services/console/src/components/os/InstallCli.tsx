@@ -1,31 +1,83 @@
+import { createResource, createSignal, type Accessor } from "solid-js";
+import { getOperatingSystem, OperatingSystem } from "./operating_system";
+
 const InstallCli = () => {
+	const [os, setOs] = createSignal(OperatingSystem.Other);
+
+	const [_operating_system] = createResource(async () => {
+		const os = await getOperatingSystem();
+		setOs(os);
+	});
+
+	return <OperatingSystemButtons os={os} handleOs={setOs} />;
+};
+
+const OperatingSystemButtons = (props: {
+	os: Accessor<OperatingSystem>;
+	handleOs: (os: OperatingSystem) => void;
+}) => {
 	return (
-		<div class="field has-addons">
+		<div class="field has-addons is-fullwidth">
 			<p class="control">
-				<button class="button">
-					<span class="icon is-small">
-						<i class="fas fa-bold"></i>
-					</span>
-					<span>Bold</span>
-				</button>
+				<OperatingSystemButton
+					name="Linux"
+					icon="fab fa-linux"
+					operating_system={OperatingSystem.Linux}
+					os={props.os}
+					handleOs={props.handleOs}
+				/>
 			</p>
 			<p class="control">
-				<button class="button">
-					<span class="icon is-small">
-						<i class="fas fa-italic"></i>
-					</span>
-					<span>Italic</span>
-				</button>
+				<OperatingSystemButton
+					name="MacOS"
+					icon="fab fa-apple"
+					operating_system={OperatingSystem.MacOS}
+					os={props.os}
+					handleOs={props.handleOs}
+				/>
 			</p>
 			<p class="control">
-				<button class="button">
-					<span class="icon is-small">
-						<i class="fas fa-underline"></i>
-					</span>
-					<span>Underline</span>
-				</button>
+				<OperatingSystemButton
+					name="Windows"
+					icon="fab fa-windows"
+					operating_system={OperatingSystem.Windows}
+					os={props.os}
+					handleOs={props.handleOs}
+				/>
+			</p>
+			<p class="control">
+				<OperatingSystemButton
+					name="Other"
+					icon="fas fa-server"
+					operating_system={OperatingSystem.Other}
+					os={props.os}
+					handleOs={props.handleOs}
+				/>
 			</p>
 		</div>
+	);
+};
+
+const OperatingSystemButton = (props: {
+	name: string;
+	icon: string;
+	operating_system: OperatingSystem;
+	os: Accessor<OperatingSystem>;
+	handleOs: (os: OperatingSystem) => void;
+}) => {
+	return (
+		<button
+			class={`button${props.operating_system === props.os() ? " is-active" : ""}`}
+			onMouseDown={(e) => {
+				e.preventDefault();
+				props.handleOs(props.operating_system);
+			}}
+		>
+			<span class="icon is-small">
+				<i class={props.icon} />
+			</span>
+			<span>{props.name}</span>
+		</button>
 	);
 };
 
