@@ -61,3 +61,14 @@ export const getOperatingSystem = async () => {
 			return OperatingSystem.Other;
 	}
 };
+
+export const useBash = async () => {
+	switch (await getOperatingSystem()) {
+		case OperatingSystem.Linux:
+		case OperatingSystem.MacOS:
+		case OperatingSystem.Other:
+			return true;
+		case OperatingSystem.Windows:
+			return false;
+	}
+};

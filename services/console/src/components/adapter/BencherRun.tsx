@@ -1,7 +1,7 @@
 import { adapter } from "./util";
 import { createResource, Match, Show, Switch } from "solid-js";
 import { Adapter } from "../../types/bencher";
-import { getOperatingSystem, OperatingSystem } from "../os/operating_system";
+import { useBash } from "../os/operating_system";
 
 const BencherRun = (props) => {
 	const [bash] = createResource(useBash);
@@ -9,7 +9,13 @@ const BencherRun = (props) => {
 	// This cannot be an empty tag (`<>`) in order for `fallback` to work properly
 	return (
 		<div>
-			<Switch>
+			<Switch
+				fallback={
+					<Show when={bash()} fallback={props.json_powershell}>
+						{props.json_bash}
+					</Show>
+				}
+			>
 				<Match when={adapter() === Adapter.RustBench}>
 					<Show when={bash()} fallback={props.rust_bench_powershell}>
 						{props.rust_bench_bash}
@@ -93,17 +99,6 @@ const BencherRun = (props) => {
 			</Switch>
 		</div>
 	);
-};
-
-const useBash = async () => {
-	switch (await getOperatingSystem()) {
-		case OperatingSystem.Linux:
-		case OperatingSystem.MacOS:
-		case OperatingSystem.Other:
-			return true;
-		case OperatingSystem.Windows:
-			return false;
-	}
 };
 
 export default BencherRun;
