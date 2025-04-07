@@ -1,0 +1,24 @@
+import BencherUpOutput from "../bencher-up-output.mdx";
+
+## Run `bencher up`
+
+With `docker` installed, we can now run the Console and API servers
+with [the `bencher up` CLI subcommand][bencher up].
+
+Run: `bencher up`
+
+You should see something like:
+
+<BencherUpOutput />
+
+Again, it is okay if your output is different. It's just important that this command works.
+
+> 🐰 If you get an error from `ghcr.io` saying:
+> `"authentication required"`
+> Try running: `docker logout ghcr.io`
+
+> 🐰 On Windows, if you get an error saying:
+> `image operating system "linux" cannot be used on this platform: operating system is not supported`
+> Try running: `& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine`
+
+[bencher up]: /docs/reference/bencher-compose/#bencher-up
