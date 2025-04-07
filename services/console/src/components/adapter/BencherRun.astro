@@ -1,7 +1,15 @@
 ---
 import BencherRun from "./BencherRun.tsx";
+
+const { isConsole } = Astro.props;
 ---
 
-<BencherRun client:only="solid-js">
-    <code slot="fallback">bencher run "bencher mock"</code>
+<BencherRun client:only="solid-js" isConsole={isConsole}>
+    <code slot="fallback"
+        >{
+            isConsole
+                ? 'bencher run "bencher mock"'
+                : 'bencher run --host https://localhost:61016 "bencher mock"'
+        }</code
+    >
 </BencherRun>

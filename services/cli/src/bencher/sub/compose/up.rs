@@ -73,7 +73,7 @@ impl SubCmd for Up {
 
         cli_println!("🐰 Bencher Self-Hosted is up and running!");
         if let CliService::All | CliService::Console = self.service {
-            cli_println!("Web Console: {}", Container::url(self.console_port));
+            cli_println!("Console Server: {}", Container::url(self.console_port));
         }
         if let CliService::All | CliService::Api = self.service {
             cli_println!("API Server: {}", Container::url(self.api_port));
