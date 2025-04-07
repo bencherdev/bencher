@@ -53,38 +53,37 @@ export const adapterIcon = (adapter: Adapter) => {
 export const adapterCommand = (adapter: null | Adapter) => {
 	switch (adapter) {
 		case Adapter.RustBench:
-			return "bencher run \"cargo +nightly bench\"";
+			return 'bencher run "cargo +nightly bench"';
 		case Adapter.RustCriterion:
 		case Adapter.RustIai:
 		case Adapter.RustIaiCallgrind:
-			return "bencher run \"cargo bench\"";
+			return 'bencher run "cargo bench"';
 		case Adapter.CppGoogle:
-			return "bencher run \"make benchmarks --benchmark_format=json\"";
+			return 'bencher run "make benchmarks --benchmark_format=json"';
 		case Adapter.CppCatch2:
-			return "bencher run \"make benchmarks\"";
+			return 'bencher run "make benchmarks"';
 		case Adapter.GoBench:
-			return "bencher run \"go test -bench\"";
+			return 'bencher run "go test -bench"';
 		case Adapter.JavaJmh:
-			return "bencher run --file results.json \"java -jar benchmarks.jar -rf json -rff results.json\"";
+			return 'bencher run --file results.json "java -jar benchmarks.jar -rf json -rff results.json"';
 		case Adapter.CSharpDotNet:
-			return "bencher run \"dotnet run -c Release\"";
+			return 'bencher run "dotnet run -c Release"';
 		case Adapter.JsBenchmark:
 		case Adapter.JsTime:
-			return "bencher run \"node benchmark.js\"";
+			return 'bencher run "node benchmark.js"';
 		case Adapter.PythonAsv:
-			return "bencher run \"asv run\"";
+			return 'bencher run "asv run"';
 		case Adapter.PythonPytest:
-			return "bencher run --file results.json \"pytest --benchmark-json results.json benchmarks.py\"";
+			return 'bencher run --file results.json "pytest --benchmark-json results.json benchmarks.py"';
 		case Adapter.RubyBenchmark:
-			return "bencher run \"ruby benchmarks.rb\"";
+			return 'bencher run "ruby benchmarks.rb"';
 		case Adapter.ShellHyperfine:
 			return "bencher run --file results.json \"hyperfine --export-json results.json 'sleep 0.1'\"";
 		case Adapter.Json:
 		default:
-			return "bencher run \"bencher mock\"";
+			return 'bencher run "bencher mock"';
 	}
 };
-
 
 export const getAdapter = () => {
 	const adapter = getAdapterInner();
