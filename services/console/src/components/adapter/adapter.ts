@@ -79,6 +79,7 @@ export const adapterCommand = (adapter: null | Adapter) => {
 			return 'bencher run "ruby benchmarks.rb"';
 		case Adapter.ShellHyperfine:
 			return "bencher run --file results.json \"hyperfine --export-json results.json 'sleep 0.1'\"";
+		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:
 		default:
 			return 'bencher run "bencher mock"';

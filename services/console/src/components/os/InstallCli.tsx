@@ -1,7 +1,13 @@
-import { createResource, createSignal, type Accessor } from "solid-js";
+import {
+	createResource,
+	createSignal,
+	Match,
+	Switch,
+	type Accessor,
+} from "solid-js";
 import { getOperatingSystem, OperatingSystem } from "./operating_system";
 
-const InstallCli = () => {
+const InstallCli = (props: { linux; macos; windows; other }) => {
 	const [os, setOs] = createSignal(OperatingSystem.Other);
 
 	const [_operating_system] = createResource(async () => {
@@ -9,7 +15,17 @@ const InstallCli = () => {
 		setOs(os);
 	});
 
-	return <OperatingSystemButtons os={os} handleOs={setOs} />;
+	return (
+		<>
+			<OperatingSystemButtons os={os} handleOs={setOs} />
+			<Switch>
+				<Match when={os() === OperatingSystem.Linux}>{props.linux}</Match>
+				<Match when={os() === OperatingSystem.MacOS}>{props.macos}</Match>
+				<Match when={os() === OperatingSystem.Windows}>{props.windows}</Match>
+				<Match when={os() === OperatingSystem.Other}>{props.other}</Match>
+			</Switch>
+		</>
+	);
 };
 
 const OperatingSystemButtons = (props: {
@@ -67,6 +83,7 @@ const OperatingSystemButton = (props: {
 }) => {
 	return (
 		<button
+			type="button"
 			class={`button${props.operating_system === props.os() ? " is-active" : ""}`}
 			onMouseDown={(e) => {
 				e.preventDefault();

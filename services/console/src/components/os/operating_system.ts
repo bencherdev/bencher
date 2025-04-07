@@ -34,8 +34,8 @@ export const getOperatingSystem = async () => {
 			return OperatingSystem.Other;
 		default:
 			if (
-				(navigator.userAgent.indexOf("WOW64") ?? -1) != -1 ||
-				(navigator.userAgent.indexOf("Win64") ?? -1) != -1 ||
+				(navigator.userAgent.indexOf("WOW64") ?? -1) !== -1 ||
+				(navigator.userAgent.indexOf("Win64") ?? -1) !== -1 ||
 				(navigator.appVersion?.indexOf("Win") ?? -1) !== -1 ||
 				(navigator.oscpu?.indexOf("Win32") ?? -1) !== -1 ||
 				(navigator.oscpu?.indexOf("Win64") ?? -1) !== -1

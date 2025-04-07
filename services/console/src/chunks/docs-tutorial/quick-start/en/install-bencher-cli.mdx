@@ -1,39 +1,12 @@
 import InstallCli from "../../../../components/os/InstallCli.astro";
-
-## Install `bencher` CLI
-
-For more details, see [the `bencher` CLI install][install cli] documentation.
-
-<InstallCli />
-
-[install cli]: /docs/how-to/install-cli/
-
-
-import CliUnixScript from "../../../general/cli-unix-script.mdx";
-import CliWindowsScript from "../../../general/cli-windows-script.mdx";
 import BencherVersionOutput from "../bencher-version-output.mdx";
 
 ## Install `bencher` CLI
 
-### Linux, Mac, & Unix
-For Linux, Mac, and other Unix-like systems run the following in your terminal:
+Use the appropriate command below to install the `bencher` CLI.
+For more details, see [the `bencher` CLI install][install cli] documentation.
 
-<CliUnixScript />
-
-### Windows
-For Windows systems run the following in a _PowerShell_ terminal:
-
-<CliWindowsScript />
-
-<br />
-
-> 🐰 If you get an error that says `running scripts is disabled on this system`:
-> - `Open Powershell` with `Run as Administrator`
-> - Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
-> - Enter: `Y`
-> - Rerun this script
-
-For additional installation options, see [how to install the `bencher` CLI](/docs/how-to/install-cli).
+<InstallCli />
 
 Now, lets test that we have the `bencher` CLI installed.
 
@@ -42,3 +15,5 @@ Run: `bencher --version`
 You should see:
 
 <BencherVersionOutput />
+
+[install cli]: /docs/how-to/install-cli/

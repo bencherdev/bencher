@@ -1,5 +1,27 @@
 ---
+import { Code } from "astro-expressive-code/components";
 import InstallCli from "./InstallCli.tsx";
 ---
 
-<InstallCli client:only="solid-js" />
+<InstallCli client:only="solid-js">
+	<Code
+		slot="linux"
+		lang="bash"
+		code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh"
+	/>
+	<Code
+		slot="macos"
+		lang="bash"
+		code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh"
+	/>
+	<Code
+		slot="windows"
+		lang="powershell"
+		code="irm https://bencher.dev/download/install-cli.ps1 | iex"
+	/>
+	<Code
+		slot="other"
+		lang="bash"
+		code="cargo install --git https://github.com/bencherdev/bencher --branch main --locked --force bencher_cli"
+	/>
+</InstallCli>
