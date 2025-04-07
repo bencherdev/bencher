@@ -1,0 +1,19 @@
+import InstallCli from "../../../../components/os/InstallCli.astro";
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherVersionOutput from "../bencher-version-output.mdx";
+
+## 安装 `bencher` CLI
+
+选择您的操作系统并运行提供的命令来安装 `bencher` CLI。有关更多详细信息，请参阅[`bencher` CLI安装][install cli]文档。
+
+<InstallCli />
+
+现在，让我们检查您是否已安装 `bencher` CLI。运行：
+
+<TerminalCommand code="bencher --version" />
+
+您应该会看到：
+
+<BencherVersionOutput />
+
+[install cli]: /zh/docs/how-to/install-cli/

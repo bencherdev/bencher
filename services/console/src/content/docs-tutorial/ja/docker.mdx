@@ -1,75 +1,53 @@
 ---
-title: "セルフホストクイックスタート"
-description: "Bencherを使用したセルフホスト型の継続的ベンチマークのセットアップ方法を学ぶ"
-heading: "セルフホスト型 Bencher の Docker クイックスタート"
-published: "2023-10-27T08:40:00Z"
-modified: "2024-11-29T18:30:00Z"
+title: "セルフホスティング クイックスタート"
+description: "Bencherを使用してセルフホスティングの継続的ベンチマークを設定する方法を学ぶ"
+heading: "Dockerを使用したBencher セルフホスティング クイックスタート"
+published: "2023-08-12T16:07:00Z"
+modified: "2025-04-06T18:30:00Z"
 sortOrder: 2
 ---
 
 import BencherIntro from "../../../chunks/general/ja/bencher-intro.mdx";
-import DockerSelfHosted from "../../../chunks/docs-tutorial/ja/docker-self-hosted.mdx";
-import DockerInstallCli from "../../../chunks/docs-tutorial/ja/docker-install-cli.mdx";
-import DockerInstall from "../../../chunks/docs-tutorial/ja/docker-install.mdx";
-import DockerRunServers from "../../../chunks/docs-tutorial/ja/docker-run-servers.mdx";
-import DockerBencherHost from "../../../chunks/docs-tutorial/ja/docker-bencher-host.mdx";
-import DockerSelfHostedAccount from "../../../chunks/docs-tutorial/ja/docker-self-hosted-account.mdx";
-import QSApiToken from "../../../chunks/docs-tutorial/ja/qs-api-token.mdx";
-import QSCreateProject from "../../../chunks/docs-tutorial/ja/qs-create-project.mdx";
-import QSRunReport from "../../../chunks/docs-tutorial/ja/qs-run-report.mdx";
-import QSGenerateAlert from "../../../chunks/docs-tutorial/ja/qs-generate-alert.mdx";
+import BencherSelfHosted from "../../../chunks/docs-tutorial/docker/ja/bencher-self-hosted.mdx";
+import InstallDocker from "../../../chunks/docs-tutorial/docker/ja/install-docker.mdx";
+import InstallBencherCli from "../../../chunks/docs-tutorial/quick-start/ja/install-bencher-cli.mdx";
+import RunBencherUp from "../../../chunks/docs-tutorial/docker/ja/run-bencher-up.mdx";
+import BenchmarkHarness from "../../../chunks/docs-tutorial/quick-start/ja/benchmark-harness.mdx";
+import TrackBenchmarks from "../../../chunks/docs-tutorial/docker/ja/track-benchmarks.mdx";
 
-## Bencherとは何ですか？
+## Bencherとは？
 
 <BencherIntro />
 
 <br />
 
-<DockerSelfHosted />
+<BencherSelfHosted />
 
 <br />
 
-<DockerInstall />
+<InstallDocker />
 
 <br />
 
-<DockerInstallCli />
+<InstallBencherCli />
 
 <br />
 
-<DockerRunServers />
+<RunBencherUp />
 
 <br />
 
-<DockerBencherHost />
+<BenchmarkHarness />
 
 <br />
 
-<DockerSelfHostedAccount />
-
-<br />
-
-<QSApiToken>
-    <h3><a id="add-api-token" href="http://localhost:3000/console/users/tokens/add?back=aHR0cHM6Ly9iZW5jaGVyLmRldi9qYS9kb2NzL3R1dG9yaWFsL3F1aWNrLXN0YXJ0LyNhZGQtYXBpLXRva2Vu">APIトークンの追加</a></h3>
-</QSApiToken>
-
-<br />
-
-<QSCreateProject />
-
-<br />
-
-<QSRunReport />
-
-<br />
-
-<QSGenerateAlert />
+<TrackBenchmarks />
 
 <br />
 <br />
 
-> 🐰 おめでとうございます！初めてのパフォーマンスリグレッションを捕まえました！🎉
+> 🐰 おめでとうございます！Bencher Self-Hostedで最初のベンチマーク結果を記録しました！🎉
 
 <br />
 
-<h2><a href="/ja/docs/explanation/benchmarking/">続けていく：ベンチマーキングの概要 ➡</a></h2>
+<h2><a href="/ja/docs/how-to/claim-project/">次へ進む：プロジェクトを請求する方法 ➡</a></h2>

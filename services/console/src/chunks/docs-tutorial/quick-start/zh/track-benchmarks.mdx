@@ -1,0 +1,23 @@
+import BencherRun from "../../../../components/adapter/BencherRun.astro";
+import BencherRunOutput from "../bencher-run-output.mdx";
+
+## 追踪你的基准测试
+
+你现在可以开始追踪你的基准测试结果了！
+为此，你将使用 [`bencher run` CLI 子命令][bencher run] 来运行你的基准测试并收集结果。运行以下命令：
+
+<BencherRun isConsole={true} />
+
+你可能需要修改基准测试命令以适应你的设置。
+如果你还没有任何基准测试，你可以使用 [`bencher mock` 子命令][bencher mock] 作为你的基准测试命令来生成一些模拟数据。
+如果一切正常，输出的末尾应该看起来像这样：
+
+<BencherRunOutput />
+
+现在，你可以在浏览器中查看你的每个基准测试的结果。
+点击或复制并粘贴 `View results` 中的链接。
+要[认领项目][claim project]，点击或复制并粘贴 `Claim this project` 链接到浏览器中。
+
+[bencher run]: /zh/docs/explanation/bencher-run/
+[bencher mock]: /zh/docs/reference/bencher-metric-format/#bencher-mock
+[claim project]: /zh/docs/how-to/claim-project/

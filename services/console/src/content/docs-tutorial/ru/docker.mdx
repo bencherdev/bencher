@@ -1,23 +1,19 @@
 ---
-title: "Быстрый старт для локального размещения"
-description: "Узнайте, как настроить самостоятельное непрерывное бенчмаркинг с Bencher"
-heading: "Быстрый старт с Bencher на собственном хосте с Docker"
-published: "2023-10-27T08:40:00Z"
-modified: "2024-11-29T18:30:00Z"
+title: "Быстрый старт на собственном хостинге"
+description: "Узнайте, как настроить независимый хостинг непрерывного бенчмаркинга с Bencher"
+heading: "Быстрый старт с Bencher на собственном хостинге с Docker"
+published: "2023-08-12T16:07:00Z"
+modified: "2025-04-06T18:30:00Z"
 sortOrder: 2
 ---
 
 import BencherIntro from "../../../chunks/general/ru/bencher-intro.mdx";
-import DockerSelfHosted from "../../../chunks/docs-tutorial/ru/docker-self-hosted.mdx";
-import DockerInstallCli from "../../../chunks/docs-tutorial/ru/docker-install-cli.mdx";
-import DockerInstall from "../../../chunks/docs-tutorial/ru/docker-install.mdx";
-import DockerRunServers from "../../../chunks/docs-tutorial/ru/docker-run-servers.mdx";
-import DockerBencherHost from "../../../chunks/docs-tutorial/ru/docker-bencher-host.mdx";
-import DockerSelfHostedAccount from "../../../chunks/docs-tutorial/ru/docker-self-hosted-account.mdx";
-import QSApiToken from "../../../chunks/docs-tutorial/ru/qs-api-token.mdx";
-import QSCreateProject from "../../../chunks/docs-tutorial/ru/qs-create-project.mdx";
-import QSRunReport from "../../../chunks/docs-tutorial/ru/qs-run-report.mdx";
-import QSGenerateAlert from "../../../chunks/docs-tutorial/ru/qs-generate-alert.mdx";
+import BencherSelfHosted from "../../../chunks/docs-tutorial/docker/ru/bencher-self-hosted.mdx";
+import InstallDocker from "../../../chunks/docs-tutorial/docker/ru/install-docker.mdx";
+import InstallBencherCli from "../../../chunks/docs-tutorial/quick-start/ru/install-bencher-cli.mdx";
+import RunBencherUp from "../../../chunks/docs-tutorial/docker/ru/run-bencher-up.mdx";
+import BenchmarkHarness from "../../../chunks/docs-tutorial/quick-start/ru/benchmark-harness.mdx";
+import TrackBenchmarks from "../../../chunks/docs-tutorial/docker/ru/track-benchmarks.mdx";
 
 ## Что такое Bencher?
 
@@ -25,51 +21,34 @@ import QSGenerateAlert from "../../../chunks/docs-tutorial/ru/qs-generate-alert.
 
 <br />
 
-<DockerSelfHosted />
+<BencherSelfHosted />
 
 <br />
 
-<DockerInstall />
+<InstallDocker />
 
 <br />
 
-<DockerInstallCli />
+<InstallBencherCli />
 
 <br />
 
-<DockerRunServers />
+<RunBencherUp />
 
 <br />
 
-<DockerBencherHost />
+<BenchmarkHarness />
 
 <br />
 
-<DockerSelfHostedAccount />
-
-<br />
-
-<QSApiToken>
-    <h3><a id="add-api-token" href="http://localhost:3000/console/users/tokens/add?back=aHR0cHM6Ly9iZW5jaGVyLmRldi9ydS9kb2NzL3R1dG9yaWFsL3F1aWNrLXN0YXJ0LyNhZGQtYXBpLXRva2Vu">Добавить токен API</a></h3>
-</QSApiToken>
-
-<br />
-
-<QSCreateProject />
-
-<br />
-
-<QSRunReport />
-
-<br />
-
-<QSGenerateAlert />
+<TrackBenchmarks />
 
 <br />
 <br />
 
-> 🐰 Поздравляем! Вы поймали свою первую регрессию производительности! 🎉
+> 🐰 Поздравляем! Вы отследили свои первые результаты бенчмарка с помощью Bencher на собственном хостинге! 🎉
 
 <br />
 
-<h2><a href="/ru/docs/explanation/benchmarking/">Продолжить: Обзор нагрузочного тестирования ➡</a></h2>
+<h2><a href="/ru/docs/how-to/claim-project/">Продолжайте: Как заявить проект ➡</a></h2>
+

@@ -1,0 +1,20 @@
+import InstallCli from "../../../../components/os/InstallCli.astro";
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherVersionOutput from "../bencher-version-output.mdx";
+
+## `bencher` CLI 설치
+
+운영 체제를 선택하고 제공된 명령을 실행하여 `bencher` CLI를 설치하세요.
+자세한 내용은 [`bencher` CLI 설치][install cli] 문서를 참조하세요.
+
+<InstallCli />
+
+이제 `bencher` CLI가 설치되어 있는지 확인해 봅시다. 다음을 실행하세요:
+
+<TerminalCommand code="bencher --version" />
+
+다음과 같은 출력이 보여야 합니다:
+
+<BencherVersionOutput />
+
+[install cli]: /ko/docs/how-to/install-cli/

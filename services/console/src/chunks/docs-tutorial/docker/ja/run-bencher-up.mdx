@@ -1,0 +1,29 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherUpOutput from "../bencher-up-output.mdx";
+import WindowsOnly from "../../../../components/os/WindowsOnly.astro";
+
+## `bencher up` を実行する
+
+`docker` と `bencher` CLI がインストールされている状態で、[ `bencher up` CLI サブコマンド][bencher up] を使用して Console と API サーバーを実行できます。
+次のコマンドを実行してください:
+
+<TerminalCommand code="bencher up" />
+
+次のような出力が表示されるはずです:
+
+<BencherUpOutput />
+
+再度、出力が異なっていても問題ありません。このコマンドが機能することが重要です。
+
+> 🐰 `ghcr.io` から `"authentication required"` というエラーが表示される場合:
+> `docker logout ghcr.io` を実行してみてください
+
+<WindowsOnly>
+    <blockquote>
+        🐰 Windowsで、次のようなエラーが表示される場合:
+        <code>image operating system "linux" cannot be used on this platform: operating system is not supported</code>
+        次のコマンドを実行してみてください: <code>& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine</code>
+    </blockquote>
+</WindowsOnly>
+
+[bencher up]: /ja/docs/reference/bencher-compose/#bencher-up

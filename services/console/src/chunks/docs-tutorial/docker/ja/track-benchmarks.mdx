@@ -1,0 +1,24 @@
+import BencherRun from "../../../../components/adapter/BencherRun.astro";
+import BencherRunOutput from "../bencher-run-output.mdx";
+
+## ベンチマークを追跡する
+
+ベンチマーク結果を追跡する準備が整いました！
+これを行うには、ベンチマークを実行して結果を収集するために[`bencher run` CLIサブコマンド][bencher run]を使用します。
+実行します:
+
+<BencherRun isConsole={false} />
+
+ベンチマークコマンドを設定に合わせて変更する必要があるかもしれません。
+まだベンチマークがない場合は、ベンチマークコマンドとして[`bencher mock` サブコマンド][bencher mock]を使用してモックデータを生成できます。
+すべてが予期通りに動作する場合、出力の最後は次のようになります:
+
+<BencherRunOutput />
+
+ブラウザで各ベンチマークの結果を確認できます。
+「結果を表示」のリンクをクリックするか、コピーしてブラウザに貼り付けます。
+プロジェクトを[請求する][claim project]には、「このプロジェクトを請求する」リンクをクリックするか、コピーしてブラウザに貼り付けます。
+
+[bencher run]: /ja/docs/explanation/bencher-run/
+[bencher mock]: /ja/docs/reference/bencher-metric-format/#bencher-mock
+[claim project]: /ja/docs/how-to/claim-project/

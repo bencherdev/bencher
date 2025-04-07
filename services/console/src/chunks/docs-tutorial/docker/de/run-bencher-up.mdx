@@ -1,0 +1,30 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherUpOutput from "../bencher-up-output.mdx";
+import WindowsOnly from "../../../../components/os/WindowsOnly.astro";
+
+## Führen Sie `bencher up` aus
+
+Mit installiertem `docker` und dem `bencher` CLI können Sie jetzt die Console- und API-Server mit dem [`bencher up` CLI-Unterbefehl][bencher up] ausführen.
+Führen Sie aus:
+
+<TerminalCommand code="bencher up" />
+
+Sie sollten etwas Folgendes sehen:
+
+<BencherUpOutput />
+
+Es ist in Ordnung, wenn Ihre Ausgabe unterschiedlich ist. Es ist nur wichtig, dass dieses Kommando funktioniert.
+
+> 🐰 Wenn Sie von `ghcr.io` einen Fehler erhalten, der besagt:
+> `"authentication required"`
+> Versuchen Sie: `docker logout ghcr.io`
+
+<WindowsOnly>
+    <blockquote>
+        🐰 Unter Windows, wenn Sie einen Fehler erhalten, der besagt:
+        <code>image operating system "linux" cannot be used on this platform: operating system is not supported</code>
+        Versuchen Sie: <code>& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine</code> auszuführen
+    </blockquote>
+</WindowsOnly>
+
+[bencher up]: /de/docs/reference/bencher-compose/#bencher-up

@@ -1,0 +1,18 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import DockerVersionOutput from "../docker-version-output.mdx";
+
+## Dockerのインストール
+
+このチュートリアルでコンソールとAPIサーバーを実行するには、`docker`がインストールされている必要があります。
+`docker`がインストールされているか確認してください。次を実行します：
+
+<TerminalCommand code="docker --version" />
+
+次のような出力が表示されるはずです：
+
+<DockerVersionOutput />
+
+バージョン番号が異なっていても問題ありません。重要なのは、このコマンドが動作することです。
+もし動作しない場合は[`docker`のインストール手順][install docker]に従ってください。
+
+[install docker]: https://docs.docker.com/get-docker/

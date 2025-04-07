@@ -1,0 +1,29 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherUpOutput from "../bencher-up-output.mdx";
+import WindowsOnly from "../../../../components/os/WindowsOnly.astro";
+
+## 运行 `bencher up`
+
+安装了 `docker` 和 `bencher` CLI 之后，您现在可以使用 [`bencher up` CLI 子命令][bencher up] 来运行控制台和 API 服务器。 运行：
+
+<TerminalCommand code="bencher up" />
+
+您应该会看到如下内容：
+
+<BencherUpOutput />
+
+同样，如果您的输出不同也没关系。 重要的是这个命令能正常工作。
+
+> 🐰 如果您从 `ghcr.io` 收到错误提示：
+> `"authentication required"`
+> 尝试运行：`docker logout ghcr.io`
+
+<WindowsOnly>
+    <blockquote>
+        🐰 在 Windows 上，如果您收到错误提示：
+        <code>image operating system "linux" cannot be used on this platform: operating system is not supported</code>
+        尝试运行：<code>& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine</code>
+    </blockquote>
+</WindowsOnly>
+
+[bencher up]: /zh/docs/reference/bencher-compose/#bencher-up

@@ -1,0 +1,17 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import DockerVersionOutput from "../docker-version-output.mdx";
+
+## 安装 Docker
+
+为了在本教程中运行控制台和 API 服务器，您需要安装 `docker`。
+检查您是否已安装 `docker`。运行以下命令：
+
+<TerminalCommand code="docker --version" />
+
+您应该看到类似以下的输出：
+
+<DockerVersionOutput />
+
+如果您的版本号不同也没关系。重要的是这个命令能够正常工作。如果不能，请按照[安装 `docker` 的说明][install docker]进行操作。
+
+[install docker]: https://docs.docker.com/get-docker/

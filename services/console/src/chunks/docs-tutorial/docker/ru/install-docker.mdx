@@ -1,0 +1,18 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import DockerVersionOutput from "../docker-version-output.mdx";
+
+## Установка Docker
+
+Для запуска серверов Console и API в этом руководстве вам потребуется установить `docker`.
+Проверьте, установлен ли у вас `docker`. Выполните команду:
+
+<TerminalCommand code="docker --version" />
+
+Вы должны увидеть что-то похожее на:
+
+<DockerVersionOutput />
+
+Ничего страшного, если номер вашей версии отличается. Главное, чтобы эта команда работала.
+Если нет, следуйте [инструкциям по установке `docker`][install docker].
+
+[install docker]: https://docs.docker.com/get-docker/

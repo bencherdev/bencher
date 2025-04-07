@@ -1,75 +1,53 @@
 ---
 title: "셀프 호스팅 빠른 시작"
-description: "Bencher를 사용하여 셀프 호스팅 연속 벤치마킹 설정 방법을 알아보세요"
-heading: "Docker를 사용한 Bencher 셀프 호스팅 퀵 스타트"
-published: "2023-10-27T08:40:00Z"
-modified: "2024-11-29T18:30:00Z"
+description: "Bencher를 사용한 셀프 호스팅 연속 벤치마킹 설정 방법 알아보기"
+heading: "Docker를 사용한 Bencher 셀프 호스팅 빠른 시작"
+published: "2023-08-12T16:07:00Z"
+modified: "2025-04-06T18:30:00Z"
 sortOrder: 2
 ---
 
 import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
-import DockerSelfHosted from "../../../chunks/docs-tutorial/ko/docker-self-hosted.mdx";
-import DockerInstallCli from "../../../chunks/docs-tutorial/ko/docker-install-cli.mdx";
-import DockerInstall from "../../../chunks/docs-tutorial/ko/docker-install.mdx";
-import DockerRunServers from "../../../chunks/docs-tutorial/ko/docker-run-servers.mdx";
-import DockerBencherHost from "../../../chunks/docs-tutorial/ko/docker-bencher-host.mdx";
-import DockerSelfHostedAccount from "../../../chunks/docs-tutorial/ko/docker-self-hosted-account.mdx";
-import QSApiToken from "../../../chunks/docs-tutorial/ko/qs-api-token.mdx";
-import QSCreateProject from "../../../chunks/docs-tutorial/ko/qs-create-project.mdx";
-import QSRunReport from "../../../chunks/docs-tutorial/ko/qs-run-report.mdx";
-import QSGenerateAlert from "../../../chunks/docs-tutorial/ko/qs-generate-alert.mdx";
+import BencherSelfHosted from "../../../chunks/docs-tutorial/docker/ko/bencher-self-hosted.mdx";
+import InstallDocker from "../../../chunks/docs-tutorial/docker/ko/install-docker.mdx";
+import InstallBencherCli from "../../../chunks/docs-tutorial/quick-start/ko/install-bencher-cli.mdx";
+import RunBencherUp from "../../../chunks/docs-tutorial/docker/ko/run-bencher-up.mdx";
+import BenchmarkHarness from "../../../chunks/docs-tutorial/quick-start/ko/benchmark-harness.mdx";
+import TrackBenchmarks from "../../../chunks/docs-tutorial/docker/ko/track-benchmarks.mdx";
 
-## Bencher가 무엇인가요?
+## Bencher란 무엇인가요?
 
 <BencherIntro />
 
 <br />
 
-<DockerSelfHosted />
+<BencherSelfHosted />
 
 <br />
 
-<DockerInstall />
+<InstallDocker />
 
 <br />
 
-<DockerInstallCli />
+<InstallBencherCli />
 
 <br />
 
-<DockerRunServers />
+<RunBencherUp />
 
 <br />
 
-<DockerBencherHost />
+<BenchmarkHarness />
 
 <br />
 
-<DockerSelfHostedAccount />
-
-<br />
-
-<QSApiToken>
-    <h3><a id="add-api-token" href="http://localhost:3000/console/users/tokens/add?back=aHR0cHM6Ly9iZW5jaGVyLmRldi9rby9kb2NzL3R1dG9yaWFsL3F1aWNrLXN0YXJ0LyNhZGQtYXBpLXRva2Vu">API 토큰 추가하기</a></h3>
-</QSApiToken>
-
-<br />
-
-<QSCreateProject />
-
-<br />
-
-<QSRunReport />
-
-<br />
-
-<QSGenerateAlert />
+<TrackBenchmarks />
 
 <br />
 <br />
 
-> 🐰 축하합니다! 첫 번째 성능 성하위를 잡았습니다! 🎉
+> 🐰 축하합니다! Bencher 셀프 호스팅으로 첫 번째 벤치마크 결과를 추적했습니다! 🎉
 
 <br />
 
-<h2><a href="/ko/docs/explanation/benchmarking/">계속 진행: 벤치마킹 개요 ➡</a></h2>
+<h2><a href="/ko/docs/how-to/claim-project/">계속하기: 프로젝트 클레임 방법 ➡</a></h2>

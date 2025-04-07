@@ -1,0 +1,18 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import DockerVersionOutput from "../docker-version-output.mdx";
+
+## Installer Docker
+
+Pour exécuter les serveurs Console et API dans ce tutoriel, vous devrez avoir `docker` installé.
+Vérifiez si vous avez `docker` installé. Exécutez :
+
+<TerminalCommand code="docker --version" />
+
+Vous devriez voir quelque chose comme :
+
+<DockerVersionOutput />
+
+Il est acceptable que votre numéro de version soit différent. Il est simplement important que cette commande fonctionne.
+Sinon, suivez les [instructions pour installer `docker`][install docker].
+
+[install docker]: https://docs.docker.com/get-docker/

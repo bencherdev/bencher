@@ -1,0 +1,28 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherUpOutput from "../bencher-up-output.mdx";
+import WindowsOnly from "../../../../components/os/WindowsOnly.astro";
+
+## `bencher up` 실행
+
+`docker`와 `bencher` CLI가 설치되었다면, 이제 콘솔과 API 서버를 [`bencher up` CLI 하위 명령어][bencher up]로 실행할 수 있습니다.
+다음 명령어를 실행하세요:
+
+<TerminalCommand code="bencher up" />
+
+다음과 같은 화면을 볼 수 있습니다:
+
+<BencherUpOutput />
+
+출력이 다르게 나타나는 것은 괜찮습니다. 중요한 것은 이 명령어가 작동하는 것입니다.
+
+> 🐰 `ghcr.io`에서 `"authentication required"`라는 오류가 발생하면
+> `docker logout ghcr.io`를 실행해보세요.
+
+<WindowsOnly>
+    <blockquote>
+        🐰 Windows에서 <code>image operating system "linux" cannot be used on this platform: operating system is not supported</code>라는 오류가 발생하면
+        다음 명령어를 실행해보세요: <code>& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine</code>
+    </blockquote>
+</WindowsOnly>
+
+[bencher up]: /ko/docs/reference/bencher-compose/#bencher-up

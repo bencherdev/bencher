@@ -1,0 +1,7 @@
+---
+import WindowsOnly from "./WindowsOnly.tsx";
+---
+
+<WindowsOnly client:only="solid-js">
+    {Astro.props.children}
+</WindowsOnly>

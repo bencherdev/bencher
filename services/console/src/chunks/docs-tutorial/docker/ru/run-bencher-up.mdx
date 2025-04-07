@@ -1,0 +1,31 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherUpOutput from "../bencher-up-output.mdx";
+import WindowsOnly from "../../../../components/os/WindowsOnly.astro";
+
+## Запуск `bencher up`
+
+С установленными `docker` и CLI `bencher`, вы теперь можете запустить серверы Консоли и API
+с помощью [подкоманды `bencher up` CLI][bencher up].
+Запустите:
+
+<TerminalCommand code="bencher up" />
+
+Вы должны увидеть что-то похожее на:
+
+<BencherUpOutput />
+
+Снова, это нормально, если ваш вывод отличается. Важно, чтобы эта команда работала.
+
+> 🐰 Если вы получите ошибку от `ghcr.io`, говоря:
+> `"требуется аутентификация"`
+> Попробуйте выполнить: `docker logout ghcr.io`
+
+<WindowsOnly>
+    <blockquote>
+        🐰 На Windows, если возникает ошибка с текстом:
+        <code>образ операционной системы "linux" не может быть использован на этой платформе: операционная система не поддерживается</code>
+        Попробуйте выполнить: <code>& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine</code>
+    </blockquote>
+</WindowsOnly>
+
+[bencher up]: /ru/docs/reference/bencher-compose/#bencher-up

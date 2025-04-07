@@ -1,0 +1,20 @@
+import InstallCli from "../../../../components/os/InstallCli.astro";
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherVersionOutput from "../bencher-version-output.mdx";
+
+## `bencher` CLI をインストールする
+
+あなたのオペレーティングシステムを選択し、提供されるコマンドを実行して `bencher` CLI をインストールします。
+詳細は、[`bencher` CLI のインストール][install cli]ドキュメントを参照してください。
+
+<InstallCli />
+
+次に、`bencher` CLI がインストールされているか確認しましょう。以下を実行します:
+
+<TerminalCommand code="bencher --version" />
+
+次のように表示されるはずです:
+
+<BencherVersionOutput />
+
+[install cli]: /ja/docs/how-to/install-cli/
