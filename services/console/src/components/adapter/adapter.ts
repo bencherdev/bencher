@@ -89,13 +89,16 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 };
 
 export const getAdapter = () => {
+	const [searchParams, setSearchParams] = useSearchParams();
+
 	const adapter = getAdapterInner();
 	if (adapter === CLEAR_ADAPTER) {
-		clearAdapter();
+		setSearchParams({
+			[ADAPTER_PARAM]: null,
+		});
 		return null;
 	}
 
-	const [searchParams, setSearchParams] = useSearchParams();
 	const adapterParam = searchParams[ADAPTER_PARAM];
 	if (validAdapter(adapterParam)) {
 		storeAdapterInner(adapterParam as Adapter);
@@ -134,6 +137,7 @@ export const clearAdapter = () => {
 		[ADAPTER_PARAM]: null,
 	});
 	storeAdapterInner(CLEAR_ADAPTER);
+	setTimeout(removeAdapterInner, 1000);
 };
 
 const validAdapter = (adapter: undefined | null | string | Adapter) => {
