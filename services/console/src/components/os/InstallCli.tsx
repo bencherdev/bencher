@@ -33,7 +33,7 @@ const OperatingSystemButtons = (props: {
 	handleOs: (os: OperatingSystem) => void;
 }) => {
 	return (
-		<div class="field has-addons is-fullwidth">
+		<div class="field has-addons is-fullwidth" style={{ overflow: "auto" }}>
 			<p class="control">
 				<OperatingSystemButton
 					name="Linux"
