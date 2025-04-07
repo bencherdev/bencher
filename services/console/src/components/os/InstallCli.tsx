@@ -8,7 +8,7 @@ import {
 import { getOperatingSystem, OperatingSystem } from "./operating_system";
 
 const InstallCli = (props: { linux; macos; windows; other }) => {
-	const [os, setOs] = createSignal(OperatingSystem.Other);
+	const [os, setOs] = createSignal<undefined | OperatingSystem>();
 
 	const [_operating_system] = createResource(async () => {
 		const os = await getOperatingSystem();
@@ -29,7 +29,7 @@ const InstallCli = (props: { linux; macos; windows; other }) => {
 };
 
 const OperatingSystemButtons = (props: {
-	os: Accessor<OperatingSystem>;
+	os: Accessor<undefined | OperatingSystem>;
 	handleOs: (os: OperatingSystem) => void;
 }) => {
 	return (
@@ -78,7 +78,7 @@ const OperatingSystemButton = (props: {
 	name: string;
 	icon: string;
 	operating_system: OperatingSystem;
-	os: Accessor<OperatingSystem>;
+	os: Accessor<undefined | OperatingSystem>;
 	handleOs: (os: OperatingSystem) => void;
 }) => {
 	return (
