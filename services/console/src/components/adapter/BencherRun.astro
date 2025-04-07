@@ -1,15 +1,175 @@
 ---
+import { Code } from "astro-expressive-code/components";
+import BencherRunFallback from "./BencherRunFallback";
 import BencherRun from "./BencherRun.tsx";
+import { adapterCommand } from "./name";
+import { Adapter } from "../../types/bencher";
 
 const { isConsole } = Astro.props;
 ---
 
-<BencherRun client:only="solid-js" isConsole={isConsole}>
-    <code slot="fallback"
-        >{
-            isConsole
-                ? 'bencher run "bencher mock"'
-                : 'bencher run --host https://localhost:61016 "bencher mock"'
-        }</code
-    >
+<BencherRun client:only="solid-js">
+    <BencherRunFallback slot="fallback">
+        <Code lang="bash" code="⠀" />
+    </BencherRunFallback>
+    <Code
+        slot="rust_bench_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.RustBench)}
+    />
+    <Code
+        slot="rust_bench_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.RustBench)}
+    />
+    <Code
+        slot="rust_criterion_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.RustCriterion)}
+    />
+    <Code
+        slot="rust_criterion_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.RustCriterion)}
+    />
+    <Code
+        slot="rust_iai_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.RustIai)}
+    />
+    <Code
+        slot="rust_iai_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.RustIai)}
+    />
+    <Code
+        slot="rust_iai_callgrind_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.RustIaiCallgrind)}
+    />
+    <Code
+        slot="rust_iai_callgrind_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.RustIaiCallgrind)}
+    />
+    <Code
+        slot="cpp_google_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.CppGoogle)}
+    />
+    <Code
+        slot="cpp_google_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.CppGoogle)}
+    />
+    <Code
+        slot="cpp_catch2_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.CppCatch2)}
+    />
+    <Code
+        slot="cpp_catch2_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.CppCatch2)}
+    />
+    <Code
+        slot="go_bench_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.GoBench)}
+    />
+    <Code
+        slot="go_bench_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.GoBench)}
+    />
+    <Code
+        slot="java_jmh_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.JavaJmh)}
+    />
+    <Code
+        slot="java_jmh_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.JavaJmh)}
+    />
+    <Code
+        slot="csharp_dotnet_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.CSharpDotNet)}
+    />
+    <Code
+        slot="csharp_dotnet_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.CSharpDotNet)}
+    />
+    <Code
+        slot="js_benchmark_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.JsBenchmark)}
+    />
+    <Code
+        slot="js_benchmark_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.JsBenchmark)}
+    />
+    <Code
+        slot="js_time_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.JsTime)}
+    />
+    <Code
+        slot="js_time_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.JsTime)}
+    />
+    <Code
+        slot="python_asv_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.PythonAsv)}
+    />
+    <Code
+        slot="python_asv_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.PythonAsv)}
+    />
+    <Code
+        slot="python_pytest_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.PythonPytest)}
+    />
+    <Code
+        slot="python_pytest_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.PythonPytest)}
+    />
+    <Code
+        slot="ruby_benchmark_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.RubyBenchmark)}
+    />
+    <Code
+        slot="ruby_benchmark_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.RubyBenchmark)}
+    />
+    <Code
+        slot="shell_hyperfine_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.ShellHyperfine)}
+    />
+    <Code
+        slot="shell_hyperfine_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.ShellHyperfine)}
+    />
+    <Code
+        slot="json_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.Json)}
+    />
+    <Code
+        slot="json_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.Json)}
+    />
 </BencherRun>

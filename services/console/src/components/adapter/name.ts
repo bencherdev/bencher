@@ -56,3 +56,41 @@ export const adapterName = (adapter: Adapter): string => {
 			return "Hyperfine";
 	}
 };
+
+export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
+	const host = isConsole ? "" : " --host https://localhost:61016";
+
+	switch (adapter) {
+		case Adapter.RustBench:
+			return `bencher run${host} "cargo +nightly bench"`;
+		case Adapter.RustCriterion:
+		case Adapter.RustIai:
+		case Adapter.RustIaiCallgrind:
+			return `bencher run${host} "cargo bench"`;
+		case Adapter.CppGoogle:
+			return `bencher run${host} "make benchmarks --benchmark_format=json"`;
+		case Adapter.CppCatch2:
+			return `bencher run${host} "make benchmarks"`;
+		case Adapter.GoBench:
+			return `bencher run${host} "go test -bench"`;
+		case Adapter.JavaJmh:
+			return `bencher run${host} --file results.json "java -jar benchmarks.jar -rf json -rff results.json"`;
+		case Adapter.CSharpDotNet:
+			return `bencher run${host} "dotnet run -c Release"`;
+		case Adapter.JsBenchmark:
+		case Adapter.JsTime:
+			return `bencher run${host} "node benchmark.js"`;
+		case Adapter.PythonAsv:
+			return `bencher run${host} "asv run"`;
+		case Adapter.PythonPytest:
+			return `bencher run${host} --file results.json "pytest --benchmark-json results.json benchmarks.py"`;
+		case Adapter.RubyBenchmark:
+			return `bencher run${host} "ruby benchmarks.rb"`;
+		case Adapter.ShellHyperfine:
+			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
+		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
+		case Adapter.Json:
+		default:
+			return `bencher run${host} "bencher mock"`;
+	}
+};
