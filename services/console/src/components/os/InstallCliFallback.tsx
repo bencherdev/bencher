@@ -1,3 +1,4 @@
+import type { Accessor } from "solid-js";
 import { OperatingSystem } from "./operating_system";
 
 const InstallCliFallback = (props: { children }) => {
@@ -9,7 +10,10 @@ const InstallCliFallback = (props: { children }) => {
 	);
 };
 
-const OperatingSystemButtons = () => {
+export const OperatingSystemButtons = (props: {
+	os?: Accessor<undefined | OperatingSystem>;
+	handleOs?: (os: OperatingSystem) => void;
+}) => {
 	return (
 		<div class="field has-addons is-fullwidth" style={{ overflow: "auto" }}>
 			<p class="control">
@@ -17,6 +21,8 @@ const OperatingSystemButtons = () => {
 					name="Linux"
 					icon="fab fa-linux"
 					operating_system={OperatingSystem.Linux}
+					os={props.os}
+					handleOs={props.handleOs}
 				/>
 			</p>
 			<p class="control">
@@ -24,6 +30,8 @@ const OperatingSystemButtons = () => {
 					name="MacOS"
 					icon="fab fa-apple"
 					operating_system={OperatingSystem.MacOS}
+					os={props.os}
+					handleOs={props.handleOs}
 				/>
 			</p>
 			<p class="control">
@@ -31,6 +39,8 @@ const OperatingSystemButtons = () => {
 					name="Windows"
 					icon="fab fa-windows"
 					operating_system={OperatingSystem.Windows}
+					os={props.os}
+					handleOs={props.handleOs}
 				/>
 			</p>
 			<p class="control">
@@ -38,19 +48,30 @@ const OperatingSystemButtons = () => {
 					name="Other"
 					icon="fas fa-server"
 					operating_system={OperatingSystem.Other}
+					os={props.os}
+					handleOs={props.handleOs}
 				/>
 			</p>
 		</div>
 	);
 };
 
-const OperatingSystemButton = (props: {
+export const OperatingSystemButton = (props: {
 	name: string;
 	icon: string;
 	operating_system: OperatingSystem;
+	os: undefined | Accessor<undefined | OperatingSystem>;
+	handleOs: undefined | ((os: OperatingSystem) => void);
 }) => {
 	return (
-		<button type="button" class="button">
+		<button
+			type="button"
+			class={`button${props.operating_system === props.os?.() ? " is-active" : ""}`}
+			onMouseDown={(e) => {
+				e.preventDefault();
+				props.handleOs?.(props.operating_system);
+			}}
+		>
 			<span class="icon is-small">
 				<i class={props.icon} />
 			</span>
