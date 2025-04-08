@@ -2,10 +2,12 @@
 import { Code } from "astro-expressive-code/components";
 import InstallCliFallback from "./InstallCliFallback.tsx";
 import InstallCli from "./InstallCli.tsx";
+
+const { centered } = Astro.props;
 ---
 
-<InstallCli client:only="solid-js">
-	<InstallCliFallback slot="fallback">
+<InstallCli client:only="solid-js" centered={centered}>
+	<InstallCliFallback slot="fallback" centered={centered}>
 		<Code frame="terminal" code="⠀" />
 	</InstallCliFallback>
 	<Code
