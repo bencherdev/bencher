@@ -1,7 +1,7 @@
 import { createResource, Show } from "solid-js";
 import { useBash } from "./operating_system";
 
-const TerminalCommand = (props: { bash; powershell }) => {
+const TerminalCommandInner = (props: { bash; powershell }) => {
 	const [bash] = createResource(useBash);
 
 	return (
@@ -13,4 +13,4 @@ const TerminalCommand = (props: { bash; powershell }) => {
 	);
 };
 
-export default TerminalCommand;
+export default TerminalCommandInner;

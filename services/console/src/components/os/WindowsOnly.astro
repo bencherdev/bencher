@@ -1,7 +1,9 @@
 ---
-import WindowsOnly from "./WindowsOnly.tsx";
+import WindowsOnlyInner from "./WindowsOnlyInner.tsx";
+
+const { children } = Astro.props;
 ---
 
-<WindowsOnly client:only="solid-js">
-    {Astro.props.children}
-</WindowsOnly>
+<WindowsOnlyInner client:only="solid-js">
+    {children}
+</WindowsOnlyInner>

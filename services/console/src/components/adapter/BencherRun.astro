@@ -1,13 +1,13 @@
 ---
 import { Code } from "astro-expressive-code/components";
-import BencherRun from "./BencherRun.tsx";
+import BencherRunInner from "./BencherRunInner.tsx";
 import { adapterCommand } from "./name";
 import { Adapter } from "../../types/bencher";
 
 const { isConsole } = Astro.props;
 ---
 
-<BencherRun client:only="solid-js">
+<BencherRunInner client:only="solid-js">
     <Code slot="fallback" frame="terminal" code="⠀" />
     <Code
         slot="rust_bench_bash"
@@ -169,4 +169,4 @@ const { isConsole } = Astro.props;
         lang="powershell"
         code={adapterCommand(isConsole, Adapter.Json)}
     />
-</BencherRun>
+</BencherRunInner>

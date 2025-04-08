@@ -1,12 +1,12 @@
 ---
 import { Code } from "astro-expressive-code/components";
 import InstallCliFallback from "./InstallCliFallback.tsx";
-import InstallCli from "./InstallCli.tsx";
+import InstallCliInner from "./InstallCliInner.tsx";
 
 const { centered } = Astro.props;
 ---
 
-<InstallCli client:only="solid-js" centered={centered}>
+<InstallCliInner client:only="solid-js" centered={centered}>
 	<InstallCliFallback slot="fallback" centered={centered}>
 		<Code frame="terminal" code="⠀" />
 	</InstallCliFallback>
@@ -30,4 +30,4 @@ const { centered } = Astro.props;
 		lang="bash"
 		code="cargo install --git https://github.com/bencherdev/bencher --branch main --locked --force bencher_cli"
 	/>
-</InstallCli>
+</InstallCliInner>

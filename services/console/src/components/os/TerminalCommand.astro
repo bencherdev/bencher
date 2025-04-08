@@ -1,12 +1,12 @@
 ---
 import { Code } from "astro-expressive-code/components";
-import TerminalCommand from "./TerminalCommand.tsx";
+import TerminalCommandInner from "./TerminalCommandInner.tsx";
 
 const { code } = Astro.props;
 ---
 
-<TerminalCommand client:only="solid-js">
+<TerminalCommandInner client:only="solid-js">
 	<Code slot="fallback" frame="terminal" code={code} />
 	<Code slot="bash" lang="bash" code={code} />
 	<Code slot="powershell" lang="powershell" code={code} />
-</TerminalCommand>
+</TerminalCommandInner>

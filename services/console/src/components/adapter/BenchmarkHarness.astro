@@ -1,8 +1,8 @@
 ---
-import BenchmarkHarness from "./BenchmarkHarness.tsx";
+import BenchmarkHarnessInner from "./BenchmarkHarnessInner.tsx";
 import BenchmarkHarnessFallback from "./BenchmarkHarnessFallback.tsx";
 ---
 
-<BenchmarkHarness client:only="solid-js">
+<BenchmarkHarnessInner client:only="solid-js">
 	<BenchmarkHarnessFallback slot="fallback" />
-</BenchmarkHarness>
+</BenchmarkHarnessInner>

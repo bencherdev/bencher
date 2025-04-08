@@ -1,7 +1,10 @@
 import type { Accessor } from "solid-js";
 import { OperatingSystem } from "./operating_system";
 
-const InstallCliFallback = (props: { centered: undefined | boolean; children }) => {
+const InstallCliFallback = (props: {
+	centered: undefined | boolean;
+	children;
+}) => {
 	return (
 		<>
 			<OperatingSystemButtons centered={props.centered} />
@@ -10,14 +13,16 @@ const InstallCliFallback = (props: { centered: undefined | boolean; children }) 
 	);
 };
 
-
 export const OperatingSystemButtons = (props: {
 	centered: undefined | boolean;
 	os?: Accessor<undefined | OperatingSystem>;
 	handleOs?: (os: OperatingSystem) => void;
 }) => {
 	return (
-		<div class={`field has-addons${props.centered ? " has-addons-centered": ""} is-fullwidth`} style={{ overflow: "auto" }}>
+		<div
+			class={`field has-addons${props.centered ? " has-addons-centered" : ""} is-fullwidth`}
+			style={{ overflow: "auto" }}
+		>
 			<p class="control">
 				<OperatingSystemButton
 					name="Linux"

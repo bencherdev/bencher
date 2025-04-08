@@ -1,7 +1,5 @@
 ---
-import { Code } from "astro-expressive-code/components";
-import ClientPlatform from "./ClientPlatform";
-import { Platform } from "../../util/platform";
+import InstallCli from "../os/InstallCli.astro";
 ---
 
 <section class="section" style="margin-top: 4rem;">
@@ -11,18 +9,16 @@ import { Platform } from "../../util/platform";
 		<br />
 		<div class="columns is-centered is-vcentered">
 			<div class="column is-7">
-				<ClientPlatform client:only="solid-js" platform={Platform.Unix}>
-					<Code lang="bash" code="curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh" />
-				</ClientPlatform>
-				<ClientPlatform client:only="solid-js" platform={Platform.Windows}>
-					<Code lang="powershell" code="irm https://bencher.dev/download/install-cli.ps1 | iex" />
-				</ClientPlatform>
+				<InstallCli centered={true} />
 			</div>
 		</div>
 		<br />
 		<div class="columns is-centered">
 			<div class="column is-one-third">
-				<a class="button is-primary is-large is-responsive is-fullwidth" href="/docs/tutorial/quick-start/">
+				<a
+					class="button is-primary is-large is-responsive is-fullwidth"
+					href="/docs/tutorial/quick-start/"
+				>
 					Learn More
 				</a>
 			</div>

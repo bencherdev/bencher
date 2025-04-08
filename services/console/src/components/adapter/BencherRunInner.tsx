@@ -3,7 +3,7 @@ import { createResource, Match, Show, Switch } from "solid-js";
 import { Adapter } from "../../types/bencher";
 import { useBash } from "../os/operating_system";
 
-const BencherRun = (props) => {
+const BencherRunInner = (props) => {
 	const [bash] = createResource(useBash);
 
 	return (
@@ -98,4 +98,4 @@ const BencherRun = (props) => {
 	);
 };
 
-export default BencherRun;
+export default BencherRunInner;

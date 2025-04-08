@@ -5,7 +5,7 @@ import { Theme } from "../navbar/theme/theme.tsx";
 import { themeSignal } from "../navbar/theme/util.tsx";
 import { adapterName } from "./name.ts";
 
-const BenchmarkHarness = () => (
+const BenchmarkHarnessInner = () => (
 	<div class="columns">
 		<div class="column is-half">
 			<LanguageBox
@@ -152,4 +152,4 @@ export const themeHover = (theme: undefined | Theme) => {
 	}
 };
 
-export default BenchmarkHarness;
+export default BenchmarkHarnessInner;

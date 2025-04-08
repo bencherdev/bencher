@@ -2,7 +2,13 @@ import { createResource, createSignal, Match, Switch } from "solid-js";
 import { getOperatingSystem, OperatingSystem } from "./operating_system";
 import { OperatingSystemButtons } from "./InstallCliFallback";
 
-const InstallCli = (props: { centered: undefined | boolean; linux; macos; windows; other }) => {
+const InstallCliInner = (props: {
+	centered: undefined | boolean;
+	linux;
+	macos;
+	windows;
+	other;
+}) => {
 	const [os, setOs] = createSignal<undefined | OperatingSystem>();
 
 	const [_operating_system] = createResource(async () => {
@@ -12,7 +18,11 @@ const InstallCli = (props: { centered: undefined | boolean; linux; macos; window
 
 	return (
 		<>
-			<OperatingSystemButtons os={os} handleOs={setOs} centered={props.centered} />
+			<OperatingSystemButtons
+				os={os}
+				handleOs={setOs}
+				centered={props.centered}
+			/>
 			<Switch>
 				<Match when={os() === OperatingSystem.Linux}>{props.linux}</Match>
 				<Match when={os() === OperatingSystem.MacOS}>{props.macos}</Match>
@@ -23,4 +33,4 @@ const InstallCli = (props: { centered: undefined | boolean; linux; macos; window
 	);
 };
 
-export default InstallCli;
+export default InstallCliInner;

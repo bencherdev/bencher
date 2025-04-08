@@ -4,7 +4,7 @@ import type { Adapter } from "../../types/bencher";
 import { adapterName } from "./name";
 import { adapter } from "./util";
 
-const SelectedAdapter = () => {
+const SelectedAdapterInner = () => {
 	return (
 		<Show when={adapter()}>
 			<div class="notification mb-4">
@@ -31,4 +31,4 @@ const SelectedAdapter = () => {
 	);
 };
 
-export default SelectedAdapter;
+export default SelectedAdapterInner;
