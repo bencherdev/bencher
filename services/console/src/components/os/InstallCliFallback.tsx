@@ -19,46 +19,35 @@ export const OperatingSystemButtons = (props: {
 	handleOs?: (os: OperatingSystem) => void;
 }) => {
 	return (
-		<div
-			class={`field has-addons${props.centered ? " has-addons-centered" : ""} is-fullwidth`}
-			style={{ overflow: "auto" }}
-		>
-			<p class="control">
-				<OperatingSystemButton
-					name="Linux"
-					icon="fab fa-linux"
-					operating_system={OperatingSystem.Linux}
-					os={props.os}
-					handleOs={props.handleOs}
-				/>
-			</p>
-			<p class="control">
-				<OperatingSystemButton
-					name="MacOS"
-					icon="fab fa-apple"
-					operating_system={OperatingSystem.MacOS}
-					os={props.os}
-					handleOs={props.handleOs}
-				/>
-			</p>
-			<p class="control">
-				<OperatingSystemButton
-					name="Windows"
-					icon="fab fa-windows"
-					operating_system={OperatingSystem.Windows}
-					os={props.os}
-					handleOs={props.handleOs}
-				/>
-			</p>
-			<p class="control">
-				<OperatingSystemButton
-					name="Other"
-					icon="fas fa-server"
-					operating_system={OperatingSystem.Other}
-					os={props.os}
-					handleOs={props.handleOs}
-				/>
-			</p>
+		<div class={`buttons has-addons${props.centered ? " is-centered" : ""}`}>
+			<OperatingSystemButton
+				name="Linux"
+				icon="fab fa-linux"
+				operating_system={OperatingSystem.Linux}
+				os={props.os}
+				handleOs={props.handleOs}
+			/>
+			<OperatingSystemButton
+				name="MacOS"
+				icon="fab fa-apple"
+				operating_system={OperatingSystem.MacOS}
+				os={props.os}
+				handleOs={props.handleOs}
+			/>
+			<OperatingSystemButton
+				name="Windows"
+				icon="fab fa-windows"
+				operating_system={OperatingSystem.Windows}
+				os={props.os}
+				handleOs={props.handleOs}
+			/>
+			<OperatingSystemButton
+				name="Other"
+				icon="fas fa-server"
+				operating_system={OperatingSystem.Other}
+				os={props.os}
+				handleOs={props.handleOs}
+			/>
 		</div>
 	);
 };
