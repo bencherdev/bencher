@@ -7,6 +7,63 @@ modified: "2025-04-08T22:00:00Z"
 sortOrder: 2
 ---
 
+There are two main places that developers track their benchmarks:
+
+1. In their local development environment
+2. In a CI/CD environment
+
+If you followed the [Quick Start][quick start] or [Docker Self-Hosted][docker self-hosted] tutorials,
+then you tracked benchmarks from your local development environment.
+Bencher does not require you to create an account in order to track benchmarks you run locally.
+However, if you want to track benchmarks in a CI/CD environment,
+then you will need to create an account.
+
+If you have already run benchmarks locally,
+then you can claim the Project that was created for you
+when you used the
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+There are a few ways to claim a Project:
+
+1. Follow the `Claim this project` signup link that is at the end of the `bencher run` output
+2. Sign up for a Bencher account and click the `Claim this project` button on the Project's Perf Page
+3. Signup for a Bencher account, create an API token, and use the API token [the `--token` option][token option] the next time you use <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> to claim the Project
+
+When a new Project is created for you, whether the slug is specified or generated,
+the Project has to belong to an Organization.
+If the user is authenticated, then the Project is added under that user's personal Organization.
+If the user is not authenticated, the Project will be created under a new `unclaimed` Organization.
+This Organization can then be `claimed` from the Project's public Perf Page
+or by using the Project slug while authenticated in a subsequent invocation of `bencher run`.
+
+[quick start]: /docs/tutorial/quick-start/
+[docker self-hosted]: /docs/tutorial/docker/
+[token option]: /docs/explanation/bencher-run/#--token-token
+
+
+
+
+Bencher allows you to create projects on-the-fly without 
+
+Optional: Either the `--project` option or the `BENCHER_PROJECT` environment variable
+may be set to the slug or UUID for a Project.
+If the value specified is a slug and the Project does not already exist, it will be created for you.
+However, if the value specified is a UUID then the Project must already exist.
+If both are specified, the `--project` option takes precedence over the `BENCHER_PROJECT` environment variable.
+If neither are specified then a Project slug will be generated for you based on:
+
+1. The name of the parent directory for the `git` repository, if it is available.
+2. A 7 digit hexadecimal short hash for the initial commit of the `git` repository, if it is available.
+3. A 13 digit alphanumeric fingerprint of the local machine, for supported operating systems.
+
+For example, a generated Project slug might look like: `project-abc4567-wxyz123456789`
+
+When a new Project is created for you, whether the slug is specified or generated,
+the Project has to belong to an Organization.
+If the user is authenticated, then the Project is added under that user's personal Organization.
+If the user is not authenticated, the Project will be created under a new `unclaimed` Organization.
+This Organization can then be `claimed` from the Project's public Perf Page
+or by using the Project slug while authenticated in a subsequent invocation of `bencher run`.
+
 <br/>
 <br/>
 

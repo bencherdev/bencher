@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/astro";
-import { type Resource, createMemo, createSignal } from "solid-js";
+import { type Resource, createSignal } from "solid-js";
 import type { JsonAuthUser, JsonProject } from "../../../types/bencher";
 import { httpPost } from "../../../util/http";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
@@ -52,7 +52,6 @@ const ClaimBanner = (props: Props) => {
 				);
 			});
 	};
-	const name = createMemo(() => props.project()?.name ?? "this project");
 
 	return (
 		<div class="content has-text-centered" style="margin-top: 1rem;">
@@ -61,16 +60,16 @@ const ClaimBanner = (props: Props) => {
 					<button
 						type="button"
 						class="button is-primary is-fullwidth"
-						title={claiming() ? "Claiming project..." : `Claim ${name()}`}
+						title={claiming() ? `Claiming ${props.project()?.name ?? "project"}...` : `Claim ${props.project()?.name ?? "this project"}`}
 						disabled={claiming()}
 						onMouseDown={async (e) => {
 							e.preventDefault();
 							await claimProject();
 						}}
 					>
-						🐰 This project is unclaimed!
+						🐰 {props.project()?.name ?? "This project"} is unclaimed!
 						<br />
-						Claim {name()}
+						Claim this project
 					</button>
 				</div>
 			</div>
