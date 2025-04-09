@@ -9,6 +9,7 @@ on:
     branches: [main, cloud, devel]
 
 env:
+  BENCHER_VERSION: 0.5.0
   # General
   CARGO_TERM_COLOR: always
   MOLD_VERSION: 2.34.1
@@ -108,7 +109,7 @@ jobs:
             source: cargo-devel
     runs-on: ${{ matrix.os }}
     # This is expected to fail when tagging a new release
-    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && ( matrix.source == 'action-devel' || matrix.source == 'cargo-devel' || matrix.source == 'cargo-main' ) }}
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && ( matrix.source == 'action-devel' || matrix.source == 'script-gen-version' || matrix.source == 'cargo-main' || matrix.source == 'cargo-devel' ) }}
     steps:
       - uses: bencherdev/bencher@main
         if: matrix.source == 'action-main'
@@ -119,7 +120,7 @@ jobs:
         run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
       - name: Windows CLI Download Install Script
         if: matrix.source == 'script-cloud' && matrix.os == 'windows-2022'
-        run: irm https://bencher.dev/download/install-cli.ps1 | iex
+        run: powershell -c "irm https://bencher.dev/download/install-cli.ps1 | iex"
       - uses: actions/checkout@v4
         if: matrix.source == 'script-gen' || matrix.source == 'script-gen-version'
       - name: Unix CLI Install Script
@@ -127,13 +128,13 @@ jobs:
         run: cat services/cli/templates/output/install-cli.sh | sh
       - name: Unix CLI Install Script Version
         if: matrix.source == 'script-gen-version' && matrix.os != 'windows-2022'
-        run: export BENCHER_VERSION=0.4.27; cat services/cli/templates/output/install-cli.sh | sh
+        run: export BENCHER_VERSION=${{ env.BENCHER_VERSION }}; cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script
         if: matrix.source == 'script-gen' && matrix.os == 'windows-2022'
-        run: gc -Raw services/cli/templates/output/install-cli.ps1 | iex
+        run: powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
       - name: Windows CLI Install Script Version
         if: matrix.source == 'script-gen-version' && matrix.os == 'windows-2022'
-        run: $env:BENCHER_VERSION="0.4.27"; gc -Raw services/cli/templates/output/install-cli.ps1 | iex
+        run: $env:BENCHER_VERSION="${{ env.BENCHER_VERSION }}"; powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
       - name: Cargo CLI Install main
         if: matrix.source == 'cargo-main'
         run: cargo install --git https://github.com/bencherdev/bencher --branch main --locked bencher_cli
