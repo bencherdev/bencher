@@ -1,0 +1,32 @@
+## `unclaimed` Projects
+
+Bencher allows you to track benchmarks results without creating an account.
+When you invoke the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+without setting [the `--token` option][token option],
+Bencher will create a new `unclaimed` [on-the-fly][on the fly projects] Project
+for your benchmark results.
+If you followed the [Quick Start][quick start] or [Self-Hosted Quick Start][self-hosted quick start] tutorials,
+you were taking advantage of this functionality.
+
+Anyone can view and post benchmark results to an `unclaimed` Project.
+In order to claim an `unclaimed` Project, you will need to create an account.
+If you follow the `Claim this project` signup link at the end of your
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code> output,
+you will automatically claim the Project when your account is created.
+
+If you already have a Bencher account,
+then you can navigate to the Project's [public Perf Page][bencher perf]
+and click the `Claim this project` button at the top of the page.
+Similarly, if you already have an API token,
+you can use the API token with the [the `--token` option][token option]
+the next time you invoke <code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+to claim the Project.
+
+> 🐰 IMPORTANT: Once a Project is `claimed`, it cannot be posted to anonymously.
+> You **must** use an API token with the [the `--token` option][token option].
+
+[token option]: /docs/explanation/bencher-run/#--token-token
+[on the fly projects]: #on-the-fly-projects
+[quick start]: /docs/tutorial/quick-start/
+[self-hosted quick start]: /docs/tutorial/docker/
+[bencher perf]: /perf

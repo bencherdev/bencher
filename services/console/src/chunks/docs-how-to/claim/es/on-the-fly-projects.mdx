@@ -1,0 +1,24 @@
+## Proyectos al Vuelo
+
+Bencher te permite crear Proyectos `claimed` y `unclaimed` al vuelo.
+Cuando invocas el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+sin establecer [la opción `--project`][opción de proyecto] o si el identificador especificado no coincide con un Proyecto existente,
+Bencher creará un nuevo Proyecto al vuelo para tus resultados de benchmarck.
+Si seguiste los tutoriales de [Inicio Rápido][inicio rápido] o [Inicio Rápido Autohospedado][inicio rápido autohospedado],
+te estabas beneficiando de esta funcionalidad.
+
+Si no se especifica [la opción `--project`][opción de proyecto], entonces se generará un identificador de Proyecto al vuelo basado en:
+
+1. El nombre del directorio padre del repositorio `git`, si está disponible.
+2. El hash corto hexadecimal de 7 dígitos del commit inicial del repositorio `git`, si está disponible.
+3. Una huella dactilar alfanumérica de 13 dígitos de la máquina local, para sistemas operativos compatibles.
+
+Por ejemplo, un identificador de Proyecto generado al vuelo podría verse así: `proyecto-abc4567-wxyz123456789`
+
+> 🐰 IMPORTANTE: Si dependes de un identificador de Proyecto al vuelo y deseas rastrear resultados de benchmark en diferentes máquinas,
+> **debes** usar [la opción `--project`][opción de proyecto] para especificar el identificador del Proyecto.
+> De lo contrario, se puede crear un nuevo Proyecto al vuelo para cada máquina diferente.
+
+[opción de proyecto]: /es/docs/explanation/bencher-run/#--project-project
+[inicio rápido]: /es/docs/tutorial/quick-start/
+[inicio rápido autohospedado]: /es/docs/tutorial/docker/

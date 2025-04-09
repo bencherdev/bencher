@@ -1,0 +1,17 @@
+## 즉석 프로젝트
+
+Bencher는 `claimed` 및 `unclaimed` 프로젝트를 즉석에서 생성할 수 있습니다. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 실행할 때 [the `--project` 옵션][project option]을 설정하지 않거나 지정된 슬러그가 기존 프로젝트와 일치하지 않으면, Bencher는 벤치마크 결과를 위한 새로운 즉석 프로젝트를 생성합니다. [빠른 시작 가이드][quick start]나 [셀프 호스팅 빠른 시작 가이드][self-hosted quick start] 튜토리얼을 따라갔다면, 이 기능을 이용한 것입니다.
+
+[the `--project` 옵션][project option]을 지정하지 않으면, 다음에 기반하여 즉석 프로젝트 슬러그가 생성됩니다:
+
+1. `git` 저장소의 상위 디렉토리 이름 (가능한 경우).
+2. `git` 저장소의 초기 커밋에 대한 7자리 16진수 짧은 해시 (가능한 경우).
+3. 지원되는 운영 체제의 경우, 로컬 기기의 13자리 영숫자 지문.
+
+예를 들어, 생성된 즉석 프로젝트 슬러그는 다음과 같이 보일 수 있습니다: `project-abc4567-wxyz123456789`
+
+> 🐰 중요: 즉석 프로젝트 슬러그에 의존하고 있으며 다른 기기에서 벤치마크 결과를 추적하고자 한다면, 반드시 [the `--project` 옵션][project option]을 사용하여 프로젝트 슬러그를 지정해야 합니다. 그렇지 않으면 각기 다른 기기마다 새로운 즉석 프로젝트가 생성될 수 있습니다.
+
+[project option]: /ko/docs/explanation/bencher-run/#--project-project
+[quick start]: /ko/docs/tutorial/quick-start/
+[self-hosted quick start]: /ko/docs/tutorial/docker/

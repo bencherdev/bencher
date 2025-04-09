@@ -1,0 +1,16 @@
+## `unclaimed` プロジェクト
+
+Bencherを使用すると、アカウントを作成せずにベンチマークの結果を追跡できます。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを[ `--token`オプション][token option]を設定せずに呼び出すと、Bencherはベンチマークの結果用に新しい`unclaimed`[オンザフライ][on the fly projects]プロジェクトを作成します。[クイックスタート][quick start]や[自社ホストクイックスタート][self-hosted quick start]チュートリアルに従った場合、あなたはこの機能を活用していました。
+
+誰でも`unclaimed`プロジェクトにベンチマークの結果を視聴したり投稿したりできます。`unclaimed`プロジェクトを主張するには、アカウントを作成する必要があります。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>の出力の最後にある `Claim this project` サインアップリンクに従うと、アカウントが作成されると同時にプロジェクトを自動的に主張します。
+
+すでにBencherアカウントを持っている場合、プロジェクトの[公開パフォーマンスページ][bencher perf]に移動し、ページの上部にある `Claim this project` ボタンをクリックできます。同様に、すでにAPIトークンを持っている場合、次回<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>を呼び出す際に[ `--token`オプション][token option]とAPIトークンを使用してプロジェクトを主張できます。
+
+> 🐰 重要: プロジェクトが `claimed` になってしまうと、匿名で投稿することはできなくなります。
+> **必ず** [ `--token`オプション][token option]を使用してAPIトークンを使用しなければなりません。
+
+[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[on the fly projects]: #on-the-fly-projects
+[quick start]: /ja/docs/tutorial/quick-start/
+[self-hosted quick start]: /ja/docs/tutorial/docker/
+[bencher perf]: /perf

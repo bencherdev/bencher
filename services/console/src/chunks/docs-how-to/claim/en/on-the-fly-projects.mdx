@@ -1,0 +1,25 @@
+## On-the-Fly Projects
+
+Bencher allows you to create both `claimed` and `unclaimed` Projects on-the-fly.
+When you invoke the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+without setting [the `--project` option][project option] or if the slug specified does not match an existing Project,
+Bencher will create a new on-the-fly Project
+for your benchmark results.
+If you followed the [Quick Start][quick start] or [Self-Hosted Quick Start][self-hosted quick start] tutorials,
+you were taking advantage of this functionality.
+
+If [the `--project` option][project option] is not specified, then an on-the-fly Project slug will be generated for you based on:
+
+1. The name of the parent directory for the `git` repository, if it is available.
+2. The 7 digit hexadecimal short hash for the initial commit of the `git` repository, if it is available.
+3. A 13 digit alphanumeric fingerprint of the local machine, for supported operating systems.
+
+For example, a generated on-the-fly Project slug might look like: `project-abc4567-wxyz123456789`
+
+> 🐰 IMPORTANT: If you are relying on an on-the-fly Project slug and you want to track benchmark results across different machines,
+> you **must** use [the `--project` option][project option] to specify the Project slug.
+> Otherwise, a new on-the-fly Project may be created for each different machine.
+
+[project option]: /docs/explanation/bencher-run/#--project-project
+[quick start]: /docs/tutorial/quick-start/
+[self-hosted quick start]: /docs/tutorial/docker/

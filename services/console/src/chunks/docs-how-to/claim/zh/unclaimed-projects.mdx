@@ -1,0 +1,15 @@
+## `unclaimed` 项目
+
+Bencher 允许您在无需创建账户的情况下跟踪基准测试结果。 当您调用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令而不设置[ `--token` 选项][token option]时，Bencher 将为您的基准测试结果创建一个新的、动态的 `unclaimed` [项目][on the fly projects]。 如果您按照[快速开始][quick start]或[自托管快速开始][self-hosted quick start]教程进行操作，您已经利用了此功能。
+
+任何人都可以查看并向 `unclaimed` 项目提交基准测试结果。 为了声明一个 `unclaimed` 项目，您需要创建一个账户。 如果您在 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 输出的末尾点击 `Claim this project` 的注册链接，您的账户创建后会自动声明该项目。
+
+如果您已经有 Bencher 账户，那么可以导航到项目的[公共性能页面][bencher perf]，并点击页面顶部的 `Claim this project` 按钮。 同样地，如果您已经有一个 API 令牌，则可以在下次调用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 时使用 [ `--token` 选项][token option] 来声明项目。
+
+> 🐰 重要： 一旦一个项目被 `claimed`，它将不能被匿名提交。 您 **必须** 使用 API 令牌与 [ `--token` 选项][token option]。
+
+[token option]: /zh/docs/explanation/bencher-run/#--token-token
+[on the fly projects]: #on-the-fly-projects
+[quick start]: /zh/docs/tutorial/quick-start/
+[self-hosted quick start]: /zh/docs/tutorial/docker/
+[bencher perf]: /perf
