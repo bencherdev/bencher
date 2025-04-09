@@ -1,5 +1,6 @@
 ---
 import InstallCli from "../os/InstallCli.astro";
+import { Code } from "astro-expressive-code/components";
 
 const LANGUAGES: string[][] = [
 	["devicon-cplusplus-plain", "devicon-python-plain"],
@@ -39,6 +40,10 @@ const LANGUAGES: string[][] = [
 		<div class="columns is-centered is-vcentered">
 			<div class="column is-7">
 				<InstallCli centered={true} />
+				<!-- This is a kludge because otherwise all but the first `Code` options in `InstallCli`` do not get formatted properly. -->
+				<div style={{ display: "none" }}>
+					<Code code="⠀" />
+				</div>
 			</div>
 		</div>
 		<br />
