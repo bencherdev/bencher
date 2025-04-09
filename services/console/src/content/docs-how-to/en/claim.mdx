@@ -1,28 +1,51 @@
 ---
-title: "Claim a Project"
-description: "How to claim a project in Bencher"
-heading: "How to Claim a Project"
+title: "Claim Benchmark Results"
+description: "How to claim benchmark results in Bencher"
+heading: "How to Claim Benchmark Results with Bencher"
 published: "2025-04-08T22:00:00Z"
 modified: "2025-04-08T22:00:00Z"
 sortOrder: 2
 ---
+
+Bencher allows you to track benchmarks results without creating an account.
+When you run the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+without setting [the `--token` option][token option],
+Bencher will [create an on-the-fly Project][project option]
+for your benchmark results.
+If you followed the [Quick Start][quick start] or [Docker Self-Hosted][docker self-hosted] tutorials,
+you were taking advantage of this functionality.
+
+A new on-the-fly Project is `unclaimed`.
+Anyone can view and post benchmark results to an `unclaimed` Project.
+In order to `claim` the Project, you will need to create an account.
+If you follow the `Claim this project` signup link at the end of the
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code> output,
+you will automatically claim the Project when your account is created.
+
+If you already have a Bencher account,
+then you can navigate to the project's public Perf Page
+and click the `Claim this project` button.
+Similarly, if you also have an API token,
+you can use the API token with the [the `--token` option][token option]
+the next time you invoke <code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
+to claim the Project.
+
+This great for getting started 
+However, if you want to track benchmarks in a CI/CD environment,
+then you will need to create an account.
+
 
 There are two main places that developers track their benchmarks:
 
 1. In their local development environment
 2. In a CI/CD environment
 
-If you followed the [Quick Start][quick start] or [Docker Self-Hosted][docker self-hosted] tutorials,
-then you tracked benchmarks from your local development environment.
-Bencher does not require you to create an account in order to track benchmarks you run locally.
-However, if you want to track benchmarks in a CI/CD environment,
-then you will need to create an account.
 
 If you have already run benchmarks locally,
 then you can claim the Project that was created for you
 when you used the
 <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
-There are a few ways to claim a Project:
+There are a few ways to claim these benchmark results:
 
 1. Follow the `Claim this project` signup link that is at the end of the `bencher run` output
 2. Sign up for a Bencher account and click the `Claim this project` button on the Project's Perf Page
@@ -37,6 +60,7 @@ or by using the Project slug while authenticated in a subsequent invocation of `
 
 [quick start]: /docs/tutorial/quick-start/
 [docker self-hosted]: /docs/tutorial/docker/
+[project option]: /docs/explanation/bencher-run/#--project-project
 [token option]: /docs/explanation/bencher-run/#--token-token
 
 
