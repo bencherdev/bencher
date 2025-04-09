@@ -26,6 +26,9 @@ npm run build
 git add ./dist/index.js
 cd -
 
+# Update CI workflow version
+sed -i '' "s/BENCHER_VERSION: [0-9]*\.[0-9]*\.[0-9]*/BENCHER_VERSION: $VERSION/" ./.github/workflows/bencher.yml
+git add ./.github/workflows/bencher.yml
 # Update UI version and types
 cd ./services/console
 npm version $VERSION
@@ -33,10 +36,10 @@ git add ./package.json
 git add ./package-lock.json
 sed -i '' "s/version: [0-9]*\.[0-9]*\.[0-9]*/version: $VERSION/" ./src/chunks/docs-how-to/install-cli/cli-github-actions-version.mdx
 git add ./src/chunks/docs-how-to/install-cli/cli-github-actions-version.mdx
-sed -i '' "s/Bencher API Server v[0-9]*\.[0-9]*\.[0-9]*/Bencher API Server v$VERSION/" ./src/chunks/docs-tutorial/docker-bencher-up-output.mdx
-git add ./src/chunks/docs-tutorial/docker-bencher-up-output.mdx
-sed -i '' "s/bencher [0-9]*\.[0-9]*\.[0-9]*/bencher $VERSION/" ./src/chunks/docs-tutorial/qs-cli-version-output.mdx
-git add ./src/chunks/docs-tutorial/qs-cli-version-output.mdx
+sed -i '' "s/Bencher API Server v[0-9]*\.[0-9]*\.[0-9]*/Bencher API Server v$VERSION/" ./src/chunks/docs-tutorial/docker/bencher-up-output.mdx
+git add ./src/chunks/docs-tutorial/docker/bencher-up-output.mdx
+sed -i '' "s/bencher [0-9]*\.[0-9]*\.[0-9]*/bencher $VERSION/" ./src/chunks/docs-tutorial/quick-start/bencher-version-output.mdx
+git add ./src/chunks/docs-tutorial/quick-start/bencher-version-output.mdx
 sed -i '' "s/export BENCHER_VERSION=[0-9]*\.[0-9]*\.[0-9]*/export BENCHER_VERSION=$VERSION/" ./src/chunks/general/cli-unix-script-version.mdx
 git add ./src/chunks/general/cli-unix-script-version.mdx
 sed -i '' "s/\$env:BENCHER_VERSION=\"[0-9]*\.[0-9]*\.[0-9]*\"/\$env:BENCHER_VERSION=\"$VERSION\"/" ./src/chunks/general/cli-windows-script-version.mdx
