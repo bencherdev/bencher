@@ -60,7 +60,11 @@ const ClaimBanner = (props: Props) => {
 					<button
 						type="button"
 						class="button is-primary is-fullwidth"
-						title={claiming() ? `Claiming ${props.project()?.name ?? "project"}...` : `Claim ${props.project()?.name ?? "this project"}`}
+						title={
+							claiming()
+								? `Claiming ${props.project()?.name ?? "project"}...`
+								: `Claim ${props.project()?.name ?? "this project"}`
+						}
 						disabled={claiming()}
 						onMouseDown={async (e) => {
 							e.preventDefault();
