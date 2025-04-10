@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 import { Theme } from "../../navbar/theme/theme";
-import { themeSignal } from "../../navbar/theme/util";
+import { theme } from "../../navbar/theme/util";
 
 export interface Props {
 	light: string;
@@ -12,7 +12,7 @@ export interface Props {
 
 const DocsImg = (props: Props) => {
 	const src = createMemo(() => {
-		switch (themeSignal()) {
+		switch (theme()) {
 			case Theme.Light:
 				return props.light;
 			case Theme.Dark:

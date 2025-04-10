@@ -44,7 +44,7 @@ import {
 	validJwt,
 	validU32,
 } from "../../../util/valid";
-import { themeSignal } from "../../navbar/theme/util";
+import { theme } from "../../navbar/theme/util";
 import ClaimBanner from "./ClaimBanner";
 import PerfFrame from "./PerfFrame";
 import PerfHeader from "./header/PerfHeader";
@@ -203,7 +203,6 @@ const PerfPanel = (props: Props) => {
 	const params = createMemo(() => props.params);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
-	const theme = themeSignal;
 
 	const [init, setInit] = createSignal(false);
 	// Sanitize all query params

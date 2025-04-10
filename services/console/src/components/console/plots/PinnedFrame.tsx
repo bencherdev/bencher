@@ -14,7 +14,7 @@ import {
 	XAxis,
 } from "../../../types/bencher";
 import { timeToDateOnlyIso } from "../../../util/convert";
-import { themeSignal } from "../../navbar/theme/util";
+import { theme } from "../../navbar/theme/util";
 import PerfFrame from "../perf/PerfFrame";
 import FallbackPlot from "./FallbackPlot";
 
@@ -62,8 +62,6 @@ const PinnedFrame = (props: Props) => {
 		};
 		setupObserver();
 	});
-
-	const theme = themeSignal;
 
 	const branchesIsEmpty = createMemo(
 		() => (props.plot?.branches?.length ?? 0) === 0,

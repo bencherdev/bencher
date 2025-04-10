@@ -1,8 +1,8 @@
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import { Adapter } from "../../types/bencher.ts";
-import { setAdapter } from "./adapter.ts";
 import { Theme } from "../navbar/theme/theme.tsx";
-import { themeSignal } from "../navbar/theme/util.tsx";
+import { theme } from "../navbar/theme/util.tsx";
+import { setAdapter } from "./adapter.ts";
 import { adapterName } from "./name.ts";
 
 const BenchmarkHarnessInner = () => (
@@ -74,7 +74,7 @@ const LanguageBox = (props: {
 	name: string;
 	adapters: Adapter[];
 }) => {
-	const themeClass = createMemo(() => themeHover(themeSignal()));
+	const themeClass = createMemo(() => themeHover(theme()));
 	const [active, setActive] = createSignal(false);
 
 	return (

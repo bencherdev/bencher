@@ -6,9 +6,11 @@ import * as Sentry from "@sentry/astro";
 import {
 	type Accessor,
 	createMemo,
+	createRoot,
 	createSignal,
 	getOwner,
 	on,
+	onCleanup,
 	runWithOwner,
 	untrack,
 } from "solid-js";
@@ -44,24 +46,36 @@ export interface PathMatch {
 	path: string;
 }
 
-const [windowLocation, setWindowLocation] = createSignal<string>(
-	window.location.toString(),
-);
-setInterval(() => {
-	const location_str = window.location.toString();
-	if (location_str !== windowLocation()) {
-		setWindowLocation(location_str);
-	}
-}, 100);
+export const windowLocation = createRoot(() => {
+	const [windowLocation, setWindowLocation] = createSignal<string>(
+		window.location.toString(),
+	);
+	const interval = setInterval(() => {
+		const location_str = window.location.toString();
+		if (location_str !== windowLocation()) {
+			setWindowLocation(location_str);
+		}
+	}, 100);
 
-// biome-ignore lint/suspicious/noExplicitAny: vendor solid-js
-const [windowState, setWindowState] = createSignal<any>(window.history.state);
-setInterval(() => {
-	const state = window.history.state;
-	if (state !== windowState()) {
-		setWindowState(state);
-	}
-}, 100);
+	onCleanup(() => clearInterval(interval));
+
+	return windowLocation;
+});
+
+export const windowState = createRoot(() => {
+	// biome-ignore lint/suspicious/noExplicitAny: vendor solid-js
+	const [windowState, setWindowState] = createSignal<any>(window.history.state);
+	const interval = setInterval(() => {
+		const state = window.history.state;
+		if (state !== windowState()) {
+			setWindowState(state);
+		}
+	}, 100);
+
+	onCleanup(() => clearInterval(interval));
+
+	return windowState;
+});
 
 export const useLocation = <S = unknown>() =>
 	createLocation(windowLocation, windowState) as Location<S>;

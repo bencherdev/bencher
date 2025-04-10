@@ -1,15 +1,15 @@
-import { createSignal } from "solid-js";
+import * as Sentry from "@sentry/astro";
+import type { Params } from "astro";
+import { createRoot, createSignal, onCleanup } from "solid-js";
 import {
-	ProjectPermission,
 	type JsonAuthUser,
 	OrganizationPermission,
+	ProjectPermission,
 } from "../types/bencher";
-import { validUser } from "./valid";
-import { httpGet } from "./http";
-import type { Params } from "astro";
 import { dateTimeMillis } from "./convert";
+import { httpGet } from "./http";
 import { removeOrganization } from "./organization";
-import * as Sentry from "@sentry/astro";
+import { validUser } from "./valid";
 
 const BENCHER_USER_KEY: string = "BENCHER_USER";
 
@@ -61,23 +61,27 @@ export const removeUser = () => {
 	localStorage.removeItem(BENCHER_USER_KEY);
 };
 
-const [authUsr, setAuthUsr] = createSignal<JsonAuthUser>(getUserRaw());
-setInterval(() => {
-	const usr = authUsr();
-	const userRaw = getUserRaw();
-	if (usr.toString() !== userRaw.toString()) {
-		setAuthUsr(userRaw);
-	} else if (
-		userRaw?.token &&
-		(dateTimeMillis(userRaw?.expiration) ?? 0) < Date.now()
-	) {
-		removeUser();
-		removeOrganization();
-		setAuthUsr(defaultUser);
-	}
-}, 100);
+export const authUser = createRoot(() => {
+	const [authUser, setAuthUser] = createSignal<JsonAuthUser>(getUserRaw());
+	const interval = setInterval(() => {
+		const usr = authUser();
+		const userRaw = getUserRaw();
+		if (usr.toString() !== userRaw.toString()) {
+			setAuthUser(userRaw);
+		} else if (
+			userRaw?.token &&
+			(dateTimeMillis(userRaw?.expiration) ?? 0) < Date.now()
+		) {
+			removeUser();
+			removeOrganization();
+			setAuthUser(defaultUser);
+		}
+	}, 100);
 
-export const authUser = authUsr;
+	onCleanup(() => clearInterval(interval));
+
+	return authUser;
+});
 
 export const isAllowedOrganization = async (
 	apiUrl: string,
@@ -111,7 +115,7 @@ export const isAllowed = async (
 	hostname: string,
 	pathname: string,
 ): Promise<boolean> => {
-	const token = authUsr().token;
+	const token = authUser().token;
 	if (!token) {
 		return false;
 	}
@@ -154,6 +158,6 @@ export const isAllowedProjectManage = (apiUrl: string, params: Params) =>
 	isAllowedProject(apiUrl, params, ProjectPermission.Manage);
 
 export const isSameUser = (_apiUrl: string, params: Params) =>
-	params?.user === authUsr().user.uuid ||
-	params?.user === authUsr().user.slug ||
-	authUsr().user.admin;
+	params?.user === authUser().user.uuid ||
+	params?.user === authUser().user.slug ||
+	authUser().user.admin;
