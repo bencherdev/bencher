@@ -28,7 +28,7 @@ export const OperatingSystemButtons = (props: {
 				handleOs={props.handleOs}
 			/>
 			<OperatingSystemButton
-				name="MacOS"
+				name="macOS"
 				icon="fab fa-apple"
 				operating_system={OperatingSystem.MacOS}
 				os={props.os}

@@ -269,7 +269,7 @@ jobs:
 
 Supported Operating Systems:
 - Linux (x86_64 & ARM64)
-- MacOS (x86_64 & ARM64)
+- macOS (x86_64 & ARM64)
 - Windows (x86_64 & ARM64)
 
 <br />
