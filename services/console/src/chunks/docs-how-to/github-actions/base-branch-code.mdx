@@ -15,7 +15,7 @@ jobs:
       - name: Track base branch benchmarks with Bencher
         run: |
           bencher run \
-          --project save-walter-white-1234abcd \
+          --project project-abc4567-wxyz123456789 \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch main \
           --testbed ubuntu-latest \

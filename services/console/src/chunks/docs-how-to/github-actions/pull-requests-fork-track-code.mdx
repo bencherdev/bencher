@@ -38,7 +38,7 @@ jobs:
       - name: Track Benchmarks with Bencher
         run: |
           bencher run \
-          --project save-walter-white-1234abcd \
+          --project project-abc4567-wxyz123456789 \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch "$PR_HEAD" \
           --start-point "$PR_BASE" \

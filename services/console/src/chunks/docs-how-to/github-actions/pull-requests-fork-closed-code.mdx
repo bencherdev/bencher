@@ -13,7 +13,7 @@ jobs:
       - name: Archive closed fork PR branch with Bencher
         run: |
           bencher archive \
-          --project save-walter-white-1234abcd \
+          --project project-abc4567-wxyz123456789 \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch "$GITHUB_HEAD_REF"
 ```

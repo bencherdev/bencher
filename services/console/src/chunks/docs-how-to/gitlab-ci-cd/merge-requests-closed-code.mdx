@@ -13,7 +13,7 @@ archive_mr_branch:
     - |
       if [ "$MR_STATE" = "closed" ]; then
         bencher archive \
-        --project save-walter-white-1234abcd \
+        --project project-abc4567-wxyz123456789 \
         --token "$BENCHER_API_TOKEN" \
         --branch "$CI_COMMIT_REF_NAME"
       else
