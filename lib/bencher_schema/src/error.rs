@@ -158,6 +158,17 @@ where
     ))
 }
 
+pub fn too_many_requests<E>(error: E) -> HttpError
+where
+    E: fmt::Display,
+{
+    cors_headers(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::TOO_MANY_REQUESTS,
+        error.to_string(),
+    ))
+}
+
 pub fn resource_not_found_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
 where
     V: fmt::Debug,

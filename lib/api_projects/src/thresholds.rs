@@ -285,13 +285,14 @@ async fn post_inner(
 
     // Create the new threshold
     let threshold_id = InsertThreshold::from_model(
-        conn_lock!(context),
+        context,
         project_id,
         branch_id,
         testbed_id,
         measure_id,
         json_threshold.model,
-    )?;
+    )
+    .await?;
 
     // Get the new threshold
     let query_threshold = schema::threshold::table

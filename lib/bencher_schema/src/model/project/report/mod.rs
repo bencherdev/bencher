@@ -74,6 +74,8 @@ impl QueryReport {
         mut json_report: JsonNewReport,
         auth_user: Option<&AuthUser>,
     ) -> Result<JsonReport, HttpError> {
+        InsertReport::rate_limit(context, query_project.id).await?;
+
         // Check to see if the project is public or private
         // If private, then validate that there is an active subscription or license
         #[cfg(feature = "plus")]
@@ -459,6 +461,9 @@ pub struct InsertReport {
 }
 
 impl InsertReport {
+    #[cfg(feature = "plus")]
+    crate::model::rate_limit::fn_rate_limit!(report, Report);
+
     pub fn from_json(
         user_id: Option<UserId>,
         project_id: ProjectId,

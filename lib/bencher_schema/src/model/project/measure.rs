@@ -142,6 +142,8 @@ impl QueryMeasure {
         project_id: ProjectId,
         json_measure: JsonNewMeasure,
     ) -> Result<Self, HttpError> {
+        InsertMeasure::rate_limit(context, project_id).await?;
+
         let insert_measure =
             InsertMeasure::from_json(conn_lock!(context), project_id, json_measure);
         diesel::insert_into(schema::measure::table)
@@ -197,15 +199,14 @@ pub struct InsertMeasure {
 }
 
 impl InsertMeasure {
+    #[cfg(feature = "plus")]
+    crate::model::rate_limit::fn_rate_limit!(measure, Measure);
+
     pub fn from_measure<T: BuiltInMeasure>(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json(conn, project_id, T::new_json())
     }
 
-    pub fn from_json(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        measure: JsonNewMeasure,
-    ) -> Self {
+    fn from_json(conn: &mut DbConnection, project_id: ProjectId, measure: JsonNewMeasure) -> Self {
         let JsonNewMeasure { name, slug, units } = measure;
         let slug = ok_slug!(conn, project_id, &name, slug, measure, QueryMeasure);
         let timestamp = DateTime::now();

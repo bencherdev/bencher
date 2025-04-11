@@ -265,9 +265,9 @@ impl QueryOrganization {
         use crate::model::project::metric::QueryMetric;
 
         const DAY: Duration = Duration::from_secs(24 * 60 * 60);
-        let now = chrono::Utc::now();
-        let start_time = now - DAY;
-        QueryMetric::usage(conn, self.id, start_time.into(), now.into())
+        let end_time = chrono::Utc::now();
+        let start_time = end_time - DAY;
+        QueryMetric::usage(conn, self.id, start_time.into(), end_time.into())
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {

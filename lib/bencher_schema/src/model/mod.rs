@@ -1,5 +1,7 @@
 pub mod organization;
 pub mod project;
+#[cfg(feature = "plus")]
+mod rate_limit;
 pub mod server;
 pub mod user;
 

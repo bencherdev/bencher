@@ -138,7 +138,7 @@ impl QueryBranch {
                 start_point: start_point.cloned().and_then(Into::into),
             },
         };
-        InsertBranch::from_json(log, context, project_id, branch).await
+        Self::create_with_head(log, context, project_id, branch).await
     }
 
     pub async fn create(
@@ -148,10 +148,20 @@ impl QueryBranch {
         json_branch: JsonNewBranch,
     ) -> Result<Self, HttpError> {
         Ok(
-            InsertBranch::from_json(log, context, project_id, json_branch)
+            Self::create_with_head(log, context, project_id, json_branch)
                 .await?
                 .0,
         )
+    }
+
+    async fn create_with_head(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        json_branch: JsonNewBranch,
+    ) -> Result<(Self, QueryHead), HttpError> {
+        InsertBranch::rate_limit(context, project_id).await?;
+        InsertBranch::from_json(log, context, project_id, json_branch).await
     }
 
     pub async fn update_start_point_if_changed(
@@ -342,27 +352,10 @@ pub struct InsertBranch {
 }
 
 impl InsertBranch {
-    pub fn new(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        name: BranchName,
-        slug: Option<Slug>,
-    ) -> Self {
-        let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch);
-        let timestamp = DateTime::now();
-        Self {
-            uuid: BranchUuid::new(),
-            project_id,
-            name,
-            slug,
-            head_id: None,
-            created: timestamp,
-            modified: timestamp,
-            archived: None,
-        }
-    }
+    #[cfg(feature = "plus")]
+    crate::model::rate_limit::fn_rate_limit!(branch, Branch);
 
-    pub async fn from_json(
+    async fn from_json(
         log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
@@ -375,7 +368,7 @@ impl InsertBranch {
         } = branch;
 
         // Create branch
-        let insert_branch = Self::new(conn_lock!(context), project_id, name, slug);
+        let insert_branch = Self::from_json_inner(conn_lock!(context), project_id, name, slug);
         diesel::insert_into(schema::branch::table)
             .values(&insert_branch)
             .execute(conn_lock!(context))
@@ -402,6 +395,26 @@ impl InsertBranch {
         slog::debug!(log, "Using start point {branch_start_point:?}");
 
         InsertHead::for_branch(log, context, query_branch, branch_start_point.as_ref()).await
+    }
+
+    fn from_json_inner(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        name: BranchName,
+        slug: Option<Slug>,
+    ) -> Self {
+        let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch);
+        let timestamp = DateTime::now();
+        Self {
+            uuid: BranchUuid::new(),
+            project_id,
+            name,
+            slug,
+            head_id: None,
+            created: timestamp,
+            modified: timestamp,
+            archived: None,
+        }
     }
 
     pub async fn main(

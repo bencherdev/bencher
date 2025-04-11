@@ -98,6 +98,8 @@ impl QueryBenchmark {
         project_id: ProjectId,
         json_benchmark: JsonNewBenchmark,
     ) -> Result<Self, HttpError> {
+        InsertBenchmark::rate_limit(context, project_id).await?;
+
         let insert_benchmark =
             InsertBenchmark::from_json(conn_lock!(context), project_id, json_benchmark);
         diesel::insert_into(schema::benchmark::table)
@@ -150,7 +152,10 @@ pub struct InsertBenchmark {
 }
 
 impl InsertBenchmark {
-    pub fn from_json(
+    #[cfg(feature = "plus")]
+    crate::model::rate_limit::fn_rate_limit!(benchmark, Benchmark);
+
+    fn from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
         benchmark: JsonNewBenchmark,

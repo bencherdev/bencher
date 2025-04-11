@@ -99,6 +99,8 @@ impl QueryTestbed {
         project_id: ProjectId,
         json_testbed: JsonNewTestbed,
     ) -> Result<Self, HttpError> {
+        InsertTestbed::rate_limit(context, project_id).await?;
+
         let insert_testbed =
             InsertTestbed::from_json(conn_lock!(context), project_id, json_testbed);
         diesel::insert_into(schema::testbed::table)
@@ -151,11 +153,10 @@ pub struct InsertTestbed {
 }
 
 impl InsertTestbed {
-    pub fn from_json(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        testbed: JsonNewTestbed,
-    ) -> Self {
+    #[cfg(feature = "plus")]
+    crate::model::rate_limit::fn_rate_limit!(testbed, Testbed);
+
+    fn from_json(conn: &mut DbConnection, project_id: ProjectId, testbed: JsonNewTestbed) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
         let slug = ok_slug!(conn, project_id, &name, slug, testbed, QueryTestbed);
         let timestamp = DateTime::now();

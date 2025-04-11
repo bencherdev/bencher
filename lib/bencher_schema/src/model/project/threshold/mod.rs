@@ -277,6 +277,9 @@ pub struct InsertThreshold {
 }
 
 impl InsertThreshold {
+    #[cfg(feature = "plus")]
+    crate::model::rate_limit::fn_rate_limit!(threshold, Threshold);
+
     pub fn new(
         project_id: ProjectId,
         branch_id: BranchId,
@@ -296,7 +299,26 @@ impl InsertThreshold {
         }
     }
 
-    pub fn from_model(
+    pub async fn from_model(
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch_id: BranchId,
+        testbed_id: TestbedId,
+        measure_id: MeasureId,
+        model: Model,
+    ) -> Result<ThresholdId, HttpError> {
+        Self::rate_limit(context, project_id).await?;
+        Self::from_model_inner(
+            conn_lock!(context),
+            project_id,
+            branch_id,
+            testbed_id,
+            measure_id,
+            model,
+        )
+    }
+
+    fn from_model_inner(
         conn: &mut DbConnection,
         project_id: ProjectId,
         branch_id: BranchId,
@@ -343,7 +365,7 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_model(
+        Self::from_model_inner(
             conn,
             project_id,
             branch_id,
@@ -360,7 +382,7 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_model(
+        Self::from_model_inner(
             conn,
             project_id,
             branch_id,
@@ -446,13 +468,14 @@ impl InsertThreshold {
                     "Creating new threshold from start point ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
                 );
                 Self::from_model(
-                    conn_lock!(context),
+                    context,
                     query_branch.project_id,
                     query_branch.id,
                     start_point_testbed_id,
                     start_point_measure_id,
                     start_point_model,
-                )?;
+                )
+                .await?;
                 slog::debug!(
                     log,
                     "Created new threshold from start point ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
@@ -485,6 +508,8 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         json_thresholds: Option<JsonReportThresholds>,
     ) -> Result<(), HttpError> {
+        Self::rate_limit(context, project_id).await?;
+
         let Some(json_thresholds) = json_thresholds else {
             slog::debug!(log, "No thresholds in report");
             return Ok(());
@@ -527,13 +552,9 @@ impl InsertThreshold {
                 } else {
                     slog::debug!(log, "Creating threshold for measure {measure_id}");
                     Self::from_model(
-                        conn_lock!(context),
-                        project_id,
-                        branch_id,
-                        testbed_id,
-                        measure_id,
-                        model,
-                    )?;
+                        context, project_id, branch_id, testbed_id, measure_id, model,
+                    )
+                    .await?;
                     slog::debug!(log, "Created threshold for measure {measure_id}");
                 }
             }
