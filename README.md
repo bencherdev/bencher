@@ -53,6 +53,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [Self-Hosted Quick Start](https://bencher.dev/docs/tutorial/docker/)
 - How To
   - [Install CLI](https://bencher.dev/docs/how-to/install-cli/)
+  - [Claim Benchmark Results](https://bencher.dev/docs/how-to/claim/)
   - [Track Benchmarks in CI](https://bencher.dev/docs/how-to/track-benchmarks/)
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions/)
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd/)
