@@ -74,6 +74,7 @@ impl QueryReport {
         mut json_report: JsonNewReport,
         auth_user: Option<&AuthUser>,
     ) -> Result<JsonReport, HttpError> {
+        #[cfg(feature = "plus")]
         InsertReport::rate_limit(context, query_project.id).await?;
 
         // Check to see if the project is public or private

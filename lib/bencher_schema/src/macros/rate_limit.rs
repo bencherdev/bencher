@@ -4,7 +4,7 @@ use bencher_json::DateTime;
 
 use crate::{
     error::BencherResource,
-    model::{project::QueryProject, user::QueryUser},
+    model::{organization::QueryOrganization, project::QueryProject, user::QueryUser},
 };
 
 pub const DAY: Duration = Duration::from_secs(24 * 60 * 60);
@@ -13,6 +13,11 @@ pub const CLAIMED_RATE_LIMIT: u32 = u16::MAX as u32;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RateLimitError {
+    #[error("Organization ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = organization.uuid)]
+    ProjectCreation {
+        organization: QueryOrganization,
+        resource: BencherResource,
+    },
     #[error("Unclaimed project ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage or claim the project: https://bencher.dev/auth/signup?claim={uuid}", uuid = project.uuid)]
     UnclaimedCreation {
         project: QueryProject,
@@ -23,7 +28,7 @@ pub enum RateLimitError {
         project: QueryProject,
         resource: BencherResource,
     },
-    #[error("User ({uuid}) has exceeded the daily rate limit ({CLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
+    #[error("User ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
     TokenCreation {
         user: QueryUser,
         resource: BencherResource,

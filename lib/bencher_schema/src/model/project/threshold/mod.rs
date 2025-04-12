@@ -307,6 +307,7 @@ impl InsertThreshold {
         measure_id: MeasureId,
         model: Model,
     ) -> Result<ThresholdId, HttpError> {
+        #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
         Self::from_model_inner(
             conn_lock!(context),
@@ -508,6 +509,7 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         json_thresholds: Option<JsonReportThresholds>,
     ) -> Result<(), HttpError> {
+        #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
 
         let Some(json_thresholds) = json_thresholds else {

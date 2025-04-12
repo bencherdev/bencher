@@ -142,6 +142,7 @@ impl QueryMeasure {
         project_id: ProjectId,
         json_measure: JsonNewMeasure,
     ) -> Result<Self, HttpError> {
+        #[cfg(feature = "plus")]
         InsertMeasure::rate_limit(context, project_id).await?;
 
         let insert_measure =

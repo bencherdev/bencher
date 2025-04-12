@@ -99,6 +99,7 @@ impl QueryTestbed {
         project_id: ProjectId,
         json_testbed: JsonNewTestbed,
     ) -> Result<Self, HttpError> {
+        #[cfg(feature = "plus")]
         InsertTestbed::rate_limit(context, project_id).await?;
 
         let insert_testbed =

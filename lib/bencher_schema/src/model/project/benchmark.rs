@@ -98,6 +98,7 @@ impl QueryBenchmark {
         project_id: ProjectId,
         json_benchmark: JsonNewBenchmark,
     ) -> Result<Self, HttpError> {
+        #[cfg(feature = "plus")]
         InsertBenchmark::rate_limit(context, project_id).await?;
 
         let insert_benchmark =

@@ -160,6 +160,7 @@ impl QueryBranch {
         project_id: ProjectId,
         json_branch: JsonNewBranch,
     ) -> Result<(Self, QueryHead), HttpError> {
+        #[cfg(feature = "plus")]
         InsertBranch::rate_limit(context, project_id).await?;
         InsertBranch::from_json(log, context, project_id, json_branch).await
     }

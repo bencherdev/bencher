@@ -150,6 +150,8 @@ impl QueryProject {
         if let Some(auth_user) = auth_user {
             let query_organization =
                 QueryOrganization::get_or_create_from_user(context, auth_user).await?;
+            #[cfg(feature = "plus")]
+            InsertProject::rate_limit(conn_lock!(context), &query_organization)?;
             // The choice was either to relax the schema constraint to allow duplicate project names
             // or to append a number to the project name to ensure uniqueness.
             let name = Self::unique_name(log, context, &query_organization, project_name).await?;
@@ -174,6 +176,10 @@ impl QueryProject {
                 &project_slug,
             )
             .await?;
+            // In most cases, there should only ever be one on-the-fly project here,
+            // but check the rate limit just in case.
+            #[cfg(feature = "plus")]
+            InsertProject::rate_limit(conn_lock!(context), &query_organization)?;
             // Currently, there is no semantic importance to having the organization and project have the same UUID.
             // However, it seems like a good idea to keep them in sync for now.
             // It makes identifying on-the-fly unclaimed projects easier, even after they have been claimed.
@@ -492,6 +498,43 @@ pub struct InsertProject {
 }
 
 impl InsertProject {
+    #[cfg(feature = "plus")]
+    pub fn rate_limit(
+        conn: &mut DbConnection,
+        query_organization: &QueryOrganization,
+    ) -> Result<(), HttpError> {
+        use crate::macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT};
+
+        let resource = BencherResource::Project;
+        let (start_time, end_time) = one_day();
+        let creation_count: u32 = schema::project::table
+                .filter(schema::project::organization_id.eq(query_organization.id))
+                .filter(schema::project::created.ge(start_time))
+                .filter(schema::project::created.le(end_time))
+                .count()
+                .get_result::<i64>(conn)
+                .map_err(resource_not_found_err!(Token, (query_organization, start_time, end_time)))?
+                .try_into()
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to count creation",
+                        &format!("Failed to count {resource} creation for organization ({uuid}) between {start_time} and {end_time}.", uuid = query_organization.uuid),
+                    e
+                    )}
+                )?;
+
+        if creation_count >= UNCLAIMED_RATE_LIMIT {
+            Err(crate::error::too_many_requests(
+                RateLimitError::ProjectCreation {
+                    organization: query_organization.clone(),
+                    resource,
+                },
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn new(
         organization_id: OrganizationId,
         name: ResourceName,

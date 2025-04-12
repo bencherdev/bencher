@@ -210,6 +210,8 @@ async fn post_inner(
 ) -> Result<JsonProject, HttpError> {
     let query_organization =
         QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+    #[cfg(feature = "plus")]
+    InsertProject::rate_limit(conn_lock!(context), &query_organization)?;
 
     if let Some(visibility) = json_project.visibility {
         // Check project visibility
