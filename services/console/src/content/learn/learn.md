@@ -58,6 +58,13 @@
 - Why use a black box when benchmarking?
   - I'm confused about the part where you use the black box for the benchmark function. Is there a reason to profile unoptimized code?
 
+## Keywords from users
+- benchmarks history
+- upload benchmarks
+- chart benchmarks results
+- save benchmark results for every commit and have a dashboard to visualize them over time
+- "benchmark data visualization tools" and "software benchmark tooling".
+
 ## Continuous Benchmarking
 - The Ultimate Guide to Continuous Benchmarking
     - https://launchdarkly.com/the-definitive-guide-to-feature-management/
