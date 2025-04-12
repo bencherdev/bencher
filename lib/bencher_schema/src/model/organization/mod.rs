@@ -119,7 +119,7 @@ impl QueryOrganization {
         auth_user: &AuthUser,
         insert_organization: InsertOrganization,
     ) -> Result<Self, HttpError> {
-        InsertOrganization::rate_limit(conn_lock!(context), auth_user)?;
+        InsertOrganization::rate_limit(context, auth_user).await?;
         let query_organization = Self::create_inner(context, insert_organization).await?;
 
         let timestamp = DateTime::now();
@@ -304,7 +304,7 @@ pub struct InsertOrganization {
 
 impl InsertOrganization {
     #[cfg(feature = "plus")]
-    pub fn rate_limit(conn: &mut DbConnection, query_user: &QueryUser) -> Result<(), HttpError> {
+    pub async fn rate_limit(context: &ApiContext, query_user: &QueryUser) -> Result<(), HttpError> {
         use crate::macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT};
 
         let resource = BencherResource::Project;
@@ -315,7 +315,7 @@ impl InsertOrganization {
                 .filter(schema::organization::created.ge(start_time))
                 .filter(schema::organization::created.le(end_time))
                 .count()
-                .get_result::<i64>(conn)
+                .get_result::<i64>(conn_lock!(context))
                 .map_err(resource_not_found_err!(Token, (query_user, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {

@@ -94,8 +94,14 @@ pub struct InsertToken {
 
 impl InsertToken {
     #[cfg(feature = "plus")]
-    pub fn rate_limit(conn: &mut DbConnection, query_user: &QueryUser) -> Result<(), HttpError> {
-        use crate::macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT};
+    pub async fn rate_limit(
+        context: &crate::ApiContext,
+        query_user: &QueryUser,
+    ) -> Result<(), HttpError> {
+        use crate::{
+            conn_lock,
+            macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT},
+        };
 
         let resource = BencherResource::Token;
         let (start_time, end_time) = one_day();
@@ -104,7 +110,7 @@ impl InsertToken {
                 .filter(schema::token::creation.ge(start_time))
                 .filter(schema::token::creation.le(end_time))
                 .count()
-                .get_result::<i64>(conn)
+                .get_result::<i64>(conn_lock!(context))
                 .map_err(resource_not_found_err!(Token, (query_user, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {

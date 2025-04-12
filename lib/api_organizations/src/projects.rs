@@ -211,7 +211,7 @@ async fn post_inner(
     let query_organization =
         QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
     #[cfg(feature = "plus")]
-    InsertProject::rate_limit(conn_lock!(context), &query_organization)?;
+    InsertProject::rate_limit(context, &query_organization).await?;
 
     if let Some(visibility) = json_project.visibility {
         // Check project visibility
