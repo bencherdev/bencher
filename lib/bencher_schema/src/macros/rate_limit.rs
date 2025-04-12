@@ -1,52 +1,3 @@
-use crate::{
-    error::BencherResource,
-    model::{
-        organization::QueryOrganization,
-        project::{branch::QueryBranch, threshold::QueryThreshold, QueryProject},
-        user::QueryUser,
-    },
-};
-
-#[derive(Debug, thiserror::Error)]
-pub enum RateLimitError {
-    #[error("User ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
-    User {
-        user: QueryUser,
-        resource: BencherResource,
-        rate_limit: u32,
-    },
-    #[error("Organization ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = organization.uuid)]
-    Organization {
-        organization: QueryOrganization,
-        resource: BencherResource,
-        rate_limit: u32,
-    },
-    #[error("Unclaimed project ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage or claim the project: https://bencher.dev/auth/signup?claim={uuid}", uuid = project.uuid)]
-    UnclaimedProject {
-        project: QueryProject,
-        resource: BencherResource,
-        rate_limit: u32,
-    },
-    #[error("Claimed project ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = project.uuid)]
-    ClaimedProject {
-        project: QueryProject,
-        resource: BencherResource,
-        rate_limit: u32,
-    },
-    #[error("Branch ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = branch.uuid)]
-    Branch {
-        branch: QueryBranch,
-        resource: BencherResource,
-        rate_limit: u32,
-    },
-    #[error("Threshold ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = threshold.uuid)]
-    Threshold {
-        threshold: QueryThreshold,
-        resource: BencherResource,
-        rate_limit: u32,
-    },
-}
-
 #[macro_export]
 macro_rules! fn_rate_limit {
     ($table:ident, $resource:ident) => {
@@ -80,7 +31,7 @@ macro_rules! fn_rate_limit {
                     if creation_count >= context.rate_limit.unclaimed =>
                 {
                     Err($crate::error::too_many_requests(
-                        $crate::macros::rate_limit::RateLimitError::UnclaimedProject {
+                        $crate::context::RateLimitError::UnclaimedProject {
                             project: query_project,
                             resource: $crate::error::BencherResource::$resource,
                             rate_limit: context.rate_limit.unclaimed,
@@ -91,7 +42,7 @@ macro_rules! fn_rate_limit {
                     if creation_count >= context.rate_limit.claimed =>
                 {
                     Err($crate::error::too_many_requests(
-                        $crate::macros::rate_limit::RateLimitError::ClaimedProject {
+                        $crate::context::RateLimitError::ClaimedProject {
                             project: query_project,
                             resource: $crate::error::BencherResource::$resource,
                             rate_limit: context.rate_limit.claimed,

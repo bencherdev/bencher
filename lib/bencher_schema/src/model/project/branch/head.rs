@@ -206,7 +206,7 @@ impl InsertHead {
         context: &ApiContext,
         query_branch: &QueryBranch,
     ) -> Result<(), HttpError> {
-        use crate::{error::BencherResource, macros::rate_limit::RateLimitError};
+        use crate::{context::RateLimitError, error::BencherResource};
 
         let resource = BencherResource::Head;
         let (start_time, end_time) = context.rate_limit.window();

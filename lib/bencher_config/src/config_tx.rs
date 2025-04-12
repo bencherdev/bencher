@@ -13,7 +13,7 @@ use bencher_json::{
 use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
-use bencher_schema::model::server::QueryServer;
+use bencher_schema::{context::RateLimit, model::server::QueryServer};
 use bencher_token::TokenKey;
 #[cfg(feature = "plus")]
 use diesel::connection::SimpleConnection;
@@ -52,6 +52,8 @@ pub enum ConfigTxError {
     DatabaseConnection(String, diesel::ConnectionError),
     #[error("Failed to parse data store: {0}")]
     DataStore(bencher_schema::context::DataStoreError),
+    #[error("Failed to configure rate limits: {0}")]
+    RateLimit(Box<bencher_schema::context::RateLimitError>),
     #[error("Failed to register endpoint: {0}")]
     Register(dropshot::ApiDescriptionRegisterError),
     #[error("Failed to create server: {0}")]
@@ -104,7 +106,8 @@ impl ConfigTx {
             restart_tx,
             #[cfg(feature = "plus")]
             plus,
-        )?;
+        )
+        .await?;
         debug!(log, "Configuring TLS");
         let tls = server.tls.take().map(|json_tls| match json_tls {
             JsonTls::AsFile {
@@ -158,7 +161,7 @@ impl ConfigTx {
     }
 }
 
-fn into_context(
+async fn into_context(
     log: &Logger,
     console: JsonConsole,
     security: JsonSecurity,
@@ -190,6 +193,12 @@ fn into_context(
         None
     };
 
+    let database = Database {
+        path: json_database.file,
+        connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
+        data_store,
+    };
+
     info!(&log, "Loading secret key");
     let token_key = TokenKey::new(
         security.issuer.unwrap_or_else(|| console_url.to_string()),
@@ -197,10 +206,7 @@ fn into_context(
     );
 
     #[cfg(feature = "plus")]
-    let rate_limit = plus
-        .as_ref()
-        .and_then(|plus| plus.rate_limit.map(Into::into))
-        .unwrap_or_default();
+    let rate_limit = plus.as_ref().and_then(|plus| plus.rate_limit);
 
     info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
@@ -215,17 +221,25 @@ fn into_context(
     #[cfg(feature = "plus")]
     let is_bencher_cloud = bencher_json::is_bencher_cloud(&console_url) && biller.is_some();
 
+    #[cfg(feature = "plus")]
+    let rate_limit = RateLimit::new(
+        log,
+        &database.connection,
+        &licensor,
+        is_bencher_cloud,
+        rate_limit,
+    )
+    .await
+    .map_err(Box::new)
+    .map_err(ConfigTxError::RateLimit)?;
+
     debug!(&log, "Creating API context");
     Ok(ApiContext {
         console_url,
         token_key,
         rbac: init_rbac().map_err(ConfigTxError::Polar)?.into(),
         messenger: smtp.into(),
-        database: Database {
-            path: json_database.file,
-            connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
-            data_store,
-        },
+        database,
         restart_tx,
         #[cfg(feature = "plus")]
         rate_limit,

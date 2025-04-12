@@ -128,7 +128,7 @@ impl InsertModel {
         context: &crate::ApiContext,
         query_threshold: &QueryThreshold,
     ) -> Result<(), HttpError> {
-        use crate::{conn_lock, error::issue_error, macros::rate_limit::RateLimitError};
+        use crate::{conn_lock, context::RateLimitError, error::issue_error};
 
         let resource = BencherResource::Model;
         let (start_time, end_time) = context.rate_limit.window();

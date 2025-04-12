@@ -98,7 +98,7 @@ impl InsertToken {
         context: &crate::ApiContext,
         query_user: &QueryUser,
     ) -> Result<(), HttpError> {
-        use crate::{conn_lock, macros::rate_limit::RateLimitError};
+        use crate::{conn_lock, context::RateLimitError};
 
         let resource = BencherResource::Token;
         let (start_time, end_time) = context.rate_limit.window();

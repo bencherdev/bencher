@@ -306,7 +306,7 @@ pub struct InsertOrganization {
 impl InsertOrganization {
     #[cfg(feature = "plus")]
     pub async fn rate_limit(context: &ApiContext, query_user: &QueryUser) -> Result<(), HttpError> {
-        use crate::macros::rate_limit::RateLimitError;
+        use crate::context::RateLimitError;
 
         let resource = BencherResource::Organization;
         let (start_time, end_time) = context.rate_limit.window();

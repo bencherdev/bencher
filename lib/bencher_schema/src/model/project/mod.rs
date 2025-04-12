@@ -503,7 +503,7 @@ impl InsertProject {
         context: &ApiContext,
         query_organization: &QueryOrganization,
     ) -> Result<(), HttpError> {
-        use crate::macros::rate_limit::RateLimitError;
+        use crate::context::RateLimitError;
 
         let resource = BencherResource::Project;
         let (start_time, end_time) = context.rate_limit.window();
