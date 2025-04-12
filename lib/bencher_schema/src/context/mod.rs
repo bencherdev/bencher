@@ -14,6 +14,8 @@ use crate::model::project::QueryProject;
 mod database;
 mod indexer;
 mod messenger;
+#[cfg(feature = "plus")]
+mod rate_limit;
 mod rbac;
 #[cfg(feature = "plus")]
 mod stats;
@@ -24,6 +26,8 @@ pub use indexer::{IndexError, Indexer};
 #[cfg(feature = "plus")]
 pub use messenger::ServerStatsBody;
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
+#[cfg(feature = "plus")]
+pub use rate_limit::RateLimit;
 pub use rbac::{Rbac, RbacError};
 #[cfg(feature = "plus")]
 pub use stats::StatsSettings;
@@ -35,6 +39,8 @@ pub struct ApiContext {
     pub messenger: Messenger,
     pub database: Database,
     pub restart_tx: Sender<()>,
+    #[cfg(feature = "plus")]
+    pub rate_limit: RateLimit,
     #[cfg(feature = "plus")]
     pub github: Option<GitHub>,
     #[cfg(feature = "plus")]

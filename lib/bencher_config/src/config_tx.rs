@@ -196,6 +196,12 @@ fn into_context(
         &security.secret_key,
     );
 
+    #[cfg(feature = "plus")]
+    let rate_limit = plus
+        .as_ref()
+        .and_then(|plus| plus.rate_limit.map(Into::into))
+        .unwrap_or_default();
+
     info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
     let Plus {
@@ -221,6 +227,8 @@ fn into_context(
             data_store,
         },
         restart_tx,
+        #[cfg(feature = "plus")]
+        rate_limit,
         #[cfg(feature = "plus")]
         github,
         #[cfg(feature = "plus")]

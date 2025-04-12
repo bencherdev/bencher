@@ -81,7 +81,7 @@ impl QueryReport {
         // If private, then validate that there is an active subscription or license
         #[cfg(feature = "plus")]
         let plan_kind = PlanKind::new_for_project(
-            conn_lock!(context),
+            context,
             context.biller.as_ref(),
             &context.licensor,
             query_project,

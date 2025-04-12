@@ -206,13 +206,10 @@ impl InsertHead {
         context: &ApiContext,
         query_branch: &QueryBranch,
     ) -> Result<(), HttpError> {
-        use crate::{
-            error::BencherResource,
-            macros::rate_limit::{one_day, RateLimitError, CLAIMED_RATE_LIMIT},
-        };
+        use crate::{error::BencherResource, macros::rate_limit::RateLimitError};
 
         let resource = BencherResource::Head;
-        let (start_time, end_time) = one_day();
+        let (start_time, end_time) = context.rate_limit.window();
         let creation_count: u32 = schema::head::table
                 .filter(schema::head::branch_id.eq(query_branch.id))
                 .filter(schema::head::created.ge(start_time))
@@ -233,10 +230,12 @@ impl InsertHead {
         // or by updating an existing branch using the API.
         // The running of a Report will be rate limited already for unclaimed projects,
         // and the API endpoint to update an existing branch would require authentication and would therefore be a claimed project.
-        if creation_count >= CLAIMED_RATE_LIMIT {
+        let rate_limit = context.rate_limit.claimed;
+        if creation_count >= rate_limit {
             Err(crate::error::too_many_requests(RateLimitError::Branch {
                 branch: query_branch.clone(),
                 resource,
+                rate_limit,
             }))
         } else {
             Ok(())

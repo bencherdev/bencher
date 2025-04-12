@@ -10,6 +10,7 @@ use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use crate::{
+    conn_lock,
     context::DbConnection,
     error::{
         issue_error, not_found_error, payment_required_error, resource_conflict_err,
@@ -20,10 +21,8 @@ use crate::{
         project::{metric::QueryMetric, QueryProject},
     },
     schema::{self, plan as plan_table},
+    ApiContext,
 };
-
-const UNCLAIMED_MAX_USAGE: u32 = u8::MAX as u32;
-const CLAIMED_MAX_USAGE: u32 = u16::MAX as u32;
 
 crate::macros::typed_id::typed_id!(PlanId);
 
@@ -89,7 +88,7 @@ impl QueryPlan {
     }
 
     pub async fn get_active_metered_plan(
-        conn: &mut DbConnection,
+        context: &ApiContext,
         biller: Option<&Biller>,
         query_organization: &QueryOrganization,
     ) -> Result<Option<MeteredPlanId>, HttpError> {
@@ -97,7 +96,8 @@ impl QueryPlan {
             return Ok(None);
         };
 
-        let Ok(query_plan) = Self::belonging_to(&query_organization).first::<QueryPlan>(conn)
+        let Ok(query_plan) =
+            Self::belonging_to(&query_organization).first::<QueryPlan>(conn_lock!(context))
         else {
             return Ok(None);
         };
@@ -231,10 +231,16 @@ pub enum PlanKindError {
         entitlements: Entitlements,
         usage: u32,
     },
-    #[error("Unclaimed organization ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_MAX_USAGE}). Please, reduce your daily usage or claim the organization: https://bencher.dev/auth/signup?claim={uuid}", uuid = organization.uuid)]
-    UnclaimedUsage { organization: QueryOrganization },
-    #[error("No plan (subscription or license) found for claimed organization ({uuid}) that exceeds the daily rate limit ({CLAIMED_MAX_USAGE}). Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", uuid = organization.uuid)]
-    ClaimedUsage { organization: QueryOrganization },
+    #[error("Unclaimed organization ({uuid}) has exceeded the daily rate limit ({rate_limit}). Please, reduce your daily usage or claim the organization: https://bencher.dev/auth/signup?claim={uuid}", uuid = organization.uuid)]
+    UnclaimedUsage {
+        organization: QueryOrganization,
+        rate_limit: u32,
+    },
+    #[error("No plan (subscription or license) found for claimed organization ({uuid}) that exceeds the daily rate limit ({rate_limit}). Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", uuid = organization.uuid)]
+    ClaimedUsage {
+        organization: QueryOrganization,
+        rate_limit: u32,
+    },
     #[error("No plan (subscription or license) found for organization ({uuid}) with private project", uuid = organization.uuid)]
     NoPlan { organization: QueryOrganization },
     #[error("No Biller has been configured for the server")]
@@ -250,17 +256,19 @@ pub enum PlanKindError {
 
 impl PlanKind {
     pub async fn new(
-        conn: &mut DbConnection,
+        context: &ApiContext,
         biller: Option<&Biller>,
         licensor: &Licensor,
         query_organization: &QueryOrganization,
         visibility: Visibility,
     ) -> Result<Self, HttpError> {
         if let Some(metered_plan_id) =
-            QueryPlan::get_active_metered_plan(conn, biller, query_organization).await?
+            QueryPlan::get_active_metered_plan(context, biller, query_organization).await?
         {
             Ok(Self::Metered(metered_plan_id))
-        } else if let Some(license_usage) = LicenseUsage::get(conn, licensor, query_organization)? {
+        } else if let Some(license_usage) =
+            LicenseUsage::get(&context.database.connection, licensor, query_organization).await?
+        {
             if license_usage.usage >= license_usage.entitlements.into() {
                 return Err(payment_required_error(PlanKindError::LicensePlanOverage {
                     organization: query_organization.clone(),
@@ -270,17 +278,19 @@ impl PlanKind {
             }
             Ok(Self::Licensed(license_usage))
         } else if visibility.is_public() {
-            let is_claimed = query_organization.is_claimed(conn)?;
-            let daily_usage = query_organization.daily_usage(conn)?;
+            let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
+            let daily_usage = query_organization.daily_usage(context).await?;
             match (is_claimed, daily_usage) {
-                (false, daily_usage) if daily_usage >= UNCLAIMED_MAX_USAGE => {
+                (false, daily_usage) if daily_usage >= context.rate_limit.unclaimed => {
                     Err(payment_required_error(PlanKindError::UnclaimedUsage {
                         organization: query_organization.clone(),
+                        rate_limit: context.rate_limit.unclaimed,
                     }))
                 },
-                (true, daily_usage) if daily_usage >= CLAIMED_MAX_USAGE => {
+                (true, daily_usage) if daily_usage >= context.rate_limit.claimed => {
                     Err(payment_required_error(PlanKindError::ClaimedUsage {
                         organization: query_organization.clone(),
+                        rate_limit: context.rate_limit.claimed,
                     }))
                 },
                 (_, _) => Ok(Self::None),
@@ -293,14 +303,14 @@ impl PlanKind {
     }
 
     pub async fn new_for_project(
-        conn: &mut DbConnection,
+        context: &ApiContext,
         biller: Option<&Biller>,
         licensor: &Licensor,
         project: &QueryProject,
     ) -> Result<Self, HttpError> {
-        let query_organization = project.organization(conn)?;
+        let query_organization = project.organization(conn_lock!(context))?;
         Self::new(
-            conn,
+            context,
             biller,
             licensor,
             &query_organization,
@@ -310,7 +320,7 @@ impl PlanKind {
     }
 
     pub async fn check_for_organization(
-        conn: &mut DbConnection,
+        context: &ApiContext,
         biller: Option<&Biller>,
         licensor: &Licensor,
         query_organization: &QueryOrganization,
@@ -320,12 +330,12 @@ impl PlanKind {
         if visibility.is_public() {
             return Ok(());
         }
-        Self::new(conn, biller, licensor, query_organization, visibility).await?;
+        Self::new(context, biller, licensor, query_organization, visibility).await?;
         Ok(())
     }
 
     pub async fn check_for_project(
-        conn: &mut DbConnection,
+        context: &ApiContext,
         biller: Option<&Biller>,
         licensor: &Licensor,
         query_project: &QueryProject,
@@ -335,8 +345,8 @@ impl PlanKind {
         if visibility.is_public() {
             return Ok(());
         }
-        let query_organization = query_project.organization(conn)?;
-        Self::new(conn, biller, licensor, &query_organization, visibility).await?;
+        let query_organization = query_project.organization(conn_lock!(context))?;
+        Self::new(context, biller, licensor, &query_organization, visibility).await?;
         Ok(())
     }
 
@@ -394,8 +404,8 @@ pub struct LicenseUsage {
 }
 
 impl LicenseUsage {
-    pub fn get(
-        conn: &mut DbConnection,
+    pub async fn get(
+        conn: &tokio::sync::Mutex<DbConnection>,
         licensor: &Licensor,
         query_organization: &QueryOrganization,
     ) -> Result<Option<LicenseUsage>, HttpError> {
@@ -413,7 +423,12 @@ impl LicenseUsage {
         let start_time = token_data.claims.issued_at();
         let end_time = token_data.claims.expiration();
 
-        let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
+        let usage = QueryMetric::usage(
+            &mut *conn.lock().await,
+            query_organization.id,
+            start_time,
+            end_time,
+        )?;
         let entitlements = licensor
             .validate_usage(&token_data.claims, usage)
             .map_err(payment_required_error)?;
@@ -425,24 +440,26 @@ impl LicenseUsage {
         }))
     }
 
-    pub fn get_for_server(
-        conn: &mut DbConnection,
+    pub async fn get_for_server(
+        conn: &tokio::sync::Mutex<DbConnection>,
         licensor: &Licensor,
         min_level: Option<PlanLevel>,
     ) -> Result<Vec<Self>, HttpError> {
         let min_level = min_level.unwrap_or_default();
-        Ok(schema::organization::table
-            .load::<QueryOrganization>(conn)
-            .map_err(resource_not_found_err!(Organization))?
-            .into_iter()
-            .filter_map(|query_organization| {
-                Self::get(conn, licensor, &query_organization)
-                    .ok()
-                    .flatten()
-                    .and_then(|license_usage| {
-                        (license_usage.level >= min_level).then_some(license_usage)
-                    })
-            })
-            .collect())
+        let organizations = {
+            let conn = &mut *conn.lock().await;
+            schema::organization::table
+                .load::<QueryOrganization>(conn)
+                .map_err(resource_not_found_err!(Organization))?
+        };
+        let mut license_usages = Vec::new();
+        for query_organization in organizations {
+            if let Ok(Some(license_usage)) = Self::get(conn, licensor, &query_organization).await {
+                if license_usage.level >= min_level {
+                    license_usages.push(license_usage);
+                }
+            }
+        }
+        Ok(license_usages)
     }
 }

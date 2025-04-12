@@ -128,14 +128,10 @@ impl InsertModel {
         context: &crate::ApiContext,
         query_threshold: &QueryThreshold,
     ) -> Result<(), HttpError> {
-        use crate::{
-            conn_lock,
-            error::issue_error,
-            macros::rate_limit::{one_day, RateLimitError, CLAIMED_RATE_LIMIT},
-        };
+        use crate::{conn_lock, error::issue_error, macros::rate_limit::RateLimitError};
 
         let resource = BencherResource::Model;
-        let (start_time, end_time) = one_day();
+        let (start_time, end_time) = context.rate_limit.window();
         let creation_count: u32 = schema::model::table
                 .filter(schema::model::threshold_id.eq(query_threshold.id))
                 .filter(schema::model::created.ge(start_time))
@@ -156,10 +152,12 @@ impl InsertModel {
         // or by updating an existing threshold using the API.
         // The running of a Report will be rate limited already for unclaimed projects,
         // and the API endpoint to update an existing threshold would require authentication and would therefore be a claimed project.
-        if creation_count >= CLAIMED_RATE_LIMIT {
+        let rate_limit = context.rate_limit.claimed;
+        if creation_count >= rate_limit {
             Err(crate::error::too_many_requests(RateLimitError::Threshold {
                 threshold: query_threshold.clone(),
                 resource,
+                rate_limit,
             }))
         } else {
             Ok(())

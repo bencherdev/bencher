@@ -503,10 +503,10 @@ impl InsertProject {
         context: &ApiContext,
         query_organization: &QueryOrganization,
     ) -> Result<(), HttpError> {
-        use crate::macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT};
+        use crate::macros::rate_limit::RateLimitError;
 
         let resource = BencherResource::Project;
-        let (start_time, end_time) = one_day();
+        let (start_time, end_time) = context.rate_limit.window();
         let creation_count: u32 = schema::project::table
                 .filter(schema::project::organization_id.eq(query_organization.id))
                 .filter(schema::project::created.ge(start_time))
@@ -523,11 +523,13 @@ impl InsertProject {
                     )}
                 )?;
 
-        if creation_count >= UNCLAIMED_RATE_LIMIT {
+        let rate_limit = context.rate_limit.unclaimed;
+        if creation_count >= rate_limit {
             Err(crate::error::too_many_requests(
                 RateLimitError::Organization {
                     organization: query_organization.clone(),
                     resource,
+                    rate_limit,
                 },
             ))
         } else {

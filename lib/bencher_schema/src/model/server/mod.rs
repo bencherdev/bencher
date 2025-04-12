@@ -86,12 +86,11 @@ impl QueryServer {
                 .unwrap_or(std::time::Duration::from_secs(24 * 60 * 60));
                 tokio::time::sleep(sleep_time).await;
 
-                let conn = &mut *conn.lock().await;
-
                 if enabled {
                     slog::info!(log, "Sending stats at {}", Utc::now());
                 } else if let Some(licensor) = licensor.as_ref() {
-                    match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)) {
+                    match LicenseUsage::get_for_server(&conn, licensor, Some(PlanLevel::Team)).await
+                    {
                         Ok(license_usages) if license_usages.is_empty() => {
                             violations += 1;
                             // Be kind. Allow for a seven day grace period.
@@ -117,6 +116,7 @@ impl QueryServer {
                     sentry::capture_message(err, sentry::Level::Error);
                 }
 
+                let conn = &mut *conn.lock().await;
                 let json_stats = match self.get_stats(conn, messenger.is_some()) {
                     Ok(json_stats) => json_stats,
                     Err(e) => {

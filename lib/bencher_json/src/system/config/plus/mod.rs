@@ -8,16 +8,20 @@ use serde::{Deserialize, Serialize};
 pub mod cloud;
 pub mod github;
 pub mod litestream;
+pub mod rate_limit;
 pub mod stats;
 
 pub use cloud::JsonCloud;
 pub use github::JsonGitHub;
 pub use litestream::JsonLitestream;
+pub use rate_limit::JsonRateLimit;
 pub use stats::JsonStats;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlus {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rate_limit: Option<JsonRateLimit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub github: Option<JsonGitHub>,
     #[serde(alias = "disaster_recovery", skip_serializing_if = "Option::is_none")]

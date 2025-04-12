@@ -98,13 +98,10 @@ impl InsertToken {
         context: &crate::ApiContext,
         query_user: &QueryUser,
     ) -> Result<(), HttpError> {
-        use crate::{
-            conn_lock,
-            macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT},
-        };
+        use crate::{conn_lock, macros::rate_limit::RateLimitError};
 
         let resource = BencherResource::Token;
-        let (start_time, end_time) = one_day();
+        let (start_time, end_time) = context.rate_limit.window();
         let creation_count: u32 = schema::token::table
                 .filter(schema::token::user_id.eq(query_user.id))
                 .filter(schema::token::creation.ge(start_time))
@@ -121,10 +118,12 @@ impl InsertToken {
                     )}
                 )?;
 
-        if creation_count >= UNCLAIMED_RATE_LIMIT {
+        let rate_limit = context.rate_limit.unclaimed;
+        if creation_count >= rate_limit {
             Err(crate::error::too_many_requests(RateLimitError::User {
                 user: query_user.clone(),
                 resource,
+                rate_limit,
             }))
         } else {
             Ok(())

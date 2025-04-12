@@ -219,7 +219,7 @@ async fn post_inner(
         QueryProject::is_visibility_public(visibility)?;
         #[cfg(feature = "plus")]
         PlanKind::check_for_organization(
-            conn_lock!(context),
+            context,
             context.biller.as_ref(),
             &context.licensor,
             &query_organization,

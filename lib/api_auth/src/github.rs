@@ -56,10 +56,11 @@ async fn post_inner(
     // If not on Bencher Cloud, then at least one organization must have a valid Bencher Plus license
     if !context.is_bencher_cloud
         && LicenseUsage::get_for_server(
-            conn_lock!(context),
+            &context.database.connection,
             &context.licensor,
             Some(PlanLevel::Enterprise),
-        )?
+        )
+        .await?
         .is_empty()
     {
         return Err(payment_required_error(

@@ -261,11 +261,11 @@ impl QueryOrganization {
     }
 
     #[cfg(feature = "plus")]
-    pub fn daily_usage(&self, conn: &mut DbConnection) -> Result<u32, HttpError> {
-        use crate::{macros::rate_limit::one_day, model::project::metric::QueryMetric};
+    pub async fn daily_usage(&self, context: &ApiContext) -> Result<u32, HttpError> {
+        use crate::model::project::metric::QueryMetric;
 
-        let (start_time, end_time) = one_day();
-        QueryMetric::usage(conn, self.id, start_time, end_time)
+        let (start_time, end_time) = context.rate_limit.window();
+        QueryMetric::usage(conn_lock!(context), self.id, start_time, end_time)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {
@@ -306,10 +306,10 @@ pub struct InsertOrganization {
 impl InsertOrganization {
     #[cfg(feature = "plus")]
     pub async fn rate_limit(context: &ApiContext, query_user: &QueryUser) -> Result<(), HttpError> {
-        use crate::macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT};
+        use crate::macros::rate_limit::RateLimitError;
 
         let resource = BencherResource::Organization;
-        let (start_time, end_time) = one_day();
+        let (start_time, end_time) = context.rate_limit.window();
         let creation_count: u32 = schema::organization::table
                 .inner_join(schema::organization_role::table)
                 .filter(schema::organization_role::user_id.eq(query_user.id))
@@ -327,10 +327,12 @@ impl InsertOrganization {
                     )}
                 )?;
 
-        if creation_count >= UNCLAIMED_RATE_LIMIT {
+        let rate_limit = context.rate_limit.unclaimed;
+        if creation_count >= rate_limit {
             Err(crate::error::too_many_requests(RateLimitError::User {
                 user: query_user.clone(),
                 resource,
+                rate_limit,
             }))
         } else {
             Ok(())
