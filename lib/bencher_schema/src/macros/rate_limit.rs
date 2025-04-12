@@ -53,10 +53,10 @@ macro_rules! fn_rate_limit {
             let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
 
             let (start_time, end_time) = $crate::macros::rate_limit::one_day();
-            let creation_count: u32 = schema::$table::table
-                .filter(schema::$table::project_id.eq(project_id))
-                .filter(schema::$table::created.ge(start_time))
-                .filter(schema::$table::created.le(end_time))
+            let creation_count: u32 = $crate::schema::$table::table
+                .filter($crate::schema::$table::project_id.eq(project_id))
+                .filter($crate::schema::$table::created.ge(start_time))
+                .filter($crate::schema::$table::created.le(end_time))
                 .count()
                 .get_result::<i64>(conn_lock!(context))
                 .map_err($crate::error::resource_not_found_err!($resource, (project_id, start_time, end_time)))?

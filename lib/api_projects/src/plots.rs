@@ -224,6 +224,8 @@ async fn post_inner(
         Permission::Create,
     )?;
 
+    #[cfg(feature = "plus")]
+    InsertPlot::rate_limit(context, query_project.id).await?;
     let query_plot = InsertPlot::from_json(context, &query_project, json_plot).await?;
 
     query_plot.into_json_for_project(conn_lock!(context), &query_project)

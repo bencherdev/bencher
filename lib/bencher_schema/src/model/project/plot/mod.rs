@@ -224,6 +224,9 @@ pub struct InsertPlot {
 }
 
 impl InsertPlot {
+    #[cfg(feature = "plus")]
+    crate::macros::rate_limit::fn_rate_limit!(plot, Plot);
+
     pub async fn from_json(
         context: &ApiContext,
         query_project: &QueryProject,

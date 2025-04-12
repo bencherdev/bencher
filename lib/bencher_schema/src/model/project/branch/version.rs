@@ -79,7 +79,7 @@ pub struct InsertVersion {
 }
 
 impl InsertVersion {
-    pub fn increment(
+    fn increment(
         conn: &mut DbConnection,
         project_id: ProjectId,
         head_id: HeadId,
