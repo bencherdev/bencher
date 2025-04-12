@@ -259,6 +259,7 @@ impl InsertHead {
         query_branch: QueryBranch,
         branch_start_point: Option<&StartPoint>,
     ) -> Result<(QueryBranch, QueryHead), HttpError> {
+        #[cfg(feature = "plus")]
         Self::rate_limit(context, &query_branch).await?;
 
         // Create the head for the branch

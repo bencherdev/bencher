@@ -119,6 +119,7 @@ impl QueryOrganization {
         auth_user: &AuthUser,
         insert_organization: InsertOrganization,
     ) -> Result<Self, HttpError> {
+        #[cfg(feature = "plus")]
         InsertOrganization::rate_limit(context, auth_user).await?;
         let query_organization = Self::create_inner(context, insert_organization).await?;
 
