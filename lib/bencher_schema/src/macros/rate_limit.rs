@@ -1,8 +1,6 @@
 use std::time::Duration;
 
-use crate::error::BencherResource;
-
-use super::project::QueryProject;
+use crate::{error::BencherResource, model::project::QueryProject};
 
 pub const DAY: Duration = Duration::from_secs(24 * 60 * 60);
 pub const UNCLAIMED_RATE_LIMIT: u32 = u8::MAX as u32;
@@ -34,7 +32,7 @@ macro_rules! fn_rate_limit {
             let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
 
             let end_time = chrono::Utc::now();
-            let start_time = end_time - $crate::model::rate_limit::DAY;
+            let start_time = end_time - $crate::macros::rate_limit::DAY;
             let creation_count: u32 = schema::$table::table
                 .filter(schema::$table::project_id.eq(project_id))
                 .filter(schema::$table::created.ge(DateTime::from(start_time)))
@@ -53,20 +51,20 @@ macro_rules! fn_rate_limit {
 
             match (is_claimed, creation_count) {
                 (false, creation_count)
-                    if creation_count >= $crate::model::rate_limit::UNCLAIMED_RATE_LIMIT =>
+                    if creation_count >= $crate::macros::rate_limit::UNCLAIMED_RATE_LIMIT =>
                 {
                     Err($crate::error::too_many_requests(
-                        $crate::model::rate_limit::RateLimitError::UnclaimedCreation {
+                        $crate::macros::rate_limit::RateLimitError::UnclaimedCreation {
                             project: query_project,
                             resource: $crate::error::BencherResource::$resource,
                         },
                     ))
                 },
                 (true, creation_count)
-                    if creation_count >= $crate::model::rate_limit::CLAIMED_RATE_LIMIT =>
+                    if creation_count >= $crate::macros::rate_limit::CLAIMED_RATE_LIMIT =>
                 {
                     Err($crate::error::too_many_requests(
-                        $crate::model::rate_limit::RateLimitError::ClaimedCreation {
+                        $crate::macros::rate_limit::RateLimitError::ClaimedCreation {
                             project: query_project,
                             resource: $crate::error::BencherResource::$resource,
                         },
@@ -78,4 +76,4 @@ macro_rules! fn_rate_limit {
         };
 }
 
-pub use fn_rate_limit;
+pub(crate) use fn_rate_limit;

@@ -24,7 +24,7 @@ where
 
 macro_rules! ok_slug {
     ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
-        crate::macros::slug::validate_slug(
+        $crate::macros::slug::validate_slug(
             $conn,
             None,
             $name,
@@ -38,7 +38,7 @@ macro_rules! ok_slug {
         )
     };
     ($conn:expr, $project_id:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
-        crate::macros::slug::validate_slug(
+        $crate::macros::slug::validate_slug(
             $conn,
             Some($project_id),
             $name,

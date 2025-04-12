@@ -6,7 +6,7 @@ macro_rules! fn_eq_name_id {
         ) -> Result<
             Box<
                 dyn diesel::BoxableExpression<
-                    crate::schema::$table::table,
+                    $crate::schema::$table::table,
                     diesel::sqlite::Sqlite,
                     SqlType = diesel::sql_types::Bool,
                 >,
@@ -15,21 +15,21 @@ macro_rules! fn_eq_name_id {
         > {
             Ok(
                 match name_id.try_into().map_err(|e| {
-                    crate::error::issue_error(
+                    $crate::error::issue_error(
                         "Failed to parse name ID",
                         "Failed to parse name ID.",
                         e,
                     )
                 })? {
                     bencher_json::NameIdKind::Uuid(uuid) => {
-                        Box::new(crate::schema::$table::uuid.eq(uuid.to_string()))
+                        Box::new($crate::schema::$table::uuid.eq(uuid.to_string()))
                     },
                     bencher_json::NameIdKind::Slug(slug) => {
-                        Box::new(crate::schema::$table::slug.eq(slug.to_string()))
+                        Box::new($crate::schema::$table::slug.eq(slug.to_string()))
                     },
                     bencher_json::NameIdKind::Name(name) => {
                         let name: bencher_json::$name = name;
-                        Box::new(crate::schema::$table::name.eq(name.to_string()))
+                        Box::new($crate::schema::$table::name.eq(name.to_string()))
                     },
                 },
             )

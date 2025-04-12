@@ -200,7 +200,7 @@ pub struct InsertMeasure {
 
 impl InsertMeasure {
     #[cfg(feature = "plus")]
-    crate::model::rate_limit::fn_rate_limit!(measure, Measure);
+    crate::macros::rate_limit::fn_rate_limit!(measure, Measure);
 
     pub fn from_measure<T: BuiltInMeasure>(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json(conn, project_id, T::new_json())

@@ -154,7 +154,7 @@ pub struct InsertTestbed {
 
 impl InsertTestbed {
     #[cfg(feature = "plus")]
-    crate::model::rate_limit::fn_rate_limit!(testbed, Testbed);
+    crate::macros::rate_limit::fn_rate_limit!(testbed, Testbed);
 
     fn from_json(conn: &mut DbConnection, project_id: ProjectId, testbed: JsonNewTestbed) -> Self {
         let JsonNewTestbed { name, slug } = testbed;

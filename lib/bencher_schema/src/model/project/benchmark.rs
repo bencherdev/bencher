@@ -153,7 +153,7 @@ pub struct InsertBenchmark {
 
 impl InsertBenchmark {
     #[cfg(feature = "plus")]
-    crate::model::rate_limit::fn_rate_limit!(benchmark, Benchmark);
+    crate::macros::rate_limit::fn_rate_limit!(benchmark, Benchmark);
 
     fn from_json(
         conn: &mut DbConnection,

@@ -353,7 +353,7 @@ pub struct InsertBranch {
 
 impl InsertBranch {
     #[cfg(feature = "plus")]
-    crate::model::rate_limit::fn_rate_limit!(branch, Branch);
+    crate::macros::rate_limit::fn_rate_limit!(branch, Branch);
 
     async fn from_json(
         log: &Logger,

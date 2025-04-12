@@ -462,7 +462,7 @@ pub struct InsertReport {
 
 impl InsertReport {
     #[cfg(feature = "plus")]
-    crate::model::rate_limit::fn_rate_limit!(report, Report);
+    crate::macros::rate_limit::fn_rate_limit!(report, Report);
 
     pub fn from_json(
         user_id: Option<UserId>,

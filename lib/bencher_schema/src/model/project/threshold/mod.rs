@@ -278,7 +278,7 @@ pub struct InsertThreshold {
 
 impl InsertThreshold {
     #[cfg(feature = "plus")]
-    crate::model::rate_limit::fn_rate_limit!(threshold, Threshold);
+    crate::macros::rate_limit::fn_rate_limit!(threshold, Threshold);
 
     pub fn new(
         project_id: ProjectId,
