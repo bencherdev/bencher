@@ -260,14 +260,10 @@ impl QueryOrganization {
 
     #[cfg(feature = "plus")]
     pub fn daily_usage(&self, conn: &mut DbConnection) -> Result<u32, HttpError> {
-        use std::time::Duration;
+        use crate::{macros::rate_limit::one_day, model::project::metric::QueryMetric};
 
-        use crate::model::project::metric::QueryMetric;
-
-        const DAY: Duration = Duration::from_secs(24 * 60 * 60);
-        let end_time = chrono::Utc::now();
-        let start_time = end_time - DAY;
-        QueryMetric::usage(conn, self.id, start_time.into(), end_time.into())
+        let (start_time, end_time) = one_day();
+        QueryMetric::usage(conn, self.id, start_time, end_time)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {
