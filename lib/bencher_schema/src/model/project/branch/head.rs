@@ -201,6 +201,48 @@ pub struct CloneThresholds {
 }
 
 impl InsertHead {
+    #[cfg(feature = "plus")]
+    pub async fn rate_limit(
+        context: &ApiContext,
+        query_branch: &QueryBranch,
+    ) -> Result<(), HttpError> {
+        use crate::{
+            error::BencherResource,
+            macros::rate_limit::{one_day, RateLimitError, CLAIMED_RATE_LIMIT},
+        };
+
+        let resource = BencherResource::Head;
+        let (start_time, end_time) = one_day();
+        let creation_count: u32 = schema::head::table
+                .filter(schema::head::branch_id.eq(query_branch.id))
+                .filter(schema::head::created.ge(start_time))
+                .filter(schema::head::created.le(end_time))
+                .count()
+                .get_result::<i64>(conn_lock!(context))
+                .map_err(resource_not_found_err!(Token, (query_branch, start_time, end_time)))?
+                .try_into()
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to count creation",
+                        &format!("Failed to count {resource} creation for branch ({uuid}) between {start_time} and {end_time}.", uuid = query_branch.uuid),
+                    e
+                    )}
+                )?;
+
+        // The only way that new `HEAD` can be crated is either through running a Report
+        // or by updating an existing branch using the API.
+        // The running of a Report will be rate limited already for unclaimed projects,
+        // and the API endpoint to update an existing branch would require authentication and would therefore be a claimed project.
+        if creation_count >= CLAIMED_RATE_LIMIT {
+            Err(crate::error::too_many_requests(RateLimitError::Branch {
+                branch: query_branch.clone(),
+                resource,
+            }))
+        } else {
+            Ok(())
+        }
+    }
+
     fn new(branch_id: BranchId, start_point_id: Option<HeadVersionId>) -> Self {
         Self {
             uuid: HeadUuid::new(),
@@ -217,6 +259,8 @@ impl InsertHead {
         query_branch: QueryBranch,
         branch_start_point: Option<&StartPoint>,
     ) -> Result<(QueryBranch, QueryHead), HttpError> {
+        Self::rate_limit(context, &query_branch).await?;
+
         // Create the head for the branch
         let insert_head = Self::new(
             query_branch.id,

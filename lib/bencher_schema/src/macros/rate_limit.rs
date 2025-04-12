@@ -4,7 +4,11 @@ use bencher_json::DateTime;
 
 use crate::{
     error::BencherResource,
-    model::{organization::QueryOrganization, project::QueryProject, user::QueryUser},
+    model::{
+        organization::QueryOrganization,
+        project::{branch::QueryBranch, QueryProject},
+        user::QueryUser,
+    },
 };
 
 pub const DAY: Duration = Duration::from_secs(24 * 60 * 60);
@@ -26,6 +30,11 @@ pub enum RateLimitError {
     #[error("Claimed project ({uuid}) has exceeded the daily rate limit ({CLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = project.uuid)]
     ClaimedProject {
         project: QueryProject,
+        resource: BencherResource,
+    },
+    #[error("Branch ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = branch.uuid)]
+    Branch {
+        branch: QueryBranch,
         resource: BencherResource,
     },
     #[error("User ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]

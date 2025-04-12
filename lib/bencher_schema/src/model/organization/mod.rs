@@ -307,7 +307,7 @@ impl InsertOrganization {
     pub async fn rate_limit(context: &ApiContext, query_user: &QueryUser) -> Result<(), HttpError> {
         use crate::macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT};
 
-        let resource = BencherResource::Project;
+        let resource = BencherResource::Organization;
         let (start_time, end_time) = one_day();
         let creation_count: u32 = schema::organization::table
                 .inner_join(schema::organization_role::table)
