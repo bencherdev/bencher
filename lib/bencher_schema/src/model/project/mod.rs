@@ -525,7 +525,7 @@ impl InsertProject {
 
         if creation_count >= UNCLAIMED_RATE_LIMIT {
             Err(crate::error::too_many_requests(
-                RateLimitError::ProjectCreation {
+                RateLimitError::Organization {
                     organization: query_organization.clone(),
                     resource,
                 },

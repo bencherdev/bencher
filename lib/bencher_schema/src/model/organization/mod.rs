@@ -119,6 +119,7 @@ impl QueryOrganization {
         auth_user: &AuthUser,
         insert_organization: InsertOrganization,
     ) -> Result<Self, HttpError> {
+        InsertOrganization::rate_limit(conn_lock!(context), auth_user)?;
         let query_organization = Self::create_inner(context, insert_organization).await?;
 
         let timestamp = DateTime::now();
@@ -302,6 +303,39 @@ pub struct InsertOrganization {
 }
 
 impl InsertOrganization {
+    #[cfg(feature = "plus")]
+    pub fn rate_limit(conn: &mut DbConnection, query_user: &QueryUser) -> Result<(), HttpError> {
+        use crate::macros::rate_limit::{one_day, RateLimitError, UNCLAIMED_RATE_LIMIT};
+
+        let resource = BencherResource::Project;
+        let (start_time, end_time) = one_day();
+        let creation_count: u32 = schema::organization::table
+                .inner_join(schema::organization_role::table)
+                .filter(schema::organization_role::user_id.eq(query_user.id))
+                .filter(schema::organization::created.ge(start_time))
+                .filter(schema::organization::created.le(end_time))
+                .count()
+                .get_result::<i64>(conn)
+                .map_err(resource_not_found_err!(Token, (query_user, start_time, end_time)))?
+                .try_into()
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to count creation",
+                        &format!("Failed to count {resource} creation for user ({uuid}) between {start_time} and {end_time}.", uuid = query_user.uuid),
+                    e
+                    )}
+                )?;
+
+        if creation_count >= UNCLAIMED_RATE_LIMIT {
+            Err(crate::error::too_many_requests(RateLimitError::User {
+                user: query_user.clone(),
+                resource,
+            }))
+        } else {
+            Ok(())
+        }
+    }
+
     fn new(name: ResourceName, slug: Slug) -> Self {
         Self::new_inner(OrganizationUuid::new(), name, slug)
     }

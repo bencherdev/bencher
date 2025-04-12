@@ -14,22 +14,22 @@ pub const CLAIMED_RATE_LIMIT: u32 = u16::MAX as u32;
 #[derive(Debug, thiserror::Error)]
 pub enum RateLimitError {
     #[error("Organization ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = organization.uuid)]
-    ProjectCreation {
+    Organization {
         organization: QueryOrganization,
         resource: BencherResource,
     },
     #[error("Unclaimed project ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage or claim the project: https://bencher.dev/auth/signup?claim={uuid}", uuid = project.uuid)]
-    UnclaimedCreation {
+    UnclaimedProject {
         project: QueryProject,
         resource: BencherResource,
     },
     #[error("Claimed project ({uuid}) has exceeded the daily rate limit ({CLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = project.uuid)]
-    ClaimedCreation {
+    ClaimedProject {
         project: QueryProject,
         resource: BencherResource,
     },
     #[error("User ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
-    TokenCreation {
+    User {
         user: QueryUser,
         resource: BencherResource,
     },
@@ -74,7 +74,7 @@ macro_rules! fn_rate_limit {
                     if creation_count >= $crate::macros::rate_limit::UNCLAIMED_RATE_LIMIT =>
                 {
                     Err($crate::error::too_many_requests(
-                        $crate::macros::rate_limit::RateLimitError::UnclaimedCreation {
+                        $crate::macros::rate_limit::RateLimitError::UnclaimedProject {
                             project: query_project,
                             resource: $crate::error::BencherResource::$resource,
                         },
@@ -84,7 +84,7 @@ macro_rules! fn_rate_limit {
                     if creation_count >= $crate::macros::rate_limit::CLAIMED_RATE_LIMIT =>
                 {
                     Err($crate::error::too_many_requests(
-                        $crate::macros::rate_limit::RateLimitError::ClaimedCreation {
+                        $crate::macros::rate_limit::RateLimitError::ClaimedProject {
                             project: query_project,
                             resource: $crate::error::BencherResource::$resource,
                         },

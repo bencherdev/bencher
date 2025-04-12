@@ -116,12 +116,10 @@ impl InsertToken {
                 )?;
 
         if creation_count >= UNCLAIMED_RATE_LIMIT {
-            Err(crate::error::too_many_requests(
-                RateLimitError::TokenCreation {
-                    user: query_user.clone(),
-                    resource,
-                },
-            ))
+            Err(crate::error::too_many_requests(RateLimitError::User {
+                user: query_user.clone(),
+                resource,
+            }))
         } else {
             Ok(())
         }
