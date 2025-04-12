@@ -52,8 +52,6 @@ pub enum ConfigTxError {
     DatabaseConnection(String, diesel::ConnectionError),
     #[error("Failed to parse data store: {0}")]
     DataStore(bencher_schema::context::DataStoreError),
-    #[error("Failed to configure rate limits: {0}")]
-    RateLimit(Box<bencher_schema::context::RateLimitingError>),
     #[error("Failed to register endpoint: {0}")]
     Register(dropshot::ApiDescriptionRegisterError),
     #[error("Failed to create server: {0}")]
@@ -65,6 +63,9 @@ pub enum ConfigTxError {
     #[cfg(feature = "plus")]
     #[error("Failed to get server ID: {0}")]
     ServerId(dropshot::HttpError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to configure rate limits: {0}")]
+    RateLimiting(Box<bencher_schema::context::RateLimitingError>),
 }
 
 impl ConfigTx {
@@ -231,7 +232,7 @@ async fn into_context(
     )
     .await
     .map_err(Box::new)
-    .map_err(ConfigTxError::RateLimit)?;
+    .map_err(ConfigTxError::RateLimiting)?;
 
     debug!(&log, "Creating API context");
     Ok(ApiContext {
