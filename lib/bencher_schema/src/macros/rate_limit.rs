@@ -6,7 +6,7 @@ use crate::{
     error::BencherResource,
     model::{
         organization::QueryOrganization,
-        project::{branch::QueryBranch, QueryProject},
+        project::{branch::QueryBranch, threshold::QueryThreshold, QueryProject},
         user::QueryUser,
     },
 };
@@ -17,6 +17,11 @@ pub const CLAIMED_RATE_LIMIT: u32 = u16::MAX as u32;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RateLimitError {
+    #[error("User ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
+    User {
+        user: QueryUser,
+        resource: BencherResource,
+    },
     #[error("Organization ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = organization.uuid)]
     Organization {
         organization: QueryOrganization,
@@ -32,14 +37,14 @@ pub enum RateLimitError {
         project: QueryProject,
         resource: BencherResource,
     },
-    #[error("Branch ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = branch.uuid)]
+    #[error("Branch ({uuid}) has exceeded the daily rate limit ({CLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = branch.uuid)]
     Branch {
         branch: QueryBranch,
         resource: BencherResource,
     },
-    #[error("User ({uuid}) has exceeded the daily rate limit ({UNCLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
-    User {
-        user: QueryUser,
+    #[error("Threshold ({uuid}) has exceeded the daily rate limit ({CLAIMED_RATE_LIMIT}) for {resource} creation. Please, reduce your daily usage.", uuid = threshold.uuid)]
+    Threshold {
+        threshold: QueryThreshold,
         resource: BencherResource,
     },
 }

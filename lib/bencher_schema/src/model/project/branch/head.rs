@@ -219,7 +219,7 @@ impl InsertHead {
                 .filter(schema::head::created.le(end_time))
                 .count()
                 .get_result::<i64>(conn_lock!(context))
-                .map_err(resource_not_found_err!(Token, (query_branch, start_time, end_time)))?
+                .map_err(resource_not_found_err!(Head, (query_branch, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {
                     issue_error(

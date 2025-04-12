@@ -88,7 +88,7 @@ impl QueryThreshold {
             (None, None) => Ok(()),
             // No current model but a new model,
             // insert the new model.
-            (None, Some(model)) => self.update_from_model(conn_lock!(context), model),
+            (None, Some(model)) => self.update_from_model(context, model).await,
             // Current model but no new model,
             // remove the current model.
             (Some(_), None) => self.remove_current_model(conn_lock!(context)),
@@ -101,13 +101,19 @@ impl QueryThreshold {
                 if current_model == model {
                     Ok(())
                 } else {
-                    self.update_from_model(conn_lock!(context), model)
+                    self.update_from_model(context, model).await
                 }
             },
         }
     }
 
-    pub fn update_from_model(
+    async fn update_from_model(&self, context: &ApiContext, model: Model) -> Result<(), HttpError> {
+        #[cfg(feature = "plus")]
+        InsertModel::rate_limit(context, self).await?;
+        self.update_from_model_inner(conn_lock!(context), model)
+    }
+
+    fn update_from_model_inner(
         &self,
         conn: &mut DbConnection,
         model: Model,

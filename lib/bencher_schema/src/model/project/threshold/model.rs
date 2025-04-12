@@ -123,6 +123,49 @@ pub struct InsertModel {
 }
 
 impl InsertModel {
+    #[cfg(feature = "plus")]
+    pub async fn rate_limit(
+        context: &crate::ApiContext,
+        query_threshold: &QueryThreshold,
+    ) -> Result<(), HttpError> {
+        use crate::{
+            conn_lock,
+            error::issue_error,
+            macros::rate_limit::{one_day, RateLimitError, CLAIMED_RATE_LIMIT},
+        };
+
+        let resource = BencherResource::Model;
+        let (start_time, end_time) = one_day();
+        let creation_count: u32 = schema::model::table
+                .filter(schema::model::threshold_id.eq(query_threshold.id))
+                .filter(schema::model::created.ge(start_time))
+                .filter(schema::model::created.le(end_time))
+                .count()
+                .get_result::<i64>(conn_lock!(context))
+                .map_err(resource_not_found_err!(Model, (query_threshold, start_time, end_time)))?
+                .try_into()
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to count creation",
+                        &format!("Failed to count {resource} creation for threshold ({uuid}) between {start_time} and {end_time}.", uuid = query_threshold.uuid),
+                    e
+                    )}
+                )?;
+
+        // The only way that new Model can be crated is either through running a Report
+        // or by updating an existing threshold using the API.
+        // The running of a Report will be rate limited already for unclaimed projects,
+        // and the API endpoint to update an existing threshold would require authentication and would therefore be a claimed project.
+        if creation_count >= CLAIMED_RATE_LIMIT {
+            Err(crate::error::too_many_requests(RateLimitError::Threshold {
+                threshold: query_threshold.clone(),
+                resource,
+            }))
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn new(threshold_id: ThresholdId, model: Model) -> Self {
         let Model {
             test,

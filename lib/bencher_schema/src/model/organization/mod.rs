@@ -316,7 +316,7 @@ impl InsertOrganization {
                 .filter(schema::organization::created.le(end_time))
                 .count()
                 .get_result::<i64>(conn_lock!(context))
-                .map_err(resource_not_found_err!(Token, (query_user, start_time, end_time)))?
+                .map_err(resource_not_found_err!(Organization, (query_user, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {
                     issue_error(
