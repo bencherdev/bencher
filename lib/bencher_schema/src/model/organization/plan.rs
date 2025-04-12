@@ -281,16 +281,16 @@ impl PlanKind {
             let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
             let daily_usage = query_organization.daily_usage(context).await?;
             match (is_claimed, daily_usage) {
-                (false, daily_usage) if daily_usage >= context.rate_limit.unclaimed => {
+                (false, daily_usage) if daily_usage >= context.rate_limiting.unclaimed_limit => {
                     Err(payment_required_error(PlanKindError::UnclaimedUsage {
                         organization: query_organization.clone(),
-                        rate_limit: context.rate_limit.unclaimed,
+                        rate_limit: context.rate_limiting.unclaimed_limit,
                     }))
                 },
-                (true, daily_usage) if daily_usage >= context.rate_limit.claimed => {
+                (true, daily_usage) if daily_usage >= context.rate_limiting.claimed_limit => {
                     Err(payment_required_error(PlanKindError::ClaimedUsage {
                         organization: query_organization.clone(),
-                        rate_limit: context.rate_limit.claimed,
+                        rate_limit: context.rate_limiting.claimed_limit,
                     }))
                 },
                 (_, _) => Ok(Self::None),

@@ -10423,11 +10423,11 @@
               }
             ]
           },
-          "rate_limit": {
+          "rate_limiting": {
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonRateLimit"
+                "$ref": "#/components/schemas/JsonRateLimiting"
               }
             ]
           },
@@ -10636,16 +10636,16 @@
           "uuid"
         ]
       },
-      "JsonRateLimit": {
+      "JsonRateLimiting": {
         "type": "object",
         "properties": {
-          "claimed": {
+          "claimed_limit": {
             "nullable": true,
             "type": "integer",
             "format": "uint32",
             "minimum": 0
           },
-          "unclaimed": {
+          "unclaimed_limit": {
             "nullable": true,
             "type": "integer",
             "format": "uint32",

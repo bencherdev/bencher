@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bencher_json::{system::config::JsonRateLimit, DateTime, PlanLevel};
+use bencher_json::{system::config::JsonRateLimiting, DateTime, PlanLevel};
 use bencher_license::Licensor;
 use slog::Logger;
 
@@ -19,14 +19,14 @@ const DAY: Duration = Duration::from_secs(24 * 60 * 60);
 const UNCLAIMED_RATE_LIMIT: u32 = u8::MAX as u32;
 const CLAIMED_RATE_LIMIT: u32 = u16::MAX as u32;
 
-pub struct RateLimit {
+pub struct RateLimiting {
     pub window: Duration,
-    pub unclaimed: u32,
-    pub claimed: u32,
+    pub unclaimed_limit: u32,
+    pub claimed_limit: u32,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum RateLimitError {
+pub enum RateLimitingError {
     #[error("User ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
     User {
         user: QueryUser,
@@ -65,40 +65,40 @@ pub enum RateLimitError {
     },
 }
 
-impl From<JsonRateLimit> for RateLimit {
-    fn from(json: JsonRateLimit) -> Self {
-        let JsonRateLimit {
+impl From<JsonRateLimiting> for RateLimiting {
+    fn from(json: JsonRateLimiting) -> Self {
+        let JsonRateLimiting {
             window,
-            unclaimed,
-            claimed,
+            unclaimed_limit,
+            claimed_limit,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
-            unclaimed: unclaimed.unwrap_or(UNCLAIMED_RATE_LIMIT),
-            claimed: claimed.unwrap_or(CLAIMED_RATE_LIMIT),
+            unclaimed_limit: unclaimed_limit.unwrap_or(UNCLAIMED_RATE_LIMIT),
+            claimed_limit: claimed_limit.unwrap_or(CLAIMED_RATE_LIMIT),
         }
     }
 }
 
-impl Default for RateLimit {
+impl Default for RateLimiting {
     fn default() -> Self {
         Self {
             window: DAY,
-            unclaimed: UNCLAIMED_RATE_LIMIT,
-            claimed: CLAIMED_RATE_LIMIT,
+            unclaimed_limit: UNCLAIMED_RATE_LIMIT,
+            claimed_limit: CLAIMED_RATE_LIMIT,
         }
     }
 }
 
-impl RateLimit {
+impl RateLimiting {
     pub async fn new(
         log: &Logger,
         conn: &tokio::sync::Mutex<DbConnection>,
         licensor: &Licensor,
         is_bencher_cloud: bool,
-        rate_limit: Option<JsonRateLimit>,
-    ) -> Result<Self, RateLimitError> {
-        let Some(rate_limit) = rate_limit else {
+        rate_limiting: Option<JsonRateLimiting>,
+    ) -> Result<Self, RateLimitingError> {
+        let Some(rate_limiting) = rate_limiting else {
             return Ok(Self::default());
         };
 
@@ -118,7 +118,7 @@ impl RateLimit {
             }
         }
 
-        Ok(rate_limit.into())
+        Ok(rate_limiting.into())
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {

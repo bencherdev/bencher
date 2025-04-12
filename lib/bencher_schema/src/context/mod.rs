@@ -15,7 +15,7 @@ mod database;
 mod indexer;
 mod messenger;
 #[cfg(feature = "plus")]
-mod rate_limit;
+mod rate_limiting;
 mod rbac;
 #[cfg(feature = "plus")]
 mod stats;
@@ -27,7 +27,7 @@ pub use indexer::{IndexError, Indexer};
 pub use messenger::ServerStatsBody;
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 #[cfg(feature = "plus")]
-pub use rate_limit::{RateLimit, RateLimitError};
+pub use rate_limiting::{RateLimiting, RateLimitingError};
 pub use rbac::{Rbac, RbacError};
 #[cfg(feature = "plus")]
 pub use stats::StatsSettings;
@@ -40,7 +40,7 @@ pub struct ApiContext {
     pub database: Database,
     pub restart_tx: Sender<()>,
     #[cfg(feature = "plus")]
-    pub rate_limit: RateLimit,
+    pub rate_limiting: RateLimiting,
     #[cfg(feature = "plus")]
     pub github: Option<GitHub>,
     #[cfg(feature = "plus")]

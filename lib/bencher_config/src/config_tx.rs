@@ -13,7 +13,7 @@ use bencher_json::{
 use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
-use bencher_schema::{context::RateLimit, model::server::QueryServer};
+use bencher_schema::{context::RateLimiting, model::server::QueryServer};
 use bencher_token::TokenKey;
 #[cfg(feature = "plus")]
 use diesel::connection::SimpleConnection;
@@ -53,7 +53,7 @@ pub enum ConfigTxError {
     #[error("Failed to parse data store: {0}")]
     DataStore(bencher_schema::context::DataStoreError),
     #[error("Failed to configure rate limits: {0}")]
-    RateLimit(Box<bencher_schema::context::RateLimitError>),
+    RateLimit(Box<bencher_schema::context::RateLimitingError>),
     #[error("Failed to register endpoint: {0}")]
     Register(dropshot::ApiDescriptionRegisterError),
     #[error("Failed to create server: {0}")]
@@ -206,7 +206,7 @@ async fn into_context(
     );
 
     #[cfg(feature = "plus")]
-    let rate_limit = plus.as_ref().and_then(|plus| plus.rate_limit);
+    let rate_limiting = plus.as_ref().and_then(|plus| plus.rate_limiting);
 
     info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
@@ -222,12 +222,12 @@ async fn into_context(
     let is_bencher_cloud = bencher_json::is_bencher_cloud(&console_url) && biller.is_some();
 
     #[cfg(feature = "plus")]
-    let rate_limit = RateLimit::new(
+    let rate_limiting = RateLimiting::new(
         log,
         &database.connection,
         &licensor,
         is_bencher_cloud,
-        rate_limit,
+        rate_limiting,
     )
     .await
     .map_err(Box::new)
@@ -242,7 +242,7 @@ async fn into_context(
         database,
         restart_tx,
         #[cfg(feature = "plus")]
-        rate_limit,
+        rate_limiting,
         #[cfg(feature = "plus")]
         github,
         #[cfg(feature = "plus")]

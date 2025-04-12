@@ -9,7 +9,7 @@ macro_rules! fn_rate_limit {
             let query_organization = query_project.organization(conn_lock!(context))?;
             let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
 
-            let (start_time, end_time) = context.rate_limit.window();
+            let (start_time, end_time) = context.rate_limiting.window();
             let creation_count: u32 = $crate::schema::$table::table
                 .filter($crate::schema::$table::project_id.eq(project_id))
                 .filter($crate::schema::$table::created.ge(start_time))
@@ -28,24 +28,24 @@ macro_rules! fn_rate_limit {
 
             match (is_claimed, creation_count) {
                 (false, creation_count)
-                    if creation_count >= context.rate_limit.unclaimed =>
+                    if creation_count >= context.rate_limiting.unclaimed_limit =>
                 {
                     Err($crate::error::too_many_requests(
-                        $crate::context::RateLimitError::UnclaimedProject {
+                        $crate::context::RateLimitingError::UnclaimedProject {
                             project: query_project,
                             resource: $crate::error::BencherResource::$resource,
-                            rate_limit: context.rate_limit.unclaimed,
+                            rate_limit: context.rate_limiting.unclaimed_limit,
                         },
                     ))
                 },
                 (true, creation_count)
-                    if creation_count >= context.rate_limit.claimed =>
+                    if creation_count >= context.rate_limiting.claimed_limit =>
                 {
                     Err($crate::error::too_many_requests(
-                        $crate::context::RateLimitError::ClaimedProject {
+                        $crate::context::RateLimitingError::ClaimedProject {
                             project: query_project,
                             resource: $crate::error::BencherResource::$resource,
-                            rate_limit: context.rate_limit.claimed,
+                            rate_limit: context.rate_limiting.claimed_limit,
                         },
                     ))
                 },

@@ -264,7 +264,7 @@ impl QueryOrganization {
     pub async fn daily_usage(&self, context: &ApiContext) -> Result<u32, HttpError> {
         use crate::model::project::metric::QueryMetric;
 
-        let (start_time, end_time) = context.rate_limit.window();
+        let (start_time, end_time) = context.rate_limiting.window();
         QueryMetric::usage(conn_lock!(context), self.id, start_time, end_time)
     }
 
@@ -306,10 +306,10 @@ pub struct InsertOrganization {
 impl InsertOrganization {
     #[cfg(feature = "plus")]
     pub async fn rate_limit(context: &ApiContext, query_user: &QueryUser) -> Result<(), HttpError> {
-        use crate::context::RateLimitError;
+        use crate::context::RateLimitingError;
 
         let resource = BencherResource::Organization;
-        let (start_time, end_time) = context.rate_limit.window();
+        let (start_time, end_time) = context.rate_limiting.window();
         let creation_count: u32 = schema::organization::table
                 .inner_join(schema::organization_role::table)
                 .filter(schema::organization_role::user_id.eq(query_user.id))
@@ -327,9 +327,9 @@ impl InsertOrganization {
                     )}
                 )?;
 
-        let rate_limit = context.rate_limit.unclaimed;
+        let rate_limit = context.rate_limiting.unclaimed_limit;
         if creation_count >= rate_limit {
-            Err(crate::error::too_many_requests(RateLimitError::User {
+            Err(crate::error::too_many_requests(RateLimitingError::User {
                 user: query_user.clone(),
                 resource,
                 rate_limit,

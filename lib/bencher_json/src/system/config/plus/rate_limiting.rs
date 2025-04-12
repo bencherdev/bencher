@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonRateLimit {
+pub struct JsonRateLimiting {
     pub window: Option<u32>,
-    pub unclaimed: Option<u32>,
-    pub claimed: Option<u32>,
+    pub unclaimed_limit: Option<u32>,
+    pub claimed_limit: Option<u32>,
 }

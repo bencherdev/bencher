@@ -22,7 +22,7 @@ pub use plus::{
         JsonCloud,
     },
     litestream::{JsonLitestream, JsonReplica},
-    rate_limit::JsonRateLimit,
+    rate_limiting::JsonRateLimiting,
     stats::JsonStats,
     JsonPlus,
 };
