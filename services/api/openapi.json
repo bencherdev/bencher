@@ -10423,6 +10423,14 @@
               }
             ]
           },
+          "rate_limit": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimit"
+              }
+            ]
+          },
           "stats": {
             "nullable": true,
             "allOf": [
@@ -10627,6 +10635,29 @@
           "slug",
           "uuid"
         ]
+      },
+      "JsonRateLimit": {
+        "type": "object",
+        "properties": {
+          "claimed": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "unclaimed": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "window": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        }
       },
       "JsonRemoveModel": {
         "type": "object",
@@ -11355,10 +11386,12 @@
         "properties": {
           "enabled": {
             "nullable": true,
+            "description": "Enable stats collection",
             "type": "boolean"
           },
           "offset": {
             "nullable": true,
+            "description": "Number of seconds from midnight",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
