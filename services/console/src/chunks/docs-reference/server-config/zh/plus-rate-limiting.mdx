@@ -1,0 +1,16 @@
+### `plus.rate_limiting`
+
+本节指定 API 服务器的速率限制。
+整节内容是可选的。
+如果未指定，将使用列出的默认值。
+
+为防止创建[`unclaimed`项目][unclaimed projects]，请将`unclaimed_limit`设置为`0`。
+
+|      名称       | 示例  | 默认值 | 是否必需 |                                                 描述                                                  |
+| :-------------: | :---: | :----: | :------: | :---------------------------------------------------------------------------------------------------: |
+|     window      | 86400 | 86400  |    否    |                            指定以秒为单位的速率限制窗口。默认设置为一天。                             |
+|   user_limit    |  255  |  255   |    否    |                          控制用户创建的某些资源的速率限制：组织和 API 令牌。                          |
+| unclaimed_limit |  255  |  255   |    否    | 控制[`unclaimed`项目][unclaimed projects]的速率限制。为了防止创建`unclaimed`项目，请将此值设置为`0`。 |
+|  claimed_limit  | 65536 | 65536  |    否    |                                     控制`claimed`项目的速率限制。                                     |
+
+[unclaimed projects]: /zh/docs/how-to/claim/#unclaimed-projects

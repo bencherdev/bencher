@@ -1,0 +1,17 @@
+### `plus.rate_limiting`
+
+Esta sección especifica la limitación de tasa para el servidor API.
+Toda la sección es opcional.
+Si no se especifica, se utilizarán los valores predeterminados enumerados.
+
+Para evitar que se creen [proyectos `unclaimed`][unclaimed projects],
+establezca el `unclaimed_limit` en `0`.
+
+|     Nombre      | Ejemplo | Por defecto | Requerido |                                                                          Descripción                                                                           |
+| :-------------: | :-----: | :---------: | :-------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|     window      |  86400  |    86400    |    No     |                                   Especifica la ventana de limitación de tasa en segundos. Establecido por defecto a un día.                                   |
+|   user_limit    |   255   |     255     |    No     |                          Controla la limitación de tasa para ciertos recursos creados por un usuario: Organizaciones y tokens de API.                          |
+| unclaimed_limit |   255   |     255     |    No     | Controla la limitación de tasa para [proyectos `unclaimed`][unclaimed projects]. Para evitar que se creen proyectos `unclaimed`, establezca este valor en `0`. |
+|  claimed_limit  |  65536  |    65536    |    No     |                                                    Controla la limitación de tasa para proyectos `claimed`.                                                    |
+
+[unclaimed projects]: /es/docs/how-to/claim/#unclaimed-projects
