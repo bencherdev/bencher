@@ -505,6 +505,8 @@ impl InsertProject {
     ) -> Result<(), HttpError> {
         use crate::context::RateLimitingError;
 
+        let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
+
         let resource = BencherResource::Project;
         let (start_time, end_time) = context.rate_limiting.window();
         let creation_count: u32 = schema::project::table
@@ -523,7 +525,11 @@ impl InsertProject {
                     )}
                 )?;
 
-        let rate_limit = context.rate_limiting.unclaimed_limit;
+        let rate_limit = if is_claimed {
+            context.rate_limiting.claimed_limit
+        } else {
+            context.rate_limiting.unclaimed_limit
+        };
         if creation_count >= rate_limit {
             Err(crate::error::too_many_requests(
                 RateLimitingError::Organization {

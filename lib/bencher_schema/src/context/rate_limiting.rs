@@ -16,11 +16,13 @@ use crate::{
 use super::DbConnection;
 
 const DAY: Duration = Duration::from_secs(24 * 60 * 60);
-const UNCLAIMED_RATE_LIMIT: u32 = u8::MAX as u32;
-const CLAIMED_RATE_LIMIT: u32 = u16::MAX as u32;
+const USER_LIMIT: u32 = u8::MAX as u32;
+const UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
+const CLAIMED_LIMIT: u32 = u16::MAX as u32;
 
 pub struct RateLimiting {
     pub window: Duration,
+    pub user_limit: u32,
     pub unclaimed_limit: u32,
     pub claimed_limit: u32,
 }
@@ -69,13 +71,15 @@ impl From<JsonRateLimiting> for RateLimiting {
     fn from(json: JsonRateLimiting) -> Self {
         let JsonRateLimiting {
             window,
+            user_limit,
             unclaimed_limit,
             claimed_limit,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
-            unclaimed_limit: unclaimed_limit.unwrap_or(UNCLAIMED_RATE_LIMIT),
-            claimed_limit: claimed_limit.unwrap_or(CLAIMED_RATE_LIMIT),
+            user_limit: user_limit.unwrap_or(USER_LIMIT),
+            unclaimed_limit: unclaimed_limit.unwrap_or(UNCLAIMED_LIMIT),
+            claimed_limit: claimed_limit.unwrap_or(CLAIMED_LIMIT),
         }
     }
 }
@@ -84,8 +88,9 @@ impl Default for RateLimiting {
     fn default() -> Self {
         Self {
             window: DAY,
-            unclaimed_limit: UNCLAIMED_RATE_LIMIT,
-            claimed_limit: CLAIMED_RATE_LIMIT,
+            user_limit: USER_LIMIT,
+            unclaimed_limit: UNCLAIMED_LIMIT,
+            claimed_limit: CLAIMED_LIMIT,
         }
     }
 }

@@ -10651,6 +10651,12 @@
             "format": "uint32",
             "minimum": 0
           },
+          "user_limit": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "window": {
             "nullable": true,
             "type": "integer",

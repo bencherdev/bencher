@@ -118,7 +118,7 @@ impl InsertToken {
                     )}
                 )?;
 
-        let rate_limit = context.rate_limiting.unclaimed_limit;
+        let rate_limit = context.rate_limiting.user_limit;
         if creation_count >= rate_limit {
             Err(crate::error::too_many_requests(RateLimitingError::User {
                 user: query_user.clone(),
