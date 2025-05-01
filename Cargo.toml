@@ -12,7 +12,7 @@ resolver = "2"
 
 [workspace.package]
 homepage = "https://bencher.dev"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2021"
 license-file = "LICENSE.md"
