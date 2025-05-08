@@ -17,7 +17,7 @@ impl Ln {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
+#[expect(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
     use pretty_assertions::assert_eq;
 

@@ -37,7 +37,7 @@ const BUFFER_SIZE: usize = IMG_WIDTH as usize * IMG_HEIGHT as usize * 3;
 const MAX_LINES: usize = 10;
 
 pub const BENCHER_WORDMARK: &[u8; 4406] = include_bytes!("../wordmark.png");
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static WORDMARK_ELEMENT: LazyLock<BitMapElement<(i32, i32)>> = LazyLock::new(|| {
     let wordmark_cursor = Cursor::new(BENCHER_WORDMARK);
     let wordmark_image =
@@ -201,7 +201,7 @@ impl From<Range<f64>> for RangedCoord {
 }
 
 // https://github.com/plotters-rs/plotters/blob/v0.3.7/plotters/examples/two-scales.rs
-#[allow(clippy::large_enum_variant, clippy::type_complexity)]
+#[expect(clippy::large_enum_variant, clippy::type_complexity)]
 enum Chart<'b> {
     Single(
         ChartContext<
@@ -243,13 +243,13 @@ impl<'b> Chart<'b> {
         })
     }
 
-    #[allow(clippy::items_after_statements)]
+    #[expect(clippy::items_after_statements)]
     fn layout_plot(&mut self, perf_data: &PerfData) -> Result<(), PlotError> {
         const AXIS_DESC_STYLE: (FontFamily, u32) = (FontFamily::Monospace, 20);
         const X_DESC: &str = "Benchmark Date and Time";
         let x_labels = usize::try_from(X_LABELS)?;
         const X_LABEL_STYLE: (FontFamily, u32) = (FontFamily::Monospace, 16);
-        #[allow(clippy::type_complexity)]
+        #[expect(clippy::type_complexity)]
         let x_label_formatter: Box<dyn Fn(&DateTime<Utc>) -> String> =
             Box::new(move |x| perf_data.x_label_fmt(x));
         const Y_LABEL_STYLE: (FontFamily, u32) = (FontFamily::Monospace, 12);
@@ -490,7 +490,7 @@ impl PerfData {
         (factor, y_desc)
     }
 
-    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+    #[expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
     fn x_range(&self) -> Range<DateTime<Utc>> {
         let diff = Duration::seconds(((self.x.1 - self.x.0).num_seconds() as f64 * 0.04) as i64);
         self.x.0..(self.x.1 + diff)
@@ -590,7 +590,7 @@ impl PerfData {
             let box_x_left = std::cmp::max(MIN_GAP, KEY_LEFT_MARGIN - (extra_lines * 8));
             let box_gap = std::cmp::max(MIN_GAP, BOX_GAP - extra_lines);
             let box_gaps = lines_len * box_gap;
-            #[allow(clippy::integer_division)]
+            #[expect(clippy::integer_division)]
             let width = (usize::try_from(IMG_WIDTH)? - box_x_left - box_gaps) / lines_len;
             (box_x_left, width, box_gap)
         } else {
@@ -765,7 +765,7 @@ const TABLEAU_10: [(u8, u8, u8); 10] = [
     // #bab0ab
     (186, 176, 171),
 ];
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static TABLEAU_10_RGB: LazyLock<[RGBColor; 10]> = LazyLock::new(|| {
     TABLEAU_10
         .into_iter()
@@ -776,7 +776,7 @@ static TABLEAU_10_RGB: LazyLock<[RGBColor; 10]> = LazyLock::new(|| {
 });
 
 impl LineData {
-    #[allow(clippy::indexing_slicing)]
+    #[expect(clippy::indexing_slicing)]
     fn color(index: usize) -> RGBColor {
         TABLEAU_10_RGB[index % 10]
     }
@@ -790,7 +790,7 @@ impl LineData {
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used, clippy::unwrap_used)]
+#[expect(clippy::expect_used, clippy::unwrap_used)]
 mod test {
     use std::{fs::File, io::Write as _, sync::LazyLock};
 

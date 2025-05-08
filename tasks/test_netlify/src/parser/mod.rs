@@ -6,7 +6,7 @@ pub struct TaskTask {
     pub sub: TaskSub,
 }
 
-#[allow(variant_size_differences, clippy::large_enum_variant)]
+#[expect(variant_size_differences, clippy::large_enum_variant)]
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
     Dev(TaskTestNetlify),

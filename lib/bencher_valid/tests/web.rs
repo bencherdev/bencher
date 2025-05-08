@@ -1,4 +1,4 @@
-#![allow(unused_crate_dependencies)]
+#![expect(unused_crate_dependencies)]
 #![cfg(target_arch = "wasm32")]
 //! Test suite for the Web and headless browsers.
 

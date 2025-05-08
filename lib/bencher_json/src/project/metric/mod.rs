@@ -141,7 +141,7 @@ impl Sum for JsonNewMetric {
 impl std::ops::Div<usize> for JsonNewMetric {
     type Output = Self;
 
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     fn div(self, rhs: usize) -> Self::Output {
         Self {
             value: self.value / rhs as f64,

@@ -55,7 +55,7 @@ pub struct ProjMeasuresQuery {
     pub archived: Option<bool>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/measures",
@@ -232,7 +232,7 @@ pub struct ProjMeasureParams {
     pub measure: ResourceId,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/measures/{measure}",

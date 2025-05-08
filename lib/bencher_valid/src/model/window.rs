@@ -136,7 +136,7 @@ mod test {
     use super::{is_valid_window, Window};
 
     #[test]
-    #[allow(clippy::excessive_precision)]
+    #[expect(clippy::excessive_precision)]
     fn test_boundary() {
         assert_eq!(true, is_valid_window(Window::MIN.into()));
         assert_eq!(true, is_valid_window(Window::THIRTY.into()));

@@ -54,7 +54,7 @@ pub struct ProjPlotsQuery {
     pub search: Option<Search>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/plots",
@@ -239,7 +239,7 @@ pub struct ProjPlotParams {
     pub plot: PlotUuid,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/plots/{plot}",

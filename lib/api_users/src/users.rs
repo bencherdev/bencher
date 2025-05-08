@@ -39,7 +39,7 @@ pub struct UsersQuery {
     pub search: Option<Search>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/users",
@@ -138,7 +138,7 @@ pub struct UserParams {
     pub user: ResourceId,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/users/{user}",

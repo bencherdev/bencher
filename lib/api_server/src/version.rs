@@ -3,7 +3,7 @@ use bencher_json::JsonApiVersion;
 use bencher_schema::{context::ApiContext, API_VERSION};
 use dropshot::{endpoint, HttpError, RequestContext};
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/version",
@@ -20,7 +20,7 @@ pub async fn server_version_options(
 /// View the API server version.
 /// This is used to verify that the CLI and API server are compatible.
 /// It can also be used as a simple endpoint to verify that the server is running.
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = GET,
     path = "/v0/server/version",

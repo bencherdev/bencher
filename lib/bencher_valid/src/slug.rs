@@ -79,7 +79,7 @@ pub fn is_valid_slug(slug: &str) -> bool {
     is_valid_len(slug) && slug == slug::slugify(slug)
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn new_slug(slug: &str) -> String {
     Slug::new(slug).0
@@ -128,7 +128,7 @@ impl Slug {
 
         while timestamp > 0 {
             let remainder = timestamp % BASE;
-            #[allow(clippy::cast_possible_truncation)]
+            #[expect(clippy::cast_possible_truncation)]
             if let Some(c) = std::char::from_digit(remainder as u32, BASE as u32) {
                 base36.push(c);
             }

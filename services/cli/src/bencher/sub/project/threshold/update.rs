@@ -35,7 +35,7 @@ impl TryFrom<CliThresholdUpdate> for Update {
                 },
             backend,
         } = update;
-        #[allow(clippy::if_same_then_else)]
+        #[expect(clippy::if_same_then_else)]
         let model = if let Some(test) = test {
             let cli_model = CliModel {
                 test,
@@ -73,7 +73,7 @@ impl From<Update> for JsonUpdateThreshold {
                 lower_boundary,
                 upper_boundary,
             } = model;
-            #[allow(clippy::inconsistent_struct_constructor)]
+            #[expect(clippy::inconsistent_struct_constructor)]
             Self {
                 subtype_0: Some(JsonUpdateModel {
                     test,

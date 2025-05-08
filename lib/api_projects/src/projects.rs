@@ -44,7 +44,7 @@ pub struct ProjectsQuery {
     pub search: Option<Search>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects",
@@ -180,7 +180,7 @@ pub struct ProjectParams {
     pub project: ResourceId,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}",

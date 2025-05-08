@@ -93,7 +93,7 @@ mod test {
     use super::{is_valid_index, Index};
 
     #[test]
-    #[allow(clippy::excessive_precision)]
+    #[expect(clippy::excessive_precision)]
     fn test_boundary() {
         assert_eq!(true, is_valid_index(Index::MIN.into()));
         assert_eq!(true, is_valid_index(1));

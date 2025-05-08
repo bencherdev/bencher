@@ -131,7 +131,7 @@ fn parse_catch2_benchmark_time(input: &str) -> IResult<&str, (Option<String>, Or
     )(input)
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 struct Prelude {
     samples: u64,
     iterations: u64,

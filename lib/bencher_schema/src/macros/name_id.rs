@@ -1,6 +1,6 @@
 macro_rules! fn_eq_name_id {
     ($name:ident, $table:ident) => {
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         pub fn eq_name_id(
             name_id: &bencher_json::NameId,
         ) -> Result<
@@ -41,7 +41,7 @@ pub(crate) use fn_eq_name_id;
 
 macro_rules! fn_from_name_id {
     ($table:ident, $resource:ident) => {
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         pub fn from_name_id(
             conn: &mut crate::context::DbConnection,
             project_id: crate::model::project::ProjectId,

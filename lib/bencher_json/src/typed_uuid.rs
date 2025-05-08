@@ -1,6 +1,6 @@
 // This exists solely to export a `Uuid` type to Typescript that then aliases to `string`.
 #[typeshare::typeshare]
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub struct Uuid(pub uuid::Uuid);
 
 macro_rules! typed_uuid {
@@ -22,38 +22,38 @@ macro_rules! typed_uuid {
         #[cfg_attr(feature = "schema", derive(JsonSchema))]
         #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
         #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         pub struct $name(uuid::Uuid);
 
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         impl From<$name> for uuid::Uuid {
             fn from(uuid: $name) -> Self {
                 uuid.0
             }
         }
 
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         impl From<uuid::Uuid> for $name {
             fn from(uuid: uuid::Uuid) -> Self {
                 Self(uuid)
             }
         }
 
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         impl From<$name> for crate::ResourceId {
             fn from(uuid: $name) -> Self {
                 uuid.0.into()
             }
         }
 
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         impl From<$name> for crate::NameId {
             fn from(uuid: $name) -> Self {
                 uuid.0.into()
             }
         }
 
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         impl std::str::FromStr for $name {
             type Err = uuid::Error;
 
@@ -62,7 +62,7 @@ macro_rules! typed_uuid {
             }
         }
 
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         impl AsRef<uuid::Uuid> for $name {
             fn as_ref(&self) -> &uuid::Uuid {
                 &self.0
@@ -70,7 +70,7 @@ macro_rules! typed_uuid {
         }
 
         impl $name {
-            #[allow(unused_qualifications)]
+            #[expect(unused_qualifications)]
             pub fn new() -> Self {
                 Self(uuid::Uuid::new_v4())
             }

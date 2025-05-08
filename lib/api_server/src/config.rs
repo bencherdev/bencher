@@ -1,8 +1,8 @@
-use bencher_config::{BENCHER_CONFIG, Config};
+use bencher_config::{Config, BENCHER_CONFIG};
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Put, ResponseAccepted, ResponseOk};
 use bencher_json::{
-    JsonConfig,
     system::config::{JsonConsole, JsonUpdateConfig},
+    JsonConfig,
 };
 use bencher_schema::{
     conn_lock,
@@ -13,12 +13,12 @@ use bencher_schema::{
         auth::{AuthUser, BearerToken, PubBearerToken},
     },
 };
-use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
 
 use super::restart::countdown;
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/config",
@@ -97,7 +97,7 @@ async fn put_inner(
         // SAFETY: This is safe because we are setting the environment variable
         // while holding a lock on the database connection.
         // This guarantees that no other thread is writing to the environment variable
-        #[allow(unsafe_code, reason = "set environment variable")]
+        #[expect(unsafe_code, reason = "set environment variable")]
         unsafe {
             std::env::set_var(BENCHER_CONFIG, &config_str);
         }
@@ -118,7 +118,7 @@ async fn put_inner(
     Ok(json_config)
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
         method = OPTIONS,
         path =  "/v0/server/config/console",

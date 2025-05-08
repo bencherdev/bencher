@@ -15,7 +15,7 @@ pub struct Update {
     pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     #[cfg(feature = "plus")]
-    #[cfg_attr(feature = "plus", allow(clippy::option_option))]
+    #[cfg_attr(feature = "plus", expect(clippy::option_option))]
     pub license: Option<Option<bencher_json::Jwt>>,
     pub backend: AuthBackend,
 }

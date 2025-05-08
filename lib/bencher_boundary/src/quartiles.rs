@@ -10,7 +10,7 @@ pub struct Quartiles {
 }
 
 impl Quartiles {
-    #[allow(clippy::indexing_slicing, clippy::integer_division)]
+    #[expect(clippy::indexing_slicing, clippy::integer_division)]
     pub fn new(data: &[f64]) -> Option<Self> {
         if data.is_empty() {
             return None;
@@ -57,7 +57,7 @@ impl Quartiles {
         Self::percentile_of_sorted(data, 0.75).and_then(|q| q.is_finite().then_some(q))
     }
 
-    #[allow(
+    #[expect(
         clippy::cast_possible_truncation,
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
@@ -89,7 +89,7 @@ impl Quartiles {
     // https://github.com/rust-lang/rustc-perf/blob/4f313add609f43e928e98132358e8426ed3969ae/site/src/comparison.rs#L1219
     fn percent_changes(data: &[f64]) -> Vec<f64> {
         const WINDOW_SIZE: usize = 2;
-        #[allow(clippy::indexing_slicing, clippy::missing_asserts_for_indexing)]
+        #[expect(clippy::indexing_slicing, clippy::missing_asserts_for_indexing)]
         let mut changes = data
             .windows(WINDOW_SIZE)
             .map(|window| {
@@ -111,7 +111,7 @@ impl Quartiles {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
+#[expect(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
     use std::sync::LazyLock;
 

@@ -1,6 +1,6 @@
 macro_rules! fn_get {
     ($table:ident, $id:ident) => {
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         pub fn get(
             conn: &mut $crate::context::DbConnection,
             id: $id,
@@ -24,7 +24,7 @@ pub(crate) use fn_get;
 
 macro_rules! fn_get_id {
     ($table:ident, $id:ident, $uuid:ident) => {
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         pub fn get_id(
             conn: &mut $crate::context::DbConnection,
             uuid: $uuid,
@@ -49,7 +49,7 @@ pub(crate) use fn_get_id;
 
 macro_rules! fn_get_uuid {
     ($table:ident, $id:ident, $uuid:ident) => {
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         pub fn get_uuid(
             conn: &mut $crate::context::DbConnection,
             id: $id,
@@ -74,7 +74,7 @@ pub(crate) use fn_get_uuid;
 
 macro_rules! fn_from_uuid {
     ($parent:ident, $parent_type:ty, $table:ident, $uuid:ident, $resource:ident) => {
-        #[allow(unused_qualifications)]
+        #[expect(unused_qualifications)]
         pub fn from_uuid(
             conn: &mut DbConnection,
             parent: $parent_type,

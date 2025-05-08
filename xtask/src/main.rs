@@ -1,4 +1,4 @@
-#![allow(
+#![expect(
     clippy::expect_used,
     clippy::print_stdout,
     clippy::print_stderr,
@@ -14,7 +14,7 @@ use task::Task;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
-    #[allow(let_underscore_drop, reason = "Optional dotenv file")]
+    #[expect(let_underscore_drop, reason = "Optional dotenv file")]
     let _ = dotenvy::from_path("xtask/.env");
     exec().await
 }

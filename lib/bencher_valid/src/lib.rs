@@ -1,4 +1,4 @@
-#![allow(unused_crate_dependencies)]
+#![expect(unused_crate_dependencies)]
 
 use std::str::FromStr as _;
 
@@ -75,7 +75,7 @@ fn is_valid_len(input: &str) -> bool {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(feature = "wasm"), allow(dead_code))]
+#[cfg_attr(not(feature = "wasm"), expect(dead_code))]
 pub fn is_valid_uuid(uuid: &str) -> bool {
     uuid::Uuid::from_str(uuid).is_ok()
 }

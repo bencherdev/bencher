@@ -275,7 +275,7 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
     debug!(log, "Setting \"{DATABASE_URL}\" to {database_path}");
     // SAFETY: This is safe because we are setting the environment variable
     // from a single thread at startup.
-    #[allow(unsafe_code, reason = "set environment variable")]
+    #[expect(unsafe_code, reason = "set environment variable")]
     unsafe {
         std::env::set_var(DATABASE_URL, database_path);
     }
@@ -318,7 +318,7 @@ fn run_litestream(
     Ok(())
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
     let JsonServer {
         bind_address,

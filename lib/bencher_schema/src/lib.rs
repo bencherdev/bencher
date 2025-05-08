@@ -1,4 +1,4 @@
-#![allow(clippy::result_large_err)]
+#![expect(clippy::result_large_err)]
 
 use diesel::connection::SimpleConnection as _;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness as _};
@@ -7,9 +7,9 @@ pub mod context;
 pub mod error;
 pub mod macros;
 pub mod model;
-#[allow(unused_qualifications)]
+#[expect(unused_qualifications)]
 pub mod schema;
-#[allow(unused_qualifications)]
+#[expect(unused_qualifications)]
 pub mod view;
 
 pub use context::ApiContext;

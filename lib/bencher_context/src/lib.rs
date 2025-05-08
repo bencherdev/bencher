@@ -17,7 +17,7 @@ const VERSION: &str = "v0";
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct RunContext(pub HashMap<String, String>);
 
-#[allow(clippy::multiple_inherent_impl)]
+#[expect(clippy::multiple_inherent_impl)]
 impl RunContext {
     fn key(path: &str) -> String {
         format!("{BENCHER_DEV}/{VERSION}{path}")

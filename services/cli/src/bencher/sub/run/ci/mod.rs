@@ -1,4 +1,4 @@
-#![allow(clippy::result_large_err)]
+#![expect(clippy::result_large_err)]
 
 use bencher_comment::ReportComment;
 

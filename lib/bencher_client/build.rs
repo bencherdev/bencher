@@ -1,4 +1,4 @@
-#![allow(let_underscore_drop, clippy::unwrap_used)]
+#![expect(let_underscore_drop, clippy::unwrap_used)]
 
 #[cfg(unix)]
 use std::os::unix;

@@ -26,7 +26,7 @@ pub struct TaskExamples {
 /// Template kind
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
-#[allow(clippy::enum_variant_names)]
+#[expect(clippy::enum_variant_names)]
 pub enum TaskExample {
     /// Rust libtest bench
     RustBench,
@@ -49,7 +49,7 @@ pub struct TaskSmokeTest {
 /// Template kind
 #[derive(ValueEnum, Debug, Clone, Copy, Default)]
 #[clap(rename_all = "snake_case")]
-#[allow(clippy::doc_markdown)]
+#[expect(clippy::doc_markdown)]
 pub enum TaskTestEnvironment {
     #[default]
     /// https://localhost:61016

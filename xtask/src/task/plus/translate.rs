@@ -90,7 +90,7 @@ impl TaskLanguage {
 }
 
 impl Translate {
-    #[allow(clippy::unused_async)]
+    #[expect(clippy::unused_async)]
     pub async fn exec(&self) -> anyhow::Result<()> {
         for input_path in &self.input_path {
             let languages = self.lang.clone().unwrap_or_else(TaskLanguage::all);

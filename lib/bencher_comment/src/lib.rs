@@ -629,7 +629,7 @@ impl ReportComment {
         })
     }
 
-    #[cfg_attr(not(feature = "plus"), allow(clippy::unused_self))]
+    #[cfg_attr(not(feature = "plus"), expect(clippy::unused_self))]
     fn is_bencher_cloud(&self) -> bool {
         #[cfg(feature = "plus")]
         {

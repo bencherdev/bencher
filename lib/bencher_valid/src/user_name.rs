@@ -18,7 +18,7 @@ use serde::{
 
 use crate::{is_valid_len, ValidError, REGEX_ERROR};
 
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static NAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,64}$").expect(REGEX_ERROR));
 

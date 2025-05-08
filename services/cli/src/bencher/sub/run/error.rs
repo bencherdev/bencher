@@ -1,4 +1,4 @@
-#![allow(clippy::absolute_paths)]
+#![expect(clippy::absolute_paths)]
 
 use super::runner::{command::Command, Runner};
 

@@ -217,7 +217,7 @@ impl MetricsLimits {
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used, clippy::unreadable_literal, clippy::unwrap_used)]
+#[expect(clippy::expect_used, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
     use std::sync::LazyLock;
 

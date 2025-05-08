@@ -1,5 +1,5 @@
 mod codegen {
-    #![allow(
+    #![expect(
         unused_qualifications,
         variant_size_differences,
         clippy::all,

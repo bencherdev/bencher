@@ -215,7 +215,7 @@ fn metric_line<'a>(
             line_ending(),
         )),
         |(_, _, _, _, current_value, _, _, _)| JsonNewMetric {
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss)]
             value: (current_value as f64).into(),
             lower_value: None,
             upper_value: None,

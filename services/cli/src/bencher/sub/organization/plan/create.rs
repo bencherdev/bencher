@@ -63,7 +63,7 @@ impl From<Create> for JsonNewPlan {
             remote,
             ..
         } = create;
-        #[allow(clippy::inconsistent_struct_constructor)]
+        #[expect(clippy::inconsistent_struct_constructor)]
         Self {
             checkout,
             level,

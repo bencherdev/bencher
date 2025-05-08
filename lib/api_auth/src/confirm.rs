@@ -10,7 +10,7 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use super::CLIENT_TOKEN_TTL;
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/auth/confirm",

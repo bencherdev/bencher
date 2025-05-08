@@ -21,7 +21,7 @@ use crate::ValidError;
 // Valid until 2159-12-06T18:53:44Z
 pub const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
 
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 pub static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
     TEST_BENCHER_API_TOKEN_STR
         .parse()

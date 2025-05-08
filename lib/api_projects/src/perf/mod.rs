@@ -48,7 +48,7 @@ pub struct ProjPerfParams {
     pub project: ResourceId,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/perf",
@@ -152,7 +152,7 @@ struct Times {
     end_time: Option<DateTime>,
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 async fn perf_results(
     context: &ApiContext,
     project: &QueryProject,
@@ -219,7 +219,7 @@ async fn perf_results(
     Ok(results)
 }
 
-#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
 async fn perf_query(
     context: &ApiContext,
     project: &QueryProject,

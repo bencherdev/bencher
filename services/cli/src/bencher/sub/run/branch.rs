@@ -2,7 +2,7 @@ use bencher_json::{GitHash, NameId};
 
 use crate::{bencher::sub::project::branch::start_point::StartPoint, parser::run::CliRunBranch};
 
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 #[derive(Debug, Clone)]
 pub struct Branch {
     branch: Option<NameId>,
@@ -45,7 +45,7 @@ impl TryFrom<CliRunBranch> for Branch {
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 fn map_start_point(
     start_point: Vec<String>,
     start_point_hash: Option<GitHash>,

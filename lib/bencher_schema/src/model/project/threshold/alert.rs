@@ -145,7 +145,7 @@ impl QueryAlert {
         .await
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub async fn into_json_for_report(
         self,
         context: &ApiContext,

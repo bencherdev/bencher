@@ -37,7 +37,7 @@ pub struct OrgPlanParams {
     pub organization: ResourceId,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/plan",

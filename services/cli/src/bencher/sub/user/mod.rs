@@ -1,3 +1,3 @@
 pub mod token;
-#[allow(clippy::module_inception)]
+#[expect(clippy::module_inception)]
 pub mod user;

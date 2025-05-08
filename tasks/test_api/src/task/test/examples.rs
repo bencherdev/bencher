@@ -12,7 +12,7 @@ pub struct Examples {
 }
 
 #[derive(Debug, Clone, Copy)]
-#[allow(clippy::enum_variant_names)]
+#[expect(clippy::enum_variant_names)]
 pub enum Example {
     RustBench,
     RustCriterion,

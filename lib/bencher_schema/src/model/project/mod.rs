@@ -7,7 +7,8 @@ use bencher_json::{
 };
 use bencher_rbac::{project::Permission, Organization, Project};
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
 };
 use dropshot::HttpError;
 use project_role::InsertProjectRole;
@@ -46,7 +47,7 @@ pub mod threshold;
 
 crate::macros::typed_id::typed_id!(ProjectId);
 
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static UNIQUE_SUFFIX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\((\d+)\)$").expect("Failed to create regex for unique project suffix")
 });

@@ -1,4 +1,4 @@
-#![allow(clippy::absolute_paths)]
+#![expect(clippy::absolute_paths)]
 
 use std::env;
 
@@ -13,7 +13,7 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
 const DEFAULT_ATTEMPTS: usize = 10;
 const DEFAULT_RETRY_AFTER: u64 = 1;
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 /// A client for the Bencher API
 #[derive(Debug, Clone)]
 pub struct BencherClient {
@@ -28,7 +28,7 @@ pub struct BencherClient {
     pub log: bool,
 }
 
-#[allow(clippy::absolute_paths)]
+#[expect(clippy::absolute_paths)]
 #[derive(thiserror::Error, Debug)]
 pub enum ClientError {
     #[error("Failed to build. Missing `host` field.")]
@@ -133,7 +133,7 @@ impl BencherClient {
     /// # Returns
     ///
     /// A `Result` containing the response JSON or an `Error`
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     pub async fn send_with<F, R, T, Json, E>(&self, sender: F) -> Result<Json, ClientError>
     where
         F: Fn(crate::codegen::Client) -> R,
@@ -167,7 +167,7 @@ impl BencherClient {
                     self.log_json(&json_response)?;
                     return Ok(json_response);
                 },
-                #[allow(clippy::print_stderr)]
+                #[expect(clippy::print_stderr)]
                 Err(crate::codegen::Error::CommunicationError(e)) => {
                     if self.log {
                         eprintln!("\nSend attempt #{}/{attempts}: {e}", attempt + 1);
@@ -310,7 +310,7 @@ impl BencherClient {
     }
 
     fn log_str(&self, err: &str) {
-        #[allow(clippy::print_stdout)]
+        #[expect(clippy::print_stdout)]
         if self.log {
             println!("{err}");
         }
@@ -329,7 +329,7 @@ pub struct ErrorResponse {
 impl std::fmt::Display for ErrorResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Status: {}", self.status)?;
-        #[allow(clippy::use_debug)]
+        #[expect(clippy::use_debug)]
         writeln!(f, "Headers: {:?}", self.headers)?;
         writeln!(f, "Request ID: {}", self.request_id)?;
         if let Some(error_code) = &self.error_code {

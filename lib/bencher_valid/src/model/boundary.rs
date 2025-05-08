@@ -66,7 +66,7 @@ impl Visitor<'_> for BoundaryVisitor {
     where
         E: de::Error,
     {
-        #[allow(clippy::cast_precision_loss)]
+        #[expect(clippy::cast_precision_loss)]
         (v as f64).try_into().map_err(E::custom)
     }
 
@@ -96,7 +96,7 @@ impl Boundary {
     pub const THREE_NINES: Self = Self(OrderedFloat(0.999));
     pub const FOUR_NINES: Self = Self(OrderedFloat(0.9999));
     pub const FIVE_NINES: Self = Self(OrderedFloat(0.99999));
-    #[allow(clippy::unreadable_literal)]
+    #[expect(clippy::unreadable_literal)]
     pub const SIXTEEN_NINES: Self = Self(OrderedFloat(0.9999999999999999));
     pub const MAX_STATISTICAL: Self = Self::SIXTEEN_NINES;
 
@@ -283,7 +283,7 @@ mod test {
     use super::{is_valid_boundary, Boundary};
 
     #[test]
-    #[allow(clippy::excessive_precision)]
+    #[expect(clippy::excessive_precision)]
     fn test_boundary() {
         assert_eq!(true, is_valid_boundary(0.0));
         assert_eq!(true, is_valid_boundary(-1.0));

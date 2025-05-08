@@ -13,7 +13,7 @@ pub mod rust;
 pub mod shell;
 mod util;
 
-#[allow(dead_code, clippy::print_stdout, clippy::unnecessary_wraps)]
+#[expect(dead_code, clippy::print_stdout, clippy::unnecessary_wraps)]
 fn print_ln(input: &str) -> IResult<&str, ()> {
     println!("--- START ---");
     println!("{input}");
@@ -22,7 +22,7 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::panic, clippy::unwrap_used)]
+#[expect(clippy::panic, clippy::unwrap_used)]
 pub(crate) mod test_util {
     use bencher_json::project::{
         measure::built_in::{

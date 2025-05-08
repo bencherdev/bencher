@@ -58,7 +58,7 @@ pub struct ProjBranchesQuery {
     pub archived: Option<bool>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches",
@@ -253,7 +253,7 @@ pub struct ProjBranchQuery {
     pub head: Option<HeadUuid>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches/{branch}",

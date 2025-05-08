@@ -17,7 +17,7 @@ mod table_style;
 use table_style::TableStyle;
 
 #[derive(Debug, Clone)]
-#[allow(clippy::option_option)]
+#[expect(clippy::option_option)]
 pub struct Perf {
     project: ResourceId,
     branches: Vec<BranchUuid>,

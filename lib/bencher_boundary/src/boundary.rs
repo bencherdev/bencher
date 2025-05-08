@@ -90,7 +90,7 @@ impl MetricsBoundary {
                 log,
                 datum,
                 data,
-                #[allow(clippy::cast_precision_loss)]
+                #[expect(clippy::cast_precision_loss)]
                 NormalTestKind::T {
                     freedom: (data.len() - 1) as f64,
                 },

@@ -20,7 +20,7 @@ impl Units {
         Self { scale, units }
     }
 
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     pub fn scale_factor(&self) -> OrderedFloat<f64> {
         OrderedFloat::from(self.scale.factor() as f64)
     }
@@ -51,7 +51,7 @@ enum Scale {
 }
 
 impl Scale {
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     fn new(min: f64, units: &str) -> Self {
         match units {
             NANOSECONDS => match min {
@@ -305,19 +305,19 @@ impl ScaleOneE {
     }
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn scale_factor(min: f64, units: &str) -> u64 {
     Scale::new(min, units).factor()
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn scale_units(min: f64, units: &str) -> String {
     Scale::new(min, units).units(units)
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn scale_units_symbol(min: f64, units: &str) -> String {
     Scale::new(min, units).units_symbol(units)

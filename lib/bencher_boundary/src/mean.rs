@@ -4,7 +4,7 @@ pub struct Mean {
 }
 
 impl Mean {
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     pub fn new(data: &[f64]) -> Option<Self> {
         mean(data).map(|mean| Self { mean })
     }
@@ -18,7 +18,7 @@ pub fn mean(data: &[f64]) -> Option<f64> {
     if data.is_empty() {
         None
     } else {
-        #[allow(clippy::cast_precision_loss)]
+        #[expect(clippy::cast_precision_loss)]
         let mean = data.iter().sum::<f64>() / data.len() as f64;
         mean.is_finite().then_some(mean)
     }
@@ -37,7 +37,7 @@ fn variance(location: f64, data: &[f64]) -> Option<f64> {
     if data.len() < 2 {
         None
     } else {
-        #[allow(clippy::cast_precision_loss)]
+        #[expect(clippy::cast_precision_loss)]
         Some(
             data.iter()
                 .map(|&value| (value - location).powi(2))
@@ -49,7 +49,7 @@ fn variance(location: f64, data: &[f64]) -> Option<f64> {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
+#[expect(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
     use std::sync::LazyLock;
 
@@ -308,7 +308,7 @@ mod test {
     }
 
     #[test]
-    #[allow(clippy::approx_constant)]
+    #[expect(clippy::approx_constant)]
     fn test_std_dev_two() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_TWO).unwrap();
         assert_eq!(std_dev, 1.5811388300841898);
@@ -345,7 +345,7 @@ mod test {
     }
 
     #[test]
-    #[allow(clippy::approx_constant)]
+    #[expect(clippy::approx_constant)]
     fn test_std_dev_five() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE).unwrap();
         assert_eq!(std_dev, 3.3166247903554);
@@ -364,7 +364,7 @@ mod test {
     }
 
     #[test]
-    #[allow(clippy::approx_constant)]
+    #[expect(clippy::approx_constant)]
     fn test_std_dev_five_desc() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE_DESC).unwrap();
         assert_eq!(std_dev, 3.3166247903554);
@@ -383,7 +383,7 @@ mod test {
     }
 
     #[test]
-    #[allow(clippy::approx_constant)]
+    #[expect(clippy::approx_constant)]
     fn test_std_dev_five_neg() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE_NEG).unwrap();
         assert_eq!(std_dev, 3.3166247903554);

@@ -221,7 +221,7 @@ macro_rules! resource_not_found_err {
     // Get one
     ($resource:ident, $value:expr) => {
         |e| {
-            #[allow(unused_qualifications)]
+            #[expect(unused_qualifications)]
             $crate::error::resource_not_found_error(
                 $crate::error::BencherResource::$resource,
                 &$value,
@@ -237,7 +237,7 @@ pub use resource_not_found_err;
 macro_rules! resource_conflict_err {
     ($resource:ident, $value:expr) => {
         |e| {
-            #[allow(unused_qualifications)]
+            #[expect(unused_qualifications)]
             $crate::error::resource_conflict_error(
                 $crate::error::BencherResource::$resource,
                 &$value,
@@ -295,7 +295,7 @@ fn cors_headers(mut http_error: HttpError) -> HttpError {
 }
 
 const GITHUB_ISSUE_URL_STR: &str = "https://github.com/bencherdev/bencher/issues/new";
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 pub static GITHUB_ISSUE_URL: LazyLock<url::Url> =
     LazyLock::new(|| GITHUB_ISSUE_URL_STR.parse().expect(GITHUB_ISSUE_URL_STR));
 

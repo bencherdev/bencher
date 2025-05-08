@@ -17,7 +17,7 @@ use serde::{
 
 use crate::{error::REGEX_ERROR, secret::SANITIZED_SECRET, ValidError};
 
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static CVC_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^[[:digit:]]{3,4}$").expect(REGEX_ERROR));
 

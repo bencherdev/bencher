@@ -1,4 +1,4 @@
-#![allow(clippy::unit_arg)]
+#![expect(clippy::unit_arg)]
 
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;

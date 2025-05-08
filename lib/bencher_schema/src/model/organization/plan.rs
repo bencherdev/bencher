@@ -211,7 +211,7 @@ impl InsertPlan {
     }
 }
 
-#[allow(variant_size_differences)]
+#[expect(variant_size_differences)]
 pub enum PlanKind {
     Metered(MeteredPlanId),
     Licensed(LicenseUsage),

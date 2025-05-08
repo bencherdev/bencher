@@ -38,7 +38,7 @@ impl FmtBody for ButtonBody {
     }
 
     // https://github.com/leemunroe/responsive-html-email-template
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn html(&self, log: &Logger) -> String {
         let Self {
             title,

@@ -4,7 +4,7 @@ use bencher_json::system::config::JsonStats;
 use chrono::NaiveTime;
 
 // Run at 03:07:22 UTC by default (offset 11,242 seconds)
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static DEFAULT_STATS_OFFSET: LazyLock<NaiveTime> =
     LazyLock::new(|| NaiveTime::from_hms_opt(3, 7, 22).expect("Invalid default stats offset"));
 // Default stats to enabled

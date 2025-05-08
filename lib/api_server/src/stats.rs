@@ -14,7 +14,7 @@ use bencher_schema::{
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/stats",

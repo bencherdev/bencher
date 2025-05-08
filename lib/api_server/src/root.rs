@@ -4,7 +4,7 @@ use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_schema::context::ApiContext;
 use dropshot::{endpoint, HttpError, RequestContext};
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/",
@@ -24,7 +24,7 @@ pub async fn server_root_options(
     ]))
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[expect(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = GET,
     path = "/",

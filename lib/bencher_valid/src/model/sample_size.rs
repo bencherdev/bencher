@@ -140,7 +140,7 @@ mod test {
     use super::{is_valid_sample_size, SampleSize};
 
     #[test]
-    #[allow(clippy::excessive_precision)]
+    #[expect(clippy::excessive_precision)]
     fn test_boundary() {
         assert_eq!(true, is_valid_sample_size(SampleSize::MIN.into()));
         assert_eq!(true, is_valid_sample_size(2));
