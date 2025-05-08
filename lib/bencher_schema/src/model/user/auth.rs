@@ -9,7 +9,7 @@ use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
     Organization, Project, Server, User as RbacUser,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
     ServerContext, SharedExtractor,

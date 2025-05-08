@@ -8,7 +8,7 @@ use bencher_json::{
     project::report::{Adapter, Iteration, JsonReportSettings},
     BenchmarkName, MeasureNameId,
 };
-use diesel::RunQueryDsl;
+use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -106,7 +106,7 @@ impl ReportResults {
                 )
                 .await?;
             }
-        };
+        }
 
         Ok(())
     }

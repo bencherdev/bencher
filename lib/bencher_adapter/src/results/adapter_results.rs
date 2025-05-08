@@ -1,8 +1,8 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr as _};
 
 use bencher_json::{
     project::{
-        measure::built_in::{self, BuiltInMeasure},
+        measure::built_in::{self, BuiltInMeasure as _},
         metric::Mean,
     },
     BenchmarkName, JsonNewMetric,

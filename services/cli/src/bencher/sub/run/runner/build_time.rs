@@ -1,6 +1,6 @@
 use bencher_json::{
     project::{
-        measure::built_in::{self, BuiltInMeasure},
+        measure::built_in::{self, BuiltInMeasure as _},
         metric::MetricResults,
     },
     JsonNewMetric,

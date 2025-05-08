@@ -5,7 +5,7 @@ use bencher_json::{
     },
     DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, NameIdKind, ResourceName, Slug,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{

@@ -1,10 +1,11 @@
-use bencher_config::{Config, BENCHER_CONFIG};
+use bencher_config::{BENCHER_CONFIG, Config};
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Put, ResponseAccepted, ResponseOk};
 use bencher_json::{
-    system::config::{JsonConsole, JsonUpdateConfig},
     JsonConfig,
+    system::config::{JsonConsole, JsonUpdateConfig},
 };
 use bencher_schema::{
+    conn_lock,
     context::ApiContext,
     error::{bad_request_error, issue_error},
     model::user::{
@@ -12,7 +13,7 @@ use bencher_schema::{
         auth::{AuthUser, BearerToken, PubBearerToken},
     },
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
 use super::restart::countdown;
@@ -91,7 +92,16 @@ async fn put_inner(
 
     // TODO add validation here
     let config_str = serde_json::to_string(&config).map_err(bad_request_error)?;
-    std::env::set_var(BENCHER_CONFIG, &config_str);
+    {
+        let _conn = conn_lock!(context);
+        // SAFETY: This is safe because we are setting the environment variable
+        // while holding a lock on the database connection.
+        // This guarantees that no other thread is writing to the environment variable
+        #[allow(unsafe_code, reason = "set environment variable")]
+        unsafe {
+            std::env::set_var(BENCHER_CONFIG, &config_str);
+        }
+    }
     Config::write(log, config_str.as_bytes())
         .await
         .map_err(|e| {

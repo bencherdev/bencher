@@ -2,7 +2,7 @@ use bencher_json::{
     project::boundary::BoundaryLimit, Boundary, CdfBoundary, IqrBoundary, PercentageBoundary,
 };
 use slog::{debug, Logger};
-use statrs::distribution::{ContinuousCDF, LogNormal, Normal, StudentsT};
+use statrs::distribution::{ContinuousCDF as _, LogNormal, Normal, StudentsT};
 
 use crate::{ln::Ln, quartiles::Quartiles, BoundaryError};
 

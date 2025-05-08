@@ -107,7 +107,7 @@ pub(crate) mod test_rust_criterion {
 
     use crate::{
         adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
-        Adaptable, AdapterResults, Settings,
+        Adaptable as _, AdapterResults, Settings,
     };
 
     use super::{parse_criterion, AdapterRustCriterion};

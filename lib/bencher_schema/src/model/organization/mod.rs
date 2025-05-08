@@ -1,4 +1,4 @@
-use std::string::ToString;
+use std::string::ToString as _;
 
 use bencher_json::{
     organization::{
@@ -9,7 +9,7 @@ use bencher_json::{
     ResourceName, Slug,
 };
 use bencher_rbac::{organization::Permission, Organization};
-use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
 use dropshot::HttpError;
 use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 

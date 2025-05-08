@@ -26,7 +26,7 @@ use bencher_schema::{
     },
     schema,
 };
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;

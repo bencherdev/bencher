@@ -3,5 +3,8 @@
 absolute-paths-allowed-crates = ["diesel"]
 absolute-paths-max-segments = 3
 
-allow-unwrap-in-tests = true
+allow-dbg-in-tests = true
 allow-expect-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-print-in-tests = true
+allow-unwrap-in-tests = true

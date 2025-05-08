@@ -6,7 +6,7 @@ use bencher_json::{
     DateTime, JsonNewReport, JsonReport, ReportUuid,
 };
 use diesel::{
-    ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
+    ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::HttpError;
 use results::ReportResults;

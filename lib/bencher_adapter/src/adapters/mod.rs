@@ -27,7 +27,7 @@ pub(crate) mod test_util {
     use bencher_json::project::{
         measure::built_in::{
             default::{Latency, Throughput},
-            BuiltInMeasure,
+            BuiltInMeasure as _,
         },
         report::JsonAverage,
     };

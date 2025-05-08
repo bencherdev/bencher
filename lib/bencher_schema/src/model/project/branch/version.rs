@@ -2,7 +2,7 @@ use bencher_json::{
     project::head::{JsonVersion, VersionNumber},
     GitHash, VersionUuid,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{
@@ -106,7 +106,7 @@ impl InsertVersion {
             uuid: version_uuid,
             project_id,
             number,
-            hash: hash.map(Into::into),
+            hash,
         };
 
         diesel::insert_into(schema::version::table)

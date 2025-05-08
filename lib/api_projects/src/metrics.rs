@@ -23,8 +23,8 @@ use bencher_schema::{
     schema, view,
 };
 use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
 };
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;

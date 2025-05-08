@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr as _};
 
 use bencher_json::{JsonNewMetric, MeasureNameId};
 use serde::{Deserialize, Serialize};

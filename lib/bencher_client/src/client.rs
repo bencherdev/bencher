@@ -108,7 +108,7 @@ impl BencherClient {
     pub async fn send<F, R, T, E>(&self, sender: F) -> Result<serde_json::Value, ClientError>
     where
         F: Fn(crate::codegen::Client) -> R,
-        R: std::future::Future<
+        R: Future<
             Output = Result<
                 progenitor_client::ResponseValue<T>,
                 crate::codegen::Error<crate::codegen::types::Error>,
@@ -137,7 +137,7 @@ impl BencherClient {
     pub async fn send_with<F, R, T, Json, E>(&self, sender: F) -> Result<Json, ClientError>
     where
         F: Fn(crate::codegen::Client) -> R,
-        R: std::future::Future<
+        R: Future<
             Output = Result<
                 progenitor_client::ResponseValue<T>,
                 crate::codegen::Error<crate::codegen::types::Error>,

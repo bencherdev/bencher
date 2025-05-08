@@ -6,7 +6,7 @@ use std::{cmp, sync::Arc};
 use bencher_json::{DateTime, JsonServer, JsonServerStats, PlanLevel, ServerUuid, BENCHER_API_URL};
 use bencher_license::Licensor;
 use chrono::{Duration, Utc};
-use diesel::RunQueryDsl;
+use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 

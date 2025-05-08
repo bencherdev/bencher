@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::str::FromStr as _;
 
 use bencher_bing_index::BingIndex;
 use bencher_google_index::GoogleIndex;

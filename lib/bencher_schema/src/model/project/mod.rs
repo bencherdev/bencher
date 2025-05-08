@@ -1,4 +1,4 @@
-use std::{string::ToString, sync::LazyLock};
+use std::{string::ToString as _, sync::LazyLock};
 
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, ProjectRole, Visibility},
@@ -7,7 +7,7 @@ use bencher_json::{
 };
 use bencher_rbac::{project::Permission, Organization, Project};
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
 };
 use dropshot::HttpError;
 use project_role::InsertProjectRole;
@@ -222,7 +222,7 @@ impl QueryProject {
         // https://www.sqlite.org/lang_expr.html#the_like_glob_regexp_match_and_extract_operators
         let escaped_name = name_str.replace('%', r"\%").replace('_', r"\_");
         // Create a regex pattern to match the original project name or any subsequent projects with the same name
-        let pattern = format!(r"{escaped_name} (%)");
+        let pattern = format!("{escaped_name} (%)");
         slog::debug!(log, "LIKE pattern: {pattern}");
 
         let Ok(highest_name) = schema::project::table

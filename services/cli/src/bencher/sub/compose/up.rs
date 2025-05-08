@@ -5,7 +5,7 @@ use bollard::{
     service::{HostConfig, PortBinding},
     Docker,
 };
-use futures_util::TryStreamExt;
+use futures_util::TryStreamExt as _;
 
 use super::DockerError;
 use crate::{
@@ -161,7 +161,7 @@ async fn pull_image(
             if let BollardError::DockerStreamError { error } = &err {
                 cli_eprintln!("{error}");
                 cli_eprintln!("Are you on Windows? Are you running in Linux container mode?");
-                cli_eprintln!(r#"Try running: & 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine"#);
+                cli_eprintln!(r"Try running: & 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine");
             }
             DockerError::CreateImage {
                 image,

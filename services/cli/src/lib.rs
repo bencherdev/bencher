@@ -2,7 +2,7 @@ mod bencher;
 mod error;
 mod parser;
 
-use bencher::{sub::SubCmd, Bencher};
+use bencher::{sub::SubCmd as _, Bencher};
 pub use bencher::{
     sub::{MockError, RunError, ThresholdError},
     BackendError,
@@ -24,11 +24,11 @@ pub async fn exec() -> Result<(), CliError> {
 macro_rules! cli_println {
     // () => (print!("\n"));
     ($fmt:expr) => ({
-        use std::io::Write;
+        use std::io::Write as _;
         let _w = writeln!(std::io::stdout(), $fmt);
     });
     ($fmt:expr, $($arg:tt)*) => ({
-        use std::io::Write;
+        use std::io::Write as _;
         let _w = writeln!(std::io::stdout(), $fmt, $($arg)*);
     });
 }
@@ -53,11 +53,11 @@ pub(crate) use cli_println_quietable;
 macro_rules! cli_eprintln {
     // () => (eprint!("\n"));
     ($fmt:expr) => ({
-        use std::io::Write;
+        use std::io::Write as _;
         let _w = writeln!(std::io::stderr(), $fmt);
     });
     ($fmt:expr, $($arg:tt)*) => ({
-        use std::io::Write;
+        use std::io::Write as _;
         let _w = writeln!(std::io::stderr(), $fmt, $($arg)*);
     })
 }

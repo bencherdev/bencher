@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::str::FromStr as _;
 use std::sync::LazyLock;
 
 use bencher_json::organization::plan::JsonLicense;

@@ -1,6 +1,6 @@
 #![allow(unused_crate_dependencies)]
 
-use std::str::FromStr;
+use std::str::FromStr as _;
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;

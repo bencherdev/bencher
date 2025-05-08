@@ -1,4 +1,4 @@
-use chrono::Datelike;
+use chrono::Datelike as _;
 use chrono::Utc;
 use derive_more::Display;
 #[cfg(feature = "schema")]

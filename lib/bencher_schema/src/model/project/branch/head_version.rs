@@ -1,5 +1,5 @@
 use bencher_json::{BranchUuid, GitHash, HeadUuid, JsonStartPoint};
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 
 use crate::{

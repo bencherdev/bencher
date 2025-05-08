@@ -1,7 +1,7 @@
 use std::{fmt, process::Stdio};
 
 use chrono::Utc;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt as _, BufReader};
 
 use super::build_time::{BuildCommand, BuildTime};
 use super::file_path::FilePath;

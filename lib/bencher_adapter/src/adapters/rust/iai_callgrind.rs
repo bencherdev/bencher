@@ -1,6 +1,6 @@
 use bencher_json::{
     project::{
-        measure::built_in::{iai_callgrind, BuiltInMeasure},
+        measure::built_in::{iai_callgrind, BuiltInMeasure as _},
         report::JsonAverage,
     },
     BenchmarkName, JsonNewMetric,
@@ -30,7 +30,7 @@ impl Adaptable for AdapterRustIaiCallgrind {
             Some(JsonAverage::Mean | JsonAverage::Median) => {
                 return None; // 'iai_callgrind' results are for a single run only.
             },
-        };
+        }
 
         // Clean up the input by removing ANSI escape codes:
         let input = strip_ansi_escapes::strip_str(input);
@@ -235,7 +235,7 @@ fn not_line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
 #[cfg(test)]
 pub(crate) mod test_rust_iai_callgrind {
     use crate::{adapters::test_util::convert_file_path, AdapterResults};
-    use bencher_json::project::measure::built_in::{iai_callgrind, BuiltInMeasure};
+    use bencher_json::project::measure::built_in::{iai_callgrind, BuiltInMeasure as _};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 

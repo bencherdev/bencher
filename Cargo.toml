@@ -8,13 +8,13 @@ members = [
     "xtask",
 ]
 exclude = ["services/benchers", "services/cargo-bencher"]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
 homepage = "https://bencher.dev"
 version = "0.5.1"
 authors = ["Everett Pompeii <everett@bencher.dev>"]
-edition = "2021"
+edition = "2024"
 license-file = "LICENSE.md"
 
 [workspace.dependencies]
@@ -111,7 +111,6 @@ single_use_lifetimes = "warn"
 trivial_casts = "warn"
 trivial_numeric_casts = "warn"
 unsafe_code = "warn"
-unsafe_op_in_unsafe_fn = "warn"
 unused_crate_dependencies = "warn"
 unused_import_braces = "warn"
 unused_lifetimes = "warn"
@@ -130,15 +129,17 @@ multiple_crate_versions = "allow"         # Checks to see if multiple versions o
 pedantic = { level = "warn", priority = -1 }
 missing_errors_doc = "allow"                 # Checks the doc comments of publicly visible functions that return a Result type and warns if there is no # Errors section.
 missing_panics_doc = "allow"                 # Checks the doc comments of publicly visible functions that may panic and warns if there is no # Panics section.
-module_name_repetitions = "allow"            # Detects type names that are prefixed or suffixed by the containing module’s name.
 must_use_candidate = "allow"                 # Checks for public functions that have no #[must_use] attribute, but return something not already marked must-use, have no mutable arg and mutate no statics.
 # restriction
 absolute_paths = "warn"                    # Checks for usage of items through absolute paths, like std::env::current_dir.
+allow_attributes = "warn"                  # Checks for usage of the #[allow] attribute and suggests replacing it with the #[expect]
+as_pointer_underscore = "warn"             # Checks for the usage of as *const _ or as *mut _ conversion using inferred type.
 as_underscore = "warn"                     # Checks for the usage of as _ conversion using inferred type.
 big_endian_bytes = "warn"                  # Checks for the usage of the to_be_bytes method and/or the function from_be_bytes.
 cfg_not_test = "warn"                      # Checks for usage of cfg that excludes code from test builds. (i.e., #[cfg(not(test))])
 dbg_macro = "warn"                         # Checks for usage of the dbg! macro.
 decimal_literal_representation = "warn"    # Warns if there is a better representation for a numeric literal.
+doc_include_without_cfg = "warn"           # Checks if included files in doc comments are included only for cfg(doc).
 error_impl_error = "warn"                  # Checks for types named Error that implement Error.
 empty_enum_variants_with_brackets = "warn" # Finds enum variants without fields that are declared with empty brackets.
 exit = "warn"                              # Detects calls to the exit() function which terminates the program.
@@ -162,6 +163,7 @@ large_include_file = "warn"                # Checks for the inclusion of large f
 little_endian_bytes = "warn"               # Checks for the usage of the to_le_bytes method and/or the function from_le_bytes.
 lossy_float_literal = "warn"               # Checks for whole number float literals that cannot be represented as the underlying type without loss.
 map_err_ignore = "warn"                    # Checks for instances of map_err(|_| Some::Enum)
+map_with_unused_argument_over_ranges = "warn" # Checks for Iterator::map over ranges without using the parameter which could be more clearly expressed using std::iter::repeat(...).take(...) or std::iter::repeat_n.
 mem_forget = "warn"                        # Checks for usage of std::mem::forget(t) where t is Drop or has a field that implements Drop.
 missing_assert_message = "warn"            # Checks assertions without a custom panic message.
 missing_asserts_for_indexing = "warn"      # Checks for repeated slice indexing without asserting beforehand that the length is greater than the largest index used to index into the slice.
@@ -169,10 +171,13 @@ mixed_read_write_in_expression = "warn"    # Checks for a read and a write to th
 modulo_arithmetic = "warn"                 # Checks for modulo arithmetic.
 multiple_inherent_impl = "warn"            # Checks for multiple inherent implementations of a struct
 mutex_atomic = "warn"                      # Checks for usage of Mutex<X> where an atomic will do.
+mutex_integer = "warn"                     # Checks for usage of Mutex<X> where X is an integral type.
 needless_raw_strings = "warn"              # Checks for raw string literals where a string literal can be used instead.
+non_zero_suggestions = "warn"              # Checks for conversions from NonZero types to regular integer types, and suggests using NonZero types for the target as well.
 panic = "warn"                             # Checks for usage of panic!.
 partial_pub_fields = "warn"                # Checks whether partial fields of a struct are public.
 pathbuf_init_then_push = "warn"            # Checks for calls to push immediately after creating a new PathBuf.
+precedence_bits = "warn"                   # Checks for bit shifting operations combined with bit masking/combining operators and suggest using parentheses.
 print_stdout = "warn"                      # Checks for printing on stdout. The purpose of this lint is to catch debugging remnants.
 print_stderr = "warn"                      # Checks for printing on stderr. The purpose of this lint is to catch debugging remnants.
 rc_buffer = "warn"                         # Checks for Rc<T> and Arc<T> when T is a mutable buffer type such as String or Vec.
@@ -201,6 +206,7 @@ unnecessary_safety_doc = "warn"            # Checks for the doc comments of publ
 unnecessary_self_imports = "warn"          # Checks for imports ending in ::{self}.
 unreachable = "warn"                       # Checks for usage of unreachable!.
 unused_result_ok = "warn"                  # Checks for calls to Result::ok() without using the returned Option.
+unused_trait_names = "warn"                # Checks for `use Trait` where the Trait is only used for its methods and not referenced by a path directly.
 unwrap_used = "warn"                       # Checks for .unwrap() or .unwrap_err() calls on Results and .unwrap() call on Options.
 use_debug = "warn"                         # Checks for usage of Debug formatting. The purpose of this lint is to catch debugging remnants.
 verbose_file_reads = "warn"                # Checks for usage of File::read_to_end and File::read_to_string.

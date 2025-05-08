@@ -1,7 +1,7 @@
 #![allow(clippy::result_large_err)]
 
-use diesel::connection::SimpleConnection;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use diesel::connection::SimpleConnection as _;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness as _};
 
 pub mod context;
 pub mod error;

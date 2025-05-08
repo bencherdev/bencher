@@ -76,9 +76,9 @@ impl TryFrom<CliRun> for Run {
             backend,
         } = run;
         Ok(Self {
-            project: project.map(Into::into),
+            project,
             branch: branch.try_into().map_err(RunError::Branch)?,
-            testbed: testbed.map(Into::into),
+            testbed,
             adapter: adapter.into(),
             sub_adapter: (&cmd).into(),
             average: average.map(Into::into),

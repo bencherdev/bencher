@@ -134,7 +134,7 @@ impl Backend {
     pub async fn send<F, R, T, E>(&self, sender: F) -> Result<serde_json::Value, BackendError>
     where
         F: Fn(bencher_client::Client) -> R,
-        R: std::future::Future<
+        R: Future<
             Output = Result<
                 progenitor_client::ResponseValue<T>,
                 bencher_client::Error<bencher_client::types::Error>,
@@ -160,7 +160,7 @@ impl Backend {
     pub async fn send_with<F, R, T, Json, E>(&self, sender: F) -> Result<Json, BackendError>
     where
         F: Fn(bencher_client::Client) -> R,
-        R: std::future::Future<
+        R: Future<
             Output = Result<
                 progenitor_client::ResponseValue<T>,
                 bencher_client::Error<bencher_client::types::Error>,

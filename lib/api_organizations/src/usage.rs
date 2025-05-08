@@ -18,7 +18,7 @@ use bencher_schema::{
         user::auth::{AuthUser, BearerToken},
     },
 };
-use diesel::{BelongingToDsl, RunQueryDsl};
+use diesel::{BelongingToDsl as _, RunQueryDsl as _};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;

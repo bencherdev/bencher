@@ -4,30 +4,30 @@ use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
 use bencher_json::system::config::{JsonLitestream, JsonPlus};
 use bencher_json::{
+    JsonConfig,
     system::config::{
         IfExists, JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, JsonSmtp,
         JsonTls, LogLevel, ServerLog,
     },
-    JsonConfig,
 };
 use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{context::RateLimiting, model::server::QueryServer};
 use bencher_token::TokenKey;
+use diesel::Connection as _;
 #[cfg(feature = "plus")]
-use diesel::connection::SimpleConnection;
-use diesel::Connection;
+use diesel::connection::SimpleConnection as _;
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
 };
-use slog::{debug, error, info, Logger};
+use slog::{Logger, debug, error, info};
 use tokio::sync::mpsc::Sender;
 
 use super::Config;
 #[cfg(feature = "plus")]
-use super::{plus::Plus, DEFAULT_BUSY_TIMEOUT};
+use super::{DEFAULT_BUSY_TIMEOUT, plus::Plus};
 
 const DATABASE_URL: &str = "DATABASE_URL";
 
@@ -273,7 +273,12 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
         debug!(log, "Failed to find \"{DATABASE_URL}\"");
     }
     debug!(log, "Setting \"{DATABASE_URL}\" to {database_path}");
-    std::env::set_var(DATABASE_URL, database_path);
+    // SAFETY: This is safe because we are setting the environment variable
+    // from a single thread at startup.
+    #[allow(unsafe_code, reason = "set environment variable")]
+    unsafe {
+        std::env::set_var(DATABASE_URL, database_path);
+    }
 }
 
 #[cfg(feature = "plus")]

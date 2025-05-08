@@ -86,7 +86,7 @@ pub fn is_valid_email(email: &str) -> bool {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use super::{is_valid_email, Email};
     use pretty_assertions::assert_eq;

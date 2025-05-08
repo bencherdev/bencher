@@ -1,5 +1,5 @@
 use bencher_json::{project::boundary::JsonBoundary, BoundaryUuid};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{

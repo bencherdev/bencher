@@ -2,7 +2,7 @@ use bencher_json::{
     project::testbed::JsonUpdateTestbed, DateTime, JsonNewTestbed, JsonTestbed, NameId, NameIdKind,
     ResourceName, Slug, TestbedUuid,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{project::metric::Median, BenchmarkName, JsonNewMetric, MeasureNameId};
+use bencher_json::{project::metric::Median as _, BenchmarkName, JsonNewMetric, MeasureNameId};
 
 use super::{
     adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray,

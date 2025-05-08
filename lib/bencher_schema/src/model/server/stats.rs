@@ -2,7 +2,7 @@ use bencher_json::{
     system::server::{JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects},
     DateTime, JsonServerStats,
 };
-use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{dsl::count, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 
 use crate::{

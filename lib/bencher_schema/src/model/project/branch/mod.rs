@@ -2,7 +2,7 @@ use bencher_json::{
     project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
     BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 use slog::Logger;
 use version::{QueryVersion, VersionId};

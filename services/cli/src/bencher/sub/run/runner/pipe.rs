@@ -1,4 +1,4 @@
-use std::{fmt, io::BufRead};
+use std::{fmt, io::BufRead as _};
 
 use super::Output;
 

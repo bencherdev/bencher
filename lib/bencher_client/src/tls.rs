@@ -2,7 +2,7 @@
 
 use reqwest::Identity;
 use std::ffi::OsStr;
-use std::io::Read;
+use std::io::Read as _;
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum CertificateError {

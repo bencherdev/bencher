@@ -27,14 +27,14 @@ impl FmtBody for NewUserBody {
             method,
         } = self;
         format!(
-            r#"Ahoy {admin},
+            "Ahoy {admin},
         A new user {invited_or_joined} your Bencher instance ({console_url}) via {method}!
 
         Name: {name}
         Email: {email}
 
         🐰 Bencher
-        "#,
+        ",
             invited_or_joined = invited_or_joined(*invited)
         )
     }

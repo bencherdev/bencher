@@ -1,8 +1,8 @@
 #![allow(unused_crate_dependencies)]
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 
-use bencher_adapter::{Adaptable, Settings};
+use bencher_adapter::{Adaptable as _, Settings};
 use bencher_json::project::report::Adapter;
 
 const JSON_RESULT: &str = r#"{
