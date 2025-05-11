@@ -637,7 +637,7 @@ jobs:
       # Install
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
-      - uses: mlugg/setup-zig@v1
+      - uses: mlugg/setup-zig@v2
         if: startsWith(matrix.build, 'linux')
         with:
           version: ${{ env.ZIG_VERSION }}
