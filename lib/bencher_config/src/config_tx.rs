@@ -15,9 +15,9 @@ use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{context::RateLimiting, model::server::QueryServer};
 use bencher_token::TokenKey;
-use diesel::Connection;
+use diesel::Connection as _;
 #[cfg(feature = "plus")]
-use diesel::connection::SimpleConnection;
+use diesel::connection::SimpleConnection as _;
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
@@ -45,7 +45,7 @@ pub enum ConfigTxError {
     #[error("Failed to run database pragma: {0}")]
     Pragma(diesel::result::Error),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
-    Polar(oso::OsoError),
+    Polar(Box<oso::OsoError>),
     #[error("Invalid endpoint URL: {0}")]
     Endpoint(bencher_json::ValidError),
     #[error("Failed to connect to database ({0}): {1}")]
@@ -172,6 +172,9 @@ async fn into_context(
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
 ) -> Result<ApiContext, ConfigTxError> {
     let console_url: url::Url = console.url.try_into().map_err(ConfigTxError::Endpoint)?;
+
+    let rbac = init_rbac().map_err(ConfigTxError::Polar)?.into();
+
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(log, &database_path);
 
@@ -238,7 +241,7 @@ async fn into_context(
     Ok(ApiContext {
         console_url,
         token_key,
-        rbac: init_rbac().map_err(ConfigTxError::Polar)?.into(),
+        rbac,
         messenger: smtp.into(),
         database,
         restart_tx,
@@ -273,7 +276,12 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
         debug!(log, "Failed to find \"{DATABASE_URL}\"");
     }
     debug!(log, "Setting \"{DATABASE_URL}\" to {database_path}");
-    std::env::set_var(DATABASE_URL, database_path);
+    // SAFETY: This is safe because we are the only process running in production
+    // and nothing else is setting the `DATABASE_URL` environment variable
+    #[expect(unsafe_code, reason = "DATABASE_URL")]
+    unsafe {
+        std::env::set_var(DATABASE_URL, database_path);
+    }
 }
 
 #[cfg(feature = "plus")]

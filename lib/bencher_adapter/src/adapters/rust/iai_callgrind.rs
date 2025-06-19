@@ -1,24 +1,24 @@
 use bencher_json::{
+    BenchmarkName, JsonNewMetric,
     project::{
-        measure::built_in::{iai_callgrind, BuiltInMeasure as _},
+        measure::built_in::{BuiltInMeasure as _, iai_callgrind},
         report::JsonAverage,
     },
-    BenchmarkName, JsonNewMetric,
 };
 use nom::{
+    IResult,
     branch::alt,
     bytes::complete::{is_a, is_not, tag},
     character::complete::{space0, space1},
     combinator::{map, opt, recognize},
     multi::{many0, many1},
     sequence::{delimited, preceded, terminated, tuple},
-    IResult,
 };
 
 use crate::{
+    Adaptable, Settings,
     adapters::util::{parse_f64, parse_u64},
     results::adapter_results::{AdapterResults, IaiCallgrindMeasure},
-    Adaptable, Settings,
 };
 
 pub struct AdapterRustIaiCallgrind;
@@ -50,8 +50,8 @@ impl Adaptable for AdapterRustIaiCallgrind {
     }
 }
 
-fn multiple_benchmarks<'a>(
-) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
+fn multiple_benchmarks<'a>()
+-> impl FnMut(&'a str) -> IResult<&'a str, Vec<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
     map(
         many0(alt((
             // Try to parse a single benchmark:
@@ -66,8 +66,8 @@ fn multiple_benchmarks<'a>(
     )
 }
 
-fn single_benchmark<'a>(
-) -> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
+fn single_benchmark<'a>()
+-> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
     map(
         tuple((
             terminated(recognize(not_line_ending()), line_ending()),
@@ -234,8 +234,8 @@ fn not_line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
 
 #[cfg(test)]
 pub(crate) mod test_rust_iai_callgrind {
-    use crate::{adapters::test_util::convert_file_path, AdapterResults};
-    use bencher_json::project::measure::built_in::{iai_callgrind, BuiltInMeasure};
+    use crate::{AdapterResults, adapters::test_util::convert_file_path};
+    use bencher_json::project::measure::built_in::{BuiltInMeasure as _, iai_callgrind};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 

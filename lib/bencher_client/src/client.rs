@@ -2,10 +2,10 @@
 
 use std::env;
 
-use bencher_json::{Jwt, BENCHER_API_URL};
+use bencher_json::{BENCHER_API_URL, Jwt};
 use reqwest::ClientBuilder;
-use serde::{de::DeserializeOwned, Serialize};
-use tokio::time::{sleep, Duration};
+use serde::{Serialize, de::DeserializeOwned};
+use tokio::time::{Duration, sleep};
 
 use crate::{SSL_CERT_FILE, SSL_CLIENT_CERT};
 
@@ -61,11 +61,11 @@ pub enum ClientError {
     #[error("Invalid response payload: {0}")]
     InvalidResponsePayload(serde_json::Error),
     #[error("Request succeeded with an unexpected response: {0:?}")]
-    UnexpectedResponseOkStrict(reqwest::Response),
+    UnexpectedResponseOkStrict(Box<reqwest::Response>),
     #[error("Request succeeded with an unexpected response body: {0}")]
     UnexpectedResponseOk(reqwest::Error),
     #[error("Request failed with an unexpected response: {0:?}")]
-    UnexpectedResponseErr(reqwest::Response),
+    UnexpectedResponseErr(Box<reqwest::Response>),
 
     #[error("Failed to send after {0} attempts")]
     SendTimeout(usize),
@@ -181,13 +181,13 @@ impl BencherClient {
                     }
                 },
                 Err(crate::codegen::Error::InvalidRequest(e)) => {
-                    return Err(ClientError::InvalidRequest(e))
+                    return Err(ClientError::InvalidRequest(e));
                 },
                 Err(crate::codegen::Error::PreHookError(e)) => {
-                    return Err(ClientError::PreHookError(e))
+                    return Err(ClientError::PreHookError(e));
                 },
                 Err(crate::codegen::Error::PostHookError(e)) => {
-                    return Err(ClientError::PostHookError(e))
+                    return Err(ClientError::PostHookError(e));
                 },
                 Err(crate::codegen::Error::ErrorResponse(e)) => {
                     let status = e.status();
@@ -202,10 +202,10 @@ impl BencherClient {
                     })));
                 },
                 Err(crate::codegen::Error::InvalidUpgrade(e)) => {
-                    return Err(ClientError::InvalidUpgrade(e))
+                    return Err(ClientError::InvalidUpgrade(e));
                 },
                 Err(crate::codegen::Error::ResponseBodyError(e)) => {
-                    return Err(ClientError::ResponseBodyError(e))
+                    return Err(ClientError::ResponseBodyError(e));
                 },
                 Err(crate::codegen::Error::InvalidResponsePayload(bytes, e)) => {
                     return if self.strict {
@@ -218,12 +218,12 @@ impl BencherClient {
                             },
                             Err(e) => Err(ClientError::InvalidResponsePayload(e)),
                         }
-                    }
+                    };
                 },
                 Err(crate::codegen::Error::UnexpectedResponse(response)) => {
                     return if response.status().is_success() {
                         if self.strict {
-                            Err(ClientError::UnexpectedResponseOkStrict(response))
+                            Err(ClientError::UnexpectedResponseOkStrict(Box::new(response)))
                         } else {
                             match response.json().await {
                                 Ok(json_response) => {
@@ -234,8 +234,8 @@ impl BencherClient {
                             }
                         }
                     } else {
-                        Err(ClientError::UnexpectedResponseErr(response))
-                    }
+                        Err(ClientError::UnexpectedResponseErr(Box::new(response)))
+                    };
                 },
             }
         }
@@ -292,7 +292,8 @@ impl BencherClient {
             let path_exists = Path::new(&path).exists();
             if !path_exists {
                 self.log_str(&format!(
-                    "Ignoring invalid `SSL_CERT_FILE`. File does not exist: {path:?}"
+                    "Ignoring invalid `SSL_CERT_FILE`. File does not exist: {}",
+                    path.display()
                 ));
             }
             path_exists

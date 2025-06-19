@@ -26,8 +26,8 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 pub(crate) mod test_util {
     use bencher_json::project::{
         measure::built_in::{
+            BuiltInMeasure as _,
             default::{Latency, Throughput},
-            BuiltInMeasure,
         },
         report::JsonAverage,
     };
@@ -35,8 +35,8 @@ pub(crate) mod test_util {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
         Adaptable, Settings,
+        results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
     };
 
     pub fn convert_file_path<A>(file_path: &str) -> AdapterResults

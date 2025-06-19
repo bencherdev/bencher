@@ -1,10 +1,10 @@
 use std::fs;
 
 use bencher_api::api::Api;
-use bencher_endpoint::Registrar;
+use bencher_endpoint::Registrar as _;
 use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 
-use crate::{parser::TaskSpec, API_VERSION};
+use crate::{API_VERSION, parser::TaskSpec};
 
 const SPEC_PATH: &str = "./services/api/openapi.json";
 

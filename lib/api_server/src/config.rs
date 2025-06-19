@@ -1,8 +1,8 @@
-use bencher_config::{Config, BENCHER_CONFIG};
+use bencher_config::{BENCHER_CONFIG, Config};
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Put, ResponseAccepted, ResponseOk};
 use bencher_json::{
-    system::config::{JsonConsole, JsonUpdateConfig},
     JsonConfig,
+    system::config::{JsonConsole, JsonUpdateConfig},
 };
 use bencher_schema::{
     context::ApiContext,
@@ -12,7 +12,7 @@ use bencher_schema::{
         auth::{AuthUser, BearerToken, PubBearerToken},
     },
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
 use super::restart::countdown;
@@ -91,7 +91,12 @@ async fn put_inner(
 
     // TODO add validation here
     let config_str = serde_json::to_string(&config).map_err(bad_request_error)?;
-    std::env::set_var(BENCHER_CONFIG, &config_str);
+    // SAFETY: This endpoint can only be called by an admin on the server.
+    // May the odds ever be in their favor.
+    #[expect(unsafe_code, reason = "BENCHER_CONFIG")]
+    unsafe {
+        std::env::set_var(BENCHER_CONFIG, &config_str);
+    }
     Config::write(log, config_str.as_bytes())
         .await
         .map_err(|e| {

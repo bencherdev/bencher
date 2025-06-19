@@ -1,4 +1,4 @@
-use bencher_json::{Entitlements, OrganizationUuid, PlanLevel, Secret, PROD_BENCHER_URL_STR};
+use bencher_json::{Entitlements, OrganizationUuid, PROD_BENCHER_URL_STR, PlanLevel, Secret};
 use bencher_license::{BillingCycle, Licensor};
 
 use crate::parser::{TaskBillingCycle, TaskLicenseGenerate};
@@ -49,6 +49,7 @@ impl Generate {
             self.entitlements,
             Some(PROD_BENCHER_URL_STR.to_owned()),
         )?;
-        Ok(println!("{license}"))
+        println!("{license}");
+        Ok(())
     }
 }

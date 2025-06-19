@@ -1,26 +1,26 @@
 use bencher_json::{
+    BenchmarkName, JsonNewMetric,
     project::{
         measure::built_in::{
-            iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
             BuiltInMeasure as _,
+            iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
         },
         report::JsonAverage,
     },
-    BenchmarkName, JsonNewMetric,
 };
 use nom::{
+    IResult,
     branch::alt,
     bytes::complete::tag,
     character::complete::{space0, space1},
     combinator::{eof, map},
     sequence::{delimited, tuple},
-    IResult,
 };
 
 use crate::{
+    Adaptable, Settings,
     adapters::util::{parse_f64, parse_u64},
     results::adapter_results::{AdapterResults, IaiMeasure},
-    Adaptable, Settings,
 };
 
 pub struct AdapterRustIai;
@@ -56,8 +56,14 @@ impl Adaptable for AdapterRustIai {
 fn parse_iai_lines(
     lines: [&str; IAI_METRICS_LINE_COUNT],
 ) -> Option<(BenchmarkName, Vec<IaiMeasure>)> {
-    let [benchmark_name_line, instructions_line, l1_accesses_line, l2_accesses_line, ram_accesses_line, estimated_cycles_line] =
-        lines;
+    let [
+        benchmark_name_line,
+        instructions_line,
+        l1_accesses_line,
+        l2_accesses_line,
+        ram_accesses_line,
+        estimated_cycles_line,
+    ] = lines;
 
     let name = benchmark_name_line.parse().ok()?;
     #[allow(trivial_casts)]
@@ -141,15 +147,15 @@ fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a st
 pub(crate) mod test_rust_iai {
 
     use crate::{
-        adapters::test_util::convert_file_path, results::adapter_metrics::AdapterMetrics,
-        Adaptable, AdapterResults,
+        Adaptable as _, AdapterResults, adapters::test_util::convert_file_path,
+        results::adapter_metrics::AdapterMetrics,
     };
     use bencher_json::{
-        project::measure::built_in::{
-            iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
-            BuiltInMeasure,
-        },
         JsonNewMetric,
+        project::measure::built_in::{
+            BuiltInMeasure as _,
+            iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
+        },
     };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;

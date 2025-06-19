@@ -1,6 +1,6 @@
 use stripe::{
-    CheckoutSession, Customer, CustomerId, PaymentMethod, PaymentMethodId, PriceId, ProductId,
-    Subscription, SubscriptionId, SubscriptionItem, SubscriptionItemId,
+    CheckoutSession, Customer, CustomerId, PaymentMethodId, PriceId, ProductId, Subscription,
+    SubscriptionId, SubscriptionItem, SubscriptionItemId,
 };
 use thiserror::Error;
 
@@ -18,11 +18,11 @@ pub enum BillingError {
     BadOrganizationUuid(String, uuid::Error),
 
     #[error("Failed to get checkout URL: {0:?}")]
-    NoCheckoutUrl(CheckoutSession),
+    NoCheckoutUrl(Box<CheckoutSession>),
     #[error("Failed to parse checkout session ID: {0:?}")]
     CheckoutSessionId(stripe::ParseIdError),
     #[error("Failed to to find checkout session subscription: {0:?}")]
-    NoSubscription(CheckoutSession),
+    NoSubscription(Box<CheckoutSession>),
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
@@ -31,17 +31,15 @@ pub enum BillingError {
     #[error("Failed to parse ID: {0}")]
     StripeId(#[from] stripe::ParseIdError),
     #[error("Email collision: {0:#?} {1:#?}")]
-    EmailCollision(Customer, Vec<Customer>),
-    #[error("Multiple payment methods: {0:#?} {1:#?}")]
-    MultiplePaymentMethods(PaymentMethod, Vec<PaymentMethod>),
+    EmailCollision(Box<Customer>, Vec<Customer>),
     #[error("Failed to find price: {0}")]
     PriceNotFound(String),
     #[error("Cannot create a subscription for the free tier")]
     ProductLevelFree,
     #[error("Multiple subscriptions: {0:#?} {1:#?}")]
-    MultipleSubscriptions(Subscription, Vec<Subscription>),
+    MultipleSubscriptions(Box<Subscription>, Vec<Subscription>),
     #[error("Multiple subscription items for {0}: {1:#?} {2:#?}")]
-    MultipleSubscriptionItems(SubscriptionId, SubscriptionItem, Vec<SubscriptionItem>),
+    MultipleSubscriptionItems(SubscriptionId, Box<SubscriptionItem>, Vec<SubscriptionItem>),
     #[error("No subscription item for {0}")]
     NoSubscriptionItem(SubscriptionId),
     #[error("No organization for {0}")]

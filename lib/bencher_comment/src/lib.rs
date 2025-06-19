@@ -1,18 +1,20 @@
+#![expect(clippy::format_push_string, reason = "todo")]
+
 use std::{
-    collections::{btree_map::Entry, BTreeMap, HashSet},
+    collections::{BTreeMap, HashSet, btree_map::Entry},
     ops::{BitOr, BitOrAssign},
     time::Duration,
 };
 
 use bencher_json::{
+    AlertUuid, JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonPerfQuery, JsonReport,
+    ReportUuid, ResourceName, Slug, ThresholdUuid, Units,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
         report::{JsonReportIteration, JsonReportMeasure, JsonReportResult},
     },
-    AlertUuid, JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonPerfQuery, JsonReport,
-    ReportUuid, ResourceName, Slug, ThresholdUuid, Units,
 };
 use ordered_float::OrderedFloat;
 use url::Url;
@@ -673,10 +675,10 @@ impl ReportComment {
     fn utm_query(&self) -> String {
         if self.is_bencher_cloud() {
             format!(
-            "?utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
-            source = self.source,
-            project = self.project_slug,
-        )
+                "?utm_medium=referral&utm_source={source}&utm_content=comment&utm_campaign=pr+comments&utm_term={project}",
+                source = self.source,
+                project = self.project_slug,
+            )
         } else {
             String::new()
         }

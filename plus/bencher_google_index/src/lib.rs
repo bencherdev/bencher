@@ -2,12 +2,12 @@ use std::str::FromStr;
 
 use serde::Serialize;
 use tame_oauth::{
+    Token,
     gcp::{
-        service_account::ServiceAccountProviderInner, ServiceAccountInfo, ServiceAccountProvider,
-        TokenOrRequest, TokenProvider as _,
+        ServiceAccountInfo, ServiceAccountProvider, TokenOrRequest, TokenProvider as _,
+        service_account::ServiceAccountProviderInner,
     },
     token_cache::CachedTokenProvider,
-    Token,
 };
 use url::Url;
 
@@ -45,7 +45,7 @@ pub enum GoogleIndexError {
     #[error("Failed to send indexing request: {0}")]
     BadIndexRequest(reqwest::Error),
     #[error("Bad indexing response: {0:?}")]
-    BadIndexResponse(reqwest::Response),
+    BadIndexResponse(Box<reqwest::Response>),
 }
 
 impl GoogleIndex {
@@ -177,7 +177,7 @@ impl GoogleIndex {
             .status()
             .is_success()
             .then_some(())
-            .ok_or_else(|| GoogleIndexError::BadIndexResponse(response))
+            .ok_or_else(|| GoogleIndexError::BadIndexResponse(Box::new(response)))
     }
 }
 

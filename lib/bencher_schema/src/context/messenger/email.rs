@@ -1,13 +1,13 @@
 use std::{fmt, sync::Arc};
 
-use bencher_json::system::config::JsonSmtp;
 use bencher_json::Secret;
-use mail_send::{mail_builder::MessageBuilder, SmtpClientBuilder};
-use slog::{error, trace, Logger};
+use bencher_json::system::config::JsonSmtp;
+use mail_send::{SmtpClientBuilder, mail_builder::MessageBuilder};
+use slog::{Logger, error, trace};
 use tokio::sync::Mutex;
 
-use super::body::FmtBody as _;
 use super::Message;
+use super::body::FmtBody as _;
 
 pub const DEFAULT_SMTP_PORT: u16 = 587;
 
@@ -15,6 +15,7 @@ pub const DEFAULT_SMTP_PORT: u16 = 587;
 pub struct Email {
     client: Arc<Mutex<Client>>,
     from_name: Option<String>,
+    #[expect(clippy::struct_field_names, reason = "from_email is more descriptive")]
     from_email: String,
 }
 

@@ -1,12 +1,12 @@
 use std::fmt;
 
 use bencher_json::{
+    Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
     organization::plan::{JsonCardDetails, JsonPlan},
     system::{
         config::JsonBilling,
         payment::{JsonCard, JsonCheckout, JsonCustomer},
     },
-    Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
 };
 use stripe::{
     AttachPaymentMethod, CancelSubscription, CardDetailsParams as PaymentCard, CheckoutSession,
@@ -20,7 +20,7 @@ use stripe::{
     SubscriptionItem, SubscriptionStatus, UsageRecord,
 };
 
-use crate::{products::Products, BillingError};
+use crate::{BillingError, products::Products};
 
 const METADATA_UUID: &str = "uuid";
 const METADATA_ORGANIZATION: &str = "organization";
@@ -227,7 +227,7 @@ impl Biller {
             url: checkout_session
                 .url
                 .take()
-                .ok_or(BillingError::NoCheckoutUrl(checkout_session))?,
+                .ok_or(BillingError::NoCheckoutUrl(Box::new(checkout_session)))?,
         })
     }
 
@@ -243,7 +243,7 @@ impl Biller {
         let subscription = checkout_session
             .subscription
             .take()
-            .ok_or(BillingError::NoSubscription(checkout_session))?;
+            .ok_or(BillingError::NoSubscription(Box::new(checkout_session)))?;
         Ok(subscription.id())
     }
 
@@ -269,7 +269,10 @@ impl Biller {
             if customers.data.is_empty() {
                 Ok(Some(customer.id))
             } else {
-                Err(BillingError::EmailCollision(customer, customers.data))
+                Err(BillingError::EmailCollision(
+                    Box::new(customer),
+                    customers.data,
+                ))
             }
         } else {
             Ok(None)
@@ -439,7 +442,10 @@ impl Biller {
         })?;
 
         let customer = Self::get_plan_customer(&subscription.customer)?;
-        let card = Self::get_plan_card(subscription_id, &subscription.default_payment_method)?;
+        let card = Self::get_plan_card(
+            subscription_id,
+            subscription.default_payment_method.as_ref(),
+        )?;
         let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription.items.data)?;
 
         let status = Self::map_status(subscription.status);
@@ -502,7 +508,7 @@ impl Biller {
 
     fn get_plan_card(
         subscription_id: &SubscriptionId,
-        default_payment_method: &Option<Expandable<PaymentMethod>>,
+        default_payment_method: Option<&Expandable<PaymentMethod>>,
     ) -> Result<JsonCardDetails, BillingError> {
         let Some(default_payment_method) = default_payment_method else {
             return Err(BillingError::NoDefaultPaymentMethod(
@@ -564,7 +570,7 @@ impl Biller {
             } else {
                 Err(BillingError::MultipleSubscriptionItems(
                     subscription_id.clone(),
-                    subscription_item,
+                    Box::new(subscription_item),
                     subscription_items,
                 ))
             }
@@ -683,12 +689,12 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 mod test {
 
     use bencher_json::{
+        Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
         organization::plan::DEFAULT_PRICE_NAME,
         system::{
             config::{JsonBilling, JsonProduct, JsonProducts},
             payment::{JsonCard, JsonCustomer},
         },
-        Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
     };
     use chrono::{Datelike as _, Utc};
     use literally::hmap;
@@ -855,11 +861,13 @@ mod test {
             name,
             email,
         };
-        assert!(biller
-            .get_customer(&json_customer.email)
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            biller
+                .get_customer(&json_customer.email)
+                .await
+                .unwrap()
+                .is_none()
+        );
         let create_customer_id = biller.create_customer(&json_customer).await.unwrap();
         let get_customer_id = biller
             .get_customer(&json_customer.email)

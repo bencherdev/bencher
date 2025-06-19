@@ -13,7 +13,7 @@ pub enum BingIndexError {
     #[error("Failed to send IndexNow request: {0}")]
     BadRequest(reqwest::Error),
     #[error("Bad IndexNow response: {0:?}")]
-    BadResponse(reqwest::Response),
+    BadResponse(Box<reqwest::Response>),
 }
 
 impl BingIndex {
@@ -29,7 +29,7 @@ impl BingIndex {
         if response.status().is_success() {
             Ok(())
         } else {
-            Err(BingIndexError::BadResponse(response))
+            Err(BingIndexError::BadResponse(Box::new(response)))
         }
     }
 

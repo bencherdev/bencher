@@ -61,11 +61,7 @@ impl Indexer {
             .await
             .map_err(IndexError::GoogleIndex);
 
-        if bing.is_err() {
-            bing
-        } else {
-            google
-        }
+        if bing.is_err() { bing } else { google }
     }
 
     pub async fn deleted(&self, url: Url) -> Result<(), IndexError> {
@@ -81,10 +77,6 @@ impl Indexer {
             .await
             .map_err(IndexError::GoogleIndex);
 
-        if bing.is_err() {
-            bing
-        } else {
-            google
-        }
+        if bing.is_err() { bing } else { google }
     }
 }

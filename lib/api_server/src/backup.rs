@@ -3,7 +3,7 @@ use std::{ffi::OsStr, path::PathBuf};
 use async_compression::tokio::write::GzipEncoder;
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{
-    system::backup::JsonDataStore, DateTime, JsonBackup, JsonBackupCreated, JsonRestart,
+    DateTime, JsonBackup, JsonBackupCreated, JsonRestart, system::backup::JsonDataStore,
 };
 use bencher_schema::{
     conn_lock,
@@ -12,11 +12,11 @@ use bencher_schema::{
     model::user::{admin::AdminUser, auth::BearerToken},
 };
 use chrono::Utc;
-use diesel::connection::SimpleConnection;
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use diesel::connection::SimpleConnection as _;
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use tokio::{
     fs::remove_file,
-    io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
+    io::{AsyncReadExt as _, AsyncWriteExt as _, BufReader, BufWriter},
 };
 
 const BUFFER_SIZE: usize = 1024;
@@ -111,7 +111,7 @@ async fn backup(
                 .map_err(BackupError::DataStore)?;
         } else {
             return Err(BackupError::NoDataStore);
-        };
+        }
     }
 
     // Remove the remaining database backup
