@@ -176,7 +176,7 @@ jobs:
       - name: Add clippy
         run: rustup component add clippy
       - name: Run clippy
-        run: cargo clippy --no-deps --all-features -- -Dwarnings
+        run: ./scripts/clippy.sh
 
   check_generated:
     name: Check Generated
