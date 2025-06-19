@@ -1,4 +1,4 @@
-use oso::{ClassBuilder, Oso, PolarClass};
+use oso::{ClassBuilder, Oso, PolarClass as _};
 
 pub mod organization;
 pub mod project;

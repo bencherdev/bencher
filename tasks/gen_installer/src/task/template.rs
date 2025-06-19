@@ -1,6 +1,6 @@
 use std::fs;
 #[cfg(unix)]
-use std::{fs::Permissions, os::unix::fs::PermissionsExt};
+use std::{fs::Permissions, os::unix::fs::PermissionsExt as _};
 
 use minijinja::Environment;
 use serde::Serialize;

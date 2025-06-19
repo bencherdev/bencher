@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use bencher_adapter::{results::adapter_metrics::AdapterMetrics, AdapterResults};
 use bencher_json::{JsonNewMetric, NameId};
 use rand::{
-    distr::{Distribution, Uniform},
-    Rng,
+    distr::{Distribution as _, Uniform},
+    Rng as _,
 };
 
 use crate::{cli_println, parser::mock::CliMock, CliError};

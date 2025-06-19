@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use base64::{
     engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
-    Engine,
+    Engine as _,
 };
 use derive_more::Display;
 #[cfg(feature = "schema")]

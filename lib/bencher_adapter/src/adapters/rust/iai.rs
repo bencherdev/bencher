@@ -2,7 +2,7 @@ use bencher_json::{
     project::{
         measure::built_in::{
             iai::{EstimatedCycles, Instructions, L1Accesses, L2Accesses, RamAccesses},
-            BuiltInMeasure,
+            BuiltInMeasure as _,
         },
         report::JsonAverage,
     },

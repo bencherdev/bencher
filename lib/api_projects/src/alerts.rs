@@ -17,7 +17,7 @@ use bencher_schema::{
     },
     schema,
 };
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -190,7 +190,7 @@ fn get_ls_query<'q>(
                 .and(schema::testbed::archived.is_null())
                 .and(schema::measure::archived.is_null()),
         );
-    };
+    }
 
     match pagination_params.order() {
         ProjAlertsSort::Created => match pagination_params.direction {

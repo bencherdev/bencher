@@ -1,6 +1,6 @@
 use bencher_boundary::MetricsBoundary;
 use bencher_json::BoundaryUuid;
-use diesel::RunQueryDsl;
+use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 

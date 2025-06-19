@@ -4,7 +4,7 @@ use serde::Serialize;
 use tame_oauth::{
     gcp::{
         service_account::ServiceAccountProviderInner, ServiceAccountInfo, ServiceAccountProvider,
-        TokenOrRequest, TokenProvider,
+        TokenOrRequest, TokenProvider as _,
     },
     token_cache::CachedTokenProvider,
     Token,

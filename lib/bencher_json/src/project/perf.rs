@@ -1,6 +1,6 @@
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::ser::{self, SerializeStruct};
+use serde::ser::{self, SerializeStruct as _};
 use serde::{Deserialize, Serialize, Serializer};
 use url::Url;
 

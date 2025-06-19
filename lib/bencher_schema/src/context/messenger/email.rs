@@ -6,7 +6,7 @@ use mail_send::{mail_builder::MessageBuilder, SmtpClientBuilder};
 use slog::{error, trace, Logger};
 use tokio::sync::Mutex;
 
-use super::body::FmtBody;
+use super::body::FmtBody as _;
 use super::Message;
 
 pub const DEFAULT_SMTP_PORT: u16 = 587;

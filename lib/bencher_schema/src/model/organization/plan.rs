@@ -6,7 +6,7 @@ use bencher_json::{
     OrganizationUuid, PlanLevel,
 };
 use bencher_license::Licensor;
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{

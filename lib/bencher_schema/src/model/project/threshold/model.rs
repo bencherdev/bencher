@@ -1,7 +1,7 @@
 use bencher_json::{
     Boundary, DateTime, JsonModel, Model, ModelTest, ModelUuid, SampleSize, Window,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 
 use crate::{

@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{BufRead, BufReader, BufWriter, Write},
+    io::{BufRead as _, BufReader, BufWriter, Write as _},
 };
 
 use camino::Utf8PathBuf;

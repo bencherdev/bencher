@@ -3,8 +3,8 @@ use bencher_json::{
     BranchUuid, DateTime, GitHash, HeadUuid, JsonHead, JsonStartPoint,
 };
 use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
 };
 
 use dropshot::HttpError;

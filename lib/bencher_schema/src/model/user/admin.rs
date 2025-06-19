@@ -1,4 +1,4 @@
-use bencher_json::Sanitize;
+use bencher_json::Sanitize as _;
 use dropshot::HttpError;
 
 use crate::{context::ApiContext, error::forbidden_error};

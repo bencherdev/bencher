@@ -2,7 +2,7 @@ use bencher_json::{
     project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
     BenchmarkName, BenchmarkUuid, DateTime, JsonBenchmark, Slug,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};

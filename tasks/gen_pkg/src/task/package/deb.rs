@@ -1,6 +1,6 @@
 use std::process::Command;
 #[cfg(unix)]
-use std::{fs::Permissions, os::unix::fs::PermissionsExt};
+use std::{fs::Permissions, os::unix::fs::PermissionsExt as _};
 
 use camino::Utf8PathBuf;
 

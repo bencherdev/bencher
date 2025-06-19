@@ -30,8 +30,8 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -195,7 +195,7 @@ fn get_ls_query<'q>(
                 .and(schema::testbed::archived.is_null())
                 .and(schema::measure::archived.is_null()),
         );
-    };
+    }
 
     Ok(match pagination_params.order() {
         ProjThresholdsSort::Created => match pagination_params.direction {

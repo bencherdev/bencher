@@ -1,6 +1,6 @@
 use bencher_json::{
     project::{
-        measure::built_in::{iai_callgrind, BuiltInMeasure},
+        measure::built_in::{iai_callgrind, BuiltInMeasure as _},
         report::JsonAverage,
     },
     BenchmarkName, JsonNewMetric,
@@ -30,7 +30,7 @@ impl Adaptable for AdapterRustIaiCallgrind {
             Some(JsonAverage::Mean | JsonAverage::Median) => {
                 return None; // 'iai_callgrind' results are for a single run only.
             },
-        };
+        }
 
         // Clean up the input by removing ANSI escape codes:
         let input = strip_ansi_escapes::strip_str(input);

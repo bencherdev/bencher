@@ -1,4 +1,4 @@
-use std::{fmt, io::Write};
+use std::{fmt, io::Write as _};
 
 use async_openai::{
     types::{

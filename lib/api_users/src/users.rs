@@ -1,6 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk, TotalCount};
 use bencher_json::{
-    user::JsonUsers, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, Sanitize,
+    user::JsonUsers, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, Sanitize as _,
     Search, UserName,
 };
 use bencher_schema::{
@@ -15,7 +15,7 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;

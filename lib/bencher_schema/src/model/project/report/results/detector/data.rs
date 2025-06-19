@@ -1,6 +1,6 @@
 use bencher_boundary::MetricsData;
 use chrono::offset::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use slog::{warn, Logger};
 

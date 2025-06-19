@@ -3,7 +3,7 @@ use bencher_json::{
     JsonUpdateUser, JsonUser, Jwt, Sanitize, Slug, UserName, UserUuid,
 };
 use bencher_token::TokenKey;
-use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{dsl::count, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use slog::Logger;
 use url::Url;

@@ -2,7 +2,7 @@ use bencher_json::{
     system::server::{JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects},
     DateTime, JsonServerStats,
 };
-use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{dsl::count, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 
 use crate::{
@@ -274,7 +274,7 @@ fn median(array: &mut [i64]) -> f64 {
     if (size % 2) == 0 {
         let left = size / 2 - 1;
         let right = size / 2;
-        (array[left] as f64 + array[right] as f64) / 2.0
+        f64::midpoint(array[left] as f64, array[right] as f64)
     } else {
         array[size / 2] as f64
     }

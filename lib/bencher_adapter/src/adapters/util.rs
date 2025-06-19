@@ -11,7 +11,7 @@ use nom::{
     IResult,
 };
 use ordered_float::OrderedFloat;
-use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::prelude::ToPrimitive as _;
 use rust_decimal::Decimal;
 use serde::{
     de::{self, Visitor},

@@ -5,7 +5,7 @@ macro_rules! fn_get {
             conn: &mut $crate::context::DbConnection,
             id: $id,
         ) -> Result<Self, dropshot::HttpError> {
-            use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+            use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
             $crate::schema::$table::table
                 .filter($crate::schema::$table::id.eq(id))
                 .first(conn)
@@ -29,7 +29,7 @@ macro_rules! fn_get_id {
             conn: &mut $crate::context::DbConnection,
             uuid: $uuid,
         ) -> Result<$id, dropshot::HttpError> {
-            use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+            use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
             $crate::schema::$table::table
                 .filter($crate::schema::$table::uuid.eq(uuid))
                 .select($crate::schema::$table::id)
@@ -54,7 +54,7 @@ macro_rules! fn_get_uuid {
             conn: &mut $crate::context::DbConnection,
             id: $id,
         ) -> Result<$uuid, dropshot::HttpError> {
-            use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+            use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
             $crate::schema::$table::table
                 .filter($crate::schema::$table::id.eq(id))
                 .select($crate::schema::$table::uuid)
@@ -80,7 +80,7 @@ macro_rules! fn_from_uuid {
             parent: $parent_type,
             uuid: $uuid,
         ) -> Result<Self, HttpError> {
-            use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+            use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
             $crate::schema::$table::table
                 .filter($crate::schema::$table::$parent.eq(parent))
                 .filter($crate::schema::$table::uuid.eq(uuid))

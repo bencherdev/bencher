@@ -1,6 +1,6 @@
 use bencher_json::MeasureUuid;
 use bencher_rank::{Rank, RankGenerator};
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{

@@ -1,5 +1,5 @@
 use bencher_json::{JsonMetric, JsonNewMetric, MetricUuid};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 #[cfg(feature = "plus")]

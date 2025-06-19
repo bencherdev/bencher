@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use chrono::{TimeZone, Utc};
+use chrono::{TimeZone as _, Utc};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

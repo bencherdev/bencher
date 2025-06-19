@@ -1,4 +1,4 @@
-use bencher_json::Sanitize;
+use bencher_json::Sanitize as _;
 use bencher_rbac::{Organization, Project};
 use oso::{Oso, ToPolar};
 

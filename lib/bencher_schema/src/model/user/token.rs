@@ -3,7 +3,7 @@ use bencher_json::{
     TokenUuid,
 };
 use bencher_token::TokenKey;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{

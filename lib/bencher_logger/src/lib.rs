@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use slog::{Drain, Logger};
+use slog::{Drain as _, Logger};
 
 pub fn bootstrap_logger() -> Logger {
     let decorator = slog_term::TermDecorator::new().build();

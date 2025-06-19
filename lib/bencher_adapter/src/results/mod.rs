@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use bencher_json::project::{
-    metric::Mean,
+    metric::Mean as _,
     report::{Adapter, JsonFold},
 };
 
-use crate::{Adaptable, AdapterError, Settings};
+use crate::{Adaptable as _, AdapterError, Settings};
 
 pub mod adapter_metrics;
 pub mod adapter_results;

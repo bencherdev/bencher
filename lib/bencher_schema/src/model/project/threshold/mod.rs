@@ -7,7 +7,7 @@ use bencher_json::{
     },
     DateTime, Model, ModelUuid, ThresholdUuid,
 };
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use model::UpdateModel;
 use slog::Logger;
@@ -525,7 +525,7 @@ impl InsertThreshold {
         let no_models = json_thresholds
             .models
             .as_ref()
-            .map_or(true, HashMap::is_empty);
+            .is_none_or(HashMap::is_empty);
         let reset_thresholds = json_thresholds.reset.unwrap_or_default();
         if no_models && !reset_thresholds {
             slog::debug!(log, "No threshold models or reset in report");

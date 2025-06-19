@@ -6,7 +6,7 @@ use bencher_json::{
     },
     AlertUuid, BoundaryUuid, DateTime, ReportUuid,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 
 use super::{

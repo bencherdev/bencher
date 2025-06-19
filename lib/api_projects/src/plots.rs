@@ -21,8 +21,8 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, QueryDsl,
-    RunQueryDsl, TextExpressionMethods,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, TextExpressionMethods as _,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;

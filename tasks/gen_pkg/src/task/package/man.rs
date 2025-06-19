@@ -1,6 +1,6 @@
 use bencher_cli::CliBencher;
 use camino::Utf8PathBuf;
-use clap::CommandFactory;
+use clap::CommandFactory as _;
 
 use crate::parser::TaskMan;
 

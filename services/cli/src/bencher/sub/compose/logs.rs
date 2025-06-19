@@ -7,7 +7,7 @@ use bollard::{
     container::{LogOutput, LogsOptions},
     Docker,
 };
-use futures_util::stream::StreamExt;
+use futures_util::stream::StreamExt as _;
 
 use crate::{cli_eprintln, cli_println};
 

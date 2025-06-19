@@ -3,7 +3,7 @@ use bencher_json::{
     DateTime, Index, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
