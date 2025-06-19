@@ -1,0 +1,30 @@
+name: Backup
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  MOLD_VERSION: 2.34.1
+
+jobs:
+  backup_database:
+    if: github.ref == 'refs/heads/cloud'
+    name: Backup Database
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Install `bencher` CLI
+        run: cargo install --debug --path services/cli --locked --force
+      - name: Backup API Server Database
+        run: |
+          bencher server backup \
+          --host https://api.bencher.dev \
+          --token ${{ secrets.BENCHER_API_TOKEN_ADMIN }} \
+          --compress \
+          --data-store aws_s3 \
+          --rm
