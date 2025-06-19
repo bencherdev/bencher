@@ -9,7 +9,7 @@ on:
     branches: [main, cloud, devel]
 
 env:
-  BENCHER_VERSION: 0.5.1
+  BENCHER_VERSION: 0.5.2
   # General
   CARGO_TERM_COLOR: always
   MOLD_VERSION: 2.34.1
