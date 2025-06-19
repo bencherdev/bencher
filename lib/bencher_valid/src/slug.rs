@@ -91,11 +91,11 @@ impl Slug {
     #[cfg(feature = "server")]
     const RAND_LEN: usize = 8;
 
-    pub fn new<S>(slug: S) -> Option<Self>
+    pub fn new<S>(input: S) -> Option<Self>
     where
         S: AsRef<str>,
     {
-        let new_slug = slug::slugify(&slug);
+        let new_slug = slug::slugify(&input);
         if new_slug.len() > Self::MAX_LEN {
             Some(Self(slug::slugify(
                 new_slug.chars().take(Self::MAX_LEN).collect::<String>(),
@@ -114,8 +114,10 @@ impl Slug {
     {
         if let Some(slug) = slug {
             slug
+        } else if let Some(slug) = Self::new(name) {
+            slug
         } else {
-            Self::new(name).unwrap_or_else(|| Self(Self::rand_suffix()))
+            Self(Self::rand_suffix())
         }
     }
 
