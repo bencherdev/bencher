@@ -210,7 +210,6 @@ impl InsertPlan {
     }
 }
 
-#[allow(variant_size_differences)]
 pub enum PlanKind {
     Metered(MeteredPlanId),
     Licensed(LicenseUsage),

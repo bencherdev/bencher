@@ -1,4 +1,4 @@
-#![allow(let_underscore_drop, clippy::unwrap_used)]
+#![expect(clippy::unwrap_used)]
 
 #[cfg(unix)]
 use std::os::unix;
@@ -24,8 +24,8 @@ fn main() {
 
     #[cfg(unix)]
     {
-        let _ = fs::remove_file("./codegen.rs");
-        let _ = unix::fs::symlink(&out_file, "./codegen.rs");
+        let _rm = fs::remove_file("./codegen.rs");
+        let _s = unix::fs::symlink(&out_file, "./codegen.rs");
     }
 
     fs::write(out_file, content).unwrap();

@@ -15,7 +15,6 @@ pub struct Task {
     sub: Sub,
 }
 
-#[allow(variant_size_differences)]
 #[derive(Debug)]
 pub enum Sub {
     Types(Types),

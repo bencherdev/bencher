@@ -284,7 +284,7 @@ mod db {
     }
 
     impl From<JsonReplica> for LitestreamReplica {
-        #[allow(clippy::too_many_lines)]
+        #[expect(clippy::too_many_lines)]
         fn from(replica: JsonReplica) -> Self {
             match replica {
                 JsonReplica::File {

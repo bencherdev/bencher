@@ -6,11 +6,10 @@ use bencher_schema::context::ApiContext;
 use dropshot::{HttpError, RequestContext, endpoint};
 
 pub const SPEC_STR: &str = include_str!("../../../services/api/openapi.json");
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 pub static SPEC: LazyLock<JsonSpec> =
     LazyLock::new(|| JsonSpec(SPEC_STR.parse().expect("Failed to parse OpenAPI spec")));
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/spec",
@@ -26,11 +25,7 @@ pub async fn server_spec_options(
 ///
 /// View the API server OpenAPI specification.
 /// The OpenAPI specification can be used to generate API client code.
-#[allow(
-    clippy::no_effect_underscore_binding,
-    clippy::doc_markdown,
-    clippy::unused_async
-)]
+#[expect(clippy::doc_markdown)]
 #[endpoint {
     method = GET,
     path = "/v0/server/spec",

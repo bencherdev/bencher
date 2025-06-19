@@ -1,5 +1,3 @@
-#![allow(clippy::result_large_err)]
-
 // Needed for binary
 use bencher_config as _;
 use bencher_json as _;

@@ -1,4 +1,4 @@
-#![allow(
+#![expect(
     clippy::expect_used,
     clippy::print_stderr,
     clippy::print_stdout,

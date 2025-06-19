@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-#[allow(clippy::absolute_paths)]
 #[derive(Debug, Error)]
 pub enum LicenseError {
     #[error("Failed to read private pem: {0}")]

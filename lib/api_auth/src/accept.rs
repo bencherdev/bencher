@@ -7,7 +7,6 @@ use bencher_schema::{
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/auth/accept",

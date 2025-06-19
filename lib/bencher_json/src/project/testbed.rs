@@ -9,19 +9,19 @@ use serde::{Deserialize, Serialize};
 use crate::ProjectUuid;
 
 pub const TESTBED_LOCALHOST_STR: &str = "localhost";
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 pub static DEFAULT_TESTBED: LazyLock<NameId> = LazyLock::new(|| {
     TESTBED_LOCALHOST_STR
         .parse()
         .expect("Failed to parse testbed name.")
 });
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static TESTBED_LOCALHOST: LazyLock<ResourceName> = LazyLock::new(|| {
     TESTBED_LOCALHOST_STR
         .parse()
         .expect("Failed to parse testbed name.")
 });
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static TESTBED_LOCALHOST_SLUG: LazyLock<Option<Slug>> = LazyLock::new(|| {
     Some(
         TESTBED_LOCALHOST_STR

@@ -9,7 +9,6 @@ use super::project::report::{
 };
 
 #[derive(Parser, Debug)]
-#[allow(clippy::option_option, clippy::struct_excessive_bools)]
 pub struct CliRun {
     /// Project slug or UUID
     #[clap(long, env = "BENCHER_PROJECT")]
@@ -74,7 +73,6 @@ pub struct CliRun {
 }
 
 #[derive(Args, Debug)]
-#[allow(clippy::option_option)]
 pub struct CliRunBranch {
     /// Branch name, slug, or UUID.
     /// If a name or slug is provided, the branch will be created if it does not exist.
@@ -192,7 +190,7 @@ pub enum CliRunFormat {
     Html,
 }
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("ci_cd")

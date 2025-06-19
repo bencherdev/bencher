@@ -34,7 +34,7 @@ fn digital_product_id() -> Option<Uuid> {
     // Safety: The accuracy of the data returned by `RegGetValueW` is not of any importance,
     // rather the consistency of the data is what is important.
     // https://learn.microsoft.com/en-us/windows/win32/api/winreg/nf-winreg-reggetvaluew
-    #[allow(unsafe_code)]
+    #[expect(unsafe_code)]
     unsafe {
         RegGetValueW(
             HKEY_LOCAL_MACHINE,

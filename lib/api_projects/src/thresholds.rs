@@ -57,7 +57,7 @@ pub enum ProjThresholdsSort {
     Modified,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/thresholds",
@@ -321,7 +321,7 @@ pub struct ProjThresholdQuery {
     pub model: Option<ModelUuid>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/thresholds/{threshold}",

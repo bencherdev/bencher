@@ -30,7 +30,7 @@ use crate::bencher::SubCmd;
 use super::project::report::Thresholds;
 
 #[derive(Debug)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct Run {
     project: Option<ResourceId>,
     branch: Branch,
@@ -48,7 +48,7 @@ pub struct Run {
     log: bool,
     ci: Option<Ci>,
     runner: Runner,
-    #[allow(clippy::struct_field_names)]
+    #[expect(clippy::struct_field_names)]
     dry_run: bool,
     backend: PubBackend,
 }

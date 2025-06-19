@@ -15,7 +15,7 @@ pub struct Task {
     sub: Sub,
 }
 
-#[allow(variant_size_differences, clippy::large_enum_variant)]
+#[expect(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum Sub {
     #[cfg(feature = "plus")]

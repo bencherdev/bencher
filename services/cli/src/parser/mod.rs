@@ -114,7 +114,6 @@ pub enum CliSub {
     Auth(CliAuth),
 }
 
-#[allow(clippy::doc_markdown)]
 #[derive(Args, Debug)]
 pub struct CliBackend {
     /// Backend host URL
@@ -213,7 +212,7 @@ impl From<CliArchived> for Option<bool> {
             (false, false) => None,
             (false, true) => Some(false),
             (true, false) => Some(true),
-            #[allow(clippy::unreachable)]
+            #[expect(clippy::unreachable)]
             (true, true) => unreachable!("Cannot set both `archive` and `unarchive`"),
         }
     }

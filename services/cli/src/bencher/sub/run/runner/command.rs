@@ -153,7 +153,7 @@ impl Command {
             .timestamp_nanos_opt()
             .and_then(|end_time| end_time.checked_sub(start_time.timestamp_nanos_opt()?))
             .and_then(|d| {
-                #[allow(clippy::cast_precision_loss)]
+                #[expect(clippy::cast_precision_loss)]
                 format!("{:.2}", (d as f64) / 1_000_000_000.0)
                     .parse::<f64>()
                     .ok()

@@ -31,7 +31,6 @@ impl TryFrom<TaskPrompt> for Prompt {
 }
 
 impl Prompt {
-    #[allow(clippy::unused_async)]
     pub async fn exec(&self) -> anyhow::Result<()> {
         let start_time = Utc::now();
         let system_input = "You are a professional technical writer for software documentation. Write your documentation in Markdown using American English.";

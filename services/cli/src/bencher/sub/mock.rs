@@ -22,7 +22,7 @@ pub struct Mock {
     pub flaky: bool,
 }
 
-#[allow(clippy::absolute_paths)]
+#[expect(clippy::absolute_paths)]
 #[derive(thiserror::Error, Debug)]
 pub enum MockError {
     #[error("Failed to generate uniform distribution: {0}")]
@@ -79,7 +79,7 @@ impl Mock {
         }
     }
 
-    #[allow(clippy::cast_precision_loss, clippy::similar_names)]
+    #[expect(clippy::cast_precision_loss)]
     fn generate_results(&self) -> Result<AdapterResults, MockError> {
         let count = self.count.unwrap_or(DEFAULT_COUNT);
         let pow = self.pow.unwrap_or(1);

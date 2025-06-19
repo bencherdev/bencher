@@ -1,9 +1,9 @@
+#![expect(clippy::multiple_inherent_impl, reason = "codegen")]
+
 mod codegen {
-    #![allow(
+    #![expect(
         unused_qualifications,
-        variant_size_differences,
         clippy::all,
-        clippy::cargo,
         clippy::pedantic,
         clippy::restriction
     )]

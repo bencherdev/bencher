@@ -15,18 +15,18 @@ impl From<Oso> for Rbac {
 #[derive(Debug, thiserror::Error)]
 pub enum RbacError {
     #[error("Failed to check permissions: {0}")]
-    IsAllowed(oso::OsoError),
+    IsAllowed(Box<oso::OsoError>),
     #[error(
         "Permission ({permission}) denied for user ({auth_user:?}) on organization ({organization:?})"
     )]
     IsAllowedOrganization {
-        auth_user: AuthUser,
+        auth_user: Box<AuthUser>,
         permission: bencher_rbac::organization::Permission,
         organization: Organization,
     },
     #[error("Permission ({permission}) denied for user ({auth_user:?}) on project ({project:?})")]
     IsAllowedProject {
-        auth_user: AuthUser,
+        auth_user: Box<AuthUser>,
         permission: bencher_rbac::project::Permission,
         project: Project,
     },
@@ -44,11 +44,14 @@ impl Rbac {
         Action: ToPolar,
         Resource: ToPolar,
     {
-        self.0.is_allowed(actor, action, resource).map_err(|e| {
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&e);
-            RbacError::IsAllowed(e)
-        })
+        self.0
+            .is_allowed(actor, action, resource)
+            .inspect_err(|e| {
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&e);
+            })
+            .map_err(Box::new)
+            .map_err(RbacError::IsAllowed)
     }
 
     pub fn is_allowed_unwrap<Actor, Action, Resource>(
@@ -83,7 +86,7 @@ impl Rbac {
                 let mut auth_user = auth_user.clone();
                 auth_user.sanitize();
                 RbacError::IsAllowedOrganization {
-                    auth_user,
+                    auth_user: Box::new(auth_user),
                     permission,
                     organization,
                 }
@@ -106,7 +109,7 @@ impl Rbac {
                 let mut auth_user = auth_user.clone();
                 auth_user.sanitize();
                 RbacError::IsAllowedProject {
-                    auth_user,
+                    auth_user: Box::new(auth_user),
                     permission,
                     project,
                 }

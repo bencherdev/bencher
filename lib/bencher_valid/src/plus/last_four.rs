@@ -18,7 +18,7 @@ use serde::{
 
 use crate::{ValidError, error::REGEX_ERROR};
 
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static LAST_FOUR_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^[[:digit:]]{4}$").expect(REGEX_ERROR));
 

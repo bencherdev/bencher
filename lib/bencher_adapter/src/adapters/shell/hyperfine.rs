@@ -43,7 +43,7 @@ pub struct HyperfineResult {
 }
 
 impl Hyperfine {
-    #[allow(clippy::unnecessary_wraps)]
+    #[expect(clippy::unnecessary_wraps)]
     fn convert(self, settings: Settings) -> Result<Option<AdapterResults>, AdapterError> {
         let results = self.results;
         let mut benchmark_metrics = Vec::with_capacity(results.len());

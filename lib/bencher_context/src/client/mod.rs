@@ -12,7 +12,6 @@ use operating_system::OperatingSystem;
 
 const ROOT: &str = "root";
 
-#[allow(clippy::multiple_inherent_impl)]
 impl RunContext {
     pub fn current() -> Self {
         let mut context = RunContext::default();
@@ -27,7 +26,7 @@ impl RunContext {
     }
 }
 
-#[allow(clippy::implicit_hasher)]
+#[expect(clippy::implicit_hasher)]
 impl From<RunContext> for HashMap<String, String> {
     fn from(context: RunContext) -> Self {
         context.0

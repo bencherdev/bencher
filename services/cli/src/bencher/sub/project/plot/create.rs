@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct Create {
     pub project: ResourceId,
     pub index: Option<Index>,
@@ -95,7 +95,6 @@ impl From<Create> for JsonNewPlot {
             upper_value,
             lower_boundary,
             upper_boundary,
-            #[allow(clippy::absolute_paths)]
             x_axis: match x_axis {
                 XAxis::DateTime => bencher_client::types::XAxis::DateTime,
                 XAxis::Version => bencher_client::types::XAxis::Version,

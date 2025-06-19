@@ -20,10 +20,10 @@ const PULL_REQUEST_TARGET: &str = "pull_request_target";
 const FULL_NAME: &str = "full_name";
 
 // https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run
-#[allow(clippy::decimal_literal_representation)]
+#[expect(clippy::decimal_literal_representation)]
 const CHECK_MAX_LENGTH: usize = 65_536;
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct GitHubActions {
     pub token: String,

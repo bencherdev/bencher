@@ -16,7 +16,7 @@ pub use error::TokenError;
 pub use key::TokenKey;
 
 #[cfg(debug_assertions)]
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 pub static DEFAULT_SECRET_KEY: LazyLock<Secret> = LazyLock::new(|| {
     "DO_NOT_USE_THIS_IN_PRODUCTION"
         .parse()

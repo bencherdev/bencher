@@ -20,7 +20,7 @@ impl TryFrom<TaskSpec> for Spec {
 }
 
 impl Spec {
-    #[allow(clippy::unused_self)]
+    #[expect(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let _log = bencher_logger::bootstrap_logger();
 

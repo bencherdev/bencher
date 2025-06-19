@@ -132,6 +132,7 @@ missing_panics_doc = "allow"                 # Checks the doc comments of public
 must_use_candidate = "allow"                 # Checks for public functions that have no #[must_use] attribute, but return something not already marked must-use, have no mutable arg and mutate no statics.
 # restriction
 absolute_paths = "warn"                    # Checks for usage of items through absolute paths, like std::env::current_dir.
+allow_attributes = "warn"                  # Checks for usage of the #[allow] attribute and suggests replacing it with the #[expect]
 as_pointer_underscore = "warn"             # Checks for the usage of as *const _ or as *mut _ conversion using inferred type.
 as_underscore = "warn"                     # Checks for the usage of as _ conversion using inferred type.
 big_endian_bytes = "warn"                  # Checks for the usage of the to_be_bytes method and/or the function from_be_bytes.

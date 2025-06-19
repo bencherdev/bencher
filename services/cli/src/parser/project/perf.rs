@@ -6,7 +6,7 @@ use clap::{Parser, ValueEnum};
 use crate::parser::{CliBackend, ElidedOption};
 
 #[derive(Parser, Debug)]
-#[allow(clippy::option_option)]
+#[expect(clippy::option_option)]
 pub struct CliPerf {
     /// Project slug or UUID
     pub project: ResourceId,

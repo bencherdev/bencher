@@ -1,5 +1,3 @@
-#![allow(clippy::print_stdout)]
-
 mod parser;
 mod task;
 

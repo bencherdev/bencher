@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-#[allow(clippy::option_option)]
+#[expect(clippy::option_option)]
 pub struct Update {
     pub project: ResourceId,
     pub name: Option<ResourceName>,

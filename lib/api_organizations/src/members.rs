@@ -54,7 +54,7 @@ pub struct OrgMembersQuery {
     pub search: Option<Search>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/members",
@@ -331,7 +331,7 @@ pub struct OrgMemberParams {
     pub user: ResourceId,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/members/{user}",

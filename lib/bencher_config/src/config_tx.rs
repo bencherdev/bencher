@@ -321,7 +321,7 @@ fn run_litestream(
     Ok(())
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
     let JsonServer {
         bind_address,

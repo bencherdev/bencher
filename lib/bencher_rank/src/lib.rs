@@ -3,7 +3,7 @@ mod generator;
 
 pub use generator::RankGenerator;
 
-#[allow(clippy::integer_division)]
+#[expect(clippy::integer_division)]
 const MID_RANK: i64 = i64::MAX / 2;
 
 #[derive(
@@ -32,7 +32,7 @@ impl Rank {
         R: Ranked,
     {
         // The window size is 2.
-        #[allow(clippy::indexing_slicing)]
+        #[expect(clippy::indexing_slicing)]
         ranks.windows(2).all(|w| {
             assert!(w.len() == 2, "window size is not 2");
             w[0].rank() <= w[1].rank()
@@ -52,7 +52,7 @@ impl Rank {
             0 => {
                 let first = ranks.first()?.rank().0;
                 // This is okay because we make sure that the new rank is less than the first rank.
-                #[allow(clippy::integer_division)]
+                #[expect(clippy::integer_division)]
                 let new_first = first / 2;
                 if new_first < first {
                     return Some(Rank(new_first));
@@ -61,7 +61,7 @@ impl Rank {
             _ if index >= ranks.len() => {
                 let last = ranks.last()?.rank().0;
                 // This is okay because we make sure that the new rank is greater than the last rank.
-                #[allow(clippy::integer_division)]
+                #[expect(clippy::integer_division)]
                 let new_last = last + ((i64::MAX - last) / 2);
                 if new_last > last {
                     return Some(Rank(new_last));
@@ -71,7 +71,7 @@ impl Rank {
                 let prev_rank = ranks.get(index - 1)?.rank().0;
                 let next_rank = ranks.get(index)?.rank().0;
                 // This is okay because we make sure that the new rank is between the previous and next rank.
-                #[allow(clippy::integer_division)]
+                #[expect(clippy::integer_division)]
                 let new_rank = prev_rank + ((next_rank - prev_rank) / 2);
                 if new_rank > prev_rank && new_rank < next_rank {
                     return Some(Rank(new_rank));
@@ -113,7 +113,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::decimal_literal_representation)]
+    #[expect(clippy::decimal_literal_representation)]
     fn test_rank_calculate() {
         let ranks = vec![
             TestRank::new(0),

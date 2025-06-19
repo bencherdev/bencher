@@ -8,13 +8,13 @@ use oauth2::{
 use octocrab::Octocrab;
 use serde::Deserialize;
 
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static AUTH_URL: LazyLock<AuthUrl> = LazyLock::new(|| {
     AuthUrl::new("https://github.com/login/oauth/authorize".to_owned())
         .expect("Invalid authorization endpoint URL")
 });
 
-#[allow(clippy::expect_used)]
+#[expect(clippy::expect_used)]
 static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
     TokenUrl::new("https://github.com/login/oauth/access_token".to_owned())
         .expect("Invalid token endpoint URL")
@@ -26,7 +26,6 @@ pub struct GitHub {
         BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>,
 }
 
-#[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
 pub enum GitHubError {
     #[error("Failed to create a reqwest client: {0}")]
@@ -120,6 +119,6 @@ struct GitHubUserEmail {
     email: String,
     verified: bool,
     primary: bool,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     visibility: Option<String>,
 }

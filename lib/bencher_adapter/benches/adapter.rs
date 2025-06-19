@@ -1,4 +1,4 @@
-#![allow(unused_crate_dependencies)]
+#![expect(unused_crate_dependencies)]
 
 use criterion::{Criterion, criterion_group, criterion_main};
 
@@ -50,7 +50,7 @@ fn adapter_json(c: &mut Criterion) {
     });
 }
 
-#[allow(clippy::non_ascii_literal)]
+#[expect(clippy::non_ascii_literal)]
 const RUST_RESULT: &str = "
 running 5 tests
 test tests::ignored ... ignored

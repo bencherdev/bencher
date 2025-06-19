@@ -1,5 +1,3 @@
-#![allow(clippy::absolute_paths)]
-
 use std::env;
 
 use bencher_json::{BENCHER_API_URL, Jwt};
@@ -7,13 +5,15 @@ use reqwest::ClientBuilder;
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::time::{Duration, sleep};
 
+use crate::codegen;
+
 use crate::{SSL_CERT_FILE, SSL_CLIENT_CERT};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
 const DEFAULT_ATTEMPTS: usize = 10;
 const DEFAULT_RETRY_AFTER: u64 = 1;
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 /// A client for the Bencher API
 #[derive(Debug, Clone)]
 pub struct BencherClient {
@@ -28,7 +28,6 @@ pub struct BencherClient {
     pub log: bool,
 }
 
-#[allow(clippy::absolute_paths)]
 #[derive(thiserror::Error, Debug)]
 pub enum ClientError {
     #[error("Failed to build. Missing `host` field.")]
@@ -107,11 +106,11 @@ impl BencherClient {
     /// A `Result` containing the response JSON value or an `Error`
     pub async fn send<F, R, T, E>(&self, sender: F) -> Result<serde_json::Value, ClientError>
     where
-        F: Fn(crate::codegen::Client) -> R,
+        F: Fn(codegen::Client) -> R,
         R: Future<
             Output = Result<
                 progenitor_client::ResponseValue<T>,
-                crate::codegen::Error<crate::codegen::types::Error>,
+                codegen::Error<codegen::types::Error>,
             >,
         >,
         T: Serialize,
@@ -133,14 +132,13 @@ impl BencherClient {
     /// # Returns
     ///
     /// A `Result` containing the response JSON or an `Error`
-    #[allow(clippy::too_many_lines)]
     pub async fn send_with<F, R, T, Json, E>(&self, sender: F) -> Result<Json, ClientError>
     where
-        F: Fn(crate::codegen::Client) -> R,
+        F: Fn(codegen::Client) -> R,
         R: Future<
             Output = Result<
                 progenitor_client::ResponseValue<T>,
-                crate::codegen::Error<crate::codegen::types::Error>,
+                codegen::Error<codegen::types::Error>,
             >,
         >,
         T: Serialize,
@@ -151,7 +149,7 @@ impl BencherClient {
             .client_builder()?
             .build()
             .map_err(ClientError::BuildClient)?;
-        let client = crate::codegen::Client::new_with_client(self.host.as_ref(), reqwest_client);
+        let client = codegen::Client::new_with_client(self.host.as_ref(), reqwest_client);
 
         let attempts = self.attempts;
         let max_attempts = attempts.checked_sub(1).unwrap_or_default();
@@ -167,8 +165,8 @@ impl BencherClient {
                     self.log_json(&json_response)?;
                     return Ok(json_response);
                 },
-                #[allow(clippy::print_stderr)]
-                Err(crate::codegen::Error::CommunicationError(e)) => {
+                #[expect(clippy::print_stderr)]
+                Err(codegen::Error::CommunicationError(e)) => {
                     if self.log {
                         eprintln!("\nSend attempt #{}/{attempts}: {e}", attempt + 1);
                     }
@@ -180,16 +178,16 @@ impl BencherClient {
                         retry_after *= 2;
                     }
                 },
-                Err(crate::codegen::Error::InvalidRequest(e)) => {
+                Err(codegen::Error::InvalidRequest(e)) => {
                     return Err(ClientError::InvalidRequest(e));
                 },
-                Err(crate::codegen::Error::PreHookError(e)) => {
+                Err(codegen::Error::PreHookError(e)) => {
                     return Err(ClientError::PreHookError(e));
                 },
-                Err(crate::codegen::Error::PostHookError(e)) => {
+                Err(codegen::Error::PostHookError(e)) => {
                     return Err(ClientError::PostHookError(e));
                 },
-                Err(crate::codegen::Error::ErrorResponse(e)) => {
+                Err(codegen::Error::ErrorResponse(e)) => {
                     let status = e.status();
                     let headers = e.headers().clone();
                     let http_error = e.into_inner();
@@ -201,13 +199,13 @@ impl BencherClient {
                         message: http_error.message,
                     })));
                 },
-                Err(crate::codegen::Error::InvalidUpgrade(e)) => {
+                Err(codegen::Error::InvalidUpgrade(e)) => {
                     return Err(ClientError::InvalidUpgrade(e));
                 },
-                Err(crate::codegen::Error::ResponseBodyError(e)) => {
+                Err(codegen::Error::ResponseBodyError(e)) => {
                     return Err(ClientError::ResponseBodyError(e));
                 },
-                Err(crate::codegen::Error::InvalidResponsePayload(bytes, e)) => {
+                Err(codegen::Error::InvalidResponsePayload(bytes, e)) => {
                     return if self.strict {
                         Err(ClientError::InvalidResponsePayloadStrict(bytes, e))
                     } else {
@@ -220,7 +218,7 @@ impl BencherClient {
                         }
                     };
                 },
-                Err(crate::codegen::Error::UnexpectedResponse(response)) => {
+                Err(codegen::Error::UnexpectedResponse(response)) => {
                     return if response.status().is_success() {
                         if self.strict {
                             Err(ClientError::UnexpectedResponseOkStrict(Box::new(response)))
@@ -311,7 +309,7 @@ impl BencherClient {
     }
 
     fn log_str(&self, err: &str) {
-        #[allow(clippy::print_stdout)]
+        #[expect(clippy::print_stdout)]
         if self.log {
             println!("{err}");
         }
@@ -330,7 +328,7 @@ pub struct ErrorResponse {
 impl std::fmt::Display for ErrorResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Status: {}", self.status)?;
-        #[allow(clippy::use_debug)]
+        #[expect(clippy::use_debug)]
         writeln!(f, "Headers: {:?}", self.headers)?;
         writeln!(f, "Request ID: {}", self.request_id)?;
         if let Some(error_code) = &self.error_code {

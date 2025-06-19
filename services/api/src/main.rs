@@ -1,4 +1,4 @@
-#![allow(unused_crate_dependencies)]
+#![expect(unused_crate_dependencies)]
 
 #[cfg(feature = "sentry")]
 use std::path::PathBuf;
@@ -16,7 +16,6 @@ use tokio::process::Command;
 use tokio::{sync, task::JoinHandle};
 use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
 
-#[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
     #[error("Failed to install default AWS credentials provider: {0:?}")]
@@ -154,7 +153,6 @@ fn init_sentry(config: &Config) -> Option<ClientInitGuard> {
 }
 
 #[cfg(feature = "plus")]
-#[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
 pub enum LitestreamError {
     #[error("Failed to absolutize the database path: {0}")]

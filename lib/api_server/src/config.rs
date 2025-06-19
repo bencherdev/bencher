@@ -17,7 +17,7 @@ use slog::Logger;
 
 use super::restart::countdown;
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/config",
@@ -113,7 +113,7 @@ async fn put_inner(
     Ok(json_config)
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
         method = OPTIONS,
         path =  "/v0/server/config/console",

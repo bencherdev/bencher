@@ -1,6 +1,5 @@
 macro_rules! fn_eq_resource_id {
     ($table:ident) => {
-        #[allow(unused_qualifications)]
         pub fn eq_resource_id(
             resource_id: &bencher_json::ResourceId,
         ) -> Result<
@@ -37,7 +36,6 @@ pub(crate) use fn_eq_resource_id;
 
 macro_rules! fn_from_resource_id {
     ($parent:ident, $parent_type:ty, $table:ident, $resource:ident) => {
-        #[allow(unused_qualifications)]
         pub fn from_resource_id(
             conn: &mut $crate::context::DbConnection,
             parent: $parent_type,
@@ -54,7 +52,6 @@ macro_rules! fn_from_resource_id {
         }
     };
     ($table:ident, $resource:ident) => {
-        #[allow(unused_qualifications)]
         pub fn from_resource_id(
             conn: &mut $crate::context::DbConnection,
             resource_id: &bencher_json::ResourceId,

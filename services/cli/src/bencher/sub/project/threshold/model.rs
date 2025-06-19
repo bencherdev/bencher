@@ -85,7 +85,6 @@ impl From<Model> for bencher_client::types::Model {
             lower_boundary,
             upper_boundary,
         } = model;
-        #[allow(clippy::inconsistent_struct_constructor)]
         bencher_client::types::Model {
             test,
             min_sample_size,

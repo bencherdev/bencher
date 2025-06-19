@@ -14,7 +14,7 @@ impl TryFrom<TaskTs> for Ts {
 }
 
 impl Ts {
-    #[allow(clippy::unused_self)]
+    #[expect(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let status = Command::new("npm")
             .args(["run", "typeshare"])

@@ -12,7 +12,7 @@ use crate::RunError;
 pub struct BuildTime;
 
 impl BuildTime {
-    #[allow(clippy::unused_self)]
+    #[expect(clippy::unused_self)]
     pub fn command(self, name: String, duration: f64) -> BuildCommand {
         BuildCommand { name, duration }
     }

@@ -20,7 +20,6 @@ impl TryFrom<TaskTypes> for Types {
 }
 
 impl Types {
-    #[allow(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         self.spec.exec()?;
         self.ts.exec()?;

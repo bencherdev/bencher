@@ -1,5 +1,5 @@
 pub trait Median {
-    #[allow(clippy::indexing_slicing, clippy::integer_division)]
+    #[expect(clippy::indexing_slicing, clippy::integer_division)]
     fn median(mut array: Vec<Self>) -> Option<Self>
     where
         Self:

@@ -28,7 +28,7 @@ const SERVER_ID: ServerId = ServerId(1);
 
 const LICENSE_GRACE_PERIOD: usize = 7;
 
-#[allow(clippy::panic)]
+#[expect(clippy::panic)]
 pub static BENCHER_STATS_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
     BENCHER_API_URL
         .clone()
@@ -74,7 +74,7 @@ impl QueryServer {
         tokio::spawn(async move {
             let StatsSettings { offset, enabled } = stats;
             let mut violations = 0;
-            #[allow(clippy::infinite_loop)]
+            #[expect(clippy::infinite_loop)]
             loop {
                 let now = Utc::now().naive_utc().time();
                 let sleep_time = match now.cmp(&offset) {

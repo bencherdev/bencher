@@ -81,7 +81,7 @@ where
 {
     let decoded = percent_decode(input.as_bytes());
     let decoded = decoded.decode_utf8()?;
-    #[allow(clippy::map_err_ignore)]
+    #[expect(clippy::map_err_ignore)]
     decoded
         .parse()
         .map_err(|_| UrlEncodedError::Urlencoded(input.into()))

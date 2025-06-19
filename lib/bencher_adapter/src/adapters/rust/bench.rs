@@ -237,7 +237,7 @@ pub(crate) mod test_rust_bench {
     }
 
     #[test]
-    #[allow(clippy::unreadable_literal)]
+    #[expect(clippy::unreadable_literal)]
     fn test_issue_390() {
         let results = convert_rust_bench("issue_390");
         assert_eq!(results.inner.len(), 4);

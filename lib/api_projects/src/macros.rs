@@ -1,6 +1,5 @@
 macro_rules! filter_name_id {
     ($name:ident, $query:ident, $table:ident, $name_id:ident) => {
-        #[allow(unused_qualifications)]
         match $name_id.try_into().map_err(|e| {
             bencher_schema::error::issue_error(
                 "Failed to parse name ID",

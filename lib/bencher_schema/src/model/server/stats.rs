@@ -20,11 +20,7 @@ const THIS_WEEK: i64 = 7 * 24 * 60 * 60;
 const THIS_MONTH: i64 = THIS_WEEK * 4;
 const TOP_PROJECTS: usize = 10;
 
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    clippy::too_many_lines
-)]
+#[expect(clippy::cast_sign_loss, clippy::too_many_lines)]
 pub fn get_stats(
     conn: &mut DbConnection,
     query_server: QueryServer,
@@ -260,7 +256,7 @@ pub fn get_stats(
     })
 }
 
-#[allow(
+#[expect(
     clippy::cast_precision_loss,
     clippy::indexing_slicing,
     clippy::integer_division
@@ -282,7 +278,7 @@ fn median(array: &mut [i64]) -> f64 {
     }
 }
 
-#[allow(clippy::cast_precision_loss, clippy::cast_sign_loss)]
+#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss)]
 fn top_projects(mut project_metrics: Vec<(QueryProject, i64)>, total: i64) -> JsonTopProjects {
     project_metrics.sort_unstable_by(|a, b| a.1.cmp(&b.1));
     project_metrics.reverse();

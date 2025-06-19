@@ -45,7 +45,7 @@ impl TryFrom<TaskSeedTest> for SeedTest {
 }
 
 impl SeedTest {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
         let token = self.token.as_ref();
@@ -1275,7 +1275,7 @@ impl SeedTest {
             TOKEN_ARG,
             token,
             PROJECT_SLUG,
-            #[allow(clippy::indexing_slicing)]
+            #[expect(clippy::indexing_slicing)]
             alerts.0[0].uuid.to_string().as_str(),
         ])
         .current_dir(CLI_DIR);

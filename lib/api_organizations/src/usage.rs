@@ -32,7 +32,7 @@ pub struct OrgUsageParams {
     pub organization: ResourceId,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/usage",
@@ -66,7 +66,7 @@ pub async fn org_usage_get(
     Ok(Get::auth_response_ok(json))
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 async fn get_inner(
     context: &ApiContext,
     path_params: OrgUsageParams,

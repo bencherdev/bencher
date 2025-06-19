@@ -53,7 +53,7 @@ pub struct ProjAlertsQuery {
     pub archived: Option<bool>,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/alerts",
@@ -289,7 +289,7 @@ pub struct ProjAlertParams {
     pub alert: AlertUuid,
 }
 
-#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/alerts/{alert}",

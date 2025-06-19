@@ -6,7 +6,7 @@ pub mod measure;
 pub mod metric;
 pub mod perf;
 pub mod plot;
-#[allow(clippy::module_inception)]
+#[expect(clippy::module_inception)]
 pub mod project;
 pub mod report;
 pub mod testbed;

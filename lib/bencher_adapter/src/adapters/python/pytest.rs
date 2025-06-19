@@ -52,7 +52,7 @@ pub struct Stats {
 }
 
 impl Pytest {
-    #[allow(clippy::unnecessary_wraps)]
+    #[expect(clippy::unnecessary_wraps)]
     fn convert(self, settings: Settings) -> Result<Option<AdapterResults>, AdapterError> {
         let benchmarks = self.benchmarks.0;
         let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());

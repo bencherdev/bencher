@@ -103,7 +103,6 @@ mod test {
     use super::{Entitlements, is_valid_entitlements};
 
     #[test]
-    #[allow(clippy::excessive_precision)]
     fn test_boundary() {
         assert_eq!(true, is_valid_entitlements(Entitlements::default().into()));
         assert_eq!(true, is_valid_entitlements(Entitlements::MIN.into()));

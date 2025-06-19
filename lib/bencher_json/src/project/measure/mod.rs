@@ -1,6 +1,4 @@
-#![allow(clippy::expect_used)]
-
-use std::fmt;
+use std::{fmt, sync::LazyLock};
 
 use bencher_valid::{DateTime, ResourceName, Slug};
 #[cfg(feature = "schema")]
@@ -10,6 +8,13 @@ use serde::{Deserialize, Serialize};
 use crate::ProjectUuid;
 
 pub mod built_in;
+
+#[expect(clippy::expect_used)]
+pub static DEFAULT_UNIT: LazyLock<ResourceName> = LazyLock::new(|| {
+    "Measure (units)"
+        .parse()
+        .expect("Failed to parse measure units.")
+});
 
 crate::typed_uuid::typed_uuid!(MeasureUuid);
 
@@ -31,9 +36,7 @@ pub struct JsonNewMeasure {
 
 impl JsonNewMeasure {
     pub fn generic_unit() -> ResourceName {
-        "Measure (units)"
-            .parse()
-            .expect("Failed to parse measure units.")
+        DEFAULT_UNIT.clone()
     }
 }
 

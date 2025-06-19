@@ -49,7 +49,7 @@ const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Info;
 const DEFAULT_BUSY_TIMEOUT: u32 = 5_000;
 
 const DEFAULT_CONSOLE_URL_STR: &str = "http://localhost:3000";
-#[allow(clippy::panic)]
+#[expect(clippy::panic)]
 static DEFAULT_CONSOLE_URL: LazyLock<Url> = LazyLock::new(|| {
     DEFAULT_CONSOLE_URL_STR.parse().unwrap_or_else(|e| {
         panic!("Failed to parse default console URL \"{DEFAULT_CONSOLE_URL_STR}\": {e}")

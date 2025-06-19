@@ -120,7 +120,6 @@ pub struct CliProjectUpdate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
-    #[allow(clippy::option_option)]
     /// Project URL
     /// To remove the current project URL without replacing it, use an underscore (`_`).
     #[clap(long)]
