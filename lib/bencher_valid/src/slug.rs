@@ -81,8 +81,8 @@ pub fn is_valid_slug(slug: &str) -> bool {
 
 #[allow(dead_code)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn new_slug(slug: &str) -> String {
-    Slug::new(slug).0
+pub fn new_slug(slug: &str) -> Option<String> {
+    Slug::new(slug).map(Into::into)
 }
 
 impl Slug {
@@ -91,18 +91,23 @@ impl Slug {
     #[cfg(feature = "server")]
     const RAND_LEN: usize = 8;
 
-    pub fn new<S>(slug: S) -> Self
+    pub fn new<S>(slug: S) -> Option<Self>
     where
         S: AsRef<str>,
     {
         let new_slug = slug::slugify(&slug);
-        Self(if new_slug.len() > Self::MAX_LEN {
-            slug::slugify(new_slug.chars().take(Self::MAX_LEN).collect::<String>())
+        if new_slug.len() > Self::MAX_LEN {
+            Some(Self(slug::slugify(
+                new_slug.chars().take(Self::MAX_LEN).collect::<String>(),
+            )))
+        } else if new_slug.is_empty() {
+            None
         } else {
-            new_slug
-        })
+            Some(Self(new_slug))
+        }
     }
 
+    #[cfg(feature = "server")]
     pub fn unwrap_or_new<N>(name: N, slug: Option<Self>) -> Self
     where
         N: AsRef<str>,
@@ -110,12 +115,12 @@ impl Slug {
         if let Some(slug) = slug {
             slug
         } else {
-            Self::new(name)
+            Self::new(name).unwrap_or_else(|| Self(Self::rand_suffix()))
         }
     }
 
     #[cfg(feature = "server")]
-    pub fn rand_suffix() -> String {
+    fn rand_suffix() -> String {
         use chrono::Utc;
         use rand::Rng;
 
@@ -174,10 +179,9 @@ impl Slug {
 
 #[cfg(test)]
 mod test {
-
     use crate::test::{LEN_64_STR, LEN_65_STR};
 
-    use super::is_valid_slug;
+    use super::{is_valid_slug, Slug};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -198,5 +202,10 @@ mod test {
         assert_eq!(false, is_valid_slug("a-Valid-slug"));
         assert_eq!(false, is_valid_slug(LEN_65_STR));
         assert_eq!(false, is_valid_slug("client-submit-serialize-deserialize-handle-client-submit-serialize-deserialize-handle-1996529012"));
+    }
+
+    #[test]
+    fn test_benchmark_name_issue_610() {
+        assert!(Slug::new("...").is_none());
     }
 }

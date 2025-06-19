@@ -60,7 +60,7 @@ impl RunContext {
         if slug.is_empty() {
             None
         } else {
-            Some(Slug::new(slug))
+            Slug::new(slug)
         }
     }
 }
