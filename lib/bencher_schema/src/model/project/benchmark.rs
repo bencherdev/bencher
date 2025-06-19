@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
     BenchmarkName, BenchmarkUuid, DateTime, JsonBenchmark, Slug,
+    project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -9,7 +9,7 @@ use super::{ProjectId, QueryProject};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
-    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
+    error::{BencherResource, assert_parentage, resource_conflict_err, resource_not_found_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},

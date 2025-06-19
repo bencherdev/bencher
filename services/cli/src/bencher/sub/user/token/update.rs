@@ -2,9 +2,9 @@ use bencher_client::types::JsonUpdateToken;
 use bencher_json::{ResourceId, ResourceName, TokenUuid};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::user::token::CliTokenUpdate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

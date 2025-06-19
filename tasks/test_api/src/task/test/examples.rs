@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use bencher_json::{Jwt, Url, LOCALHOST_BENCHER_API_URL};
+use bencher_json::{Jwt, LOCALHOST_BENCHER_API_URL, Url};
 
 use crate::parser::{TaskExample, TaskExamples};
 

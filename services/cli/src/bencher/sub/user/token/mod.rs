@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::user::token::CliToken, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::user::token::CliToken};
 
 mod create;
 mod list;

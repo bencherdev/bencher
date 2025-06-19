@@ -1,9 +1,9 @@
 use bencher_client::types::{JsonConfig, JsonUpdateConfig};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::CliConfigUpdate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

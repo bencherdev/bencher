@@ -1,6 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    project::report::Iteration, DateTime, JsonOneMetric, MetricUuid, ReportUuid, ResourceId,
+    DateTime, JsonOneMetric, MetricUuid, ReportUuid, ResourceId, project::report::Iteration,
 };
 use bencher_schema::{
     conn_lock,
@@ -8,25 +8,25 @@ use bencher_schema::{
     error::resource_not_found_err,
     model::{
         project::{
+            QueryProject,
             benchmark::QueryBenchmark,
-            branch::{head::QueryHead, version::QueryVersion, QueryBranch},
+            branch::{QueryBranch, head::QueryHead, version::QueryVersion},
             measure::QueryMeasure,
             metric_boundary::QueryMetricBoundary,
             testbed::QueryTestbed,
             threshold::{
-                alert::QueryAlert, boundary::QueryBoundary, model::QueryModel, QueryThreshold,
+                QueryThreshold, alert::QueryAlert, boundary::QueryBoundary, model::QueryModel,
             },
-            QueryProject,
         },
         user::auth::{AuthUser, PubBearerToken},
     },
     schema, view,
 };
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
 };
-use dropshot::{endpoint, HttpError, Path, RequestContext};
+use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

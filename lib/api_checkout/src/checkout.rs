@@ -15,7 +15,7 @@ use bencher_schema::{
         user::auth::{AuthUser, BearerToken},
     },
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {

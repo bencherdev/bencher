@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::{
-    project::perf::{JsonPerfImgQueryParams, JsonPerfQueryParams},
     JsonPerfQuery,
+    project::perf::{JsonPerfImgQueryParams, JsonPerfQueryParams},
 };
 use bencher_plot::LinePlot;
 use bencher_schema::{
@@ -9,7 +9,7 @@ use bencher_schema::{
     error::{bad_request_error, issue_error},
     model::user::auth::{AuthUser, PubBearerToken},
 };
-use dropshot::{endpoint, Body, HttpError, Path, Query, RequestContext};
+use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
 use http::Response;
 
 use super::ProjPerfParams;

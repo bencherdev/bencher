@@ -7,11 +7,11 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
-use crate::{secret::SANITIZED_SECRET, Sanitize, ValidError};
+use crate::{Sanitize, ValidError, secret::SANITIZED_SECRET};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
@@ -88,7 +88,7 @@ pub fn is_valid_email(email: &str) -> bool {
 mod test {
     use std::str::FromStr as _;
 
-    use super::{is_valid_email, Email};
+    use super::{Email, is_valid_email};
     use pretty_assertions::assert_eq;
 
     use crate::test::{LEN_64_STR, LEN_65_STR};

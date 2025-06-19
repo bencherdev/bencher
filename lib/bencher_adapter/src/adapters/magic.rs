@@ -1,7 +1,7 @@
 use crate::{
-    results::adapter_results::AdapterResults, Adaptable, AdapterCSharp, AdapterCpp, AdapterGo,
-    AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRuby, AdapterRust, AdapterShell,
-    Settings,
+    Adaptable, AdapterCSharp, AdapterCpp, AdapterGo, AdapterJava, AdapterJs, AdapterJson,
+    AdapterPython, AdapterRuby, AdapterRust, AdapterShell, Settings,
+    results::adapter_results::AdapterResults,
 };
 
 pub struct AdapterMagic;
@@ -25,7 +25,7 @@ impl Adaptable for AdapterMagic {
 mod test_magic {
     use super::AdapterMagic;
     use crate::adapters::{
-        c_sharp::{dot_net::test_c_sharp_dot_net, AdapterCSharp},
+        c_sharp::{AdapterCSharp, dot_net::test_c_sharp_dot_net},
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
         go::bench::test_go_bench,
         java::jmh::test_java_jmh,

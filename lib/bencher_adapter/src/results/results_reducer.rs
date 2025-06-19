@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use bencher_json::{project::metric::Median as _, BenchmarkName, JsonNewMetric, MeasureNameId};
+use bencher_json::{BenchmarkName, JsonNewMetric, MeasureNameId, project::metric::Median as _};
 
 use super::{
-    adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray,
+    AdapterResultsArray, adapter_metrics::AdapterMetrics, adapter_results::AdapterResults,
 };
 
 #[derive(Debug, Clone, Default)]

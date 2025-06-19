@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::JsonSpec;
 use bencher_schema::context::ApiContext;
-use dropshot::{endpoint, HttpError, RequestContext};
+use dropshot::{HttpError, RequestContext, endpoint};
 
 pub const SPEC_STR: &str = include_str!("../../../services/api/openapi.json");
 #[allow(clippy::expect_used)]

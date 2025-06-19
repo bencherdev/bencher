@@ -5,11 +5,11 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
+    JsonDirection, JsonNewReport, JsonPagination, JsonReport, JsonReports, ReportUuid, ResourceId,
     project::{
         head::VersionNumber,
         report::{JsonReportQuery, JsonReportQueryParams},
     },
-    JsonDirection, JsonNewReport, JsonPagination, JsonReport, JsonReports, ReportUuid, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -18,22 +18,22 @@ use bencher_schema::{
     error::{bad_request_error, resource_conflict_err, resource_not_found_err},
     model::{
         project::{
+            QueryProject,
             branch::{
                 head::HeadId,
                 version::{QueryVersion, VersionId},
             },
             report::{QueryReport, ReportId},
-            QueryProject,
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
 };
 use diesel::{
-    dsl::count, BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
+    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _, dsl::count,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;

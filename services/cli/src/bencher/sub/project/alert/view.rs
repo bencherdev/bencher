@@ -1,9 +1,9 @@
 use bencher_json::{AlertUuid, ResourceId};
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::project::alert::CliAlertView,
-    CliError,
 };
 
 #[derive(Debug)]

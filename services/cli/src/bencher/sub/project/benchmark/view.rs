@@ -1,9 +1,9 @@
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::project::benchmark::CliBenchmarkView,
-    CliError,
 };
 
 #[derive(Debug)]

@@ -6,11 +6,11 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
-use crate::{is_valid_len, Slug, UserName, ValidError};
+use crate::{Slug, UserName, ValidError, is_valid_len};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]

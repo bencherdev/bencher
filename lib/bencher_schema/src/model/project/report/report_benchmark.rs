@@ -1,4 +1,4 @@
-use bencher_json::{project::report::Iteration, ReportBenchmarkUuid};
+use bencher_json::{ReportBenchmarkUuid, project::report::Iteration};
 
 use crate::{
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},

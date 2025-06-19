@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
-use bencher_json::{Jwt, Url, LOCALHOST_BENCHER_API_URL};
+use bencher_json::{Jwt, LOCALHOST_BENCHER_API_URL, Url};
 use pretty_assertions::assert_eq;
 
 use crate::parser::TaskSeedTest;

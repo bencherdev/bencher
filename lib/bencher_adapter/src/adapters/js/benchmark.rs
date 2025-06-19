@@ -1,21 +1,21 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
+use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 
 use nom::{
+    IResult,
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
     sequence::{delimited, tuple},
-    IResult,
 };
 
 use crate::{
+    Adaptable, Settings,
     adapters::util::{
-        nom_error, parse_benchmark_name_chars, parse_f64, parse_number_as_f64, parse_u64,
-        throughput_as_secs, NomError, Units,
+        NomError, Units, nom_error, parse_benchmark_name_chars, parse_f64, parse_number_as_f64,
+        parse_u64, throughput_as_secs,
     },
     results::adapter_results::AdapterResults,
-    Adaptable, Settings,
 };
 
 pub struct AdapterJsBenchmark;
@@ -90,8 +90,8 @@ pub(crate) mod test_js_benchmark {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_throughput},
         AdapterResults, Settings,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_throughput},
     };
 
     use super::AdapterJsBenchmark;

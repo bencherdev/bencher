@@ -1,9 +1,9 @@
 use bencher_json::{PlotUuid, ResourceId};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::plot::CliPlotDelete,
-    CliError,
 };
 
 #[derive(Debug)]

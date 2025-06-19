@@ -5,17 +5,17 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    NameId,
     project::{
         branch::JsonUpdateStartPoint,
         report::{JsonReportSettings, JsonReportThresholds},
     },
-    NameId,
 };
 
 #[cfg(feature = "server")]
 use crate::{
-    project::{branch::DEFAULT_BRANCH, testbed::DEFAULT_TESTBED},
     JsonNewReport,
+    project::{branch::DEFAULT_BRANCH, testbed::DEFAULT_TESTBED},
 };
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -1,9 +1,9 @@
 #![cfg(feature = "plus")]
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::CliServerStats,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

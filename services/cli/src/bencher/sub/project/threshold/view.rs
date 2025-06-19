@@ -1,9 +1,9 @@
 use bencher_json::{ModelUuid, ResourceId, ThresholdUuid};
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::project::threshold::CliThresholdView,
-    CliError,
 };
 
 #[derive(Debug)]

@@ -2,9 +2,9 @@ use bencher_client::types::JsonConfirm;
 use bencher_json::Jwt;
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::system::auth::CliAuthConfirm,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::project::alert::CliAlert, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::project::alert::CliAlert};
 
 mod list;
 mod update;

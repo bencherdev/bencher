@@ -63,7 +63,7 @@ impl From<UpdateAlertStatus> for AlertStatus {
 
 #[cfg(feature = "db")]
 mod alert_status {
-    use super::{AlertStatus, ACTIVE_INT, DISMISSED_INT, SILENCED_INT};
+    use super::{ACTIVE_INT, AlertStatus, DISMISSED_INT, SILENCED_INT};
 
     #[derive(Debug, thiserror::Error)]
     pub enum AlertStatusError {

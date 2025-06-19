@@ -2,9 +2,9 @@ use bencher_client::types::JsonUpdateTestbed;
 use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::testbed::CliTestbedUpdate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

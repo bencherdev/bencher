@@ -1,7 +1,7 @@
 use bencher_json::{Boundary, ModelTest, SampleSize, Window};
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
 };
 
 use crate::{
@@ -11,8 +11,8 @@ use crate::{
         measure::MeasureId,
         testbed::TestbedId,
         threshold::{
-            model::{ModelId, QueryModel},
             ThresholdId,
+            model::{ModelId, QueryModel},
         },
     },
     schema,

@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::project::threshold::CliThreshold, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::project::threshold::CliThreshold};
 
 mod create;
 mod delete;
@@ -18,7 +18,9 @@ pub enum Threshold {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ThresholdError {
-    #[error("Failed to find Bencher project. Set the project as the first argument, use the `--project` argument, or the `BENCHER_PROJECT` environment variable.")]
+    #[error(
+        "Failed to find Bencher project. Set the project as the first argument, use the `--project` argument, or the `BENCHER_PROJECT` environment variable."
+    )]
     NoProject,
     #[error("Invalid threshold model: {0}")]
     BadModel(bencher_json::ValidError),

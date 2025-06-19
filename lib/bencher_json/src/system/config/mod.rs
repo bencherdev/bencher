@@ -16,15 +16,15 @@ pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]
 pub use plus::{
+    JsonPlus,
     cloud::{
+        JsonCloud,
         billing::{JsonBilling, JsonProduct, JsonProducts},
         index::{JsonBingIndex, JsonGoogleIndex, JsonIndex},
-        JsonCloud,
     },
     litestream::{JsonLitestream, JsonReplica},
     rate_limiting::JsonRateLimiting,
     stats::JsonStats,
-    JsonPlus,
 };
 pub use security::JsonSecurity;
 pub use server::{JsonServer, JsonTls};

@@ -1,17 +1,17 @@
 use bencher_json::{
+    AlertUuid, BoundaryUuid, DateTime, ReportUuid,
     project::{
         alert::{AlertStatus, JsonAlert, JsonPerfAlert, JsonUpdateAlert},
         boundary::BoundaryLimit,
         report::Iteration,
     },
-    AlertUuid, BoundaryUuid, DateTime, ReportUuid,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 
 use super::{
-    boundary::{BoundaryId, QueryBoundary},
     QueryThreshold,
+    boundary::{BoundaryId, QueryBoundary},
 };
 use crate::{
     conn_lock,
@@ -19,10 +19,10 @@ use crate::{
     error::{resource_conflict_err, resource_not_found_err},
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     model::project::{
+        ProjectId, QueryProject,
         benchmark::QueryBenchmark,
         branch::{head::HeadId, version::VersionId},
         metric::QueryMetric,
-        ProjectId, QueryProject,
     },
     schema::{self, alert as alert_table},
 };

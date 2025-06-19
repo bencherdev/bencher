@@ -98,7 +98,7 @@ impl fmt::Display for OrganizationRole {
 
 #[cfg(feature = "db")]
 mod organization_role {
-    use super::{OrganizationRole, LEADER_ROLE};
+    use super::{LEADER_ROLE, OrganizationRole};
 
     #[derive(Debug, thiserror::Error)]
     pub enum OrganizationRoleError {

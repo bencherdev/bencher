@@ -11,7 +11,7 @@ use bencher_schema::{
         user::{admin::AdminUser, auth::BearerToken},
     },
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]

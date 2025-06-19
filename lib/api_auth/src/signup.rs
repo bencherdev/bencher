@@ -1,12 +1,12 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
-use bencher_json::{system::auth::JsonAuthAck, JsonSignup};
+use bencher_json::{JsonSignup, system::auth::JsonAuthAck};
 use bencher_schema::{
     conn_lock,
     context::{ApiContext, Body, ButtonBody, Message},
     error::{forbidden_error, issue_error},
     model::user::InsertUser,
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
 use super::AUTH_TOKEN_TTL;

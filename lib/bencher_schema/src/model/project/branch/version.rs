@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::head::{JsonVersion, VersionNumber},
     GitHash, VersionUuid,
+    project::head::{JsonVersion, VersionNumber},
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -13,7 +13,7 @@ use crate::{
     schema::version as version_table,
 };
 
-use super::{head::HeadId, head_version::InsertHeadVersion, ProjectId, QueryProject};
+use super::{ProjectId, QueryProject, head::HeadId, head_version::InsertHeadVersion};
 
 crate::macros::typed_id::typed_id!(VersionId);
 

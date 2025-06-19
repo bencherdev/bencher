@@ -2,12 +2,12 @@ use bencher_client::types::{JsonDirection, OrgMembersSort};
 use bencher_json::{ResourceId, UserName};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::{
-        organization::member::{CliMemberList, CliMembersSort},
         CliPagination,
+        organization::member::{CliMemberList, CliMembersSort},
     },
-    CliError,
 };
 
 #[derive(Debug)]

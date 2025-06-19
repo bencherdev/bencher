@@ -1,17 +1,17 @@
 #![cfg(feature = "plus")]
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted};
-use bencher_json::{system::auth::JsonOAuth, JsonAuthUser, JsonSignup, PlanLevel};
+use bencher_json::{JsonAuthUser, JsonSignup, PlanLevel, system::auth::JsonOAuth};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
     error::{issue_error, payment_required_error, unauthorized_error},
     model::{
-        organization::{plan::LicenseUsage, QueryOrganization},
+        organization::{QueryOrganization, plan::LicenseUsage},
         user::{InsertUser, QueryUser},
     },
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
 use super::CLIENT_TOKEN_TTL;
@@ -64,8 +64,8 @@ async fn post_inner(
         .is_empty()
     {
         return Err(payment_required_error(
-                "You must have a valid Bencher Plus Enterprise license for at least one organization on the server to use GitHub OAuth2",
-            ));
+            "You must have a valid Bencher Plus Enterprise license for at least one organization on the server to use GitHub OAuth2",
+        ));
     }
 
     let (name, email) = github

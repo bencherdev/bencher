@@ -2,9 +2,9 @@ use bencher_client::types::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot};
 use bencher_json::{Index, PlotUuid, ResourceId, ResourceName, Window};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::plot::CliPlotUpdate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

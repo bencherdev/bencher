@@ -4,15 +4,15 @@ use bencher_client::types::JsonReportThresholds;
 use bencher_json::{Boundary, NameId, SampleSize, Window};
 
 use crate::{
+    ThresholdError,
     bencher::sub::project::threshold::model::Model,
     parser::{
+        ElidedOption,
         project::{
             report::CliReportThresholds,
             threshold::{CliModel, CliModelTest},
         },
-        ElidedOption,
     },
-    ThresholdError,
 };
 
 #[derive(Debug, Clone)]
@@ -23,7 +23,9 @@ pub struct Thresholds {
 
 #[derive(thiserror::Error, Debug)]
 pub enum ThresholdsError {
-    #[error("The {0} Measure Threshold is missing its model test. Use the `--threshold-test` option to set the test.")]
+    #[error(
+        "The {0} Measure Threshold is missing its model test. Use the `--threshold-test` option to set the test."
+    )]
     MissingTest(NameId),
     #[error("Failed to validate the model for the {measure} Measure Threshold: {err}")]
     BadModel {

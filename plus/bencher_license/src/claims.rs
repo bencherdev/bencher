@@ -1,8 +1,8 @@
-use bencher_json::{DateTime, Entitlements, OrganizationUuid, PlanLevel, BENCHER_URL_STR};
+use bencher_json::{BENCHER_URL_STR, DateTime, Entitlements, OrganizationUuid, PlanLevel};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use crate::{audience::Audience, billing_cycle::BillingCycle, LicenseError};
+use crate::{LicenseError, audience::Audience, billing_cycle::BillingCycle};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {

@@ -105,7 +105,7 @@ impl Dimension {
                                 Ok(())
                             } else {
                                 Err(err)
-                            }
+                            };
                         },
                         Err(err) => return Err(err),
                     }
@@ -165,7 +165,7 @@ impl Dimension {
                                 Ok(())
                             } else {
                                 Err(err)
-                            }
+                            };
                         },
                         Err(err) => return Err(err),
                     }
@@ -223,7 +223,7 @@ impl Dimension {
                                 Ok(())
                             } else {
                                 Err(err)
-                            }
+                            };
                         },
                         Err(err) => return Err(err),
                     }
@@ -281,7 +281,7 @@ impl Dimension {
                                 Ok(())
                             } else {
                                 Err(err)
-                            }
+                            };
                         },
                         Err(err) => return Err(err),
                     }

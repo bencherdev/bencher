@@ -1,11 +1,11 @@
 use std::str::FromStr as _;
 use std::sync::LazyLock;
 
-use bencher_json::{organization::member::OrganizationRole, Email, Jwt, OrganizationUuid, Secret};
+use bencher_json::{Email, Jwt, OrganizationUuid, Secret, organization::member::OrganizationRole};
 use chrono::Utc;
 use jsonwebtoken::{
-    decode, encode, errors::ErrorKind as JsonWebTokenErrorKind, Algorithm, DecodingKey,
-    EncodingKey, Header, TokenData, Validation,
+    Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
+    errors::ErrorKind as JsonWebTokenErrorKind,
 };
 
 use crate::{Audience, Claims, InviteClaims, OrgClaims, TokenError};
@@ -120,7 +120,7 @@ impl TokenKey {
 mod test {
     use std::{sync::LazyLock, thread, time};
 
-    use bencher_json::{organization::member::OrganizationRole, Email, OrganizationUuid};
+    use bencher_json::{Email, OrganizationUuid, organization::member::OrganizationRole};
 
     use crate::{Audience, DEFAULT_SECRET_KEY};
 

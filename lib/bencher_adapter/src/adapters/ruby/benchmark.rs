@@ -1,17 +1,17 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
+use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
+    IResult,
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
     sequence::{delimited, tuple},
-    IResult,
 };
 
 use crate::{
-    adapters::util::{latency_as_nanos, parse_benchmark_name_chars, parse_f64, NomError, Units},
-    results::adapter_results::AdapterResults,
     Adaptable, Settings,
+    adapters::util::{NomError, Units, latency_as_nanos, parse_benchmark_name_chars, parse_f64},
+    results::adapter_results::AdapterResults,
 };
 
 pub struct AdapterRubyBenchmark;
@@ -103,8 +103,8 @@ pub(crate) mod test_ruby_benchmark {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
         AdapterResults, Settings,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
     };
 
     use super::AdapterRubyBenchmark;

@@ -2,20 +2,20 @@ use std::{fmt, str::FromStr};
 
 use bencher_json::BenchmarkName;
 use nom::{
+    IResult,
     branch::alt,
     bytes::complete::tag,
     character::complete::digit1,
     combinator::{map, map_res},
     error::ErrorKind as NomErrorKind,
     multi::fold_many1,
-    IResult,
 };
 use ordered_float::OrderedFloat;
-use rust_decimal::prelude::ToPrimitive as _;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive as _;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer,
+    de::{self, Visitor},
 };
 
 use crate::AdapterError;

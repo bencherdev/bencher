@@ -1,9 +1,9 @@
 use bencher_client::types::{JsonBackup, JsonDataStore};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::{CliBackup, CliBackupDataStore},
-    CliError,
 };
 
 #[derive(Debug, Clone)]

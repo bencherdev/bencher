@@ -4,8 +4,8 @@ use std::{fs::Permissions, os::unix::fs::PermissionsExt as _};
 
 use camino::Utf8PathBuf;
 
-use crate::parser::{TaskDeb, TaskMan};
 use crate::API_VERSION;
+use crate::parser::{TaskDeb, TaskMan};
 
 use super::man::Man;
 
@@ -45,7 +45,10 @@ impl Deb {
         std::fs::create_dir_all(&debian_path)?;
 
         let control_path = debian_path.join("control");
-        let control = format!("Package: bencher\nVersion: {API_VERSION}\nArchitecture: {arch}\nMaintainer: Bencher <info@bencher.dev>\nDescription: Continuous Benchmarking\n", arch = self.arch);
+        let control = format!(
+            "Package: bencher\nVersion: {API_VERSION}\nArchitecture: {arch}\nMaintainer: Bencher <info@bencher.dev>\nDescription: Continuous Benchmarking\n",
+            arch = self.arch
+        );
         std::fs::write(control_path, control)?;
 
         let man_path = deb_path.join("usr/local/man/man1");

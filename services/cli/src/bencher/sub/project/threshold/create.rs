@@ -1,11 +1,11 @@
 use bencher_client::types::JsonNewThreshold;
 use bencher_json::{NameId, ResourceId};
 
-use super::{model::Model, ThresholdError};
+use super::{ThresholdError, model::Model};
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::threshold::{CliThresholdCreate, CliThresholdCreateProject},
-    CliError,
 };
 
 #[derive(Debug, Clone)]

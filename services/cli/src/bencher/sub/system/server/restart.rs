@@ -1,9 +1,9 @@
 use bencher_client::types::JsonRestart;
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::CliRestart,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

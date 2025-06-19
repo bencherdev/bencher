@@ -2,9 +2,9 @@ use bencher_client::types::OrganizationPermission;
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::{CliOrganizationAllowed, CliOrganizationPermission},
-    CliError,
 };
 
 #[derive(Debug)]

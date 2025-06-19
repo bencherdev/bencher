@@ -1,4 +1,4 @@
-use crate::{parser::CliSub, CliError};
+use crate::{CliError, parser::CliSub};
 
 mod compose;
 mod mock;
@@ -30,7 +30,7 @@ use project::{
 };
 pub use project::{archive::ArchiveError, report::ThresholdsError, threshold::ThresholdError};
 use run::Run;
-pub use run::{runner::output::Output, RunError};
+pub use run::{RunError, runner::output::Output};
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};
 use user::{token::Token, user::User};

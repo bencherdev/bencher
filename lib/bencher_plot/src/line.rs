@@ -1,6 +1,6 @@
 use crate::PlotError;
-use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
 use bencher_json::{JsonMeasure, Units};
+use bencher_json::{JsonPerf, project::perf::JsonPerfMetrics};
 use chrono::{DateTime, Duration, Utc};
 use image::{GenericImageView as _, ImageBuffer};
 use ordered_float::{FloatCore as _, OrderedFloat};
@@ -8,10 +8,10 @@ use plotters::chart::{ChartContext, DualCoordChartContext};
 use plotters::coord::ranged1d::{DefaultFormatting, KeyPointHint};
 use plotters::prelude::{Cartesian2d, IntoLogRange as _, LogCoord, RangedDateTime};
 use plotters::{
-    coord::{types::RangedCoordf64, Shift},
+    coord::{Shift, types::RangedCoordf64},
     prelude::{
-        BitMapBackend, BitMapElement, ChartBuilder, DrawingArea, IntoDrawingArea as _, MultiLineText,
-        Ranged, Rectangle,
+        BitMapBackend, BitMapElement, ChartBuilder, DrawingArea, IntoDrawingArea as _,
+        MultiLineText, Ranged, Rectangle,
     },
     series::LineSeries,
     style::{Color as _, FontFamily, RGBColor, ShapeStyle, WHITE},

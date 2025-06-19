@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{Jwt, Url, BENCHER_API_URL_STR};
+use bencher_json::{BENCHER_API_URL_STR, Jwt, Url};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 pub mod compose;
@@ -13,15 +13,15 @@ pub mod user;
 
 use compose::{CliDown, CliLogs, CliUp};
 use mock::CliMock;
-use organization::{member::CliMember, CliOrganization};
+use organization::{CliOrganization, member::CliMember};
 use project::{
-    alert::CliAlert, archive::CliArchive, benchmark::CliBenchmark, branch::CliBranch,
+    CliProject, alert::CliAlert, archive::CliArchive, benchmark::CliBenchmark, branch::CliBranch,
     measure::CliMeasure, metric::CliMetric, perf::CliPerf, plot::CliPlot, report::CliReport,
-    testbed::CliTestbed, threshold::CliThreshold, CliProject,
+    testbed::CliTestbed, threshold::CliThreshold,
 };
 use run::CliRun;
 use system::{auth::CliAuth, server::CliServer};
-use user::{token::CliToken, CliUser};
+use user::{CliUser, token::CliToken};
 
 /// Bencher CLI
 #[derive(Parser, Debug)]

@@ -2,8 +2,8 @@ use std::sync::LazyLock;
 
 use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
-    basic::BasicClient, reqwest, AuthUrl, AuthorizationCode, ClientId, ClientSecret,
-    EndpointNotSet, EndpointSet, TokenResponse as _, TokenUrl,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, EndpointNotSet, EndpointSet,
+    TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
 };
 use octocrab::Octocrab;
 use serde::Deserialize;

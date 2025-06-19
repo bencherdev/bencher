@@ -2,11 +2,11 @@ mod bencher;
 mod error;
 mod parser;
 
-use bencher::{sub::SubCmd as _, Bencher};
 pub use bencher::{
-    sub::{MockError, RunError, ThresholdError},
     BackendError,
+    sub::{MockError, RunError, ThresholdError},
 };
+use bencher::{Bencher, sub::SubCmd as _};
 pub use error::CliError;
 pub use parser::CliBencher;
 use tokio_rustls as _;

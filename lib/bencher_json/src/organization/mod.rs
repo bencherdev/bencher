@@ -5,8 +5,8 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::UserUuid;

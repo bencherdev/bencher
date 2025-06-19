@@ -3,7 +3,7 @@
 use std::sync::LazyLock;
 use std::{cmp, sync::Arc};
 
-use bencher_json::{DateTime, JsonServer, JsonServerStats, PlanLevel, ServerUuid, BENCHER_API_URL};
+use bencher_json::{BENCHER_API_URL, DateTime, JsonServer, JsonServerStats, PlanLevel, ServerUuid};
 use bencher_license::Licensor;
 use chrono::{Duration, Utc};
 use diesel::RunQueryDsl as _;
@@ -11,13 +11,13 @@ use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
+    API_VERSION,
     context::StatsSettings,
     context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
     error::resource_conflict_err,
     macros::fn_get::fn_get,
     model::{organization::plan::LicenseUsage, user::QueryUser},
     schema::{self, server as server_table},
-    API_VERSION,
 };
 
 mod stats;
@@ -94,12 +94,22 @@ impl QueryServer {
                         Ok(license_usages) if license_usages.is_empty() => {
                             violations += 1;
                             // Be kind. Allow for a seven day grace period.
-                            slog::warn!(log, "Sending stats is disabled, but there is no valid Bencher Plus license key! This is violation #{violations} of the Bencher License: https://bencher.dev/legal/license");
+                            slog::warn!(
+                                log,
+                                "Sending stats is disabled, but there is no valid Bencher Plus license key! This is violation #{violations} of the Bencher License: https://bencher.dev/legal/license"
+                            );
                             if let Some(remaining) = LICENSE_GRACE_PERIOD.checked_sub(violations) {
-                                slog::warn!(log, "You have {remaining} days remaining in your Bencher License grace period. Please purchase a license key: https://bencher.dev/pricing");
+                                slog::warn!(
+                                    log,
+                                    "You have {remaining} days remaining in your Bencher License grace period. Please purchase a license key: https://bencher.dev/pricing"
+                                );
                                 continue;
                             }
-                            slog::warn!(log, "Sending stats at {}. Please purchase a license key: https://bencher.dev/pricing",  Utc::now());
+                            slog::warn!(
+                                log,
+                                "Sending stats at {}. Please purchase a license key: https://bencher.dev/pricing",
+                                Utc::now()
+                            );
                         },
                         Ok(_) => {
                             slog::debug!(log, "Sending stats is disabled");

@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::testbed::JsonUpdateTestbed, DateTime, JsonNewTestbed, JsonTestbed, NameId, NameIdKind,
-    ResourceName, Slug, TestbedUuid,
+    DateTime, JsonNewTestbed, JsonTestbed, NameId, NameIdKind, ResourceName, Slug, TestbedUuid,
+    project::testbed::JsonUpdateTestbed,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -9,7 +9,7 @@ use super::{ProjectId, QueryProject};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
-    error::{assert_parentage, resource_conflict_err, BencherResource},
+    error::{BencherResource, assert_parentage, resource_conflict_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         name_id::{fn_eq_name_id, fn_from_name_id},

@@ -2,9 +2,9 @@ use bencher_client::types::JsonNewClaim;
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::claim::CliOrganizationClaim,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

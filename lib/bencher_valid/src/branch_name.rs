@@ -7,8 +7,8 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::{Slug, ValidError};

@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::system::server::CliConfig, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::system::server::CliConfig};
 
 mod console;
 mod update;

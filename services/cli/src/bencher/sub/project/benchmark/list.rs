@@ -2,12 +2,12 @@ use bencher_client::types::{JsonDirection, ProjBenchmarksSort};
 use bencher_json::{BenchmarkName, ResourceId};
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::{
-        project::benchmark::{CliBenchmarkList, CliBenchmarksSort},
         CliPagination,
+        project::benchmark::{CliBenchmarkList, CliBenchmarksSort},
     },
-    CliError,
 };
 
 #[derive(Debug)]

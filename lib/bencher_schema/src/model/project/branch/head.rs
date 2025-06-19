@@ -1,20 +1,20 @@
 use bencher_json::{
-    project::head::{JsonVersion, VersionNumber},
     BranchUuid, DateTime, GitHash, HeadUuid, JsonHead, JsonStartPoint,
+    project::head::{JsonVersion, VersionNumber},
 };
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
 };
 
 use dropshot::HttpError;
 use slog::Logger;
 
 use super::{
+    BranchId, QueryBranch,
     head_version::{HeadVersionId, InsertHeadVersion},
     start_point::StartPoint,
     version::{QueryVersion, VersionId},
-    BranchId, QueryBranch,
 };
 use crate::{
     conn_lock,
@@ -22,8 +22,8 @@ use crate::{
     error::{issue_error, resource_conflict_err, resource_not_found_err},
     macros::fn_get::fn_get,
     model::project::{
-        threshold::{alert::QueryAlert, InsertThreshold},
         ProjectId,
+        threshold::{InsertThreshold, alert::QueryAlert},
     },
     schema::{self, head as head_table},
 };

@@ -1,13 +1,13 @@
 use bencher_client::types::JsonNewPlot;
 use bencher_json::{
-    project::plot::XAxis, BenchmarkUuid, BranchUuid, Index, MeasureUuid, ResourceId, ResourceName,
-    TestbedUuid, Window,
+    BenchmarkUuid, BranchUuid, Index, MeasureUuid, ResourceId, ResourceName, TestbedUuid, Window,
+    project::plot::XAxis,
 };
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::plot::{CliPlotCreate, CliXAxis},
-    CliError,
 };
 
 #[derive(Debug, Clone)]

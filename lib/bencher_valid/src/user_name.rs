@@ -12,11 +12,11 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
-use crate::{is_valid_len, ValidError, REGEX_ERROR};
+use crate::{REGEX_ERROR, ValidError, is_valid_len};
 
 #[allow(clippy::expect_used)]
 static NAME_REGEX: LazyLock<Regex> =

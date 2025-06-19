@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::project::testbed::CliTestbed, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::project::testbed::CliTestbed};
 
 mod create;
 mod delete;

@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use bencher_adapter::{results::adapter_metrics::AdapterMetrics, AdapterResults};
+use bencher_adapter::{AdapterResults, results::adapter_metrics::AdapterMetrics};
 use bencher_json::{JsonNewMetric, NameId};
 use rand::{
-    distr::{Distribution as _, Uniform},
     Rng as _,
+    distr::{Distribution as _, Uniform},
 };
 
-use crate::{cli_println, parser::mock::CliMock, CliError};
+use crate::{CliError, cli_println, parser::mock::CliMock};
 
 use super::SubCmd;
 

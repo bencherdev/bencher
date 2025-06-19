@@ -1,20 +1,20 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
+use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 
 use nom::{
+    IResult,
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
     sequence::tuple,
-    IResult,
 };
 
 use crate::{
+    Adaptable, Settings,
     adapters::util::{
-        latency_as_nanos, nom_error, parse_benchmark_name_chars, parse_u64, parse_units, NomError,
+        NomError, latency_as_nanos, nom_error, parse_benchmark_name_chars, parse_u64, parse_units,
     },
     results::adapter_results::AdapterResults,
-    Adaptable, Settings,
 };
 
 pub struct AdapterJsTime;
@@ -85,8 +85,8 @@ pub(crate) mod test_js_time {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
         AdapterResults, Settings,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
     };
 
     use super::AdapterJsTime;

@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use crate::{bencher::sub::SubCmd, parser::organization::plan::CliOrganizationPlan, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::organization::plan::CliOrganizationPlan};
 
 mod create;
 mod delete;

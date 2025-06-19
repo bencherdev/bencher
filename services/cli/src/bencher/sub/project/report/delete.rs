@@ -1,9 +1,9 @@
 use bencher_json::{ReportUuid, ResourceId};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::report::CliReportDelete,
-    CliError,
 };
 
 #[derive(Debug)]

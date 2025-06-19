@@ -1,9 +1,9 @@
 use bencher_json::{
-    organization::member::OrganizationRole, DateTime, Email, JsonPubUser, JsonSignup,
-    JsonUpdateUser, JsonUser, Jwt, Sanitize, Slug, UserName, UserUuid,
+    DateTime, Email, JsonPubUser, JsonSignup, JsonUpdateUser, JsonUser, Jwt, Sanitize, Slug,
+    UserName, UserUuid, organization::member::OrganizationRole,
 };
 use bencher_token::TokenKey;
-use diesel::{dsl::count, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, dsl::count};
 use dropshot::HttpError;
 use slog::Logger;
 use url::Url;
@@ -38,7 +38,7 @@ macro_rules! same_user {
 pub use same_user;
 
 use super::organization::{
-    organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
+    InsertOrganization, QueryOrganization, organization_role::InsertOrganizationRole,
 };
 
 #[derive(Debug, Clone, diesel::Queryable)]

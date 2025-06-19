@@ -1,14 +1,14 @@
 use std::time::Duration;
 
-use bencher_json::{system::config::JsonRateLimiting, DateTime, PlanLevel};
+use bencher_json::{DateTime, PlanLevel, system::config::JsonRateLimiting};
 use bencher_license::Licensor;
 use slog::Logger;
 
 use crate::{
     error::BencherResource,
     model::{
-        organization::{plan::LicenseUsage, QueryOrganization},
-        project::{branch::QueryBranch, threshold::QueryThreshold, QueryProject},
+        organization::{QueryOrganization, plan::LicenseUsage},
+        project::{QueryProject, branch::QueryBranch, threshold::QueryThreshold},
         user::QueryUser,
     },
 };
@@ -110,7 +110,10 @@ impl RateLimiting {
         if !is_bencher_cloud {
             match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)).await {
                 Ok(license_usages) if license_usages.is_empty() => {
-                    slog::warn!(log, "Custom rate limits are set, but there is no valid Bencher Plus license key! This is a violation of the Bencher License: https://bencher.dev/legal/license");
+                    slog::warn!(
+                        log,
+                        "Custom rate limits are set, but there is no valid Bencher Plus license key! This is a violation of the Bencher License: https://bencher.dev/legal/license"
+                    );
                     slog::warn!(
                         log,
                         "Please purchase a license key: https://bencher.dev/pricing"

@@ -1,11 +1,11 @@
 use std::io::Write as _;
 
 use async_openai::{
+    Client,
     types::{
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
         CreateChatCompletionRequestArgs,
     },
-    Client,
 };
 use chrono::Utc;
 use notify_rust::Notification;

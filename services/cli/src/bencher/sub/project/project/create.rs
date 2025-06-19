@@ -2,9 +2,9 @@ use bencher_client::types::{JsonNewProject, Visibility};
 use bencher_json::{ResourceId, ResourceName, Slug, Url};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::{CliProjectCreate, CliProjectVisibility},
-    CliError,
 };
 
 #[derive(Debug, Clone)]

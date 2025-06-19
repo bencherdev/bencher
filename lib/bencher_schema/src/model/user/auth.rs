@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use bencher_json::system::payment::JsonCustomer;
 use bencher_json::{Jwt, Sanitize};
 use bencher_rbac::{
+    Organization, Project, Server, User as RbacUser,
     server::Permission,
     user::{OrganizationRoles, ProjectRoles},
-    Organization, Project, Server, User as RbacUser,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
@@ -19,7 +19,7 @@ use oso::{PolarValue, ToPolar};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection, Rbac},
-    error::{bad_request_error, BEARER_TOKEN_FORMAT},
+    error::{BEARER_TOKEN_FORMAT, bad_request_error},
     model::{organization::OrganizationId, project::ProjectId},
     schema,
 };
@@ -303,7 +303,7 @@ impl SharedExtractor for BearerToken {
             Err(e) => {
                 return Err(bad_request_error(format!(
                     "Request has an invalid \"Authorization\" header: {e}. {BEARER_TOKEN_FORMAT}"
-                )))
+                )));
             },
         };
         let Some(("Bearer", token)) = authorization_str.split_once(' ') else {

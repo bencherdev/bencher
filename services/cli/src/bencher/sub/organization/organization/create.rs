@@ -2,9 +2,9 @@ use bencher_client::types::JsonNewOrganization;
 use bencher_json::{ResourceName, Slug};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::CliOrganizationCreate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

@@ -1,13 +1,13 @@
 use bencher_client::types::{JsonDirection, ProjReportsSort};
-use bencher_json::{project::report::JsonReportQuery, DateTime, NameId, ResourceId};
+use bencher_json::{DateTime, NameId, ResourceId, project::report::JsonReportQuery};
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::{
-        project::report::{CliReportList, CliReportsSort},
         CliPagination,
+        project::report::{CliReportList, CliReportsSort},
     },
-    CliError,
 };
 
 #[derive(Debug, Clone)]

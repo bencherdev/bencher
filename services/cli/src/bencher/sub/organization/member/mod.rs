@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::organization::member::CliMember, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::organization::member::CliMember};
 
 mod invite;
 mod list;

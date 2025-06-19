@@ -15,7 +15,7 @@ impl Adaptable for AdapterJs {
 
 #[cfg(test)]
 mod test_js {
-    use super::{time::test_js_time, AdapterJs};
+    use super::{AdapterJs, time::test_js_time};
     use crate::adapters::{js::benchmark::test_js_benchmark, test_util::convert_file_path};
 
     #[test]

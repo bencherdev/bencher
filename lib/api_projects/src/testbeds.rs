@@ -3,8 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    project::testbed::JsonUpdateTestbed, JsonDirection, JsonNewTestbed, JsonPagination,
-    JsonTestbed, JsonTestbeds, ResourceId, ResourceName, Search,
+    JsonDirection, JsonNewTestbed, JsonPagination, JsonTestbed, JsonTestbeds, ResourceId,
+    ResourceName, Search, project::testbed::JsonUpdateTestbed,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -13,18 +13,18 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            testbed::{QueryTestbed, UpdateTestbed},
             QueryProject,
+            testbed::{QueryTestbed, UpdateTestbed},
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
 };
 use diesel::{
-    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    TextExpressionMethods as _,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, TextExpressionMethods as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

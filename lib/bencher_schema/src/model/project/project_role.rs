@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::{ProjectPermission, ProjectRole},
     DateTime,
+    project::{ProjectPermission, ProjectRole},
 };
 
 use crate::{model::user::UserId, schema::project_role as project_role_table};

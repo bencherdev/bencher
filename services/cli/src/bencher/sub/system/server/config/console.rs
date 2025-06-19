@@ -1,7 +1,7 @@
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::system::server::CliConfigConsole,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

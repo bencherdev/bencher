@@ -1,8 +1,8 @@
 use std::sync::LazyLock;
 
 use base64::{
-    engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
     Engine as _,
+    engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
 };
 use derive_more::Display;
 #[cfg(feature = "schema")]
@@ -12,8 +12,8 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::ValidError;

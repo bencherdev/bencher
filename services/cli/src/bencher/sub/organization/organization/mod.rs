@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::organization::CliOrganization, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::organization::CliOrganization};
 
 mod allowed;
 mod claim;

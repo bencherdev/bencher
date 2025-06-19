@@ -2,9 +2,9 @@ use bencher_client::types::{JsonUpdateAlert, UpdateAlertStatus};
 use bencher_json::{AlertUuid, ResourceId};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::alert::{CliAlertStatusUpdate, CliAlertUpdate},
-    CliError,
 };
 
 #[derive(Debug, Clone)]

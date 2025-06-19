@@ -5,14 +5,13 @@ use std::{
 };
 
 use bencher_json::{
-    sanitize_json,
+    BENCHER_API_PORT, JsonConfig, sanitize_json,
     system::config::{
         JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, LogLevel, ServerLog,
     },
-    JsonConfig, BENCHER_API_PORT,
 };
 use bencher_token::DEFAULT_SECRET_KEY;
-use slog::{error, info, Logger};
+use slog::{Logger, error, info};
 use url::Url;
 
 mod config_tx;
@@ -152,11 +151,17 @@ impl Config {
                 (path, config_file)
             },
             Err(e) => {
-                info!(log, "Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
+                info!(
+                    log,
+                    "Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}"
+                );
                 let config_file = match tokio::fs::read(DEFAULT_CONFIG_PATH).await {
                     Ok(config_file) => config_file,
                     Err(e) => {
-                        info!(log, "Failed to open config file at default path \"{DEFAULT_CONFIG_PATH}\": {e}");
+                        info!(
+                            log,
+                            "Failed to open config file at default path \"{DEFAULT_CONFIG_PATH}\": {e}"
+                        );
                         return Ok(None);
                     },
                 };

@@ -2,9 +2,9 @@ use bencher_client::types::{JsonNewMember, OrganizationRole};
 use bencher_json::{Email, ResourceId, UserName};
 
 use crate::{
+    CliError,
     bencher::backend::AuthBackend,
     parser::organization::member::{CliMemberInvite, CliMemberRole},
-    CliError,
 };
 
 use crate::bencher::SubCmd;

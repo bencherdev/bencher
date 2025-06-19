@@ -4,8 +4,8 @@ use std::{fmt, str::FromStr};
 use uuid::Uuid;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::{Sanitize, ValidError};

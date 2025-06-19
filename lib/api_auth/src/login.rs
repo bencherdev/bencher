@@ -6,7 +6,7 @@ use bencher_schema::{
     error::issue_error,
     model::user::QueryUser,
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
 use super::AUTH_TOKEN_TTL;

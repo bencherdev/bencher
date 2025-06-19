@@ -6,8 +6,8 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::ValidError;
@@ -90,7 +90,7 @@ pub fn is_valid_index(index: u8) -> bool {
 mod test {
     use pretty_assertions::assert_eq;
 
-    use super::{is_valid_index, Index};
+    use super::{Index, is_valid_index};
 
     #[test]
     #[allow(clippy::excessive_precision)]

@@ -1,9 +1,9 @@
 use bencher_json::{
-    project::measure::{
-        built_in::{self, BuiltInMeasure},
-        JsonUpdateMeasure, MeasureUuid,
-    },
     DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, NameIdKind, ResourceName, Slug,
+    project::measure::{
+        JsonUpdateMeasure, MeasureUuid,
+        built_in::{self, BuiltInMeasure},
+    },
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -11,7 +11,7 @@ use dropshot::HttpError;
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
-    error::{assert_parentage, resource_conflict_err, BencherResource},
+    error::{BencherResource, assert_parentage, resource_conflict_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         name_id::{fn_eq_name_id, fn_from_name_id},

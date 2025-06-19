@@ -4,12 +4,12 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
-    de::{self, Deserializer, Unexpected, Visitor},
     Deserialize, Serialize,
+    de::{self, Deserializer, Unexpected, Visitor},
 };
 use uuid::Uuid;
 
-use crate::{slug::is_valid_slug, Slug, ValidError};
+use crate::{Slug, ValidError, slug::is_valid_slug};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]

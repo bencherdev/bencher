@@ -1,11 +1,11 @@
 use std::fmt;
 
 use bencher_json::{
+    JsonNewMetric,
     project::{
         measure::built_in::{self, BuiltInMeasure as _},
         metric::MetricResults,
     },
-    JsonNewMetric,
 };
 use camino::Utf8PathBuf;
 

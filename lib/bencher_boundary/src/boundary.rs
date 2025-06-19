@@ -1,4 +1,4 @@
-use bencher_json::{project::boundary::BoundaryLimit, Boundary, ModelTest, SampleSize};
+use bencher_json::{Boundary, ModelTest, SampleSize, project::boundary::BoundaryLimit};
 use slog::Logger;
 
 use crate::limits::{MetricsLimits, NormalTestKind};

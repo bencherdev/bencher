@@ -3,9 +3,9 @@
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::usage::CliOrganizationUsage,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

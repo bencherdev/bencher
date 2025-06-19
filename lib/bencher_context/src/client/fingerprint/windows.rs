@@ -2,9 +2,9 @@ use core::ffi::c_void;
 
 use uuid::Uuid;
 use windows::{
-    core::PCWSTR,
     System::Profile::SystemManufacturers::SmbiosInformation,
-    Win32::System::Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_ANY},
+    Win32::System::Registry::{HKEY_LOCAL_MACHINE, RRF_RT_ANY, RegGetValueW},
+    core::PCWSTR,
 };
 
 impl super::Fingerprint {

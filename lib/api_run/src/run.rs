@@ -6,11 +6,11 @@ use bencher_schema::{
     context::ApiContext,
     error::{bad_request_error, unauthorized_error},
     model::{
-        project::{report::QueryReport, QueryProject},
+        project::{QueryProject, report::QueryReport},
         user::auth::{AuthUser, PubBearerToken},
     },
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]

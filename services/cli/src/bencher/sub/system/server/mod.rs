@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::system::server::CliServer, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::system::server::CliServer};
 
 mod backup;
 mod config;

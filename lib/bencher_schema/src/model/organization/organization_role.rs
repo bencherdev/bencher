@@ -1,6 +1,6 @@
 use bencher_json::{
-    organization::{member::OrganizationRole, OrganizationPermission},
     DateTime, Jwt,
+    organization::{OrganizationPermission, member::OrganizationRole},
 };
 use bencher_token::TokenKey;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -78,9 +78,9 @@ impl InsertOrganizationRole {
         // Make sure the email in the invite is the same as the email associated with the user
         let email_user_id = QueryUser::get_id_from_email(conn, email)?;
         if user_id != email_user_id {
-            return Err(unauthorized_error(
-               format!("Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}")
-            ));
+            return Err(unauthorized_error(format!(
+                "Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}"
+            )));
         }
 
         let timestamp = DateTime::now();

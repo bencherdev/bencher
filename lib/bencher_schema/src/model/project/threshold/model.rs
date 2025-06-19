@@ -1,12 +1,14 @@
 use bencher_json::{
     Boundary, DateTime, JsonModel, Model, ModelTest, ModelUuid, SampleSize, Window,
 };
-use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
+use diesel::{
+    ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+};
 use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
-    error::{assert_parentage, resource_not_found_err, BencherResource},
+    error::{BencherResource, assert_parentage, resource_not_found_err},
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     model::project::ProjectId,
     schema::{self, model as model_table},

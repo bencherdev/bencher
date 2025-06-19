@@ -1,9 +1,9 @@
-use bencher_json::{organization::member::OrganizationRole, DateTime, Email, OrganizationUuid};
+use bencher_json::{DateTime, Email, OrganizationUuid, organization::member::OrganizationRole};
 use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
 use serde::{Deserialize, Serialize};
 
-use super::{audience::Audience, TokenError};
+use super::{TokenError, audience::Audience};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {

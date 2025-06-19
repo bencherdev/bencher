@@ -1,4 +1,4 @@
-use tabled::{settings::Style, Table};
+use tabled::{Table, settings::Style};
 
 use crate::parser::project::perf::CliPerfTableStyle;
 

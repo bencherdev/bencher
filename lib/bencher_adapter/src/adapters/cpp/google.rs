@@ -1,11 +1,11 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonNewMetric};
+use bencher_json::{BenchmarkName, JsonAny, JsonNewMetric, project::report::JsonAverage};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
 use crate::{
-    adapters::util::{latency_as_nanos, Units},
-    results::adapter_results::AdapterResults,
     Adaptable, AdapterError, Settings,
+    adapters::util::{Units, latency_as_nanos},
+    results::adapter_results::AdapterResults,
 };
 
 pub struct AdapterCppGoogle;
@@ -74,8 +74,8 @@ pub(crate) mod test_cpp_google {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
         AdapterResults, Settings,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
     };
 
     use super::AdapterCppGoogle;

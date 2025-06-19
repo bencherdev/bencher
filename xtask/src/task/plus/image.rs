@@ -1,6 +1,6 @@
 use async_openai::{
-    types::{CreateImageRequestArgs, ImageResponseFormat, ImageSize},
     Client,
+    types::{CreateImageRequestArgs, ImageResponseFormat, ImageSize},
 };
 use chrono::Utc;
 use notify_rust::Notification;

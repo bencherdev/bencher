@@ -2,9 +2,9 @@ use bencher_client::types::{JsonUpdateMember, OrganizationRole};
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::member::CliMemberUpdate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

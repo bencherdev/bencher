@@ -1,6 +1,6 @@
 #![allow(clippy::absolute_paths)]
 
-use super::runner::{command::Command, Runner};
+use super::runner::{Runner, command::Command};
 
 #[derive(thiserror::Error, Debug)]
 pub enum RunError {
@@ -12,9 +12,13 @@ pub enum RunError {
     #[error("{0}")]
     Thresholds(#[from] crate::bencher::sub::ThresholdsError),
 
-    #[error("No default shell command path for target family. Try setting a custom shell with the `--shell` argument.")]
+    #[error(
+        "No default shell command path for target family. Try setting a custom shell with the `--shell` argument."
+    )]
     Shell,
-    #[error("No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` argument.")]
+    #[error(
+        "No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` argument."
+    )]
     Flag,
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]
     NoCommand,

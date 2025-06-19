@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::project::plot::CliPlot, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::project::plot::CliPlot};
 
 mod create;
 mod delete;

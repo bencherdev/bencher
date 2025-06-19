@@ -2,9 +2,9 @@ use bencher_client::types::JsonUpdateBranch;
 use bencher_json::{BranchName, ResourceId, Slug};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::branch::CliBranchUpdate,
-    CliError,
 };
 
 use super::start_point::StartPoint;

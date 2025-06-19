@@ -6,25 +6,25 @@ pub mod results;
 use criterion as _;
 
 use adapters::{
-    c_sharp::{dot_net::AdapterCSharpDotNet, AdapterCSharp},
-    cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle, AdapterCpp},
-    go::{bench::AdapterGoBench, AdapterGo},
-    java::{jmh::AdapterJavaJmh, AdapterJava},
-    js::{benchmark::AdapterJsBenchmark, time::AdapterJsTime, AdapterJs},
+    c_sharp::{AdapterCSharp, dot_net::AdapterCSharpDotNet},
+    cpp::{AdapterCpp, catch2::AdapterCppCatch2, google::AdapterCppGoogle},
+    go::{AdapterGo, bench::AdapterGoBench},
+    java::{AdapterJava, jmh::AdapterJavaJmh},
+    js::{AdapterJs, benchmark::AdapterJsBenchmark, time::AdapterJsTime},
     json::AdapterJson,
     magic::AdapterMagic,
-    python::{asv::AdapterPythonAsv, pytest::AdapterPythonPytest, AdapterPython},
-    ruby::{benchmark::AdapterRubyBenchmark, AdapterRuby},
+    python::{AdapterPython, asv::AdapterPythonAsv, pytest::AdapterPythonPytest},
+    ruby::{AdapterRuby, benchmark::AdapterRubyBenchmark},
     rust::{
-        bench::AdapterRustBench, criterion::AdapterRustCriterion, iai::AdapterRustIai,
-        iai_callgrind::AdapterRustIaiCallgrind, AdapterRust,
+        AdapterRust, bench::AdapterRustBench, criterion::AdapterRustCriterion, iai::AdapterRustIai,
+        iai_callgrind::AdapterRustIaiCallgrind,
     },
-    shell::{hyperfine::AdapterShellHyperfine, AdapterShell},
+    shell::{AdapterShell, hyperfine::AdapterShellHyperfine},
 };
 use bencher_json::project::report::{Adapter, JsonAverage};
 pub use bencher_json::{BenchmarkName, JsonNewMetric};
 pub use error::AdapterError;
-pub use results::{adapter_results::AdapterResults, AdapterResultsArray};
+pub use results::{AdapterResultsArray, adapter_results::AdapterResults};
 
 pub trait Adaptable {
     fn convert(&self, input: &str, settings: Settings) -> Option<AdapterResults> {

@@ -6,9 +6,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
     JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric, JsonProject,
     JsonPubUser, JsonTestbed, NameId,
+    urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
 use super::{branch::JsonUpdateStartPoint, threshold::JsonThresholdModel};
@@ -180,9 +180,9 @@ impl fmt::Display for Adapter {
 #[cfg(feature = "db")]
 mod adapter {
     use super::{
-        Adapter, CPP_CATCH2_INT, CPP_GOOGLE_INT, CPP_INT, C_SHARP_DOT_NET_INT, C_SHARP_INT,
-        GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT, JSON_INT, JS_BENCHMARK_INT, JS_INT,
-        JS_TIME_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT,
+        Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_GOOGLE_INT, CPP_INT,
+        GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT, JS_BENCHMARK_INT, JS_INT, JS_TIME_INT,
+        JSON_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT,
         RUBY_INT, RUST_BENCH_INT, RUST_CRITERION_INT, RUST_IAI_CALLGRIND_INT, RUST_IAI_INT,
         RUST_INT, SHELL_HYPERFINE_INT, SHELL_INT,
     };

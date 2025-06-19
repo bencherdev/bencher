@@ -1,6 +1,6 @@
 use clap::Parser as _;
 
-use crate::{parser::CliBencher, CliError};
+use crate::{CliError, parser::CliBencher};
 
 pub mod backend;
 pub mod sub;

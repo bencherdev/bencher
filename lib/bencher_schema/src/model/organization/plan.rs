@@ -2,15 +2,15 @@
 
 use bencher_billing::Biller;
 use bencher_json::{
-    project::Visibility, DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId,
-    OrganizationUuid, PlanLevel,
+    DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, OrganizationUuid,
+    PlanLevel, project::Visibility,
 };
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{
-    conn_lock,
+    ApiContext, conn_lock,
     context::DbConnection,
     error::{
         issue_error, not_found_error, payment_required_error, resource_conflict_err,
@@ -18,10 +18,9 @@ use crate::{
     },
     model::{
         organization::{OrganizationId, QueryOrganization, UpdateOrganization},
-        project::{metric::QueryMetric, QueryProject},
+        project::{QueryProject, metric::QueryMetric},
     },
     schema::{self, plan as plan_table},
-    ApiContext,
 };
 
 crate::macros::typed_id::typed_id!(PlanId);

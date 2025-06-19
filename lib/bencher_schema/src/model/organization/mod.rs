@@ -1,23 +1,23 @@
 use std::string::ToString as _;
 
 use bencher_json::{
-    organization::{
-        member::OrganizationRole, JsonOrganizationPatch, JsonOrganizationPatchNull,
-        JsonUpdateOrganization,
-    },
     DateTime, JsonNewOrganization, JsonOrganization, Jwt, OrganizationUuid, ResourceId,
     ResourceName, Slug,
+    organization::{
+        JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization,
+        member::OrganizationRole,
+    },
 };
-use bencher_rbac::{organization::Permission, Organization};
+use bencher_rbac::{Organization, organization::Permission};
 use diesel::{ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
 use dropshot::HttpError;
 use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 
 use crate::{
-    conn_lock,
+    ApiContext, CLAIM_TOKEN_TTL, conn_lock,
     context::{DbConnection, Rbac},
     error::{
-        forbidden_error, issue_error, resource_not_found_error, unauthorized_error, BencherResource,
+        BencherResource, forbidden_error, issue_error, resource_not_found_error, unauthorized_error,
     },
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -27,7 +27,6 @@ use crate::{
     model::user::auth::AuthUser,
     resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
-    ApiContext, CLAIM_TOKEN_TTL,
 };
 
 use super::user::QueryUser;

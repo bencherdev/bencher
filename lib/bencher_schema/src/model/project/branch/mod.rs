@@ -1,8 +1,10 @@
 use bencher_json::{
-    project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
     BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
+    project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
 };
-use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
+use diesel::{
+    ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+};
 use dropshot::HttpError;
 use slog::Logger;
 use version::{QueryVersion, VersionId};
@@ -12,8 +14,8 @@ use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
     error::{
-        assert_parentage, issue_error, resource_conflict_err, resource_not_found_err,
-        BencherResource,
+        BencherResource, assert_parentage, issue_error, resource_conflict_err,
+        resource_not_found_err,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},

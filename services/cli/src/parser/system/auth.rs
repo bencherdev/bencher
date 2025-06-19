@@ -1,9 +1,9 @@
 use bencher_json::{Email, Jwt, OrganizationUuid, Slug, UserName};
 use clap::{Parser, Subcommand};
 
+use crate::parser::CliBackend;
 #[cfg(feature = "plus")]
 use crate::parser::organization::plan::CliPlanLevel;
-use crate::parser::CliBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliAuth {

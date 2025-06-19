@@ -1,20 +1,20 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
+use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
+    IResult,
     branch::alt,
     bytes::complete::{tag, take_till1},
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
     sequence::tuple,
-    IResult,
 };
 
 use crate::{
+    Adaptable, Settings,
     adapters::util::{
-        latency_as_nanos, parse_benchmark_name, parse_f64, parse_u64, parse_units, NomError,
+        NomError, latency_as_nanos, parse_benchmark_name, parse_f64, parse_u64, parse_units,
     },
     results::adapter_results::AdapterResults,
-    Adaptable, Settings,
 };
 
 pub struct AdapterGoBench;
@@ -79,15 +79,15 @@ fn parse_go_bench(input: &str) -> IResult<&str, JsonNewMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_go_bench {
-    use bencher_json::{project::report::JsonAverage, JsonNewMetric};
+    use bencher_json::{JsonNewMetric, project::report::JsonAverage};
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
         AdapterResults, Settings,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
     };
 
-    use super::{parse_go, AdapterGoBench};
+    use super::{AdapterGoBench, parse_go};
 
     fn convert_go_bench(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/go/bench/{suffix}.txt");

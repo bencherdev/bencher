@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    organization::usage::{JsonUsage, UsageKind},
     DateTime, ResourceId,
+    organization::usage::{JsonUsage, UsageKind},
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
@@ -13,13 +13,13 @@ use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::{forbidden_error, issue_error, payment_required_error, resource_not_found_err},
     model::{
-        organization::{plan::QueryPlan, QueryOrganization},
+        organization::{QueryOrganization, plan::QueryPlan},
         project::metric::QueryMetric,
         user::auth::{AuthUser, BearerToken},
     },
 };
 use diesel::{BelongingToDsl as _, RunQueryDsl as _};
-use dropshot::{endpoint, HttpError, Path, RequestContext};
+use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -156,10 +156,10 @@ async fn get_inner(
         } else {
             Err(issue_error(
                 "Failed to find subscription for plan usage",
-            &format!(
-                "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
-                 ),
-            "Failed to find subscription for plan usage"
+                &format!(
+                    "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
+                ),
+                "Failed to find subscription for plan usage",
             ))
         }
     // Self-Hosted Licensed

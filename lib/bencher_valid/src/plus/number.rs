@@ -11,11 +11,11 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
-use crate::{error::REGEX_ERROR, secret::SANITIZED_SECRET, ValidError};
+use crate::{ValidError, error::REGEX_ERROR, secret::SANITIZED_SECRET};
 
 #[allow(clippy::expect_used)]
 static NUMBER_REGEX: LazyLock<Regex> =
@@ -117,11 +117,7 @@ fn checksum_modifier_odd(c: char) -> u32 {
 fn checksum_modifier_even(c: char) -> u32 {
     let n = numeric_char_to_u32(c);
     let d = n * 2;
-    if d <= 9 {
-        d
-    } else {
-        d - 9
-    }
+    if d <= 9 { d } else { d - 9 }
 }
 
 fn numeric_char_to_u32(c: char) -> u32 {

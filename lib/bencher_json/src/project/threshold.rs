@@ -4,13 +4,13 @@ use bencher_valid::{DateTime, Model, NameId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::{
-    urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
     JsonBranch, JsonMeasure, JsonModel, JsonTestbed, ProjectUuid,
+    urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
 crate::typed_uuid::typed_uuid!(ThresholdUuid);

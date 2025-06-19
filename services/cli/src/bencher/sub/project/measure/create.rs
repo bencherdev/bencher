@@ -2,9 +2,9 @@ use bencher_client::types::JsonNewMeasure;
 use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::measure::CliMeasureCreate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

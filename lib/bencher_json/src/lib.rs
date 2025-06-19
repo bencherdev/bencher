@@ -31,12 +31,13 @@ pub use organization::{plan::JsonPlan, usage::JsonUsage};
 
 pub use big_int::BigInt;
 pub use organization::{
+    JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationUuid,
     claim::JsonNewClaim,
     member::{JsonMember, JsonMembers},
-    JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationUuid,
 };
 pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
+    JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},
     benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
@@ -53,7 +54,6 @@ pub use project::{
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
-    JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
 };
 pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
@@ -72,8 +72,8 @@ pub use system::{
     version::JsonApiVersion,
 };
 pub use user::{
-    token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
     JsonPubUser, JsonUpdateUser, JsonUser, JsonUsers, UserUuid,
+    token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
 };
 
 pub const BENCHER_CONSOLE_PORT: u16 = 3000;

@@ -3,8 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    project::plot::JsonUpdatePlot, JsonDirection, JsonNewPlot, JsonPagination, JsonPlot, JsonPlots,
-    PlotUuid, ResourceId, ResourceName, Search,
+    JsonDirection, JsonNewPlot, JsonPagination, JsonPlot, JsonPlots, PlotUuid, ResourceId,
+    ResourceName, Search, project::plot::JsonUpdatePlot,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -13,18 +13,18 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            plot::{InsertPlot, QueryPlot, UpdatePlot},
             QueryProject,
+            plot::{InsertPlot, QueryPlot, UpdatePlot},
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
 };
 use diesel::{
-    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, TextExpressionMethods as _,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _,
+    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

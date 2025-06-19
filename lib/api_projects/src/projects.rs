@@ -2,8 +2,8 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, ResponseDeleted, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    project::{JsonUpdateProject, Visibility},
     JsonDirection, JsonPagination, JsonProject, JsonProjects, ResourceId, ResourceName, Search,
+    project::{JsonUpdateProject, Visibility},
 };
 use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
@@ -19,9 +19,10 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;

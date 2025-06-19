@@ -3,30 +3,30 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    project::branch::JsonUpdateBranch, BranchName, HeadUuid, JsonBranch, JsonBranches,
-    JsonDirection, JsonNewBranch, JsonPagination, ResourceId, Search,
+    BranchName, HeadUuid, JsonBranch, JsonBranches, JsonDirection, JsonNewBranch, JsonPagination,
+    ResourceId, Search, project::branch::JsonUpdateBranch,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
     error::{
-        resource_conflict_err, resource_not_found_err, resource_not_found_error, BencherResource,
+        BencherResource, resource_conflict_err, resource_not_found_err, resource_not_found_error,
     },
     model::{
         project::{
-            branch::{head::QueryHead, QueryBranch, UpdateBranch},
             QueryProject,
+            branch::{QueryBranch, UpdateBranch, head::QueryHead},
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
 };
 use diesel::{
-    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    TextExpressionMethods as _,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, TextExpressionMethods as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;

@@ -2,9 +2,9 @@ use bencher_client::types::{JsonNewBranch, JsonNewStartPoint};
 use bencher_json::{BranchName, GitHash, NameId, ResourceId, Slug};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::branch::{CliBranchCreate, CliStartPointCreate},
-    CliError,
 };
 
 #[derive(Debug, Clone)]

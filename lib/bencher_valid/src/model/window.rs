@@ -6,8 +6,8 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::ValidError;
@@ -133,7 +133,7 @@ pub fn is_valid_window(window: u32) -> bool {
 mod test {
     use pretty_assertions::assert_eq;
 
-    use super::{is_valid_window, Window};
+    use super::{Window, is_valid_window};
 
     #[test]
     #[allow(clippy::excessive_precision)]

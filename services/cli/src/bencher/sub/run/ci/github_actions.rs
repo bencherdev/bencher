@@ -1,8 +1,8 @@
 use bencher_comment::ReportComment;
 use octocrab::{
+    Octocrab,
     models::CommentId,
     params::checks::{CheckRunConclusion, CheckRunOutput},
-    Octocrab,
 };
 
 use crate::{cli_eprintln_quietable, cli_println_quietable};
@@ -201,10 +201,10 @@ impl GitHubActions {
                 .ok_or_else(|| GitHubError::BadPRNumber(event_str.clone(), event_name.into()))?
         } else {
             cli_println_quietable!(
-                        log,
-                        "Not running as a GitHub Action pull request event (`pull_request` or `pull_request_target`) and the `--ci-number` option was not set. Creating a GitHub Check instead.\n{}",
-                        docker_env(GITHUB_EVENT_NAME)
-                    );
+                log,
+                "Not running as a GitHub Action pull request event (`pull_request` or `pull_request_target`) and the `--ci-number` option was not set. Creating a GitHub Check instead.\n{}",
+                docker_env(GITHUB_EVENT_NAME)
+            );
             return self
                 .create_github_check(report_comment, log, &event_str, &event)
                 .await;

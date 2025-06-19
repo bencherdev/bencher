@@ -8,7 +8,7 @@ use bencher_valid::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{system::payment::JsonCustomer, BigInt, OrganizationUuid};
+use crate::{BigInt, OrganizationUuid, system::payment::JsonCustomer};
 
 pub const DEFAULT_PRICE_NAME: &str = "default";
 

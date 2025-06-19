@@ -6,8 +6,8 @@ use derive_more::Display;
 use schemars::JsonSchema;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::ValidError;
@@ -53,7 +53,7 @@ impl TryFrom<i64> for DateTimeMillis {
 
 impl From<DateTimeMillis> for i64 {
     fn from(date_time: DateTimeMillis) -> Self {
-        date_time.0 .0
+        date_time.0.0
     }
 }
 

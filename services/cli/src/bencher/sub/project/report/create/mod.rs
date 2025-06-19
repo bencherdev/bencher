@@ -5,12 +5,12 @@ use bencher_client::types::{
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{
         backend::AuthBackend,
-        sub::{project::branch::start_point::StartPoint, SubCmd},
+        sub::{SubCmd, project::branch::start_point::StartPoint},
     },
     parser::project::report::CliReportCreate,
-    CliError,
 };
 
 mod adapter;

@@ -1,21 +1,21 @@
 use bollard::{
+    Docker,
     container::{Config, CreateContainerOptions, StartContainerOptions},
     errors::Error as BollardError,
     image::CreateImageOptions,
     service::{HostConfig, PortBinding},
-    Docker,
 };
 use futures_util::TryStreamExt as _;
 
 use super::DockerError;
 use crate::{
+    CliError,
     bencher::sub::{
-        compose::{down::stop_containers, logs::tail_container_logs, Container},
         SubCmd,
+        compose::{Container, down::stop_containers, logs::tail_container_logs},
     },
     cli_eprintln, cli_println,
     parser::compose::{CliService, CliUp, CliUpPull},
-    CliError,
 };
 
 #[derive(Debug, Clone)]

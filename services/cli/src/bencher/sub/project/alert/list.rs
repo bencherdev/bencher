@@ -2,12 +2,12 @@ use bencher_client::types::{AlertStatus, JsonDirection, ProjAlertsSort};
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::{
-        project::alert::{CliAlertList, CliAlertStatus, CliAlertsSort},
         CliPagination,
+        project::alert::{CliAlertList, CliAlertStatus, CliAlertsSort},
     },
-    CliError,
 };
 
 #[derive(Debug)]

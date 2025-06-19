@@ -5,10 +5,10 @@ use bencher_comment::ReportComment;
 use bencher_json::{DateTime, JsonReport, NameId, ResourceId, RunContext};
 
 use crate::{
+    CliError,
     bencher::backend::PubBackend,
     cli_eprintln_quietable, cli_println, cli_println_quietable,
     parser::run::{CliRun, CliRunOutput},
-    CliError,
 };
 
 mod branch;

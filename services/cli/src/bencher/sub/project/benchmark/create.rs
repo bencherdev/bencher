@@ -2,9 +2,9 @@ use bencher_client::types::JsonNewBenchmark;
 use bencher_json::{BenchmarkName, ResourceId, Slug};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::benchmark::CliBenchmarkCreate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

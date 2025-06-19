@@ -2,7 +2,7 @@ use bencher_boundary::MetricsData;
 use chrono::offset::Utc;
 use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
-use slog::{warn, Logger};
+use slog::{Logger, warn};
 
 use crate::{
     context::DbConnection,
@@ -54,9 +54,9 @@ pub fn metrics_data(
         } else {
             debug_assert!(false, "window > i64::MIN");
             warn!(
-                    log,
-                    "Window is too large, ignoring. But this should never happen: window {window} > i64::MIN for now {now}"
-                );
+                log,
+                "Window is too large, ignoring. But this should never happen: window {window} > i64::MIN for now {now}"
+            );
         }
     }
 

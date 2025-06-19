@@ -1,14 +1,14 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
-use bencher_json::{organization::OrganizationPermission, JsonAllowed, ResourceId};
+use bencher_json::{JsonAllowed, ResourceId, organization::OrganizationPermission};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
     model::{
-        organization::{organization_role::Permission, QueryOrganization},
+        organization::{QueryOrganization, organization_role::Permission},
         user::auth::{AuthUser, BearerToken},
     },
 };
-use dropshot::{endpoint, HttpError, Path, RequestContext};
+use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

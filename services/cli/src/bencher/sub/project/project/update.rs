@@ -4,9 +4,9 @@ use bencher_client::types::{
 use bencher_json::{ResourceId, ResourceName, Slug, Url};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::CliProjectUpdate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

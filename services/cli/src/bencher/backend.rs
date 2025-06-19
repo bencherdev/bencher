@@ -1,9 +1,9 @@
 use std::{fmt, ops::Deref, time::Duration};
 
-use bencher_json::{JsonApiVersion, JsonConsole, Jwt, BENCHER_API_URL, BENCHER_URL};
-use serde::{de::DeserializeOwned, Serialize};
+use bencher_json::{BENCHER_API_URL, BENCHER_URL, JsonApiVersion, JsonConsole, Jwt};
+use serde::{Serialize, de::DeserializeOwned};
 
-use crate::{cli_eprintln_quietable, parser::CliBackend, CLI_VERSION};
+use crate::{CLI_VERSION, cli_eprintln_quietable, parser::CliBackend};
 
 #[derive(Debug, Clone)]
 pub struct PubBackend {
@@ -26,7 +26,9 @@ pub enum BackendError {
     ParseHost(bencher_json::ValidError),
     #[error("Failed to parse API token: {0}")]
     ParseToken(bencher_json::ValidError),
-    #[error("Failed to find Bencher API token, and this API endpoint requires authorization. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable.")]
+    #[error(
+        "Failed to find Bencher API token, and this API endpoint requires authorization. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable."
+    )]
     NoToken,
     #[error("Failed to get API server version: {0}")]
     ApiVersion(bencher_client::ClientError),

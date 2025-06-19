@@ -3,37 +3,37 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
+    JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ResourceId, ThresholdUuid,
     project::threshold::{
         JsonNewThreshold, JsonRemoveModel, JsonThreshold, JsonThresholdQuery,
         JsonThresholdQueryParams, JsonUpdateModel, JsonUpdateThreshold,
     },
-    JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ResourceId, ThresholdUuid,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
     error::{
-        bad_request_error, resource_conflict_err, resource_not_found_err, resource_not_found_error,
-        BencherResource,
+        BencherResource, bad_request_error, resource_conflict_err, resource_not_found_err,
+        resource_not_found_error,
     },
     model::{
         project::{
+            QueryProject,
             branch::QueryBranch,
             measure::QueryMeasure,
             testbed::QueryTestbed,
-            threshold::{model::QueryModel, InsertThreshold, QueryThreshold},
-            QueryProject,
+            threshold::{InsertThreshold, QueryThreshold, model::QueryModel},
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
 };
 use diesel::{
-    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

@@ -12,11 +12,11 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
-use crate::{error::REGEX_ERROR, ValidError};
+use crate::{ValidError, error::REGEX_ERROR};
 
 #[allow(clippy::expect_used)]
 static LAST_FOUR_REGEX: LazyLock<Regex> =

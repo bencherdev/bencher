@@ -2,9 +2,9 @@ use bencher_endpoint::{
     CorsResponse, Endpoint, Get, Post, ResponseCreated, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    project::measure::built_in::default::{Latency, Throughput},
     JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, ResourceId,
     ResourceName, Search,
+    project::measure::built_in::default::{Latency, Throughput},
 };
 use bencher_rbac::organization::Permission;
 #[cfg(feature = "plus")]
@@ -16,21 +16,21 @@ use bencher_schema::{
     model::{
         organization::QueryOrganization,
         project::{
+            InsertProject, QueryProject,
             branch::InsertBranch,
             measure::{InsertMeasure, QueryMeasure},
             testbed::{InsertTestbed, QueryTestbed},
             threshold::InsertThreshold,
-            InsertProject, QueryProject,
         },
         user::auth::{AuthUser, BearerToken},
     },
     schema,
 };
 use diesel::{
-    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    TextExpressionMethods as _,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, TextExpressionMethods as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;

@@ -2,15 +2,14 @@ use std::str::FromStr as _;
 use std::sync::LazyLock;
 
 use bencher_json::organization::plan::JsonLicense;
-use bencher_json::{Entitlements, Jwt, OrganizationUuid, PlanLevel, Secret, BENCHER_URL_STR};
+use bencher_json::{BENCHER_URL_STR, Entitlements, Jwt, OrganizationUuid, PlanLevel, Secret};
 use chrono::Utc;
 use jsonwebtoken::{
-    decode, encode,
+    Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
     errors::{Error as JsonWebTokenError, ErrorKind as JsonWebTokenErrorKind},
-    Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
 
-use crate::{audience::Audience, billing_cycle::BillingCycle, claims::Claims, LicenseError};
+use crate::{LicenseError, audience::Audience, billing_cycle::BillingCycle, claims::Claims};
 
 pub const TEST_PUBLIC_PEM: &str = include_str!("./test/public.pem");
 pub const LIVE_PUBLIC_PEM: &str = include_str!("../public.pem");
@@ -230,10 +229,10 @@ fn check_expiration(time: i64) -> Result<(), LicenseError> {
 mod test {
     use std::sync::LazyLock;
 
-    use bencher_json::{OrganizationUuid, PlanLevel, Secret, BENCHER_URL_STR};
+    use bencher_json::{BENCHER_URL_STR, OrganizationUuid, PlanLevel, Secret};
     use pretty_assertions::assert_eq;
 
-    use crate::{audience::Audience, licensor::BillingCycle, Licensor};
+    use crate::{Licensor, audience::Audience, licensor::BillingCycle};
 
     pub const PRIVATE_PEM: &str = include_str!("./test/private.pem");
     static PRIVATE_PEM_SECRET: LazyLock<Secret> = LazyLock::new(|| PRIVATE_PEM.parse().unwrap());
@@ -245,12 +244,16 @@ mod test {
         let entitlements = 1_000.try_into().unwrap();
 
         for plan_level in [PlanLevel::Free, PlanLevel::Team, PlanLevel::Enterprise] {
-            assert!(licensor
-                .new_monthly_license(organization, plan_level, entitlements)
-                .is_err());
-            assert!(licensor
-                .new_annual_license(organization, plan_level, entitlements)
-                .is_err());
+            assert!(
+                licensor
+                    .new_monthly_license(organization, plan_level, entitlements)
+                    .is_err()
+            );
+            assert!(
+                licensor
+                    .new_annual_license(organization, plan_level, entitlements)
+                    .is_err()
+            );
         }
     }
 

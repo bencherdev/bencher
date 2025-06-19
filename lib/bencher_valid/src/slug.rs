@@ -6,11 +6,11 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
-use crate::{is_valid_len, ValidError, MAX_LEN};
+use crate::{MAX_LEN, ValidError, is_valid_len};
 
 pub const BASE_36: &str = "0123456789abcdefghijklmnopqrstuvwxyz";
 
@@ -183,7 +183,7 @@ impl Slug {
 mod test {
     use crate::test::{LEN_64_STR, LEN_65_STR};
 
-    use super::{is_valid_slug, Slug};
+    use super::{Slug, is_valid_slug};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -203,7 +203,12 @@ mod test {
         assert_eq!(false, is_valid_slug("a--valid-slug"));
         assert_eq!(false, is_valid_slug("a-Valid-slug"));
         assert_eq!(false, is_valid_slug(LEN_65_STR));
-        assert_eq!(false, is_valid_slug("client-submit-serialize-deserialize-handle-client-submit-serialize-deserialize-handle-1996529012"));
+        assert_eq!(
+            false,
+            is_valid_slug(
+                "client-submit-serialize-deserialize-handle-client-submit-serialize-deserialize-handle-1996529012"
+            )
+        );
     }
 
     #[test]

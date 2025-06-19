@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use bencher_json::{system::config::DataStore as DataStoreConfig, Secret};
+use bencher_json::{Secret, system::config::DataStore as DataStoreConfig};
 
 pub type DbConnection = diesel::SqliteConnection;
 

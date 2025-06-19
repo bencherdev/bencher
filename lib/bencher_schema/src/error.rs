@@ -174,9 +174,9 @@ where
     V: fmt::Debug,
     E: fmt::Display,
 {
-    not_found_error(
-        format!("{resource} ({value:?}) not found: {error}\n{resource} may be private and require authentication or it may not exist.\n{BEARER_TOKEN_FORMAT}"),
-    )
+    not_found_error(format!(
+        "{resource} ({value:?}) not found: {error}\n{resource} may be private and require authentication or it may not exist.\n{BEARER_TOKEN_FORMAT}"
+    ))
 }
 
 pub fn resource_conflict_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError

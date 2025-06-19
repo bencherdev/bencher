@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize, Serializer};
 use url::Url;
 
 use crate::urlencoded::{
-    from_urlencoded_list, from_urlencoded_nullable_list, to_urlencoded, to_urlencoded_list,
-    to_urlencoded_optional_list, UrlEncodedError,
+    UrlEncodedError, from_urlencoded_list, from_urlencoded_nullable_list, to_urlencoded,
+    to_urlencoded_list, to_urlencoded_optional_list,
 };
 use crate::{
     BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonBenchmark, JsonBranch,
@@ -339,9 +339,9 @@ pub mod table {
     use tabled::{Table, Tabled};
 
     use crate::{
-        project::{head::VersionNumber, report::Iteration},
         DateTime, JsonBenchmark, JsonBranch, JsonMeasure, JsonMetric, JsonPerf, JsonProject,
         JsonTestbed,
+        project::{head::VersionNumber, report::Iteration},
     };
 
     impl From<JsonPerf> for Table {

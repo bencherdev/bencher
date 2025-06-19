@@ -6,10 +6,10 @@ macro_rules! fn_eq_resource_id {
         ) -> Result<
             Box<
                 dyn diesel::BoxableExpression<
-                    $crate::schema::$table::table,
-                    diesel::sqlite::Sqlite,
-                    SqlType = diesel::sql_types::Bool,
-                >,
+                        $crate::schema::$table::table,
+                        diesel::sqlite::Sqlite,
+                        SqlType = diesel::sql_types::Bool,
+                    >,
             >,
             dropshot::HttpError,
         > {

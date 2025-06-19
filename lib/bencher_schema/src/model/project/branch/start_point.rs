@@ -1,15 +1,15 @@
 use bencher_json::{
-    project::branch::{JsonUpdateStartPoint, START_POINT_MAX_VERSIONS},
     GitHash, JsonNewStartPoint,
+    project::branch::{JsonUpdateStartPoint, START_POINT_MAX_VERSIONS},
 };
 use dropshot::HttpError;
 
 use crate::{conn_lock, context::ApiContext, model::project::ProjectId};
 
 use super::{
+    QueryBranch,
     head_version::{HeadVersionId, QueryHeadVersion},
     version::QueryVersion,
-    QueryBranch,
 };
 
 #[derive(Debug, Clone)]

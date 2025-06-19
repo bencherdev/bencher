@@ -1,5 +1,5 @@
 use bencher_json::{
-    organization::member::OrganizationRole, DateTime, Email, JsonMember, Slug, UserName, UserUuid,
+    DateTime, Email, JsonMember, Slug, UserName, UserUuid, organization::member::OrganizationRole,
 };
 
 #[derive(diesel::Queryable)]

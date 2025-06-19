@@ -4,9 +4,9 @@ use bencher_client::types::{JsonOrganizationPatch, JsonUpdateOrganization};
 use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::CliOrganizationUpdate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

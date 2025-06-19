@@ -4,8 +4,8 @@ use bencher_valid::{DateTime, Index, ResourceName, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ProjectUuid, TestbedUuid};
@@ -227,7 +227,7 @@ pub enum XAxis {
 
 #[cfg(feature = "db")]
 mod plot_x_axis {
-    use super::{XAxis, DATE_TIME_INT, VERSION_INT};
+    use super::{DATE_TIME_INT, VERSION_INT, XAxis};
 
     #[derive(Debug, thiserror::Error)]
     pub enum XAxisError {

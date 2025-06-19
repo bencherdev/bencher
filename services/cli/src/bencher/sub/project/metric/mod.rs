@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::project::metric::CliMetric, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::project::metric::CliMetric};
 
 mod view;
 

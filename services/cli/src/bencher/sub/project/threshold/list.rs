@@ -1,13 +1,13 @@
 use bencher_client::types::{JsonDirection, ProjThresholdsSort};
-use bencher_json::{project::threshold::JsonThresholdQuery, NameId, ResourceId};
+use bencher_json::{NameId, ResourceId, project::threshold::JsonThresholdQuery};
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::{
-        project::threshold::{CliThresholdList, CliThresholdsSort},
         CliPagination,
+        project::threshold::{CliThresholdList, CliThresholdsSort},
     },
-    CliError,
 };
 
 #[derive(Debug, Clone)]

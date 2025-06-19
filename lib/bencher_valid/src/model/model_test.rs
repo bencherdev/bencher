@@ -33,7 +33,7 @@ pub enum ModelTest {
 #[cfg(feature = "db")]
 mod db {
     use super::{
-        ModelTest, DELTA_IQR_INT, IQR_INT, LOG_NORMAL_INT, PERCENTAGE_INT, STATIC_INT, T_TEST_INT,
+        DELTA_IQR_INT, IQR_INT, LOG_NORMAL_INT, ModelTest, PERCENTAGE_INT, STATIC_INT, T_TEST_INT,
         Z_SCORE_INT,
     };
 

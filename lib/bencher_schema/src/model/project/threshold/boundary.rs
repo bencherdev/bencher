@@ -1,4 +1,4 @@
-use bencher_json::{project::boundary::JsonBoundary, BoundaryUuid};
+use bencher_json::{BoundaryUuid, project::boundary::JsonBoundary};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
@@ -11,7 +11,7 @@ use crate::{
     schema::boundary as boundary_table,
 };
 
-use super::{model::ModelId, ThresholdId};
+use super::{ThresholdId, model::ModelId};
 
 crate::macros::typed_id::typed_id!(BoundaryId);
 

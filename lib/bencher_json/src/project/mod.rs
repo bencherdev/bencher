@@ -7,8 +7,8 @@ use bencher_valid::{DateTime, ResourceName, Slug, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::OrganizationUuid;
@@ -259,7 +259,7 @@ impl Visibility {
 mod visibility {
     #[cfg(feature = "plus")]
     use super::PRIVATE_INT;
-    use super::{Visibility, PUBLIC_INT};
+    use super::{PUBLIC_INT, Visibility};
 
     #[derive(Debug, thiserror::Error)]
     pub enum VisibilityError {
@@ -370,7 +370,7 @@ impl Display for ProjectRole {
 
 #[cfg(feature = "db")]
 mod organization_role {
-    use super::{ProjectRole, MAINTAINER_ROLE};
+    use super::{MAINTAINER_ROLE, ProjectRole};
 
     #[derive(Debug, thiserror::Error)]
     pub enum ProjectRoleError {

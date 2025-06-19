@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use bencher_json::{
+    DateTime, Model, ModelUuid, ThresholdUuid,
     project::{
         report::JsonReportThresholds,
         threshold::{JsonThreshold, JsonThresholdModel},
     },
-    DateTime, Model, ModelUuid, ThresholdUuid,
 };
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -14,17 +14,17 @@ use slog::Logger;
 
 use self::model::{InsertModel, ModelId, QueryModel};
 use super::{
-    branch::{head::HeadId, start_point::StartPoint, version::VersionId, BranchId, QueryBranch},
+    ProjectId, QueryProject,
+    branch::{BranchId, QueryBranch, head::HeadId, start_point::StartPoint, version::VersionId},
     measure::{MeasureId, QueryMeasure},
     testbed::{QueryTestbed, TestbedId},
-    ProjectId, QueryProject,
 };
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
     error::{
-        assert_parentage, assert_siblings, resource_conflict_err, resource_not_found_err,
-        BencherResource,
+        BencherResource, assert_parentage, assert_siblings, resource_conflict_err,
+        resource_not_found_err,
     },
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     schema::{self, threshold as threshold_table},

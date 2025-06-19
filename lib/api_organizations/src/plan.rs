@@ -5,29 +5,29 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
-    organization::plan::{JsonNewPlan, JsonPlan},
     DateTime, ResourceId,
+    organization::plan::{JsonNewPlan, JsonPlan},
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
     error::{
-        forbidden_error, issue_error, resource_conflict_err, resource_conflict_error,
-        resource_not_found_err, BencherResource,
+        BencherResource, forbidden_error, issue_error, resource_conflict_err,
+        resource_conflict_error, resource_not_found_err,
     },
     model::{organization::QueryOrganization, user::auth::BearerToken},
     model::{
         organization::{
-            plan::{InsertPlan, QueryPlan},
             UpdateOrganization,
+            plan::{InsertPlan, QueryPlan},
         },
         user::auth::AuthUser,
     },
     schema,
 };
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -95,10 +95,10 @@ async fn get_one_inner(
     } else {
         Err(issue_error(
             "Failed to find subscription for plan",
-        &format!(
-            "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
-             ),
-        "Failed to find subscription for plan"
+            &format!(
+                "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
+            ),
+            "Failed to find subscription for plan",
         ))
     }
 }
@@ -335,12 +335,12 @@ async fn delete_plan(
         }
     } else {
         return Err(issue_error(
-                "Failed to find subscription for plan deletion",
+            "Failed to find subscription for plan deletion",
             &format!(
                 "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
-                 ),
-            "Failed to find subscription for plan deletion"
-            ));
+            ),
+            "Failed to find subscription for plan deletion",
+        ));
     }
 
     Ok(())

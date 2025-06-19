@@ -3,28 +3,29 @@ use bencher_endpoint::{
     ResponseOk, TotalCount,
 };
 use bencher_json::{
-    organization::member::{JsonNewMember, JsonUpdateMember},
     JsonAuthAck, JsonDirection, JsonMember, JsonMembers, JsonPagination, ResourceId, Search,
     UserName,
+    organization::member::{JsonNewMember, JsonUpdateMember},
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
-    conn_lock,
+    INVITE_TOKEN_TTL, conn_lock,
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err},
     model::{
-        organization::{member::QueryMember, OrganizationId, QueryOrganization},
+        organization::{OrganizationId, QueryOrganization, member::QueryMember},
         user::{
-            auth::{AuthUser, BearerToken},
             QueryUser, UserId,
+            auth::{AuthUser, BearerToken},
         },
     },
-    schema, INVITE_TOKEN_TTL,
+    schema,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
@@ -280,7 +281,10 @@ async fn post_inner(
         title: format!("Invitation to join {org_name}"),
         preheader: "Click the provided link to join.".into(),
         greeting: if let Some(name) = name {
-            format!("Ahoy {name}!") } else { "Ahoy!".into() },
+            format!("Ahoy {name}!")
+        } else {
+            "Ahoy!".into()
+        },
         pre_body: format!(
             "Please, click the button below or use the provided token to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
             user_name = auth_user.user.name,

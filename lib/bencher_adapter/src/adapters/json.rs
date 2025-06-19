@@ -1,4 +1,4 @@
-use crate::{results::adapter_results::AdapterResults, Adaptable, Settings};
+use crate::{Adaptable, Settings, results::adapter_results::AdapterResults};
 
 pub struct AdapterJson;
 

@@ -6,8 +6,8 @@ use std::{fmt, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
+    de::{self, Visitor},
 };
 
 use crate::ValidError;
@@ -137,7 +137,7 @@ pub fn is_valid_sample_size(sample_size: u32) -> bool {
 mod test {
     use pretty_assertions::assert_eq;
 
-    use super::{is_valid_sample_size, SampleSize};
+    use super::{SampleSize, is_valid_sample_size};
 
     #[test]
     #[allow(clippy::excessive_precision)]

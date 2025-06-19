@@ -8,7 +8,7 @@ use bencher_schema::{
         user::auth::{AuthUser, BearerToken},
     },
 };
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

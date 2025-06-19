@@ -4,7 +4,7 @@ use bencher_json::PROD_BENCHER_URL_STR;
 use camino::Utf8PathBuf;
 use serde::Serialize;
 
-use crate::{parser::TaskTestNetlify, API_VERSION};
+use crate::{API_VERSION, parser::TaskTestNetlify};
 
 const DEPLOY_ID_KEY: &str = "deploy_id";
 const NTFY_URL: &str = "https://ntfy.sh";

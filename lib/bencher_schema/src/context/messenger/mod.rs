@@ -8,7 +8,7 @@ pub use body::ServerStatsBody;
 pub use body::{Body, ButtonBody, NewUserBody};
 pub use email::Email;
 pub use message::Message;
-use slog::{info, Logger};
+use slog::{Logger, info};
 
 #[cfg(feature = "plus")]
 pub const GITHUB_OAUTH2: &str = "GitHub OAuth2";

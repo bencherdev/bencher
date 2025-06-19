@@ -8,7 +8,7 @@ use bencher_json::{
 use tabled::Table;
 
 use crate::parser::ElidedOption;
-use crate::{bencher::backend::PubBackend, cli_println, parser::project::perf::CliPerf, CliError};
+use crate::{CliError, bencher::backend::PubBackend, cli_println, parser::project::perf::CliPerf};
 
 use crate::bencher::SubCmd;
 

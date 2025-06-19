@@ -1,11 +1,11 @@
 use crate::{
+    CliError,
     bencher::sub::SubCmd,
     parser::compose::{CliDown, CliService},
-    CliError,
 };
 use bollard::{
-    container::{RemoveContainerOptions, StopContainerOptions},
     Docker,
+    container::{RemoveContainerOptions, StopContainerOptions},
 };
 
 use crate::cli_println;

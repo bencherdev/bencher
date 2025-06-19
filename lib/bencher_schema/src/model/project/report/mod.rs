@@ -1,12 +1,13 @@
 use bencher_json::{
+    DateTime, JsonNewReport, JsonReport, ReportUuid,
     project::report::{
         Adapter, Iteration, JsonReportAlerts, JsonReportMeasure, JsonReportResult,
         JsonReportResults,
     },
-    DateTime, JsonNewReport, JsonReport, ReportUuid,
 };
 use diesel::{
-    ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
 };
 use dropshot::HttpError;
 use results::ReportResults;
@@ -21,24 +22,24 @@ use crate::{
     macros::fn_get::{fn_get_id, fn_get_uuid},
     model::{
         project::{
+            ProjectId, QueryProject,
             benchmark::QueryBenchmark,
             branch::version::QueryVersion,
             measure::QueryMeasure,
             testbed::{QueryTestbed, TestbedId},
-            threshold::{alert::QueryAlert, model::QueryModel, QueryThreshold},
-            ProjectId, QueryProject,
+            threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
         },
-        user::{auth::AuthUser, QueryUser, UserId},
+        user::{QueryUser, UserId, auth::AuthUser},
     },
     schema::{self, report as report_table},
     view,
 };
 
 use super::{
-    branch::{head::HeadId, version::VersionId, QueryBranch},
+    branch::{QueryBranch, head::HeadId, version::VersionId},
     metric::QueryMetric,
     metric_boundary::QueryMetricBoundary,
-    threshold::{boundary::QueryBoundary, InsertThreshold},
+    threshold::{InsertThreshold, boundary::QueryBoundary},
 };
 
 pub mod report_benchmark;

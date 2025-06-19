@@ -1,18 +1,18 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
+use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
+    IResult,
     bytes::complete::{tag, take_until1},
     character::complete::space1,
     combinator::{eof, map, map_res},
     sequence::{delimited, tuple},
-    IResult,
 };
 
 use crate::{
+    Adaptable, Settings,
     adapters::util::{
-        latency_as_nanos, parse_benchmark_name, parse_number_as_f64, parse_units, NomError,
+        NomError, latency_as_nanos, parse_benchmark_name, parse_number_as_f64, parse_units,
     },
     results::adapter_results::AdapterResults,
-    Adaptable, Settings,
 };
 
 pub struct AdapterRustBench;
@@ -89,15 +89,15 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonNewMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_rust_bench {
-    use bencher_json::{project::report::JsonAverage, JsonNewMetric};
+    use bencher_json::{JsonNewMetric, project::report::JsonAverage};
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
         AdapterResults, Settings,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
     };
 
-    use super::{parse_cargo, AdapterRustBench};
+    use super::{AdapterRustBench, parse_cargo};
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/bench/{suffix}.txt");

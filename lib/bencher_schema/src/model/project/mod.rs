@@ -1,13 +1,14 @@
 use std::{string::ToString as _, sync::LazyLock};
 
 use bencher_json::{
-    project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, ProjectRole, Visibility},
     DateTime, JsonNewProject, JsonProject, ProjectUuid, ResourceId, ResourceIdKind, ResourceName,
     Slug, Url,
+    project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, ProjectRole, Visibility},
 };
-use bencher_rbac::{project::Permission, Organization, Project};
+use bencher_rbac::{Organization, Project, project::Permission};
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
 };
 use dropshot::HttpError;
 use project_role::InsertProjectRole;
@@ -15,11 +16,11 @@ use regex::Regex;
 use slog::Logger;
 
 use crate::{
-    conn_lock,
+    ApiContext, conn_lock,
     context::{DbConnection, Rbac},
     error::{
-        assert_parentage, forbidden_error, issue_error, resource_conflict_err,
-        resource_not_found_err, resource_not_found_error, unauthorized_error, BencherResource,
+        BencherResource, assert_parentage, forbidden_error, issue_error, resource_conflict_err,
+        resource_not_found_err, resource_not_found_error, unauthorized_error,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
@@ -28,7 +29,6 @@ use crate::{
     },
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
-    ApiContext,
 };
 
 use super::organization::OrganizationId;
@@ -260,7 +260,9 @@ impl QueryProject {
         } else {
             return Err(issue_error(
                 "Failed to create new project number",
-                &format!("Failed to create new number for project ({project_name}) with highest project ({highest_name})"),
+                &format!(
+                    "Failed to create new number for project ({project_name}) with highest project ({highest_name})"
+                ),
                 highest_name,
             ));
         };

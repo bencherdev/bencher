@@ -2,9 +2,9 @@ use bencher_client::types::JsonUpdateMeasure;
 use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::measure::CliMeasureUpdate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

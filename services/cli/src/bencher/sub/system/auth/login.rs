@@ -4,9 +4,9 @@ use bencher_client::types::PlanLevel;
 use bencher_json::{Email, Jwt};
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::system::auth::CliAuthLogin,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

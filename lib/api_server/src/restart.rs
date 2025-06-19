@@ -2,10 +2,10 @@ use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::JsonRestart;
 use bencher_schema::{
     context::ApiContext,
-    model::user::{admin::AdminUser, auth::BearerToken, UserId},
+    model::user::{UserId, admin::AdminUser, auth::BearerToken},
 };
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use slog::{error, warn, Logger};
+use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
+use slog::{Logger, error, warn};
 use tokio::sync::mpsc::Sender;
 
 const DEFAULT_DELAY: u64 = 3;
@@ -73,7 +73,8 @@ pub fn countdown(log: &Logger, restart_tx: Sender<()>, delay: Option<u64>, user_
                     error!(countdown_log, "Failed to send restart for {user_id}: {e}");
                 }
             } else {
-                warn!(countdown_log,
+                warn!(
+                    countdown_log,
                     "Received admin request from {user_id} to restart. Server will restart in {tick} seconds.",
                 );
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;

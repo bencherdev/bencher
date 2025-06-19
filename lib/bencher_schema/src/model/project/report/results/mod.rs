@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{
-    results::adapter_metrics::AdapterMetrics, AdapterResults, AdapterResultsArray,
-    Settings as AdapterSettings,
+    AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
+    results::adapter_metrics::AdapterMetrics,
 };
 use bencher_json::{
-    project::report::{Adapter, Iteration, JsonReportSettings},
     BenchmarkName, MeasureNameId,
+    project::report::{Adapter, Iteration, JsonReportSettings},
 };
 use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
@@ -17,13 +17,13 @@ use crate::{
     context::ApiContext,
     error::{bad_request_error, issue_error, resource_conflict_err},
     model::project::{
+        ProjectId,
         benchmark::{BenchmarkId, QueryBenchmark},
-        branch::{head::HeadId, BranchId},
+        branch::{BranchId, head::HeadId},
         measure::{MeasureId, QueryMeasure},
         metric::{InsertMetric, QueryMetric},
         report::report_benchmark::{InsertReportBenchmark, QueryReportBenchmark},
         testbed::TestbedId,
-        ProjectId,
     },
     schema,
 };

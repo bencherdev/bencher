@@ -1,12 +1,12 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonNewMetric};
+use bencher_json::{BenchmarkName, JsonAny, JsonNewMetric, project::report::JsonAverage};
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
 use crate::{
+    Adaptable, AdapterError, Settings,
     adapters::util::{latency_as_nanos, throughput_as_secs},
     results::adapter_results::{AdapterMeasure, AdapterResults},
-    Adaptable, AdapterError, Settings,
 };
 
 pub struct AdapterJavaJmh;
@@ -113,10 +113,10 @@ pub(crate) mod test_java_jmh {
     use pretty_assertions::assert_eq;
 
     use crate::{
+        AdapterResults, Settings,
         adapters::test_util::{
             convert_file_path, opt_convert_file_path, validate_latency, validate_throughput,
         },
-        AdapterResults, Settings,
     };
 
     use super::AdapterJavaJmh;

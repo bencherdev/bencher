@@ -1,4 +1,4 @@
-use crate::{bencher::sub::SubCmd, parser::system::auth::CliAuth, CliError};
+use crate::{CliError, bencher::sub::SubCmd, parser::system::auth::CliAuth};
 
 mod accept;
 mod confirm;

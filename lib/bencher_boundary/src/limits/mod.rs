@@ -1,10 +1,10 @@
 use bencher_json::{
-    project::boundary::BoundaryLimit, Boundary, CdfBoundary, IqrBoundary, PercentageBoundary,
+    Boundary, CdfBoundary, IqrBoundary, PercentageBoundary, project::boundary::BoundaryLimit,
 };
-use slog::{debug, Logger};
+use slog::{Logger, debug};
 use statrs::distribution::{ContinuousCDF as _, LogNormal, Normal, StudentsT};
 
-use crate::{ln::Ln, quartiles::Quartiles, BoundaryError};
+use crate::{BoundaryError, ln::Ln, quartiles::Quartiles};
 
 mod limit;
 
@@ -222,7 +222,7 @@ mod test {
     use std::sync::LazyLock;
 
     use bencher_json::{
-        project::boundary::BoundaryLimit, Boundary, CdfBoundary, IqrBoundary, PercentageBoundary,
+        Boundary, CdfBoundary, IqrBoundary, PercentageBoundary, project::boundary::BoundaryLimit,
     };
     use bencher_logger::bootstrap_logger;
     use ordered_float::OrderedFloat;

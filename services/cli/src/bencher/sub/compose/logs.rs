@@ -1,11 +1,11 @@
 use crate::{
+    CliError,
     bencher::sub::SubCmd,
     parser::compose::{CliLogs, CliService},
-    CliError,
 };
 use bollard::{
-    container::{LogOutput, LogsOptions},
     Docker,
+    container::{LogOutput, LogsOptions},
 };
 use futures_util::stream::StreamExt as _;
 

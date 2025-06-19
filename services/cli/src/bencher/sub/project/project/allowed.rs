@@ -2,9 +2,9 @@ use bencher_client::types::ProjectPermission;
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::{CliProjectAllowed, CliProjectPermission},
-    CliError,
 };
 
 #[derive(Debug)]

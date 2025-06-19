@@ -16,7 +16,9 @@ impl From<Oso> for Rbac {
 pub enum RbacError {
     #[error("Failed to check permissions: {0}")]
     IsAllowed(oso::OsoError),
-    #[error("Permission ({permission}) denied for user ({auth_user:?}) on organization ({organization:?})")]
+    #[error(
+        "Permission ({permission}) denied for user ({auth_user:?}) on organization ({organization:?})"
+    )]
     IsAllowedOrganization {
         auth_user: AuthUser,
         permission: bencher_rbac::organization::Permission,

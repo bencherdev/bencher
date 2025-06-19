@@ -7,9 +7,9 @@ use super::{
     metric::QueryMetric,
     report::report_benchmark::{QueryReportBenchmark, ReportBenchmarkId},
     threshold::{
+        ThresholdId,
         boundary::{BoundaryId, QueryBoundary},
         model::ModelId,
-        ThresholdId,
     },
 };
 

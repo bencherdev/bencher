@@ -6,12 +6,12 @@ use std::{
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
-    de::{self, Deserializer, Unexpected, Visitor},
     Deserialize, Serialize,
+    de::{self, Deserializer, Unexpected, Visitor},
 };
 use uuid::Uuid;
 
-use crate::{non_empty::is_valid_non_empty, NonEmpty, Slug, ValidError};
+use crate::{NonEmpty, Slug, ValidError, non_empty::is_valid_non_empty};
 
 #[typeshare::typeshare]
 #[derive(Debug, derive_more::Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]

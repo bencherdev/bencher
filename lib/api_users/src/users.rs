@@ -1,23 +1,25 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk, TotalCount};
 use bencher_json::{
-    user::JsonUsers, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, Sanitize as _,
-    Search, UserName,
+    JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, Sanitize as _, Search,
+    UserName, user::JsonUsers,
 };
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::user::{
+        QueryUser, UpdateUser,
         admin::AdminUser,
         auth::{AuthUser, BearerToken},
-        same_user, QueryUser, UpdateUser,
+        same_user,
     },
     schema,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

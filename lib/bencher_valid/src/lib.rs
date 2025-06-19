@@ -27,22 +27,22 @@ mod url;
 mod user_name;
 
 pub use crate::git_hash::GitHash;
-pub use crate::slug::{Slug, BASE_36};
+pub use crate::slug::{BASE_36, Slug};
 pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
 pub use branch_name::BranchName;
 pub use date_time::{DateTime, DateTimeMillis};
 pub use email::Email;
-pub use error::ValidError;
 use error::REGEX_ERROR;
+pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
 pub use model::{
+    Model,
     boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary},
     model_test::ModelTest,
     sample_size::SampleSize,
     window::Window,
-    Model,
 };
 pub use name_id::{NameId, NameIdKind};
 pub use non_empty::NonEmpty;
@@ -55,7 +55,7 @@ pub use resource_id::{ResourceId, ResourceIdKind};
 pub use resource_name::ResourceName;
 pub use search::Search;
 pub use secret::Secret;
-pub use units::{Units, BYTES, NANOSECONDS, SECONDS};
+pub use units::{BYTES, NANOSECONDS, SECONDS, Units};
 pub use user_name::UserName;
 
 const MAX_LEN: usize = 64;

@@ -5,8 +5,8 @@ use std::{fs::Permissions, os::unix::fs::PermissionsExt as _};
 use minijinja::Environment;
 use serde::Serialize;
 
-use crate::parser::{TaskTemplate, TaskTemplateKind};
 use crate::API_VERSION;
+use crate::parser::{TaskTemplate, TaskTemplateKind};
 
 const CLI_TEMPLATES: &str = "services/cli/templates";
 const SH_TEMPLATE: &str = "install-cli.sh.j2";

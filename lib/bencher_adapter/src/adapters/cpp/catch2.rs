@@ -1,19 +1,19 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
+use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
+    IResult,
     character::complete::{anychar, space0, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
     sequence::tuple,
-    IResult,
 };
 use ordered_float::OrderedFloat;
 
 use crate::{
+    Adaptable, Settings,
     adapters::util::{
-        latency_as_nanos, parse_number_as_f64, parse_u64, parse_units, NomError, Units,
+        NomError, Units, latency_as_nanos, parse_number_as_f64, parse_u64, parse_units,
     },
     results::adapter_results::AdapterResults,
-    Adaptable, Settings,
 };
 
 const CATCH2_METRICS_LINE_COUNT: usize = 5;
@@ -193,11 +193,11 @@ pub(crate) mod test_cpp_catch2 {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
         AdapterResults, Settings,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
     };
 
-    use super::{parse_catch2_prelude_line, AdapterCppCatch2};
+    use super::{AdapterCppCatch2, parse_catch2_prelude_line};
 
     fn convert_cpp_catch2(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/cpp/catch2/{suffix}.txt");

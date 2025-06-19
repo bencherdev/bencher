@@ -1,9 +1,9 @@
 use bencher_json::{MetricUuid, ResourceId};
 
 use crate::{
+    CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::project::metric::CliMetricView,
-    CliError,
 };
 
 #[derive(Debug)]

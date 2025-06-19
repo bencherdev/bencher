@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk, TotalCount};
 use bencher_json::{
-    project::alert::{AlertStatus, JsonUpdateAlert},
     AlertUuid, JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
+    project::alert::{AlertStatus, JsonUpdateAlert},
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -10,15 +10,18 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            threshold::alert::{QueryAlert, UpdateAlert},
             QueryProject,
+            threshold::alert::{QueryAlert, UpdateAlert},
         },
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
 };
-use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use diesel::{
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
+};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

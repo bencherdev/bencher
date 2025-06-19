@@ -2,9 +2,9 @@ use bencher_client::types::{Entitlements, JsonNewPlan, NonEmpty, OrganizationUui
 use bencher_json::ResourceId;
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::plan::{CliPlanCreate, CliPlanLevel},
-    CliError,
 };
 
 #[derive(Debug, Clone)]

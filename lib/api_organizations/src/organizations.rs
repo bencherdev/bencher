@@ -3,8 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    organization::JsonUpdateOrganization, JsonDirection, JsonNewOrganization, JsonOrganization,
-    JsonOrganizations, JsonPagination, ResourceId, ResourceName, Search,
+    JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations, JsonPagination,
+    ResourceId, ResourceName, Search, organization::JsonUpdateOrganization,
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
@@ -18,9 +18,10 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

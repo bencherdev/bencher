@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use percent_encoding::{percent_decode, utf8_percent_encode, AsciiSet, CONTROLS};
+use percent_encoding::{AsciiSet, CONTROLS, percent_decode, utf8_percent_encode};
 use thiserror::Error;
 
 // https://url.spec.whatwg.org/#fragment-percent-encode-set

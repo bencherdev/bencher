@@ -1,9 +1,9 @@
 use bencher_json::{ResourceId, TokenUuid};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::user::token::CliTokenView,
-    CliError,
 };
 
 #[derive(Debug)]

@@ -1,6 +1,6 @@
 use bencher_json::{
-    user::token::JsonUpdateToken, DateTime, JsonNewToken, JsonToken, Jwt, ResourceId, ResourceName,
-    TokenUuid,
+    DateTime, JsonNewToken, JsonToken, Jwt, ResourceId, ResourceName, TokenUuid,
+    user::token::JsonUpdateToken,
 };
 use bencher_token::TokenKey;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -9,7 +9,7 @@ use dropshot::HttpError;
 use crate::{
     context::{DbConnection, Rbac},
     error::{
-        assert_parentage, bad_request_error, issue_error, resource_not_found_err, BencherResource,
+        BencherResource, assert_parentage, bad_request_error, issue_error, resource_not_found_err,
     },
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     model::user::same_user,
@@ -17,7 +17,7 @@ use crate::{
     schema::token as token_table,
 };
 
-use super::{auth::AuthUser, QueryUser, UserId};
+use super::{QueryUser, UserId, auth::AuthUser};
 
 crate::macros::typed_id::typed_id!(TokenId);
 

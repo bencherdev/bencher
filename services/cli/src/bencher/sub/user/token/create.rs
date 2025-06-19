@@ -2,9 +2,9 @@ use bencher_client::types::JsonNewToken;
 use bencher_json::{ResourceId, ResourceName};
 
 use crate::{
+    CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::user::token::CliTokenCreate,
-    CliError,
 };
 
 #[derive(Debug, Clone)]

@@ -10,7 +10,7 @@ use crate::{
     error::{bad_request_error, resource_conflict_err},
     model::project::{
         benchmark::BenchmarkId,
-        branch::{head::HeadId, BranchId},
+        branch::{BranchId, head::HeadId},
         measure::MeasureId,
         metric::QueryMetric,
         testbed::TestbedId,

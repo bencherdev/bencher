@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis},
     DateTime, Index, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
+    project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis},
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -11,8 +11,8 @@ use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
     error::{
-        assert_parentage, resource_conflict_err, resource_conflict_error, resource_not_found_err,
-        BencherResource,
+        BencherResource, assert_parentage, resource_conflict_err, resource_conflict_error,
+        resource_not_found_err,
     },
     schema::plot as plot_table,
 };

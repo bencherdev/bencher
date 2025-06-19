@@ -4,17 +4,17 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use bencher_api::{api::Api, API_VERSION};
+use bencher_api::{API_VERSION, api::Api};
 use bencher_config::{Config, ConfigTx};
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonLitestream;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
-use slog::{error, info, Logger};
+use slog::{Logger, error, info};
 #[cfg(feature = "plus")]
 use tokio::process::Command;
 use tokio::{sync, task::JoinHandle};
-use tokio_rustls::rustls::crypto::{ring, CryptoProvider};
+use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
 
 #[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
@@ -159,7 +159,9 @@ fn init_sentry(config: &Config) -> Option<ClientInitGuard> {
 pub enum LitestreamError {
     #[error("Failed to absolutize the database path: {0}")]
     Database(std::io::Error),
-    #[error("Failed to convert Bencher config to Litestream config. This is likely a bug. Please report this: {0}")]
+    #[error(
+        "Failed to convert Bencher config to Litestream config. This is likely a bug. Please report this: {0}"
+    )]
     Yaml(serde_yaml::Error),
     #[error("Failed to write Litestream config ({0}): {1}")]
     WriteYaml(PathBuf, std::io::Error),
