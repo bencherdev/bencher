@@ -4,30 +4,30 @@ use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
 use bencher_json::system::config::{JsonLitestream, JsonPlus};
 use bencher_json::{
+    JsonConfig,
     system::config::{
         IfExists, JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, JsonSmtp,
         JsonTls, LogLevel, ServerLog,
     },
-    JsonConfig,
 };
 use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{context::RateLimiting, model::server::QueryServer};
 use bencher_token::TokenKey;
+use diesel::Connection;
 #[cfg(feature = "plus")]
 use diesel::connection::SimpleConnection;
-use diesel::Connection;
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
 };
-use slog::{debug, error, info, Logger};
+use slog::{Logger, debug, error, info};
 use tokio::sync::mpsc::Sender;
 
 use super::Config;
 #[cfg(feature = "plus")]
-use super::{plus::Plus, DEFAULT_BUSY_TIMEOUT};
+use super::{DEFAULT_BUSY_TIMEOUT, plus::Plus};
 
 const DATABASE_URL: &str = "DATABASE_URL";
 

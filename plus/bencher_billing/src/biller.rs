@@ -690,7 +690,7 @@ mod test {
         },
         Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
     };
-    use chrono::{Datelike, Utc};
+    use chrono::{Datelike as _, Utc};
     use literally::hmap;
     use pretty_assertions::assert_eq;
     use stripe::{CustomerId, PaymentMethodId};
