@@ -32,7 +32,6 @@ pub struct OrgUsageParams {
     pub organization: ResourceId,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/usage",

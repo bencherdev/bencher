@@ -21,7 +21,6 @@ use tokio::{
 
 const BUFFER_SIZE: usize = 1024;
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/backup",

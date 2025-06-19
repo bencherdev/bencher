@@ -20,7 +20,6 @@ pub struct ProjAllowedParams {
     pub permission: ProjectPermission,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/allowed/{permission}",

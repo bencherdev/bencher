@@ -17,7 +17,6 @@ use bencher_schema::{
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/checkout",

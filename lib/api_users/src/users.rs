@@ -41,7 +41,6 @@ pub struct UsersQuery {
     pub search: Option<Search>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/users",
@@ -139,7 +138,6 @@ pub struct UserParams {
     /// The slug or UUID for a user.
     pub user: ResourceId,
 }
-
 
 #[endpoint {
     method = OPTIONS,

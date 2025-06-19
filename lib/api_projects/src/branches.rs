@@ -58,7 +58,6 @@ pub struct ProjBranchesQuery {
     pub archived: Option<bool>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches",
@@ -252,7 +251,6 @@ pub struct ProjBranchQuery {
     /// If not specified, then the current head is used.
     pub head: Option<HeadUuid>,
 }
-
 
 #[endpoint {
     method = OPTIONS,

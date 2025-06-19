@@ -40,7 +40,6 @@ pub struct ProjMetricParams {
     pub metric: MetricUuid,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/metrics/{metric}",

@@ -3,7 +3,6 @@ use bencher_json::JsonApiVersion;
 use bencher_schema::{API_VERSION, context::ApiContext};
 use dropshot::{HttpError, RequestContext, endpoint};
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/version",

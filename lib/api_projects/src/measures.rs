@@ -55,7 +55,6 @@ pub struct ProjMeasuresQuery {
     pub archived: Option<bool>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/measures",
@@ -231,7 +230,6 @@ pub struct ProjMeasureParams {
     /// The slug or UUID for a measure.
     pub measure: ResourceId,
 }
-
 
 #[endpoint {
     method = OPTIONS,

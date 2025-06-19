@@ -17,7 +17,6 @@ use slog::Logger;
 
 use super::restart::countdown;
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/config",
@@ -112,7 +111,6 @@ async fn put_inner(
 
     Ok(json_config)
 }
-
 
 #[endpoint {
         method = OPTIONS,

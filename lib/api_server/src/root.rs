@@ -4,7 +4,6 @@ use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_schema::context::ApiContext;
 use dropshot::{HttpError, RequestContext, endpoint};
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/",
@@ -23,7 +22,6 @@ pub async fn server_root_options(
         Post.into(),
     ]))
 }
-
 
 #[endpoint {
     method = GET,

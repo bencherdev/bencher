@@ -45,7 +45,6 @@ pub struct ProjectsQuery {
     pub search: Option<Search>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects",
@@ -180,7 +179,6 @@ pub struct ProjectParams {
     /// The slug or UUID for a project.
     pub project: ResourceId,
 }
-
 
 #[endpoint {
     method = OPTIONS,

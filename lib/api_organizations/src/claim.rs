@@ -18,7 +18,6 @@ pub struct OrgClaimParams {
     pub organization: ResourceId,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/claim",

@@ -56,7 +56,6 @@ pub enum ProjReportsSort {
     DateTime,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/reports",
@@ -304,7 +303,6 @@ pub struct ProjReportParams {
     /// The UUID for a report.
     pub report: ReportUuid,
 }
-
 
 #[endpoint {
     method = OPTIONS,

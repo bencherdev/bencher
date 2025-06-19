@@ -55,7 +55,6 @@ pub struct ProjTestbedsQuery {
     pub archived: Option<bool>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/testbeds",
@@ -231,7 +230,6 @@ pub struct ProjTestbedParams {
     /// The slug or UUID for a testbed.
     pub testbed: ResourceId,
 }
-
 
 #[endpoint {
     method = OPTIONS,

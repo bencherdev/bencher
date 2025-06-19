@@ -14,7 +14,6 @@ use http::Response;
 
 use super::ProjPerfParams;
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/perf/img",

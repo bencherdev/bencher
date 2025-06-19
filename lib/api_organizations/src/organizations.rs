@@ -43,7 +43,6 @@ pub struct OrganizationsQuery {
     pub search: Option<Search>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations",
@@ -192,7 +191,6 @@ pub struct OrganizationParams {
     /// The slug or UUID for an organization.
     pub organization: ResourceId,
 }
-
 
 #[endpoint {
     method = OPTIONS,

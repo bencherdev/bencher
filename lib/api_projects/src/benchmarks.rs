@@ -56,7 +56,6 @@ pub struct ProjBenchmarksQuery {
     pub archived: Option<bool>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/benchmarks",
@@ -232,7 +231,6 @@ pub struct ProjBenchmarkParams {
     /// The slug or UUID for a benchmark.
     pub benchmark: ResourceId,
 }
-
 
 #[endpoint {
     method = OPTIONS,

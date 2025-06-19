@@ -54,7 +54,6 @@ pub struct OrgMembersQuery {
     pub search: Option<Search>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/members",
@@ -330,7 +329,6 @@ pub struct OrgMemberParams {
     /// The slug or UUID for an organization member.
     pub user: ResourceId,
 }
-
 
 #[endpoint {
     method = OPTIONS,

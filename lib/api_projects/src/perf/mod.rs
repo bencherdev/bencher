@@ -48,7 +48,6 @@ pub struct ProjPerfParams {
     pub project: ResourceId,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/perf",

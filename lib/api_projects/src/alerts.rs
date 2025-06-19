@@ -53,7 +53,6 @@ pub struct ProjAlertsQuery {
     pub archived: Option<bool>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/alerts",
@@ -288,7 +287,6 @@ pub struct ProjAlertParams {
     /// The UUID for an alert.
     pub alert: AlertUuid,
 }
-
 
 #[endpoint {
     method = OPTIONS,

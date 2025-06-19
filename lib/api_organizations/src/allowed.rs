@@ -20,7 +20,6 @@ pub struct OrgAllowedParams {
     pub permission: OrganizationPermission,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/allowed/{permission}",

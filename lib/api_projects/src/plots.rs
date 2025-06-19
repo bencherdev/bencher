@@ -54,7 +54,6 @@ pub struct ProjPlotsQuery {
     pub search: Option<Search>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/plots",
@@ -238,7 +237,6 @@ pub struct ProjPlotParams {
     /// The UUID for a plot.
     pub plot: PlotUuid,
 }
-
 
 #[endpoint {
     method = OPTIONS,

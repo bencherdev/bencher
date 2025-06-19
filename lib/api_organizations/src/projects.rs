@@ -59,7 +59,6 @@ pub struct OrgProjectsQuery {
     pub search: Option<Search>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/projects",

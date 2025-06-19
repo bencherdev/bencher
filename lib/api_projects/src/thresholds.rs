@@ -57,7 +57,6 @@ pub enum ProjThresholdsSort {
     Modified,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/thresholds",
@@ -320,7 +319,6 @@ pub struct ProjThresholdQuery {
     /// If not specified, then the current model is used.
     pub model: Option<ModelUuid>,
 }
-
 
 #[endpoint {
     method = OPTIONS,

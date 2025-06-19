@@ -50,7 +50,6 @@ pub struct UserTokensQuery {
     pub search: Option<Search>,
 }
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/users/{user}/tokens",
@@ -226,7 +225,6 @@ pub struct UserTokenParams {
     /// The UUID for a token.
     pub token: Uuid,
 }
-
 
 #[endpoint {
     method = OPTIONS,

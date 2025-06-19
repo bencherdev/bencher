@@ -13,7 +13,6 @@ use bencher_schema::{
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
-
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/run",
