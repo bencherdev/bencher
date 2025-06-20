@@ -1,5 +1,5 @@
 use bencher_json::{
-    DateTime, JsonServerStats,
+    DateTime, JsonOrganizations, JsonServerStats, JsonUsers,
     system::server::{JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects},
 };
 use diesel::{
@@ -33,82 +33,10 @@ pub async fn get_stats(
     let this_week = timestamp - THIS_WEEK;
     let this_month = timestamp - THIS_MONTH;
 
-    // organizations
-    let organizations = if is_bencher_cloud {
-        None
-    } else {
-        Some(connection_lock!(db_connection, |conn| {
-            schema::organization::table
-                .load::<QueryOrganization>(conn)
-                .map_err(resource_not_found_err!(Organization))?
-                .into_iter()
-                .map(|org| org.into_json(conn))
-                .collect()
-        }))
-    };
-
-    // admins
-    let admins = if is_bencher_cloud {
-        None
-    } else {
-        Some(connection_lock!(db_connection, |conn| {
-            schema::user::table
-                .filter(schema::user::admin.eq(true))
-                .load::<QueryUser>(conn)
-                .map_err(resource_not_found_err!(User))?
-                .into_iter()
-                .map(QueryUser::into_json)
-                .collect()
-        }))
-    };
-
-    // users
-    let weekly_users = schema::user::table
-        .filter(schema::user::created.ge(this_week))
-        .select(count(schema::user::id))
-        .first::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let monthly_users = schema::user::table
-        .filter(schema::user::created.ge(this_month))
-        .select(count(schema::user::id))
-        .first::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let total_users = schema::user::table
-        .select(count(schema::user::id))
-        .first::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let users_cohort = JsonCohort {
-        week: weekly_users as u64,
-        month: monthly_users as u64,
-        total: total_users as u64,
-    };
-
-    // projects
-    let weekly_projects = schema::project::table
-        .filter(schema::project::created.ge(this_week))
-        .select(count(schema::project::id))
-        .first::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let monthly_projects = schema::project::table
-        .filter(schema::project::created.ge(this_month))
-        .select(count(schema::project::id))
-        .first::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let total_projects = schema::project::table
-        .select(count(schema::project::id))
-        .first::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let projects_cohort = JsonCohort {
-        week: weekly_projects as u64,
-        month: monthly_projects as u64,
-        total: total_projects as u64,
-    };
+    let organizations = get_organizations(db_connection, is_bencher_cloud).await?;
+    let admins = get_admins(db_connection, is_bencher_cloud).await?;
+    let users_cohort = get_users(db_connection, this_week, this_month).await?;
+    let projects_cohort = get_projects(db_connection, this_week, this_month).await?;
 
     // reports and median reports per project
     let mut weekly_reports = schema::report::table
@@ -255,6 +183,101 @@ pub async fn get_stats(
         metrics: Some(metrics_cohort),
         metrics_per_report: Some(metrics_per_report_cohort),
         top_projects: Some(top_projects_cohort),
+    })
+}
+
+async fn get_organizations(
+    db_connection: &Mutex<DbConnection>,
+    is_bencher_cloud: bool,
+) -> Result<Option<JsonOrganizations>, HttpError> {
+    Ok(if is_bencher_cloud {
+        None
+    } else {
+        Some(connection_lock!(db_connection, |conn| {
+            schema::organization::table
+                .load::<QueryOrganization>(conn)
+                .map_err(resource_not_found_err!(Organization))?
+                .into_iter()
+                .map(|org| org.into_json(conn))
+                .collect()
+        }))
+    })
+}
+
+async fn get_admins(
+    db_connection: &Mutex<DbConnection>,
+    is_bencher_cloud: bool,
+) -> Result<Option<JsonUsers>, HttpError> {
+    Ok(if is_bencher_cloud {
+        None
+    } else {
+        Some(connection_lock!(db_connection, |conn| {
+            schema::user::table
+                .filter(schema::user::admin.eq(true))
+                .load::<QueryUser>(conn)
+                .map_err(resource_not_found_err!(User))?
+                .into_iter()
+                .map(QueryUser::into_json)
+                .collect()
+        }))
+    })
+}
+
+async fn get_users(
+    db_connection: &Mutex<DbConnection>,
+    this_week: i64,
+    this_month: i64,
+) -> Result<JsonCohort, HttpError> {
+    let weekly_users = schema::user::table
+        .filter(schema::user::created.ge(this_week))
+        .count()
+        .get_result::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(User))?;
+
+    let monthly_users = schema::user::table
+        .filter(schema::user::created.ge(this_month))
+        .count()
+        .get_result::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(User))?;
+
+    let total_users = schema::user::table
+        .count()
+        .get_result::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(User))?;
+
+    Ok(JsonCohort {
+        week: weekly_users as u64,
+        month: monthly_users as u64,
+        total: total_users as u64,
+    })
+}
+
+async fn get_projects(
+    db_connection: &Mutex<DbConnection>,
+    this_week: i64,
+    this_month: i64,
+) -> Result<JsonCohort, HttpError> {
+    let weekly_projects = schema::project::table
+        .filter(schema::project::created.ge(this_week))
+        .count()
+        .get_result::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(User))?;
+
+    let monthly_projects = schema::project::table
+        .filter(schema::project::created.ge(this_month))
+        .count()
+        .get_result::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(User))?;
+
+    let total_projects = schema::project::table
+        .count()
+        .get_result::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(User))?;
+
+    Ok(JsonCohort {
+        week: weekly_projects as u64,
+        month: monthly_projects as u64,
+        total: total_projects as u64,
     })
 }
 
