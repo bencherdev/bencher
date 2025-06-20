@@ -1,9 +1,11 @@
-#![expect(unused_crate_dependencies)]
-
 use std::str::FromStr as _;
 
+#[cfg(feature = "client")]
+use regex as _;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
+#[cfg(all(test, not(feature = "wasm")))]
+use wasm_bindgen_test as _;
 
 mod benchmark_name;
 mod branch_name;
