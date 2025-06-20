@@ -9,40 +9,74 @@ use crate::{JsonOrganizations, JsonUsers, ProjectUuid};
 
 crate::typed_uuid::typed_uuid!(ServerUuid);
 
+/// A Bencher server instance
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonServer {
+    /// The server UUID
     pub uuid: ServerUuid,
+    /// The date the server was created
     pub created: DateTime,
+    /// The current version of the server
     pub version: Option<String>,
 }
 
+/// Bencher server stats
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonServerStats {
+    /// The Bencher server instance
     pub server: JsonServer,
-    // Timestamp of the stats
+    /// Timestamp of the stats
     pub timestamp: DateTime,
-    // Server organizations
+    /// Server organizations
     pub organizations: Option<JsonOrganizations>,
-    // Server admins
+    /// Server admins
     pub admins: Option<JsonUsers>,
-    // Number of users (created)
+    /// Number of users (created)
     pub users: Option<JsonCohort>,
-    // Number of projects (created)
+    /// Number of projects (created)
     pub projects: Option<JsonCohort>,
-    // Number of projects (with at least one report)
+    /// Number of unclaimed projects (created)
+    pub unclaimed_projects: Option<JsonCohort>,
+    /// Number of claimed projects (created)
+    pub claimed_projects: Option<JsonCohort>,
+    /// Number of active projects (with at least one report)
     pub active_projects: Option<JsonCohort>,
-    // Number of reports (created)
+    /// Number of active unclaimed projects (with at least one report)
+    pub active_unclaimed_projects: Option<JsonCohort>,
+    /// Number of active claimed projects (with at least one report)
+    pub active_claimed_projects: Option<JsonCohort>,
+    /// Number of reports (created)
     pub reports: Option<JsonCohort>,
-    // Number of reports per active project (created)
+    /// Number of unclaimed reports (created)
+    pub unclaimed_reports: Option<JsonCohort>,
+    /// Number of claimed reports (created)
+    pub claimed_reports: Option<JsonCohort>,
+    /// Number of reports per active project (created)
     pub reports_per_project: Option<JsonCohortAvg>,
-    // Number of metrics (created)
+    /// Number of reports per active unclaimed project (created)
+    pub reports_per_unclaimed_project: Option<JsonCohortAvg>,
+    /// Number of reports per active claimed project (created)
+    pub reports_per_claimed_project: Option<JsonCohortAvg>,
+    /// Number of metrics (created)
     pub metrics: Option<JsonCohort>,
-    // Number of metrics per report (created)
+    /// Number of unclaimed metrics (created)
+    pub unclaimed_metrics: Option<JsonCohort>,
+    /// Number of claimed metrics (created)
+    pub claimed_metrics: Option<JsonCohort>,
+    /// Number of metrics per report (created)
     pub metrics_per_report: Option<JsonCohortAvg>,
-    // Top 10 projects
+    /// Number of metrics per unclaimed report (created)
+    pub metrics_per_unclaimed_report: Option<JsonCohortAvg>,
+    /// Number of metrics per claimed report (created)
+    pub metrics_per_claimed_report: Option<JsonCohortAvg>,
+    /// Top 10 projects
     pub top_projects: Option<JsonTopCohort>,
+    /// Top 10 unclaimed projects
+    pub top_unclaimed_projects: Option<JsonTopCohort>,
+    /// Top 10 claimed projects
+    pub top_claimed_projects: Option<JsonTopCohort>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
