@@ -46,7 +46,9 @@ pub async fn server_stats_get(
 async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let query_server = QueryServer::get_server(conn_lock!(context))?;
     let is_bencher_cloud = context.is_bencher_cloud;
-    query_server.get_stats(conn_lock!(context), is_bencher_cloud)
+    query_server
+        .get_stats(&context.database.connection, is_bencher_cloud)
+        .await
 }
 
 // TODO remove in due time
@@ -97,11 +99,12 @@ async fn post_inner(
     slog::info!(log, "Self-Hosted Stats: {server_stats:?}");
     QueryServer::send_stats_to_backend(
         log,
-        conn_lock!(context),
+        &context.database.connection,
         &context.messenger,
         &server_stats,
         Some(json_server_stats.server.uuid),
-    )?;
+    )
+    .await?;
 
     Ok(())
 }

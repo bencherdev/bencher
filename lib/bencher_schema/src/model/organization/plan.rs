@@ -8,9 +8,10 @@ use bencher_json::{
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
+use tokio::sync::Mutex;
 
 use crate::{
-    ApiContext, conn_lock,
+    ApiContext, conn_lock, connection_lock,
     context::DbConnection,
     error::{
         issue_error, not_found_error, payment_required_error, resource_conflict_err,
@@ -403,7 +404,7 @@ pub struct LicenseUsage {
 
 impl LicenseUsage {
     pub async fn get(
-        conn: &tokio::sync::Mutex<DbConnection>,
+        db_connection: &Mutex<DbConnection>,
         licensor: &Licensor,
         query_organization: &QueryOrganization,
     ) -> Result<Option<LicenseUsage>, HttpError> {
@@ -422,7 +423,7 @@ impl LicenseUsage {
         let end_time = token_data.claims.expiration();
 
         let usage = QueryMetric::usage(
-            &mut *conn.lock().await,
+            connection_lock!(db_connection),
             query_organization.id,
             start_time,
             end_time,
@@ -439,20 +440,22 @@ impl LicenseUsage {
     }
 
     pub async fn get_for_server(
-        conn: &tokio::sync::Mutex<DbConnection>,
+        db_connection: &Mutex<DbConnection>,
         licensor: &Licensor,
         min_level: Option<PlanLevel>,
     ) -> Result<Vec<Self>, HttpError> {
         let min_level = min_level.unwrap_or_default();
         let organizations = {
-            let conn = &mut *conn.lock().await;
+            let conn = connection_lock!(db_connection);
             schema::organization::table
                 .load::<QueryOrganization>(conn)
                 .map_err(resource_not_found_err!(Organization))?
         };
         let mut license_usages = Vec::new();
         for query_organization in organizations {
-            if let Ok(Some(license_usage)) = Self::get(conn, licensor, &query_organization).await {
+            if let Ok(Some(license_usage)) =
+                Self::get(db_connection, licensor, &query_organization).await
+            {
                 if license_usage.level >= min_level {
                     license_usages.push(license_usage);
                 }

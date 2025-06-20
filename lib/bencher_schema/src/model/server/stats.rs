@@ -6,8 +6,10 @@ use diesel::{
     ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _, dsl::count,
 };
 use dropshot::HttpError;
+use tokio::sync::Mutex;
 
 use crate::{
+    connection_lock,
     context::DbConnection,
     error::resource_not_found_err,
     model::{organization::QueryOrganization, project::QueryProject, user::QueryUser},
@@ -21,8 +23,8 @@ const THIS_MONTH: i64 = THIS_WEEK * 4;
 const TOP_PROJECTS: usize = 10;
 
 #[expect(clippy::cast_sign_loss, clippy::too_many_lines)]
-pub fn get_stats(
-    conn: &mut DbConnection,
+pub async fn get_stats(
+    db_connection: &Mutex<DbConnection>,
     query_server: QueryServer,
     is_bencher_cloud: bool,
 ) -> Result<JsonServerStats, HttpError> {
@@ -35,47 +37,47 @@ pub fn get_stats(
     let organizations = if is_bencher_cloud {
         None
     } else {
-        Some(
+        Some(connection_lock!(db_connection, |conn| {
             schema::organization::table
                 .load::<QueryOrganization>(conn)
                 .map_err(resource_not_found_err!(Organization))?
                 .into_iter()
                 .map(|org| org.into_json(conn))
-                .collect(),
-        )
+                .collect()
+        }))
     };
 
     // admins
     let admins = if is_bencher_cloud {
         None
     } else {
-        Some(
+        Some(connection_lock!(db_connection, |conn| {
             schema::user::table
                 .filter(schema::user::admin.eq(true))
                 .load::<QueryUser>(conn)
                 .map_err(resource_not_found_err!(User))?
                 .into_iter()
                 .map(QueryUser::into_json)
-                .collect(),
-        )
+                .collect()
+        }))
     };
 
     // users
     let weekly_users = schema::user::table
         .filter(schema::user::created.ge(this_week))
         .select(count(schema::user::id))
-        .first::<i64>(conn)
+        .first::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(User))?;
 
     let monthly_users = schema::user::table
         .filter(schema::user::created.ge(this_month))
         .select(count(schema::user::id))
-        .first::<i64>(conn)
+        .first::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(User))?;
 
     let total_users = schema::user::table
         .select(count(schema::user::id))
-        .first::<i64>(conn)
+        .first::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(User))?;
 
     let users_cohort = JsonCohort {
@@ -88,18 +90,18 @@ pub fn get_stats(
     let weekly_projects = schema::project::table
         .filter(schema::project::created.ge(this_week))
         .select(count(schema::project::id))
-        .first::<i64>(conn)
+        .first::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(User))?;
 
     let monthly_projects = schema::project::table
         .filter(schema::project::created.ge(this_month))
         .select(count(schema::project::id))
-        .first::<i64>(conn)
+        .first::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(User))?;
 
     let total_projects = schema::project::table
         .select(count(schema::project::id))
-        .first::<i64>(conn)
+        .first::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(User))?;
 
     let projects_cohort = JsonCohort {
@@ -113,7 +115,7 @@ pub fn get_stats(
         .filter(schema::report::created.ge(this_week))
         .group_by(schema::report::project_id)
         .select(count(schema::report::id))
-        .load::<i64>(conn)
+        .load::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Report))?;
     let weekly_active_projects = weekly_reports.len();
     let weekly_reports_total: i64 = weekly_reports.iter().sum();
@@ -123,7 +125,7 @@ pub fn get_stats(
         .filter(schema::report::created.ge(this_month))
         .group_by(schema::report::project_id)
         .select(count(schema::report::id))
-        .load::<i64>(conn)
+        .load::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Report))?;
     let monthly_active_projects = monthly_reports.len();
     let monthly_reports_total: i64 = monthly_reports.iter().sum();
@@ -132,7 +134,7 @@ pub fn get_stats(
     let mut total_reports = schema::report::table
         .group_by(schema::report::project_id)
         .select(count(schema::report::id))
-        .load::<i64>(conn)
+        .load::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Report))?;
     let total_active_projects = total_reports.len();
     let total_reports_total: i64 = total_reports.iter().sum();
@@ -162,7 +164,7 @@ pub fn get_stats(
         .filter(schema::report::created.ge(this_week))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
-        .load::<i64>(conn)
+        .load::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Metric))?;
     let weekly_metrics_total: i64 = weekly_metrics.iter().sum();
     let weekly_metrics_per_project = median(&mut weekly_metrics);
@@ -172,7 +174,7 @@ pub fn get_stats(
         .filter(schema::report::created.ge(this_month))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
-        .load::<i64>(conn)
+        .load::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Metric))?;
     let monthly_metrics_total: i64 = monthly_metrics.iter().sum();
     let monthly_metrics_per_project = median(&mut monthly_metrics);
@@ -181,7 +183,7 @@ pub fn get_stats(
         .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
-        .load::<i64>(conn)
+        .load::<i64>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Metric))?;
     let total_metrics_total: i64 = total_metrics.iter().sum();
     let total_metrics_per_project = median(&mut total_metrics);
@@ -207,7 +209,7 @@ pub fn get_stats(
         .filter(schema::report::created.ge(this_week))
         .group_by(schema::project::id)
         .select((QueryProject::as_select(), count(schema::metric::id)))
-        .load::<(QueryProject, i64)>(conn)
+        .load::<(QueryProject, i64)>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Project))?;
     let weekly_project_metrics = top_projects(weekly_project_metrics, weekly_metrics_total);
 
@@ -219,7 +221,7 @@ pub fn get_stats(
         .filter(schema::report::created.ge(this_month))
         .group_by(schema::project::id)
         .select((QueryProject::as_select(), count(schema::metric::id)))
-        .load::<(QueryProject, i64)>(conn)
+        .load::<(QueryProject, i64)>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Project))?;
     let monthly_project_metrics = top_projects(monthly_project_metrics, monthly_metrics_total);
 
@@ -230,7 +232,7 @@ pub fn get_stats(
         )
         .group_by(schema::project::id)
         .select((QueryProject::as_select(), count(schema::metric::id)))
-        .load::<(QueryProject, i64)>(conn)
+        .load::<(QueryProject, i64)>(connection_lock!(db_connection))
         .map_err(resource_not_found_err!(Metric))?;
     let total_project_metrics = top_projects(total_project_metrics, total_metrics_total);
 

@@ -9,7 +9,9 @@ use chrono::{Duration, Utc};
 use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
+use tokio::sync::Mutex;
 
+use crate::connection_lock;
 use crate::{
     API_VERSION,
     context::StatsSettings,
@@ -66,7 +68,7 @@ impl QueryServer {
     pub fn spawn_stats(
         self,
         log: Logger,
-        conn: Arc<tokio::sync::Mutex<DbConnection>>,
+        db_connection: Arc<Mutex<DbConnection>>,
         stats: StatsSettings,
         licensor: Option<Licensor>,
         messenger: Option<Messenger>,
@@ -89,7 +91,12 @@ impl QueryServer {
                 if enabled {
                     slog::info!(log, "Sending stats at {}", Utc::now());
                 } else if let Some(licensor) = licensor.as_ref() {
-                    match LicenseUsage::get_for_server(&conn, licensor, Some(PlanLevel::Team)).await
+                    match LicenseUsage::get_for_server(
+                        &db_connection,
+                        licensor,
+                        Some(PlanLevel::Team),
+                    )
+                    .await
                     {
                         Ok(license_usages) if license_usages.is_empty() => {
                             violations += 1;
@@ -126,8 +133,7 @@ impl QueryServer {
                     sentry::capture_message(err, sentry::Level::Error);
                 }
 
-                let conn = &mut *conn.lock().await;
-                let json_stats = match self.get_stats(conn, messenger.is_some()) {
+                let json_stats = match self.get_stats(&db_connection, messenger.is_some()).await {
                     Ok(json_stats) => json_stats,
                     Err(e) => {
                         slog::error!(log, "Failed to get stats: {e}");
@@ -144,8 +150,14 @@ impl QueryServer {
 
                 if let Some(messenger) = messenger.as_ref() {
                     slog::info!(log, "Bencher Cloud Stats: {json_stats_str:?}");
-                    if let Err(e) =
-                        Self::send_stats_to_backend(&log, conn, messenger, &json_stats_str, None)
+                    if let Err(e) = Self::send_stats_to_backend(
+                        &log,
+                        &db_connection,
+                        messenger,
+                        &json_stats_str,
+                        None,
+                    )
+                    .await
                     {
                         slog::error!(log, "Failed to send stats: {e}");
                     }
@@ -164,23 +176,23 @@ impl QueryServer {
         });
     }
 
-    pub fn get_stats(
+    pub async fn get_stats(
         self,
-        conn: &mut DbConnection,
+        db_connection: &Mutex<DbConnection>,
         is_bencher_cloud: bool,
     ) -> Result<JsonServerStats, HttpError> {
-        stats::get_stats(conn, self, is_bencher_cloud)
+        stats::get_stats(db_connection, self, is_bencher_cloud).await
     }
 
-    pub fn send_stats_to_backend(
+    pub async fn send_stats_to_backend(
         log: &Logger,
-        conn: &mut DbConnection,
+        db_connection: &Mutex<DbConnection>,
         messenger: &Messenger,
         server_stats: &str,
         self_hosted_server: Option<ServerUuid>,
     ) -> Result<(), HttpError> {
         // TODO find a better home for these than my inbox
-        let admins = QueryUser::get_admins(conn)?;
+        let admins = QueryUser::get_admins(connection_lock!(db_connection))?;
         for admin in admins {
             let message = Message {
                 to_name: Some(admin.name.clone().into()),
