@@ -71,8 +71,8 @@ fn single_benchmark<'a>()
     map(
         tuple((
             terminated(recognize(not_line_ending()), line_ending()),
-            // Callgrind tool is always enabled:
-            callgrind_tool_measures(),
+            // Callgrind tool if it was enabled:
+            opt(callgrind_tool_measures()),
             // Add DHAT tool measures if it was enabled:
             opt(dhat_tool_measures()),
         )),
@@ -80,7 +80,7 @@ fn single_benchmark<'a>()
             let benchmark_name = benchmark_name.parse().ok()?;
 
             let mut measures = vec![];
-            measures.extend(callgrind_measures);
+            measures.extend(callgrind_measures.into_iter().flatten());
             measures.extend(dhat_measures.into_iter().flatten());
 
             Some((benchmark_name, measures))
@@ -94,12 +94,12 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
         preceded(
             opt(tool_name_line("CALLGRIND")),
             tuple((
-                metric_line(iai_callgrind::Instructions::NAME_STR),
-                metric_line(iai_callgrind::L1Hits::NAME_STR),
-                metric_line(iai_callgrind::L2Hits::NAME_STR),
-                metric_line(iai_callgrind::RamHits::NAME_STR),
-                metric_line(iai_callgrind::TotalReadWrite::NAME_STR),
-                metric_line(iai_callgrind::EstimatedCycles::NAME_STR),
+                opt(metric_line(iai_callgrind::Instructions::NAME_STR)),
+                opt(metric_line(iai_callgrind::L1Hits::NAME_STR)),
+                opt(metric_line(iai_callgrind::L2Hits::NAME_STR)),
+                opt(metric_line(iai_callgrind::RamHits::NAME_STR)),
+                opt(metric_line(iai_callgrind::TotalReadWrite::NAME_STR)),
+                opt(metric_line(iai_callgrind::EstimatedCycles::NAME_STR)),
                 opt(metric_line(iai_callgrind::GlobalBusEvents::NAME_STR)),
             )),
         ),
@@ -113,12 +113,12 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
             global_bus_events,
         )| {
             [
-                Some(IaiCallgrindMeasure::Instructions(instructions)),
-                Some(IaiCallgrindMeasure::L1Hits(l1_hits)),
-                Some(IaiCallgrindMeasure::L2Hits(l2_hits)),
-                Some(IaiCallgrindMeasure::RamHits(ram_hits)),
-                Some(IaiCallgrindMeasure::TotalReadWrite(total_read_write)),
-                Some(IaiCallgrindMeasure::EstimatedCycles(estimated_cycles)),
+                instructions.map(IaiCallgrindMeasure::Instructions),
+                l1_hits.map(IaiCallgrindMeasure::L1Hits),
+                l2_hits.map(IaiCallgrindMeasure::L2Hits),
+                ram_hits.map(IaiCallgrindMeasure::RamHits),
+                total_read_write.map(IaiCallgrindMeasure::TotalReadWrite),
+                estimated_cycles.map(IaiCallgrindMeasure::EstimatedCycles),
                 global_bus_events.map(IaiCallgrindMeasure::GlobalBusEvents),
             ]
             .into_iter()
