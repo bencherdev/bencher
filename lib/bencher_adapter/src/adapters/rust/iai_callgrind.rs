@@ -1,3 +1,5 @@
+use std::ops::Neg as _;
+
 use bencher_json::{
     BenchmarkName, JsonNewMetric,
     project::{
@@ -9,7 +11,7 @@ use nom::{
     IResult,
     branch::alt,
     bytes::complete::{is_a, is_not, tag},
-    character::complete::{space0, space1},
+    character::complete::{char, space0, space1},
     combinator::{map, opt, recognize},
     multi::{many0, many1},
     sequence::{delimited, preceded, terminated, tuple},
@@ -20,8 +22,6 @@ use crate::{
     adapters::util::parse_f64,
     results::adapter_results::{AdapterResults, IaiCallgrindMeasure},
 };
-
-// TODO: char instead of single character tags ??
 
 pub struct AdapterRustIaiCallgrind;
 
@@ -238,42 +238,33 @@ fn tool_name_line<'a>(tool_name: &'static str) -> impl FnMut(&'a str) -> IResult
     )
 }
 
-// TODO: char instead of tag
 fn metric_line<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (String, JsonNewMetric)> {
     map(
         tuple((
-            space0,
+            space1,
             is_not(":\r\n"),
-            tag(":"),
+            char(':'),
             space1,
             // the current run value:
             parse_f64,
-            tag("|"),
+            char('|'),
             alt((
                 // No previous run:
-                // TODO: USE delimiter instead of tag
-                recognize(tuple((tag("N/A"), space1, tag("(*********)")))),
+                recognize(tuple((
+                    tag("N/A"),
+                    space1,
+                    delimited(char('('), many1(char('*')), char(')')),
+                ))),
                 // Comparison to previous run:
                 recognize(tuple((
                     parse_f64,
                     space0,
                     alt((
-                        // TODO: USE delimiter instead of tag
-                        recognize(tag("(No change)")),
+                        recognize(delimited(char('('), tag("No change"), char(')'))),
                         recognize(tuple((
-                            // TODO: infinity??
-                            delimited(
-                                tag("("),
-                                tuple((alt((tag("+"), tag("-"))), parse_f64, tag("%"))),
-                                tag(")"),
-                            ),
+                            delimited(char('('), alt((infinity, percent)), char(')')),
                             space1,
-                            // TODO: infinity
-                            delimited(
-                                tag("["),
-                                tuple((alt((tag("+"), tag("-"))), parse_f64, tag("x"))),
-                                tag("]"),
-                            ),
+                            delimited(char('['), alt((infinity, factor)), char(']')),
                         ))),
                     )),
                 ))),
@@ -291,6 +282,52 @@ fn metric_line<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (String, JsonNew
             )
         },
     )
+}
+
+fn infinity(input: &str) -> IResult<&str, f64> {
+    map(
+        tuple((
+            alt((many1(char('+')), many1(char('-')))),
+            tag("inf"),
+            alt((many1(char('+')), many1(char('-')))),
+        )),
+        |(signs, _, _)| {
+            // The indexing is safe due to the usage of `many1` above
+            #[expect(clippy::indexing_slicing)]
+            let sign = signs[0];
+            if sign == '+' {
+                f64::INFINITY
+            } else {
+                f64::NEG_INFINITY
+            }
+        },
+    )(input)
+}
+
+fn factor(input: &str) -> IResult<&str, f64> {
+    map(
+        tuple((alt((char('+'), char('-'))), parse_f64, char('x'))),
+        |(sign, num, _)| {
+            if sign == '+' {
+                num
+            } else {
+                num.neg()
+            }
+        },
+    )(input)
+}
+
+fn percent(input: &str) -> IResult<&str, f64> {
+    map(
+        tuple((alt((char('+'), char('-'))), parse_f64, char('%'))),
+        |(sign, num, _)| {
+            if sign == '+' {
+                num
+            } else {
+                num.neg()
+            }
+        },
+    )(input)
 }
 
 fn line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
@@ -372,7 +409,41 @@ pub(crate) mod test_rust_iai_callgrind {
             "./tool_output/rust/iai_callgrind/delta.txt",
         );
 
-        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected = HashMap::from([
+                (iai_callgrind::Instructions::SLUG_STR, 1_734.0),
+                (iai_callgrind::L1Hits::SLUG_STR, 2_359.0),
+                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
+                (iai_callgrind::RamHits::SLUG_STR, 3.0),
+                (iai_callgrind::TotalReadWrite::SLUG_STR, 0.0),
+                (iai_callgrind::EstimatedCycles::SLUG_STR, 2_464.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (iai_callgrind::Instructions::SLUG_STR, 26_214_734.0),
+                (iai_callgrind::L1Hits::SLUG_STR, 35_638_619.0),
+                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
+                (iai_callgrind::RamHits::SLUG_STR, 3.0),
+                (iai_callgrind::TotalReadWrite::SLUG_STR, 35_638_622.0),
+                (iai_callgrind::EstimatedCycles::SLUG_STR, 35_638_724.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30",
+            );
+        }
     }
 
     #[test]
