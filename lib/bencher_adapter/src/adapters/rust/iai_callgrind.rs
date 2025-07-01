@@ -82,18 +82,16 @@ fn single_benchmark<'a>()
                 ))),
                 line_ending(),
             ),
-            // TODO: permutation. The order isn't fixed
-            // Callgrind tool if it was enabled:
-            opt(callgrind_tool_measures()),
-            // Add DHAT tool measures if it was enabled:
-            opt(dhat_tool_measures()),
+            many0(alt((
+                // Callgrind tool if it was enabled:
+                callgrind_tool_measures(),
+                // Add DHAT tool measures if it was enabled:
+                dhat_tool_measures(),
+            ))),
         )),
-        |(benchmark_name, callgrind_measures, dhat_measures)| {
+        |(benchmark_name, measures)| {
             let benchmark_name = benchmark_name.parse().ok()?;
-
-            let mut measures = vec![];
-            measures.extend(callgrind_measures.into_iter().flatten());
-            measures.extend(dhat_measures.into_iter().flatten());
+            let measures = measures.into_iter().flatten().collect();
 
             Some((benchmark_name, measures))
         },
@@ -103,7 +101,7 @@ fn single_benchmark<'a>()
 fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
 {
     map(
-        preceded(opt(tool_name_line("CALLGRIND")), many0(metric_line())),
+        preceded(opt(tool_name_line("CALLGRIND")), many1(metric_line())),
         |metrics| {
             metrics
                 .into_iter()
@@ -206,7 +204,7 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
 
 fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
     map(
-        preceded(tool_name_line("DHAT"), many0(metric_line())),
+        preceded(tool_name_line("DHAT"), many1(metric_line())),
         |metrics| {
             metrics
                 .into_iter()
@@ -327,6 +325,21 @@ pub(crate) mod test_rust_iai_callgrind {
     fn test_with_dhat() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/with-dhat.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(
+            &results,
+            &OptionalMetrics {
+                dhat: true,
+                ..Default::default()
+            },
+        );
+    }
+
+    #[test]
+    fn test_with_dhat_first_then_callgrind() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/dhat-then-callgrind.txt",
         );
 
         validate_adapter_rust_iai_callgrind(

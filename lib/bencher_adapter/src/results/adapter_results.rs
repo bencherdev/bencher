@@ -344,9 +344,8 @@ impl AdapterResults {
                     IaiCallgrindMeasure::WritesBytes(json_metric) => {
                         (built_in::iai_callgrind::WritesBytes::name_id(), json_metric)
                     },
-                    // TODO: return None or add an Unknown metric?
-                    IaiCallgrindMeasure::Unknown(json_metric) => {
-                        (built_in::iai_callgrind::Unknown::name_id(), json_metric)
+                    IaiCallgrindMeasure::Unknown(_) => {
+                        continue;
                     },
                 };
                 metrics_value.inner.insert(resource_id, metric);
