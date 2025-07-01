@@ -17,7 +17,7 @@ use nom::{
 
 use crate::{
     Adaptable, Settings,
-    adapters::util::{parse_f64, parse_u64},
+    adapters::util::parse_f64,
     results::adapter_results::{AdapterResults, IaiCallgrindMeasure},
 };
 
@@ -88,11 +88,11 @@ fn single_benchmark<'a>()
             // Add DHAT tool measures if it was enabled:
             opt(dhat_tool_measures()),
         )),
-        |(benchmark_name, callgrind_measures_1, dhat_measures)| {
+        |(benchmark_name, callgrind_measures, dhat_measures)| {
             let benchmark_name = benchmark_name.parse().ok()?;
 
             let mut measures = vec![];
-            measures.extend(callgrind_measures_1.into_iter().flatten());
+            measures.extend(callgrind_measures.into_iter().flatten());
             measures.extend(dhat_measures.into_iter().flatten());
 
             Some((benchmark_name, measures))
@@ -206,41 +206,28 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
 
 fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
     map(
-        preceded(
-            // TODO: not opt
-            opt(tool_name_line("DHAT")),
-            tuple((
-                // TODO: all opt
-                metric_line_u64(iai_callgrind::TotalBytes::NAME_STR),
-                metric_line_u64(iai_callgrind::TotalBlocks::NAME_STR),
-                metric_line_u64(iai_callgrind::AtTGmaxBytes::NAME_STR),
-                metric_line_u64(iai_callgrind::AtTGmaxBlocks::NAME_STR),
-                metric_line_u64(iai_callgrind::AtTEndBytes::NAME_STR),
-                metric_line_u64(iai_callgrind::AtTEndBlocks::NAME_STR),
-                metric_line_u64(iai_callgrind::ReadsBytes::NAME_STR),
-                metric_line_u64(iai_callgrind::WritesBytes::NAME_STR),
-            )),
-        ),
-        |(
-            total_bytes,
-            total_blocks,
-            at_t_gmax_bytes,
-            at_t_gmax_blocks,
-            at_t_end_bytes,
-            at_t_end_blocks,
-            reads_bytes,
-            writes_bytes,
-        )| {
-            vec![
-                IaiCallgrindMeasure::TotalBytes(total_bytes),
-                IaiCallgrindMeasure::TotalBlocks(total_blocks),
-                IaiCallgrindMeasure::AtTGmaxBytes(at_t_gmax_bytes),
-                IaiCallgrindMeasure::AtTGmaxBlocks(at_t_gmax_blocks),
-                IaiCallgrindMeasure::AtTEndBytes(at_t_end_bytes),
-                IaiCallgrindMeasure::AtTEndBlocks(at_t_end_blocks),
-                IaiCallgrindMeasure::ReadsBytes(reads_bytes),
-                IaiCallgrindMeasure::WritesBytes(writes_bytes),
-            ]
+        preceded(tool_name_line("DHAT"), many0(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::TotalBytes::NAME_STR => IaiCallgrindMeasure::TotalBytes(json),
+                    iai_callgrind::TotalBlocks::NAME_STR => IaiCallgrindMeasure::TotalBlocks(json),
+                    iai_callgrind::AtTGmaxBytes::NAME_STR => {
+                        IaiCallgrindMeasure::AtTGmaxBytes(json)
+                    },
+                    iai_callgrind::AtTGmaxBlocks::NAME_STR => {
+                        IaiCallgrindMeasure::AtTGmaxBlocks(json)
+                    },
+                    iai_callgrind::AtTEndBytes::NAME_STR => IaiCallgrindMeasure::AtTEndBytes(json),
+                    iai_callgrind::AtTEndBlocks::NAME_STR => {
+                        IaiCallgrindMeasure::AtTEndBlocks(json)
+                    },
+                    iai_callgrind::ReadsBytes::NAME_STR => IaiCallgrindMeasure::ReadsBytes(json),
+                    iai_callgrind::WritesBytes::NAME_STR => IaiCallgrindMeasure::WritesBytes(json),
+                    _ => IaiCallgrindMeasure::Unknown(json),
+                })
+                .collect()
         },
     )
 }
@@ -304,54 +291,6 @@ fn metric_line<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (String, JsonNew
                     upper_value: None,
                 },
             )
-        },
-    )
-}
-
-fn metric_line_u64<'a>(
-    measure_name: &'static str,
-) -> impl FnMut(&'a str) -> IResult<&'a str, JsonNewMetric> {
-    map(
-        tuple((
-            space0,
-            tag(measure_name),
-            tag(":"),
-            space1,
-            // the current run value:
-            parse_u64,
-            tag("|"),
-            alt((
-                // No previous run:
-                recognize(tuple((tag("N/A"), space1, tag("(*********)")))),
-                // Comparison to previous run:
-                recognize(tuple((
-                    parse_u64,
-                    space0,
-                    alt((
-                        recognize(tag("(No change)")),
-                        recognize(tuple((
-                            delimited(
-                                tag("("),
-                                tuple((alt((tag("+"), tag("-"))), parse_f64, tag("%"))),
-                                tag(")"),
-                            ),
-                            space1,
-                            delimited(
-                                tag("["),
-                                tuple((alt((tag("+"), tag("-"))), parse_f64, tag("x"))),
-                                tag("]"),
-                            ),
-                        ))),
-                    )),
-                ))),
-            )),
-            line_ending(),
-        )),
-        |(_, _, _, _, current_value, _, _, _)| JsonNewMetric {
-            #[expect(clippy::cast_precision_loss)]
-            value: (current_value as f64).into(),
-            lower_value: None,
-            upper_value: None,
         },
     )
 }
@@ -698,7 +637,6 @@ pub(crate) mod test_rust_iai_callgrind {
         benchmark_name: &str,
     ) {
         let actual = results.get(benchmark_name).unwrap();
-        dbg!(&actual);
         assert_eq!(actual.inner.len(), expected.len());
 
         for (key, value) in expected {
