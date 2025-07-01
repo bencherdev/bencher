@@ -1,0 +1,86 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+rust_iai_callgrind::custom_format::callgrind_format all_with_wb
+  Instructions:                           1|N/A                  (*********)
+  Dr:                                     2|N/A                  (*********)
+  Dw:                                     3|N/A                  (*********)
+  I1mr:                                   4|N/A                  (*********)
+  D1mr:                                   5|N/A                  (*********)
+  D1mw:                                   6|N/A                  (*********)
+  ILmr:                                   7|N/A                  (*********)
+  DLmr:                                   8|N/A                  (*********)
+  DLmw:                                   9|N/A                  (*********)
+  I1 Miss Rate:                     10.0000|N/A                  (*********)
+  LLi Miss Rate:                    11.0000|N/A                  (*********)
+  D1 Miss Rate:                     12.0000|N/A                  (*********)
+  LLd Miss Rate:                    13.0000|N/A                  (*********)
+  LL Miss Rate:                     14.0000|N/A                  (*********)
+  L1 Hits:                               15|N/A                  (*********)
+  L2 Hits:                               16|N/A                  (*********)
+  RAM Hits:                              17|N/A                  (*********)
+  L1 Hit Rate:                      18.0000|N/A                  (*********)
+  LL Hit Rate:                      19.0000|N/A                  (*********)
+  Ram Hit Rate:                     20.0000|N/A                  (*********)
+  Total read+write:                      21|N/A                  (*********)
+  Estimated Cycles:                      22|N/A                  (*********)
+  SysCount:                              23|N/A                  (*********)
+  SysTime:                               24|N/A                  (*********)
+  SysCpuTime:                            25|N/A                  (*********)
+  Ge:                                    26|N/A                  (*********)
+  Bc:                                    27|N/A                  (*********)
+  Bcm:                                   28|N/A                  (*********)
+  Bi:                                    29|N/A                  (*********)
+  Bim:                                   30|N/A                  (*********)
+  ILdmr:                                 31|N/A                  (*********)
+  DLdmr:                                 32|N/A                  (*********)
+  DLdmw:                                 33|N/A                  (*********)
+rust_iai_callgrind::custom_format::callgrind_format all_with_cachuse
+  Instructions:                           1|N/A                  (*********)
+  Dr:                                     2|N/A                  (*********)
+  Dw:                                     3|N/A                  (*********)
+  I1mr:                                   4|N/A                  (*********)
+  D1mr:                                   5|N/A                  (*********)
+  D1mw:                                   6|N/A                  (*********)
+  ILmr:                                   7|N/A                  (*********)
+  DLmr:                                   8|N/A                  (*********)
+  DLmw:                                   9|N/A                  (*********)
+  I1 Miss Rate:                     10.0000|N/A                  (*********)
+  LLi Miss Rate:                    11.0000|N/A                  (*********)
+  D1 Miss Rate:                     12.0000|N/A                  (*********)
+  LLd Miss Rate:                    13.0000|N/A                  (*********)
+  LL Miss Rate:                     14.0000|N/A                  (*********)
+  L1 Hits:                               15|N/A                  (*********)
+  L2 Hits:                               16|N/A                  (*********)
+  RAM Hits:                              17|N/A                  (*********)
+  L1 Hit Rate:                      18.0000|N/A                  (*********)
+  LL Hit Rate:                      19.0000|N/A                  (*********)
+  Ram Hit Rate:                     20.0000|N/A                  (*********)
+  Total read+write:                      21|N/A                  (*********)
+  Estimated Cycles:                      22|N/A                  (*********)
+  SysCount:                              23|N/A                  (*********)
+  SysTime:                               24|N/A                  (*********)
+  SysCpuTime:                            25|N/A                  (*********)
+  Ge:                                    26|N/A                  (*********)
+  Bc:                                    27|N/A                  (*********)
+  Bcm:                                   28|N/A                  (*********)
+  Bi:                                    29|N/A                  (*********)
+  Bim:                                   30|N/A                  (*********)
+  AcCost1:                               31|N/A                  (*********)
+  AcCost2:                               32|N/A                  (*********)
+  SpLoss1:                               33|N/A                  (*********)
+  SpLoss2:                               34|N/A                  (*********)
+
+
+
+
+
+
+
+
+
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...
