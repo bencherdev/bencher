@@ -1,16 +1,16 @@
 use std::{collections::HashMap, str::FromStr as _};
 
 use bencher_json::{
+    BenchmarkName, JsonNewMetric,
     project::{
         measure::built_in::{self, BuiltInMeasure as _},
         metric::Mean,
     },
-    BenchmarkName, JsonNewMetric,
 };
 use literally::hmap;
 use serde::{Deserialize, Serialize};
 
-use super::{adapter_metrics::AdapterMetrics, CombinedKind};
+use super::{CombinedKind, adapter_metrics::AdapterMetrics};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdapterResults {

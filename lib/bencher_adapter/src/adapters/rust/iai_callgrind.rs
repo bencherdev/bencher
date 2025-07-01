@@ -308,11 +308,7 @@ fn factor(input: &str) -> IResult<&str, f64> {
     map(
         tuple((alt((char('+'), char('-'))), parse_f64, char('x'))),
         |(sign, num, _)| {
-            if sign == '+' {
-                num
-            } else {
-                num.neg()
-            }
+            if sign == '+' { num } else { num.neg() }
         },
     )(input)
 }
@@ -321,11 +317,7 @@ fn percent(input: &str) -> IResult<&str, f64> {
     map(
         tuple((alt((char('+'), char('-'))), parse_f64, char('%'))),
         |(sign, num, _)| {
-            if sign == '+' {
-                num
-            } else {
-                num.neg()
-            }
+            if sign == '+' { num } else { num.neg() }
         },
     )(input)
 }
