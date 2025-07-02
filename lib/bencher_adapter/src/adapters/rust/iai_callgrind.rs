@@ -85,6 +85,8 @@ fn single_benchmark<'a>()
             many0(alt((
                 // Callgrind tool if it was enabled:
                 callgrind_tool_measures(),
+                // Cachegrind tool if it was enabled:
+                cachegrind_tool_measures(),
                 // Add DHAT tool measures if it was enabled:
                 dhat_tool_measures(),
             ))),
@@ -197,6 +199,72 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
                     iai_callgrind::SpLoss2::NAME_STR => {
                         IaiCallgrindMeasure::LLBadSpatialLocality(json)
                     },
+                    _ => IaiCallgrindMeasure::Unknown(json),
+                })
+                .collect()
+        },
+    )
+}
+
+fn cachegrind_tool_measures<'a>()
+-> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
+    map(
+        preceded(tool_name_line("CACHEGRIND"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::Instructions::NAME_STR => {
+                        IaiCallgrindMeasure::Instructions(json)
+                    },
+                    iai_callgrind::L1Hits::NAME_STR => IaiCallgrindMeasure::L1Hits(json),
+                    iai_callgrind::L2Hits::NAME_STR => IaiCallgrindMeasure::L2Hits(json),
+                    iai_callgrind::LLHits::NAME_STR => IaiCallgrindMeasure::LLHits(json),
+                    iai_callgrind::RamHits::NAME_STR => IaiCallgrindMeasure::RamHits(json),
+                    iai_callgrind::TotalReadWrite::NAME_STR => {
+                        IaiCallgrindMeasure::TotalReadWrite(json)
+                    },
+                    iai_callgrind::EstimatedCycles::NAME_STR => {
+                        IaiCallgrindMeasure::EstimatedCycles(json)
+                    },
+                    iai_callgrind::Dr::NAME_STR => IaiCallgrindMeasure::DataCacheReads(json),
+                    iai_callgrind::Dw::NAME_STR => IaiCallgrindMeasure::DataCacheWrites(json),
+                    iai_callgrind::I1mr::NAME_STR => {
+                        IaiCallgrindMeasure::L1InstrCacheReadMisses(json)
+                    },
+                    iai_callgrind::D1mr::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheReadMisses(json)
+                    },
+                    iai_callgrind::D1mw::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheWriteMisses(json)
+                    },
+                    iai_callgrind::ILmr::NAME_STR => {
+                        IaiCallgrindMeasure::LLInstrCacheReadMisses(json)
+                    },
+                    iai_callgrind::DLmr::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheReadMisses(json)
+                    },
+                    iai_callgrind::DLmw::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheWriteMisses(json)
+                    },
+                    iai_callgrind::I1MissRate::NAME_STR => {
+                        IaiCallgrindMeasure::L1InstrCacheMissRate(json)
+                    },
+                    iai_callgrind::LLiMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLInstrCacheMissRate(json)
+                    },
+                    iai_callgrind::D1MissRate::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheMissRate(json)
+                    },
+                    iai_callgrind::LLdMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheMissRate(json)
+                    },
+                    iai_callgrind::LLMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLCacheMissRate(json)
+                    },
+                    iai_callgrind::L1HitRate::NAME_STR => IaiCallgrindMeasure::L1HitRate(json),
+                    iai_callgrind::LLHitRate::NAME_STR => IaiCallgrindMeasure::LLHitRate(json),
+                    iai_callgrind::RamHitRate::NAME_STR => IaiCallgrindMeasure::RamHitRate(json),
                     _ => IaiCallgrindMeasure::Unknown(json),
                 })
                 .collect()
@@ -651,6 +719,75 @@ pub(crate) mod test_rust_iai_callgrind {
                 &expected,
                 &results,
                 "rust_iai_callgrind::custom_format::callgrind_format all_with_cachuse",
+            );
+        }
+    }
+
+    #[test]
+    fn test_cachegrind() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/cachegrind.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let expected = HashMap::from([(Instructions::SLUG_STR, 1.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::cachegrind_format just_instructions",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (I1MissRate::SLUG_STR, 1.0),
+                (Dr::SLUG_STR, 2.0),
+                (EstimatedCycles::SLUG_STR, 3.0),
+                (TotalReadWrite::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::cachegrind_format metrics_mixed",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (Instructions::SLUG_STR, 1.0),
+                (Dr::SLUG_STR, 2.0),
+                (Dw::SLUG_STR, 3.0),
+                (I1mr::SLUG_STR, 4.0),
+                (D1mr::SLUG_STR, 5.0),
+                (D1mw::SLUG_STR, 6.0),
+                (ILmr::SLUG_STR, 7.0),
+                (DLmr::SLUG_STR, 8.0),
+                (DLmw::SLUG_STR, 9.0),
+                (I1MissRate::SLUG_STR, 10.0),
+                (LLiMissRate::SLUG_STR, 11.0),
+                (D1MissRate::SLUG_STR, 12.0),
+                (LLdMissRate::SLUG_STR, 13.0),
+                (LLMissRate::SLUG_STR, 14.0),
+                (L1Hits::SLUG_STR, 15.0),
+                (L2Hits::SLUG_STR, 16.0),
+                (RamHits::SLUG_STR, 17.0),
+                (L1HitRate::SLUG_STR, 18.0),
+                (LLHitRate::SLUG_STR, 19.0),
+                (RamHitRate::SLUG_STR, 20.0),
+                (TotalReadWrite::SLUG_STR, 21.0),
+                (EstimatedCycles::SLUG_STR, 22.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::cachegrind_format all_metrics",
             );
         }
     }
