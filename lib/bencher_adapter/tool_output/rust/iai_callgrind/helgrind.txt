@@ -1,0 +1,31 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+rust_iai_callgrind::custom_format::helgrind_format just_errors
+  ======= HELGRIND =========================================================
+  Errors:                                 1|N/A                  (*********)
+rust_iai_callgrind::custom_format::helgrind_format metrics_mixed
+  ======= HELGRIND =========================================================
+  Contexts:                               1|N/A                  (*********)
+  Suppressed Contexts:                    2|N/A                  (*********)
+  Suppressed Errors:                      3|N/A                  (*********)
+  Errors:                                 4|N/A                  (*********)
+rust_iai_callgrind::custom_format::helgrind_format all_metrics
+  ======= HELGRIND =========================================================
+  Errors:                                 1|N/A                  (*********)
+  Contexts:                               2|N/A                  (*********)
+  Suppressed Errors:                      3|N/A                  (*********)
+  Suppressed Contexts:                    4|N/A                  (*********)
+
+
+
+
+
+
+
+
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...
