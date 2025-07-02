@@ -84,7 +84,7 @@ pub mod iai_callgrind {
 
     create_measure!(Unknown, "Unknown", "unknown-metric", "unknown");
 
-    // Callgrind
+    // Callgrind and Cachegrind
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Hits, "L1 Hits", "l1-hits", "hits");
     create_measure!(L2Hits, "L2 Hits", "l2-hits", "hits");
@@ -104,36 +104,36 @@ pub mod iai_callgrind {
     );
     create_measure!(GlobalBusEvents, "Ge", "global-bus-events", "events");
 
-    create_measure!(Dr, "Dr", "dr", "dr");
-    create_measure!(Dw, "Dw", "dw", "dw");
-    create_measure!(I1mr, "I1mr", "i1mr", "i1mr");
-    create_measure!(D1mr, "D1mr", "d1mr", "d1mr");
-    create_measure!(D1mw, "D1mw", "d1mw", "d1mw");
-    create_measure!(ILmr, "ILmr", "ilmr", "ilmr");
-    create_measure!(DLmr, "DLmr", "dlmr", "dlmr");
-    create_measure!(DLmw, "DLmw", "dlmw", "dlmw");
-    create_measure!(I1MissRate, "I1 Miss Rate", "i1-miss-rate", "missrate");
-    create_measure!(LLiMissRate, "LLi Miss Rate", "lli-miss-rate", "missrate");
-    create_measure!(D1MissRate, "D1 Miss Rate", "d1-miss-rate", "missrate");
-    create_measure!(LLdMissRate, "LLd Miss Rate", "lld-miss-rate", "missrate");
-    create_measure!(LLMissRate, "LL Miss Rate", "ll-miss-rate", "missrate");
-    create_measure!(L1HitRate, "L1 Hit Rate", "l1-hit-rate", "hitrate");
-    create_measure!(LLHitRate, "LL Hit Rate", "ll-hit-rate", "hitrate");
-    create_measure!(RamHitRate, "RAM Hit Rate", "ram-hit-rate", "hitrate");
-    create_measure!(SysCount, "SysCount", "sys-count", "sys");
-    create_measure!(SysTime, "SysTime", "sys-time", "sys");
-    create_measure!(SysCpuTime, "SysCpuTime", "sys-cpu-time", "sys");
-    create_measure!(Bc, "Bc", "bc", "bc");
-    create_measure!(Bcm, "Bcm", "bcm", "bcm");
-    create_measure!(Bi, "Bi", "bi", "bi");
-    create_measure!(Bim, "Bim", "bim", "bim");
-    create_measure!(ILdmr, "ILdmr", "ildmr", "ildmr");
-    create_measure!(DLdmr, "DLdmr", "dldmr", "dldmr");
-    create_measure!(DLdmw, "DLdmw", "dldmw", "dldmw");
-    create_measure!(AcCost1, "AcCost1", "accost1", "accost1");
-    create_measure!(AcCost2, "AcCost2", "accost2", "accost2");
-    create_measure!(SpLoss1, "SpLoss1", "sploss1", "sploss1");
-    create_measure!(SpLoss2, "SpLoss2", "sploss2", "sploss2");
+    create_measure!(Dr, "Dr", "dr", "reads");
+    create_measure!(Dw, "Dw", "dw", "writes");
+    create_measure!(I1mr, "I1mr", "i1mr", "misses (reads)");
+    create_measure!(D1mr, "D1mr", "d1mr", "misses (reads)");
+    create_measure!(D1mw, "D1mw", "d1mw", "misses (writes)");
+    create_measure!(ILmr, "ILmr", "ilmr", "misses (reads)");
+    create_measure!(DLmr, "DLmr", "dlmr", "misses (reads)");
+    create_measure!(DLmw, "DLmw", "dlmw", "misses (writes)");
+    create_measure!(I1MissRate, "I1 Miss Rate", "i1-miss-rate", "misses (%)");
+    create_measure!(LLiMissRate, "LLi Miss Rate", "lli-miss-rate", "misses (%)");
+    create_measure!(D1MissRate, "D1 Miss Rate", "d1-miss-rate", "misses (%)");
+    create_measure!(LLdMissRate, "LLd Miss Rate", "lld-miss-rate", "misses (%)");
+    create_measure!(LLMissRate, "LL Miss Rate", "ll-miss-rate", "misses (%)");
+    create_measure!(L1HitRate, "L1 Hit Rate", "l1-hit-rate", "hits (%)");
+    create_measure!(LLHitRate, "LL Hit Rate", "ll-hit-rate", "hits (%)");
+    create_measure!(RamHitRate, "RAM Hit Rate", "ram-hit-rate", "hits (%)");
+    create_measure!(SysCount, "SysCount", "sys-count", "syscalls");
+    create_measure!(SysTime, "SysTime", "sys-time", "msec/usec/nsec");
+    create_measure!(SysCpuTime, "SysCpuTime", "sys-cpu-time", "nsec");
+    create_measure!(Bc, "Bc", "bc", "branches");
+    create_measure!(Bcm, "Bcm", "bcm", "branches");
+    create_measure!(Bi, "Bi", "bi", "branches");
+    create_measure!(Bim, "Bim", "bim", "branches");
+    create_measure!(ILdmr, "ILdmr", "ildmr", "misses (reads)");
+    create_measure!(DLdmr, "DLdmr", "dldmr", "misses (reads)");
+    create_measure!(DLdmw, "DLdmw", "dldmw", "misses (writes)");
+    create_measure!(AcCost1, "AcCost1", "accost1", "temporal locality count");
+    create_measure!(AcCost2, "AcCost2", "accost2", "temporal locality count");
+    create_measure!(SpLoss1, "SpLoss1", "sploss1", "spatial loss count");
+    create_measure!(SpLoss2, "SpLoss2", "sploss2", "spatial loss count");
 
     // DHAT
     create_measure!(TotalBytes, "Total bytes", "total-bytes", BYTES);
