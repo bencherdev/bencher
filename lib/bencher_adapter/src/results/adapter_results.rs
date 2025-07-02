@@ -106,6 +106,14 @@ pub enum IaiCallgrindMeasure {
     MemcheckSuppressedContexts(JsonNewMetric),
 
     /*
+     * Helgrind tool:
+     */
+    HelgrindErrors(JsonNewMetric),
+    HelgrindContexts(JsonNewMetric),
+    HelgrindSuppressedErrors(JsonNewMetric),
+    HelgrindSuppressedContexts(JsonNewMetric),
+
+    /*
      * Unknown
      */
     Unknown(JsonNewMetric),
@@ -211,6 +219,7 @@ impl AdapterResults {
                 .or_insert_with(AdapterMetrics::default);
             for metric in metrics {
                 let (resource_id, metric) = match metric {
+                    // Callgrind/Cachgrind
                     IaiCallgrindMeasure::Instructions(json_metric) => (
                         built_in::iai_callgrind::Instructions::name_id(),
                         json_metric,
@@ -329,6 +338,7 @@ impl AdapterResults {
                     IaiCallgrindMeasure::LLBadSpatialLocality(json_metric) => {
                         (built_in::iai_callgrind::SpLoss2::name_id(), json_metric)
                     },
+                    // DHAT
                     IaiCallgrindMeasure::TotalBytes(json_metric) => {
                         (built_in::iai_callgrind::TotalBytes::name_id(), json_metric)
                     },
@@ -356,6 +366,7 @@ impl AdapterResults {
                     IaiCallgrindMeasure::WritesBytes(json_metric) => {
                         (built_in::iai_callgrind::WritesBytes::name_id(), json_metric)
                     },
+                    // Memcheck
                     IaiCallgrindMeasure::MemcheckErrors(json_metric) => (
                         built_in::iai_callgrind::MemcheckErrors::name_id(),
                         json_metric,
@@ -372,6 +383,23 @@ impl AdapterResults {
                         built_in::iai_callgrind::MemcheckSuppressedContexts::name_id(),
                         json_metric,
                     ),
+                    // Helgrind
+                    IaiCallgrindMeasure::HelgrindErrors(json_metric) => (
+                        built_in::iai_callgrind::HelgrindErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::HelgrindContexts(json_metric) => (
+                        built_in::iai_callgrind::HelgrindContexts::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::HelgrindSuppressedErrors(json_metric) => (
+                        built_in::iai_callgrind::HelgrindSuppressedErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::HelgrindSuppressedContexts(json_metric) => (
+                        built_in::iai_callgrind::HelgrindSuppressedContexts::name_id(),
+                        json_metric,
+                    ),
                     IaiCallgrindMeasure::Unknown(_) => {
                         continue;
                     },
@@ -380,6 +408,7 @@ impl AdapterResults {
             }
         }
 
+        // TODO: Can be empty if only unknown metrics were encountered
         Some(results_map.into())
     }
 

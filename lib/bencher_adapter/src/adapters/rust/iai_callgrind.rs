@@ -91,6 +91,8 @@ fn single_benchmark<'a>()
                 dhat_tool_measures(),
                 // Add Memcheck tool measures if it was enabled:
                 memcheck_tool_measures(),
+                // Add Helgrind tool measures if it was enabled:
+                helgrind_tool_measures(),
             ))),
         )),
         |(benchmark_name, measures)| {
@@ -321,6 +323,33 @@ fn memcheck_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<I
                     },
                     iai_callgrind::MemcheckSuppressedContexts::NAME_STR => {
                         IaiCallgrindMeasure::MemcheckSuppressedContexts(json)
+                    },
+                    _ => IaiCallgrindMeasure::Unknown(json),
+                })
+                .collect()
+        },
+    )
+}
+
+fn helgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
+{
+    map(
+        preceded(tool_name_line("HELGRIND"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::HelgrindErrors::NAME_STR => {
+                        IaiCallgrindMeasure::HelgrindErrors(json)
+                    },
+                    iai_callgrind::HelgrindContexts::NAME_STR => {
+                        IaiCallgrindMeasure::HelgrindContexts(json)
+                    },
+                    iai_callgrind::HelgrindSuppressedErrors::NAME_STR => {
+                        IaiCallgrindMeasure::HelgrindSuppressedErrors(json)
+                    },
+                    iai_callgrind::HelgrindSuppressedContexts::NAME_STR => {
+                        IaiCallgrindMeasure::HelgrindSuppressedContexts(json)
                     },
                     _ => IaiCallgrindMeasure::Unknown(json),
                 })
@@ -868,6 +897,57 @@ pub(crate) mod test_rust_iai_callgrind {
                 &expected,
                 &results,
                 "rust_iai_callgrind::custom_format::memcheck_format all_metrics",
+            );
+        }
+    }
+
+    #[test]
+    fn test_helgrind() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/helgrind.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let expected = HashMap::from([(HelgrindErrors::SLUG_STR, 1.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::helgrind_format just_errors",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (HelgrindContexts::SLUG_STR, 1.0),
+                (HelgrindSuppressedContexts::SLUG_STR, 2.0),
+                (HelgrindSuppressedErrors::SLUG_STR, 3.0),
+                (HelgrindErrors::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::helgrind_format metrics_mixed",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (HelgrindErrors::SLUG_STR, 1.0),
+                (HelgrindContexts::SLUG_STR, 2.0),
+                (HelgrindSuppressedErrors::SLUG_STR, 3.0),
+                (HelgrindSuppressedContexts::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::helgrind_format all_metrics",
             );
         }
     }

@@ -170,4 +170,25 @@ pub mod iai_callgrind {
         "memcheck-suppressed-contexts",
         "suppressed contexts"
     );
+
+    // Helgrind
+    create_measure!(HelgrindErrors, "Errors", "helgrind-errors", "errors");
+    create_measure!(
+        HelgrindContexts,
+        "Contexts",
+        "helgrind-contexts",
+        "contexts"
+    );
+    create_measure!(
+        HelgrindSuppressedErrors,
+        "Suppressed Errors",
+        "helgrind-suppressed-errors",
+        "suppressed errors"
+    );
+    create_measure!(
+        HelgrindSuppressedContexts,
+        "Suppressed Contexts",
+        "helgrind-suppressed-contexts",
+        "suppressed contexts"
+    );
 }
