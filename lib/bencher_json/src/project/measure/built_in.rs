@@ -149,4 +149,25 @@ pub mod iai_callgrind {
     create_measure!(AtTEndBlocks, "At t-end blocks", "at-t-end-blocks", "blocks");
     create_measure!(ReadsBytes, "Reads bytes", "reads-bytes", BYTES);
     create_measure!(WritesBytes, "Writes bytes", "writes-bytes", BYTES);
+
+    // Memcheck
+    create_measure!(MemcheckErrors, "Errors", "memcheck-errors", "errors");
+    create_measure!(
+        MemcheckContexts,
+        "Contexts",
+        "memcheck-contexts",
+        "contexts"
+    );
+    create_measure!(
+        MemcheckSuppressedErrors,
+        "Suppressed Errors",
+        "memcheck-suppressed-errors",
+        "suppressed errors"
+    );
+    create_measure!(
+        MemcheckSuppressedContexts,
+        "Suppressed Contexts",
+        "memcheck-suppressed-contexts",
+        "suppressed contexts"
+    );
 }

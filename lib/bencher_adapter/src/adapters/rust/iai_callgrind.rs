@@ -89,6 +89,8 @@ fn single_benchmark<'a>()
                 cachegrind_tool_measures(),
                 // Add DHAT tool measures if it was enabled:
                 dhat_tool_measures(),
+                // Add Memcheck tool measures if it was enabled:
+                memcheck_tool_measures(),
             ))),
         )),
         |(benchmark_name, measures)| {
@@ -293,6 +295,33 @@ fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCa
                     },
                     iai_callgrind::ReadsBytes::NAME_STR => IaiCallgrindMeasure::ReadsBytes(json),
                     iai_callgrind::WritesBytes::NAME_STR => IaiCallgrindMeasure::WritesBytes(json),
+                    _ => IaiCallgrindMeasure::Unknown(json),
+                })
+                .collect()
+        },
+    )
+}
+
+fn memcheck_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
+{
+    map(
+        preceded(tool_name_line("MEMCHECK"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::MemcheckErrors::NAME_STR => {
+                        IaiCallgrindMeasure::MemcheckErrors(json)
+                    },
+                    iai_callgrind::MemcheckContexts::NAME_STR => {
+                        IaiCallgrindMeasure::MemcheckContexts(json)
+                    },
+                    iai_callgrind::MemcheckSuppressedErrors::NAME_STR => {
+                        IaiCallgrindMeasure::MemcheckSuppressedErrors(json)
+                    },
+                    iai_callgrind::MemcheckSuppressedContexts::NAME_STR => {
+                        IaiCallgrindMeasure::MemcheckSuppressedContexts(json)
+                    },
                     _ => IaiCallgrindMeasure::Unknown(json),
                 })
                 .collect()
@@ -788,6 +817,57 @@ pub(crate) mod test_rust_iai_callgrind {
                 &expected,
                 &results,
                 "rust_iai_callgrind::custom_format::cachegrind_format all_metrics",
+            );
+        }
+    }
+
+    #[test]
+    fn test_memcheck() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/memcheck.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let expected = HashMap::from([(MemcheckErrors::SLUG_STR, 1.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::memcheck_format just_errors",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (MemcheckContexts::SLUG_STR, 1.0),
+                (MemcheckSuppressedContexts::SLUG_STR, 2.0),
+                (MemcheckSuppressedErrors::SLUG_STR, 3.0),
+                (MemcheckErrors::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::memcheck_format metrics_mixed",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (MemcheckErrors::SLUG_STR, 1.0),
+                (MemcheckContexts::SLUG_STR, 2.0),
+                (MemcheckSuppressedErrors::SLUG_STR, 3.0),
+                (MemcheckSuppressedContexts::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::memcheck_format all_metrics",
             );
         }
     }

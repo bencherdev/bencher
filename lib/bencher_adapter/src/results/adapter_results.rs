@@ -98,6 +98,14 @@ pub enum IaiCallgrindMeasure {
     WritesBytes(JsonNewMetric),
 
     /*
+     * Memcheck tool:
+     */
+    MemcheckErrors(JsonNewMetric),
+    MemcheckContexts(JsonNewMetric),
+    MemcheckSuppressedErrors(JsonNewMetric),
+    MemcheckSuppressedContexts(JsonNewMetric),
+
+    /*
      * Unknown
      */
     Unknown(JsonNewMetric),
@@ -348,6 +356,22 @@ impl AdapterResults {
                     IaiCallgrindMeasure::WritesBytes(json_metric) => {
                         (built_in::iai_callgrind::WritesBytes::name_id(), json_metric)
                     },
+                    IaiCallgrindMeasure::MemcheckErrors(json_metric) => (
+                        built_in::iai_callgrind::MemcheckErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::MemcheckContexts(json_metric) => (
+                        built_in::iai_callgrind::MemcheckContexts::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::MemcheckSuppressedErrors(json_metric) => (
+                        built_in::iai_callgrind::MemcheckSuppressedErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::MemcheckSuppressedContexts(json_metric) => (
+                        built_in::iai_callgrind::MemcheckSuppressedContexts::name_id(),
+                        json_metric,
+                    ),
                     IaiCallgrindMeasure::Unknown(_) => {
                         continue;
                     },
