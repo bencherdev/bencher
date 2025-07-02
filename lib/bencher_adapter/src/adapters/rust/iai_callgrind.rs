@@ -93,6 +93,8 @@ fn single_benchmark<'a>()
                 memcheck_tool_measures(),
                 // Add Helgrind tool measures if it was enabled:
                 helgrind_tool_measures(),
+                // Add Drd tool measures if it was enabled:
+                drd_tool_measures(),
             ))),
         )),
         |(benchmark_name, measures)| {
@@ -350,6 +352,28 @@ fn helgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<I
                     },
                     iai_callgrind::HelgrindSuppressedContexts::NAME_STR => {
                         IaiCallgrindMeasure::HelgrindSuppressedContexts(json)
+                    },
+                    _ => IaiCallgrindMeasure::Unknown(json),
+                })
+                .collect()
+        },
+    )
+}
+
+fn drd_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
+    map(
+        preceded(tool_name_line("DRD"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::DrdErrors::NAME_STR => IaiCallgrindMeasure::DrdErrors(json),
+                    iai_callgrind::DrdContexts::NAME_STR => IaiCallgrindMeasure::DrdContexts(json),
+                    iai_callgrind::DrdSuppressedErrors::NAME_STR => {
+                        IaiCallgrindMeasure::DrdSuppressedErrors(json)
+                    },
+                    iai_callgrind::DrdSuppressedContexts::NAME_STR => {
+                        IaiCallgrindMeasure::DrdSuppressedContexts(json)
                     },
                     _ => IaiCallgrindMeasure::Unknown(json),
                 })
@@ -948,6 +972,57 @@ pub(crate) mod test_rust_iai_callgrind {
                 &expected,
                 &results,
                 "rust_iai_callgrind::custom_format::helgrind_format all_metrics",
+            );
+        }
+    }
+
+    #[test]
+    fn test_drd() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/drd.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let expected = HashMap::from([(DrdErrors::SLUG_STR, 1.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::drd_format just_errors",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (DrdContexts::SLUG_STR, 1.0),
+                (DrdSuppressedContexts::SLUG_STR, 2.0),
+                (DrdSuppressedErrors::SLUG_STR, 3.0),
+                (DrdErrors::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::drd_format metrics_mixed",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (DrdErrors::SLUG_STR, 1.0),
+                (DrdContexts::SLUG_STR, 2.0),
+                (DrdSuppressedErrors::SLUG_STR, 3.0),
+                (DrdSuppressedContexts::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::drd_format all_metrics",
             );
         }
     }

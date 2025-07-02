@@ -191,4 +191,20 @@ pub mod iai_callgrind {
         "helgrind-suppressed-contexts",
         "suppressed contexts"
     );
+
+    // Drd
+    create_measure!(DrdErrors, "Errors", "drd-errors", "errors");
+    create_measure!(DrdContexts, "Contexts", "drd-contexts", "contexts");
+    create_measure!(
+        DrdSuppressedErrors,
+        "Suppressed Errors",
+        "drd-suppressed-errors",
+        "suppressed errors"
+    );
+    create_measure!(
+        DrdSuppressedContexts,
+        "Suppressed Contexts",
+        "drd-suppressed-contexts",
+        "suppressed contexts"
+    );
 }

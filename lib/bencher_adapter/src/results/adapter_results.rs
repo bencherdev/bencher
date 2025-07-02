@@ -114,6 +114,14 @@ pub enum IaiCallgrindMeasure {
     HelgrindSuppressedContexts(JsonNewMetric),
 
     /*
+     * Drd tool:
+     */
+    DrdErrors(JsonNewMetric),
+    DrdContexts(JsonNewMetric),
+    DrdSuppressedErrors(JsonNewMetric),
+    DrdSuppressedContexts(JsonNewMetric),
+
+    /*
      * Unknown
      */
     Unknown(JsonNewMetric),
@@ -400,6 +408,22 @@ impl AdapterResults {
                         built_in::iai_callgrind::HelgrindSuppressedContexts::name_id(),
                         json_metric,
                     ),
+                    // Drd
+                    IaiCallgrindMeasure::DrdErrors(json_metric) => {
+                        (built_in::iai_callgrind::DrdErrors::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::DrdContexts(json_metric) => {
+                        (built_in::iai_callgrind::DrdContexts::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::DrdSuppressedErrors(json_metric) => (
+                        built_in::iai_callgrind::DrdSuppressedErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::DrdSuppressedContexts(json_metric) => (
+                        built_in::iai_callgrind::DrdSuppressedContexts::name_id(),
+                        json_metric,
+                    ),
+                    // Unknown
                     IaiCallgrindMeasure::Unknown(_) => {
                         continue;
                     },
@@ -408,7 +432,6 @@ impl AdapterResults {
             }
         }
 
-        // TODO: Can be empty if only unknown metrics were encountered
         Some(results_map.into())
     }
 
