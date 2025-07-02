@@ -49,6 +49,7 @@ pub enum IaiCallgrindMeasure {
     Instructions(JsonNewMetric),
     L1Hits(JsonNewMetric),
     L2Hits(JsonNewMetric),
+    LLHits(JsonNewMetric), // renamed from L2 Hits
     RamHits(JsonNewMetric),
     TotalReadWrite(JsonNewMetric),
     EstimatedCycles(JsonNewMetric),
@@ -211,6 +212,9 @@ impl AdapterResults {
                     },
                     IaiCallgrindMeasure::L2Hits(json_metric) => {
                         (built_in::iai_callgrind::L2Hits::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLHits(json_metric) => {
+                        (built_in::iai_callgrind::LLHits::name_id(), json_metric)
                     },
                     IaiCallgrindMeasure::RamHits(json_metric) => {
                         (built_in::iai_callgrind::RamHits::name_id(), json_metric)

@@ -1,0 +1,23 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+rust_iai_callgrind::custom_format::callgrind_format ll_hits
+  Instructions:                          10|N/A                  (*********)
+  LL Hits:                               20|N/A                  (*********)
+rust_iai_callgrind::custom_format::callgrind_format ll_hits_mixed
+  LL Hits:                                2|N/A                  (*********)
+  Instructions:                           1|N/A                  (*********)
+
+
+
+
+
+
+
+
+
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...

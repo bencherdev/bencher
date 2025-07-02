@@ -87,8 +87,8 @@ pub mod iai_callgrind {
     // Callgrind
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Hits, "L1 Hits", "l1-hits", "hits");
-    // TODO: LLhits
     create_measure!(L2Hits, "L2 Hits", "l2-hits", "hits");
+    create_measure!(LLHits, "LL Hits", "ll-hits", "hits");
     create_measure!(RamHits, "RAM Hits", "ram-hits", "hits");
     create_measure!(
         TotalReadWrite,
@@ -102,6 +102,7 @@ pub mod iai_callgrind {
         "estimated-cycles",
         "cycles"
     );
+    create_measure!(GlobalBusEvents, "Ge", "global-bus-events", "events");
 
     create_measure!(Dr, "Dr", "dr", "dr");
     create_measure!(Dw, "Dw", "dw", "dw");
@@ -118,8 +119,7 @@ pub mod iai_callgrind {
     create_measure!(LLMissRate, "LL Miss Rate", "ll-miss-rate", "missrate");
     create_measure!(L1HitRate, "L1 Hit Rate", "l1-hit-rate", "hitrate");
     create_measure!(LLHitRate, "LL Hit Rate", "ll-hit-rate", "hitrate");
-    // TODO: Adjust to "RAM Hit Rate"
-    create_measure!(RamHitRate, "Ram Hit Rate", "ram-hit-rate", "hitrate");
+    create_measure!(RamHitRate, "RAM Hit Rate", "ram-hit-rate", "hitrate");
     create_measure!(SysCount, "SysCount", "sys-count", "sys");
     create_measure!(SysTime, "SysTime", "sys-time", "sys");
     create_measure!(SysCpuTime, "SysCpuTime", "sys-cpu-time", "sys");
@@ -136,8 +136,6 @@ pub mod iai_callgrind {
     create_measure!(SpLoss2, "SpLoss2", "sploss2", "sploss2");
 
     // DHAT
-    // TODO: Move up to callgrind measures
-    create_measure!(GlobalBusEvents, "Ge", "global-bus-events", "events");
     create_measure!(TotalBytes, "Total bytes", "total-bytes", BYTES);
     create_measure!(TotalBlocks, "Total blocks", "total-blocks", "blocks");
     create_measure!(AtTGmaxBytes, "At t-gmax bytes", "at-t-gmax-bytes", BYTES);

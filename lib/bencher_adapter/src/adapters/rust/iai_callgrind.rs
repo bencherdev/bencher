@@ -98,6 +98,7 @@ fn single_benchmark<'a>()
     )
 }
 
+#[expect(clippy::too_many_lines)]
 fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
 {
     map(
@@ -111,6 +112,7 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
                     },
                     iai_callgrind::L1Hits::NAME_STR => IaiCallgrindMeasure::L1Hits(json),
                     iai_callgrind::L2Hits::NAME_STR => IaiCallgrindMeasure::L2Hits(json),
+                    iai_callgrind::LLHits::NAME_STR => IaiCallgrindMeasure::LLHits(json),
                     iai_callgrind::RamHits::NAME_STR => IaiCallgrindMeasure::RamHits(json),
                     iai_callgrind::TotalReadWrite::NAME_STR => {
                         IaiCallgrindMeasure::TotalReadWrite(json)
@@ -520,6 +522,37 @@ pub(crate) mod test_rust_iai_callgrind {
             &results,
             "rust_iai_callgrind::custom_format::callgrind_format mixed_2",
         );
+    }
+
+    #[test]
+    fn test_callgrind_ll_hits() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/callgrind-ll-hits.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected =
+                HashMap::from([(Instructions::SLUG_STR, 10.0), (LLHits::SLUG_STR, 20.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::callgrind_format ll_hits",
+            );
+        }
+
+        {
+            let expected = HashMap::from([(Instructions::SLUG_STR, 1.0), (LLHits::SLUG_STR, 2.0)]);
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::callgrind_format ll_hits_mixed",
+            );
+        }
     }
 
     #[test]
