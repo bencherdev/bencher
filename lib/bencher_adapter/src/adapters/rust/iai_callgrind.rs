@@ -1,3 +1,5 @@
+use std::ops::Neg as _;
+
 use bencher_json::{
     BenchmarkName, JsonNewMetric,
     project::{
@@ -9,7 +11,7 @@ use nom::{
     IResult,
     branch::alt,
     bytes::complete::{is_a, is_not, tag},
-    character::complete::{space0, space1},
+    character::complete::{char, space0, space1},
     combinator::{map, opt, recognize},
     multi::{many0, many1},
     sequence::{delimited, preceded, terminated, tuple},
@@ -17,7 +19,7 @@ use nom::{
 
 use crate::{
     Adaptable, Settings,
-    adapters::util::{parse_f64, parse_u64},
+    adapters::util::parse_f64,
     results::adapter_results::{AdapterResults, IaiCallgrindMeasure},
 };
 
@@ -70,157 +72,406 @@ fn single_benchmark<'a>()
 -> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
     map(
         tuple((
-            terminated(recognize(not_line_ending()), line_ending()),
-            // Callgrind tool is always enabled:
-            callgrind_tool_measures(),
-            // Add DHAT tool measures if it was enabled:
-            opt(dhat_tool_measures()),
+            terminated(
+                recognize(tuple((
+                    is_not(":\r\n \t"),
+                    tag("::"),
+                    is_not(":\r\n"),
+                    tag("::"),
+                    not_line_ending(),
+                ))),
+                line_ending(),
+            ),
+            many0(alt((
+                // Callgrind tool if it was enabled:
+                callgrind_tool_measures(),
+                // Cachegrind tool if it was enabled:
+                cachegrind_tool_measures(),
+                // Add DHAT tool measures if it was enabled:
+                dhat_tool_measures(),
+                // Add Memcheck tool measures if it was enabled:
+                memcheck_tool_measures(),
+                // Add Helgrind tool measures if it was enabled:
+                helgrind_tool_measures(),
+                // Add Drd tool measures if it was enabled:
+                drd_tool_measures(),
+            ))),
         )),
-        |(benchmark_name, callgrind_measures, dhat_measures)| {
+        |(benchmark_name, measures)| {
             let benchmark_name = benchmark_name.parse().ok()?;
-
-            let mut measures = vec![];
-            measures.extend(callgrind_measures);
-            measures.extend(dhat_measures.into_iter().flatten());
+            let measures = measures.into_iter().flatten().collect();
 
             Some((benchmark_name, measures))
         },
     )
 }
 
+#[expect(clippy::too_many_lines)]
 fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
 {
     map(
-        preceded(
-            opt(tool_name_line("CALLGRIND")),
-            tuple((
-                metric_line(iai_callgrind::Instructions::NAME_STR),
-                metric_line(iai_callgrind::L1Hits::NAME_STR),
-                metric_line(iai_callgrind::L2Hits::NAME_STR),
-                metric_line(iai_callgrind::RamHits::NAME_STR),
-                metric_line(iai_callgrind::TotalReadWrite::NAME_STR),
-                metric_line(iai_callgrind::EstimatedCycles::NAME_STR),
-                opt(metric_line(iai_callgrind::GlobalBusEvents::NAME_STR)),
-            )),
-        ),
-        |(
-            instructions,
-            l1_hits,
-            l2_hits,
-            ram_hits,
-            total_read_write,
-            estimated_cycles,
-            global_bus_events,
-        )| {
-            [
-                Some(IaiCallgrindMeasure::Instructions(instructions)),
-                Some(IaiCallgrindMeasure::L1Hits(l1_hits)),
-                Some(IaiCallgrindMeasure::L2Hits(l2_hits)),
-                Some(IaiCallgrindMeasure::RamHits(ram_hits)),
-                Some(IaiCallgrindMeasure::TotalReadWrite(total_read_write)),
-                Some(IaiCallgrindMeasure::EstimatedCycles(estimated_cycles)),
-                global_bus_events.map(IaiCallgrindMeasure::GlobalBusEvents),
-            ]
-            .into_iter()
-            .flatten()
-            .collect()
+        preceded(opt(tool_name_line("CALLGRIND")), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::Instructions::NAME_STR => {
+                        IaiCallgrindMeasure::Instructions(json)
+                    },
+                    iai_callgrind::L1Hits::NAME_STR => IaiCallgrindMeasure::L1Hits(json),
+                    iai_callgrind::L2Hits::NAME_STR => IaiCallgrindMeasure::L2Hits(json),
+                    iai_callgrind::LLHits::NAME_STR => IaiCallgrindMeasure::LLHits(json),
+                    iai_callgrind::RamHits::NAME_STR => IaiCallgrindMeasure::RamHits(json),
+                    iai_callgrind::TotalReadWrite::NAME_STR => {
+                        IaiCallgrindMeasure::TotalReadWrite(json)
+                    },
+                    iai_callgrind::EstimatedCycles::NAME_STR => {
+                        IaiCallgrindMeasure::EstimatedCycles(json)
+                    },
+                    iai_callgrind::Dr::NAME_STR => IaiCallgrindMeasure::DataCacheReads(json),
+                    iai_callgrind::Dw::NAME_STR => IaiCallgrindMeasure::DataCacheWrites(json),
+                    iai_callgrind::I1mr::NAME_STR => {
+                        IaiCallgrindMeasure::L1InstrCacheReadMisses(json)
+                    },
+                    iai_callgrind::D1mr::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheReadMisses(json)
+                    },
+                    iai_callgrind::D1mw::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheWriteMisses(json)
+                    },
+                    iai_callgrind::ILmr::NAME_STR => {
+                        IaiCallgrindMeasure::LLInstrCacheReadMisses(json)
+                    },
+                    iai_callgrind::DLmr::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheReadMisses(json)
+                    },
+                    iai_callgrind::DLmw::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheWriteMisses(json)
+                    },
+                    iai_callgrind::I1MissRate::NAME_STR => {
+                        IaiCallgrindMeasure::L1InstrCacheMissRate(json)
+                    },
+                    iai_callgrind::LLiMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLInstrCacheMissRate(json)
+                    },
+                    iai_callgrind::D1MissRate::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheMissRate(json)
+                    },
+                    iai_callgrind::LLdMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheMissRate(json)
+                    },
+                    iai_callgrind::LLMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLCacheMissRate(json)
+                    },
+                    iai_callgrind::L1HitRate::NAME_STR => IaiCallgrindMeasure::L1HitRate(json),
+                    iai_callgrind::LLHitRate::NAME_STR => IaiCallgrindMeasure::LLHitRate(json),
+                    iai_callgrind::RamHitRate::NAME_STR => IaiCallgrindMeasure::RamHitRate(json),
+                    iai_callgrind::SysCount::NAME_STR => {
+                        IaiCallgrindMeasure::NumberSystemCalls(json)
+                    },
+                    iai_callgrind::SysTime::NAME_STR => IaiCallgrindMeasure::TimeSystemCalls(json),
+                    iai_callgrind::SysCpuTime::NAME_STR => {
+                        IaiCallgrindMeasure::CpuTimeSystemCalls(json)
+                    },
+                    iai_callgrind::GlobalBusEvents::NAME_STR => {
+                        IaiCallgrindMeasure::GlobalBusEvents(json)
+                    },
+                    iai_callgrind::Bc::NAME_STR => {
+                        IaiCallgrindMeasure::ExecutedConditionalBranches(json)
+                    },
+                    iai_callgrind::Bcm::NAME_STR => {
+                        IaiCallgrindMeasure::MispredictedConditionalBranches(json)
+                    },
+                    iai_callgrind::Bi::NAME_STR => {
+                        IaiCallgrindMeasure::ExecutedIndirectBranches(json)
+                    },
+                    iai_callgrind::Bim::NAME_STR => {
+                        IaiCallgrindMeasure::MispredictedIndirectBranches(json)
+                    },
+                    iai_callgrind::ILdmr::NAME_STR => {
+                        IaiCallgrindMeasure::DirtyMissInstructionRead(json)
+                    },
+                    iai_callgrind::DLdmr::NAME_STR => IaiCallgrindMeasure::DirtyMissDataRead(json),
+                    iai_callgrind::DLdmw::NAME_STR => IaiCallgrindMeasure::DirtyMissDataWrite(json),
+                    iai_callgrind::AcCost1::NAME_STR => {
+                        IaiCallgrindMeasure::L1BadTemporalLocality(json)
+                    },
+                    iai_callgrind::AcCost2::NAME_STR => {
+                        IaiCallgrindMeasure::LLBadTemporalLocality(json)
+                    },
+                    iai_callgrind::SpLoss1::NAME_STR => {
+                        IaiCallgrindMeasure::L1BadSpatialLocality(json)
+                    },
+                    iai_callgrind::SpLoss2::NAME_STR => {
+                        IaiCallgrindMeasure::LLBadSpatialLocality(json)
+                    },
+                    _ => IaiCallgrindMeasure::Unknown,
+                })
+                .collect()
+        },
+    )
+}
+
+fn cachegrind_tool_measures<'a>()
+-> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
+    map(
+        preceded(tool_name_line("CACHEGRIND"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::Instructions::NAME_STR => {
+                        IaiCallgrindMeasure::Instructions(json)
+                    },
+                    iai_callgrind::L1Hits::NAME_STR => IaiCallgrindMeasure::L1Hits(json),
+                    iai_callgrind::L2Hits::NAME_STR => IaiCallgrindMeasure::L2Hits(json),
+                    iai_callgrind::LLHits::NAME_STR => IaiCallgrindMeasure::LLHits(json),
+                    iai_callgrind::RamHits::NAME_STR => IaiCallgrindMeasure::RamHits(json),
+                    iai_callgrind::TotalReadWrite::NAME_STR => {
+                        IaiCallgrindMeasure::TotalReadWrite(json)
+                    },
+                    iai_callgrind::EstimatedCycles::NAME_STR => {
+                        IaiCallgrindMeasure::EstimatedCycles(json)
+                    },
+                    iai_callgrind::Dr::NAME_STR => IaiCallgrindMeasure::DataCacheReads(json),
+                    iai_callgrind::Dw::NAME_STR => IaiCallgrindMeasure::DataCacheWrites(json),
+                    iai_callgrind::I1mr::NAME_STR => {
+                        IaiCallgrindMeasure::L1InstrCacheReadMisses(json)
+                    },
+                    iai_callgrind::D1mr::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheReadMisses(json)
+                    },
+                    iai_callgrind::D1mw::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheWriteMisses(json)
+                    },
+                    iai_callgrind::ILmr::NAME_STR => {
+                        IaiCallgrindMeasure::LLInstrCacheReadMisses(json)
+                    },
+                    iai_callgrind::DLmr::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheReadMisses(json)
+                    },
+                    iai_callgrind::DLmw::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheWriteMisses(json)
+                    },
+                    iai_callgrind::I1MissRate::NAME_STR => {
+                        IaiCallgrindMeasure::L1InstrCacheMissRate(json)
+                    },
+                    iai_callgrind::LLiMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLInstrCacheMissRate(json)
+                    },
+                    iai_callgrind::D1MissRate::NAME_STR => {
+                        IaiCallgrindMeasure::L1DataCacheMissRate(json)
+                    },
+                    iai_callgrind::LLdMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLDataCacheMissRate(json)
+                    },
+                    iai_callgrind::LLMissRate::NAME_STR => {
+                        IaiCallgrindMeasure::LLCacheMissRate(json)
+                    },
+                    iai_callgrind::L1HitRate::NAME_STR => IaiCallgrindMeasure::L1HitRate(json),
+                    iai_callgrind::LLHitRate::NAME_STR => IaiCallgrindMeasure::LLHitRate(json),
+                    iai_callgrind::RamHitRate::NAME_STR => IaiCallgrindMeasure::RamHitRate(json),
+                    _ => IaiCallgrindMeasure::Unknown,
+                })
+                .collect()
         },
     )
 }
 
 fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
     map(
-        preceded(
-            opt(tool_name_line("DHAT")),
-            tuple((
-                metric_line(iai_callgrind::TotalBytes::NAME_STR),
-                metric_line(iai_callgrind::TotalBlocks::NAME_STR),
-                metric_line(iai_callgrind::AtTGmaxBytes::NAME_STR),
-                metric_line(iai_callgrind::AtTGmaxBlocks::NAME_STR),
-                metric_line(iai_callgrind::AtTEndBytes::NAME_STR),
-                metric_line(iai_callgrind::AtTEndBlocks::NAME_STR),
-                metric_line(iai_callgrind::ReadsBytes::NAME_STR),
-                metric_line(iai_callgrind::WritesBytes::NAME_STR),
-            )),
-        ),
-        |(
-            total_bytes,
-            total_blocks,
-            at_t_gmax_bytes,
-            at_t_gmax_blocks,
-            at_t_end_bytes,
-            at_t_end_blocks,
-            reads_bytes,
-            writes_bytes,
-        )| {
-            vec![
-                IaiCallgrindMeasure::TotalBytes(total_bytes),
-                IaiCallgrindMeasure::TotalBlocks(total_blocks),
-                IaiCallgrindMeasure::AtTGmaxBytes(at_t_gmax_bytes),
-                IaiCallgrindMeasure::AtTGmaxBlocks(at_t_gmax_blocks),
-                IaiCallgrindMeasure::AtTEndBytes(at_t_end_bytes),
-                IaiCallgrindMeasure::AtTEndBlocks(at_t_end_blocks),
-                IaiCallgrindMeasure::ReadsBytes(reads_bytes),
-                IaiCallgrindMeasure::WritesBytes(writes_bytes),
-            ]
+        preceded(tool_name_line("DHAT"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::TotalBytes::NAME_STR => IaiCallgrindMeasure::TotalBytes(json),
+                    iai_callgrind::TotalBlocks::NAME_STR => IaiCallgrindMeasure::TotalBlocks(json),
+                    iai_callgrind::AtTGmaxBytes::NAME_STR => {
+                        IaiCallgrindMeasure::AtTGmaxBytes(json)
+                    },
+                    iai_callgrind::AtTGmaxBlocks::NAME_STR => {
+                        IaiCallgrindMeasure::AtTGmaxBlocks(json)
+                    },
+                    iai_callgrind::AtTEndBytes::NAME_STR => IaiCallgrindMeasure::AtTEndBytes(json),
+                    iai_callgrind::AtTEndBlocks::NAME_STR => {
+                        IaiCallgrindMeasure::AtTEndBlocks(json)
+                    },
+                    iai_callgrind::ReadsBytes::NAME_STR => IaiCallgrindMeasure::ReadsBytes(json),
+                    iai_callgrind::WritesBytes::NAME_STR => IaiCallgrindMeasure::WritesBytes(json),
+                    _ => IaiCallgrindMeasure::Unknown,
+                })
+                .collect()
+        },
+    )
+}
+
+fn memcheck_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
+{
+    map(
+        preceded(tool_name_line("MEMCHECK"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::MemcheckErrors::NAME_STR => {
+                        IaiCallgrindMeasure::MemcheckErrors(json)
+                    },
+                    iai_callgrind::MemcheckContexts::NAME_STR => {
+                        IaiCallgrindMeasure::MemcheckContexts(json)
+                    },
+                    iai_callgrind::MemcheckSuppressedErrors::NAME_STR => {
+                        IaiCallgrindMeasure::MemcheckSuppressedErrors(json)
+                    },
+                    iai_callgrind::MemcheckSuppressedContexts::NAME_STR => {
+                        IaiCallgrindMeasure::MemcheckSuppressedContexts(json)
+                    },
+                    _ => IaiCallgrindMeasure::Unknown,
+                })
+                .collect()
+        },
+    )
+}
+
+fn helgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
+{
+    map(
+        preceded(tool_name_line("HELGRIND"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::HelgrindErrors::NAME_STR => {
+                        IaiCallgrindMeasure::HelgrindErrors(json)
+                    },
+                    iai_callgrind::HelgrindContexts::NAME_STR => {
+                        IaiCallgrindMeasure::HelgrindContexts(json)
+                    },
+                    iai_callgrind::HelgrindSuppressedErrors::NAME_STR => {
+                        IaiCallgrindMeasure::HelgrindSuppressedErrors(json)
+                    },
+                    iai_callgrind::HelgrindSuppressedContexts::NAME_STR => {
+                        IaiCallgrindMeasure::HelgrindSuppressedContexts(json)
+                    },
+                    _ => IaiCallgrindMeasure::Unknown,
+                })
+                .collect()
+        },
+    )
+}
+
+fn drd_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
+    map(
+        preceded(tool_name_line("DRD"), many1(metric_line())),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|(metric_name, json)| match metric_name.as_str() {
+                    iai_callgrind::DrdErrors::NAME_STR => IaiCallgrindMeasure::DrdErrors(json),
+                    iai_callgrind::DrdContexts::NAME_STR => IaiCallgrindMeasure::DrdContexts(json),
+                    iai_callgrind::DrdSuppressedErrors::NAME_STR => {
+                        IaiCallgrindMeasure::DrdSuppressedErrors(json)
+                    },
+                    iai_callgrind::DrdSuppressedContexts::NAME_STR => {
+                        IaiCallgrindMeasure::DrdSuppressedContexts(json)
+                    },
+                    _ => IaiCallgrindMeasure::Unknown,
+                })
+                .collect()
         },
     )
 }
 
 fn tool_name_line<'a>(tool_name: &'static str) -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
     delimited(
-        tuple((space0, many1(tag("=")), tag(" "))),
+        tuple((space1, many1(tag("=")), tag(" "))),
         tag(tool_name),
         tuple((tag(" "), many1(tag("=")), line_ending())),
     )
 }
 
-fn metric_line<'a>(
-    measure_name: &'static str,
-) -> impl FnMut(&'a str) -> IResult<&'a str, JsonNewMetric> {
+fn metric_line<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (String, JsonNewMetric)> {
     map(
         tuple((
-            space0,
-            tag(measure_name),
-            tag(":"),
+            space1,
+            is_not(":\r\n"),
+            char(':'),
             space1,
             // the current run value:
-            parse_u64,
-            tag("|"),
+            parse_f64,
+            char('|'),
             alt((
                 // No previous run:
-                recognize(tuple((tag("N/A"), space1, tag("(*********)")))),
+                recognize(tuple((
+                    tag("N/A"),
+                    space1,
+                    delimited(char('('), many1(char('*')), char(')')),
+                ))),
                 // Comparison to previous run:
                 recognize(tuple((
-                    parse_u64,
+                    parse_f64,
                     space0,
                     alt((
-                        recognize(tag("(No change)")),
+                        recognize(delimited(char('('), tag("No change"), char(')'))),
                         recognize(tuple((
-                            delimited(
-                                tag("("),
-                                tuple((alt((tag("+"), tag("-"))), parse_f64, tag("%"))),
-                                tag(")"),
-                            ),
+                            delimited(char('('), alt((infinity, percent)), char(')')),
                             space1,
-                            delimited(
-                                tag("["),
-                                tuple((alt((tag("+"), tag("-"))), parse_f64, tag("x"))),
-                                tag("]"),
-                            ),
+                            delimited(char('['), alt((infinity, factor)), char(']')),
                         ))),
                     )),
                 ))),
             )),
             line_ending(),
         )),
-        |(_, _, _, _, current_value, _, _, _)| JsonNewMetric {
-            #[expect(clippy::cast_precision_loss)]
-            value: (current_value as f64).into(),
-            lower_value: None,
-            upper_value: None,
+        |(_, metric_name, _, _, current_value, _, _, _)| {
+            (
+                metric_name.to_owned(),
+                JsonNewMetric {
+                    value: current_value.into(),
+                    lower_value: None,
+                    upper_value: None,
+                },
+            )
         },
     )
+}
+
+fn infinity(input: &str) -> IResult<&str, f64> {
+    map(
+        tuple((
+            alt((many1(char('+')), many1(char('-')))),
+            tag("inf"),
+            alt((many1(char('+')), many1(char('-')))),
+        )),
+        |(signs, _, _)| {
+            // The indexing is safe due to the usage of `many1` above
+            #[expect(clippy::indexing_slicing)]
+            let sign = signs[0];
+            if sign == '+' {
+                f64::INFINITY
+            } else {
+                f64::NEG_INFINITY
+            }
+        },
+    )(input)
+}
+
+fn factor(input: &str) -> IResult<&str, f64> {
+    map(
+        tuple((alt((char('+'), char('-'))), parse_f64, char('x'))),
+        |(sign, num, _)| {
+            if sign == '+' { num } else { num.neg() }
+        },
+    )(input)
+}
+
+fn percent(input: &str) -> IResult<&str, f64> {
+    map(
+        tuple((alt((char('+'), char('-'))), parse_f64, char('%'))),
+        |(sign, num, _)| {
+            if sign == '+' { num } else { num.neg() }
+        },
+    )(input)
 }
 
 fn line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
@@ -267,6 +518,21 @@ pub(crate) mod test_rust_iai_callgrind {
     }
 
     #[test]
+    fn test_with_dhat_first_then_callgrind() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/dhat-then-callgrind.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(
+            &results,
+            &OptionalMetrics {
+                dhat: true,
+                ..Default::default()
+            },
+        );
+    }
+
+    #[test]
     fn test_with_dhat_and_global_bus_events() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/with-dhat-and-global-bus-events.txt",
@@ -285,6 +551,58 @@ pub(crate) mod test_rust_iai_callgrind {
     fn test_delta() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/delta.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+    }
+
+    #[test]
+    fn test_delta_with_infinity() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/delta_with_inf.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected = HashMap::from([
+                (iai_callgrind::Instructions::SLUG_STR, 1_734.0),
+                (iai_callgrind::L1Hits::SLUG_STR, 2_359.0),
+                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
+                (iai_callgrind::RamHits::SLUG_STR, 3.0),
+                (iai_callgrind::TotalReadWrite::SLUG_STR, 0.0),
+                (iai_callgrind::EstimatedCycles::SLUG_STR, 2_464.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (iai_callgrind::Instructions::SLUG_STR, 26_214_734.0),
+                (iai_callgrind::L1Hits::SLUG_STR, 35_638_619.0),
+                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
+                (iai_callgrind::RamHits::SLUG_STR, 3.0),
+                (iai_callgrind::TotalReadWrite::SLUG_STR, 35_638_622.0),
+                (iai_callgrind::EstimatedCycles::SLUG_STR, 35_638_724.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30",
+            );
+        }
+    }
+
+    #[test]
+    fn test_with_summary_and_regressions() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/with-summary-and-regressions.txt",
         );
 
         validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
@@ -312,6 +630,419 @@ pub(crate) mod test_rust_iai_callgrind {
                 ..Default::default()
             },
         );
+    }
+
+    #[test]
+    fn test_without_cachesim() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/without-cachesim.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected = HashMap::from([(Instructions::SLUG_STR, 1734.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10",
+            );
+        }
+
+        {
+            let expected = HashMap::from([(Instructions::SLUG_STR, 26_214_734.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30",
+            );
+        }
+    }
+
+    #[test]
+    fn test_callgrind_mixed_order() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/callgrind-mixed-order.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        let expected = HashMap::from([
+            (Instructions::SLUG_STR, 1.0),
+            (Dr::SLUG_STR, 2.0),
+            (Dw::SLUG_STR, 3.0),
+        ]);
+
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_iai_callgrind::custom_format::callgrind_format mixed_1",
+        );
+
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_iai_callgrind::custom_format::callgrind_format mixed_2",
+        );
+    }
+
+    #[test]
+    fn test_callgrind_ll_hits() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/callgrind-ll-hits.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected =
+                HashMap::from([(Instructions::SLUG_STR, 10.0), (LLHits::SLUG_STR, 20.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::callgrind_format ll_hits",
+            );
+        }
+
+        {
+            let expected = HashMap::from([(Instructions::SLUG_STR, 1.0), (LLHits::SLUG_STR, 2.0)]);
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::callgrind_format ll_hits_mixed",
+            );
+        }
+    }
+
+    #[test]
+    fn test_callgrind_all() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/callgrind-all.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected = HashMap::from([
+                (Instructions::SLUG_STR, 1.0),
+                (Dr::SLUG_STR, 2.0),
+                (Dw::SLUG_STR, 3.0),
+                (I1mr::SLUG_STR, 4.0),
+                (D1mr::SLUG_STR, 5.0),
+                (D1mw::SLUG_STR, 6.0),
+                (ILmr::SLUG_STR, 7.0),
+                (DLmr::SLUG_STR, 8.0),
+                (DLmw::SLUG_STR, 9.0),
+                (I1MissRate::SLUG_STR, 10.0),
+                (LLiMissRate::SLUG_STR, 11.0),
+                (D1MissRate::SLUG_STR, 12.0),
+                (LLdMissRate::SLUG_STR, 13.0),
+                (LLMissRate::SLUG_STR, 14.0),
+                (L1Hits::SLUG_STR, 15.0),
+                (L2Hits::SLUG_STR, 16.0),
+                (RamHits::SLUG_STR, 17.0),
+                (L1HitRate::SLUG_STR, 18.0),
+                (LLHitRate::SLUG_STR, 19.0),
+                (RamHitRate::SLUG_STR, 20.0),
+                (TotalReadWrite::SLUG_STR, 21.0),
+                (EstimatedCycles::SLUG_STR, 22.0),
+                (SysCount::SLUG_STR, 23.0),
+                (SysTime::SLUG_STR, 24.0),
+                (SysCpuTime::SLUG_STR, 25.0),
+                (GlobalBusEvents::SLUG_STR, 26.0),
+                (Bc::SLUG_STR, 27.0),
+                (Bcm::SLUG_STR, 28.0),
+                (Bi::SLUG_STR, 29.0),
+                (Bim::SLUG_STR, 30.0),
+                (ILdmr::SLUG_STR, 31.0),
+                (DLdmr::SLUG_STR, 32.0),
+                (DLdmw::SLUG_STR, 33.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::callgrind_format all_with_wb",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (Instructions::SLUG_STR, 1.0),
+                (Dr::SLUG_STR, 2.0),
+                (Dw::SLUG_STR, 3.0),
+                (I1mr::SLUG_STR, 4.0),
+                (D1mr::SLUG_STR, 5.0),
+                (D1mw::SLUG_STR, 6.0),
+                (ILmr::SLUG_STR, 7.0),
+                (DLmr::SLUG_STR, 8.0),
+                (DLmw::SLUG_STR, 9.0),
+                (I1MissRate::SLUG_STR, 10.0),
+                (LLiMissRate::SLUG_STR, 11.0),
+                (D1MissRate::SLUG_STR, 12.0),
+                (LLdMissRate::SLUG_STR, 13.0),
+                (LLMissRate::SLUG_STR, 14.0),
+                (L1Hits::SLUG_STR, 15.0),
+                (L2Hits::SLUG_STR, 16.0),
+                (RamHits::SLUG_STR, 17.0),
+                (L1HitRate::SLUG_STR, 18.0),
+                (LLHitRate::SLUG_STR, 19.0),
+                (RamHitRate::SLUG_STR, 20.0),
+                (TotalReadWrite::SLUG_STR, 21.0),
+                (EstimatedCycles::SLUG_STR, 22.0),
+                (SysCount::SLUG_STR, 23.0),
+                (SysTime::SLUG_STR, 24.0),
+                (SysCpuTime::SLUG_STR, 25.0),
+                (GlobalBusEvents::SLUG_STR, 26.0),
+                (Bc::SLUG_STR, 27.0),
+                (Bcm::SLUG_STR, 28.0),
+                (Bi::SLUG_STR, 29.0),
+                (Bim::SLUG_STR, 30.0),
+                (AcCost1::SLUG_STR, 31.0),
+                (AcCost2::SLUG_STR, 32.0),
+                (SpLoss1::SLUG_STR, 33.0),
+                (SpLoss2::SLUG_STR, 34.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::callgrind_format all_with_cachuse",
+            );
+        }
+    }
+
+    #[test]
+    fn test_cachegrind() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/cachegrind.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let expected = HashMap::from([(Instructions::SLUG_STR, 1.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::cachegrind_format just_instructions",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (I1MissRate::SLUG_STR, 1.0),
+                (Dr::SLUG_STR, 2.0),
+                (EstimatedCycles::SLUG_STR, 3.0),
+                (TotalReadWrite::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::cachegrind_format metrics_mixed",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (Instructions::SLUG_STR, 1.0),
+                (Dr::SLUG_STR, 2.0),
+                (Dw::SLUG_STR, 3.0),
+                (I1mr::SLUG_STR, 4.0),
+                (D1mr::SLUG_STR, 5.0),
+                (D1mw::SLUG_STR, 6.0),
+                (ILmr::SLUG_STR, 7.0),
+                (DLmr::SLUG_STR, 8.0),
+                (DLmw::SLUG_STR, 9.0),
+                (I1MissRate::SLUG_STR, 10.0),
+                (LLiMissRate::SLUG_STR, 11.0),
+                (D1MissRate::SLUG_STR, 12.0),
+                (LLdMissRate::SLUG_STR, 13.0),
+                (LLMissRate::SLUG_STR, 14.0),
+                (L1Hits::SLUG_STR, 15.0),
+                (L2Hits::SLUG_STR, 16.0),
+                (RamHits::SLUG_STR, 17.0),
+                (L1HitRate::SLUG_STR, 18.0),
+                (LLHitRate::SLUG_STR, 19.0),
+                (RamHitRate::SLUG_STR, 20.0),
+                (TotalReadWrite::SLUG_STR, 21.0),
+                (EstimatedCycles::SLUG_STR, 22.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::cachegrind_format all_metrics",
+            );
+        }
+    }
+
+    #[test]
+    fn test_memcheck() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/memcheck.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let expected = HashMap::from([(MemcheckErrors::SLUG_STR, 1.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::memcheck_format just_errors",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (MemcheckContexts::SLUG_STR, 1.0),
+                (MemcheckSuppressedContexts::SLUG_STR, 2.0),
+                (MemcheckSuppressedErrors::SLUG_STR, 3.0),
+                (MemcheckErrors::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::memcheck_format metrics_mixed",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (MemcheckErrors::SLUG_STR, 1.0),
+                (MemcheckContexts::SLUG_STR, 2.0),
+                (MemcheckSuppressedErrors::SLUG_STR, 3.0),
+                (MemcheckSuppressedContexts::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::memcheck_format all_metrics",
+            );
+        }
+    }
+
+    #[test]
+    fn test_helgrind() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/helgrind.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let expected = HashMap::from([(HelgrindErrors::SLUG_STR, 1.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::helgrind_format just_errors",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (HelgrindContexts::SLUG_STR, 1.0),
+                (HelgrindSuppressedContexts::SLUG_STR, 2.0),
+                (HelgrindSuppressedErrors::SLUG_STR, 3.0),
+                (HelgrindErrors::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::helgrind_format metrics_mixed",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (HelgrindErrors::SLUG_STR, 1.0),
+                (HelgrindContexts::SLUG_STR, 2.0),
+                (HelgrindSuppressedErrors::SLUG_STR, 3.0),
+                (HelgrindSuppressedContexts::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::helgrind_format all_metrics",
+            );
+        }
+    }
+
+    #[test]
+    fn test_drd() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/drd.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let expected = HashMap::from([(DrdErrors::SLUG_STR, 1.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::drd_format just_errors",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (DrdContexts::SLUG_STR, 1.0),
+                (DrdSuppressedContexts::SLUG_STR, 2.0),
+                (DrdSuppressedErrors::SLUG_STR, 3.0),
+                (DrdErrors::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::drd_format metrics_mixed",
+            );
+        }
+
+        {
+            let expected = HashMap::from([
+                (DrdErrors::SLUG_STR, 1.0),
+                (DrdContexts::SLUG_STR, 2.0),
+                (DrdSuppressedErrors::SLUG_STR, 3.0),
+                (DrdSuppressedContexts::SLUG_STR, 4.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::custom_format::drd_format all_metrics",
+            );
+        }
     }
 
     #[derive(Default)]

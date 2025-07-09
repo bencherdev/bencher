@@ -49,10 +49,41 @@ pub enum IaiCallgrindMeasure {
     Instructions(JsonNewMetric),
     L1Hits(JsonNewMetric),
     L2Hits(JsonNewMetric),
+    LLHits(JsonNewMetric), // renamed from L2 Hits
     RamHits(JsonNewMetric),
     TotalReadWrite(JsonNewMetric),
     EstimatedCycles(JsonNewMetric),
-    GlobalBusEvents(JsonNewMetric),
+    GlobalBusEvents(JsonNewMetric),        // Ge
+    DataCacheReads(JsonNewMetric),         // Dr
+    DataCacheWrites(JsonNewMetric),        // Dw
+    L1InstrCacheReadMisses(JsonNewMetric), // I1mr
+    L1DataCacheReadMisses(JsonNewMetric),  // D1mr
+    L1DataCacheWriteMisses(JsonNewMetric), // D1mw
+    LLInstrCacheReadMisses(JsonNewMetric), // ILmr
+    LLDataCacheReadMisses(JsonNewMetric),  // DLmr
+    LLDataCacheWriteMisses(JsonNewMetric), // DLmw
+    L1InstrCacheMissRate(JsonNewMetric),   // I1MissRate
+    LLInstrCacheMissRate(JsonNewMetric),   // LLiMissRate
+    L1DataCacheMissRate(JsonNewMetric),    // D1MissRate
+    LLDataCacheMissRate(JsonNewMetric),    // LLdMissRate
+    LLCacheMissRate(JsonNewMetric),        // LLMissRate
+    L1HitRate(JsonNewMetric),
+    LLHitRate(JsonNewMetric),
+    RamHitRate(JsonNewMetric),
+    NumberSystemCalls(JsonNewMetric),               // SysCount
+    TimeSystemCalls(JsonNewMetric),                 // SysTime
+    CpuTimeSystemCalls(JsonNewMetric),              // SysCpuTime
+    ExecutedConditionalBranches(JsonNewMetric),     // Bc
+    MispredictedConditionalBranches(JsonNewMetric), // Bcm
+    ExecutedIndirectBranches(JsonNewMetric),        // Bi
+    MispredictedIndirectBranches(JsonNewMetric),    // Bim
+    DirtyMissInstructionRead(JsonNewMetric),        // ILdmr
+    DirtyMissDataRead(JsonNewMetric),               // DLdmr
+    DirtyMissDataWrite(JsonNewMetric),              // DLdmw
+    L1BadTemporalLocality(JsonNewMetric),           // AcLoss1
+    LLBadTemporalLocality(JsonNewMetric),           // AcLoss2
+    L1BadSpatialLocality(JsonNewMetric),            // SpLoss1
+    LLBadSpatialLocality(JsonNewMetric),            // SpLoss2
 
     /*
      * DHAT tool:
@@ -65,6 +96,35 @@ pub enum IaiCallgrindMeasure {
     AtTEndBlocks(JsonNewMetric),
     ReadsBytes(JsonNewMetric),
     WritesBytes(JsonNewMetric),
+
+    /*
+     * Memcheck tool:
+     */
+    MemcheckErrors(JsonNewMetric),
+    MemcheckContexts(JsonNewMetric),
+    MemcheckSuppressedErrors(JsonNewMetric),
+    MemcheckSuppressedContexts(JsonNewMetric),
+
+    /*
+     * Helgrind tool:
+     */
+    HelgrindErrors(JsonNewMetric),
+    HelgrindContexts(JsonNewMetric),
+    HelgrindSuppressedErrors(JsonNewMetric),
+    HelgrindSuppressedContexts(JsonNewMetric),
+
+    /*
+     * Drd tool:
+     */
+    DrdErrors(JsonNewMetric),
+    DrdContexts(JsonNewMetric),
+    DrdSuppressedErrors(JsonNewMetric),
+    DrdSuppressedContexts(JsonNewMetric),
+
+    /*
+     * Unknown
+     */
+    Unknown,
 }
 
 impl AdapterResults {
@@ -152,6 +212,7 @@ impl AdapterResults {
         Some(results_map.into())
     }
 
+    #[expect(clippy::too_many_lines)]
     pub fn new_iai_callgrind(
         benchmark_metrics: Vec<(BenchmarkName, Vec<IaiCallgrindMeasure>)>,
     ) -> Option<Self> {
@@ -166,9 +227,7 @@ impl AdapterResults {
                 .or_insert_with(AdapterMetrics::default);
             for metric in metrics {
                 let (resource_id, metric) = match metric {
-                    /*
-                     * Callgrind tool:
-                     */
+                    // Callgrind/Cachgrind
                     IaiCallgrindMeasure::Instructions(json_metric) => (
                         built_in::iai_callgrind::Instructions::name_id(),
                         json_metric,
@@ -178,6 +237,9 @@ impl AdapterResults {
                     },
                     IaiCallgrindMeasure::L2Hits(json_metric) => {
                         (built_in::iai_callgrind::L2Hits::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLHits(json_metric) => {
+                        (built_in::iai_callgrind::LLHits::name_id(), json_metric)
                     },
                     IaiCallgrindMeasure::RamHits(json_metric) => {
                         (built_in::iai_callgrind::RamHits::name_id(), json_metric)
@@ -194,10 +256,97 @@ impl AdapterResults {
                         built_in::iai_callgrind::GlobalBusEvents::name_id(),
                         json_metric,
                     ),
-
-                    /*
-                     * DHAT tool:
-                     */
+                    IaiCallgrindMeasure::DataCacheReads(json_metric) => {
+                        (built_in::iai_callgrind::Dr::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::DataCacheWrites(json_metric) => {
+                        (built_in::iai_callgrind::Dw::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1InstrCacheReadMisses(json_metric) => {
+                        (built_in::iai_callgrind::I1mr::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1DataCacheReadMisses(json_metric) => {
+                        (built_in::iai_callgrind::D1mr::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1DataCacheWriteMisses(json_metric) => {
+                        (built_in::iai_callgrind::D1mw::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLInstrCacheReadMisses(json_metric) => {
+                        (built_in::iai_callgrind::ILmr::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLDataCacheReadMisses(json_metric) => {
+                        (built_in::iai_callgrind::DLmr::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLDataCacheWriteMisses(json_metric) => {
+                        (built_in::iai_callgrind::DLmw::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1InstrCacheMissRate(json_metric) => {
+                        (built_in::iai_callgrind::I1MissRate::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLInstrCacheMissRate(json_metric) => {
+                        (built_in::iai_callgrind::LLiMissRate::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1DataCacheMissRate(json_metric) => {
+                        (built_in::iai_callgrind::D1MissRate::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLDataCacheMissRate(json_metric) => {
+                        (built_in::iai_callgrind::LLdMissRate::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLCacheMissRate(json_metric) => {
+                        (built_in::iai_callgrind::LLMissRate::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1HitRate(json_metric) => {
+                        (built_in::iai_callgrind::L1HitRate::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLHitRate(json_metric) => {
+                        (built_in::iai_callgrind::LLHitRate::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::RamHitRate(json_metric) => {
+                        (built_in::iai_callgrind::RamHitRate::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::NumberSystemCalls(json_metric) => {
+                        (built_in::iai_callgrind::SysCount::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::TimeSystemCalls(json_metric) => {
+                        (built_in::iai_callgrind::SysTime::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::CpuTimeSystemCalls(json_metric) => {
+                        (built_in::iai_callgrind::SysCpuTime::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::ExecutedConditionalBranches(json_metric) => {
+                        (built_in::iai_callgrind::Bc::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::MispredictedConditionalBranches(json_metric) => {
+                        (built_in::iai_callgrind::Bcm::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::ExecutedIndirectBranches(json_metric) => {
+                        (built_in::iai_callgrind::Bi::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::MispredictedIndirectBranches(json_metric) => {
+                        (built_in::iai_callgrind::Bim::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::DirtyMissInstructionRead(json_metric) => {
+                        (built_in::iai_callgrind::ILdmr::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::DirtyMissDataRead(json_metric) => {
+                        (built_in::iai_callgrind::DLdmr::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::DirtyMissDataWrite(json_metric) => {
+                        (built_in::iai_callgrind::DLdmw::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1BadTemporalLocality(json_metric) => {
+                        (built_in::iai_callgrind::AcCost1::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLBadTemporalLocality(json_metric) => {
+                        (built_in::iai_callgrind::AcCost2::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1BadSpatialLocality(json_metric) => {
+                        (built_in::iai_callgrind::SpLoss1::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::LLBadSpatialLocality(json_metric) => {
+                        (built_in::iai_callgrind::SpLoss2::name_id(), json_metric)
+                    },
+                    // DHAT
                     IaiCallgrindMeasure::TotalBytes(json_metric) => {
                         (built_in::iai_callgrind::TotalBytes::name_id(), json_metric)
                     },
@@ -224,6 +373,59 @@ impl AdapterResults {
                     },
                     IaiCallgrindMeasure::WritesBytes(json_metric) => {
                         (built_in::iai_callgrind::WritesBytes::name_id(), json_metric)
+                    },
+                    // Memcheck
+                    IaiCallgrindMeasure::MemcheckErrors(json_metric) => (
+                        built_in::iai_callgrind::MemcheckErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::MemcheckContexts(json_metric) => (
+                        built_in::iai_callgrind::MemcheckContexts::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::MemcheckSuppressedErrors(json_metric) => (
+                        built_in::iai_callgrind::MemcheckSuppressedErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::MemcheckSuppressedContexts(json_metric) => (
+                        built_in::iai_callgrind::MemcheckSuppressedContexts::name_id(),
+                        json_metric,
+                    ),
+                    // Helgrind
+                    IaiCallgrindMeasure::HelgrindErrors(json_metric) => (
+                        built_in::iai_callgrind::HelgrindErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::HelgrindContexts(json_metric) => (
+                        built_in::iai_callgrind::HelgrindContexts::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::HelgrindSuppressedErrors(json_metric) => (
+                        built_in::iai_callgrind::HelgrindSuppressedErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::HelgrindSuppressedContexts(json_metric) => (
+                        built_in::iai_callgrind::HelgrindSuppressedContexts::name_id(),
+                        json_metric,
+                    ),
+                    // Drd
+                    IaiCallgrindMeasure::DrdErrors(json_metric) => {
+                        (built_in::iai_callgrind::DrdErrors::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::DrdContexts(json_metric) => {
+                        (built_in::iai_callgrind::DrdContexts::name_id(), json_metric)
+                    },
+                    IaiCallgrindMeasure::DrdSuppressedErrors(json_metric) => (
+                        built_in::iai_callgrind::DrdSuppressedErrors::name_id(),
+                        json_metric,
+                    ),
+                    IaiCallgrindMeasure::DrdSuppressedContexts(json_metric) => (
+                        built_in::iai_callgrind::DrdSuppressedContexts::name_id(),
+                        json_metric,
+                    ),
+                    // Unknown
+                    IaiCallgrindMeasure::Unknown => {
+                        continue;
                     },
                 };
                 metrics_value.inner.insert(resource_id, metric);
