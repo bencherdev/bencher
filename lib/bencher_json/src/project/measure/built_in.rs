@@ -3,6 +3,7 @@ use bencher_valid::NameId;
 
 pub trait BuiltInMeasure {
     const NAME_STR: &'static str;
+    const DISPLAY_STR: Option<&'static str>;
     const SLUG_STR: &'static str;
     const UNITS_STR: &'static str;
 
@@ -14,13 +15,17 @@ pub trait BuiltInMeasure {
     }
 
     fn from_str(measure_str: &str) -> Option<JsonNewMeasure> {
-        (measure_str == Self::NAME_STR || measure_str == Self::SLUG_STR).then(Self::new_json)
+        (Self::DISPLAY_STR.is_some_and(|display| measure_str == display)
+            || measure_str == Self::NAME_STR
+            || measure_str == Self::SLUG_STR)
+            .then(Self::new_json)
     }
 
     #[expect(clippy::expect_used)]
     fn new_json() -> JsonNewMeasure {
         JsonNewMeasure {
-            name: Self::NAME_STR
+            name: Self::DISPLAY_STR
+                .unwrap_or(Self::NAME_STR)
                 .parse()
                 .expect("Failed to parse measure name."),
             slug: Some(
@@ -41,6 +46,17 @@ macro_rules! create_measure {
 
         impl crate::project::measure::built_in::BuiltInMeasure for $id {
             const NAME_STR: &'static str = $name;
+            const DISPLAY_STR: Option<&'static str> = None;
+            const SLUG_STR: &'static str = $slug;
+            const UNITS_STR: &'static str = $units;
+        }
+    };
+    ($id:ident, $name:literal, $display:literal, $slug:literal, $units:expr) => {
+        pub struct $id;
+
+        impl crate::project::measure::built_in::BuiltInMeasure for $id {
+            const NAME_STR: &'static str = $name;
+            const DISPLAY_STR: Option<&'static str> = Some($display);
             const SLUG_STR: &'static str = $slug;
             const UNITS_STR: &'static str = $units;
         }
@@ -151,59 +167,85 @@ pub mod iai_callgrind {
     create_measure!(WritesBytes, "Writes bytes", "writes-bytes", BYTES);
 
     // Memcheck
-    create_measure!(MemcheckErrors, "Errors", "memcheck-errors", "errors");
+    create_measure!(
+        MemcheckErrors,
+        "Errors",
+        "Memcheck Errors",
+        "memcheck-errors",
+        "errors"
+    );
     create_measure!(
         MemcheckContexts,
         "Contexts",
+        "Memcheck Contexts",
         "memcheck-contexts",
         "contexts"
     );
     create_measure!(
         MemcheckSuppressedErrors,
         "Suppressed Errors",
+        "Memcheck Suppressed Errors",
         "memcheck-suppressed-errors",
         "suppressed errors"
     );
     create_measure!(
         MemcheckSuppressedContexts,
         "Suppressed Contexts",
+        "Memcheck Suppressed Contexts",
         "memcheck-suppressed-contexts",
         "suppressed contexts"
     );
 
     // Helgrind
-    create_measure!(HelgrindErrors, "Errors", "helgrind-errors", "errors");
+    create_measure!(
+        HelgrindErrors,
+        "Errors",
+        "Helgrind Errors",
+        "helgrind-errors",
+        "errors"
+    );
     create_measure!(
         HelgrindContexts,
         "Contexts",
+        "Helgrind Contexts",
         "helgrind-contexts",
         "contexts"
     );
     create_measure!(
         HelgrindSuppressedErrors,
         "Suppressed Errors",
+        "Helgrind Suppressed Errors",
         "helgrind-suppressed-errors",
         "suppressed errors"
     );
     create_measure!(
         HelgrindSuppressedContexts,
         "Suppressed Contexts",
+        "Helgrind Suppressed Contexts",
         "helgrind-suppressed-contexts",
         "suppressed contexts"
     );
 
     // Drd
-    create_measure!(DrdErrors, "Errors", "drd-errors", "errors");
-    create_measure!(DrdContexts, "Contexts", "drd-contexts", "contexts");
+    create_measure!(DrdErrors, "Errors", "DRD Errors", "drd-errors", "errors");
+    create_measure!(
+        DrdContexts,
+        "Contexts",
+        "DRD Contexts",
+        "drd-contexts",
+        "contexts"
+    );
     create_measure!(
         DrdSuppressedErrors,
         "Suppressed Errors",
+        "DRD Suppressed Errors",
         "drd-suppressed-errors",
         "suppressed errors"
     );
     create_measure!(
         DrdSuppressedContexts,
         "Suppressed Contexts",
+        "DRD Suppressed Contexts",
         "drd-suppressed-contexts",
         "suppressed contexts"
     );
