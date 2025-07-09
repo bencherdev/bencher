@@ -205,7 +205,7 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
                     iai_callgrind::SpLoss2::NAME_STR => {
                         IaiCallgrindMeasure::LLBadSpatialLocality(json)
                     },
-                    _ => IaiCallgrindMeasure::Unknown(json),
+                    _ => IaiCallgrindMeasure::Unknown,
                 })
                 .collect()
         },
@@ -271,7 +271,7 @@ fn cachegrind_tool_measures<'a>()
                     iai_callgrind::L1HitRate::NAME_STR => IaiCallgrindMeasure::L1HitRate(json),
                     iai_callgrind::LLHitRate::NAME_STR => IaiCallgrindMeasure::LLHitRate(json),
                     iai_callgrind::RamHitRate::NAME_STR => IaiCallgrindMeasure::RamHitRate(json),
-                    _ => IaiCallgrindMeasure::Unknown(json),
+                    _ => IaiCallgrindMeasure::Unknown,
                 })
                 .collect()
         },
@@ -299,7 +299,7 @@ fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCa
                     },
                     iai_callgrind::ReadsBytes::NAME_STR => IaiCallgrindMeasure::ReadsBytes(json),
                     iai_callgrind::WritesBytes::NAME_STR => IaiCallgrindMeasure::WritesBytes(json),
-                    _ => IaiCallgrindMeasure::Unknown(json),
+                    _ => IaiCallgrindMeasure::Unknown,
                 })
                 .collect()
         },
@@ -326,7 +326,7 @@ fn memcheck_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<I
                     iai_callgrind::MemcheckSuppressedContexts::NAME_STR => {
                         IaiCallgrindMeasure::MemcheckSuppressedContexts(json)
                     },
-                    _ => IaiCallgrindMeasure::Unknown(json),
+                    _ => IaiCallgrindMeasure::Unknown,
                 })
                 .collect()
         },
@@ -353,7 +353,7 @@ fn helgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<I
                     iai_callgrind::HelgrindSuppressedContexts::NAME_STR => {
                         IaiCallgrindMeasure::HelgrindSuppressedContexts(json)
                     },
-                    _ => IaiCallgrindMeasure::Unknown(json),
+                    _ => IaiCallgrindMeasure::Unknown,
                 })
                 .collect()
         },
@@ -375,7 +375,7 @@ fn drd_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCal
                     iai_callgrind::DrdSuppressedContexts::NAME_STR => {
                         IaiCallgrindMeasure::DrdSuppressedContexts(json)
                     },
-                    _ => IaiCallgrindMeasure::Unknown(json),
+                    _ => IaiCallgrindMeasure::Unknown,
                 })
                 .collect()
         },

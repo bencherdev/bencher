@@ -124,7 +124,7 @@ pub enum IaiCallgrindMeasure {
     /*
      * Unknown
      */
-    Unknown(JsonNewMetric),
+    Unknown,
 }
 
 impl AdapterResults {
@@ -424,7 +424,7 @@ impl AdapterResults {
                         json_metric,
                     ),
                     // Unknown
-                    IaiCallgrindMeasure::Unknown(_) => {
+                    IaiCallgrindMeasure::Unknown => {
                         continue;
                     },
                 };
