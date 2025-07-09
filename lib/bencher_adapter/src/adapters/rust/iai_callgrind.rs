@@ -74,7 +74,7 @@ fn single_benchmark<'a>()
         tuple((
             terminated(
                 recognize(tuple((
-                    is_not(":\r\n"),
+                    is_not(":\r\n \t"),
                     tag("::"),
                     is_not(":\r\n"),
                     tag("::"),
@@ -384,7 +384,7 @@ fn drd_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCal
 
 fn tool_name_line<'a>(tool_name: &'static str) -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
     delimited(
-        tuple((space0, many1(tag("=")), tag(" "))),
+        tuple((space1, many1(tag("=")), tag(" "))),
         tag(tool_name),
         tuple((tag(" "), many1(tag("=")), line_ending())),
     )
@@ -597,6 +597,15 @@ pub(crate) mod test_rust_iai_callgrind {
                 "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30",
             );
         }
+    }
+
+    #[test]
+    fn test_with_summary_and_regressions() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/with-summary-and-regressions.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
     }
 
     #[test]
