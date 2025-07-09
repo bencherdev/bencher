@@ -553,6 +553,15 @@ pub(crate) mod test_rust_iai_callgrind {
             "./tool_output/rust/iai_callgrind/delta.txt",
         );
 
+        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+    }
+
+    #[test]
+    fn test_delta_with_infinity() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/delta_with_inf.txt",
+        );
+
         assert_eq!(results.inner.len(), 2);
 
         {
