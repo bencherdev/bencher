@@ -39,11 +39,17 @@ pub async fn get_stats(
     let users_cohort = get_users(db_connection, this_week, this_month).await?;
 
     // projects
-    let projects_cohort = get_projects(db_connection, this_week, this_month).await?;
-    let unclaimed_projects_cohort =
-        get_unclaimed_projects(db_connection, this_week, this_month).await?;
+    let projects_cohort =
+        get_projects_cohort(db_connection, this_week, this_month, ProjectState::All).await?;
+    let unclaimed_projects_cohort = get_projects_cohort(
+        db_connection,
+        this_week,
+        this_month,
+        ProjectState::Unclaimed,
+    )
+    .await?;
     let claimed_projects_cohort =
-        get_claimed_projects(db_connection, this_week, this_month).await?;
+        get_projects_cohort(db_connection, this_week, this_month, ProjectState::Claimed).await?;
 
     // reports and median reports per project
     let ReportCohorts {
@@ -236,27 +242,21 @@ async fn get_users(
     })
 }
 
-async fn get_projects(
+enum ProjectState {
+    All,
+    Unclaimed,
+    Claimed,
+}
+
+async fn get_projects_cohort(
     db_connection: &Mutex<DbConnection>,
     this_week: i64,
     this_month: i64,
+    state: ProjectState,
 ) -> Result<JsonCohort, HttpError> {
-    let weekly_projects = schema::project::table
-        .filter(schema::project::created.ge(this_week))
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let monthly_projects = schema::project::table
-        .filter(schema::project::created.ge(this_month))
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let total_projects = schema::project::table
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
+    let weekly_projects = get_project_count(db_connection, Some(this_week), &state).await?;
+    let monthly_projects = get_project_count(db_connection, Some(this_month), &state).await?;
+    let total_projects = get_project_count(db_connection, None, &state).await?;
 
     Ok(JsonCohort {
         week: weekly_projects as u64,
@@ -265,80 +265,43 @@ async fn get_projects(
     })
 }
 
-async fn get_unclaimed_projects(
+async fn get_project_count(
     db_connection: &Mutex<DbConnection>,
-    this_week: i64,
-    this_month: i64,
-) -> Result<JsonCohort, HttpError> {
-    let weekly_projects = schema::project::table
-        .inner_join(schema::organization::table.left_join(schema::organization_role::table))
-        .filter(schema::organization_role::id.is_null())
-        .filter(schema::project::created.ge(this_week))
-        .group_by(schema::project::id)
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
+    since: Option<i64>,
+    state: &ProjectState,
+) -> Result<i64, HttpError> {
+    match state {
+        ProjectState::All => {
+            let mut query = schema::project::table.into_boxed();
+            if let Some(since) = since {
+                query = query.filter(schema::project::created.ge(since));
+            }
+            query
+                .count()
+                .get_result::<i64>(connection_lock!(db_connection))
+                .map_err(resource_not_found_err!(Project))
+        },
+        ProjectState::Unclaimed | ProjectState::Claimed => {
+            let mut query = schema::project::table
+                .inner_join(schema::organization::table.left_join(schema::organization_role::table))
+                .select(diesel::dsl::count_distinct(schema::project::id))
+                .into_boxed();
 
-    let monthly_projects = schema::project::table
-        .inner_join(schema::organization::table.left_join(schema::organization_role::table))
-        .filter(schema::organization_role::id.is_null())
-        .filter(schema::project::created.ge(this_month))
-        .group_by(schema::project::id)
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
+            query = match state {
+                ProjectState::All => unreachable!(),
+                ProjectState::Unclaimed => query.filter(schema::organization_role::id.is_null()),
+                ProjectState::Claimed => query.filter(schema::organization_role::id.is_not_null()),
+            };
 
-    let total_projects = schema::project::table
-        .inner_join(schema::organization::table.left_join(schema::organization_role::table))
-        .filter(schema::organization_role::id.is_null())
-        .group_by(schema::project::id)
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
+            if let Some(since) = since {
+                query = query.filter(schema::project::created.ge(since));
+            }
 
-    Ok(JsonCohort {
-        week: weekly_projects as u64,
-        month: monthly_projects as u64,
-        total: total_projects as u64,
-    })
-}
-
-async fn get_claimed_projects(
-    db_connection: &Mutex<DbConnection>,
-    this_week: i64,
-    this_month: i64,
-) -> Result<JsonCohort, HttpError> {
-    let weekly_projects = schema::project::table
-        .inner_join(schema::organization::table.left_join(schema::organization_role::table))
-        .filter(schema::organization_role::id.is_not_null())
-        .filter(schema::project::created.ge(this_week))
-        .group_by(schema::project::id)
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let monthly_projects = schema::project::table
-        .inner_join(schema::organization::table.left_join(schema::organization_role::table))
-        .filter(schema::organization_role::id.is_not_null())
-        .filter(schema::project::created.ge(this_month))
-        .group_by(schema::project::id)
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    let total_projects = schema::project::table
-        .inner_join(schema::organization::table.left_join(schema::organization_role::table))
-        .filter(schema::organization_role::id.is_not_null())
-        .group_by(schema::project::id)
-        .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
-
-    Ok(JsonCohort {
-        week: weekly_projects as u64,
-        month: monthly_projects as u64,
-        total: total_projects as u64,
-    })
+            query
+                .first::<i64>(connection_lock!(db_connection))
+                .map_err(resource_not_found_err!(Project))
+        },
+    }
 }
 
 struct ReportCohorts {
