@@ -11136,16 +11136,28 @@
         ]
       },
       "JsonServer": {
+        "description": "A Bencher server instance",
         "type": "object",
         "properties": {
           "created": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "The date the server was created",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "uuid": {
-            "$ref": "#/components/schemas/ServerUuid"
+            "description": "The server UUID",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServerUuid"
+              }
+            ]
           },
           "version": {
             "nullable": true,
+            "description": "The current version of the server",
             "type": "string"
           }
         },
@@ -11180,10 +11192,30 @@
         ]
       },
       "JsonServerStats": {
+        "description": "Bencher server stats",
         "type": "object",
         "properties": {
+          "active_claimed_projects": {
+            "nullable": true,
+            "description": "Number of active claimed projects (with at least one report)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
           "active_projects": {
             "nullable": true,
+            "description": "Number of active projects (with at least one report)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "active_unclaimed_projects": {
+            "nullable": true,
+            "description": "Number of active unclaimed projects (with at least one report)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohort"
@@ -11192,22 +11224,70 @@
           },
           "admins": {
             "nullable": true,
+            "description": "Server admins",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonUsers"
               }
             ]
           },
-          "metrics": {
+          "claimed_metrics": {
             "nullable": true,
+            "description": "Number of claimed metrics (created)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohort"
               }
             ]
           },
+          "claimed_projects": {
+            "nullable": true,
+            "description": "Number of claimed projects (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "claimed_reports": {
+            "nullable": true,
+            "description": "Number of claimed reports (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "metrics": {
+            "nullable": true,
+            "description": "Number of metrics (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "metrics_per_claimed_report": {
+            "nullable": true,
+            "description": "Number of metrics per claimed report (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
           "metrics_per_report": {
             "nullable": true,
+            "description": "Number of metrics per report (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "metrics_per_unclaimed_report": {
+            "nullable": true,
+            "description": "Number of metrics per unclaimed report (created)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohortAvg"
@@ -11216,6 +11296,7 @@
           },
           "organizations": {
             "nullable": true,
+            "description": "Server organizations",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonOrganizations"
@@ -11224,6 +11305,7 @@
           },
           "projects": {
             "nullable": true,
+            "description": "Number of projects (created)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohort"
@@ -11232,14 +11314,34 @@
           },
           "reports": {
             "nullable": true,
+            "description": "Number of reports (created)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohort"
               }
             ]
           },
+          "reports_per_claimed_project": {
+            "nullable": true,
+            "description": "Number of reports per active claimed project (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
           "reports_per_project": {
             "nullable": true,
+            "description": "Number of reports per active project (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "reports_per_unclaimed_project": {
+            "nullable": true,
+            "description": "Number of reports per active unclaimed project (created)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohortAvg"
@@ -11247,21 +11349,78 @@
             ]
           },
           "server": {
-            "$ref": "#/components/schemas/JsonServer"
+            "description": "The Bencher server instance",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonServer"
+              }
+            ]
           },
           "timestamp": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "Timestamp of the stats",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
-          "top_projects": {
+          "top_claimed_projects": {
             "nullable": true,
+            "description": "Top 10 claimed projects",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonTopCohort"
               }
             ]
           },
+          "top_projects": {
+            "nullable": true,
+            "description": "Top 10 projects",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTopCohort"
+              }
+            ]
+          },
+          "top_unclaimed_projects": {
+            "nullable": true,
+            "description": "Top 10 unclaimed projects",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTopCohort"
+              }
+            ]
+          },
+          "unclaimed_metrics": {
+            "nullable": true,
+            "description": "Number of unclaimed metrics (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "unclaimed_projects": {
+            "nullable": true,
+            "description": "Number of unclaimed projects (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "unclaimed_reports": {
+            "nullable": true,
+            "description": "Number of unclaimed reports (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
           "users": {
             "nullable": true,
+            "description": "Number of users (created)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohort"
