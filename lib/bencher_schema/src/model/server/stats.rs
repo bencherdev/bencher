@@ -37,6 +37,8 @@ pub async fn get_stats(
     let organizations = get_organizations(db_connection, is_bencher_cloud).await?;
     let admins = get_admins(db_connection, is_bencher_cloud).await?;
     let users_cohort = get_users(db_connection, this_week, this_month).await?;
+
+    // projects
     let projects_cohort = get_projects(db_connection, this_week, this_month).await?;
     let unclaimed_projects_cohort =
         get_unclaimed_projects(db_connection, this_week, this_month).await?;
@@ -44,52 +46,21 @@ pub async fn get_stats(
         get_claimed_projects(db_connection, this_week, this_month).await?;
 
     // reports and median reports per project
-    let mut weekly_reports = schema::report::table
-        .filter(schema::report::created.ge(this_week))
-        .group_by(schema::report::project_id)
-        .select(count(schema::report::id))
-        .load::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Report))?;
-    let weekly_active_projects = weekly_reports.len();
-    let weekly_reports_total: i64 = weekly_reports.iter().sum();
-    let weekly_reports_per_project = median(&mut weekly_reports);
-
-    let mut monthly_reports = schema::report::table
-        .filter(schema::report::created.ge(this_month))
-        .group_by(schema::report::project_id)
-        .select(count(schema::report::id))
-        .load::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Report))?;
-    let monthly_active_projects = monthly_reports.len();
-    let monthly_reports_total: i64 = monthly_reports.iter().sum();
-    let monthly_reports_per_project = median(&mut monthly_reports);
-
-    let mut total_reports = schema::report::table
-        .group_by(schema::report::project_id)
-        .select(count(schema::report::id))
-        .load::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Report))?;
-    let total_active_projects = total_reports.len();
-    let total_reports_total: i64 = total_reports.iter().sum();
-    let total_reports_per_project = median(&mut total_reports);
-
-    let active_projects_cohort = JsonCohort {
-        week: weekly_active_projects as u64,
-        month: monthly_active_projects as u64,
-        total: total_active_projects as u64,
-    };
-
-    let reports_cohort = JsonCohort {
-        week: weekly_reports_total as u64,
-        month: monthly_reports_total as u64,
-        total: total_reports_total as u64,
-    };
-
-    let reports_per_project_cohort = JsonCohortAvg {
-        week: weekly_reports_per_project,
-        month: monthly_reports_per_project,
-        total: total_reports_per_project,
-    };
+    let ReportCohorts {
+        active_projects_cohort,
+        reports_cohort,
+        reports_per_project_cohort,
+    } = get_report_cohorts(db_connection, this_week, this_month).await?;
+    let ReportCohorts {
+        active_projects_cohort: active_unclaimed_projects_cohort,
+        reports_cohort: unclaimed_reports_cohort,
+        reports_per_project_cohort: reports_per_unclaimed_project_cohort,
+    } = get_unclaimed_report_cohorts(db_connection, this_week, this_month).await?;
+    let ReportCohorts {
+        active_projects_cohort: active_claimed_projects_cohort,
+        reports_cohort: claimed_reports_cohort,
+        reports_per_project_cohort: reports_per_claimed_project_cohort,
+    } = get_claimed_report_cohorts(db_connection, this_week, this_month).await?;
 
     // metrics and median metrics per report
     let mut weekly_metrics = schema::metric::table
@@ -185,8 +156,14 @@ pub async fn get_stats(
         unclaimed_projects: Some(unclaimed_projects_cohort),
         claimed_projects: Some(claimed_projects_cohort),
         active_projects: Some(active_projects_cohort),
+        active_unclaimed_projects: Some(active_unclaimed_projects_cohort),
+        active_claimed_projects: Some(active_claimed_projects_cohort),
         reports: Some(reports_cohort),
+        unclaimed_reports: Some(unclaimed_reports_cohort),
+        claimed_reports: Some(claimed_reports_cohort),
         reports_per_project: Some(reports_per_project_cohort),
+        reports_per_unclaimed_project: Some(reports_per_unclaimed_project_cohort),
+        reports_per_claimed_project: Some(reports_per_claimed_project_cohort),
         metrics: Some(metrics_cohort),
         metrics_per_report: Some(metrics_per_report_cohort),
         top_projects: Some(top_projects_cohort),
@@ -361,6 +338,219 @@ async fn get_claimed_projects(
         week: weekly_projects as u64,
         month: monthly_projects as u64,
         total: total_projects as u64,
+    })
+}
+
+struct ReportCohorts {
+    active_projects_cohort: JsonCohort,
+    reports_cohort: JsonCohort,
+    reports_per_project_cohort: JsonCohortAvg,
+}
+
+async fn get_report_cohorts(
+    db_connection: &Mutex<DbConnection>,
+    this_week: i64,
+    this_month: i64,
+) -> Result<ReportCohorts, HttpError> {
+    let mut weekly_reports = schema::report::table
+        .filter(schema::report::created.ge(this_week))
+        .group_by(schema::report::project_id)
+        .select(count(schema::report::id))
+        .load::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(Report))?;
+    let weekly_active_projects = weekly_reports.len();
+    let weekly_reports_total: i64 = weekly_reports.iter().sum();
+    let weekly_reports_per_project = median(&mut weekly_reports);
+
+    let mut monthly_reports = schema::report::table
+        .filter(schema::report::created.ge(this_month))
+        .group_by(schema::report::project_id)
+        .select(count(schema::report::id))
+        .load::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(Report))?;
+    let monthly_active_projects = monthly_reports.len();
+    let monthly_reports_total: i64 = monthly_reports.iter().sum();
+    let monthly_reports_per_project = median(&mut monthly_reports);
+
+    let mut total_reports = schema::report::table
+        .group_by(schema::report::project_id)
+        .select(count(schema::report::id))
+        .load::<i64>(connection_lock!(db_connection))
+        .map_err(resource_not_found_err!(Report))?;
+    let total_active_projects = total_reports.len();
+    let total_reports_total: i64 = total_reports.iter().sum();
+    let total_reports_per_project = median(&mut total_reports);
+
+    let active_projects_cohort = JsonCohort {
+        week: weekly_active_projects as u64,
+        month: monthly_active_projects as u64,
+        total: total_active_projects as u64,
+    };
+
+    let reports_cohort = JsonCohort {
+        week: weekly_reports_total as u64,
+        month: monthly_reports_total as u64,
+        total: total_reports_total as u64,
+    };
+
+    let reports_per_project_cohort = JsonCohortAvg {
+        week: weekly_reports_per_project,
+        month: monthly_reports_per_project,
+        total: total_reports_per_project,
+    };
+
+    Ok(ReportCohorts {
+        active_projects_cohort,
+        reports_cohort,
+        reports_per_project_cohort,
+    })
+}
+
+async fn get_unclaimed_report_cohorts(
+    db_connection: &Mutex<DbConnection>,
+    this_week: i64,
+    this_month: i64,
+) -> Result<ReportCohorts, HttpError> {
+    let mut weekly_reports =
+        schema::report::table
+            .inner_join(schema::project::table.inner_join(
+                schema::organization::table.left_join(schema::organization_role::table),
+            ))
+            .filter(schema::organization_role::id.is_null())
+            .filter(schema::report::created.ge(this_week))
+            .group_by(schema::report::project_id)
+            .select(count(schema::report::id))
+            .load::<i64>(connection_lock!(db_connection))
+            .map_err(resource_not_found_err!(Report))?;
+    let weekly_active_projects = weekly_reports.len();
+    let weekly_reports_total: i64 = weekly_reports.iter().sum();
+    let weekly_reports_per_project = median(&mut weekly_reports);
+
+    let mut monthly_reports =
+        schema::report::table
+            .inner_join(schema::project::table.inner_join(
+                schema::organization::table.left_join(schema::organization_role::table),
+            ))
+            .filter(schema::organization_role::id.is_null())
+            .filter(schema::report::created.ge(this_month))
+            .group_by(schema::report::project_id)
+            .select(count(schema::report::id))
+            .load::<i64>(connection_lock!(db_connection))
+            .map_err(resource_not_found_err!(Report))?;
+    let monthly_active_projects = monthly_reports.len();
+    let monthly_reports_total: i64 = monthly_reports.iter().sum();
+    let monthly_reports_per_project = median(&mut monthly_reports);
+
+    let mut total_reports =
+        schema::report::table
+            .inner_join(schema::project::table.inner_join(
+                schema::organization::table.left_join(schema::organization_role::table),
+            ))
+            .filter(schema::organization_role::id.is_null())
+            .group_by(schema::report::project_id)
+            .select(count(schema::report::id))
+            .load::<i64>(connection_lock!(db_connection))
+            .map_err(resource_not_found_err!(Report))?;
+    let total_active_projects = total_reports.len();
+    let total_reports_total: i64 = total_reports.iter().sum();
+    let total_reports_per_project = median(&mut total_reports);
+
+    let active_projects_cohort = JsonCohort {
+        week: weekly_active_projects as u64,
+        month: monthly_active_projects as u64,
+        total: total_active_projects as u64,
+    };
+
+    let reports_cohort = JsonCohort {
+        week: weekly_reports_total as u64,
+        month: monthly_reports_total as u64,
+        total: total_reports_total as u64,
+    };
+
+    let reports_per_project_cohort = JsonCohortAvg {
+        week: weekly_reports_per_project,
+        month: monthly_reports_per_project,
+        total: total_reports_per_project,
+    };
+
+    Ok(ReportCohorts {
+        active_projects_cohort,
+        reports_cohort,
+        reports_per_project_cohort,
+    })
+}
+
+async fn get_claimed_report_cohorts(
+    db_connection: &Mutex<DbConnection>,
+    this_week: i64,
+    this_month: i64,
+) -> Result<ReportCohorts, HttpError> {
+    let mut weekly_reports =
+        schema::report::table
+            .inner_join(schema::project::table.inner_join(
+                schema::organization::table.left_join(schema::organization_role::table),
+            ))
+            .filter(schema::organization_role::id.is_not_null())
+            .filter(schema::report::created.ge(this_week))
+            .group_by(schema::report::project_id)
+            .select(count(schema::report::id))
+            .load::<i64>(connection_lock!(db_connection))
+            .map_err(resource_not_found_err!(Report))?;
+    let weekly_active_projects = weekly_reports.len();
+    let weekly_reports_total: i64 = weekly_reports.iter().sum();
+    let weekly_reports_per_project = median(&mut weekly_reports);
+
+    let mut monthly_reports =
+        schema::report::table
+            .inner_join(schema::project::table.inner_join(
+                schema::organization::table.left_join(schema::organization_role::table),
+            ))
+            .filter(schema::organization_role::id.is_not_null())
+            .filter(schema::report::created.ge(this_month))
+            .group_by(schema::report::project_id)
+            .select(count(schema::report::id))
+            .load::<i64>(connection_lock!(db_connection))
+            .map_err(resource_not_found_err!(Report))?;
+    let monthly_active_projects = monthly_reports.len();
+    let monthly_reports_total: i64 = monthly_reports.iter().sum();
+    let monthly_reports_per_project = median(&mut monthly_reports);
+
+    let mut total_reports =
+        schema::report::table
+            .inner_join(schema::project::table.inner_join(
+                schema::organization::table.left_join(schema::organization_role::table),
+            ))
+            .filter(schema::organization_role::id.is_not_null())
+            .group_by(schema::report::project_id)
+            .select(count(schema::report::id))
+            .load::<i64>(connection_lock!(db_connection))
+            .map_err(resource_not_found_err!(Report))?;
+    let total_active_projects = total_reports.len();
+    let total_reports_total: i64 = total_reports.iter().sum();
+    let total_reports_per_project = median(&mut total_reports);
+
+    let active_projects_cohort = JsonCohort {
+        week: weekly_active_projects as u64,
+        month: monthly_active_projects as u64,
+        total: total_active_projects as u64,
+    };
+
+    let reports_cohort = JsonCohort {
+        week: weekly_reports_total as u64,
+        month: monthly_reports_total as u64,
+        total: total_reports_total as u64,
+    };
+
+    let reports_per_project_cohort = JsonCohortAvg {
+        week: weekly_reports_per_project,
+        month: monthly_reports_per_project,
+        total: total_reports_per_project,
+    };
+
+    Ok(ReportCohorts {
+        active_projects_cohort,
+        reports_cohort,
+        reports_per_project_cohort,
     })
 }
 
