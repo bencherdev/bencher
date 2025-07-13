@@ -1,6 +1,6 @@
 use std::str::FromStr as _;
 
-#[cfg(feature = "client")]
+#[cfg(feature = "server")]
 use regex as _;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
