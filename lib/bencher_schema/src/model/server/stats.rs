@@ -1,5 +1,6 @@
 use bencher_json::{
     DateTime, JsonOrganizations, JsonServerStats, JsonUsers,
+    organization::claim,
     system::server::{JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects},
 };
 use diesel::{
@@ -65,88 +66,17 @@ pub async fn get_stats(
         get_reports_cohorts(db_connection, this_week, this_month, ProjectState::Claimed).await?;
 
     // metrics and median metrics per report
-    let mut weekly_metrics = schema::metric::table
-        .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
-        .filter(schema::report::created.ge(this_week))
-        .group_by(schema::report::id)
-        .select(count(schema::metric::id))
-        .load::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Metric))?;
-    let weekly_metrics_total: i64 = weekly_metrics.iter().sum();
-    let weekly_metrics_per_project = median(&mut weekly_metrics);
-
-    let mut monthly_metrics = schema::metric::table
-        .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
-        .filter(schema::report::created.ge(this_month))
-        .group_by(schema::report::id)
-        .select(count(schema::metric::id))
-        .load::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Metric))?;
-    let monthly_metrics_total: i64 = monthly_metrics.iter().sum();
-    let monthly_metrics_per_project = median(&mut monthly_metrics);
-
-    let mut total_metrics = schema::metric::table
-        .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
-        .group_by(schema::report::id)
-        .select(count(schema::metric::id))
-        .load::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Metric))?;
-    let total_metrics_total: i64 = total_metrics.iter().sum();
-    let total_metrics_per_project = median(&mut total_metrics);
-
-    let metrics_cohort = JsonCohort {
-        week: weekly_metrics_total as u64,
-        month: monthly_metrics_total as u64,
-        total: total_metrics_total as u64,
-    };
-
-    let metrics_per_report_cohort = JsonCohortAvg {
-        week: weekly_metrics_per_project,
-        month: monthly_metrics_per_project,
-        total: total_metrics_per_project,
-    };
-
-    // top projects
-    let weekly_project_metrics = schema::metric::table
-        .inner_join(
-            schema::report_benchmark::table
-                .inner_join(schema::report::table.inner_join(schema::project::table)),
-        )
-        .filter(schema::report::created.ge(this_week))
-        .group_by(schema::project::id)
-        .select((QueryProject::as_select(), count(schema::metric::id)))
-        .load::<(QueryProject, i64)>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Project))?;
-    let weekly_project_metrics = top_projects(weekly_project_metrics, weekly_metrics_total);
-
-    let monthly_project_metrics = schema::metric::table
-        .inner_join(
-            schema::report_benchmark::table
-                .inner_join(schema::report::table.inner_join(schema::project::table)),
-        )
-        .filter(schema::report::created.ge(this_month))
-        .group_by(schema::project::id)
-        .select((QueryProject::as_select(), count(schema::metric::id)))
-        .load::<(QueryProject, i64)>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Project))?;
-    let monthly_project_metrics = top_projects(monthly_project_metrics, monthly_metrics_total);
-
-    let total_project_metrics = schema::metric::table
-        .inner_join(
-            schema::report_benchmark::table
-                .inner_join(schema::report::table.inner_join(schema::project::table)),
-        )
-        .group_by(schema::project::id)
-        .select((QueryProject::as_select(), count(schema::metric::id)))
-        .load::<(QueryProject, i64)>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(Metric))?;
-    let total_project_metrics = top_projects(total_project_metrics, total_metrics_total);
-
-    let top_projects_cohort = JsonTopCohort {
-        week: weekly_project_metrics,
-        month: monthly_project_metrics,
-        total: total_project_metrics,
-    };
+    let metrics_cohorts =
+        get_metrics_cohorts(db_connection, this_week, this_month, ProjectState::All).await?;
+    let unclaimed_metrics_cohorts = get_metrics_cohorts(
+        db_connection,
+        this_week,
+        this_month,
+        ProjectState::Unclaimed,
+    )
+    .await?;
+    let claimed_metrics_cohorts =
+        get_metrics_cohorts(db_connection, this_week, this_month, ProjectState::Claimed).await?;
 
     Ok(JsonServerStats {
         server: query_server.into_json(),
@@ -166,9 +96,15 @@ pub async fn get_stats(
         reports_per_project: Some(reports_cohorts.reports_per_project_cohort),
         reports_per_unclaimed_project: Some(unclaimed_reports_cohorts.reports_per_project_cohort),
         reports_per_claimed_project: Some(claimed_reports_cohorts.reports_per_project_cohort),
-        metrics: Some(metrics_cohort),
-        metrics_per_report: Some(metrics_per_report_cohort),
-        top_projects: Some(top_projects_cohort),
+        metrics: Some(metrics_cohorts.metrics_cohort),
+        unclaimed_metrics: Some(unclaimed_metrics_cohorts.metrics_cohort),
+        claimed_metrics: Some(claimed_metrics_cohorts.metrics_cohort),
+        metrics_per_report: Some(metrics_cohorts.metrics_per_report_cohort),
+        metrics_per_unclaimed_report: Some(unclaimed_metrics_cohorts.metrics_per_report_cohort),
+        metrics_per_claimed_report: Some(claimed_metrics_cohorts.metrics_per_report_cohort),
+        top_projects: Some(metrics_cohorts.top_projects_cohort),
+        top_unclaimed_projects: Some(unclaimed_metrics_cohorts.top_projects_cohort),
+        top_claimed_projects: Some(claimed_metrics_cohorts.top_projects_cohort),
     })
 }
 
@@ -393,6 +329,158 @@ async fn get_reports_by_project(
             query
                 .load::<i64>(connection_lock!(db_connection))
                 .map_err(resource_not_found_err!(Report))
+        },
+    }
+}
+
+struct MetricsCohorts {
+    metrics_cohort: JsonCohort,
+    metrics_per_report_cohort: JsonCohortAvg,
+    top_projects_cohort: JsonTopCohort,
+}
+
+async fn get_metrics_cohorts(
+    db_connection: &Mutex<DbConnection>,
+    this_week: i64,
+    this_month: i64,
+    state: ProjectState,
+) -> Result<MetricsCohorts, HttpError> {
+    let mut weekly_metrics = get_metrics_by_report(db_connection, Some(this_week), &state).await?;
+    let weekly_metrics_total: i64 = weekly_metrics.iter().sum();
+    let weekly_metrics_per_project = median(&mut weekly_metrics);
+    let weekly_top_projects = get_top_projects(db_connection, Some(this_week), &state).await?;
+
+    let mut monthly_metrics =
+        get_metrics_by_report(db_connection, Some(this_month), &state).await?;
+    let monthly_metrics_total: i64 = monthly_metrics.iter().sum();
+    let monthly_metrics_per_project = median(&mut monthly_metrics);
+    let monthly_top_projects = get_top_projects(db_connection, Some(this_month), &state).await?;
+
+    let mut total_metrics = get_metrics_by_report(db_connection, None, &state).await?;
+    let total_metrics_total: i64 = total_metrics.iter().sum();
+    let total_metrics_per_project = median(&mut total_metrics);
+    let total_top_projects = get_top_projects(db_connection, None, &state).await?;
+
+    let metrics_cohort = JsonCohort {
+        week: weekly_metrics_total as u64,
+        month: monthly_metrics_total as u64,
+        total: total_metrics_total as u64,
+    };
+
+    let metrics_per_report_cohort = JsonCohortAvg {
+        week: weekly_metrics_per_project,
+        month: monthly_metrics_per_project,
+        total: total_metrics_per_project,
+    };
+
+    let top_projects_cohort = JsonTopCohort {
+        week: top_projects(weekly_top_projects, weekly_metrics_total),
+        month: top_projects(monthly_top_projects, monthly_metrics_total),
+        total: top_projects(total_top_projects, total_metrics_total),
+    };
+
+    Ok(MetricsCohorts {
+        metrics_cohort,
+        metrics_per_report_cohort,
+        top_projects_cohort,
+    })
+}
+
+async fn get_metrics_by_report(
+    db_connection: &Mutex<DbConnection>,
+    since: Option<i64>,
+    state: &ProjectState,
+) -> Result<Vec<i64>, HttpError> {
+    let mut query = schema::metric::table
+        .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
+        .group_by(schema::report::id)
+        .select(count(schema::metric::id))
+        .into_boxed();
+
+    if let Some(since) = since {
+        query = query.filter(schema::report::created.ge(since));
+    }
+
+    match state {
+        ProjectState::All => query
+            .load::<i64>(connection_lock!(db_connection))
+            .map_err(resource_not_found_err!(Metric)),
+        ProjectState::Unclaimed | ProjectState::Claimed => {
+            let mut query = schema::metric::table
+                .inner_join(schema::report_benchmark::table.inner_join(
+                    schema::report::table.inner_join(schema::project::table.inner_join(
+                        schema::organization::table.left_join(schema::organization_role::table),
+                    )),
+                ))
+                .group_by(schema::report::id)
+                .select(count(schema::metric::id))
+                .into_boxed();
+
+            query = match state {
+                ProjectState::All => unreachable!(),
+                ProjectState::Unclaimed => query.filter(schema::organization_role::id.is_null()),
+                ProjectState::Claimed => query.filter(schema::organization_role::id.is_not_null()),
+            };
+
+            if let Some(since) = since {
+                query = query.filter(schema::report::created.ge(since));
+            }
+
+            query
+                .load::<i64>(connection_lock!(db_connection))
+                .map_err(resource_not_found_err!(Metric))
+        },
+    }
+}
+
+async fn get_top_projects(
+    db_connection: &Mutex<DbConnection>,
+    since: Option<i64>,
+    state: &ProjectState,
+) -> Result<Vec<(QueryProject, i64)>, HttpError> {
+    match state {
+        ProjectState::All => {
+            let mut query = schema::metric::table
+                .inner_join(
+                    schema::report_benchmark::table
+                        .inner_join(schema::report::table.inner_join(schema::project::table)),
+                )
+                .group_by(schema::project::id)
+                .select((QueryProject::as_select(), count(schema::metric::id)))
+                .into_boxed();
+
+            if let Some(since) = since {
+                query = query.filter(schema::report::created.ge(since));
+            }
+
+            query
+                .load::<(QueryProject, i64)>(connection_lock!(db_connection))
+                .map_err(resource_not_found_err!(Project))
+        },
+        ProjectState::Unclaimed | ProjectState::Claimed => {
+            let mut query = schema::metric::table
+                .inner_join(schema::report_benchmark::table.inner_join(
+                    schema::report::table.inner_join(schema::project::table.inner_join(
+                        schema::organization::table.left_join(schema::organization_role::table),
+                    )),
+                ))
+                .group_by(schema::project::id)
+                .select((QueryProject::as_select(), count(schema::metric::id)))
+                .into_boxed();
+
+            query = match state {
+                ProjectState::All => unreachable!(),
+                ProjectState::Unclaimed => query.filter(schema::organization_role::id.is_null()),
+                ProjectState::Claimed => query.filter(schema::organization_role::id.is_not_null()),
+            };
+
+            if let Some(since) = since {
+                query = query.filter(schema::report::created.ge(since));
+            }
+
+            query
+                .load::<(QueryProject, i64)>(connection_lock!(db_connection))
+                .map_err(resource_not_found_err!(Project))
         },
     }
 }
