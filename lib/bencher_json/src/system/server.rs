@@ -38,45 +38,45 @@ pub struct JsonServerStats {
     /// Number of projects (created)
     pub projects: Option<JsonCohort>,
     /// Number of unclaimed projects (created)
-    pub unclaimed_projects: Option<JsonCohort>,
+    pub projects_unclaimed: Option<JsonCohort>,
     /// Number of claimed projects (created)
-    pub claimed_projects: Option<JsonCohort>,
+    pub projects_claimed: Option<JsonCohort>,
     /// Number of active projects (with at least one report)
     pub active_projects: Option<JsonCohort>,
     /// Number of active unclaimed projects (with at least one report)
-    pub active_unclaimed_projects: Option<JsonCohort>,
+    pub active_projects_unclaimed: Option<JsonCohort>,
     /// Number of active claimed projects (with at least one report)
-    pub active_claimed_projects: Option<JsonCohort>,
+    pub active_projects_claimed: Option<JsonCohort>,
     /// Number of reports (created)
     pub reports: Option<JsonCohort>,
     /// Number of unclaimed reports (created)
-    pub unclaimed_reports: Option<JsonCohort>,
+    pub reports_unclaimed: Option<JsonCohort>,
     /// Number of claimed reports (created)
-    pub claimed_reports: Option<JsonCohort>,
+    pub reports_claimed: Option<JsonCohort>,
     /// Number of reports per active project (created)
     pub reports_per_project: Option<JsonCohortAvg>,
     /// Number of reports per active unclaimed project (created)
-    pub reports_per_unclaimed_project: Option<JsonCohortAvg>,
+    pub reports_per_project_unclaimed: Option<JsonCohortAvg>,
     /// Number of reports per active claimed project (created)
-    pub reports_per_claimed_project: Option<JsonCohortAvg>,
+    pub reports_per_project_claimed: Option<JsonCohortAvg>,
     /// Number of metrics (created)
     pub metrics: Option<JsonCohort>,
     /// Number of unclaimed metrics (created)
-    pub unclaimed_metrics: Option<JsonCohort>,
+    pub metrics_unclaimed: Option<JsonCohort>,
     /// Number of claimed metrics (created)
-    pub claimed_metrics: Option<JsonCohort>,
+    pub metrics_claimed: Option<JsonCohort>,
     /// Number of metrics per report (created)
     pub metrics_per_report: Option<JsonCohortAvg>,
     /// Number of metrics per unclaimed report (created)
-    pub metrics_per_unclaimed_report: Option<JsonCohortAvg>,
+    pub metrics_per_report_unclaimed: Option<JsonCohortAvg>,
     /// Number of metrics per claimed report (created)
-    pub metrics_per_claimed_report: Option<JsonCohortAvg>,
+    pub metrics_per_report_claimed: Option<JsonCohortAvg>,
     /// Top 10 projects
     pub top_projects: Option<JsonTopCohort>,
     /// Top 10 unclaimed projects
-    pub top_unclaimed_projects: Option<JsonTopCohort>,
+    pub top_projects_unclaimed: Option<JsonTopCohort>,
     /// Top 10 claimed projects
-    pub top_claimed_projects: Option<JsonTopCohort>,
+    pub top_projects_claimed: Option<JsonTopCohort>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

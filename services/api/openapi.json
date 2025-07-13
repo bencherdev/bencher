@@ -11195,15 +11195,6 @@
         "description": "Bencher server stats",
         "type": "object",
         "properties": {
-          "active_claimed_projects": {
-            "nullable": true,
-            "description": "Number of active claimed projects (with at least one report)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonCohort"
-              }
-            ]
-          },
           "active_projects": {
             "nullable": true,
             "description": "Number of active projects (with at least one report)",
@@ -11213,7 +11204,16 @@
               }
             ]
           },
-          "active_unclaimed_projects": {
+          "active_projects_claimed": {
+            "nullable": true,
+            "description": "Number of active claimed projects (with at least one report)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "active_projects_unclaimed": {
             "nullable": true,
             "description": "Number of active unclaimed projects (with at least one report)",
             "allOf": [
@@ -11231,33 +11231,6 @@
               }
             ]
           },
-          "claimed_metrics": {
-            "nullable": true,
-            "description": "Number of claimed metrics (created)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonCohort"
-              }
-            ]
-          },
-          "claimed_projects": {
-            "nullable": true,
-            "description": "Number of claimed projects (created)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonCohort"
-              }
-            ]
-          },
-          "claimed_reports": {
-            "nullable": true,
-            "description": "Number of claimed reports (created)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonCohort"
-              }
-            ]
-          },
           "metrics": {
             "nullable": true,
             "description": "Number of metrics (created)",
@@ -11267,12 +11240,12 @@
               }
             ]
           },
-          "metrics_per_claimed_report": {
+          "metrics_claimed": {
             "nullable": true,
-            "description": "Number of metrics per claimed report (created)",
+            "description": "Number of claimed metrics (created)",
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonCohortAvg"
+                "$ref": "#/components/schemas/JsonCohort"
               }
             ]
           },
@@ -11285,12 +11258,30 @@
               }
             ]
           },
-          "metrics_per_unclaimed_report": {
+          "metrics_per_report_claimed": {
+            "nullable": true,
+            "description": "Number of metrics per claimed report (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "metrics_per_report_unclaimed": {
             "nullable": true,
             "description": "Number of metrics per unclaimed report (created)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "metrics_unclaimed": {
+            "nullable": true,
+            "description": "Number of unclaimed metrics (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
               }
             ]
           },
@@ -11312,6 +11303,24 @@
               }
             ]
           },
+          "projects_claimed": {
+            "nullable": true,
+            "description": "Number of claimed projects (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "projects_unclaimed": {
+            "nullable": true,
+            "description": "Number of unclaimed projects (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
           "reports": {
             "nullable": true,
             "description": "Number of reports (created)",
@@ -11321,12 +11330,12 @@
               }
             ]
           },
-          "reports_per_claimed_project": {
+          "reports_claimed": {
             "nullable": true,
-            "description": "Number of reports per active claimed project (created)",
+            "description": "Number of claimed reports (created)",
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonCohortAvg"
+                "$ref": "#/components/schemas/JsonCohort"
               }
             ]
           },
@@ -11339,12 +11348,30 @@
               }
             ]
           },
-          "reports_per_unclaimed_project": {
+          "reports_per_project_claimed": {
+            "nullable": true,
+            "description": "Number of reports per active claimed project (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "reports_per_project_unclaimed": {
             "nullable": true,
             "description": "Number of reports per active unclaimed project (created)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "reports_unclaimed": {
+            "nullable": true,
+            "description": "Number of unclaimed reports (created)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
               }
             ]
           },
@@ -11364,15 +11391,6 @@
               }
             ]
           },
-          "top_claimed_projects": {
-            "nullable": true,
-            "description": "Top 10 claimed projects",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonTopCohort"
-              }
-            ]
-          },
           "top_projects": {
             "nullable": true,
             "description": "Top 10 projects",
@@ -11382,39 +11400,21 @@
               }
             ]
           },
-          "top_unclaimed_projects": {
+          "top_projects_claimed": {
             "nullable": true,
-            "description": "Top 10 unclaimed projects",
+            "description": "Top 10 claimed projects",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonTopCohort"
               }
             ]
           },
-          "unclaimed_metrics": {
+          "top_projects_unclaimed": {
             "nullable": true,
-            "description": "Number of unclaimed metrics (created)",
+            "description": "Top 10 unclaimed projects",
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonCohort"
-              }
-            ]
-          },
-          "unclaimed_projects": {
-            "nullable": true,
-            "description": "Number of unclaimed projects (created)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonCohort"
-              }
-            ]
-          },
-          "unclaimed_reports": {
-            "nullable": true,
-            "description": "Number of unclaimed reports (created)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonCohort"
+                "$ref": "#/components/schemas/JsonTopCohort"
               }
             ]
           },
