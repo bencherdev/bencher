@@ -49,12 +49,15 @@ async fn get_project_count(
 ) -> Result<i64, HttpError> {
     match state {
         ProjectState::All => {
-            let mut query = schema::project::table.into_boxed();
+            let mut query = schema::project::table
+                .select(diesel::dsl::count_distinct(schema::project::id))
+                .into_boxed();
+
             if let Some(since) = since {
                 query = query.filter(schema::project::created.ge(since));
             }
+
             query
-                .count()
                 .get_result::<i64>(connection_lock!(db_connection))
                 .map_err(resource_not_found_err!(Project))
         },

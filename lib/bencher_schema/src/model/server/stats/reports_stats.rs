@@ -1,5 +1,5 @@
 use bencher_json::system::server::{JsonCohort, JsonCohortAvg};
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, dsl::count};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
@@ -69,26 +69,28 @@ async fn get_reports_by_project(
     since: Option<i64>,
     state: &ProjectState,
 ) -> Result<Vec<i64>, HttpError> {
-    let mut query = schema::report::table
-        .group_by(schema::report::project_id)
-        .select(count(schema::report::id))
-        .into_boxed();
-
-    if let Some(since) = since {
-        query = query.filter(schema::report::created.ge(since));
-    }
-
     match state {
-        ProjectState::All => query
-            .load::<i64>(connection_lock!(db_connection))
-            .map_err(resource_not_found_err!(Report)),
+        ProjectState::All => {
+            let mut query = schema::report::table
+                .group_by(schema::report::project_id)
+                .select(diesel::dsl::count_distinct(schema::report::id))
+                .into_boxed();
+
+            if let Some(since) = since {
+                query = query.filter(schema::report::created.ge(since));
+            }
+
+            query
+                .load::<i64>(connection_lock!(db_connection))
+                .map_err(resource_not_found_err!(Report))
+        },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::report::table
                 .inner_join(schema::project::table.inner_join(
                     schema::organization::table.left_join(schema::organization_role::table),
                 ))
                 .group_by(schema::report::project_id)
-                .select(count(schema::report::id))
+                .select(diesel::dsl::count_distinct(schema::report::id))
                 .into_boxed();
 
             query = match state {

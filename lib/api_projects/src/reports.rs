@@ -31,7 +31,7 @@ use bencher_schema::{
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
-    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _, dsl::count,
+    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
@@ -421,7 +421,7 @@ async fn delete_inner(
     // Otherwise, just return since the version is still in use
     if schema::report::table
         .filter(schema::report::version_id.eq(version_id))
-        .select(count(schema::report::id))
+        .count()
         .first::<i64>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Version,

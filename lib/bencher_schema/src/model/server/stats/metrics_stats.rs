@@ -1,9 +1,7 @@
 use bencher_json::system::server::{
     JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects,
 };
-use diesel::{
-    ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _, dsl::count,
-};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
@@ -77,20 +75,22 @@ async fn get_metrics_by_report(
     since: Option<i64>,
     state: &ProjectState,
 ) -> Result<Vec<i64>, HttpError> {
-    let mut query = schema::metric::table
-        .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
-        .group_by(schema::report::id)
-        .select(count(schema::metric::id))
-        .into_boxed();
-
-    if let Some(since) = since {
-        query = query.filter(schema::report::created.ge(since));
-    }
-
     match state {
-        ProjectState::All => query
-            .load::<i64>(connection_lock!(db_connection))
-            .map_err(resource_not_found_err!(Metric)),
+        ProjectState::All => {
+            let mut query = schema::metric::table
+                .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
+                .group_by(schema::report::id)
+                .select(diesel::dsl::count_distinct(schema::metric::id))
+                .into_boxed();
+
+            if let Some(since) = since {
+                query = query.filter(schema::report::created.ge(since));
+            }
+
+            query
+                .load::<i64>(connection_lock!(db_connection))
+                .map_err(resource_not_found_err!(Metric))
+        },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::metric::table
                 .inner_join(schema::report_benchmark::table.inner_join(
@@ -99,7 +99,7 @@ async fn get_metrics_by_report(
                     )),
                 ))
                 .group_by(schema::report::id)
-                .select(count(schema::metric::id))
+                .select(diesel::dsl::count_distinct(schema::metric::id))
                 .into_boxed();
 
             query = match state {
@@ -136,7 +136,10 @@ async fn get_top_projects(
                         .inner_join(schema::report::table.inner_join(schema::project::table)),
                 )
                 .group_by(schema::project::id)
-                .select((QueryProject::as_select(), count(schema::metric::id)))
+                .select((
+                    QueryProject::as_select(),
+                    diesel::dsl::count_distinct(schema::metric::id),
+                ))
                 .into_boxed();
 
             if let Some(since) = since {
@@ -155,7 +158,10 @@ async fn get_top_projects(
                     )),
                 ))
                 .group_by(schema::project::id)
-                .select((QueryProject::as_select(), count(schema::metric::id)))
+                .select((
+                    QueryProject::as_select(),
+                    diesel::dsl::count_distinct(schema::metric::id),
+                ))
                 .into_boxed();
 
             query = match state {
