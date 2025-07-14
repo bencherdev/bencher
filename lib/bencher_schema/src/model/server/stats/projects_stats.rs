@@ -3,7 +3,7 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
-use crate::{connection_lock, context::DbConnection, error::resource_not_found_err, schema};
+use crate::{context::DbConnection, error::resource_not_found_err, schema, yield_connection_lock};
 
 use super::ProjectState;
 
@@ -57,9 +57,9 @@ async fn get_project_count(
                 query = query.filter(schema::project::created.ge(since));
             }
 
-            query
-                .get_result::<i64>(connection_lock!(db_connection))
-                .map_err(resource_not_found_err!(Project))
+            yield_connection_lock!(db_connection, |conn| query
+                .get_result::<i64>(conn)
+                .map_err(resource_not_found_err!(Project)))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::project::table
@@ -81,9 +81,9 @@ async fn get_project_count(
                 query = query.filter(schema::project::created.ge(since));
             }
 
-            query
-                .first::<i64>(connection_lock!(db_connection))
-                .map_err(resource_not_found_err!(Project))
+            yield_connection_lock!(db_connection, |conn| query
+                .first::<i64>(conn)
+                .map_err(resource_not_found_err!(Project)))
         },
     }
 }

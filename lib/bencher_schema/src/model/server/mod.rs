@@ -11,7 +11,7 @@ use dropshot::HttpError;
 use slog::Logger;
 use tokio::sync::Mutex;
 
-use crate::connection_lock;
+use crate::yield_connection_lock;
 use crate::{
     API_VERSION,
     context::StatsSettings,
@@ -192,7 +192,8 @@ impl QueryServer {
         self_hosted_server: Option<ServerUuid>,
     ) -> Result<(), HttpError> {
         // TODO find a better home for these than my inbox
-        let admins = QueryUser::get_admins(connection_lock!(db_connection))?;
+        let admins = yield_connection_lock!(db_connection, |conn| QueryUser::get_admins(conn))?;
+
         for admin in admins {
             let message = Message {
                 to_name: Some(admin.name.clone().into()),

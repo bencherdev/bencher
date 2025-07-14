@@ -6,8 +6,8 @@ use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
-    connection_lock, context::DbConnection, error::resource_not_found_err,
-    model::project::QueryProject, schema,
+    context::DbConnection, error::resource_not_found_err, model::project::QueryProject, schema,
+    yield_connection_lock,
 };
 
 use super::{ProjectState, TOP_PROJECTS, median};
@@ -87,9 +87,9 @@ async fn get_metrics_by_report(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            query
-                .load::<i64>(connection_lock!(db_connection))
-                .map_err(resource_not_found_err!(Metric))
+            yield_connection_lock!(db_connection, |conn| query
+                .load::<i64>(conn)
+                .map_err(resource_not_found_err!(Metric)))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::metric::table
@@ -116,9 +116,9 @@ async fn get_metrics_by_report(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            query
-                .load::<i64>(connection_lock!(db_connection))
-                .map_err(resource_not_found_err!(Metric))
+            yield_connection_lock!(db_connection, |conn| query
+                .load::<i64>(conn)
+                .map_err(resource_not_found_err!(Metric)))
         },
     }
 }
@@ -146,9 +146,9 @@ async fn get_top_projects(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            query
-                .load::<(QueryProject, i64)>(connection_lock!(db_connection))
-                .map_err(resource_not_found_err!(Project))
+            yield_connection_lock!(db_connection, |conn| query
+                .load::<(QueryProject, i64)>(conn)
+                .map_err(resource_not_found_err!(Project)))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::metric::table
@@ -178,9 +178,9 @@ async fn get_top_projects(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            query
-                .load::<(QueryProject, i64)>(connection_lock!(db_connection))
-                .map_err(resource_not_found_err!(Project))
+            yield_connection_lock!(db_connection, |conn| query
+                .load::<(QueryProject, i64)>(conn)
+                .map_err(resource_not_found_err!(Project)))
         },
     }
 }

@@ -4,8 +4,8 @@ use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
-    connection_lock, context::DbConnection, error::resource_not_found_err,
-    model::organization::QueryOrganization, schema,
+    context::DbConnection, error::resource_not_found_err, model::organization::QueryOrganization,
+    schema, yield_connection_lock,
 };
 
 pub(super) struct OrganizationStats {
@@ -29,7 +29,7 @@ async fn get_organizations(
     Ok(if is_bencher_cloud {
         None
     } else {
-        Some(connection_lock!(db_connection, |conn| {
+        Some(yield_connection_lock!(db_connection, |conn| {
             schema::organization::table
                 .load::<QueryOrganization>(conn)
                 .map_err(resource_not_found_err!(Organization))?

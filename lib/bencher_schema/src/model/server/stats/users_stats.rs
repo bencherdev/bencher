@@ -4,8 +4,8 @@ use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
-    connection_lock, context::DbConnection, error::resource_not_found_err, model::user::QueryUser,
-    schema,
+    context::DbConnection, error::resource_not_found_err, model::user::QueryUser, schema,
+    yield_connection_lock,
 };
 
 pub(super) struct UsersStats {
@@ -34,7 +34,7 @@ async fn get_admins(
     Ok(if is_bencher_cloud {
         None
     } else {
-        Some(connection_lock!(db_connection, |conn| {
+        Some(yield_connection_lock!(db_connection, |conn| {
             schema::user::table
                 .filter(schema::user::admin.eq(true))
                 .load::<QueryUser>(conn)
@@ -52,22 +52,22 @@ async fn get_users(
     this_week: i64,
     this_month: i64,
 ) -> Result<JsonCohort, HttpError> {
-    let weekly_users = schema::user::table
+    let weekly_users = yield_connection_lock!(db_connection, |conn| schema::user::table
         .filter(schema::user::created.ge(this_week))
         .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
+        .get_result::<i64>(conn)
+        .map_err(resource_not_found_err!(User))?);
 
-    let monthly_users = schema::user::table
+    let monthly_users = yield_connection_lock!(db_connection, |conn| schema::user::table
         .filter(schema::user::created.ge(this_month))
         .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
+        .get_result::<i64>(conn)
+        .map_err(resource_not_found_err!(User))?);
 
-    let total_users = schema::user::table
+    let total_users = yield_connection_lock!(db_connection, |conn| schema::user::table
         .count()
-        .get_result::<i64>(connection_lock!(db_connection))
-        .map_err(resource_not_found_err!(User))?;
+        .get_result::<i64>(conn)
+        .map_err(resource_not_found_err!(User))?);
 
     Ok(JsonCohort {
         week: weekly_users as u64,

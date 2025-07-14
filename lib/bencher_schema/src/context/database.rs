@@ -16,12 +16,10 @@ pub struct Database {
 #[macro_export]
 /// Warning: Do not call `connection_lock!` multiple times in the same line, as it will deadlock.
 /// Use the `|conn|` syntax to reuse the same connection multiple times in the same line.
-macro_rules! connection_lock {
-    ($connection:ident) => {
-        &mut *$connection.lock().await
-    };
+macro_rules! yield_connection_lock {
     ($connection:ident, |$conn:ident| $multi:expr) => {{
-        let $conn = $crate::connection_lock!($connection);
+        tokio::task::yield_now().await;
+        let $conn = &mut *$connection.lock().await;
         $multi
     }};
 }
