@@ -897,14 +897,15 @@ jobs:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
         run: cargo install --debug --path services/cli --locked --force
-      - name: Backup API Server Database
-        run: |
-          bencher server backup \
-          --host https://api.bencher.dev \
-          --token ${{ secrets.BENCHER_API_TOKEN_ADMIN }} \
-          --compress \
-          --data-store aws_s3 \
-          --rm
+      # todo(ep): Fix database backup
+      # - name: Backup API Server Database
+      #   run: |
+      #     bencher server backup \
+      #     --host https://api.bencher.dev \
+      #     --token ${{ secrets.BENCHER_API_TOKEN_ADMIN }} \
+      #     --compress \
+      #     --data-store aws_s3 \
+      #     --rm
 
   deploy_api_fly:
     name: Deploy API to Fly.io Prod
