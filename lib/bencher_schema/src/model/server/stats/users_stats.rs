@@ -20,30 +20,27 @@ impl UsersStats {
         this_month: i64,
         is_bencher_cloud: bool,
     ) -> Result<Self, HttpError> {
-        let admins = get_admins(db_connection, is_bencher_cloud).await?;
+        let admins = if is_bencher_cloud {
+            None
+        } else {
+            Some(get_admins(db_connection).await?)
+        };
         let users = get_users(db_connection, this_week, this_month).await?;
 
         Ok(Self { admins, users })
     }
 }
 
-async fn get_admins(
-    db_connection: &Mutex<DbConnection>,
-    is_bencher_cloud: bool,
-) -> Result<Option<JsonUsers>, HttpError> {
-    Ok(if is_bencher_cloud {
-        None
-    } else {
-        Some(yield_connection_lock!(db_connection, |conn| {
-            schema::user::table
-                .filter(schema::user::admin.eq(true))
-                .load::<QueryUser>(conn)
-                .map_err(resource_not_found_err!(User))?
-                .into_iter()
-                .map(QueryUser::into_json)
-                .collect()
-        }))
-    })
+async fn get_admins(db_connection: &Mutex<DbConnection>) -> Result<JsonUsers, HttpError> {
+    Ok(yield_connection_lock!(db_connection, |conn| {
+        schema::user::table
+            .filter(schema::user::admin.eq(true))
+            .load::<QueryUser>(conn)
+            .map_err(resource_not_found_err!(User))?
+            .into_iter()
+            .map(QueryUser::into_json)
+            .collect()
+    }))
 }
 
 #[expect(clippy::cast_sign_loss, reason = "count is always positive")]
