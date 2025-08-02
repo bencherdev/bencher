@@ -49,6 +49,8 @@ impl Rbac {
             .inspect_err(|e| {
                 #[cfg(feature = "sentry")]
                 sentry::capture_error(&e);
+                #[cfg(not(feature = "sentry"))]
+                let _ = e;
             })
             .map_err(Box::new)
             .map_err(RbacError::IsAllowed)

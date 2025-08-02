@@ -1277,6 +1277,7 @@ dependencies = [
  "bencher_rank",
  "bencher_rbac",
  "bencher_token",
+ "camino",
  "chrono",
  "css-inline",
  "derive_more 2.0.1",

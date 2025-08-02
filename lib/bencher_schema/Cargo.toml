@@ -33,6 +33,7 @@ bencher_license = { workspace = true, optional = true }
 bencher_rank.workspace = true
 bencher_rbac.workspace = true
 bencher_token.workspace = true
+camino.workspace = true
 chrono.workspace = true
 derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
