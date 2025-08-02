@@ -33,6 +33,7 @@ jobs:
             let fs = require('fs');
             let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
             core.exportVariable("PR_HEAD", prEvent.pull_request.head.ref);
+            core.exportVariable("PR_HEAD_SHA", prEvent.pull_request.head.sha);
             core.exportVariable("PR_BASE", prEvent.pull_request.base.ref);
             core.exportVariable("PR_BASE_SHA", prEvent.pull_request.base.sha);
             core.exportVariable("PR_NUMBER", prEvent.number);
@@ -43,6 +44,7 @@ jobs:
           --project project-abc4567-wxyz123456789 \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch "$PR_HEAD" \
+          --hash "$PR_HEAD_SHA" \
           --start-point "$PR_BASE" \
           --start-point-hash "$PR_BASE_SHA" \
           --start-point-clone-thresholds \
