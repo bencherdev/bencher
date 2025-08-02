@@ -11,75 +11,89 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
    (например, `on: workflow_run: ...`)
 4. Создайте `job` для GitHub Actions.
    (например, `jobs: track_fork_pr_branch`)
-5. Запустите этот job только в случае успешного завершения предыдущего workflow, используя
+5. Выполните эту задачу только в случае успешного завершения предыдущего workflow, используя
    [событие `workflow_run` GitHub Actions][github actions workflow_run].
    (например, `if: github.event.workflow_run.conclusion == 'success'`)
-6. Установите тип машины, на которой будет выполнено задание.
-   См. документацию [GitHub Actions `runs-on`][github actions runs-on]
-   для полного обзора.
+6. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
+   на `write` для `pull-requests`.
+   В зависимости от ваших настроек GitHub, это может не требоваться.
+   Однако для всех организаций и персональных репозиториев,
+   [созданных после 02 февраля 2023 года][github token read only],
+   это поведение по умолчанию.
+   Полный обзор см. в [документации GitHub][github token permissions security].
+   (например, `permissions: pull-requests: write`)
+7. Установите тип компьютера, на котором будет выполняться задача.
+   Полный обзор см. в [документации `runs-on` для GitHub Actions][github actions runs-on].
    (например, `runs-on: ubuntu-latest`)
-7. Установите результаты бенчмарков и имена файлов объекта события `pull_request` как переменные окружения.
+8. Задайте результаты бенчмарков и файлы объектов события `pull_request` в качестве переменных среды.
    (например, `env: ...`)
-8. Скачайте кешированные результаты бенчмарков и событие `pull_request`
-   используя [действие `action-download-artifact` GitHub Actions][action download artifact].
+9. Скачайте кешированные результаты бенчмарков и событие `pull_request`
+   с помощью [GitHub Action `action-download-artifact`][action download artifact].
    (например, `uses: dawidd6/action-download-artifact@v6`)
-10. Экспортируйте необходимые данные из события `pull_request` как переменные окружения.
+10. Экспортируйте необходимые данные из события `pull_request` как [промежуточные переменные среды][github intermediate environment variable].
     (например, `core.exportVariable(...)`)
-11. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
+11. Установите Bencher CLI с помощью [GitHub Action][bencher cli github action].
    (например, `uses: bencherdev/bencher@main`)
 12. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
-    для отслеживания бенчмарков ветки форка pull.
-    См. [подкоманду CLI `bencher run`][bencher run] для полного обзора.
+    для отслеживания бенчмарков брэнча в вашем форке.
+    Полный обзор см. в [подкоманде `bencher run` для CLI][bencher run].
     (например, `bencher run`)
-13. Установите опцию `--project` на проектный ключ.
-    См. [документацию `--project`][project option] для более подробной информации.
+13. Установите параметр `--project` в значение Project slug.
+    Подробности смотрите в [документации `--project`][project option].
     (например, `--project project-abc4567-wxyz123456789`)
-14. Установите опцию `--token` на секрет `BENCHER_API_TOKEN` **репозитория**.
-    См. [документацию `--token`][token option] для более подробной информации.
+14. Установите параметр `--token` в значение секрета **Repository** `BENCHER_API_TOKEN`.
+    Подробности смотрите в [документации `--token`][token option].
     (например, `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-15. Установите опцию `--branch` на имя ветки форка PR,
-    используя [промежуточную переменную окружения][github intermediate environment variable].
-    См. [документацию `--branch`][branch option] для полного обзора.
+15. Установите параметр `--branch` на имя ветки PR форка
+    с использованием [промежуточной переменной среды][github intermediate environment variable].
+    Полный обзор см. в [документации `--branch`][branch option].
     (например, `--branch "$PR_HEAD"`)
-16. Установите начальную точку для ветки форка PR:
-    1. Установите опцию `--start-point` на начальную точку ветки форка PR,
-    используя [промежуточную переменную окружения][github intermediate environment variable].
-    См. [документацию `--start-point`][start point] для полного обзора.
+16. Установите параметр `--hash` в `git` hash ветки PR форка
+    с использованием [промежуточной переменной среды][github intermediate environment variable].
+    Полный обзор см. в [документации `--hash`][hash option].
+    (например, `--hash "$PR_HEAD_SHA"`)
+17. Установите Начальную Точку для ветки PR форка:
+    1. Установите параметр `--start-point` на начальную точку ветки PR форка
+    с использованием [промежуточной переменной среды][github intermediate environment variable].
+    Полный обзор см. в [документации `--start-point`][start point].
     (например, `--start-point "$PR_BASE"`)
-    2. Установите опцию `--start-point-hash` на хэш `git` начальной точки ветки форка PR,
-    используя [промежуточную переменную окружения][github intermediate environment variable].
-    См. [документацию `--start-point-hash`][start point hash] для полного обзора.
+    2. Установите параметр `--start-point-hash` в `git` hash начальной точки ветки PR форка
+    с использованием [промежуточной переменной среды][github intermediate environment variable].
+    Полный обзор см. в [документации `--start-point-hash`][start point hash].
     (например, `--start-point-hash "$PR_BASE_SHA"`)
-    3. Установите флаг `--start-point-clone-thresholds` для клонирования порогов из начальной точки.
-    См. [документацию `--start-point-clone-thresholds`][start point clone thresholds] для полного обзора.
+    3. Установите флаг `--start-point-clone-thresholds`, чтобы клонировать Пороги с начальной точки.
+    Полный обзор см. в [документации `--start-point-clone-thresholds`][start point clone thresholds].
     (например, `--start-point-clone-thresholds`)
-    4. Установите флаг `--start-point-reset` для всегда сброса ветки форка PR к начальной точке.
-    Это предотвратит смещение данных бенчмарков.
-    См. [документацию `--start-point-reset`][start point reset] для полного обзора.
+    4. Установите флаг `--start-point-reset` для всегда сбрасывания ветки PR форка к начальной точке.
+    Это предотвратит сдвиг данных бенчмарков.
+    Полный обзор см. в [документации `--start-point-reset`][start point reset].
     (например, `--start-point-reset`)
-17. Установите опцию `--testbed` на имя тестового стенда.
-    Это, вероятно, должно совпадать с выбранной машиной в `runs-on`.
-    См. [документацию `--tested`][testbed option] для более подробной информации.
+18. Установите параметр `--testbed` на имя Testbed.
+    Это должно совпадать с машиной, выбранной в `runs-on`.
+    Подробности смотрите в [документации `--tested`][testbed option].
     (например, `--testbed ubuntu-latest`)
-18. Установите флаг `--err` для провала команды в случае генерации Предупреждения.
-   См. [документацию `--err`][alert err] для полного обзора.
+19. Установите флаг `--err`, чтобы команда завершилась неудачно, если сгенерируется Уведомление.
+   Полный обзор см. в [документации `--err`][alert err].
    (например, `--err`)
-19. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
-   См. [бенчмаркинг адаптеров][adapter json] для полного обзора.
+20. Установите параметр `--adapter` в значение [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Полный обзор см. в [документации адаптеров][adapter json].
    (например, `--adapter json`)
-20. Установите опцию `--github-actions` на токен аутентификации GitHub API для размещения результатов в комментарии к Pull Request,
-    используя [переменную окружения `GITHUB_TOKEN` GitHub Actions][github token].
-    См. [документацию `--github-actions`][github actions option] для более подробной информации.
+21. Установите параметр `--github-actions` на значение токена аутентификации GitHub API для публикации результатов в виде комментария к Pull Request, используя
+    [переменную среды `GITHUB_TOKEN` GitHub Actions][github token].
+    Подробности смотрите в [документации `--github-actions`][github actions option].
     (например, `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-21. Установите опцию `--ci-number` на номер pull request,
-    используя [промежуточную переменную окружения][github intermediate environment variable].
-    См. [документацию `--ci-number`][ci number option] для более подробной информации.
+22. Установите параметр `--ci-number` на номер pull request,
+    используя [промежуточную переменную среды][github intermediate environment variable].
+    Подробности смотрите в [документации `--ci-number`][ci number option].
     (например, `--ci-number "$PR_NUMBER"`)
-22. Установите опцию `--file` на путь к файлу результатов бенчмарков.
-    См. [команду бенчмаркинга][command argument] для полного обзора.
+23. Установите параметр `--file` на путь к файлу с результатами бенчмарков.
+    Полный обзор см. в [документации о команде бенчмарков][command argument].
     (например, `--file "$BENCHMARK_RESULTS"`)
 
 [github actions workflow_run]: https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github token permissions]: https://docs.github.com/ru/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/ru/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [github intermediate environment variable]: https://docs.github.com/ru/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 [action download artifact]: https://github.com/dawidd6/action-download-artifact
@@ -91,6 +105,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [project option]: /ru/docs/explanation/bencher-run/#--project-project
 [token option]: /ru/docs/explanation/bencher-run/#--token-token
 [branch option]: /ru/docs/explanation/branch-selection/#--branch-branch
+[hash option]: /ru/docs/explanation/branch-selection/#--hash-hash
 [start point]: /ru/docs/explanation/branch-selection/#--start-point-branch
 [start point hash]: /ru/docs/explanation/branch-selection/#--start-point-hash-hash
 [start point clone thresholds]: /ru/docs/explanation/branch-selection/#--start-point-clone-thresholds

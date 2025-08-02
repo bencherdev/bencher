@@ -1,80 +1,88 @@
-import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
+import PullRequestsForkTrackCode from "../chunks/page/ja/pull-requests-fork-track-code.mdx";
 
 <PullRequestsForkTrackCode />
 
-1. 最初のGitHub Actions `workflow`ファイルを作成します。
+1. 最初の GitHub Actions `workflow` ファイルを作成します。
    (例: `.github/workflows/fork_pr_benchmarks_track.yml`)
 2. このワークフローに名前を付けます。
    (例: `name: Track Benchmarks with Bencher`)
-3. 2つのワークフローを[ `workflow_run` イベント][github actions workflow_run]で連鎖させます。
+3. [`workflow_run` イベント][github actions workflow_run]を使って2つのワークフローを連鎖させます。
    (例: `on: workflow_run: ...`)
-4. GitHub Actions `job` を作成します。
+4. GitHub Actions `job`を作成します。
    (例: `jobs: track_fork_pr_branch`)
-5. 前のワークフローの結論が成功した場合のみこのジョブを実行します。[ `workflow_run` イベント][github actions workflow_run] を使用します。
+5. 前のワークフローの結論が成功した場合にのみこのジョブを実行します。
+   [GitHub Actions の `workflow_run` イベント][github actions workflow_run]を使用して検証します。
    (例: `if: github.event.workflow_run.conclusion == 'success'`)
-6. ジョブが実行されるマシンのタイプを設定します。[GitHub Actions `runs-on` ドキュメント][github actions runs-on] を参照してください。
+6. `GITHUB_TOKEN` の[権限を設定][github token permissions]し、`pull-requests` 用に `write` に設定します。
+   GitHub の設定によっては、これが必要ない場合もあります。
+   しかし、[2023年2月2日以降に作成された][github token read only]すべての組織と個人リポジトリでは、
+   これはデフォルトの動作です。
+   完全な概要については、[GitHub のドキュメント][github token permissions security]を参照してください。
+   (例: `permissions: pull-requests: write`)
+7. ジョブが実行されるマシンのタイプを設定します。
+   完全な概要については、[GitHub Actions `runs-on` ドキュメント][github actions runs-on]を参照してください。
    (例: `runs-on: ubuntu-latest`)
-7. ベンチマーク結果と`pull_request`イベントのオブジェクトファイル名を環境変数として設定します。
+8. ベンチマーク結果および `pull_request` イベントのオブジェクトファイル名を環境変数として設定します。
    (例: `env: ...`)
-8. キャッシュされたベンチマーク結果と`pull_request`イベントを[ `action-download-artifact` GitHub Action][action download artifact] を使用してダウンロードします。
+9. [GitHub Action `action-download-artifact`][action download artifact]を使用して、キャッシュされたベンチマーク結果と `pull_request` イベントをダウンロードします。
    (例: `uses: dawidd6/action-download-artifact@v6`)
-10. 必要なデータを`pull_request`イベントから環境変数としてエクスポートします。
+10. `pull_request` イベントから必要なデータをエクスポートし、[中間環境変数][github intermediate environment variable]として使用します。
     (例: `core.exportVariable(...)`)
-11. [GitHub Action][bencher cli github action] を使用してBencher CLIをインストールします。
+11. [GitHub Action][bencher cli github action]を使用して Bencher CLI をインストールします。
    (例: `uses: bencherdev/bencher@main`)
-12. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用してフォークプルブランチのベンチマークを追跡します。
-    [ `bencher run` CLIサブコマンド][bencher run]の全体的な概要を参照してください。
+12. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用して、
+    プルフォークブランチのベンチマークをトラックします。
+    完全な概要については、[`bencher run` CLI サブコマンド][bencher run]を参照してください。
     (例: `bencher run`)
 13. `--project` オプションをプロジェクトスラッグに設定します。
-    詳細は[ `--project` ドキュメント][project option]を参照してください。
+    詳細は、[`--project` ドキュメント][project option]をご覧ください。
     (例: `--project project-abc4567-wxyz123456789`)
-14. `--token` オプションを`BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
-    詳細は[ `--token` ドキュメント][token option]を参照してください。
+14. `--token` オプションを `BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
+    詳細は、[`--token` ドキュメント][token option]をご覧ください。
     (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-15. `--branch` オプションをフォークPRブランチ名に
-    [仲介環境変数][github intermediate environment variable] を使用して設定します。
-    [ `--branch` ドキュメント][branch option] を参照して全体像を確認してください。
+15. [中間環境変数][github intermediate environment variable]を使用して、フォーク PR ブランチ名に `--branch` オプションを設定します。
+    完全な概要については、[`--branch` ドキュメント][branch option]を参照してください。
     (例: `--branch "$PR_HEAD"`)
-16. フォークPRブランチの開始ポイントを設定します:
-    1. `--start-point` オプションをフォークPRブランチの開始ポイントに
-    [仲介環境変数][github intermediate environment variable] を使用して設定します。
-    [ `--start-point` ドキュメント][start point] を参照して全体像を確認してください。
+16. [中間環境変数][github intermediate environment variable]を使用して、フォーク PR ブランチの `git` ハッシュに `--hash` オプションを設定します。
+    完全な概要については、[`--hash` ドキュメント][hash option]を参照してください。
+    (例: `--hash "$PR_HEAD_SHA"`)
+17. フォーク PR ブランチの開始地点を設定します：
+    1. [中間環境変数][github intermediate environment variable]を使用して、フォーク PR ブランチの開始地点に `--start-point` オプションを設定します。
+    完全な概要については、[`--start-point` ドキュメント][start point]を参照してください。
     (例: `--start-point "$PR_BASE"`)
-    2. `--start-point-hash` オプションをフォークPRブランチ開始ポイントの`git`ハッシュに
-    [仲介環境変数][github intermediate environment variable] を使用して設定します。
-    [ `--start-point-hash` ドキュメント][start point hash] を参照して全体像を確認してください。
+    2. [中間環境変数][github intermediate environment variable]を使用して、フォーク PR ブランチの開始地点 `git` ハッシュに `--start-point-hash` オプションを設定します。
+    完全な概要については、[`--start-point-hash` ドキュメント][start point hash]を参照してください。
     (例: `--start-point-hash "$PR_BASE_SHA"`)
-    3. `--start-point-clone-thresholds` フラグを設定して開始ポイントからしきい値をクローンします。
-    [ `--start-point-clone-thresholds` ドキュメント][start point clone thresholds] を参照して全体像を確認してください。
+    3. 開始地点からしきい値をクローンするために `--start-point-clone-thresholds` フラグを設定します。
+    完全な概要については、[`--start-point-clone-thresholds` ドキュメント][start point clone thresholds]を参照してください。
     (例: `--start-point-clone-thresholds`)
-    4. `--start-point-reset` フラグを設定してフォークPRブランチを常に開始ポイントにリセットします。
-    これはベンチマークデータのドリフトを防ぎます。
-    [ `--start-point-reset` ドキュメント][start point reset] を参照してください。
+    4. ベンチマークのデータドリフトを防ぐために、フォーク PR ブランチを開始地点に常にリセットする `--start-point-reset` フラグを設定します。
+    完全な概要については、[`--start-point-reset` ドキュメント][start point reset]を参照してください。
     (例: `--start-point-reset`)
-17. `--testbed` オプションをテストベッド名に設定します。
-    これはおそらく `runs-on` で選択されたマシンと一致しているべきです。
-    詳細は[ `--tested` ドキュメント][testbed option]を参照してください。
+18. `--testbed` オプションをテストベッド名に設定します。
+    これは `runs-on` で選択したマシンに一致する必要があります。
+    詳細は、[`--tested` ドキュメント][testbed option]をご覧ください。
     (例: `--testbed ubuntu-latest`)
-18. アラートが生成された場合にコマンドが失敗するように`--err` フラグを設定します。
-   [ `--err` ドキュメント][alert err] を参照して全体像を確認してください。
+19. アラートが生成された場合にコマンドを失敗させる `--err` フラグを設定します。
+   完全な概要については、[`--err` ドキュメント][alert err]を参照してください。
    (例: `--err`)
-19. [Bencher Metric Format JSON (`json`)][bmf] にオプションを設定して <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> によって生成された形式を指定します。
-   [ベンチマークハーネスアダプタ][adapter json] を参照して全体像を確認してください。
+20. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された[Bencher Metric Format JSON (`json`)][bmf] に `--adapter` オプションを設定します。
+   完全な概要については、[ベンチマークハーネスアダプタ][adapter json]を参照してください。
    (例: `--adapter json`)
-20. `--github-actions` オプションをGitHub API認証トークンに設定して、
-    プルリクエストにコメントとして結果を投稿します。
-    [GitHub Actions `GITHUB_TOKEN` 環境変数][github token] を使用して設定します。
-    詳細は[ `--github-actions` ドキュメント][github actions option] を参照してください。
+21. [GitHub Actions `GITHUB_TOKEN` 環境変数][github token]を使用してプルリクエストにコメントとして結果を投稿するために、GitHub API 認証トークンに `--github-actions` オプションを設定します。
+    詳細は、[`--github-actions` ドキュメント][github actions option]をご覧ください。
     (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-21. `--ci-number` オプションをプルリクエスト番号に設定します。
-    [仲介環境変数][github intermediate environment variable] を使用します。
-    詳細は[ `--ci-number` ドキュメント][ci number option] を参照してください。
+22. [中間環境変数][github intermediate environment variable]を使用して、プルリクエスト番号に `--ci-number` オプションを設定します。
+    詳細は、[`--ci-number` ドキュメント][ci number option]をご覧ください。
     (例: `--ci-number "$PR_NUMBER"`)
-22. `--file` オプションをベンチマーク結果のファイルパスに設定します。
-    [ベンチマークコマンド][command argument] を参照して全体像を確認してください。
+23. ベンチマーク結果のファイルパスに `--file` オプションを設定します。
+    完全な概要については、[ベンチマークコマンド][command argument]を参照してください。
     (例: `--file "$BENCHMARK_RESULTS"`)
 
 [github actions workflow_run]: https://docs.github.com/ja/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github token permissions]: https://docs.github.com/ja/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/ja/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [github intermediate environment variable]: https://docs.github.com/ja/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 [action download artifact]: https://github.com/dawidd6/action-download-artifact
@@ -86,6 +94,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
 [token option]: /ja/docs/explanation/bencher-run/#--token-token
 [branch option]: /ja/docs/explanation/branch-selection/#--branch-branch
+[hash option]: /ja/docs/explanation/branch-selection/#--hash-hash
 [start point]: /ja/docs/explanation/branch-selection/#--start-point-branch
 [start point hash]: /ja/docs/explanation/branch-selection/#--start-point-hash-hash
 [start point clone thresholds]: /ja/docs/explanation/branch-selection/#--start-point-clone-thresholds

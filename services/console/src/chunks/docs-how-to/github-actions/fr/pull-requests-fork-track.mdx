@@ -2,84 +2,100 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 
 <PullRequestsForkTrackCode />
 
-1. Créez un premier fichier de `workflow` GitHub Actions.
-   (ex : `.github/workflows/fork_pr_benchmarks_track.yml`)
-2. Nommez ce workflow second workflow.
-   (ex : `name: Track Benchmarks with Bencher`)
-3. Enchaînez les deux workflows avec
+1. Créez un premier fichier `workflow` GitHub Actions.
+   (ex: `.github/workflows/fork_pr_benchmarks_track.yml`)
+2. Nommez ce workflow deuxième workflow.
+   (ex: `name: Track Benchmarks with Bencher`)
+3. Chainez les deux workflows avec
    [l'événement `workflow_run`][github actions workflow_run].
-   (ex : `on: workflow_run: ...`)
-4. Créez un `job` GitHub Actions.
-   (ex : `jobs: track_fork_pr_branch`)
-5. Exécutez ce job uniquement si la conclusion du précédent workflow était un succès en utilisant
+   (ex: `on: workflow_run: ...`)
+4. Créez un `job` pour GitHub Actions.
+   (ex: `jobs: track_fork_pr_branch`)
+5. Exécutez ce job uniquement si la conclusion du workflow précédent était un succès en utilisant
    [l'événement `workflow_run` de GitHub Actions][github actions workflow_run].
-   (ex : `if: github.event.workflow_run.conclusion == 'success'`)
-6. Définissez le type de machine sur lequel le job s'exécutera.
+   (ex: `if: github.event.workflow_run.conclusion == 'success'`)
+6. Définissez [les permissions pour le `GITHUB_TOKEN`][github token permissions]
+   sur `write` pour `pull-requests`.
+   Selon vos paramètres GitHub, cela peut ne pas être nécessaire.
+   Mais pour toutes les organisations et les dépôts personnels
+   [créés après le 02 février 2023][github token read only],
+   ceci est le comportement par défaut.
+   Consultez [la documentation GitHub][github token permissions security]
+   pour un aperçu complet.
+   (ex: `permissions: pull-requests: write`)
+7. Définissez le type de machine sur lequel le job sera exécuté.
    Consultez la [documentation `runs-on` de GitHub Actions][github actions runs-on]
    pour un aperçu complet.
-   (ex : `runs-on: ubuntu-latest`)
-7. Définissez les résultats des benchmarks et les noms des fichiers d'objets de l'événement `pull_request` comme variables d'environnement.
-   (ex : `env: ...`)
-8. Téléchargez les résultats des benchmarks mis en cache et l'événement `pull_request`
+   (ex: `runs-on: ubuntu-latest`)
+8. Définissez les noms des fichiers de résultats de benchmark et de l'objet `pull_request` comme variables d'environnement.
+   (ex: `env: ...`)
+9. Téléchargez les résultats de benchmark mis en cache et l'événement `pull_request`
    en utilisant [l'Action GitHub `action-download-artifact`][action download artifact].
-   (ex : `uses: dawidd6/action-download-artifact@v6`)
-10. Exportez les données nécessaires de l'événement `pull_request` en tant que variables d'environnement.
-    (ex : `core.exportVariable(...)`)
-11. Installez le CLI Bencher en utilisant [l'Action GitHub][bencher cli github action].
-   (ex : `uses: bencherdev/bencher@main`)
+   (ex: `uses: dawidd6/action-download-artifact@v6`)
+10. Exportez les données nécessaires de l'événement `pull_request` en tant que [variables d'environnement intermédiaires][github intermediate environment variable].
+    (ex: `core.exportVariable(...)`)
+11. Installez le Bencher CLI en utilisant [l'Action GitHub][bencher cli github action].
+   (ex: `uses: bencherdev/bencher@main`)
 12. Utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
-    pour suivre les benchmarks de votre branche pull fork.
-    Consultez la sous-commande CLI [`bencher run`][bencher run] pour un aperçu complet.
-    (ex : `bencher run`)
+    pour suivre vos benchmarks de branche de pull request forkée.
+    Consultez la [sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
+    (ex: `bencher run`)
 13. Définissez l'option `--project` sur le slug du Projet.
-    Consultez la documentation [`--project`][project option] pour plus de détails.
-    (ex : `--project project-abc4567-wxyz123456789`)
+    Consultez les [documents `--project`][project option] pour plus de détails.
+    (ex: `--project project-abc4567-wxyz123456789`)
 14. Définissez l'option `--token` sur le secret **Repository** `BENCHER_API_TOKEN`.
-    Consultez la documentation [`--token`][token option] pour plus de détails.
-    (ex : `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
-15. Définissez l'option `--branch` sur le nom de la branche PR fork
+    Consultez les [documents `--token`][token option] pour plus de détails.
+    (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. Définissez l'option `--branch` sur le nom de la branche PR forkée
     en utilisant [une variable d'environnement intermédiaire][github intermediate environment variable].
-    Consultez la documentation [`--branch`][branch option] pour un aperçu complet.
-    (ex : `--branch "$PR_HEAD"`)
-16. Définissez le Point de Départ pour la branche PR fork :
-    1. Définissez l'option `--start-point` sur le point de départ de la branche PR fork
+    Consultez les [documents `--branch`][branch option] pour un aperçu complet.
+    (ex: `--branch "$PR_HEAD"`)
+16. Définissez l'option `--hash` sur le hash `git` de la branche PR forkée
     en utilisant [une variable d'environnement intermédiaire][github intermediate environment variable].
-    Consultez la documentation [`--start-point`][start point] pour un aperçu complet.
-    (ex : `--start-point "$PR_BASE"`)
-    2. Définissez l'option `--start-point-hash` sur le hash `git` du point de départ de la branche PR fork
+    Consultez les [documents `--hash`][hash option] pour un aperçu complet.
+    (ex: `--hash "$PR_HEAD_SHA"`)
+17. Définissez le point de départ pour la branche PR forkée :
+    1. Définissez l'option `--start-point` sur le point de départ de la branche PR forkée
     en utilisant [une variable d'environnement intermédiaire][github intermediate environment variable].
-    Consultez la documentation [`--start-point-hash`][start point hash] pour un aperçu complet.
-    (ex : `--start-point-hash "$PR_BASE_SHA"`)
-    3. Définissez le drapeau `--start-point-clone-thresholds` pour cloner les Seuils à partir du point de départ.
-    Consultez la documentation [`--start-point-clone-thresholds`][start point clone thresholds] pour un aperçu complet.
-    (ex : `--start-point-clone-thresholds`)
-    4. Définissez le drapeau `--start-point-reset` pour toujours réinitialiser la branche PR fork au point de départ.
+    Consultez les [documents `--start-point`][start point] pour un aperçu complet.
+    (ex: `--start-point "$PR_BASE"`)
+    2. Définissez l'option `--start-point-hash` sur le hash `git` du point de départ de la branche PR forkée
+    en utilisant [une variable d'environnement intermédiaire][github intermediate environment variable].
+    Consultez les [documents `--start-point-hash`][start point hash] pour un aperçu complet.
+    (ex: `--start-point-hash "$PR_BASE_SHA"`)
+    3. Définissez l'option `--start-point-clone-thresholds` pour cloner les seuils à partir du point de départ.
+    Consultez les [documents `--start-point-clone-thresholds`][start point clone thresholds] pour un aperçu complet.
+    (ex: `--start-point-clone-thresholds`)
+    4. Définissez l'option `--start-point-reset` pour toujours réinitialiser la branche PR forkée au point de départ.
     Cela empêchera la dérive des données de benchmark.
-    Consultez la documentation [`--start-point-reset`][start point reset] pour un aperçu complet.
-    (ex : `--start-point-reset`)
-17. Définissez l'option `--testbed` sur le nom du Testbed.
+    Consultez les [documents `--start-point-reset`][start point reset] pour un aperçu complet.
+    (ex: `--start-point-reset`)
+18. Définissez l'option `--testbed` sur le nom de l'environnement de test.
     Cela devrait probablement correspondre à la machine sélectionnée dans `runs-on`.
-    Consultez la documentation [`--tested`][testbed option] pour plus de détails.
-    (ex : `--testbed ubuntu-latest`)
-18. Définissez le drapeau `--err` pour échouer la commande si une Alerte est générée.
-   Consultez la documentation [`--err`][alert err] pour un aperçu complet.
-   (ex : `--err`)
-19. Définissez l'option `--adapter` sur [Bencher Metric Format JSON (`json`)][bmf] qui est généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
-   Consultez la documentation [benchmark harness adapters][adapter json] pour un aperçu complet.
-   (ex : `--adapter json`)
-20. Définissez l'option `--github-actions` sur le jeton d'authentification de l'API GitHub pour publier les résultats en tant que commentaire sur le Pull Request en utilisant
+    Consultez les [documents `--tested`][testbed option] pour plus de détails.
+    (ex: `--testbed ubuntu-latest`)
+19. Définissez le drapeau `--err` pour échouer la commande si une alerte est générée.
+   Consultez les [documents `--err`][alert err] pour un aperçu complet.
+   (ex: `--err`)
+20. Définissez l'option `--adapter` sur le format JSON du Bencher Metric Format (`json`) généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Consultez les [adapters de harness de benchmark][adapter json] pour un aperçu complet.
+   (ex: `--adapter json`)
+21. Définissez l'option `--github-actions` sur le jeton d'authentification de l'API GitHub pour publier les résultats sous forme de commentaire sur la Pull Request en utilisant
     [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions][github token].
-    Consultez la documentation [`--github-actions`][github actions option] pour plus de détails.
-    (ex : `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-21. Définissez l'option `--ci-number` sur le numéro de la pull request
+    Consultez les [documents `--github-actions`][github actions option] pour plus de détails.
+    (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+22. Définissez l'option `--ci-number` sur le numéro de pull request
     en utilisant [une variable d'environnement intermédiaire][github intermediate environment variable].
-    Consultez la documentation [`--ci-number`][ci number option] pour plus de détails.
-    (ex : `--ci-number "$PR_NUMBER"`)
-22. Définissez l'option `--file` sur le chemin du fichier de résultats des benchmarks.
-    Consultez la documentation [benchmark command][command argument] pour un aperçu complet.
-    (ex : `--file "$BENCHMARK_RESULTS"`)
+    Consultez les [documents `--ci-number`][ci number option] pour plus de détails.
+    (ex: `--ci-number "$PR_NUMBER"`)
+23. Définissez l'option `--file` sur le chemin du fichier des résultats de benchmark.
+    Consultez les [commandes de benchmark][command argument] pour un aperçu complet.
+    (ex: `--file "$BENCHMARK_RESULTS"`)
 
 [github actions workflow_run]: https://docs.github.com/fr/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github token permissions]: https://docs.github.com/fr/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/fr/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
 [github actions runs-on]: https://docs.github.com/fr/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
 [github intermediate environment variable]: https://docs.github.com/fr/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 [action download artifact]: https://github.com/dawidd6/action-download-artifact
@@ -91,6 +107,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [project option]: /fr/docs/explanation/bencher-run/#--project-project
 [token option]: /fr/docs/explanation/bencher-run/#--token-token
 [branch option]: /fr/docs/explanation/branch-selection/#--branch-branch
+[hash option]: /fr/docs/explanation/branch-selection/#--hash-hash
 [start point]: /fr/docs/explanation/branch-selection/#--start-point-branch
 [start point hash]: /fr/docs/explanation/branch-selection/#--start-point-hash-hash
 [start point clone thresholds]: /fr/docs/explanation/branch-selection/#--start-point-clone-thresholds
