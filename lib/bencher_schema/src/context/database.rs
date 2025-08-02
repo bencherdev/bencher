@@ -64,7 +64,6 @@ impl DataStore {
     }
 }
 
-const ARN_AWS_S3: &str = "arn:aws:s3:";
 const COLON: char = ':';
 const ACCESSPOINT: &str = ":accesspoint/";
 
@@ -84,10 +83,21 @@ impl AwsS3 {
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
 
-        let (region, accesspoint_arn) = access_point
-            .trim_start_matches(ARN_AWS_S3)
-            .split_once(COLON)
-            .ok_or_else(|| DataStoreError::DataStore(access_point.to_owned()))?;
+        let (partition, region, accesspoint_arn) = {
+            let mut parts = access_point.splitn(4, COLON);
+            let _arn = parts.next();
+            let partition = parts
+                .next()
+                .ok_or_else(|| DataStoreError::DataStore(access_point.to_owned()))?;
+            let _s3 = parts.next();
+            let remaining = parts
+                .next()
+                .ok_or_else(|| DataStoreError::DataStore(access_point.to_owned()))?;
+            let (region, accesspoint_arn) = remaining
+                .split_once(COLON)
+                .ok_or_else(|| DataStoreError::DataStore(access_point.to_owned()))?;
+            (partition, region, accesspoint_arn)
+        };
 
         let config = aws_sdk_s3::Config::builder()
             .credentials_provider(credentials_provider)
@@ -106,7 +116,7 @@ impl AwsS3 {
                 (resource.to_owned(), None)
             };
         let bucket_arn =
-            format!("{ARN_AWS_S3}{region}{COLON}{account_id}{ACCESSPOINT}{bucket_name}");
+            format!("arn:{partition}:s3:{region}{COLON}{account_id}{ACCESSPOINT}{bucket_name}");
 
         Ok(Self {
             client,
