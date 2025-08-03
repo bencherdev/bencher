@@ -17,9 +17,12 @@ use tokio::{
     io::{AsyncReadExt as _, AsyncWriteExt as _, BufReader, BufWriter},
 };
 
-const BUFFER_SIZE: usize = 1024;
-const PAGES_PER_STEP: i32 = 5;
-const PAUSE_BETWEEN_PAGES: std::time::Duration = std::time::Duration::from_millis(250);
+// https://www.sqlite.org/pgszchng2016.html
+const SQLITE_PAGE_SIZE: usize = 4096;
+const PAUSE_BETWEEN_PAGES: std::time::Duration = std::time::Duration::from_millis(100);
+// We want the backup to be done in a reasonable time, ~10 minutes.
+// Sqlite page size * 10 minutes * 60 seconds * 10 iterations of 100 milliseconds pauses per second
+const PAGES_PER_STEP_COEFFICIENT: usize = SQLITE_PAGE_SIZE * 10 * 60 * 10;
 
 #[endpoint {
     method = OPTIONS,
@@ -63,6 +66,11 @@ async fn post_inner(
 
 #[derive(Debug, thiserror::Error)]
 pub enum BackupError {
+    #[error("Failed to get source database size ({path}): {error}")]
+    GetSourceDatabaseSize {
+        path: PathBuf,
+        error: std::io::Error,
+    },
     #[error("Failed to open source database ({path}): {error}")]
     OpenSourceDatabase {
         path: PathBuf,
@@ -177,6 +185,22 @@ impl Backup {
 }
 
 fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), BackupError> {
+    // Get the total size of the source database
+    let src_size = src
+        .metadata()
+        .map_err(|error| BackupError::GetSourceDatabaseSize {
+            path: src.clone(),
+            error,
+        })?
+        .len();
+    // Calculate the number of pages per step in order to complete the backup in a reasonable time
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::integer_division,
+        reason = "precision is not needed"
+    )]
+    let pages_per_step = (src_size / PAGES_PER_STEP_COEFFICIENT as u64) as i32;
+
     let src_connection =
         rusqlite::Connection::open(src).map_err(|error| BackupError::OpenSourceDatabase {
             path: src.clone(),
@@ -191,7 +215,7 @@ fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), BackupError> {
         .map_err(BackupError::CreateBackup)?;
     // https://www.sqlite.org/backup.html#example_2_online_backup_of_a_running_database
     backup
-        .run_to_completion(PAGES_PER_STEP, PAUSE_BETWEEN_PAGES, None)
+        .run_to_completion(pages_per_step, PAUSE_BETWEEN_PAGES, None)
         .map_err(BackupError::RunBackup)
 }
 
@@ -202,7 +226,7 @@ async fn compress_database(
     let backup_file = tokio::fs::File::open(&backup_file_path)
         .await
         .map_err(BackupError::OpenBackupFile)?;
-    let mut backup_data = BufReader::with_capacity(BUFFER_SIZE, backup_file);
+    let mut backup_data = BufReader::with_capacity(SQLITE_PAGE_SIZE, backup_file);
 
     let compress_file_name = format!("{backup_file_name}.gz");
     let mut compress_file_path = backup_file_path.clone();
@@ -210,10 +234,10 @@ async fn compress_database(
     let compress_file = tokio::fs::File::create(&compress_file_path)
         .await
         .map_err(BackupError::CreateZipFile)?;
-    let compress_data = BufWriter::with_capacity(BUFFER_SIZE, compress_file);
+    let compress_data = BufWriter::with_capacity(SQLITE_PAGE_SIZE, compress_file);
 
     let mut encoder = GzipEncoder::new(compress_data);
-    let mut data_buffer = [0; BUFFER_SIZE];
+    let mut data_buffer = [0; SQLITE_PAGE_SIZE];
     while let Ok(data_size) = backup_data.read(&mut data_buffer).await {
         if data_size == 0 {
             break;
