@@ -59,20 +59,29 @@ pub struct ApiContext {
 /// Warning: Do not call `conn_lock!` multiple times in the same line, as it will deadlock.
 /// Use the `|conn|` syntax to reuse the same connection multiple times in the same line.
 macro_rules! conn_lock {
-    ($context:ident) => {
-        &mut *$context.conn().await
+    ($context:expr) => {
+        $crate::connection_lock!($context.database.connection)
     };
-    ($context:ident, |$conn:ident| $multi:expr) => {{
+    ($context:expr, |$conn:ident| $multi:expr) => {{
         let $conn = $crate::conn_lock!($context);
         $multi
     }};
 }
 
-impl ApiContext {
-    pub async fn conn(&self) -> tokio::sync::MutexGuard<DbConnection> {
-        self.database.connection.lock().await
-    }
+#[macro_export]
+/// Warning: Do not call `connection_lock!` multiple times in the same line, as it will deadlock.
+/// Use the `|conn|` syntax to reuse the same connection multiple times in the same line.
+macro_rules! connection_lock {
+    ($connection:expr) => {
+        &mut *$connection.lock().await
+    };
+    ($connection:expr, |$conn:ident| $multi:expr) => {{
+        let $conn = $crate::connection_lock!($connection);
+        $multi
+    }};
+}
 
+impl ApiContext {
     #[cfg(feature = "plus")]
     pub fn biller(&self) -> Result<&Biller, dropshot::HttpError> {
         self.biller.as_ref().ok_or_else(|| {

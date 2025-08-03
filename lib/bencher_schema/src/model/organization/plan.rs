@@ -11,7 +11,7 @@ use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
-    ApiContext, conn_lock,
+    ApiContext, conn_lock, connection_lock,
     context::DbConnection,
     error::{
         issue_error, not_found_error, payment_required_error, resource_conflict_err,
@@ -22,7 +22,6 @@ use crate::{
         project::{QueryProject, metric::QueryMetric},
     },
     schema::{self, plan as plan_table},
-    yield_connection_lock,
 };
 
 crate::macros::typed_id::typed_id!(PlanId);
@@ -423,12 +422,12 @@ impl LicenseUsage {
         let start_time = token_data.claims.issued_at();
         let end_time = token_data.claims.expiration();
 
-        let usage = yield_connection_lock!(db_connection, |conn| QueryMetric::usage(
-            conn,
+        let usage = QueryMetric::usage(
+            connection_lock!(db_connection),
             query_organization.id,
             start_time,
             end_time,
-        )?);
+        )?;
         let entitlements = licensor
             .validate_usage(&token_data.claims, usage)
             .map_err(payment_required_error)?;
@@ -446,10 +445,9 @@ impl LicenseUsage {
         min_level: Option<PlanLevel>,
     ) -> Result<Vec<Self>, HttpError> {
         let min_level = min_level.unwrap_or_default();
-        let organizations =
-            yield_connection_lock!(db_connection, |conn| schema::organization::table
-                .load::<QueryOrganization>(conn)
-                .map_err(resource_not_found_err!(Organization))?);
+        let organizations = schema::organization::table
+            .load::<QueryOrganization>(connection_lock!(db_connection))
+            .map_err(resource_not_found_err!(Organization))?;
         let mut license_usages = Vec::new();
         for query_organization in organizations {
             if let Ok(Some(license_usage)) =
