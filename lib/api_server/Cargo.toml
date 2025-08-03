@@ -16,17 +16,13 @@ plus = [
 sentry = ["bencher_config/sentry", "bencher_schema/sentry"]
 
 [dependencies]
-async-compression = { workspace = true, features = ["tokio", "gzip"] }
 bencher_endpoint.workspace = true
 bencher_config.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_schema.workspace = true
-chrono.workspace = true
 dropshot.workspace = true
-rusqlite = { workspace = true, features = ["backup"] }
 serde_json.workspace = true
 slog.workspace = true
-thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 
 [lints]

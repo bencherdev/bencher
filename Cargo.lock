@@ -227,17 +227,13 @@ dependencies = [
 name = "api_server"
 version = "0.5.3"
 dependencies = [
- "async-compression",
  "bencher_config",
  "bencher_endpoint",
  "bencher_json",
  "bencher_schema",
- "chrono",
  "dropshot",
- "rusqlite",
  "serde_json",
  "slog",
- "thiserror 2.0.12",
  "tokio",
 ]
 
