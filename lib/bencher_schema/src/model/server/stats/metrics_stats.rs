@@ -130,6 +130,7 @@ async fn get_top_projects(
 ) -> Result<Vec<(QueryProject, i64)>, HttpError> {
     match state {
         ProjectState::All => {
+            #[expect(clippy::cast_possible_wrap, reason = "const")]
             let mut query = schema::metric::table
                 .inner_join(
                     schema::report_benchmark::table
@@ -140,6 +141,8 @@ async fn get_top_projects(
                     QueryProject::as_select(),
                     diesel::dsl::count_distinct(schema::metric::id),
                 ))
+                .order(diesel::dsl::count_distinct(schema::metric::id).desc())
+                .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
             if let Some(since) = since {
@@ -151,6 +154,7 @@ async fn get_top_projects(
                 .map_err(resource_not_found_err!(Project)))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
+            #[expect(clippy::cast_possible_wrap, reason = "const")]
             let mut query = schema::metric::table
                 .inner_join(schema::report_benchmark::table.inner_join(
                     schema::report::table.inner_join(schema::project::table.inner_join(
@@ -162,6 +166,8 @@ async fn get_top_projects(
                     QueryProject::as_select(),
                     diesel::dsl::count_distinct(schema::metric::id),
                 ))
+                .order(diesel::dsl::count_distinct(schema::metric::id).desc())
+                .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
             query = match state {

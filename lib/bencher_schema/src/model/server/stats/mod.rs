@@ -48,38 +48,6 @@ pub async fn get_stats(
     let projects_stats =
         ProjectsStats::new(db_connection, this_week, this_month, ProjectState::All).await?;
 
-    // todo(ep): Run stats as a background task
-    if is_bencher_cloud {
-        return Ok(JsonServerStats {
-            server: query_server.into_json(),
-            timestamp: now,
-            organizations: organizations_stats.organizations,
-            admins: users_stats.admins,
-            users: Some(users_stats.users),
-            projects: Some(projects_stats.projects),
-            projects_unclaimed: None,
-            projects_claimed: None,
-            active_projects: None,
-            active_projects_unclaimed: None,
-            active_projects_claimed: None,
-            reports: None,
-            reports_unclaimed: None,
-            reports_claimed: None,
-            reports_per_project: None,
-            reports_per_project_unclaimed: None,
-            reports_per_project_claimed: None,
-            metrics: None,
-            metrics_unclaimed: None,
-            metrics_claimed: None,
-            metrics_per_report: None,
-            metrics_per_report_unclaimed: None,
-            metrics_per_report_claimed: None,
-            top_projects: None,
-            top_projects_unclaimed: None,
-            top_projects_claimed: None,
-        });
-    }
-
     let unclaimed_projects_stats = ProjectsStats::new(
         db_connection,
         this_week,
