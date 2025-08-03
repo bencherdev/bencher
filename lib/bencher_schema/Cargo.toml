@@ -21,6 +21,7 @@ sentry = ["dep:sentry"]
 
 [dependencies]
 # Workspace
+async-compression = { workspace = true, features = ["tokio", "gzip"] }
 async-trait.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
@@ -40,6 +41,7 @@ diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 http.workspace = true
 regex.workspace = true
+rusqlite = { workspace = true, features = ["backup"] }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true
 oso.workspace = true

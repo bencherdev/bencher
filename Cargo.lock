@@ -1263,6 +1263,7 @@ dependencies = [
 name = "bencher_schema"
 version = "0.5.3"
 dependencies = [
+ "async-compression",
  "async-trait",
  "aws-credential-types",
  "aws-sdk-s3",
@@ -1289,6 +1290,7 @@ dependencies = [
  "oso",
  "regex",
  "reqwest",
+ "rusqlite",
  "sentry",
  "serde_json",
  "serde_urlencoded",

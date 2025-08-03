@@ -20,7 +20,7 @@ mod rbac;
 #[cfg(feature = "plus")]
 mod stats;
 
-pub use database::{DataStoreError, Database, DbConnection};
+pub use database::{DataStore, DataStoreError, Database, DbConnection};
 #[cfg(feature = "plus")]
 pub use indexer::{IndexError, Indexer};
 #[cfg(feature = "plus")]

@@ -22,7 +22,10 @@ use crate::{
     schema::{self, server as server_table},
 };
 
+mod backup;
 mod stats;
+
+pub use backup::{ServerBackup, ServerBackupError};
 
 crate::macros::typed_id::typed_id!(ServerId);
 
