@@ -24,6 +24,7 @@ bencher_schema.workspace = true
 chrono.workspace = true
 diesel.workspace = true
 dropshot.workspace = true
+rusqlite = { workspace = true, features = ["backup"] }
 serde_json.workspace = true
 slog.workspace = true
 thiserror.workspace = true

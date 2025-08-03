@@ -63,6 +63,12 @@ async fn post_inner(
 
 #[derive(Debug, thiserror::Error)]
 pub enum BackupError {
+    #[error("Failed to open source database ({path}): {error}")]
+    OpenDatabase {
+        path: PathBuf,
+        error: rusqlite::Error,
+    },
+
     #[error("Failed to batch execute: {0}")]
     BatchExecute(diesel::result::Error),
     #[error("Failed to create backup file: {0}")]
@@ -158,6 +164,14 @@ async fn backup_database(context: &ApiContext) -> Result<Backup, BackupError> {
         file_name,
         created: date_time.into(),
     })
+}
+
+async fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), BackupError> {
+    let mut src = rusqlite::Connection::open(src).map_err(|error| BackupError::OpenDatabase {
+        path: src.clone(),
+        error,
+    })?;
+    Ok(())
 }
 
 async fn compress_database(

@@ -74,6 +74,7 @@ rand = "0.9"
 regex = "1.11"
 regex-lite = "0.1"
 reqwest = { version = "0.12", default-features = false }
+rusqlite = "0.32"
 schemars = { version = "0.8", features = ["uuid1"] }
 sentry = { version = "0.36", default-features = false, features = [
     "reqwest",
