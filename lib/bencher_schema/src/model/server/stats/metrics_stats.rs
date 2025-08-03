@@ -3,11 +3,9 @@ use bencher_json::system::server::{
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
-use tokio::sync::Mutex;
 
 use crate::{
     context::DbConnection, error::resource_not_found_err, model::project::QueryProject, schema,
-    yield_connection_lock,
 };
 
 use super::{ProjectState, TOP_PROJECTS, median};
@@ -20,29 +18,26 @@ pub(super) struct MetricsStats {
 
 impl MetricsStats {
     #[expect(clippy::cast_sign_loss, reason = "count is always positive")]
-    pub async fn new(
-        db_connection: &Mutex<DbConnection>,
+    pub fn new(
+        db_connection: &mut DbConnection,
         this_week: i64,
         this_month: i64,
         state: ProjectState,
     ) -> Result<Self, HttpError> {
-        let mut weekly_metrics =
-            get_metrics_by_report(db_connection, Some(this_week), &state).await?;
+        let mut weekly_metrics = get_metrics_by_report(db_connection, Some(this_week), state)?;
         let weekly_metrics_total: i64 = weekly_metrics.iter().sum();
         let weekly_metrics_per_project = median(&mut weekly_metrics);
-        let weekly_top_projects = get_top_projects(db_connection, Some(this_week), &state).await?;
+        let weekly_top_projects = get_top_projects(db_connection, Some(this_week), state)?;
 
-        let mut monthly_metrics =
-            get_metrics_by_report(db_connection, Some(this_month), &state).await?;
+        let mut monthly_metrics = get_metrics_by_report(db_connection, Some(this_month), state)?;
         let monthly_metrics_total: i64 = monthly_metrics.iter().sum();
         let monthly_metrics_per_project = median(&mut monthly_metrics);
-        let monthly_top_projects =
-            get_top_projects(db_connection, Some(this_month), &state).await?;
+        let monthly_top_projects = get_top_projects(db_connection, Some(this_month), state)?;
 
-        let mut total_metrics = get_metrics_by_report(db_connection, None, &state).await?;
+        let mut total_metrics = get_metrics_by_report(db_connection, None, state)?;
         let total_metrics_total: i64 = total_metrics.iter().sum();
         let total_metrics_per_project = median(&mut total_metrics);
-        let total_top_projects = get_top_projects(db_connection, None, &state).await?;
+        let total_top_projects = get_top_projects(db_connection, None, state)?;
 
         let metrics = JsonCohort {
             week: weekly_metrics_total as u64,
@@ -70,10 +65,10 @@ impl MetricsStats {
     }
 }
 
-async fn get_metrics_by_report(
-    db_connection: &Mutex<DbConnection>,
+fn get_metrics_by_report(
+    db_connection: &mut DbConnection,
     since: Option<i64>,
-    state: &ProjectState,
+    state: ProjectState,
 ) -> Result<Vec<i64>, HttpError> {
     match state {
         ProjectState::All => {
@@ -87,9 +82,9 @@ async fn get_metrics_by_report(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            yield_connection_lock!(db_connection, |conn| query
-                .load::<i64>(conn)
-                .map_err(resource_not_found_err!(Metric)))
+            query
+                .load::<i64>(db_connection)
+                .map_err(resource_not_found_err!(Metric))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::metric::table
@@ -116,17 +111,17 @@ async fn get_metrics_by_report(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            yield_connection_lock!(db_connection, |conn| query
-                .load::<i64>(conn)
-                .map_err(resource_not_found_err!(Metric)))
+            query
+                .load::<i64>(db_connection)
+                .map_err(resource_not_found_err!(Metric))
         },
     }
 }
 
-async fn get_top_projects(
-    db_connection: &Mutex<DbConnection>,
+fn get_top_projects(
+    db_connection: &mut DbConnection,
     since: Option<i64>,
-    state: &ProjectState,
+    state: ProjectState,
 ) -> Result<Vec<(QueryProject, i64)>, HttpError> {
     match state {
         ProjectState::All => {
@@ -149,9 +144,9 @@ async fn get_top_projects(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            yield_connection_lock!(db_connection, |conn| query
-                .load::<(QueryProject, i64)>(conn)
-                .map_err(resource_not_found_err!(Project)))
+            query
+                .load::<(QueryProject, i64)>(db_connection)
+                .map_err(resource_not_found_err!(Project))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
@@ -184,9 +179,9 @@ async fn get_top_projects(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            yield_connection_lock!(db_connection, |conn| query
-                .load::<(QueryProject, i64)>(conn)
-                .map_err(resource_not_found_err!(Project)))
+            query
+                .load::<(QueryProject, i64)>(db_connection)
+                .map_err(resource_not_found_err!(Project))
         },
     }
 }

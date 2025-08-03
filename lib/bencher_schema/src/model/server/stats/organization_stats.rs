@@ -1,11 +1,10 @@
 use bencher_json::JsonOrganizations;
 use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
-use tokio::sync::Mutex;
 
 use crate::{
     context::DbConnection, error::resource_not_found_err, model::organization::QueryOrganization,
-    schema, yield_connection_lock,
+    schema,
 };
 
 pub(super) struct OrganizationStats {
@@ -13,28 +12,24 @@ pub(super) struct OrganizationStats {
 }
 
 impl OrganizationStats {
-    pub async fn new(
-        db_connection: &Mutex<DbConnection>,
+    pub fn new(
+        db_connection: &mut DbConnection,
         is_bencher_cloud: bool,
     ) -> Result<Self, HttpError> {
         let organizations = if is_bencher_cloud {
             None
         } else {
-            Some(get_organizations(db_connection).await?)
+            Some(get_organizations(db_connection)?)
         };
         Ok(Self { organizations })
     }
 }
 
-async fn get_organizations(
-    db_connection: &Mutex<DbConnection>,
-) -> Result<JsonOrganizations, HttpError> {
-    Ok(yield_connection_lock!(db_connection, |conn| {
-        schema::organization::table
-            .load::<QueryOrganization>(conn)
-            .map_err(resource_not_found_err!(Organization))?
-            .into_iter()
-            .map(|org| org.into_json(conn))
-            .collect()
-    }))
+fn get_organizations(db_connection: &mut DbConnection) -> Result<JsonOrganizations, HttpError> {
+    Ok(schema::organization::table
+        .load::<QueryOrganization>(db_connection)
+        .map_err(resource_not_found_err!(Organization))?
+        .into_iter()
+        .map(|org| org.into_json(db_connection))
+        .collect())
 }

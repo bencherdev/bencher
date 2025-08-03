@@ -136,6 +136,17 @@ where
     ))
 }
 
+pub fn request_timeout_error<E>(error: E) -> HttpError
+where
+    E: fmt::Display,
+{
+    cors_headers(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::REQUEST_TIMEOUT,
+        error.to_string(),
+    ))
+}
+
 pub fn conflict_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,

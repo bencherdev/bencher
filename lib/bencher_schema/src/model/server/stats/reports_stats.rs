@@ -1,9 +1,8 @@
 use bencher_json::system::server::{JsonCohort, JsonCohortAvg};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
-use tokio::sync::Mutex;
 
-use crate::{context::DbConnection, error::resource_not_found_err, schema, yield_connection_lock};
+use crate::{context::DbConnection, error::resource_not_found_err, schema};
 
 use super::{ProjectState, median};
 
@@ -15,25 +14,23 @@ pub(super) struct ReportsStats {
 
 impl ReportsStats {
     #[expect(clippy::cast_sign_loss, reason = "count is always positive")]
-    pub async fn new(
-        db_connection: &Mutex<DbConnection>,
+    pub fn new(
+        db_connection: &mut DbConnection,
         this_week: i64,
         this_month: i64,
         state: ProjectState,
     ) -> Result<Self, HttpError> {
-        let mut weekly_reports =
-            get_reports_by_project(db_connection, Some(this_week), &state).await?;
+        let mut weekly_reports = get_reports_by_project(db_connection, Some(this_week), state)?;
         let weekly_active_projects = weekly_reports.len();
         let weekly_reports_total: i64 = weekly_reports.iter().sum();
         let weekly_reports_per_project = median(&mut weekly_reports);
 
-        let mut monthly_reports =
-            get_reports_by_project(db_connection, Some(this_month), &state).await?;
+        let mut monthly_reports = get_reports_by_project(db_connection, Some(this_month), state)?;
         let monthly_active_projects = monthly_reports.len();
         let monthly_reports_total: i64 = monthly_reports.iter().sum();
         let monthly_reports_per_project = median(&mut monthly_reports);
 
-        let mut total_reports = get_reports_by_project(db_connection, None, &state).await?;
+        let mut total_reports = get_reports_by_project(db_connection, None, state)?;
         let total_active_projects = total_reports.len();
         let total_reports_total: i64 = total_reports.iter().sum();
         let total_reports_per_project = median(&mut total_reports);
@@ -64,10 +61,10 @@ impl ReportsStats {
     }
 }
 
-async fn get_reports_by_project(
-    db_connection: &Mutex<DbConnection>,
+fn get_reports_by_project(
+    db_connection: &mut DbConnection,
     since: Option<i64>,
-    state: &ProjectState,
+    state: ProjectState,
 ) -> Result<Vec<i64>, HttpError> {
     match state {
         ProjectState::All => {
@@ -80,9 +77,9 @@ async fn get_reports_by_project(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            yield_connection_lock!(db_connection, |conn| query
-                .load::<i64>(conn)
-                .map_err(resource_not_found_err!(Report)))
+            query
+                .load::<i64>(db_connection)
+                .map_err(resource_not_found_err!(Report))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::report::table
@@ -107,9 +104,9 @@ async fn get_reports_by_project(
                 query = query.filter(schema::report::created.ge(since));
             }
 
-            yield_connection_lock!(db_connection, |conn| query
-                .load::<i64>(conn)
-                .map_err(resource_not_found_err!(Report)))
+            query
+                .load::<i64>(db_connection)
+                .map_err(resource_not_found_err!(Report))
         },
     }
 }

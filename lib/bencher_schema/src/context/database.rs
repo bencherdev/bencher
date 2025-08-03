@@ -15,17 +15,6 @@ pub struct Database {
     pub data_store: Option<DataStore>,
 }
 
-#[macro_export]
-/// Warning: Do not call `connection_lock!` multiple times in the same line, as it will deadlock.
-/// Use the `|conn|` syntax to reuse the same connection multiple times in the same line.
-macro_rules! yield_connection_lock {
-    ($connection:ident, |$conn:ident| $multi:expr) => {{
-        tokio::task::yield_now().await;
-        let $conn = &mut *$connection.lock().await;
-        $multi
-    }};
-}
-
 pub enum DataStore {
     AwsS3(AwsS3),
 }

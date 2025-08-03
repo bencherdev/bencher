@@ -12,12 +12,11 @@ use dropshot::HttpError;
 use slog::Logger;
 use tokio::sync::Mutex;
 
-use crate::connection_lock;
 use crate::{
-    API_VERSION,
+    API_VERSION, connection_lock,
     context::StatsSettings,
     context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
-    error::resource_conflict_err,
+    error::{request_timeout_error, resource_conflict_err},
     macros::fn_get::fn_get,
     model::{organization::plan::LicenseUsage, user::QueryUser},
     schema::{self, server as server_table},
@@ -80,6 +79,7 @@ impl QueryServer {
     ) {
         tokio::spawn(async move {
             let StatsSettings { offset, enabled } = stats;
+            let is_bencher_cloud = messenger.is_some();
             let mut violations = 0;
             #[expect(clippy::infinite_loop)]
             loop {
@@ -138,19 +138,12 @@ impl QueryServer {
                     sentry::capture_message(err, sentry::Level::Error);
                 }
 
-                let json_stats = match self.get_stats(db_path.clone(), messenger.is_some()).await {
-                    Ok(json_stats) => json_stats,
-                    Err(e) => {
-                        slog::error!(log, "Failed to get stats: {e}");
-                        continue;
-                    },
-                };
-                let json_stats_str = match serde_json::to_string_pretty(&json_stats) {
-                    Ok(json_stats_str) => json_stats_str,
-                    Err(e) => {
-                        slog::error!(log, "Failed to serialize stats: {e}");
-                        continue;
-                    },
+                let Some(json_stats_str) = self
+                    .get_stats_str(&log, db_path.clone(), is_bencher_cloud)
+                    .await
+                else {
+                    slog::error!(log, "Failed to get stats string");
+                    continue;
                 };
 
                 if let Some(messenger) = messenger.as_ref() {
@@ -186,7 +179,30 @@ impl QueryServer {
         db_path: PathBuf,
         is_bencher_cloud: bool,
     ) -> Result<JsonServerStats, HttpError> {
-        stats::get_stats(db_path, self, is_bencher_cloud).await
+        tokio::task::spawn_blocking(move || stats::get_stats(&db_path, self, is_bencher_cloud))
+            .await
+            .map_err(request_timeout_error)?
+    }
+
+    async fn get_stats_str(
+        self,
+        log: &Logger,
+        db_path: PathBuf,
+        is_bencher_cloud: bool,
+    ) -> Option<String> {
+        let json_stats = self
+            .get_stats(db_path, is_bencher_cloud)
+            .await
+            .inspect_err(|e| {
+                slog::error!(log, "Failed to get stats: {e}");
+            })
+            .ok()?;
+
+        serde_json::to_string_pretty(&json_stats)
+            .inspect_err(|e| {
+                slog::error!(log, "Failed to serialize stats: {e}");
+            })
+            .ok()
     }
 
     pub async fn send_stats_to_backend(

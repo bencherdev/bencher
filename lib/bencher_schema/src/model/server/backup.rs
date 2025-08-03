@@ -18,9 +18,9 @@ const PAUSE_BETWEEN_PAGES: std::time::Duration = std::time::Duration::from_milli
 const PAGES_PER_STEP_COEFFICIENT: usize = SQLITE_PAGE_SIZE * 10 * 60 * 10;
 
 pub struct ServerBackup {
-    file_path: PathBuf,
-    file_name: String,
-    created: DateTime,
+    pub file_path: PathBuf,
+    pub file_name: String,
+    pub created: DateTime,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -75,7 +75,9 @@ impl ServerBackup {
             file_path: backup_file_path,
             file_name: backup_file_name,
             created,
-        } = Self::backup_database(file_path).await?;
+        } = tokio::task::spawn_blocking(move || Self::backup_database(&file_path))
+            .await
+            .map_err(ServerBackupError::JoinBackup)??;
 
         // Compress the database backup
         let compress = json_backup.compress.unwrap_or_default();
@@ -111,7 +113,7 @@ impl ServerBackup {
         Ok(JsonBackupCreated { created })
     }
 
-    async fn backup_database(file_path: PathBuf) -> Result<Self, ServerBackupError> {
+    pub fn backup_database(file_path: &PathBuf) -> Result<Self, ServerBackupError> {
         let file_stem = file_path
             .file_stem()
             .unwrap_or_else(|| OsStr::new("bencher"))
@@ -128,10 +130,7 @@ impl ServerBackup {
         let mut backup_file_path = file_path.clone();
         backup_file_path.set_file_name(&file_name);
 
-        let dest = backup_file_path.clone();
-        tokio::task::spawn_blocking(move || run_online_backup(&file_path, &dest))
-            .await
-            .map_err(ServerBackupError::JoinBackup)??;
+        run_online_backup(file_path, &backup_file_path)?;
 
         Ok(Self {
             file_path: backup_file_path,
