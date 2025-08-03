@@ -22,7 +22,6 @@ bencher_config.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_schema.workspace = true
 chrono.workspace = true
-diesel.workspace = true
 dropshot.workspace = true
 rusqlite = { workspace = true, features = ["backup"] }
 serde_json.workspace = true

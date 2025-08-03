@@ -6,13 +6,11 @@ use bencher_json::{
     DateTime, JsonBackup, JsonBackupCreated, JsonRestart, system::backup::JsonDataStore,
 };
 use bencher_schema::{
-    conn_lock,
     context::ApiContext,
     error::bad_request_error,
     model::user::{admin::AdminUser, auth::BearerToken},
 };
 use chrono::Utc;
-use diesel::connection::SimpleConnection as _;
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use tokio::{
     fs::remove_file,
@@ -20,6 +18,8 @@ use tokio::{
 };
 
 const BUFFER_SIZE: usize = 1024;
+const PAGES_PER_STEP: i32 = 5;
+const PAUSE_BETWEEN_PAGES: std::time::Duration = std::time::Duration::from_millis(250);
 
 #[endpoint {
     method = OPTIONS,
@@ -64,15 +64,23 @@ async fn post_inner(
 #[derive(Debug, thiserror::Error)]
 pub enum BackupError {
     #[error("Failed to open source database ({path}): {error}")]
-    OpenDatabase {
+    OpenSourceDatabase {
         path: PathBuf,
         error: rusqlite::Error,
     },
-
-    #[error("Failed to batch execute: {0}")]
-    BatchExecute(diesel::result::Error),
-    #[error("Failed to create backup file: {0}")]
-    CreateBackupFile(std::io::Error),
+    #[error("Failed to open destination database ({path}): {error}")]
+    OpenDestinationDatabase {
+        path: PathBuf,
+        error: rusqlite::Error,
+    },
+    #[error("Failed to create online backup: {0}")]
+    CreateBackup(rusqlite::Error),
+    #[error("Failed to run online backup: {0}")]
+    RunBackup(rusqlite::Error),
+    #[error("Failed to join backup task: {0}")]
+    JoinBackup(tokio::task::JoinError),
+    #[error("Failed to open backup file: {0}")]
+    OpenBackupFile(std::io::Error),
     #[error("Failed to create compressed file: {0}")]
     CreateZipFile(std::io::Error),
     #[error("Failed to write to compressed file: {0}")]
@@ -98,7 +106,7 @@ async fn backup(
         file_path: backup_file_path,
         file_name: backup_file_name,
         created,
-    } = backup_database(context).await?;
+    } = Backup::run(context).await?;
 
     // Compress the database backup
     let (source_path, file_name) = if json_backup.compress.unwrap_or_default() {
@@ -135,43 +143,56 @@ struct Backup {
     created: DateTime,
 }
 
-async fn backup_database(context: &ApiContext) -> Result<Backup, BackupError> {
-    let mut file_path = context.database.path.clone();
+impl Backup {
+    async fn run(context: &ApiContext) -> Result<Backup, BackupError> {
+        let file_path = context.database.path.clone();
 
-    let file_stem = file_path
-        .file_stem()
-        .unwrap_or_else(|| OsStr::new("bencher"))
-        .to_string_lossy();
-    let file_extension = file_path
-        .extension()
-        .unwrap_or_else(|| OsStr::new("db"))
-        .to_string_lossy();
-    let date_time = Utc::now();
-    let file_name = format!(
-        "backup-{file_stem}-{}.{file_extension}",
-        date_time.format("%Y-%m-%d-%H-%M-%S")
-    );
-    file_path.set_file_name(&file_name);
-    let file_path_str = file_path.to_string_lossy();
-    let query = format!("VACUUM INTO '{file_path_str}'");
+        let file_stem = file_path
+            .file_stem()
+            .unwrap_or_else(|| OsStr::new("bencher"))
+            .to_string_lossy();
+        let file_extension = file_path
+            .extension()
+            .unwrap_or_else(|| OsStr::new("db"))
+            .to_string_lossy();
+        let date_time = Utc::now();
+        let file_name = format!(
+            "backup-{file_stem}-{}.{file_extension}",
+            date_time.format("%Y-%m-%d-%H-%M-%S")
+        );
+        let mut backup_file_path = file_path.clone();
+        backup_file_path.set_file_name(&file_name);
 
-    conn_lock!(context)
-        .batch_execute(&query)
-        .map_err(BackupError::BatchExecute)?;
+        let dest = backup_file_path.clone();
+        tokio::task::spawn_blocking(move || run_online_backup(&file_path, &dest))
+            .await
+            .map_err(BackupError::JoinBackup)??;
 
-    Ok(Backup {
-        file_path,
-        file_name,
-        created: date_time.into(),
-    })
+        Ok(Backup {
+            file_path: backup_file_path,
+            file_name,
+            created: date_time.into(),
+        })
+    }
 }
 
-async fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), BackupError> {
-    let mut src = rusqlite::Connection::open(src).map_err(|error| BackupError::OpenDatabase {
-        path: src.clone(),
-        error,
-    })?;
-    Ok(())
+fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), BackupError> {
+    let src_connection =
+        rusqlite::Connection::open(src).map_err(|error| BackupError::OpenSourceDatabase {
+            path: src.clone(),
+            error,
+        })?;
+    let mut dest_connection =
+        rusqlite::Connection::open(dest).map_err(|error| BackupError::OpenDestinationDatabase {
+            path: dest.clone(),
+            error,
+        })?;
+    let backup = rusqlite::backup::Backup::new(&src_connection, &mut dest_connection)
+        .map_err(BackupError::CreateBackup)?;
+    // https://www.sqlite.org/backup.html#example_2_online_backup_of_a_running_database
+    backup
+        .run_to_completion(PAGES_PER_STEP, PAUSE_BETWEEN_PAGES, None)
+        .map_err(BackupError::RunBackup)
 }
 
 async fn compress_database(
@@ -180,7 +201,7 @@ async fn compress_database(
 ) -> Result<(PathBuf, String), BackupError> {
     let backup_file = tokio::fs::File::open(&backup_file_path)
         .await
-        .map_err(BackupError::CreateBackupFile)?;
+        .map_err(BackupError::OpenBackupFile)?;
     let mut backup_data = BufReader::with_capacity(BUFFER_SIZE, backup_file);
 
     let compress_file_name = format!("{backup_file_name}.gz");

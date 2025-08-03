@@ -233,7 +233,6 @@ dependencies = [
  "bencher_json",
  "bencher_schema",
  "chrono",
- "diesel",
  "dropshot",
  "rusqlite",
  "serde_json",
