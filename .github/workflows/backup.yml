@@ -2,6 +2,8 @@ name: Backup
 
 on:
   workflow_dispatch:
+  push:
+    branches: [cloud]
 
 env:
   CARGO_TERM_COLOR: always
@@ -9,10 +11,9 @@ env:
 
 jobs:
   backup_database:
-    if: github.ref == 'refs/heads/cloud'
     name: Backup Database
     runs-on: ubuntu-22.04
-    timeout-minutes: 12
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
