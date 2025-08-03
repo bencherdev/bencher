@@ -78,10 +78,11 @@ impl ServerBackup {
         } = Self::backup_database(file_path).await?;
 
         // Compress the database backup
-        let (source_path, file_name) = if json_backup.compress.unwrap_or_default() {
-            compress_database(backup_file_path.clone(), &backup_file_name).await?
+        let compress = json_backup.compress.unwrap_or_default();
+        let (source_path, file_name) = if compress {
+            compress_database(backup_file_path, &backup_file_name).await?
         } else {
-            (backup_file_path.clone(), backup_file_name)
+            (backup_file_path, backup_file_name)
         };
 
         // Store the database backup in AWS S3
@@ -98,9 +99,13 @@ impl ServerBackup {
 
         // Remove the remaining database backup
         if json_backup.rm.unwrap_or_default() {
-            remove_file(source_path)
-                .await
-                .map_err(ServerBackupError::RmZipFile)?;
+            remove_file(source_path).await.map_err(|e| {
+                if compress {
+                    ServerBackupError::RmZipFile(e)
+                } else {
+                    ServerBackupError::RmBackupFile(e)
+                }
+            })?;
         }
 
         Ok(JsonBackupCreated { created })
