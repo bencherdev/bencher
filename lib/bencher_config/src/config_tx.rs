@@ -124,11 +124,13 @@ impl ConfigTx {
 
         #[cfg(feature = "plus")]
         {
-            let conn = context.database.connection.clone();
-            let query_server = QueryServer::get_or_create(&mut *conn.lock().await)
-                .map_err(ConfigTxError::ServerId)?;
+            use bencher_schema::conn_lock;
+
+            let query_server =
+                QueryServer::get_or_create(conn_lock!(context)).map_err(ConfigTxError::ServerId)?;
             info!(log, "Bencher API Server ID: {}", query_server.uuid);
 
+            let db_path = context.database.path.clone();
             // Bencher Cloud does not need to send stats to itself,
             // so we just include the Messenger directly.
             // Bencher Self-Hosted needs the Licensor in order to check for a valid license if stats are disabled.
@@ -137,7 +139,14 @@ impl ConfigTx {
             } else {
                 (Some(context.licensor.clone()), None)
             };
-            query_server.spawn_stats(log.clone(), conn, context.stats, licensor, messenger);
+            query_server.spawn_stats(
+                log.clone(),
+                db_path,
+                context.database.connection.clone(),
+                context.stats,
+                licensor,
+                messenger,
+            );
         }
 
         let mut api_description = ApiDescription::new();

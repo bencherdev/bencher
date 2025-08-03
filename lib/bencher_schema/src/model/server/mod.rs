@@ -1,5 +1,6 @@
 #![cfg(feature = "plus")]
 
+use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::{cmp, sync::Arc};
 
@@ -11,7 +12,7 @@ use dropshot::HttpError;
 use slog::Logger;
 use tokio::sync::Mutex;
 
-use crate::yield_connection_lock;
+use crate::connection_lock;
 use crate::{
     API_VERSION,
     context::StatsSettings,
@@ -71,6 +72,7 @@ impl QueryServer {
     pub fn spawn_stats(
         self,
         log: Logger,
+        db_path: PathBuf,
         db_connection: Arc<Mutex<DbConnection>>,
         stats: StatsSettings,
         licensor: Option<Licensor>,
@@ -136,7 +138,7 @@ impl QueryServer {
                     sentry::capture_message(err, sentry::Level::Error);
                 }
 
-                let json_stats = match self.get_stats(&db_connection, messenger.is_some()).await {
+                let json_stats = match self.get_stats(db_path.clone(), messenger.is_some()).await {
                     Ok(json_stats) => json_stats,
                     Err(e) => {
                         slog::error!(log, "Failed to get stats: {e}");
@@ -181,10 +183,10 @@ impl QueryServer {
 
     pub async fn get_stats(
         self,
-        db_connection: &Mutex<DbConnection>,
+        db_path: PathBuf,
         is_bencher_cloud: bool,
     ) -> Result<JsonServerStats, HttpError> {
-        stats::get_stats(db_connection, self, is_bencher_cloud).await
+        stats::get_stats(db_path, self, is_bencher_cloud).await
     }
 
     pub async fn send_stats_to_backend(
@@ -195,7 +197,7 @@ impl QueryServer {
         self_hosted_server: Option<ServerUuid>,
     ) -> Result<(), HttpError> {
         // TODO find a better home for these than my inbox
-        let admins = yield_connection_lock!(db_connection, |conn| QueryUser::get_admins(conn))?;
+        let admins = QueryUser::get_admins(connection_lock!(db_connection))?;
 
         for admin in admins {
             let message = Message {

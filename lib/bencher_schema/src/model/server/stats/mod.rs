@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use bencher_json::{DateTime, JsonServerStats};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
@@ -29,7 +31,7 @@ enum ProjectState {
 }
 
 pub async fn get_stats(
-    db_connection: &Mutex<DbConnection>,
+    db_path: PathBuf,
     query_server: QueryServer,
     is_bencher_cloud: bool,
 ) -> Result<JsonServerStats, HttpError> {
