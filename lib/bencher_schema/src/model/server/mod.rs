@@ -176,12 +176,15 @@ impl QueryServer {
 
     pub async fn get_stats(
         self,
+        log: Logger,
         db_path: PathBuf,
         is_bencher_cloud: bool,
     ) -> Result<JsonServerStats, HttpError> {
-        tokio::task::spawn_blocking(move || stats::get_stats(&db_path, self, is_bencher_cloud))
-            .await
-            .map_err(request_timeout_error)?
+        tokio::task::spawn_blocking(move || {
+            stats::get_stats(&log, &db_path, self, is_bencher_cloud)
+        })
+        .await
+        .map_err(request_timeout_error)?
     }
 
     async fn get_stats_str(
@@ -191,7 +194,7 @@ impl QueryServer {
         is_bencher_cloud: bool,
     ) -> Option<String> {
         let json_stats = self
-            .get_stats(db_path, is_bencher_cloud)
+            .get_stats(log.clone(), db_path, is_bencher_cloud)
             .await
             .inspect_err(|e| {
                 slog::error!(log, "Failed to get stats: {e}");

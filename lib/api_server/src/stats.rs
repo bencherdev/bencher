@@ -39,15 +39,17 @@ pub async fn server_stats_get(
     bearer_token: BearerToken,
 ) -> Result<ResponseOk<JsonServerStats>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_one_inner(rqctx.context()).await?;
+    let json = get_one_inner(&rqctx.log, rqctx.context()).await?;
     Ok(Get::auth_response_ok(json))
 }
 
-async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpError> {
+async fn get_one_inner(log: &Logger, context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let query_server = QueryServer::get_server(conn_lock!(context))?;
     let db_path = context.database.path.clone();
     let is_bencher_cloud = context.is_bencher_cloud;
-    query_server.get_stats(db_path, is_bencher_cloud).await
+    query_server
+        .get_stats(log.clone(), db_path, is_bencher_cloud)
+        .await
 }
 
 // TODO remove in due time
