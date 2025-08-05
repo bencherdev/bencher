@@ -25,6 +25,7 @@ use diesel::{
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
+#[cfg(feature = "plus")]
 use slog::Logger;
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;

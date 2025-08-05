@@ -8,12 +8,14 @@ publish = false
 
 [features]
 plus = [
+    "dep:async-compression",
     "dep:bencher_billing",
     "dep:bencher_bing_index",
     "dep:bencher_github",
     "dep:bencher_google_index",
     "dep:bencher_license",
     "dep:reqwest",
+    "dep:rusqlite",
     "dep:serde_json",
     "bencher_json/plus",
 ]
@@ -21,7 +23,7 @@ sentry = ["dep:sentry"]
 
 [dependencies]
 # Workspace
-async-compression = { workspace = true, features = ["tokio", "gzip"] }
+async-compression = { workspace = true, optional = true, features = ["tokio", "gzip"] }
 async-trait.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
@@ -41,7 +43,7 @@ diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 http.workspace = true
 regex.workspace = true
-rusqlite = { workspace = true, features = ["backup"] }
+rusqlite = { workspace = true, optional = true, features = ["backup"] }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true
 oso.workspace = true
