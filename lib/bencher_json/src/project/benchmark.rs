@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{BenchmarkName, DateTime, Slug};
+use bencher_valid::{BenchmarkName, DateTime, NameId, Slug};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 use crate::ProjectUuid;
 
 crate::typed_uuid::typed_uuid!(BenchmarkUuid);
+
+/// A benchmark UUID, slug, or name.
+pub type BenchmarkNameId = NameId<BenchmarkName>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

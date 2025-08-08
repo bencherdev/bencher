@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    NameId,
+    BranchNameId, TestbedNameId,
     project::{
         branch::JsonUpdateStartPoint,
         report::{JsonReportSettings, JsonReportThresholds},
@@ -26,7 +26,7 @@ pub struct JsonNewRun {
     pub project: Option<ResourceId>,
     /// Branch UUID, slug, or name.
     /// If the branch is not provided or does not exist, it will be created.
-    pub branch: Option<NameId>,
+    pub branch: Option<BranchNameId>,
     /// Full `git` commit hash.
     /// All reports with the same `git` commit hash will be considered part of the same branch version.
     /// This can be useful for tracking the performance of a specific commit across multiple testbeds.
@@ -43,7 +43,7 @@ pub struct JsonNewRun {
     pub start_point: Option<JsonUpdateStartPoint>,
     /// Testbed UUID, slug, or name.
     /// If the testbed is not provided or does not exist, it will be created.
-    pub testbed: Option<NameId>,
+    pub testbed: Option<TestbedNameId>,
     /// Thresholds to use for the branch, testbed, and measures in the report.
     /// If a threshold does not exist, it will be created.
     /// If a threshold exists and the model is different, it will be updated with the new model.

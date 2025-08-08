@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, fmt, iter::Sum, ops::Add};
 
-use bencher_valid::{BenchmarkName, DateTime, NameId};
+use bencher_valid::{BenchmarkName, DateTime};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -12,7 +12,9 @@ mod median;
 pub use mean::Mean;
 pub use median::Median;
 
-use crate::{JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonTestbed, ReportUuid};
+use crate::{
+    JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonTestbed, MeasureNameId, ReportUuid,
+};
 
 use super::{alert::JsonPerfAlert, report::Iteration, threshold::JsonThresholdModel};
 
@@ -23,9 +25,6 @@ pub type JsonResultsMap = HashMap<BenchmarkName, JsonMetricsMap>;
 
 #[typeshare::typeshare]
 pub type JsonMetricsMap = HashMap<MeasureNameId, JsonNewMetric>;
-
-#[typeshare::typeshare]
-pub type MeasureNameId = NameId;
 
 pub type MetricResults = Vec<(BenchmarkName, Vec<(MeasureNameId, JsonNewMetric)>)>;
 

@@ -8,13 +8,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{JsonHead, ProjectUuid};
 
-crate::typed_uuid::typed_uuid!(BranchUuid);
-
 pub const START_POINT_MAX_VERSIONS: u32 = 255;
 
 pub const BRANCH_MAIN_STR: &str = "main";
 #[expect(clippy::expect_used)]
-pub static DEFAULT_BRANCH: LazyLock<NameId> = LazyLock::new(|| {
+pub static DEFAULT_BRANCH: LazyLock<BranchNameId> = LazyLock::new(|| {
     BRANCH_MAIN_STR
         .parse()
         .expect("Failed to parse branch name.")
@@ -33,6 +31,11 @@ static BRANCH_MAIN_SLUG: LazyLock<Option<Slug>> = LazyLock::new(|| {
             .expect("Failed to parse branch slug."),
     )
 });
+
+crate::typed_uuid::typed_uuid!(BranchUuid);
+
+/// A branch UUID, slug, or name.
+pub type BranchNameId = NameId<BranchName>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -68,7 +71,7 @@ impl JsonNewBranch {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewStartPoint {
     /// The UUID, slug, or name of the branch to use as the start point.
-    pub branch: NameId,
+    pub branch: BranchNameId,
     /// The full `git` hash of the branch to use as the start point.
     /// Requires the `branch` field to be set.
     pub hash: Option<GitHash>,
@@ -128,7 +131,7 @@ pub struct JsonUpdateBranch {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateStartPoint {
     /// The UUID, slug, or name of the branch to use as the start point.
-    pub branch: Option<NameId>,
+    pub branch: Option<BranchNameId>,
     /// The full git hash of the branch to use as the start point.
     /// Requires the `branch` field to be set.
     pub hash: Option<GitHash>,

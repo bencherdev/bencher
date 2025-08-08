@@ -1,5 +1,6 @@
 use std::{
     fmt::{self, Display},
+    marker::PhantomData,
     str::FromStr,
 };
 
@@ -11,12 +12,12 @@ use serde::{
 };
 use uuid::Uuid;
 
-use crate::{Slug, ValidError, non_empty::is_valid_non_empty};
+use crate::{Slug, ValidError};
 
 #[typeshare::typeshare]
-#[derive(Debug, derive_more::Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct NameId(String);
+pub struct NameId<T>(T);
 
 pub enum NameIdKind<T> {
     Uuid(Uuid),
@@ -24,28 +25,27 @@ pub enum NameIdKind<T> {
     Name(T),
 }
 
-impl FromStr for NameId {
-    type Err = ValidError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        // A UUID always a valid slug
-        // A slug is always non-empty
-        // And a non-empty string is always a valid name ID
-        if is_valid_non_empty(value) {
-            Ok(Self(value.into()))
-        } else {
-            Err(ValidError::NameId(value.into()))
-        }
-    }
-}
-
-impl<T> TryFrom<&NameId> for NameIdKind<T>
+impl<T> FromStr for NameId<T>
 where
     T: FromStr<Err = ValidError>,
 {
+    type Err = ValidError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Ok(Self(value.parse().map_err(|error| ValidError::NameId {
+            value: value.to_owned(),
+            error: Box::new(error),
+        })?))
+    }
+}
+
+impl<T> TryFrom<&NameId<T>> for NameIdKind<T>
+where
+    T: AsRef<str> + FromStr<Err = ValidError> + Display,
+{
     type Error = ValidError;
 
-    fn try_from(name_id: &NameId) -> Result<Self, Self::Error> {
+    fn try_from(name_id: &NameId<T>) -> Result<Self, Self::Error> {
         if let Ok(uuid) = Uuid::from_str(name_id.as_ref()) {
             Ok(Self::Uuid(uuid))
         } else if let Ok(slug) = Slug::from_str(name_id.as_ref()) {
@@ -53,32 +53,59 @@ where
         } else if let Ok(name) = T::from_str(name_id.as_ref()) {
             Ok(Self::Name(name))
         } else {
-            Err(ValidError::NameId(name_id.to_string()))
+            Err(ValidError::FromNameId(name_id.to_string()))
         }
     }
 }
 
-impl From<Uuid> for NameId {
+impl From<Uuid> for NameId<Uuid> {
     fn from(uuid: Uuid) -> Self {
-        Self(uuid.to_string())
+        Self(uuid)
     }
 }
 
-impl From<Slug> for NameId {
+impl From<Slug> for NameId<Slug> {
     fn from(slug: Slug) -> Self {
-        Self(slug.into())
+        Self(slug)
     }
 }
 
-impl AsRef<str> for NameId {
+impl<T> AsRef<str> for NameId<T>
+where
+    T: AsRef<str>,
+{
     fn as_ref(&self) -> &str {
-        &self.0
+        self.0.as_ref()
     }
 }
 
-impl From<NameId> for String {
-    fn from(name_id: NameId) -> Self {
-        name_id.0
+impl<T> From<NameId<T>> for String
+where
+    T: Display,
+{
+    fn from(name_id: NameId<T>) -> Self {
+        name_id.0.to_string()
+    }
+}
+
+impl<T> Display for NameId<T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl<T> Serialize for NameId<T>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
     }
 }
 
@@ -95,19 +122,29 @@ where
     }
 }
 
-impl<'de> Deserialize<'de> for NameId {
-    fn deserialize<D>(deserializer: D) -> Result<NameId, D::Error>
+impl<'de, T> Deserialize<'de> for NameId<T>
+where
+    T: Deserialize<'de> + FromStr<Err = ValidError>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<NameId<T>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(NameIdVisitor)
+        deserializer.deserialize_str(NameIdVisitor {
+            marker: PhantomData,
+        })
     }
 }
 
-struct NameIdVisitor;
+struct NameIdVisitor<T> {
+    marker: PhantomData<T>,
+}
 
-impl Visitor<'_> for NameIdVisitor {
-    type Value = NameId;
+impl<T> Visitor<'_> for NameIdVisitor<T>
+where
+    T: FromStr<Err = ValidError>,
+{
+    type Value = NameId<T>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("a valid UUID or slug.")

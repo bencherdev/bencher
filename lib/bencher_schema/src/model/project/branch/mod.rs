@@ -1,5 +1,6 @@
 use bencher_json::{
-    BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
+    BranchName, BranchNameId, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind,
+    Slug,
     project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
 };
 use diesel::{
@@ -89,7 +90,7 @@ impl QueryBranch {
         log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
-        branch: &NameId,
+        branch: &BranchNameId,
         start_point: Option<&JsonUpdateStartPoint>,
     ) -> Result<(BranchId, HeadId), HttpError> {
         let (query_branch, query_head) =

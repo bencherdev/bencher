@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, Model, NameId};
+use bencher_valid::{DateTime, Model};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -9,7 +9,8 @@ use serde::{
 };
 
 use crate::{
-    JsonBranch, JsonMeasure, JsonModel, JsonTestbed, ProjectUuid,
+    BranchNameId, JsonBranch, JsonMeasure, JsonModel, JsonTestbed, MeasureNameId, ProjectUuid,
+    TestbedNameId,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -19,11 +20,11 @@ crate::typed_uuid::typed_uuid!(ThresholdUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
     /// The UUID, slug, or name of the threshold branch.
-    pub branch: NameId,
+    pub branch: BranchNameId,
     /// The UUID, slug, or name of the threshold testbed.
-    pub testbed: NameId,
+    pub testbed: TestbedNameId,
     /// The UUID, slug, or name of the threshold measure.
-    pub measure: NameId,
+    pub measure: MeasureNameId,
     #[serde(flatten)]
     pub model: Model,
 }
@@ -74,9 +75,9 @@ pub struct JsonThresholdQueryParams {
 
 #[derive(Debug, Clone)]
 pub struct JsonThresholdQuery {
-    pub branch: Option<NameId>,
-    pub testbed: Option<NameId>,
-    pub measure: Option<NameId>,
+    pub branch: Option<BranchNameId>,
+    pub testbed: Option<TestbedNameId>,
+    pub measure: Option<MeasureNameId>,
     pub archived: Option<bool>,
 }
 

@@ -1,6 +1,6 @@
 use bencher_json::{
-    DateTime, JsonNewTestbed, JsonTestbed, NameId, NameIdKind, ResourceName, Slug, TestbedUuid,
-    project::testbed::JsonUpdateTestbed,
+    DateTime, JsonNewTestbed, JsonTestbed, NameId, NameIdKind, ResourceName, Slug, TestbedNameId,
+    TestbedUuid, project::testbed::JsonUpdateTestbed,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -70,7 +70,7 @@ impl QueryTestbed {
     async fn get_or_create_inner(
         context: &ApiContext,
         project_id: ProjectId,
-        testbed: &NameId,
+        testbed: &TestbedNameId,
     ) -> Result<Self, HttpError> {
         let query_testbed = Self::from_name_id(conn_lock!(context), project_id, testbed);
 

@@ -41,20 +41,21 @@ pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},
-    benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
+    benchmark::{BenchmarkNameId, BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
-    branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonNewStartPoint},
+    branch::{
+        BranchNameId, BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonNewStartPoint,
+    },
     head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
-    measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
+    measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureNameId, MeasureUuid},
     metric::{
-        JsonMetric, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MeasureNameId,
-        MetricUuid,
+        JsonMetric, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MetricUuid,
     },
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
-    testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
+    testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedNameId, TestbedUuid},
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
 };
 pub use run::JsonNewRun;

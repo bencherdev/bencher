@@ -1,10 +1,8 @@
-use thiserror::Error;
-
 use crate::{Boundary, SampleSize, Window};
 
 pub(crate) const REGEX_ERROR: &str = "Failed to compile regex.";
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum ValidError {
     #[error("Failed to validate resource ID: {0}")]
     ResourceId(String),
@@ -26,8 +24,13 @@ pub enum ValidError {
     BranchName(String),
     #[error("Failed to validate benchmark name: {0}")]
     BenchmarkName(String),
-    #[error("Failed to validate name ID: {0}")]
-    NameId(String),
+    #[error("Failed to validate name ID ({value}): {error}")]
+    NameId {
+        value: String,
+        error: Box<dyn std::error::Error + Send + Sync + 'static>,
+    },
+    #[error("Failed to convert name ID: {0}")]
+    FromNameId(String),
     #[error("Failed to validate non-empty ID: {0}")]
     NonEmpty(String),
     #[error("Failed to validate resource name string: {0}")]

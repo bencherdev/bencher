@@ -1,5 +1,4 @@
-use crate::JsonNewMeasure;
-use bencher_valid::NameId;
+use crate::{JsonNewMeasure, MeasureNameId};
 
 pub trait BuiltInMeasure {
     const NAME_STR: &'static str;
@@ -8,7 +7,7 @@ pub trait BuiltInMeasure {
     const UNITS_STR: &'static str;
 
     #[expect(clippy::expect_used)]
-    fn name_id() -> NameId {
+    fn name_id() -> MeasureNameId {
         Self::SLUG_STR
             .parse()
             .expect("Failed to parse measure slug.")

@@ -42,7 +42,7 @@ macro_rules! typed_uuid {
             }
         }
 
-        impl From<$name> for crate::NameId {
+        impl From<$name> for crate::NameId<uuid::Uuid> {
             fn from(uuid: $name) -> Self {
                 uuid.0.into()
             }

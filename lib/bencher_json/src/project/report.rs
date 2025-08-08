@@ -6,8 +6,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric, JsonProject,
-    JsonPubUser, JsonTestbed, NameId,
+    BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric,
+    JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, TestbedNameId,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -20,7 +20,7 @@ crate::typed_uuid::typed_uuid!(ReportUuid);
 pub struct JsonNewReport {
     /// Branch UUID, slug, or name.
     /// If the branch does not exist, it will be created.
-    pub branch: NameId,
+    pub branch: BranchNameId,
     /// Full `git` commit hash.
     /// All reports with the same `git` commit hash will be considered part of the same branch version.
     /// This can be useful for tracking the performance of a specific commit across multiple testbeds.
@@ -37,7 +37,7 @@ pub struct JsonNewReport {
     pub start_point: Option<JsonUpdateStartPoint>,
     /// Testbed UUID, slug, or name.
     /// If the testbed does not exist, it will be created.
-    pub testbed: NameId,
+    pub testbed: TestbedNameId,
     /// Thresholds to use for the branch, testbed, and measures in the report.
     /// If a threshold does not exist, it will be created.
     /// If a threshold exists and the model is different, it will be updated with the new model.
@@ -58,7 +58,7 @@ pub struct JsonNewReport {
 pub struct JsonReportThresholds {
     /// Map of measure UUID, slug, or name to the threshold model to use.
     /// If a measure name or slug is provided, the measure will be created if it does not exist.
-    pub models: Option<HashMap<NameId, Model>>,
+    pub models: Option<HashMap<MeasureNameId, Model>>,
     /// Reset all thresholds for the branch and testbed.
     /// Any models present in the `models` field will still be updated accordingly.
     /// If a threshold already exists and is not present in the `models` field,
@@ -360,8 +360,8 @@ pub struct JsonReportQueryParams {
 
 #[derive(Debug, Clone)]
 pub struct JsonReportQuery {
-    pub branch: Option<NameId>,
-    pub testbed: Option<NameId>,
+    pub branch: Option<BranchNameId>,
+    pub testbed: Option<TestbedNameId>,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
     pub archived: Option<bool>,

@@ -1,6 +1,6 @@
 use std::{fmt, sync::LazyLock};
 
-use bencher_valid::{DateTime, ResourceName, Slug};
+use bencher_valid::{DateTime, NameId, ResourceName, Slug};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,10 @@ pub static DEFAULT_UNIT: LazyLock<ResourceName> = LazyLock::new(|| {
 });
 
 crate::typed_uuid::typed_uuid!(MeasureUuid);
+
+/// A measure UUID, slug, or name.
+#[typeshare::typeshare]
+pub type MeasureNameId = NameId<ResourceName>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

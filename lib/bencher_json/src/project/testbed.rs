@@ -10,7 +10,7 @@ use crate::ProjectUuid;
 
 pub const TESTBED_LOCALHOST_STR: &str = "localhost";
 #[expect(clippy::expect_used)]
-pub static DEFAULT_TESTBED: LazyLock<NameId> = LazyLock::new(|| {
+pub static DEFAULT_TESTBED: LazyLock<TestbedNameId> = LazyLock::new(|| {
     TESTBED_LOCALHOST_STR
         .parse()
         .expect("Failed to parse testbed name.")
@@ -31,6 +31,9 @@ static TESTBED_LOCALHOST_SLUG: LazyLock<Option<Slug>> = LazyLock::new(|| {
 });
 
 crate::typed_uuid::typed_uuid!(TestbedUuid);
+
+/// A testbed UUID, slug, or name.
+pub type TestbedNameId = NameId<ResourceName>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
