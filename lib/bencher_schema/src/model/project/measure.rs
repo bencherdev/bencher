@@ -47,8 +47,8 @@ impl QueryMeasure {
     fn_eq_resource_id!(measure);
     fn_from_resource_id!(project_id, ProjectId, measure, Measure);
 
-    fn_eq_name_id!(ResourceName, measure);
-    fn_from_name_id!(measure, Measure);
+    fn_eq_name_id!(ResourceName, measure, MeasureNameId);
+    fn_from_name_id!(measure, Measure, MeasureNameId);
 
     fn_get!(measure, MeasureId);
     fn_get_id!(measure, MeasureId, MeasureUuid);

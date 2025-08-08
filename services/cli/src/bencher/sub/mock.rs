@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{AdapterResults, results::adapter_metrics::AdapterMetrics};
-use bencher_json::{JsonNewMetric, NameId};
+use bencher_json::{JsonNewMetric, MeasureNameId};
 use rand::{
     Rng as _,
     distr::{Distribution as _, Uniform},
@@ -16,7 +16,7 @@ const DEFAULT_COUNT: usize = 5;
 #[derive(Debug, Clone)]
 pub struct Mock {
     pub count: Option<usize>,
-    pub measures: Vec<NameId>,
+    pub measures: Vec<MeasureNameId>,
     pub pow: Option<i32>,
     pub fail: bool,
     pub flaky: bool,

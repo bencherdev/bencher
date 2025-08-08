@@ -4,23 +4,26 @@ use bencher_client::types::{
     JsonUpdateBenchmark, JsonUpdateBranch, JsonUpdateMeasure, JsonUpdateTestbed,
 };
 use bencher_json::{
-    BenchmarkName, BranchName, JsonBenchmark, JsonBenchmarks, JsonBranch, JsonBranches,
-    JsonMeasure, JsonMeasures, JsonTestbed, JsonTestbeds, NameId, NameIdKind, ResourceId,
-    ResourceName,
+    BenchmarkName, BenchmarkNameId, BranchName, BranchNameId, JsonBenchmark, JsonBenchmarks,
+    JsonBranch, JsonBranches, JsonMeasure, JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId,
+    NameId, NameIdKind, ResourceId, ResourceName, TestbedNameId,
 };
+use octocrab::models::repos::Branch;
 
 use crate::{
-    bencher::backend::AuthBackend, cli_println, parser::project::archive::CliArchiveDimension,
+    bencher::{backend::AuthBackend, sub::project::testbed::Testbed},
+    cli_println,
+    parser::project::archive::CliArchiveDimension,
 };
 
 use super::{ArchiveAction, ArchiveError};
 
 #[derive(Debug, Clone)]
 pub enum Dimension {
-    Branch(NameId),
-    Testbed(NameId),
-    Benchmark(NameId),
-    Measure(NameId),
+    Branch(BranchNameId),
+    Testbed(TestbedNameId),
+    Benchmark(BenchmarkNameId),
+    Measure(MeasureNameId),
 }
 
 impl From<CliArchiveDimension> for Dimension {
@@ -51,16 +54,16 @@ impl fmt::Display for Dimension {
     }
 }
 
-impl AsRef<NameId> for Dimension {
-    fn as_ref(&self) -> &NameId {
-        match self {
-            Self::Branch(name_id)
-            | Self::Testbed(name_id)
-            | Self::Benchmark(name_id)
-            | Self::Measure(name_id) => name_id,
-        }
-    }
-}
+// impl AsRef<NameId> for Dimension {
+//     fn as_ref(&self) -> &NameId {
+//         match self {
+//             Self::Branch(name_id)
+//             | Self::Testbed(name_id)
+//             | Self::Benchmark(name_id)
+//             | Self::Measure(name_id) => name_id,
+//         }
+//     }
+// }
 
 impl Dimension {
     pub async fn archive(

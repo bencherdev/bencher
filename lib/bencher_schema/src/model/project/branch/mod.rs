@@ -1,6 +1,5 @@
 use bencher_json::{
-    BranchName, BranchNameId, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind,
-    Slug,
+    BranchName, BranchNameId, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameIdKind, Slug,
     project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
 };
 use diesel::{
@@ -59,8 +58,8 @@ impl QueryBranch {
     fn_eq_resource_id!(branch);
     fn_from_resource_id!(project_id, ProjectId, branch, Branch);
 
-    fn_eq_name_id!(BranchName, branch);
-    fn_from_name_id!(branch, Branch);
+    fn_eq_name_id!(BranchName, branch, BranchNameId);
+    fn_from_name_id!(branch, Branch, BranchNameId);
 
     fn_get!(branch, BranchId);
     fn_get_id!(branch, BranchId, BranchUuid);
@@ -111,7 +110,7 @@ impl QueryBranch {
         log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
-        branch: &NameId,
+        branch: &BranchNameId,
         start_point: Option<&JsonUpdateStartPoint>,
     ) -> Result<(Self, QueryHead), HttpError> {
         let query_branch = Self::from_name_id(conn_lock!(context), project_id, branch);

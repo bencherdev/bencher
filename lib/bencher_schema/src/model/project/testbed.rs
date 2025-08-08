@@ -1,5 +1,5 @@
 use bencher_json::{
-    DateTime, JsonNewTestbed, JsonTestbed, NameId, NameIdKind, ResourceName, Slug, TestbedNameId,
+    DateTime, JsonNewTestbed, JsonTestbed, NameIdKind, ResourceName, Slug, TestbedNameId,
     TestbedUuid, project::testbed::JsonUpdateTestbed,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -41,8 +41,8 @@ impl QueryTestbed {
     fn_eq_resource_id!(testbed);
     fn_from_resource_id!(project_id, ProjectId, testbed, Testbed);
 
-    fn_eq_name_id!(ResourceName, testbed);
-    fn_from_name_id!(testbed, Testbed);
+    fn_eq_name_id!(ResourceName, testbed, TestbedNameId);
+    fn_from_name_id!(testbed, Testbed, TestbedNameId);
 
     fn_get!(testbed, TestbedId);
     fn_get_id!(testbed, TestbedId, TestbedUuid);
@@ -52,7 +52,7 @@ impl QueryTestbed {
     pub async fn get_or_create(
         context: &ApiContext,
         project_id: ProjectId,
-        testbed: &NameId,
+        testbed: &TestbedNameId,
     ) -> Result<TestbedId, HttpError> {
         let query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
 
