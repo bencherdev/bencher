@@ -858,6 +858,7 @@ jobs:
         run: cargo test-api smoke test
 
   deploy_api_fly:
+    if: github.ref == 'refs/heads/cloud'
     name: Deploy API to Fly.io Prod
     runs-on: ubuntu-22.04
     needs:
