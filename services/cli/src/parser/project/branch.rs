@@ -1,4 +1,4 @@
-use bencher_json::{BranchName, GitHash, HeadUuid, NameId, ResourceId, Slug};
+use bencher_json::{BranchName, BranchNameId, GitHash, HeadUuid, ResourceId, Slug};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -79,7 +79,7 @@ pub struct CliStartPointCreate {
     /// Branch name, slug, or UUID to use as the new branch start point
     /// https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
     #[clap(long, value_name = "BRANCH")]
-    pub start_point_branch: Option<NameId>,
+    pub start_point_branch: Option<BranchNameId>,
 
     /// Branch `git` hash to use as the new branch start point
     #[clap(long, requires = "start_point_branch", value_name = "HASH")]
@@ -147,7 +147,7 @@ pub struct CliStartPointUpdate {
     /// Use the specified branch name, slug, or UUID as the start point for `branch`.
     /// If `branch` already exists and the start point is different, a new branch will be created.
     #[clap(long, value_name = "BRANCH")]
-    pub start_point_branch: Option<NameId>,
+    pub start_point_branch: Option<BranchNameId>,
 
     /// Use the specified full `git` hash as the start point for `branch` (requires: `--start-point-branch`).
     /// If `branch` already exists and the start point hash is different, a new branch will be created.

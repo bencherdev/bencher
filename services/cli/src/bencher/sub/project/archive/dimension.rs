@@ -6,14 +6,11 @@ use bencher_client::types::{
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BranchName, BranchNameId, JsonBenchmark, JsonBenchmarks,
     JsonBranch, JsonBranches, JsonMeasure, JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId,
-    NameId, NameIdKind, ResourceId, ResourceName, TestbedNameId,
+    NameIdKind, ResourceId, ResourceName, TestbedNameId,
 };
-use octocrab::models::repos::Branch;
 
 use crate::{
-    bencher::{backend::AuthBackend, sub::project::testbed::Testbed},
-    cli_println,
-    parser::project::archive::CliArchiveDimension,
+    bencher::backend::AuthBackend, cli_println, parser::project::archive::CliArchiveDimension,
 };
 
 use super::{ArchiveAction, ArchiveError};
@@ -54,17 +51,6 @@ impl fmt::Display for Dimension {
     }
 }
 
-// impl AsRef<NameId> for Dimension {
-//     fn as_ref(&self) -> &NameId {
-//         match self {
-//             Self::Branch(name_id)
-//             | Self::Testbed(name_id)
-//             | Self::Benchmark(name_id)
-//             | Self::Measure(name_id) => name_id,
-//         }
-//     }
-// }
-
 impl Dimension {
     pub async fn archive(
         &self,
@@ -86,9 +72,13 @@ impl Dimension {
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
+        let Self::Branch(name_id) = self else {
+            return Err(ArchiveError::NoBranch {
+                dimension: self.clone(),
+            });
+        };
         let branch: &ResourceId =
-            &match self
-                .as_ref()
+            &match name_id
                 .try_into()
                 .map_err(|err| ArchiveError::ParseDimension {
                     dimension: self.clone(),
@@ -146,9 +136,13 @@ impl Dimension {
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
+        let Self::Testbed(name_id) = self else {
+            return Err(ArchiveError::NoTestbed {
+                dimension: self.clone(),
+            });
+        };
         let testbed: &ResourceId =
-            &match self
-                .as_ref()
+            &match name_id
                 .try_into()
                 .map_err(|err| ArchiveError::ParseDimension {
                     dimension: self.clone(),
@@ -204,9 +198,13 @@ impl Dimension {
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
+        let Self::Benchmark(name_id) = self else {
+            return Err(ArchiveError::NoBenchmark {
+                dimension: self.clone(),
+            });
+        };
         let benchmark: &ResourceId =
-            &match self
-                .as_ref()
+            &match name_id
                 .try_into()
                 .map_err(|err| ArchiveError::ParseDimension {
                     dimension: self.clone(),
@@ -262,9 +260,13 @@ impl Dimension {
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
+        let Self::Measure(name_id) = self else {
+            return Err(ArchiveError::NoMeasure {
+                dimension: self.clone(),
+            });
+        };
         let measure: &ResourceId =
-            &match self
-                .as_ref()
+            &match name_id
                 .try_into()
                 .map_err(|err| ArchiveError::ParseDimension {
                     dimension: self.clone(),

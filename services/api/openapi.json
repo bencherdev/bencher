@@ -9481,7 +9481,7 @@
             "description": "Branch UUID, slug, or name. If the branch does not exist, it will be created.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_BranchName"
               }
             ]
           },
@@ -9539,7 +9539,7 @@
             "description": "Testbed UUID, slug, or name. If the testbed does not exist, it will be created.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_ResourceName"
               }
             ]
           },
@@ -9569,7 +9569,7 @@
             "description": "Branch UUID, slug, or name. If the branch is not provided or does not exist, it will be created.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_BranchName"
               }
             ]
           },
@@ -9646,7 +9646,7 @@
             "description": "Testbed UUID, slug, or name. If the testbed is not provided or does not exist, it will be created.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_ResourceName"
               }
             ]
           },
@@ -9673,7 +9673,7 @@
             "description": "The UUID, slug, or name of the branch to use as the start point.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_BranchName"
               }
             ]
           },
@@ -9735,7 +9735,7 @@
             "description": "The UUID, slug, or name of the threshold branch.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_BranchName"
               }
             ]
           },
@@ -9761,7 +9761,7 @@
             "description": "The UUID, slug, or name of the threshold measure.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_ResourceName"
               }
             ]
           },
@@ -9786,7 +9786,7 @@
             "description": "The UUID, slug, or name of the threshold testbed.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_ResourceName"
               }
             ]
           },
@@ -12075,7 +12075,7 @@
             "description": "The UUID, slug, or name of the branch to use as the start point.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId"
+                "$ref": "#/components/schemas/NameId_for_BranchName"
               }
             ]
           },
@@ -12427,8 +12427,11 @@
         "type": "string",
         "format": "uuid"
       },
-      "NameId": {
-        "type": "string"
+      "NameId_for_BranchName": {
+        "$ref": "#/components/schemas/BranchName"
+      },
+      "NameId_for_ResourceName": {
+        "$ref": "#/components/schemas/ResourceName"
       },
       "NonEmpty": {
         "type": "string"

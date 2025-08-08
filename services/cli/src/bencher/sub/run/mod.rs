@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, JsonReport, NameId, ResourceId, RunContext};
+use bencher_json::{DateTime, JsonReport, ResourceId, RunContext, TestbedNameId};
 
 use crate::{
     CliError,
@@ -34,7 +34,7 @@ use super::project::report::Thresholds;
 pub struct Run {
     project: Option<ResourceId>,
     branch: Branch,
-    testbed: Option<NameId>,
+    testbed: Option<TestbedNameId>,
     adapter: Adapter,
     sub_adapter: SubAdapter,
     average: Option<JsonAverage>,

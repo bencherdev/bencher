@@ -40,10 +40,6 @@ from_client!(
     GitHash,
     Index,
     Jwt,
-    // BranchNameId,
-    // TestbedNameId,
-    // BenchmarkNameId,
-    // MeasureNameId,
     NonEmpty,
     ResourceId,
     ResourceName,
@@ -53,6 +49,18 @@ from_client!(
     UserName,
     Window
 );
+
+impl From<bencher_json::BranchNameId> for types::NameIdForBranchName {
+    fn from(json: bencher_json::BranchNameId) -> Self {
+        Self(json.into_inner().into())
+    }
+}
+
+impl From<bencher_json::NameId<bencher_json::ResourceName>> for types::NameIdForResourceName {
+    fn from(json: bencher_json::NameId<bencher_json::ResourceName>) -> Self {
+        Self(json.into_inner().into())
+    }
+}
 
 from_client!(
     OrganizationUuid,

@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewThreshold;
-use bencher_json::{NameId, ResourceId};
+use bencher_json::{BranchNameId, MeasureNameId, ResourceId, TestbedNameId};
 
 use super::{ThresholdError, model::Model};
 use crate::{
@@ -11,9 +11,9 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
-    pub branch: NameId,
-    pub testbed: NameId,
-    pub measure: NameId,
+    pub branch: BranchNameId,
+    pub testbed: TestbedNameId,
+    pub measure: MeasureNameId,
     pub model: Model,
     pub backend: AuthBackend,
 }

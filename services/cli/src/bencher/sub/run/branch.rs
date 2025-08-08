@@ -1,11 +1,11 @@
-use bencher_json::{GitHash, NameId};
+use bencher_json::{BranchNameId, GitHash};
 
 use crate::{bencher::sub::project::branch::start_point::StartPoint, parser::run::CliRunBranch};
 
 #[expect(clippy::struct_field_names)]
 #[derive(Debug, Clone)]
 pub struct Branch {
-    branch: Option<NameId>,
+    branch: Option<BranchNameId>,
     hash: Option<GitHash>,
     start_point: StartPoint,
 }
@@ -54,7 +54,6 @@ fn map_start_point(
     start_point_reset: bool,
 ) -> StartPoint {
     let branch = start_point.first().and_then(|b| {
-        // The only invalid `NameId` is an empty string.
         // This allows for "continue on empty" semantics for the branch start point.
         b.parse().ok()
     });
@@ -69,7 +68,7 @@ fn map_start_point(
 
 impl From<Branch>
     for (
-        Option<bencher_client::types::NameId>,
+        Option<bencher_client::types::NameIdForBranchName>,
         Option<bencher_client::types::GitHash>,
         Option<bencher_client::types::JsonUpdateStartPoint>,
     )

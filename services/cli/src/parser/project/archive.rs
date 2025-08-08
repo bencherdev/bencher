@@ -1,4 +1,4 @@
-use bencher_json::{NameId, ResourceId};
+use bencher_json::{BenchmarkNameId, BranchNameId, MeasureNameId, ResourceId, TestbedNameId};
 use clap::{ArgGroup, Args, Parser};
 
 use crate::parser::CliBackend;
@@ -26,17 +26,17 @@ pub struct CliArchive {
 pub struct CliArchiveDimension {
     /// Branch name, slug, or UUID.
     #[clap(long)]
-    pub branch: Option<NameId>,
+    pub branch: Option<BranchNameId>,
 
     /// Testbed name, slug, or UUID.
     #[clap(long)]
-    pub testbed: Option<NameId>,
+    pub testbed: Option<TestbedNameId>,
 
     /// Benchmark name, slug, or UUID.
     #[clap(long)]
-    pub benchmark: Option<NameId>,
+    pub benchmark: Option<BenchmarkNameId>,
 
     /// Measure name, slug, or UUID.
     #[clap(long)]
-    pub measure: Option<NameId>,
+    pub measure: Option<MeasureNameId>,
 }

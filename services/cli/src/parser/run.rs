@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, GitHash, NameId, ResourceId};
+use bencher_json::{BranchNameId, DateTime, GitHash, ResourceId, TestbedNameId};
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
@@ -20,7 +20,7 @@ pub struct CliRun {
     /// Testbed name, slug, or UUID.
     /// If a name or slug is provided, the testbed will be created if it does not exist.
     #[clap(long, env = "BENCHER_TESTBED")]
-    pub testbed: Option<NameId>,
+    pub testbed: Option<TestbedNameId>,
 
     /// Benchmark harness adapter
     #[clap(value_enum, long, env = "BENCHER_ADAPTER", default_value = "magic")]
@@ -77,7 +77,7 @@ pub struct CliRunBranch {
     /// Branch name, slug, or UUID.
     /// If a name or slug is provided, the branch will be created if it does not exist.
     #[clap(long, env = "BENCHER_BRANCH", alias = "if-branch")]
-    pub branch: Option<NameId>,
+    pub branch: Option<BranchNameId>,
 
     /// `git` commit hash (default HEAD)
     #[clap(long)]

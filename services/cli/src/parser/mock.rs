@@ -1,4 +1,4 @@
-use bencher_json::NameId;
+use bencher_json::MeasureNameId;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -9,7 +9,7 @@ pub struct CliMock {
 
     /// Measures to generate for each benchmark
     #[clap(long, default_value = "latency")]
-    pub measure: Vec<NameId>,
+    pub measure: Vec<MeasureNameId>,
 
     /// The power of 10 to use for the mock metrics
     #[clap(long)]

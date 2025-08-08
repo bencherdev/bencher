@@ -32,6 +32,7 @@ where
     type Err = ValidError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
+        // This works as long as a valid UUID and a valid Slug are always a valid T.
         Ok(Self(value.parse().map_err(|error| ValidError::NameId {
             value: value.to_owned(),
             error: Box::new(error),
@@ -55,6 +56,13 @@ where
         } else {
             Err(ValidError::FromNameId(name_id.to_string()))
         }
+    }
+}
+
+/// Returns the inner value.
+impl<T> NameId<T> {
+    pub fn into_inner(self) -> T {
+        self.0
     }
 }
 

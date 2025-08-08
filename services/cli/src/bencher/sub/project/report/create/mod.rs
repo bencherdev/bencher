@@ -1,8 +1,8 @@
 use bencher_client::types::{
     Adapter, DateTime, GitHash, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings,
-    JsonUpdateStartPoint, NameId,
+    JsonUpdateStartPoint,
 };
-use bencher_json::ResourceId;
+use bencher_json::{BranchNameId, ResourceId, TestbedNameId};
 
 use crate::{
     CliError,
@@ -23,10 +23,10 @@ pub use thresholds::{Thresholds, ThresholdsError};
 #[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
-    pub branch: NameId,
+    pub branch: BranchNameId,
     pub hash: Option<GitHash>,
     pub start_point: Option<JsonUpdateStartPoint>,
-    pub testbed: NameId,
+    pub testbed: TestbedNameId,
     pub thresholds: Thresholds,
     pub start_time: DateTime,
     pub end_time: DateTime,
@@ -58,10 +58,10 @@ impl TryFrom<CliReportCreate> for Create {
         } = create;
         Ok(Self {
             project,
-            branch: branch.into(),
+            branch,
             hash: hash.map(Into::into),
             start_point: StartPoint::from(start_point).into(),
-            testbed: testbed.into(),
+            testbed,
             thresholds: thresholds.try_into().map_err(CliError::Thresholds)?,
             start_time: start_time.into(),
             end_time: end_time.into(),
@@ -90,10 +90,10 @@ impl From<Create> for JsonNewReport {
             ..
         } = create;
         Self {
-            branch,
+            branch: branch.into(),
             hash,
             start_point,
-            testbed,
+            testbed: testbed.into(),
             thresholds: None,
             start_time,
             end_time,

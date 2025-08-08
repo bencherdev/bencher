@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_client::types::JsonReportThresholds;
-use bencher_json::{Boundary, NameId, SampleSize, Window};
+use bencher_json::{Boundary, MeasureNameId, SampleSize, Window};
 
 use crate::{
     ThresholdError,
@@ -26,10 +26,10 @@ pub enum ThresholdsError {
     #[error(
         "The {0} Measure Threshold is missing its model test. Use the `--threshold-test` option to set the test."
     )]
-    MissingTest(NameId),
+    MissingTest(MeasureNameId),
     #[error("Failed to validate the model for the {measure} Measure Threshold: {err}")]
     BadModel {
-        measure: NameId,
+        measure: MeasureNameId,
         err: ThresholdError,
     },
     #[error("There are more model tests than Measures: {0:?}")]

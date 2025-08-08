@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonNewBranch, JsonNewStartPoint};
-use bencher_json::{BranchName, GitHash, NameId, ResourceId, Slug};
+use bencher_json::{BranchName, BranchNameId, GitHash, ResourceId, Slug};
 
 use crate::{
     CliError,
@@ -12,7 +12,7 @@ pub struct Create {
     pub project: ResourceId,
     pub name: BranchName,
     pub slug: Option<Slug>,
-    pub start_point_branch: Option<NameId>,
+    pub start_point_branch: Option<BranchNameId>,
     pub start_point_hash: Option<GitHash>,
     pub start_point_max_versions: u32,
     pub start_point_clone_thresholds: bool,

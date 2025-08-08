@@ -1,11 +1,11 @@
 use bencher_client::types::JsonUpdateStartPoint;
-use bencher_json::{GitHash, NameId};
+use bencher_json::{BranchNameId, GitHash};
 
 use crate::parser::project::branch::CliStartPointUpdate;
 
 #[derive(Debug, Clone)]
 pub struct StartPoint {
-    pub branch: Option<NameId>,
+    pub branch: Option<BranchNameId>,
     pub hash: Option<GitHash>,
     pub max_versions: u32,
     pub clone_thresholds: bool,

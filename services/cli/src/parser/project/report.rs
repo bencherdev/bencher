@@ -1,5 +1,6 @@
 use bencher_json::{
-    Boundary, DateTime, GitHash, NameId, ReportUuid, ResourceId, SampleSize, Window,
+    Boundary, BranchNameId, DateTime, GitHash, MeasureNameId, ReportUuid, ResourceId, SampleSize,
+    TestbedNameId, Window,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -29,11 +30,11 @@ pub struct CliReportList {
 
     /// Branch name, slug, or UUID
     #[clap(long)]
-    pub branch: Option<NameId>,
+    pub branch: Option<BranchNameId>,
 
     /// Testbed name, slug, or UUID
     #[clap(long)]
-    pub testbed: Option<NameId>,
+    pub testbed: Option<TestbedNameId>,
 
     /// Start time (seconds since epoch)
     #[clap(long, value_name = "SECONDS")]
@@ -68,7 +69,7 @@ pub struct CliReportCreate {
 
     /// Branch name, slug, or UUID
     #[clap(long)]
-    pub branch: NameId,
+    pub branch: BranchNameId,
 
     /// `git` commit hash
     #[clap(long)]
@@ -79,7 +80,7 @@ pub struct CliReportCreate {
 
     /// Testbed name, slug, or UUID
     #[clap(long)]
-    pub testbed: NameId,
+    pub testbed: TestbedNameId,
 
     #[clap(flatten)]
     pub thresholds: CliReportThresholds,
@@ -118,7 +119,7 @@ pub struct CliReportThresholds {
     /// When specifying multiple Thresholds, all of the same options must be used for each Threshold.
     /// To ignore an option for a specific Threshold, use an underscore (`_`).
     #[clap(long)]
-    pub threshold_measure: Vec<NameId>,
+    pub threshold_measure: Vec<MeasureNameId>,
 
     /// Threshold model test
     #[clap(value_enum, long, requires = "threshold_measure")]

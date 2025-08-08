@@ -1,4 +1,7 @@
-use bencher_json::{Boundary, ModelUuid, NameId, ResourceId, SampleSize, ThresholdUuid, Window};
+use bencher_json::{
+    Boundary, BranchNameId, MeasureNameId, ModelUuid, ResourceId, SampleSize, TestbedNameId,
+    ThresholdUuid, Window,
+};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -29,15 +32,15 @@ pub struct CliThresholdList {
 
     /// Branch name, slug, or UUID
     #[clap(long)]
-    pub branch: Option<NameId>,
+    pub branch: Option<BranchNameId>,
 
     /// Testbed name, slug, or UUID
     #[clap(long)]
-    pub testbed: Option<NameId>,
+    pub testbed: Option<TestbedNameId>,
 
     /// Measure name, slug, or UUID
     #[clap(long)]
-    pub measure: Option<NameId>,
+    pub measure: Option<MeasureNameId>,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliThresholdsSort>,
@@ -66,15 +69,15 @@ pub struct CliThresholdCreate {
 
     /// Branch name, slug, or UUID
     #[clap(long)]
-    pub branch: NameId,
+    pub branch: BranchNameId,
 
     /// Testbed name, slug, or UUID
     #[clap(long)]
-    pub testbed: NameId,
+    pub testbed: TestbedNameId,
 
     /// Measure name, slug, or UUID
     #[clap(long)]
-    pub measure: NameId,
+    pub measure: MeasureNameId,
 
     #[clap(flatten)]
     pub model: CliModel,
