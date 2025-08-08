@@ -11,7 +11,7 @@ use serde::{
 };
 use uuid::Uuid;
 
-use crate::{NonEmpty, Slug, ValidError, non_empty::is_valid_non_empty};
+use crate::{Slug, ValidError, non_empty::is_valid_non_empty};
 
 #[typeshare::typeshare]
 #[derive(Debug, derive_more::Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -70,12 +70,6 @@ impl From<Slug> for NameId {
     }
 }
 
-impl From<NonEmpty> for NameId {
-    fn from(non_empty: NonEmpty) -> Self {
-        Self(non_empty.into())
-    }
-}
-
 impl AsRef<str> for NameId {
     fn as_ref(&self) -> &str {
         &self.0
@@ -125,8 +119,4 @@ impl Visitor<'_> for NameIdVisitor {
     {
         NameId::from_str(v).map_err(|_e| E::invalid_value(Unexpected::Str(v), &self))
     }
-}
-
-impl NameId {
-    pub const MAX_LEN: usize = crate::MAX_LEN;
 }
