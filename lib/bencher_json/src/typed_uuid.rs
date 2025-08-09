@@ -41,11 +41,11 @@ macro_rules! typed_uuid {
             }
         }
 
-        impl From<$uuid> for crate::NameId<uuid::Uuid> {
-            fn from(uuid: $uuid) -> Self {
-                uuid.0.into()
-            }
-        }
+        // impl From<$uuid> for crate::NameId<uuid::Uuid> {
+        //     fn from(uuid: $uuid) -> Self {
+        //         uuid.0.into()
+        //     }
+        // }
 
         impl std::str::FromStr for $uuid {
             type Err = uuid::Error;
@@ -58,12 +58,6 @@ macro_rules! typed_uuid {
         impl AsRef<uuid::Uuid> for $uuid {
             fn as_ref(&self) -> &uuid::Uuid {
                 &self.0
-            }
-        }
-
-        impl bencher_valid::NamedUuid for $uuid {
-            fn uuid(&self) -> uuid::Uuid {
-                self.0
             }
         }
 

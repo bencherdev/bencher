@@ -36,11 +36,11 @@ macro_rules! typed_slug {
             }
         }
 
-        impl From<$slug> for crate::NameId<$crate::Slug> {
-            fn from(slug: $slug) -> Self {
-                slug.0.into()
-            }
-        }
+        // impl From<$slug> for crate::NameId<$crate::Slug> {
+        //     fn from(slug: $slug) -> Self {
+        //         slug.0.into()
+        //     }
+        // }
 
         impl std::str::FromStr for $slug {
             type Err = $crate::ValidError;
@@ -53,12 +53,6 @@ macro_rules! typed_slug {
         impl AsRef<$crate::Slug> for $slug {
             fn as_ref(&self) -> &$crate::Slug {
                 &self.0
-            }
-        }
-
-        impl bencher_valid::NamedSlug for $slug {
-            fn slug(&self) -> $crate::Slug {
-                self.0.clone()
             }
         }
 

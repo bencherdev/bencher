@@ -24,13 +24,8 @@ pub enum ValidError {
     BranchName(String),
     #[error("Failed to validate benchmark name: {0}")]
     BenchmarkName(String),
-    #[error("Failed to validate name ID ({value}): {error}")]
-    NameId {
-        value: String,
-        error: Box<dyn std::error::Error + Send + Sync + 'static>,
-    },
     #[error("Failed to convert name ID: {0:?}")]
-    FromNameId(Box<dyn std::fmt::Debug + Send + Sync + 'static>),
+    NameId(String),
     #[error("Failed to validate non-empty ID: {0}")]
     NonEmpty(String),
     #[error("Failed to validate resource name string: {0}")]

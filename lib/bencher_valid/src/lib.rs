@@ -46,7 +46,7 @@ pub use model::{
     sample_size::SampleSize,
     window::Window,
 };
-pub use name_id::{NameId, NameIdKind, NamedId, NamedSlug, NamedUuid};
+pub use name_id::NamedId;
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plus::{
