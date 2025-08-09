@@ -12,26 +12,17 @@ macro_rules! fn_eq_name_id {
             >,
             dropshot::HttpError,
         > {
-            Ok(
-                match name_id.try_into().map_err(|e| {
-                    $crate::error::issue_error(
-                        "Failed to parse name ID",
-                        "Failed to parse name ID.",
-                        e,
-                    )
-                })? {
-                    bencher_json::NameIdKind::Uuid(uuid) => {
-                        Box::new($crate::schema::$table::uuid.eq(uuid.to_string()))
-                    },
-                    bencher_json::NameIdKind::Slug(slug) => {
-                        Box::new($crate::schema::$table::slug.eq(slug.to_string()))
-                    },
-                    bencher_json::NameIdKind::Name(name) => {
-                        let name: bencher_json::$name = name;
-                        Box::new($crate::schema::$table::name.eq(name.to_string()))
-                    },
+            Ok(match name_id {
+                bencher_json::NamedId::Uuid(uuid) => {
+                    Box::new($crate::schema::$table::uuid.eq(uuid.to_string()))
                 },
-            )
+                bencher_json::NamedId::Slug(slug) => {
+                    Box::new($crate::schema::$table::slug.eq(slug.to_string()))
+                },
+                bencher_json::NamedId::Name(name) => {
+                    Box::new($crate::schema::$table::name.eq(name.to_string()))
+                },
+            })
         }
     };
 }

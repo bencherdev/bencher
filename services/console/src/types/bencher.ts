@@ -30,12 +30,8 @@ export type Index = number;
 
 export type Iteration = number;
 
-export type NameId<T> = T;
-
-export type ResourceName = string;
-
 /** A measure UUID, slug, or name. */
-export type MeasureNameId = NameId<ResourceName>;
+export type MeasureNameId = NamedId<Uuid, MeasureSlug, ResourceName>;
 
 export interface JsonNewMetric {
 	value: number;
@@ -93,6 +89,8 @@ export interface JsonBranch {
 	modified: string;
 	archived?: string;
 }
+
+export type ResourceName = string;
 
 export interface JsonTestbed {
 	uuid: Uuid;
@@ -221,6 +219,8 @@ export type LastFour = string;
 export type LicensedPlanId = string;
 
 export type MeteredPlanId = string;
+
+export type NameId<T> = T;
 
 export type NonEmpty = string;
 

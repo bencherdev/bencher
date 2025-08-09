@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use bencher_valid::{BranchName, DateTime, GitHash, NameId, NamedId};
+use bencher_valid::{BranchName, DateTime, GitHash, NamedId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

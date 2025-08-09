@@ -27,9 +27,9 @@ pub trait NamedSlug {
     fn slug(&self) -> Slug;
 }
 
-#[typeshare::typeshare]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema", schemars(untagged))]
 pub enum NamedId<U, S, T> {
     Uuid(U),
     Slug(S),

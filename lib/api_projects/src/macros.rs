@@ -1,20 +1,13 @@
 macro_rules! filter_name_id {
     ($name:ident, $query:ident, $table:ident, $name_id:ident) => {
-        match $name_id.try_into().map_err(|e| {
-            bencher_schema::error::issue_error(
-                "Failed to parse name ID",
-                "Failed to parse name ID.",
-                e,
-            )
-        })? {
-            bencher_json::NameIdKind::Uuid(uuid) => {
+        match $name_id {
+            bencher_json::NamedId::Uuid(uuid) => {
                 $query = $query.filter(bencher_schema::schema::$table::uuid.eq(uuid.to_string()));
             },
-            bencher_json::NameIdKind::Slug(slug) => {
+            bencher_json::NamedId::Slug(slug) => {
                 $query = $query.filter(bencher_schema::schema::$table::slug.eq(slug.to_string()));
             },
-            bencher_json::NameIdKind::Name(name) => {
-                let name: bencher_json::$name = name;
+            bencher_json::NamedId::Name(name) => {
                 $query = $query.filter(bencher_schema::schema::$table::name.eq(name.to_string()));
             },
         }

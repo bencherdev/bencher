@@ -1,6 +1,6 @@
 use std::{fmt, sync::LazyLock};
 
-use bencher_valid::{DateTime, NameId, ResourceName};
+use bencher_valid::{DateTime, NamedId, ResourceName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ crate::typed_slug::typed_slug!(MeasureSlug, ResourceName);
 
 /// A measure UUID, slug, or name.
 #[typeshare::typeshare]
-pub type MeasureNameId = NameId<ResourceName>;
+pub type MeasureNameId = NamedId<MeasureUuid, MeasureSlug, ResourceName>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

@@ -187,18 +187,12 @@ impl Dimension {
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
-        let Self::Benchmark(name_id) = self else {
+        let Self::Benchmark(name_id) = self.clone() else {
             return Err(ArchiveError::NoDimension {
                 dimension: self.clone(),
             });
         };
-        let named_id: NamedId<BenchmarkUuid, BenchmarkSlug, BenchmarkName> = name_id
-            .try_into()
-            .map_err(|err| ArchiveError::ParseDimension {
-                dimension: self.clone(),
-                err,
-            })?;
-        let benchmark: &ResourceId = &match named_id {
+        let benchmark: &ResourceId = &match name_id {
             NamedId::Uuid(uuid) => uuid.into(),
             NamedId::Slug(slug) => slug.into(),
             NamedId::Name(name) => {
@@ -249,18 +243,12 @@ impl Dimension {
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
-        let Self::Measure(name_id) = self else {
+        let Self::Measure(name_id) = self.clone() else {
             return Err(ArchiveError::NoDimension {
                 dimension: self.clone(),
             });
         };
-        let named_id: NamedId<MeasureUuid, MeasureSlug, ResourceName> = name_id
-            .try_into()
-            .map_err(|err| ArchiveError::ParseDimension {
-                dimension: self.clone(),
-                err,
-            })?;
-        let measure: &ResourceId = &match named_id {
+        let measure: &ResourceId = &match name_id {
             NamedId::Uuid(uuid) => uuid.into(),
             NamedId::Slug(slug) => slug.into(),
             NamedId::Name(name) => {

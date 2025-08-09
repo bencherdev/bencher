@@ -87,7 +87,7 @@ impl QueryMeasure {
 
         // Dynamically create adapter specific measures
         // Or recreate default measures if they were previously deleted
-        let measure_str = measure.as_ref();
+        let measure_str = &measure.to_string();
 
         let json_measure = if let Some(measure) = built_in::default::Latency::from_str(measure_str)
             .or_else(|| built_in::default::Throughput::from_str(measure_str))
@@ -164,11 +164,7 @@ impl QueryMeasure {
         {
             measure
         } else {
-            let Ok(kind) = NamedId::<MeasureUuid, MeasureSlug, ResourceName>::try_from(measure)
-            else {
-                return Err(http_error);
-            };
-            match kind {
+            match measure.clone() {
                 NamedId::Uuid(_) => return Err(http_error),
                 NamedId::Slug(slug) => JsonNewMeasure {
                     name: slug.clone().into(),

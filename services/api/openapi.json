@@ -9487,7 +9487,7 @@
             "description": "Branch UUID, slug, or name. If the branch does not exist, it will be created.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_BranchName"
+                "$ref": "#/components/schemas/NamedId_for_BranchUuid_and_BranchSlug_and_BranchName"
               }
             ]
           },
@@ -9545,7 +9545,7 @@
             "description": "Testbed UUID, slug, or name. If the testbed does not exist, it will be created.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_ResourceName"
+                "$ref": "#/components/schemas/NamedId_for_TestbedUuid_and_TestbedSlug_and_ResourceName"
               }
             ]
           },
@@ -9575,7 +9575,7 @@
             "description": "Branch UUID, slug, or name. If the branch is not provided or does not exist, it will be created.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_BranchName"
+                "$ref": "#/components/schemas/NamedId_for_BranchUuid_and_BranchSlug_and_BranchName"
               }
             ]
           },
@@ -9652,7 +9652,7 @@
             "description": "Testbed UUID, slug, or name. If the testbed is not provided or does not exist, it will be created.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_ResourceName"
+                "$ref": "#/components/schemas/NamedId_for_TestbedUuid_and_TestbedSlug_and_ResourceName"
               }
             ]
           },
@@ -9679,7 +9679,7 @@
             "description": "The UUID, slug, or name of the branch to use as the start point.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_BranchName"
+                "$ref": "#/components/schemas/NamedId_for_BranchUuid_and_BranchSlug_and_BranchName"
               }
             ]
           },
@@ -9741,7 +9741,7 @@
             "description": "The UUID, slug, or name of the threshold branch.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_BranchName"
+                "$ref": "#/components/schemas/NamedId_for_BranchUuid_and_BranchSlug_and_BranchName"
               }
             ]
           },
@@ -9767,7 +9767,7 @@
             "description": "The UUID, slug, or name of the threshold measure.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_ResourceName"
+                "$ref": "#/components/schemas/NamedId_for_MeasureUuid_and_MeasureSlug_and_ResourceName"
               }
             ]
           },
@@ -9792,7 +9792,7 @@
             "description": "The UUID, slug, or name of the threshold testbed.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_ResourceName"
+                "$ref": "#/components/schemas/NamedId_for_TestbedUuid_and_TestbedSlug_and_ResourceName"
               }
             ]
           },
@@ -12081,7 +12081,7 @@
             "description": "The UUID, slug, or name of the branch to use as the start point.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NameId_for_BranchName"
+                "$ref": "#/components/schemas/NamedId_for_BranchUuid_and_BranchSlug_and_BranchName"
               }
             ]
           },
@@ -12436,11 +12436,44 @@
         "type": "string",
         "format": "uuid"
       },
-      "NameId_for_BranchName": {
-        "$ref": "#/components/schemas/BranchName"
+      "NamedId_for_BranchUuid_and_BranchSlug_and_BranchName": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/BranchUuid"
+          },
+          {
+            "$ref": "#/components/schemas/BranchSlug"
+          },
+          {
+            "$ref": "#/components/schemas/BranchName"
+          }
+        ]
       },
-      "NameId_for_ResourceName": {
-        "$ref": "#/components/schemas/ResourceName"
+      "NamedId_for_MeasureUuid_and_MeasureSlug_and_ResourceName": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/MeasureUuid"
+          },
+          {
+            "$ref": "#/components/schemas/MeasureSlug"
+          },
+          {
+            "$ref": "#/components/schemas/ResourceName"
+          }
+        ]
+      },
+      "NamedId_for_TestbedUuid_and_TestbedSlug_and_ResourceName": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/TestbedUuid"
+          },
+          {
+            "$ref": "#/components/schemas/TestbedSlug"
+          },
+          {
+            "$ref": "#/components/schemas/ResourceName"
+          }
+        ]
       },
       "NonEmpty": {
         "type": "string"
