@@ -24,6 +24,7 @@ pub mod pagination;
 pub mod project;
 pub mod run;
 pub mod system;
+pub(crate) mod typed_db;
 pub(crate) mod typed_slug;
 pub(crate) mod typed_uuid;
 pub mod urlencoded;
