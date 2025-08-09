@@ -33,7 +33,7 @@ static BRANCH_MAIN_SLUG: LazyLock<Option<BranchSlug>> = LazyLock::new(|| {
 });
 
 crate::typed_uuid::typed_uuid!(BranchUuid);
-crate::typed_slug::typed_slug!(BranchSlug);
+crate::typed_slug::typed_slug!(BranchSlug, BranchName);
 
 /// A branch UUID, slug, or name.
 pub type BranchNameId = NameId<BranchName>;

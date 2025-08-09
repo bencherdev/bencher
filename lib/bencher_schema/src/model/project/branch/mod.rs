@@ -1,6 +1,5 @@
 use bencher_json::{
-    BranchName, BranchNameId, BranchSlug, BranchUuid, DateTime, JsonBranch, JsonNewBranch,
-    NameIdKind,
+    BranchName, BranchNameId, BranchSlug, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NamedId,
     project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
 };
 use diesel::{
@@ -125,17 +124,17 @@ impl QueryBranch {
             Err(e) => e,
         };
 
-        let Ok(kind) = NameIdKind::<BranchName>::try_from(branch) else {
+        let Ok(kind) = NamedId::<BranchUuid, BranchSlug, BranchName>::try_from(branch) else {
             return Err(http_error);
         };
         let branch = match kind {
-            NameIdKind::Uuid(_) => return Err(http_error),
-            NameIdKind::Slug(slug) => JsonNewBranch {
+            NamedId::Uuid(_) => return Err(http_error),
+            NamedId::Slug(slug) => JsonNewBranch {
                 name: slug.clone().into(),
-                slug: Some(slug.into()),
+                slug: Some(slug),
                 start_point: start_point.cloned().and_then(Into::into),
             },
-            NameIdKind::Name(name) => JsonNewBranch {
+            NamedId::Name(name) => JsonNewBranch {
                 name,
                 slug: None,
                 start_point: start_point.cloned().and_then(Into::into),

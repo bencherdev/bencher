@@ -1,5 +1,5 @@
 macro_rules! typed_slug {
-    ($name:ident) => {
+    ($slug:ident) => {
         #[typeshare::typeshare]
         #[derive(
             Debug,
@@ -16,33 +16,33 @@ macro_rules! typed_slug {
         #[cfg_attr(feature = "schema", derive(JsonSchema))]
         #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
         #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
-        pub struct $name($crate::Slug);
+        pub struct $slug($crate::Slug);
 
-        impl From<$name> for $crate::Slug {
-            fn from(slug: $name) -> Self {
+        impl From<$slug> for $crate::Slug {
+            fn from(slug: $slug) -> Self {
                 slug.0
             }
         }
 
-        impl From<$crate::Slug> for $name {
+        impl From<$crate::Slug> for $slug {
             fn from(slug: $crate::Slug) -> Self {
                 Self(slug)
             }
         }
 
-        impl From<$name> for crate::ResourceId {
-            fn from(slug: $name) -> Self {
+        impl From<$slug> for crate::ResourceId {
+            fn from(slug: $slug) -> Self {
                 slug.0.into()
             }
         }
 
-        impl From<$name> for crate::NameId<$crate::Slug> {
-            fn from(slug: $name) -> Self {
+        impl From<$slug> for crate::NameId<$crate::Slug> {
+            fn from(slug: $slug) -> Self {
                 slug.0.into()
             }
         }
 
-        impl std::str::FromStr for $name {
+        impl std::str::FromStr for $slug {
             type Err = $crate::ValidError;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -50,19 +50,28 @@ macro_rules! typed_slug {
             }
         }
 
-        impl AsRef<$crate::Slug> for $name {
+        impl AsRef<$crate::Slug> for $slug {
             fn as_ref(&self) -> &$crate::Slug {
                 &self.0
             }
         }
 
-        impl bencher_valid::NamedSlug for $name {
+        impl bencher_valid::NamedSlug for $slug {
             fn slug(&self) -> $crate::Slug {
                 self.0.clone()
             }
         }
 
-        $crate::typed_db::typed_db!($name);
+        $crate::typed_db::typed_db!($slug);
+    };
+    ($slug:ident, $name:ident) => {
+        $crate::typed_slug::typed_slug!($slug);
+
+        impl From<$slug> for $name {
+            fn from(slug: $slug) -> Self {
+                $crate::Slug::from(slug).into()
+            }
+        }
     };
 }
 

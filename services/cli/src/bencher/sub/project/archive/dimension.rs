@@ -4,9 +4,10 @@ use bencher_client::types::{
     JsonUpdateBenchmark, JsonUpdateBranch, JsonUpdateMeasure, JsonUpdateTestbed,
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, BranchName, BranchNameId, JsonBenchmark, JsonBenchmarks,
-    JsonBranch, JsonBranches, JsonMeasure, JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId,
-    NameIdKind, ResourceId, ResourceName, TestbedNameId,
+    BenchmarkName, BenchmarkNameId, BranchName, BranchNameId, BranchSlug, BranchUuid,
+    JsonBenchmark, JsonBenchmarks, JsonBranch, JsonBranches, JsonMeasure, JsonMeasures,
+    JsonTestbed, JsonTestbeds, MeasureNameId, NameIdKind, NamedId, ResourceId, ResourceName,
+    TestbedNameId,
 };
 
 use crate::{
@@ -77,33 +78,34 @@ impl Dimension {
                 dimension: self.clone(),
             });
         };
-        let branch: &ResourceId =
-            &match name_id
+        let named_id: NamedId<BranchUuid, BranchSlug, BranchName> =
+            name_id
                 .try_into()
                 .map_err(|err| ArchiveError::ParseDimension {
                     dimension: self.clone(),
                     err,
-                })? {
-                NameIdKind::Uuid(uuid) => uuid.into(),
-                NameIdKind::Slug(slug) => slug.into(),
-                NameIdKind::Name(name) => {
-                    match get_branch_by_name(project, &name, action, backend).await {
-                        Ok(json) => json.uuid.into(),
-                        Err(err @ ArchiveError::NotFound { .. }) => {
-                            return if get_branch_by_name(project, &name, !action, backend)
-                                .await
-                                .is_ok()
-                            {
-                                self.log_noop(action);
-                                Ok(())
-                            } else {
-                                Err(err)
-                            };
-                        },
-                        Err(err) => return Err(err),
-                    }
-                },
-            };
+                })?;
+        let branch: &ResourceId = &match named_id {
+            NamedId::Uuid(uuid) => uuid.into(),
+            NamedId::Slug(slug) => slug.into(),
+            NamedId::Name(name) => {
+                match get_branch_by_name(project, &name, action, backend).await {
+                    Ok(json) => json.uuid.into(),
+                    Err(err @ ArchiveError::NotFound { .. }) => {
+                        return if get_branch_by_name(project, &name, !action, backend)
+                            .await
+                            .is_ok()
+                        {
+                            self.log_noop(action);
+                            Ok(())
+                        } else {
+                            Err(err)
+                        };
+                    },
+                    Err(err) => return Err(err),
+                }
+            },
+        };
         let update = &JsonUpdateBranch {
             name: None,
             slug: None,
