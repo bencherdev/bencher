@@ -42,7 +42,7 @@ where
 
 impl<T> TryFrom<&NameId<T>> for NameIdKind<T>
 where
-    T: AsRef<str> + FromStr<Err = ValidError> + Display,
+    T: AsRef<str> + FromStr<Err = ValidError> + Clone + fmt::Debug + Send + Sync + 'static,
 {
     type Error = ValidError;
 
@@ -54,7 +54,9 @@ where
         } else if let Ok(name) = T::from_str(name_id.as_ref()) {
             Ok(Self::Name(name))
         } else {
-            Err(ValidError::FromNameId(name_id.to_string()))
+            Err(ValidError::FromNameId(Box::new(
+                name_id.clone().into_inner(),
+            )))
         }
     }
 }
