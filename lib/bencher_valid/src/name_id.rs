@@ -73,6 +73,21 @@ where
     }
 }
 
+impl<U, S, T> Display for NamedId<U, S, T>
+where
+    U: Display,
+    S: Display,
+    T: Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Uuid(uuid) => uuid.fmt(f),
+            Self::Slug(slug) => slug.fmt(f),
+            Self::Name(name) => name.fmt(f),
+        }
+    }
+}
+
 impl<U, S, T> Serialize for NamedId<U, S, T>
 where
     U: Serialize,

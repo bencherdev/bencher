@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use bencher_valid::{DateTime, NameId, ResourceName};
+use bencher_valid::{DateTime, NameId, NamedId, ResourceName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,7 @@ crate::typed_uuid::typed_uuid!(TestbedUuid);
 crate::typed_slug::typed_slug!(TestbedSlug, ResourceName);
 
 /// A testbed UUID, slug, or name.
-pub type TestbedNameId = NameId<ResourceName>;
+pub type TestbedNameId = NamedId<TestbedUuid, TestbedSlug, ResourceName>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

@@ -79,10 +79,7 @@ impl QueryTestbed {
             Err(e) => e,
         };
 
-        let Ok(kind) = NamedId::<TestbedUuid, TestbedSlug, ResourceName>::try_from(testbed) else {
-            return Err(http_error);
-        };
-        let json_testbed = match kind {
+        let json_testbed = match testbed.clone() {
             NamedId::Uuid(_) => return Err(http_error),
             NamedId::Slug(slug) => JsonNewTestbed {
                 name: slug.clone().into(),

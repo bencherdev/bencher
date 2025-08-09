@@ -138,18 +138,12 @@ impl Dimension {
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
-        let Self::Testbed(name_id) = self else {
+        let Self::Testbed(name_id) = self.clone() else {
             return Err(ArchiveError::NoDimension {
                 dimension: self.clone(),
             });
         };
-        let named_id: NamedId<TestbedUuid, TestbedSlug, ResourceName> = name_id
-            .try_into()
-            .map_err(|err| ArchiveError::ParseDimension {
-                dimension: self.clone(),
-                err,
-            })?;
-        let testbed: &ResourceId = &match named_id {
+        let testbed: &ResourceId = &match name_id {
             NamedId::Uuid(uuid) => uuid.into(),
             NamedId::Slug(slug) => slug.into(),
             NamedId::Name(name) => {
