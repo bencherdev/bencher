@@ -22,14 +22,8 @@ pub struct Archive {
 
 #[derive(thiserror::Error, Debug)]
 pub enum ArchiveError {
-    #[error("Missing branch dimension: {dimension}")]
-    NoBranch { dimension: Dimension },
-    #[error("Missing testbed dimension: {dimension}")]
-    NoTestbed { dimension: Dimension },
-    #[error("Missing benchmark dimension: {dimension}")]
-    NoBenchmark { dimension: Dimension },
-    #[error("Missing measure dimension: {dimension}")]
-    NoMeasure { dimension: Dimension },
+    #[error("Missing dimension: {dimension}")]
+    NoDimension { dimension: Dimension },
     #[error("Failed to parse UUID, slug, or name for the {dimension}: {err}")]
     ParseDimension {
         dimension: Dimension,

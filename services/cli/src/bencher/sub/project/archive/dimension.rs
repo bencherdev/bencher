@@ -73,7 +73,7 @@ impl Dimension {
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
         let Self::Branch(name_id) = self else {
-            return Err(ArchiveError::NoBranch {
+            return Err(ArchiveError::NoDimension {
                 dimension: self.clone(),
             });
         };
@@ -137,7 +137,7 @@ impl Dimension {
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
         let Self::Testbed(name_id) = self else {
-            return Err(ArchiveError::NoTestbed {
+            return Err(ArchiveError::NoDimension {
                 dimension: self.clone(),
             });
         };
@@ -199,7 +199,7 @@ impl Dimension {
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
         let Self::Benchmark(name_id) = self else {
-            return Err(ArchiveError::NoBenchmark {
+            return Err(ArchiveError::NoDimension {
                 dimension: self.clone(),
             });
         };
@@ -261,7 +261,7 @@ impl Dimension {
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
         let Self::Measure(name_id) = self else {
-            return Err(ArchiveError::NoMeasure {
+            return Err(ArchiveError::NoDimension {
                 dimension: self.clone(),
             });
         };

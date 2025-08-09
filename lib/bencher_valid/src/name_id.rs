@@ -157,7 +157,7 @@ where
     type Value = NameId<T>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid UUID or slug.")
+        formatter.write_str("a valid UUID, slug, or name.")
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
