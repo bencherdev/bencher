@@ -124,10 +124,7 @@ impl QueryBranch {
             Err(e) => e,
         };
 
-        let Ok(kind) = NamedId::<BranchUuid, BranchSlug, BranchName>::try_from(branch) else {
-            return Err(http_error);
-        };
-        let branch = match kind {
+        let branch = match branch.clone() {
             NamedId::Uuid(_) => return Err(http_error),
             NamedId::Slug(slug) => JsonNewBranch {
                 name: slug.clone().into(),

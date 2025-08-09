@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use bencher_valid::{BranchName, DateTime, GitHash, NameId};
+use bencher_valid::{BranchName, DateTime, GitHash, NameId, NamedId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -36,7 +36,7 @@ crate::typed_uuid::typed_uuid!(BranchUuid);
 crate::typed_slug::typed_slug!(BranchSlug, BranchName);
 
 /// A branch UUID, slug, or name.
-pub type BranchNameId = NameId<BranchName>;
+pub type BranchNameId = NamedId<BranchUuid, BranchSlug, BranchName>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

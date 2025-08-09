@@ -73,19 +73,12 @@ impl Dimension {
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
-        let Self::Branch(name_id) = self else {
+        let Self::Branch(name_id) = self.clone() else {
             return Err(ArchiveError::NoDimension {
                 dimension: self.clone(),
             });
         };
-        let named_id: NamedId<BranchUuid, BranchSlug, BranchName> =
-            name_id
-                .try_into()
-                .map_err(|err| ArchiveError::ParseDimension {
-                    dimension: self.clone(),
-                    err,
-                })?;
-        let branch: &ResourceId = &match named_id {
+        let branch: &ResourceId = &match name_id {
             NamedId::Uuid(uuid) => uuid.into(),
             NamedId::Slug(slug) => slug.into(),
             NamedId::Name(name) => {
