@@ -1,4 +1,4 @@
-use bencher_json::{BranchName, BranchNameId, GitHash, HeadUuid, ResourceId, Slug};
+use bencher_json::{BranchName, BranchNameId, BranchSlug, GitHash, HeadUuid, ResourceId};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -64,7 +64,7 @@ pub struct CliBranchCreate {
 
     /// Branch slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<BranchSlug>,
 
     #[clap(flatten)]
     pub start_point: CliStartPointCreate,
@@ -129,7 +129,7 @@ pub struct CliBranchUpdate {
 
     /// Branch slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<BranchSlug>,
 
     #[clap(flatten)]
     pub start_point: CliStartPointUpdate,

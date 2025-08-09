@@ -45,13 +45,11 @@ export interface JsonNewMetric {
 
 export type JsonMetricsMap = Record<MeasureNameId, JsonNewMetric>;
 
-export type Slug = string;
-
 export interface JsonBenchmark {
 	uuid: Uuid;
 	project: Uuid;
 	name: BenchmarkName;
-	slug: Slug;
+	slug: BenchmarkSlug;
 	created: string;
 	modified: string;
 	archived?: string;
@@ -89,7 +87,7 @@ export interface JsonBranch {
 	uuid: Uuid;
 	project: Uuid;
 	name: BranchName;
-	slug: Slug;
+	slug: BranchSlug;
 	head: JsonHead;
 	created: string;
 	modified: string;
@@ -100,7 +98,7 @@ export interface JsonTestbed {
 	uuid: Uuid;
 	project: Uuid;
 	name: ResourceName;
-	slug: Slug;
+	slug: TestbedSlug;
 	created: string;
 	modified: string;
 	archived?: string;
@@ -110,7 +108,7 @@ export interface JsonMeasure {
 	uuid: Uuid;
 	project: Uuid;
 	name: ResourceName;
-	slug: Slug;
+	slug: MeasureSlug;
 	units: ResourceName;
 	created: string;
 	modified: string;
@@ -231,6 +229,8 @@ export type ResourceId = string;
 export type RunContext = Record<string, string>;
 
 export type Secret = string;
+
+export type Slug = string;
 
 export type Url = string;
 

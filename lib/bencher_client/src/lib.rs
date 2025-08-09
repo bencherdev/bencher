@@ -246,3 +246,17 @@ into_uuid!(
     JsonModel,
     JsonAlert
 );
+
+macro_rules! from_slug {
+    ($($name:ident),*) => {
+        $(
+            impl From<bencher_json::$name> for types::$name  {
+                fn from(json: bencher_json::$name) -> Self {
+                    Self(bencher_json::Slug::from(json).into())
+                }
+            }
+        )*
+    };
+}
+
+from_slug!(BranchSlug, TestbedSlug, BenchmarkSlug, MeasureSlug);

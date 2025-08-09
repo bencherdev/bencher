@@ -8014,6 +8014,9 @@
       "BenchmarkName": {
         "type": "string"
       },
+      "BenchmarkSlug": {
+        "$ref": "#/components/schemas/Slug"
+      },
       "BenchmarkUuid": {
         "type": "string",
         "format": "uuid"
@@ -8036,6 +8039,9 @@
       },
       "BranchName": {
         "type": "string"
+      },
+      "BranchSlug": {
+        "$ref": "#/components/schemas/Slug"
       },
       "BranchUuid": {
         "type": "string",
@@ -8338,7 +8344,7 @@
             "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
-            "$ref": "#/components/schemas/Slug"
+            "$ref": "#/components/schemas/BenchmarkSlug"
           },
           "uuid": {
             "$ref": "#/components/schemas/BenchmarkUuid"
@@ -8440,7 +8446,7 @@
             "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
-            "$ref": "#/components/schemas/Slug"
+            "$ref": "#/components/schemas/BranchSlug"
           },
           "uuid": {
             "$ref": "#/components/schemas/BranchUuid"
@@ -8912,7 +8918,7 @@
             "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
-            "$ref": "#/components/schemas/Slug"
+            "$ref": "#/components/schemas/MeasureSlug"
           },
           "units": {
             "$ref": "#/components/schemas/ResourceName"
@@ -9122,7 +9128,7 @@
             "description": "The preferred slug for the benchmark. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/BenchmarkSlug"
               }
             ]
           }
@@ -9147,7 +9153,7 @@
             "description": "The preferred slug for the branch. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/BranchSlug"
               }
             ]
           },
@@ -9224,7 +9230,7 @@
             "description": "The preferred slug for the measure. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/MeasureSlug"
               }
             ]
           },
@@ -9719,7 +9725,7 @@
             "description": "The preferred slug for the testbed. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/TestbedSlug"
               }
             ]
           }
@@ -11587,7 +11593,7 @@
             "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
-            "$ref": "#/components/schemas/Slug"
+            "$ref": "#/components/schemas/TestbedSlug"
           },
           "uuid": {
             "$ref": "#/components/schemas/TestbedUuid"
@@ -11865,7 +11871,7 @@
             "description": "The preferred new slug for the benchmark. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/BenchmarkSlug"
               }
             ]
           }
@@ -11893,7 +11899,7 @@
             "description": "The preferred new slug for the branch. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/BranchSlug"
               }
             ]
           },
@@ -11947,7 +11953,7 @@
             "description": "The preferred new slug for the measure. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/MeasureSlug"
               }
             ]
           },
@@ -12129,7 +12135,7 @@
             "description": "The preferred new slug for the testbed. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/TestbedSlug"
               }
             ]
           }
@@ -12341,6 +12347,9 @@
           "error",
           "critical"
         ]
+      },
+      "MeasureSlug": {
+        "$ref": "#/components/schemas/Slug"
       },
       "MeasureUuid": {
         "type": "string",
@@ -12562,6 +12571,9 @@
       },
       "Slug": {
         "type": "string"
+      },
+      "TestbedSlug": {
+        "$ref": "#/components/schemas/Slug"
       },
       "TestbedUuid": {
         "type": "string",

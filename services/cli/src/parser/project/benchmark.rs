@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, ResourceId, Slug};
+use bencher_json::{BenchmarkName, BenchmarkSlug, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -64,7 +64,7 @@ pub struct CliBenchmarkCreate {
 
     /// Benchmark slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<BenchmarkSlug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -96,7 +96,7 @@ pub struct CliBenchmarkUpdate {
 
     /// Benchmark slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<BenchmarkSlug>,
 
     #[clap(flatten)]
     pub archived: CliArchived,

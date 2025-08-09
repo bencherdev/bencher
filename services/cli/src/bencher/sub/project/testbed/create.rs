@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewTestbed;
-use bencher_json::{ResourceId, ResourceName, Slug};
+use bencher_json::{ResourceId, ResourceName, TestbedSlug};
 
 use crate::{
     CliError,
@@ -11,7 +11,7 @@ use crate::{
 pub struct Create {
     pub project: ResourceId,
     pub name: ResourceName,
-    pub slug: Option<Slug>,
+    pub slug: Option<TestbedSlug>,
     pub backend: AuthBackend,
 }
 

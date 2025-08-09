@@ -1,4 +1,4 @@
-use bencher_json::{ResourceId, ResourceName, Slug};
+use bencher_json::{MeasureSlug, ResourceId, ResourceName};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -64,7 +64,7 @@ pub struct CliMeasureCreate {
 
     /// Measure slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<MeasureSlug>,
 
     /// Units of measure
     #[clap(long)]
@@ -100,7 +100,7 @@ pub struct CliMeasureUpdate {
 
     /// Measure slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<MeasureSlug>,
 
     /// Units of measure
     #[clap(long)]

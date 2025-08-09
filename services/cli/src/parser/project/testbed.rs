@@ -1,4 +1,4 @@
-use bencher_json::{ResourceId, ResourceName, Slug};
+use bencher_json::{ResourceId, ResourceName, TestbedSlug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -64,7 +64,7 @@ pub struct CliTestbedCreate {
 
     /// Testbed slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<TestbedSlug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -96,7 +96,7 @@ pub struct CliTestbedUpdate {
 
     /// Testbed slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<TestbedSlug>,
 
     #[clap(flatten)]
     pub archived: CliArchived,
