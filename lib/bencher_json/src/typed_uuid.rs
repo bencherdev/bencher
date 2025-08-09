@@ -61,6 +61,12 @@ macro_rules! typed_uuid {
             }
         }
 
+        impl bencher_valid::NamedUuid for $name {
+            fn uuid(&self) -> uuid::Uuid {
+                self.0
+            }
+        }
+
         impl $name {
             pub fn new() -> Self {
                 Self(uuid::Uuid::new_v4())

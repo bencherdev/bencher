@@ -56,6 +56,12 @@ macro_rules! typed_slug {
             }
         }
 
+        impl bencher_valid::NamedSlug for $name {
+            fn slug(&self) -> $crate::Slug {
+                self.0.clone()
+            }
+        }
+
         $crate::typed_db::typed_db!($name);
     };
 }

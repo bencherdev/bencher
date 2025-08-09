@@ -19,6 +19,43 @@ use crate::{Slug, ValidError};
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct NameId<T>(T);
 
+pub trait NamedUuid {
+    fn uuid(&self) -> Uuid;
+}
+
+pub trait NamedSlug {
+    fn slug(&self) -> Slug;
+}
+
+pub enum NamedId<U, S, T> {
+    Uuid(U),
+    Slug(S),
+    Name(T),
+}
+
+impl<U, S, T> TryFrom<&NameId<T>> for NamedId<U, S, T>
+where
+    U: NamedUuid + FromStr<Err = uuid::Error>,
+    S: NamedSlug + FromStr<Err = ValidError>,
+    T: AsRef<str> + FromStr<Err = ValidError> + Clone + fmt::Debug + Send + Sync + 'static,
+{
+    type Error = ValidError;
+
+    fn try_from(name_id: &NameId<T>) -> Result<Self, Self::Error> {
+        if let Ok(uuid) = U::from_str(name_id.as_ref()) {
+            Ok(Self::Uuid(uuid))
+        } else if let Ok(slug) = S::from_str(name_id.as_ref()) {
+            Ok(Self::Slug(slug))
+        } else if let Ok(name) = T::from_str(name_id.as_ref()) {
+            Ok(Self::Name(name))
+        } else {
+            Err(ValidError::FromNameId(Box::new(
+                name_id.clone().into_inner(),
+            )))
+        }
+    }
+}
+
 pub enum NameIdKind<T> {
     Uuid(Uuid),
     Slug(Slug),
