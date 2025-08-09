@@ -27,6 +27,9 @@ pub trait NamedSlug {
     fn slug(&self) -> Slug;
 }
 
+#[typeshare::typeshare]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub enum NamedId<U, S, T> {
     Uuid(U),
     Slug(S),
@@ -42,17 +45,89 @@ where
     type Error = ValidError;
 
     fn try_from(name_id: &NameId<T>) -> Result<Self, Self::Error> {
-        if let Ok(uuid) = U::from_str(name_id.as_ref()) {
+        name_id
+            .as_ref()
+            .parse()
+            .map_err(|error| ValidError::FromNameId(Box::new(error)))
+    }
+}
+
+impl<U, S, T> FromStr for NamedId<U, S, T>
+where
+    U: NamedUuid + FromStr<Err = uuid::Error>,
+    S: NamedSlug + FromStr<Err = ValidError>,
+    T: AsRef<str> + FromStr<Err = ValidError> + Clone + fmt::Debug + Send + Sync + 'static,
+{
+    type Err = ValidError;
+
+    fn from_str(name_id: &str) -> Result<Self, Self::Err> {
+        if let Ok(uuid) = U::from_str(name_id) {
             Ok(Self::Uuid(uuid))
-        } else if let Ok(slug) = S::from_str(name_id.as_ref()) {
+        } else if let Ok(slug) = S::from_str(name_id) {
             Ok(Self::Slug(slug))
-        } else if let Ok(name) = T::from_str(name_id.as_ref()) {
+        } else if let Ok(name) = T::from_str(name_id) {
             Ok(Self::Name(name))
         } else {
-            Err(ValidError::FromNameId(Box::new(
-                name_id.clone().into_inner(),
-            )))
+            Err(ValidError::FromNameId(Box::new(name_id.to_owned())))
         }
+    }
+}
+
+impl<U, S, T> Serialize for NamedId<U, S, T>
+where
+    U: Serialize,
+    S: Serialize,
+    T: Serialize,
+{
+    fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
+    where
+        SER: serde::Serializer,
+    {
+        match self {
+            Self::Uuid(uuid) => uuid.serialize(serializer),
+            Self::Slug(slug) => slug.serialize(serializer),
+            Self::Name(name) => name.serialize(serializer),
+        }
+    }
+}
+
+impl<'de, U, S, T> Deserialize<'de> for NamedId<U, S, T>
+where
+    U: NamedUuid + FromStr<Err = uuid::Error>,
+    S: NamedSlug + FromStr<Err = ValidError>,
+    T: AsRef<str> + FromStr<Err = ValidError> + Clone + fmt::Debug + Send + Sync + 'static,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(NamedIdVisitor {
+            marker: PhantomData,
+        })
+    }
+}
+
+struct NamedIdVisitor<U, S, T> {
+    marker: PhantomData<(U, S, T)>,
+}
+
+impl<U, S, T> Visitor<'_> for NamedIdVisitor<U, S, T>
+where
+    U: NamedUuid + FromStr<Err = uuid::Error>,
+    S: NamedSlug + FromStr<Err = ValidError>,
+    T: AsRef<str> + FromStr<Err = ValidError> + Clone + fmt::Debug + Send + Sync + 'static,
+{
+    type Value = NamedId<U, S, T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid UUID, slug, or name.")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        NamedId::from_str(v).map_err(|_e| E::invalid_value(Unexpected::Str(v), &self))
     }
 }
 
