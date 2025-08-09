@@ -1,5 +1,5 @@
 use bencher_json::{
-    DateTime, JsonNewTestbed, JsonTestbed, NameIdKind, ResourceName, Slug, TestbedNameId,
+    DateTime, JsonNewTestbed, JsonTestbed, NameIdKind, ResourceName, TestbedNameId, TestbedSlug,
     TestbedUuid, project::testbed::JsonUpdateTestbed,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -31,7 +31,7 @@ pub struct QueryTestbed {
     pub uuid: TestbedUuid,
     pub project_id: ProjectId,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: TestbedSlug,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -86,7 +86,7 @@ impl QueryTestbed {
             NameIdKind::Uuid(_) => return Err(http_error),
             NameIdKind::Slug(slug) => JsonNewTestbed {
                 name: slug.clone().into(),
-                slug: Some(slug),
+                slug: Some(slug.into()),
             },
             NameIdKind::Name(name) => JsonNewTestbed { name, slug: None },
         };
@@ -147,7 +147,7 @@ pub struct InsertTestbed {
     pub uuid: TestbedUuid,
     pub project_id: ProjectId,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: TestbedSlug,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -159,13 +159,20 @@ impl InsertTestbed {
 
     fn from_json(conn: &mut DbConnection, project_id: ProjectId, testbed: JsonNewTestbed) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
-        let slug = ok_slug!(conn, project_id, &name, slug, testbed, QueryTestbed);
+        let slug = ok_slug!(
+            conn,
+            project_id,
+            &name,
+            slug.map(Into::into),
+            testbed,
+            QueryTestbed
+        );
         let timestamp = DateTime::now();
         Self {
             uuid: TestbedUuid::new(),
             project_id,
             name,
-            slug,
+            slug: slug.into(),
             created: timestamp,
             modified: timestamp,
             archived: None,
@@ -181,7 +188,7 @@ impl InsertTestbed {
 #[diesel(table_name = testbed_table)]
 pub struct UpdateTestbed {
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<TestbedSlug>,
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,
 }

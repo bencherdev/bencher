@@ -24,6 +24,7 @@ pub mod pagination;
 pub mod project;
 pub mod run;
 pub mod system;
+pub(crate) mod typed_slug;
 pub(crate) mod typed_uuid;
 pub mod urlencoded;
 pub mod user;
@@ -41,13 +42,14 @@ pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},
-    benchmark::{BenchmarkNameId, BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
+    benchmark::{BenchmarkNameId, BenchmarkSlug, BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
     branch::{
-        BranchNameId, BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonNewStartPoint,
+        BranchNameId, BranchSlug, BranchUuid, JsonBranch, JsonBranches, JsonNewBranch,
+        JsonNewStartPoint,
     },
     head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
-    measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureNameId, MeasureUuid},
+    measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureNameId, MeasureSlug, MeasureUuid},
     metric::{
         JsonMetric, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MetricUuid,
     },
@@ -55,7 +57,7 @@ pub use project::{
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
-    testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedNameId, TestbedUuid},
+    testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedNameId, TestbedSlug, TestbedUuid},
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
 };
 pub use run::JsonNewRun;

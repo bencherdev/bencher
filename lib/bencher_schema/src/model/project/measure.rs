@@ -1,5 +1,5 @@
 use bencher_json::{
-    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, NameIdKind, ResourceName, Slug,
+    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, MeasureSlug, NameIdKind, ResourceName,
     project::measure::{
         JsonUpdateMeasure, MeasureUuid,
         built_in::{self, BuiltInMeasure},
@@ -36,7 +36,7 @@ pub struct QueryMeasure {
     pub uuid: MeasureUuid,
     pub project_id: ProjectId,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: MeasureSlug,
     pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
@@ -171,7 +171,7 @@ impl QueryMeasure {
                 NameIdKind::Uuid(_) => return Err(http_error),
                 NameIdKind::Slug(slug) => JsonNewMeasure {
                     name: slug.clone().into(),
-                    slug: Some(slug),
+                    slug: Some(slug.into()),
                     units: JsonNewMeasure::generic_unit(),
                 },
                 NameIdKind::Name(name) => JsonNewMeasure {
@@ -240,7 +240,7 @@ pub struct InsertMeasure {
     pub uuid: MeasureUuid,
     pub project_id: ProjectId,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: MeasureSlug,
     pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
@@ -257,13 +257,20 @@ impl InsertMeasure {
 
     fn from_json(conn: &mut DbConnection, project_id: ProjectId, measure: JsonNewMeasure) -> Self {
         let JsonNewMeasure { name, slug, units } = measure;
-        let slug = ok_slug!(conn, project_id, &name, slug, measure, QueryMeasure);
+        let slug = ok_slug!(
+            conn,
+            project_id,
+            &name,
+            slug.map(Into::into),
+            measure,
+            QueryMeasure
+        );
         let timestamp = DateTime::now();
         Self {
             uuid: MeasureUuid::new(),
             project_id,
             name,
-            slug,
+            slug: slug.into(),
             units,
             created: timestamp,
             modified: timestamp,
@@ -276,7 +283,7 @@ impl InsertMeasure {
 #[diesel(table_name = measure_table)]
 pub struct UpdateMeasure {
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<MeasureSlug>,
     pub units: Option<ResourceName>,
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,

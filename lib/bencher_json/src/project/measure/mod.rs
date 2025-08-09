@@ -1,6 +1,6 @@
 use std::{fmt, sync::LazyLock};
 
-use bencher_valid::{DateTime, NameId, ResourceName, Slug};
+use bencher_valid::{DateTime, NameId, ResourceName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,7 @@ pub static DEFAULT_UNIT: LazyLock<ResourceName> = LazyLock::new(|| {
 });
 
 crate::typed_uuid::typed_uuid!(MeasureUuid);
+crate::typed_slug::typed_slug!(MeasureSlug);
 
 /// A measure UUID, slug, or name.
 #[typeshare::typeshare]
@@ -32,7 +33,7 @@ pub struct JsonNewMeasure {
     /// If not provided, the slug will be generated from the name.
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<MeasureSlug>,
     /// The units of measure.
     /// Maximum length is 64 characters.
     pub units: ResourceName,
@@ -57,7 +58,7 @@ pub struct JsonMeasure {
     pub uuid: MeasureUuid,
     pub project: ProjectUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: MeasureSlug,
     pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
@@ -78,7 +79,7 @@ pub struct JsonUpdateMeasure {
     pub name: Option<ResourceName>,
     /// The preferred new slug for the measure.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<MeasureSlug>,
     /// The new units of measure.
     /// Maximum length is 64 characters.
     pub units: Option<ResourceName>,

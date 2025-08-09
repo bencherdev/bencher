@@ -1,5 +1,5 @@
 use bencher_json::{
-    BenchmarkName, BenchmarkUuid, DateTime, JsonBenchmark, Slug,
+    BenchmarkName, BenchmarkSlug, BenchmarkUuid, DateTime, JsonBenchmark,
     project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -30,7 +30,7 @@ pub struct QueryBenchmark {
     pub uuid: BenchmarkUuid,
     pub project_id: ProjectId,
     pub name: BenchmarkName,
-    pub slug: Slug,
+    pub slug: BenchmarkSlug,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -146,7 +146,7 @@ pub struct InsertBenchmark {
     pub uuid: BenchmarkUuid,
     pub project_id: ProjectId,
     pub name: BenchmarkName,
-    pub slug: Slug,
+    pub slug: BenchmarkSlug,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -162,13 +162,20 @@ impl InsertBenchmark {
         benchmark: JsonNewBenchmark,
     ) -> Self {
         let JsonNewBenchmark { name, slug } = benchmark;
-        let slug = ok_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark);
+        let slug = ok_slug!(
+            conn,
+            project_id,
+            &name,
+            slug.map(Into::into),
+            benchmark,
+            QueryBenchmark
+        );
         let timestamp = DateTime::now();
         Self {
             uuid: BenchmarkUuid::new(),
             project_id,
             name,
-            slug,
+            slug: slug.into(),
             created: timestamp,
             modified: timestamp,
             archived: None,
@@ -180,7 +187,7 @@ impl InsertBenchmark {
 #[diesel(table_name = benchmark_table)]
 pub struct UpdateBenchmark {
     pub name: Option<BenchmarkName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<BenchmarkSlug>,
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,
 }

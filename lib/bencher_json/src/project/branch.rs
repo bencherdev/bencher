@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use bencher_valid::{BranchName, DateTime, GitHash, NameId, Slug};
+use bencher_valid::{BranchName, DateTime, GitHash, NameId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,7 @@ static BRANCH_MAIN: LazyLock<BranchName> = LazyLock::new(|| {
         .expect("Failed to parse branch name.")
 });
 #[expect(clippy::expect_used)]
-static BRANCH_MAIN_SLUG: LazyLock<Option<Slug>> = LazyLock::new(|| {
+static BRANCH_MAIN_SLUG: LazyLock<Option<BranchSlug>> = LazyLock::new(|| {
     Some(
         BRANCH_MAIN_STR
             .parse()
@@ -33,6 +33,7 @@ static BRANCH_MAIN_SLUG: LazyLock<Option<Slug>> = LazyLock::new(|| {
 });
 
 crate::typed_uuid::typed_uuid!(BranchUuid);
+crate::typed_slug::typed_slug!(BranchSlug);
 
 /// A branch UUID, slug, or name.
 pub type BranchNameId = NameId<BranchName>;
@@ -47,7 +48,7 @@ pub struct JsonNewBranch {
     /// If not provided, the slug will be generated from the name.
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<BranchSlug>,
     /// The start point for the new branch.
     /// Historical branch versions from the start point branch will be shallow copied over to the new branch head.
     /// That is, historical metrics data for the start point branch will appear in queries for the new branch.
@@ -99,7 +100,7 @@ pub struct JsonBranch {
     pub uuid: BranchUuid,
     pub project: ProjectUuid,
     pub name: BranchName,
-    pub slug: Slug,
+    pub slug: BranchSlug,
     pub head: JsonHead,
     pub created: DateTime,
     pub modified: DateTime,
@@ -120,7 +121,7 @@ pub struct JsonUpdateBranch {
     pub name: Option<BranchName>,
     /// The preferred new slug for the branch.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<BranchSlug>,
     /// The new start point for the branch.
     pub start_point: Option<JsonUpdateStartPoint>,
     /// Set whether the branch is archived.

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use bencher_valid::{DateTime, NameId, ResourceName, Slug};
+use bencher_valid::{DateTime, NameId, ResourceName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -22,7 +22,7 @@ static TESTBED_LOCALHOST: LazyLock<ResourceName> = LazyLock::new(|| {
         .expect("Failed to parse testbed name.")
 });
 #[expect(clippy::expect_used)]
-static TESTBED_LOCALHOST_SLUG: LazyLock<Option<Slug>> = LazyLock::new(|| {
+static TESTBED_LOCALHOST_SLUG: LazyLock<Option<TestbedSlug>> = LazyLock::new(|| {
     Some(
         TESTBED_LOCALHOST_STR
             .parse()
@@ -31,6 +31,7 @@ static TESTBED_LOCALHOST_SLUG: LazyLock<Option<Slug>> = LazyLock::new(|| {
 });
 
 crate::typed_uuid::typed_uuid!(TestbedUuid);
+crate::typed_slug::typed_slug!(TestbedSlug);
 
 /// A testbed UUID, slug, or name.
 pub type TestbedNameId = NameId<ResourceName>;
@@ -45,7 +46,7 @@ pub struct JsonNewTestbed {
     /// If not provided, the slug will be generated from the name.
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<TestbedSlug>,
 }
 
 impl JsonNewTestbed {
@@ -70,7 +71,7 @@ pub struct JsonTestbed {
     pub uuid: TestbedUuid,
     pub project: ProjectUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: TestbedSlug,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -90,7 +91,7 @@ pub struct JsonUpdateTestbed {
     pub name: Option<ResourceName>,
     /// The preferred new slug for the testbed.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<TestbedSlug>,
     /// Set whether the testbed is archived.
     pub archived: Option<bool>,
 }

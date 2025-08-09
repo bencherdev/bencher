@@ -7,8 +7,9 @@ use std::{
 };
 
 use bencher_json::{
-    AlertUuid, JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure, JsonPerfQuery, JsonReport,
-    ReportUuid, ResourceName, Slug, ThresholdUuid, Units,
+    AlertUuid, BenchmarkSlug, BranchSlug, JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure,
+    JsonPerfQuery, JsonReport, MeasureSlug, ReportUuid, ResourceName, Slug, TestbedSlug,
+    ThresholdUuid, Units,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -741,10 +742,10 @@ impl ReportComment {
 
 enum Resource {
     Report(ReportUuid),
-    Branch(Slug),
-    Testbed(Slug),
-    Benchmark(Slug),
-    Measure(Slug),
+    Branch(BranchSlug),
+    Testbed(TestbedSlug),
+    Benchmark(BenchmarkSlug),
+    Measure(MeasureSlug),
     Threshold(ThresholdUuid),
     Alert(AlertUuid),
 }
@@ -765,10 +766,10 @@ impl Resource {
     fn into_id(self) -> String {
         match self {
             Resource::Report(uuid) => uuid.to_string(),
-            Resource::Branch(slug)
-            | Resource::Testbed(slug)
-            | Resource::Benchmark(slug)
-            | Resource::Measure(slug) => slug.into(),
+            Resource::Branch(slug) => slug.to_string(),
+            Resource::Testbed(slug) => slug.to_string(),
+            Resource::Benchmark(slug) => slug.to_string(),
+            Resource::Measure(slug) => slug.to_string(),
             Resource::Threshold(uuid) => uuid.to_string(),
             Resource::Alert(uuid) => uuid.to_string(),
         }
@@ -778,7 +779,7 @@ impl Resource {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Measure {
     name: ResourceName,
-    slug: Slug,
+    slug: MeasureSlug,
     units: ResourceName,
 }
 

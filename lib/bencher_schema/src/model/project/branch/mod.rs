@@ -1,5 +1,6 @@
 use bencher_json::{
-    BranchName, BranchNameId, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameIdKind, Slug,
+    BranchName, BranchNameId, BranchSlug, BranchUuid, DateTime, JsonBranch, JsonNewBranch,
+    NameIdKind,
     project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
 };
 use diesel::{
@@ -47,7 +48,7 @@ pub struct QueryBranch {
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
     pub name: BranchName,
-    pub slug: Slug,
+    pub slug: BranchSlug,
     pub head_id: Option<HeadId>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -131,7 +132,7 @@ impl QueryBranch {
             NameIdKind::Uuid(_) => return Err(http_error),
             NameIdKind::Slug(slug) => JsonNewBranch {
                 name: slug.clone().into(),
-                slug: Some(slug),
+                slug: Some(slug.into()),
                 start_point: start_point.cloned().and_then(Into::into),
             },
             NameIdKind::Name(name) => JsonNewBranch {
@@ -347,7 +348,7 @@ pub struct InsertBranch {
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
     pub name: BranchName,
-    pub slug: Slug,
+    pub slug: BranchSlug,
     pub head_id: Option<HeadId>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -404,15 +405,22 @@ impl InsertBranch {
         conn: &mut DbConnection,
         project_id: ProjectId,
         name: BranchName,
-        slug: Option<Slug>,
+        slug: Option<BranchSlug>,
     ) -> Self {
-        let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch);
+        let slug = ok_slug!(
+            conn,
+            project_id,
+            &name,
+            slug.map(Into::into),
+            branch,
+            QueryBranch
+        );
         let timestamp = DateTime::now();
         Self {
             uuid: BranchUuid::new(),
             project_id,
             name,
-            slug,
+            slug: slug.into(),
             head_id: None,
             created: timestamp,
             modified: timestamp,
@@ -435,7 +443,7 @@ impl InsertBranch {
 #[diesel(table_name = branch_table)]
 pub struct UpdateBranch {
     pub name: Option<BranchName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<BranchSlug>,
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,
 }

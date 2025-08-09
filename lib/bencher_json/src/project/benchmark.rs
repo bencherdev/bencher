@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{BenchmarkName, DateTime, NameId, Slug};
+use bencher_valid::{BenchmarkName, DateTime, NameId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::ProjectUuid;
 
 crate::typed_uuid::typed_uuid!(BenchmarkUuid);
+crate::typed_slug::typed_slug!(BenchmarkSlug);
 
 /// A benchmark UUID, slug, or name.
 pub type BenchmarkNameId = NameId<BenchmarkName>;
@@ -22,7 +23,7 @@ pub struct JsonNewBenchmark {
     /// If not provided, the slug will be generated from the name.
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<BenchmarkSlug>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,7 +39,7 @@ pub struct JsonBenchmark {
     pub uuid: BenchmarkUuid,
     pub project: ProjectUuid,
     pub name: BenchmarkName,
-    pub slug: Slug,
+    pub slug: BenchmarkSlug,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -58,7 +59,7 @@ pub struct JsonUpdateBenchmark {
     pub name: Option<BenchmarkName>,
     /// The preferred new slug for the benchmark.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<BenchmarkSlug>,
     /// Set whether the benchmark is archived.
     pub archived: Option<bool>,
 }
