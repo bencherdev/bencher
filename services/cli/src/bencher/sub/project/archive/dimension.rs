@@ -6,7 +6,7 @@ use bencher_client::types::{
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BranchName, BranchNameId, JsonBenchmark, JsonBenchmarks,
     JsonBranch, JsonBranches, JsonMeasure, JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId,
-    NamedId, ResourceId, ResourceName, TestbedNameId,
+    NameId, ResourceId, ResourceName, TestbedNameId,
 };
 
 use crate::{
@@ -78,24 +78,22 @@ impl Dimension {
             });
         };
         let branch: &ResourceId = &match name_id {
-            NamedId::Uuid(uuid) => uuid.into(),
-            NamedId::Slug(slug) => slug.into(),
-            NamedId::Name(name) => {
-                match get_branch_by_name(project, &name, action, backend).await {
-                    Ok(json) => json.uuid.into(),
-                    Err(err @ ArchiveError::NotFound { .. }) => {
-                        return if get_branch_by_name(project, &name, !action, backend)
-                            .await
-                            .is_ok()
-                        {
-                            self.log_noop(action);
-                            Ok(())
-                        } else {
-                            Err(err)
-                        };
-                    },
-                    Err(err) => return Err(err),
-                }
+            NameId::Uuid(uuid) => uuid.into(),
+            NameId::Slug(slug) => slug.into(),
+            NameId::Name(name) => match get_branch_by_name(project, &name, action, backend).await {
+                Ok(json) => json.uuid.into(),
+                Err(err @ ArchiveError::NotFound { .. }) => {
+                    return if get_branch_by_name(project, &name, !action, backend)
+                        .await
+                        .is_ok()
+                    {
+                        self.log_noop(action);
+                        Ok(())
+                    } else {
+                        Err(err)
+                    };
+                },
+                Err(err) => return Err(err),
             },
         };
         let update = &JsonUpdateBranch {
@@ -136,9 +134,9 @@ impl Dimension {
             });
         };
         let testbed: &ResourceId = &match name_id {
-            NamedId::Uuid(uuid) => uuid.into(),
-            NamedId::Slug(slug) => slug.into(),
-            NamedId::Name(name) => {
+            NameId::Uuid(uuid) => uuid.into(),
+            NameId::Slug(slug) => slug.into(),
+            NameId::Name(name) => {
                 match get_testbed_by_name(project, &name, action, backend).await {
                     Ok(json) => json.uuid.into(),
                     Err(err @ ArchiveError::NotFound { .. }) => {
@@ -192,9 +190,9 @@ impl Dimension {
             });
         };
         let benchmark: &ResourceId = &match name_id {
-            NamedId::Uuid(uuid) => uuid.into(),
-            NamedId::Slug(slug) => slug.into(),
-            NamedId::Name(name) => {
+            NameId::Uuid(uuid) => uuid.into(),
+            NameId::Slug(slug) => slug.into(),
+            NameId::Name(name) => {
                 match get_benchmark_by_name(project, &name, action, backend).await {
                     Ok(json) => json.uuid.into(),
                     Err(err @ ArchiveError::NotFound { .. }) => {
@@ -248,9 +246,9 @@ impl Dimension {
             });
         };
         let measure: &ResourceId = &match name_id {
-            NamedId::Uuid(uuid) => uuid.into(),
-            NamedId::Slug(slug) => slug.into(),
-            NamedId::Name(name) => {
+            NameId::Uuid(uuid) => uuid.into(),
+            NameId::Slug(slug) => slug.into(),
+            NameId::Name(name) => {
                 match get_measure_by_name(project, &name, action, backend).await {
                     Ok(json) => json.uuid.into(),
                     Err(err @ ArchiveError::NotFound { .. }) => {

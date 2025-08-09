@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 pub use bencher_context::RunContext;
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
-    Index, IqrBoundary, Jwt, Model, ModelTest, NamedId, NonEmpty, PercentageBoundary, ResourceId,
+    Index, IqrBoundary, Jwt, Model, ModelTest, NameId, NonEmpty, PercentageBoundary, ResourceId,
     ResourceIdKind, ResourceName, SampleSize, Sanitize, Search, Secret, Slug, Units, Url, UserName,
     ValidError, Window,
 };

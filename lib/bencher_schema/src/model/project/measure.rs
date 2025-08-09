@@ -1,5 +1,5 @@
 use bencher_json::{
-    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, MeasureSlug, NamedId, ResourceName,
+    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, MeasureSlug, NameId, ResourceName,
     project::measure::{
         JsonUpdateMeasure, MeasureUuid,
         built_in::{self, BuiltInMeasure},
@@ -165,13 +165,13 @@ impl QueryMeasure {
             measure
         } else {
             match measure.clone() {
-                NamedId::Uuid(_) => return Err(http_error),
-                NamedId::Slug(slug) => JsonNewMeasure {
+                NameId::Uuid(_) => return Err(http_error),
+                NameId::Slug(slug) => JsonNewMeasure {
                     name: slug.clone().into(),
                     slug: Some(slug),
                     units: JsonNewMeasure::generic_unit(),
                 },
-                NamedId::Name(name) => JsonNewMeasure {
+                NameId::Name(name) => JsonNewMeasure {
                     name,
                     slug: None,
                     units: JsonNewMeasure::generic_unit(),

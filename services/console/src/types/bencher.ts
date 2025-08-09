@@ -4,9 +4,15 @@
 
 export type BenchmarkName = string;
 
+/** A benchmark UUID, slug, or name. */
+export type BenchmarkNameId = Uuid | Slug | string;
+
 export type Boundary = number;
 
 export type BranchName = string;
+
+/** A branch UUID, slug, or name. */
+export type BranchNameId = Uuid | Slug | string;
 
 export type CardCvc = string;
 
@@ -31,7 +37,7 @@ export type Index = number;
 export type Iteration = number;
 
 /** A measure UUID, slug, or name. */
-export type MeasureNameId = NamedId<Uuid, MeasureSlug, ResourceName>;
+export type MeasureNameId = Uuid | Slug | string;
 
 export interface JsonNewMetric {
 	value: number;
@@ -45,7 +51,7 @@ export interface JsonBenchmark {
 	uuid: Uuid;
 	project: Uuid;
 	name: BenchmarkName;
-	slug: BenchmarkSlug;
+	slug: Slug;
 	created: string;
 	modified: string;
 	archived?: string;
@@ -83,7 +89,7 @@ export interface JsonBranch {
 	uuid: Uuid;
 	project: Uuid;
 	name: BranchName;
-	slug: BranchSlug;
+	slug: Slug;
 	head: JsonHead;
 	created: string;
 	modified: string;
@@ -96,7 +102,7 @@ export interface JsonTestbed {
 	uuid: Uuid;
 	project: Uuid;
 	name: ResourceName;
-	slug: TestbedSlug;
+	slug: Slug;
 	created: string;
 	modified: string;
 	archived?: string;
@@ -106,7 +112,7 @@ export interface JsonMeasure {
 	uuid: Uuid;
 	project: Uuid;
 	name: ResourceName;
-	slug: MeasureSlug;
+	slug: Slug;
 	units: ResourceName;
 	created: string;
 	modified: string;
@@ -220,8 +226,6 @@ export type LicensedPlanId = string;
 
 export type MeteredPlanId = string;
 
-export type NameId<T> = T;
-
 export type NonEmpty = string;
 
 export type ResourceId = string;
@@ -231,6 +235,9 @@ export type RunContext = Record<string, string>;
 export type Secret = string;
 
 export type Slug = string;
+
+/** A testbed UUID, slug, or name. */
+export type TestbedNameId = Uuid | Slug | string;
 
 export type Url = string;
 
@@ -249,7 +256,7 @@ export interface JsonAuthAck {
 export interface JsonUser {
 	uuid: Uuid;
 	name: UserName;
-	slug: Slug;
+	slug: string;
 	email: Email;
 	admin: boolean;
 	locked: boolean;
@@ -436,7 +443,7 @@ export interface JsonNewProject {
 	 * If the provided or generated slug is already in use, a unique slug will be generated.
 	 * Maximum length is 64 characters.
 	 */
-	slug?: Slug;
+	slug?: string;
 	/**
 	 * The URL for the project.
 	 * If the project is public, the URL will be accessible listed on its Perf Page.
@@ -495,7 +502,7 @@ export interface JsonOneMetric {
 export interface JsonOrganization {
 	uuid: Uuid;
 	name: ResourceName;
-	slug: Slug;
+	slug: string;
 	license?: Jwt;
 	created: string;
 	modified: string;
@@ -511,7 +518,7 @@ export interface JsonProject {
 	uuid: Uuid;
 	organization: Uuid;
 	name: ResourceName;
-	slug: Slug;
+	slug: string;
 	url?: Url;
 	visibility: Visibility;
 	created: string;
@@ -604,7 +611,7 @@ export interface JsonPlot {
 export interface JsonPubUser {
 	uuid: Uuid;
 	name: UserName;
-	slug: Slug;
+	slug: string;
 }
 
 export enum Adapter {
@@ -652,7 +659,7 @@ export interface JsonReport {
 
 export interface JsonSignup {
 	name: UserName;
-	slug?: Slug;
+	slug?: string;
 	email: Email;
 	plan?: PlanLevel;
 	invite?: Jwt;
@@ -693,7 +700,7 @@ export interface JsonUpdateUser {
 	 * The preferred new slug for the user.
 	 * Maximum length is 64 characters.
 	 */
-	slug?: Slug;
+	slug?: string;
 	/** The new email for the user. */
 	email?: Email;
 	/**

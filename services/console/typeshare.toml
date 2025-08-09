@@ -16,6 +16,14 @@
 "AlertUuid" = "Uuid"
 "UserUuid" = "Uuid"
 "TokenUuid" = "Uuid"
+# Typed Slugs
+"Slug" = "string"
+"BranchSlug" = "Slug"
+"TestbedSlug" = "Slug"
+"BenchmarkSlug" = "Slug"
+"MeasureSlug" = "Slug"
+# Name ID
+"NameId" = "Uuid | Slug | string"
 # Other types
 "DateTime" = "string"
 "OrderedFloat" = "number"

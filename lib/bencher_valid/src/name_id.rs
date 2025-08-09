@@ -16,13 +16,13 @@ use crate::ValidError;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema", schemars(untagged))]
-pub enum NamedId<U, S, T> {
+pub enum NameId<U, S, T> {
     Uuid(U),
     Slug(S),
     Name(T),
 }
 
-impl<U, S, T> FromStr for NamedId<U, S, T>
+impl<U, S, T> FromStr for NameId<U, S, T>
 where
     U: FromStr,
     S: FromStr,
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<U, S, T> Display for NamedId<U, S, T>
+impl<U, S, T> Display for NameId<U, S, T>
 where
     U: Display,
     S: Display,
@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<U, S, T> Serialize for NamedId<U, S, T>
+impl<U, S, T> Serialize for NameId<U, S, T>
 where
     U: Serialize,
     S: Serialize,
@@ -76,7 +76,7 @@ where
     }
 }
 
-impl<'de, U, S, T> Deserialize<'de> for NamedId<U, S, T>
+impl<'de, U, S, T> Deserialize<'de> for NameId<U, S, T>
 where
     U: FromStr,
     S: FromStr,
@@ -86,23 +86,23 @@ where
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(NamedIdVisitor {
+        deserializer.deserialize_str(NameIdVisitor {
             marker: PhantomData,
         })
     }
 }
 
-struct NamedIdVisitor<U, S, T> {
+struct NameIdVisitor<U, S, T> {
     marker: PhantomData<(U, S, T)>,
 }
 
-impl<U, S, T> Visitor<'_> for NamedIdVisitor<U, S, T>
+impl<U, S, T> Visitor<'_> for NameIdVisitor<U, S, T>
 where
     U: FromStr,
     S: FromStr,
     T: FromStr,
 {
-    type Value = NamedId<U, S, T>;
+    type Value = NameId<U, S, T>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("a valid UUID, slug, or name.")
@@ -112,6 +112,6 @@ where
     where
         E: de::Error,
     {
-        NamedId::from_str(v).map_err(|_e| E::invalid_value(Unexpected::Str(v), &self))
+        NameId::from_str(v).map_err(|_e| E::invalid_value(Unexpected::Str(v), &self))
     }
 }

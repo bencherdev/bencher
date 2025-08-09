@@ -13,13 +13,13 @@ macro_rules! fn_eq_name_id {
             dropshot::HttpError,
         > {
             Ok(match name_id {
-                bencher_json::NamedId::Uuid(uuid) => {
+                bencher_json::NameId::Uuid(uuid) => {
                     Box::new($crate::schema::$table::uuid.eq(uuid.to_string()))
                 },
-                bencher_json::NamedId::Slug(slug) => {
+                bencher_json::NameId::Slug(slug) => {
                     Box::new($crate::schema::$table::slug.eq(slug.to_string()))
                 },
-                bencher_json::NamedId::Name(name) => {
+                bencher_json::NameId::Name(name) => {
                     Box::new($crate::schema::$table::name.eq(name.to_string()))
                 },
             })

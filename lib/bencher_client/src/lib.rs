@@ -275,7 +275,7 @@ macro_rules! from_name_id {
 }
 
 from_name_id!(
-    BranchNameId => NamedIdForBranchUuidAndBranchSlugAndBranchName,
-    TestbedNameId => NamedIdForTestbedUuidAndTestbedSlugAndResourceName,
-    MeasureNameId => NamedIdForMeasureUuidAndMeasureSlugAndResourceName
+    BranchNameId => NameIdForBranchUuidAndBranchSlugAndBranchName,
+    TestbedNameId => NameIdForTestbedUuidAndTestbedSlugAndResourceName,
+    MeasureNameId => NameIdForMeasureUuidAndMeasureSlugAndResourceName
 );

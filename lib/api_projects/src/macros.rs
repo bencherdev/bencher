@@ -1,13 +1,13 @@
 macro_rules! filter_name_id {
     ($name:ident, $query:ident, $table:ident, $name_id:ident) => {
         match $name_id {
-            bencher_json::NamedId::Uuid(uuid) => {
+            bencher_json::NameId::Uuid(uuid) => {
                 $query = $query.filter(bencher_schema::schema::$table::uuid.eq(uuid.to_string()));
             },
-            bencher_json::NamedId::Slug(slug) => {
+            bencher_json::NameId::Slug(slug) => {
                 $query = $query.filter(bencher_schema::schema::$table::slug.eq(slug.to_string()));
             },
-            bencher_json::NamedId::Name(name) => {
+            bencher_json::NameId::Name(name) => {
                 $query = $query.filter(bencher_schema::schema::$table::name.eq(name.to_string()));
             },
         }

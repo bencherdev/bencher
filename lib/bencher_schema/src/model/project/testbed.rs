@@ -1,5 +1,5 @@
 use bencher_json::{
-    DateTime, JsonNewTestbed, JsonTestbed, NamedId, ResourceName, TestbedNameId, TestbedSlug,
+    DateTime, JsonNewTestbed, JsonTestbed, NameId, ResourceName, TestbedNameId, TestbedSlug,
     TestbedUuid, project::testbed::JsonUpdateTestbed,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -80,12 +80,12 @@ impl QueryTestbed {
         };
 
         let json_testbed = match testbed.clone() {
-            NamedId::Uuid(_) => return Err(http_error),
-            NamedId::Slug(slug) => JsonNewTestbed {
+            NameId::Uuid(_) => return Err(http_error),
+            NameId::Slug(slug) => JsonNewTestbed {
                 name: slug.clone().into(),
                 slug: Some(slug),
             },
-            NamedId::Name(name) => JsonNewTestbed { name, slug: None },
+            NameId::Name(name) => JsonNewTestbed { name, slug: None },
         };
 
         Self::create(context, project_id, json_testbed).await
