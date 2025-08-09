@@ -4,10 +4,9 @@ use bencher_client::types::{
     JsonUpdateBenchmark, JsonUpdateBranch, JsonUpdateMeasure, JsonUpdateTestbed,
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, BenchmarkSlug, BenchmarkUuid, BranchName, BranchNameId,
-    BranchSlug, BranchUuid, JsonBenchmark, JsonBenchmarks, JsonBranch, JsonBranches, JsonMeasure,
-    JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId, MeasureSlug, MeasureUuid, NameIdKind,
-    NamedId, ResourceId, ResourceName, TestbedNameId, TestbedSlug, TestbedUuid,
+    BenchmarkName, BenchmarkNameId, BranchName, BranchNameId, JsonBenchmark, JsonBenchmarks,
+    JsonBranch, JsonBranches, JsonMeasure, JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId,
+    NamedId, ResourceId, ResourceName, TestbedNameId,
 };
 
 use crate::{

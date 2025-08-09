@@ -125,7 +125,7 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let thresholds = get_ls_query(&query_project, &pagination_params, &query_params)?
+    let thresholds = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryThreshold>(conn_lock!(context))
@@ -147,7 +147,7 @@ async fn get_ls_inner(
         }
     }
 
-    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)?
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
         .get_result::<i64>(conn_lock!(context))
         .map_err(resource_not_found_err!(
@@ -163,7 +163,7 @@ fn get_ls_query<'q>(
     query_project: &'q QueryProject,
     pagination_params: &ProjThresholdsPagination,
     query_params: &'q JsonThresholdQuery,
-) -> Result<BoxedQuery<'q>, HttpError> {
+) -> BoxedQuery<'q> {
     let mut query = QueryThreshold::belonging_to(query_project)
         .inner_join(schema::branch::table)
         .inner_join(schema::testbed::table)
@@ -196,7 +196,7 @@ fn get_ls_query<'q>(
         );
     }
 
-    Ok(match pagination_params.order() {
+    match pagination_params.order() {
         ProjThresholdsSort::Created => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::threshold::created.asc()),
             Some(JsonDirection::Desc) => query.order(schema::threshold::created.desc()),
@@ -206,7 +206,7 @@ fn get_ls_query<'q>(
             Some(JsonDirection::Desc) | None => query.order(schema::threshold::modified.desc()),
         },
     }
-    .select(QueryThreshold::as_select()))
+    .select(QueryThreshold::as_select())
 }
 
 // TODO refactor out internal types

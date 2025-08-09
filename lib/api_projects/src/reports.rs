@@ -126,7 +126,7 @@ async fn get_ls_inner(
         auth_user,
     )?;
 
-    let reports = get_ls_query(&query_project, &pagination_params, &query_params)?
+    let reports = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load(conn_lock!(context))
@@ -148,7 +148,7 @@ async fn get_ls_inner(
         }
     }
 
-    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)?
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
         .get_result::<i64>(conn_lock!(context))
         .map_err(resource_not_found_err!(
@@ -164,7 +164,7 @@ fn get_ls_query<'q>(
     query_project: &'q QueryProject,
     pagination_params: &ProjReportsPagination,
     query_params: &'q JsonReportQuery,
-) -> Result<BoxedQuery<'q>, HttpError> {
+) -> BoxedQuery<'q> {
     let mut query =
         QueryReport::belonging_to(query_project)
             .inner_join(schema::head::table.inner_join(
@@ -201,7 +201,7 @@ fn get_ls_query<'q>(
         );
     }
 
-    Ok(match pagination_params.order() {
+    match pagination_params.order() {
         ProjReportsSort::DateTime => match pagination_params.direction {
             Some(JsonDirection::Asc) => query.order((
                 schema::report::start_time.asc(),
@@ -215,7 +215,7 @@ fn get_ls_query<'q>(
             )),
         },
     }
-    .select(QueryReport::as_select()))
+    .select(QueryReport::as_select())
 }
 
 // TODO refactor out internal types

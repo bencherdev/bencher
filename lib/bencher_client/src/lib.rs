@@ -50,18 +50,6 @@ from_client!(
     Window
 );
 
-impl From<bencher_json::BranchNameId> for types::NameIdForBranchName {
-    fn from(json: bencher_json::BranchNameId) -> Self {
-        Self(json.into_inner().into())
-    }
-}
-
-impl From<bencher_json::NameId<bencher_json::ResourceName>> for types::NameIdForResourceName {
-    fn from(json: bencher_json::NameId<bencher_json::ResourceName>) -> Self {
-        Self(json.into_inner().into())
-    }
-}
-
 from_client!(
     OrganizationUuid,
     ProjectUuid,
@@ -260,3 +248,34 @@ macro_rules! from_slug {
 }
 
 from_slug!(BranchSlug, TestbedSlug, BenchmarkSlug, MeasureSlug);
+
+macro_rules! from_name_id {
+    ($($from:ident => $to:ident),*) => {
+        $(
+            impl From<bencher_json::$from> for types::$to {
+                fn from(json: bencher_json::$from) -> Self {
+                    match json {
+                        bencher_json::$from::Uuid(uuid) => Self {
+                            subtype_0: Some(uuid.into()),
+                            ..Self::default()
+                        },
+                        bencher_json::$from::Slug(slug) => Self {
+                            subtype_1: Some(slug.into()),
+                            ..Self::default()
+                        },
+                        bencher_json::$from::Name(name) => Self {
+                            subtype_2: Some(name.into()),
+                            ..Self::default()
+                        },
+                    }
+                }
+            }
+        )*
+    };
+}
+
+from_name_id!(
+    BranchNameId => NamedIdForBranchUuidAndBranchSlugAndBranchName,
+    TestbedNameId => NamedIdForTestbedUuidAndTestbedSlugAndResourceName,
+    MeasureNameId => NamedIdForMeasureUuidAndMeasureSlugAndResourceName
+);
