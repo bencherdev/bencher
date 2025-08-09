@@ -68,7 +68,7 @@ fn map_start_point(
 
 impl From<Branch>
     for (
-        Option<bencher_client::types::NameIdForBranchName>,
+        Option<bencher_client::types::NamedIdForBranchUuidAndBranchSlugAndBranchName>,
         Option<bencher_client::types::GitHash>,
         Option<bencher_client::types::JsonUpdateStartPoint>,
     )

@@ -92,7 +92,7 @@ impl TryFrom<CliReportThresholds> for Thresholds {
                 err,
             })?;
 
-            models_map.insert(measure.into(), model.into());
+            models_map.insert(measure.to_string(), model.into());
         }
 
         let remaining_tests = tests.collect::<Vec<_>>();
