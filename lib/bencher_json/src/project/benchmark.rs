@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::ProjectUuid;
 
 crate::typed_uuid::typed_uuid!(BenchmarkUuid);
-crate::typed_slug::typed_slug!(BenchmarkSlug);
+crate::typed_slug::typed_slug!(BenchmarkSlug, BenchmarkName);
 
 /// A benchmark UUID, slug, or name.
 pub type BenchmarkNameId = NameId<BenchmarkName>;

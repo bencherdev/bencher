@@ -17,7 +17,7 @@ pub static DEFAULT_UNIT: LazyLock<ResourceName> = LazyLock::new(|| {
 });
 
 crate::typed_uuid::typed_uuid!(MeasureUuid);
-crate::typed_slug::typed_slug!(MeasureSlug);
+crate::typed_slug::typed_slug!(MeasureSlug, ResourceName);
 
 /// A measure UUID, slug, or name.
 #[typeshare::typeshare]

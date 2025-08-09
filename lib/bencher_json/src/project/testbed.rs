@@ -31,7 +31,7 @@ static TESTBED_LOCALHOST_SLUG: LazyLock<Option<TestbedSlug>> = LazyLock::new(|| 
 });
 
 crate::typed_uuid::typed_uuid!(TestbedUuid);
-crate::typed_slug::typed_slug!(TestbedSlug);
+crate::typed_slug::typed_slug!(TestbedSlug, ResourceName);
 
 /// A testbed UUID, slug, or name.
 pub type TestbedNameId = NameId<ResourceName>;

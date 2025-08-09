@@ -10,7 +10,7 @@ use serde::{
     de::{self, Visitor},
 };
 
-use crate::ValidError;
+use crate::{Slug, ValidError};
 
 // In practice, this may need to be raised all the way up to 4096.
 const MAX_BENCHMARK_NAME_LEN: usize = 1024;
@@ -76,6 +76,12 @@ impl FromStr for BenchmarkName {
 impl AsRef<str> for BenchmarkName {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl From<Slug> for BenchmarkName {
+    fn from(slug: Slug) -> Self {
+        Self(slug.into())
     }
 }
 

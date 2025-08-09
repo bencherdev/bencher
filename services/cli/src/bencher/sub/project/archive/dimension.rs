@@ -4,10 +4,10 @@ use bencher_client::types::{
     JsonUpdateBenchmark, JsonUpdateBranch, JsonUpdateMeasure, JsonUpdateTestbed,
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, BranchName, BranchNameId, BranchSlug, BranchUuid,
-    JsonBenchmark, JsonBenchmarks, JsonBranch, JsonBranches, JsonMeasure, JsonMeasures,
-    JsonTestbed, JsonTestbeds, MeasureNameId, NameIdKind, NamedId, ResourceId, ResourceName,
-    TestbedNameId,
+    BenchmarkName, BenchmarkNameId, BenchmarkSlug, BenchmarkUuid, BranchName, BranchNameId,
+    BranchSlug, BranchUuid, JsonBenchmark, JsonBenchmarks, JsonBranch, JsonBranches, JsonMeasure,
+    JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId, MeasureSlug, MeasureUuid, NameIdKind,
+    NamedId, ResourceId, ResourceName, TestbedNameId, TestbedSlug, TestbedUuid,
 };
 
 use crate::{
@@ -143,33 +143,33 @@ impl Dimension {
                 dimension: self.clone(),
             });
         };
-        let testbed: &ResourceId =
-            &match name_id
-                .try_into()
-                .map_err(|err| ArchiveError::ParseDimension {
-                    dimension: self.clone(),
-                    err,
-                })? {
-                NameIdKind::Uuid(uuid) => uuid.into(),
-                NameIdKind::Slug(slug) => slug.into(),
-                NameIdKind::Name(name) => {
-                    match get_testbed_by_name(project, &name, action, backend).await {
-                        Ok(json) => json.uuid.into(),
-                        Err(err @ ArchiveError::NotFound { .. }) => {
-                            return if get_testbed_by_name(project, &name, !action, backend)
-                                .await
-                                .is_ok()
-                            {
-                                self.log_noop(action);
-                                Ok(())
-                            } else {
-                                Err(err)
-                            };
-                        },
-                        Err(err) => return Err(err),
-                    }
-                },
-            };
+        let named_id: NamedId<TestbedUuid, TestbedSlug, ResourceName> = name_id
+            .try_into()
+            .map_err(|err| ArchiveError::ParseDimension {
+                dimension: self.clone(),
+                err,
+            })?;
+        let testbed: &ResourceId = &match named_id {
+            NamedId::Uuid(uuid) => uuid.into(),
+            NamedId::Slug(slug) => slug.into(),
+            NamedId::Name(name) => {
+                match get_testbed_by_name(project, &name, action, backend).await {
+                    Ok(json) => json.uuid.into(),
+                    Err(err @ ArchiveError::NotFound { .. }) => {
+                        return if get_testbed_by_name(project, &name, !action, backend)
+                            .await
+                            .is_ok()
+                        {
+                            self.log_noop(action);
+                            Ok(())
+                        } else {
+                            Err(err)
+                        };
+                    },
+                    Err(err) => return Err(err),
+                }
+            },
+        };
         let update = &JsonUpdateTestbed {
             name: None,
             slug: None,
@@ -205,33 +205,33 @@ impl Dimension {
                 dimension: self.clone(),
             });
         };
-        let benchmark: &ResourceId =
-            &match name_id
-                .try_into()
-                .map_err(|err| ArchiveError::ParseDimension {
-                    dimension: self.clone(),
-                    err,
-                })? {
-                NameIdKind::Uuid(uuid) => uuid.into(),
-                NameIdKind::Slug(slug) => slug.into(),
-                NameIdKind::Name(name) => {
-                    match get_benchmark_by_name(project, &name, action, backend).await {
-                        Ok(json) => json.uuid.into(),
-                        Err(err @ ArchiveError::NotFound { .. }) => {
-                            return if get_benchmark_by_name(project, &name, !action, backend)
-                                .await
-                                .is_ok()
-                            {
-                                self.log_noop(action);
-                                Ok(())
-                            } else {
-                                Err(err)
-                            };
-                        },
-                        Err(err) => return Err(err),
-                    }
-                },
-            };
+        let named_id: NamedId<BenchmarkUuid, BenchmarkSlug, BenchmarkName> = name_id
+            .try_into()
+            .map_err(|err| ArchiveError::ParseDimension {
+                dimension: self.clone(),
+                err,
+            })?;
+        let benchmark: &ResourceId = &match named_id {
+            NamedId::Uuid(uuid) => uuid.into(),
+            NamedId::Slug(slug) => slug.into(),
+            NamedId::Name(name) => {
+                match get_benchmark_by_name(project, &name, action, backend).await {
+                    Ok(json) => json.uuid.into(),
+                    Err(err @ ArchiveError::NotFound { .. }) => {
+                        return if get_benchmark_by_name(project, &name, !action, backend)
+                            .await
+                            .is_ok()
+                        {
+                            self.log_noop(action);
+                            Ok(())
+                        } else {
+                            Err(err)
+                        };
+                    },
+                    Err(err) => return Err(err),
+                }
+            },
+        };
         let update = &JsonUpdateBenchmark {
             name: None,
             slug: None,
@@ -267,33 +267,33 @@ impl Dimension {
                 dimension: self.clone(),
             });
         };
-        let measure: &ResourceId =
-            &match name_id
-                .try_into()
-                .map_err(|err| ArchiveError::ParseDimension {
-                    dimension: self.clone(),
-                    err,
-                })? {
-                NameIdKind::Uuid(uuid) => uuid.into(),
-                NameIdKind::Slug(slug) => slug.into(),
-                NameIdKind::Name(name) => {
-                    match get_measure_by_name(project, &name, action, backend).await {
-                        Ok(json) => json.uuid.into(),
-                        Err(err @ ArchiveError::NotFound { .. }) => {
-                            return if get_measure_by_name(project, &name, !action, backend)
-                                .await
-                                .is_ok()
-                            {
-                                self.log_noop(action);
-                                Ok(())
-                            } else {
-                                Err(err)
-                            };
-                        },
-                        Err(err) => return Err(err),
-                    }
-                },
-            };
+        let named_id: NamedId<MeasureUuid, MeasureSlug, ResourceName> = name_id
+            .try_into()
+            .map_err(|err| ArchiveError::ParseDimension {
+                dimension: self.clone(),
+                err,
+            })?;
+        let measure: &ResourceId = &match named_id {
+            NamedId::Uuid(uuid) => uuid.into(),
+            NamedId::Slug(slug) => slug.into(),
+            NamedId::Name(name) => {
+                match get_measure_by_name(project, &name, action, backend).await {
+                    Ok(json) => json.uuid.into(),
+                    Err(err @ ArchiveError::NotFound { .. }) => {
+                        return if get_measure_by_name(project, &name, !action, backend)
+                            .await
+                            .is_ok()
+                        {
+                            self.log_noop(action);
+                            Ok(())
+                        } else {
+                            Err(err)
+                        };
+                    },
+                    Err(err) => return Err(err),
+                }
+            },
+        };
         let update = &JsonUpdateMeasure {
             name: None,
             slug: None,
