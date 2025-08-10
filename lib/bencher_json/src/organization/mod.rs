@@ -32,7 +32,7 @@ impl From<UserUuid> for OrganizationUuid {
 
 impl From<ProjectSlug> for OrganizationSlug {
     fn from(slug: ProjectSlug) -> Self {
-        Self(Slug::from(slug))
+        Self(slug.into())
     }
 }
 

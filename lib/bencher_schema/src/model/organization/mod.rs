@@ -94,9 +94,10 @@ impl QueryOrganization {
         project_slug: &ProjectSlug,
     ) -> Result<Self, HttpError> {
         // The project organization should be created with the project's slug.
-        if let Ok(query_organization) =
-            Self::from_resource_id(conn_lock!(context), &project_slug.clone().into())
-        {
+        if let Ok(query_organization) = Self::from_resource_id(
+            conn_lock!(context),
+            &OrganizationSlug::from(project_slug.clone()).into(),
+        ) {
             // If the project is part of an organization that is claimed,
             // then the project can not have anonymous reports.
             return if query_organization.is_claimed(conn_lock!(context))? {

@@ -8,7 +8,7 @@ use std::{
 
 use bencher_json::{
     AlertUuid, BenchmarkSlug, BranchSlug, JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure,
-    JsonPerfQuery, JsonReport, MeasureSlug, ReportUuid, ResourceName, Slug, TestbedSlug,
+    JsonPerfQuery, JsonReport, MeasureSlug, ProjectSlug, ReportUuid, ResourceName, TestbedSlug,
     ThresholdUuid, Units,
     project::{
         alert::AlertStatus,
@@ -27,7 +27,7 @@ const EMPTY_CELL: &str = "<td></td>";
 
 pub struct ReportComment {
     console_url: Url,
-    project_slug: Slug,
+    project_slug: ProjectSlug,
     public_links: bool,
     multiple_iterations: bool,
     benchmark_count: usize,

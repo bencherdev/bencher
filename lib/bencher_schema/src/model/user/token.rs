@@ -1,5 +1,5 @@
 use bencher_json::{
-    DateTime, JsonNewToken, JsonToken, Jwt, ResourceId, ResourceName, TokenUuid,
+    DateTime, JsonNewToken, JsonToken, Jwt, ResourceId, ResourceName, TokenUuid, UserResourceId,
     user::token::JsonUpdateToken,
 };
 use bencher_token::TokenKey;
@@ -134,7 +134,7 @@ impl InsertToken {
         conn: &mut DbConnection,
         rbac: &Rbac,
         token_key: &TokenKey,
-        user: &ResourceId,
+        user: &UserResourceId,
         token: JsonNewToken,
         auth_user: &AuthUser,
     ) -> Result<Self, HttpError> {

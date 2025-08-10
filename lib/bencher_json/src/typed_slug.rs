@@ -44,6 +44,12 @@ macro_rules! typed_slug {
             }
         }
 
+        impl AsRef<str> for $slug {
+            fn as_ref(&self) -> &str {
+                self.0.as_ref()
+            }
+        }
+
         $crate::typed_db::typed_db!($slug);
     };
     ($slug:ident, $name:ident) => {

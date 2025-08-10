@@ -18,6 +18,12 @@ pub enum ResourceId<U, S> {
     Slug(S),
 }
 
+impl<U, S> From<S> for ResourceId<U, S> {
+    fn from(slug: S) -> Self {
+        Self::Slug(slug)
+    }
+}
+
 #[cfg(feature = "schema")]
 impl<U, S> JsonSchema for ResourceId<U, S>
 where
