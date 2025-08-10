@@ -1,8 +1,8 @@
 use std::string::ToString as _;
 
 use bencher_json::{
-    DateTime, JsonNewOrganization, JsonOrganization, Jwt, OrganizationUuid, ResourceId,
-    ResourceName, Slug,
+    DateTime, JsonNewOrganization, JsonOrganization, Jwt, OrganizationResourceId, OrganizationSlug,
+    OrganizationUuid, ProjectSlug, ResourceName,
     organization::{
         JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization,
         member::OrganizationRole,
@@ -43,15 +43,15 @@ pub struct QueryOrganization {
     pub id: OrganizationId,
     pub uuid: OrganizationUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: OrganizationSlug,
     pub license: Option<Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
 }
 
 impl QueryOrganization {
-    fn_eq_resource_id!(organization);
-    fn_from_resource_id!(organization, Organization);
+    fn_eq_resource_id!(organization, OrganizationResourceId);
+    fn_from_resource_id!(organization, Organization, OrganizationResourceId);
 
     pub fn from_uuid(conn: &mut DbConnection, uuid: OrganizationUuid) -> Result<Self, HttpError> {
         schema::organization::table
@@ -91,7 +91,7 @@ impl QueryOrganization {
     pub async fn get_or_create_from_project(
         context: &ApiContext,
         project_name: &ResourceName,
-        project_slug: &Slug,
+        project_slug: &ProjectSlug,
     ) -> Result<Self, HttpError> {
         // The project organization should be created with the project's slug.
         if let Ok(query_organization) =
@@ -109,7 +109,7 @@ impl QueryOrganization {
         }
 
         let insert_organization =
-            InsertOrganization::new(project_name.clone(), project_slug.clone());
+            InsertOrganization::new(project_name.clone(), project_slug.clone().into());
         Self::create_inner(context, insert_organization).await
     }
 
@@ -156,7 +156,7 @@ impl QueryOrganization {
     pub fn is_allowed_resource_id(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        organization: &ResourceId,
+        organization: &OrganizationResourceId,
         auth_user: &AuthUser,
         permission: Permission,
     ) -> Result<Self, HttpError> {
@@ -170,7 +170,7 @@ impl QueryOrganization {
     fn is_allowed_resource_id_inner(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        organization: &ResourceId,
+        organization: &OrganizationResourceId,
         auth_user: &AuthUser,
         permission: Permission,
     ) -> Result<Self, HttpError> {
@@ -297,7 +297,7 @@ impl QueryOrganization {
 pub struct InsertOrganization {
     pub uuid: OrganizationUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: OrganizationSlug,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -338,11 +338,11 @@ impl InsertOrganization {
         }
     }
 
-    fn new(name: ResourceName, slug: Slug) -> Self {
+    fn new(name: ResourceName, slug: OrganizationSlug) -> Self {
         Self::new_inner(OrganizationUuid::new(), name, slug)
     }
 
-    fn new_inner(uuid: OrganizationUuid, name: ResourceName, slug: Slug) -> Self {
+    fn new_inner(uuid: OrganizationUuid, name: ResourceName, slug: OrganizationSlug) -> Self {
         let timestamp = DateTime::now();
         Self {
             uuid,
@@ -355,8 +355,14 @@ impl InsertOrganization {
 
     pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
-        let slug = ok_slug!(conn, &name, slug, organization, QueryOrganization);
-        Self::new(name, slug)
+        let slug = ok_slug!(
+            conn,
+            &name,
+            slug.map(Into::into),
+            organization,
+            QueryOrganization
+        );
+        Self::new(name, slug.into())
     }
 
     pub fn from_user(conn: &mut DbConnection, query_user: &QueryUser) -> Self {
@@ -371,7 +377,7 @@ impl InsertOrganization {
             QueryOrganization
         );
         // The user's organization should be created with the user's UUID.
-        Self::new_inner(query_user.uuid.into(), name.into(), slug)
+        Self::new_inner(query_user.uuid.into(), name.into(), slug.into())
     }
 }
 
@@ -379,7 +385,7 @@ impl InsertOrganization {
 #[diesel(table_name = organization_table)]
 pub struct UpdateOrganization {
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<OrganizationSlug>,
     #[cfg(feature = "plus")]
     pub license: Option<Option<Jwt>>,
     pub modified: DateTime,

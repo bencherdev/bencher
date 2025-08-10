@@ -1,11 +1,16 @@
 pub mod token;
-use bencher_valid::{Email, Slug, UserName};
+use bencher_valid::{Email, ResourceId, Slug, UserName};
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 crate::typed_uuid::typed_uuid!(UserUuid);
+crate::typed_slug::typed_slug!(UserSlug, UserName);
+
+/// An user UUID or slug.
+#[typeshare::typeshare]
+pub type UserResourceId = ResourceId<UserUuid, UserSlug>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

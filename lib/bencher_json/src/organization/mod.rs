@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, ResourceName, Slug};
+use bencher_valid::{DateTime, ResourceId, ResourceName, Slug};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -9,7 +9,7 @@ use serde::{
     de::{self, Visitor},
 };
 
-use crate::UserUuid;
+use crate::{ProjectSlug, UserUuid};
 
 pub mod claim;
 pub mod member;
@@ -17,11 +17,22 @@ pub mod plan;
 pub mod usage;
 
 crate::typed_uuid::typed_uuid!(OrganizationUuid);
+crate::typed_slug::typed_slug!(OrganizationSlug, ResourceName);
+
+/// An organization UUID or slug.
+#[typeshare::typeshare]
+pub type OrganizationResourceId = ResourceId<OrganizationUuid, OrganizationSlug>;
 
 // Create a personal organization for a user.
 impl From<UserUuid> for OrganizationUuid {
     fn from(uuid: UserUuid) -> Self {
         uuid::Uuid::from(uuid).into()
+    }
+}
+
+impl From<ProjectSlug> for OrganizationSlug {
+    fn from(slug: ProjectSlug) -> Self {
+        Self(Slug::from(slug))
     }
 }
 
@@ -35,7 +46,7 @@ pub struct JsonNewOrganization {
     /// If not provided, the slug will be generated from the name.
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<OrganizationSlug>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,7 +61,7 @@ crate::from_vec!(JsonOrganizations[JsonOrganization]);
 pub struct JsonOrganization {
     pub uuid: OrganizationUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: OrganizationSlug,
     #[cfg(feature = "plus")]
     pub license: Option<bencher_valid::Jwt>,
     pub created: DateTime,
@@ -85,7 +96,7 @@ pub struct JsonOrganizationPatch {
     pub name: Option<ResourceName>,
     /// The preferred new slug for the organization.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<OrganizationSlug>,
     /// ➕ Bencher Plus: The new license for the organization.
     /// Set to `null` to remove the current license.
     #[cfg(feature = "plus")]
@@ -96,7 +107,7 @@ pub struct JsonOrganizationPatch {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOrganizationPatchNull {
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<OrganizationSlug>,
     #[cfg(feature = "plus")]
     pub license: (),
 }

@@ -2,13 +2,12 @@
 
 use bencher_valid::{
     CardCvc, CardNumber, Email, Entitlements, ExpirationMonth, ExpirationYear, NonEmpty, PlanLevel,
-    ResourceId,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{OrganizationUuid, UserUuid};
+use crate::{OrganizationResourceId, OrganizationUuid, UserUuid};
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,7 +48,7 @@ pub struct JsonPayment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewCheckout {
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub self_hosted: Option<OrganizationUuid>,

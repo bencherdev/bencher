@@ -30,18 +30,6 @@ macro_rules! typed_slug {
             }
         }
 
-        impl From<$slug> for crate::ResourceId {
-            fn from(slug: $slug) -> Self {
-                slug.0.into()
-            }
-        }
-
-        // impl From<$slug> for crate::NameId<$crate::Slug> {
-        //     fn from(slug: $slug) -> Self {
-        //         slug.0.into()
-        //     }
-        // }
-
         impl std::str::FromStr for $slug {
             type Err = $crate::ValidError;
 

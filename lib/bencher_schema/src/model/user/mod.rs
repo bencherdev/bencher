@@ -54,8 +54,8 @@ pub struct QueryUser {
 }
 
 impl QueryUser {
-    fn_eq_resource_id!(user);
-    fn_from_resource_id!(user, User);
+    fn_eq_resource_id!(user, UserResourceId);
+    fn_from_resource_id!(user, User, UserResourceId);
 
     fn from_uuid(conn: &mut DbConnection, uuid: UserUuid) -> Result<Self, HttpError> {
         schema::user::table

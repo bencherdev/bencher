@@ -1,8 +1,8 @@
 use std::{string::ToString as _, sync::LazyLock};
 
 use bencher_json::{
-    DateTime, JsonNewProject, JsonProject, ProjectUuid, ResourceId, ResourceIdKind, ResourceName,
-    Slug, Url,
+    DateTime, JsonNewProject, JsonProject, ProjectResourceId, ProjectSlug, ProjectUuid,
+    ResourceName, Url,
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, ProjectRole, Visibility},
 };
 use bencher_rbac::{Organization, Project, project::Permission};
@@ -61,7 +61,7 @@ pub struct QueryProject {
     pub uuid: ProjectUuid,
     pub organization_id: OrganizationId,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: ProjectSlug,
     pub url: Option<Url>,
     pub visibility: Visibility,
     pub created: DateTime,
@@ -69,8 +69,8 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
-    fn_eq_resource_id!(project);
-    fn_from_resource_id!(project, Project);
+    fn_eq_resource_id!(project, ProjectResourceId);
+    fn_from_resource_id!(project, Project, ProjectResourceId);
 
     fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
@@ -82,7 +82,7 @@ impl QueryProject {
         Project
     );
 
-    fn from_slug(conn: &mut DbConnection, slug: &Slug) -> Result<Self, HttpError> {
+    fn from_slug(conn: &mut DbConnection, slug: &ProjectSlug) -> Result<Self, HttpError> {
         schema::project::table
             .filter(schema::project::slug.eq(slug))
             .first(conn)
@@ -93,7 +93,7 @@ impl QueryProject {
         log: &Logger,
         context: &ApiContext,
         auth_user: Option<&AuthUser>,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         project_name_fn: NameFn,
     ) -> Result<Self, HttpError>
     where
@@ -106,12 +106,9 @@ impl QueryProject {
             Err(e) => e,
         };
 
-        let Ok(kind) = ResourceIdKind::try_from(project) else {
-            return Err(http_error);
-        };
-        let project_slug = match kind {
-            ResourceIdKind::Uuid(_) => return Err(http_error),
-            ResourceIdKind::Slug(slug) => slug,
+        let project_slug = match project.clone() {
+            ProjectResourceId::Uuid(_) => return Err(http_error),
+            ProjectResourceId::Slug(slug) => slug,
         };
 
         Self::get_or_create_inner(log, context, auth_user, project_name_fn, project_slug).await
@@ -126,7 +123,7 @@ impl QueryProject {
     ) -> Result<Self, HttpError>
     where
         NameFn: FnOnce() -> Result<ResourceName, HttpError>,
-        SlugFn: FnOnce() -> Result<Slug, HttpError>,
+        SlugFn: FnOnce() -> Result<ProjectSlug, HttpError>,
     {
         let project_slug = project_slug_fn()?;
         if let Ok(query_project) = Self::from_slug(conn_lock!(context), &project_slug) {
@@ -141,7 +138,7 @@ impl QueryProject {
         context: &ApiContext,
         auth_user: Option<&AuthUser>,
         project_name_fn: NameFn,
-        project_slug: Slug,
+        project_slug: ProjectSlug,
     ) -> Result<Self, HttpError>
     where
         NameFn: FnOnce() -> Result<ResourceName, HttpError>,
@@ -360,7 +357,7 @@ impl QueryProject {
     pub fn is_allowed(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         auth_user: &AuthUser,
         permission: Permission,
     ) -> Result<Self, HttpError> {
@@ -373,7 +370,7 @@ impl QueryProject {
     fn is_allowed_inner(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         auth_user: &AuthUser,
         permission: Permission,
     ) -> Result<Self, HttpError> {
@@ -385,7 +382,7 @@ impl QueryProject {
     pub fn is_allowed_public(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         auth_user: Option<&AuthUser>,
     ) -> Result<Self, HttpError> {
         // Do not leak information about private projects.
@@ -398,7 +395,7 @@ impl QueryProject {
     fn is_allowed_public_inner(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         auth_user: Option<&AuthUser>,
     ) -> Result<Self, HttpError> {
         let query_project = Self::from_resource_id(conn, project)?;
@@ -492,7 +489,7 @@ pub struct InsertProject {
     pub uuid: ProjectUuid,
     pub organization_id: OrganizationId,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: ProjectSlug,
     pub url: Option<Url>,
     pub visibility: Visibility,
     pub created: DateTime,
@@ -548,7 +545,7 @@ impl InsertProject {
     pub fn new(
         organization_id: OrganizationId,
         name: ResourceName,
-        slug: Slug,
+        slug: ProjectSlug,
         url: Option<Url>,
         visibility: Option<Visibility>,
     ) -> Self {
@@ -566,7 +563,7 @@ impl InsertProject {
         uuid: ProjectUuid,
         organization_id: OrganizationId,
         name: ResourceName,
-        slug: Slug,
+        slug: ProjectSlug,
         url: Option<Url>,
         visibility: Option<Visibility>,
     ) -> Self {
@@ -594,14 +591,14 @@ impl InsertProject {
             url,
             visibility,
         } = project;
-        let slug = ok_slug!(conn, &name, slug, project, QueryProject);
+        let slug = ok_slug!(conn, &name, slug.map(Into::into), project, QueryProject);
         Self::new(organization.id, name, slug, url, visibility)
     }
 
     fn from_organization(
         query_organization: &QueryOrganization,
         name: ResourceName,
-        slug: Slug,
+        slug: ProjectSlug,
     ) -> Self {
         Self::new_inner(
             query_organization.uuid.into(),
@@ -618,7 +615,7 @@ impl InsertProject {
 #[diesel(table_name = project_table)]
 pub struct UpdateProject {
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<ProjectSlug>,
     pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,
     pub modified: DateTime,

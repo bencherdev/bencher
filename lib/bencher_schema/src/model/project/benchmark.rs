@@ -37,8 +37,14 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
-    fn_eq_resource_id!(benchmark);
-    fn_from_resource_id!(project_id, ProjectId, benchmark, Benchmark);
+    fn_eq_resource_id!(benchmark, BenchmarkResourceId);
+    fn_from_resource_id!(
+        project_id,
+        ProjectId,
+        benchmark,
+        Benchmark,
+        BenchmarkResourceId
+    );
 
     fn_get!(benchmark, BenchmarkId);
     fn_get_id!(benchmark, BenchmarkId, BenchmarkUuid);

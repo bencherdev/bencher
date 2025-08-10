@@ -35,18 +35,6 @@ macro_rules! typed_uuid {
             }
         }
 
-        impl From<$uuid> for crate::ResourceId {
-            fn from(uuid: $uuid) -> Self {
-                uuid.0.into()
-            }
-        }
-
-        // impl From<$uuid> for crate::NameId<uuid::Uuid> {
-        //     fn from(uuid: $uuid) -> Self {
-        //         uuid.0.into()
-        //     }
-        // }
-
         impl std::str::FromStr for $uuid {
             type Err = uuid::Error;
 

@@ -1,7 +1,7 @@
 macro_rules! fn_eq_resource_id {
-    ($table:ident) => {
+    ($table:ident, $resource_id:ident) => {
         pub fn eq_resource_id(
-            resource_id: &bencher_json::ResourceId,
+            resource_id: &bencher_json::$resource_id,
         ) -> Result<
             Box<
                 dyn diesel::BoxableExpression<
@@ -12,22 +12,14 @@ macro_rules! fn_eq_resource_id {
             >,
             dropshot::HttpError,
         > {
-            Ok(
-                match resource_id.try_into().map_err(|e| {
-                    $crate::error::issue_error(
-                        "Failed to parse resource ID",
-                        "Failed to parse resource ID.",
-                        e,
-                    )
-                })? {
-                    bencher_json::ResourceIdKind::Uuid(uuid) => {
-                        Box::new($crate::schema::$table::uuid.eq(uuid.to_string()))
-                    },
-                    bencher_json::ResourceIdKind::Slug(slug) => {
-                        Box::new($crate::schema::$table::slug.eq(slug.to_string()))
-                    },
+            Ok(match resource_id {
+                bencher_json::ResourceId::Uuid(uuid) => {
+                    Box::new($crate::schema::$table::uuid.eq(uuid.to_string()))
                 },
-            )
+                bencher_json::ResourceId::Slug(slug) => {
+                    Box::new($crate::schema::$table::slug.eq(slug.to_string()))
+                },
+            })
         }
     };
 }
@@ -35,11 +27,11 @@ macro_rules! fn_eq_resource_id {
 pub(crate) use fn_eq_resource_id;
 
 macro_rules! fn_from_resource_id {
-    ($parent:ident, $parent_type:ty, $table:ident, $resource:ident) => {
+    ($parent:ident, $parent_type:ty, $table:ident, $resource:ident, $resource_id:ident) => {
         pub fn from_resource_id(
             conn: &mut $crate::context::DbConnection,
             parent: $parent_type,
-            resource_id: &bencher_json::ResourceId,
+            resource_id: &bencher_json::$resource_id,
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(schema::$table::$parent.eq(parent))
@@ -51,10 +43,10 @@ macro_rules! fn_from_resource_id {
                 ))
         }
     };
-    ($table:ident, $resource:ident) => {
+    ($table:ident, $resource:ident, $resource_id:ident) => {
         pub fn from_resource_id(
             conn: &mut $crate::context::DbConnection,
-            resource_id: &bencher_json::ResourceId,
+            resource_id: &bencher_json::$resource_id,
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(Self::eq_resource_id(resource_id)?)

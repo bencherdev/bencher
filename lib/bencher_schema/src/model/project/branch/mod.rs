@@ -55,8 +55,8 @@ pub struct QueryBranch {
 }
 
 impl QueryBranch {
-    fn_eq_resource_id!(branch);
-    fn_from_resource_id!(project_id, ProjectId, branch, Branch);
+    fn_eq_resource_id!(branch, BranchResourceId);
+    fn_from_resource_id!(project_id, ProjectId, branch, Branch, BranchResourceId);
 
     fn_eq_name_id!(BranchName, branch, BranchNameId);
     fn_from_name_id!(branch, Branch, BranchNameId);

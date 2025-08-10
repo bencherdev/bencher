@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use bencher_valid::{BranchName, DateTime, GitHash, NameId};
+use bencher_valid::{BranchName, DateTime, GitHash, NameId, ResourceId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -34,6 +34,10 @@ static BRANCH_MAIN_SLUG: LazyLock<Option<BranchSlug>> = LazyLock::new(|| {
 
 crate::typed_uuid::typed_uuid!(BranchUuid);
 crate::typed_slug::typed_slug!(BranchSlug, BranchName);
+
+/// An branch UUID or slug.
+#[typeshare::typeshare]
+pub type BranchResourceId = ResourceId<BranchUuid, BranchSlug>;
 
 /// A branch UUID, slug, or name.
 #[typeshare::typeshare]

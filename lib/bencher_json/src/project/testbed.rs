@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use bencher_valid::{DateTime, NameId, ResourceName};
+use bencher_valid::{DateTime, NameId, ResourceId, ResourceName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -32,6 +32,10 @@ static TESTBED_LOCALHOST_SLUG: LazyLock<Option<TestbedSlug>> = LazyLock::new(|| 
 
 crate::typed_uuid::typed_uuid!(TestbedUuid);
 crate::typed_slug::typed_slug!(TestbedSlug, ResourceName);
+
+/// An testbed UUID or slug.
+#[typeshare::typeshare]
+pub type TestbedResourceId = ResourceId<TestbedUuid, TestbedSlug>;
 
 /// A testbed UUID, slug, or name.
 #[typeshare::typeshare]

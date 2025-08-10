@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use bencher_valid::{DateTime, ResourceName, Slug, Url};
+use bencher_valid::{DateTime, ResourceId, ResourceName, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -28,6 +28,11 @@ pub mod testbed;
 pub mod threshold;
 
 crate::typed_uuid::typed_uuid!(ProjectUuid);
+crate::typed_slug::typed_slug!(ProjectSlug, ResourceName);
+
+/// An project UUID or slug.
+#[typeshare::typeshare]
+pub type ProjectResourceId = ResourceId<ProjectUuid, ProjectSlug>;
 
 // Create a project from an organization.
 impl From<OrganizationUuid> for ProjectUuid {
@@ -47,7 +52,7 @@ pub struct JsonNewProject {
     /// If not provided, the slug will be generated from the name.
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<ProjectSlug>,
     /// The URL for the project.
     /// If the project is public, the URL will be accessible listed on its Perf Page.
     pub url: Option<Url>,
@@ -69,7 +74,7 @@ pub struct JsonProject {
     pub uuid: ProjectUuid,
     pub organization: OrganizationUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: ProjectSlug,
     pub url: Option<Url>,
     pub visibility: Visibility,
     pub created: DateTime,
@@ -110,7 +115,7 @@ pub struct JsonProjectPatch {
     pub name: Option<ResourceName>,
     /// The preferred new slug for the project.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<ProjectSlug>,
     /// The new URL of the project.
     /// Set to `null` to remove the current URL.
     pub url: Option<Url>,
@@ -123,7 +128,7 @@ pub struct JsonProjectPatch {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProjectPatchNull {
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<ProjectSlug>,
     pub url: (),
     pub visibility: Option<Visibility>,
 }

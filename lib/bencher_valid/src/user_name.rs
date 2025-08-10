@@ -16,7 +16,7 @@ use serde::{
     de::{self, Visitor},
 };
 
-use crate::{REGEX_ERROR, ValidError, is_valid_len};
+use crate::{REGEX_ERROR, Slug, ValidError, is_valid_len};
 
 #[expect(clippy::expect_used)]
 static NAME_REGEX: LazyLock<Regex> =
@@ -47,6 +47,12 @@ impl FromStr for UserName {
 impl AsRef<str> for UserName {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl From<Slug> for UserName {
+    fn from(slug: Slug) -> Self {
+        Self(slug.to_string())
     }
 }
 

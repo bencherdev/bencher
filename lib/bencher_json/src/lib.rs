@@ -4,8 +4,8 @@ pub use bencher_context::RunContext;
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
     Index, IqrBoundary, Jwt, Model, ModelTest, NameId, NonEmpty, PercentageBoundary, ResourceId,
-    ResourceIdKind, ResourceName, SampleSize, Sanitize, Search, Secret, Slug, Units, Url, UserName,
-    ValidError, Window,
+    ResourceName, SampleSize, Sanitize, Search, Secret, Slug, Units, Url, UserName, ValidError,
+    Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
@@ -35,22 +35,29 @@ pub use organization::{plan::JsonPlan, usage::JsonUsage};
 
 pub use big_int::BigInt;
 pub use organization::{
-    JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationUuid,
+    JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationResourceId,
+    OrganizationSlug, OrganizationUuid,
     claim::JsonNewClaim,
     member::{JsonMember, JsonMembers},
 };
 pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
-    JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
+    JsonNewProject, JsonProject, JsonProjects, ProjectResourceId, ProjectSlug, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},
-    benchmark::{BenchmarkNameId, BenchmarkSlug, BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
+    benchmark::{
+        BenchmarkNameId, BenchmarkResourceId, BenchmarkSlug, BenchmarkUuid, JsonBenchmark,
+        JsonBenchmarks,
+    },
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
     branch::{
-        BranchNameId, BranchSlug, BranchUuid, JsonBranch, JsonBranches, JsonNewBranch,
-        JsonNewStartPoint,
+        BranchNameId, BranchResourceId, BranchSlug, BranchUuid, JsonBranch, JsonBranches,
+        JsonNewBranch, JsonNewStartPoint,
     },
     head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
-    measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureNameId, MeasureSlug, MeasureUuid},
+    measure::{
+        JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureNameId, MeasureResourceId, MeasureSlug,
+        MeasureUuid,
+    },
     metric::{
         JsonMetric, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MetricUuid,
     },
@@ -58,7 +65,10 @@ pub use project::{
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
-    testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedNameId, TestbedSlug, TestbedUuid},
+    testbed::{
+        JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedNameId, TestbedResourceId, TestbedSlug,
+        TestbedUuid,
+    },
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
 };
 pub use run::JsonNewRun;
@@ -78,7 +88,7 @@ pub use system::{
     version::JsonApiVersion,
 };
 pub use user::{
-    JsonPubUser, JsonUpdateUser, JsonUser, JsonUsers, UserUuid,
+    JsonPubUser, JsonUpdateUser, JsonUser, JsonUsers, UserResourceId, UserSlug, UserUuid,
     token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
 };
 

@@ -1,11 +1,11 @@
 use bencher_context::RunContext;
-use bencher_valid::{DateTime, GitHash, ResourceId};
+use bencher_valid::{DateTime, GitHash};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BranchNameId, TestbedNameId,
+    BranchNameId, ProjectResourceId, TestbedNameId,
     project::{
         branch::JsonUpdateStartPoint,
         report::{JsonReportSettings, JsonReportThresholds},
@@ -23,7 +23,7 @@ use crate::{
 pub struct JsonNewRun {
     /// Project UUID or slug.
     /// If the project is not provided or does not exist, it will be created.
-    pub project: Option<ResourceId>,
+    pub project: Option<ProjectResourceId>,
     /// Branch UUID, slug, or name.
     /// If the branch is not provided or does not exist, it will be created.
     pub branch: Option<BranchNameId>,
