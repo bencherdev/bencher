@@ -18,10 +18,15 @@
 "TokenUuid" = "Uuid"
 # Typed Slugs
 "Slug" = "string"
+"OrganizationSlug" = "Slug"
+"ProjectSlug" = "Slug"
 "BranchSlug" = "Slug"
 "TestbedSlug" = "Slug"
 "BenchmarkSlug" = "Slug"
 "MeasureSlug" = "Slug"
+"UserSlug" = "Slug"
+# Resource ID
+"ResourceId" = "Uuid | Slug"
 # Name ID
 "NameId" = "Uuid | Slug | string"
 # Other types

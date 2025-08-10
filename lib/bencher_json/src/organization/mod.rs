@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, ResourceId, ResourceName, Slug};
+use bencher_valid::{DateTime, ResourceId, ResourceName};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -30,6 +30,7 @@ impl From<UserUuid> for OrganizationUuid {
     }
 }
 
+// Create an organization for a project.
 impl From<ProjectSlug> for OrganizationSlug {
     fn from(slug: ProjectSlug) -> Self {
         Self(slug.into())

@@ -3,8 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    BranchName, HeadUuid, JsonBranch, JsonBranches, JsonDirection, JsonNewBranch, JsonPagination,
-    ResourceId, Search, project::branch::JsonUpdateBranch,
+    BranchName, BranchResourceId, HeadUuid, JsonBranch, JsonBranches, JsonDirection, JsonNewBranch,
+    JsonPagination, ProjectResourceId, Search, project::branch::JsonUpdateBranch,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -34,7 +34,7 @@ use slog::Logger;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchesParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 pub type ProjBranchesPagination = JsonPagination<ProjBranchesSort>;
@@ -238,9 +238,9 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The slug or UUID for a branch.
-    pub branch: ResourceId,
+    pub branch: BranchResourceId,
 }
 
 #[derive(Deserialize, JsonSchema)]

@@ -5,7 +5,7 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
-    DateTime, ResourceId,
+    DateTime, OrganizationResourceId,
     organization::plan::{JsonNewPlan, JsonPlan},
 };
 use bencher_rbac::organization::Permission;
@@ -34,7 +34,7 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgPlanParams {
     /// The slug or UUID for an organization.
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 }
 
 #[endpoint {

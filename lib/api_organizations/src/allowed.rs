@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
-use bencher_json::{JsonAllowed, ResourceId, organization::OrganizationPermission};
+use bencher_json::{JsonAllowed, OrganizationResourceId, organization::OrganizationPermission};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
@@ -15,7 +15,7 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgAllowedParams {
     /// The slug or UUID for an organization.
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
     /// The permission to check.
     pub permission: OrganizationPermission,
 }

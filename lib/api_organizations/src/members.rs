@@ -3,8 +3,8 @@ use bencher_endpoint::{
     ResponseOk, TotalCount,
 };
 use bencher_json::{
-    JsonAuthAck, JsonDirection, JsonMember, JsonMembers, JsonPagination, ResourceId, Search,
-    UserName,
+    JsonAuthAck, JsonDirection, JsonMember, JsonMembers, JsonPagination, OrganizationResourceId,
+    Search, UserName, UserResourceId,
     organization::member::{JsonNewMember, JsonUpdateMember},
 };
 use bencher_rbac::organization::Permission;
@@ -33,7 +33,7 @@ use slog::Logger;
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMembersParams {
     /// The slug or UUID for an organization.
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 }
 
 pub type OrgMembersPagination = JsonPagination<OrgMembersSort>;
@@ -325,9 +325,9 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMemberParams {
     /// The slug or UUID for an organization.
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
     /// The slug or UUID for an organization member.
-    pub user: ResourceId,
+    pub user: UserResourceId,
 }
 
 #[endpoint {

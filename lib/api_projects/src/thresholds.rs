@@ -3,7 +3,7 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ResourceId, ThresholdUuid,
+    JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ProjectResourceId, ThresholdUuid,
     project::threshold::{
         JsonNewThreshold, JsonRemoveModel, JsonThreshold, JsonThresholdQuery,
         JsonThresholdQueryParams, JsonUpdateModel, JsonUpdateThreshold,
@@ -42,7 +42,7 @@ use crate::macros::{filter_branch_name_id, filter_measure_name_id, filter_testbe
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdsParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 pub type ProjThresholdsPagination = JsonPagination<ProjThresholdsSort>;
@@ -306,7 +306,7 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The UUID for a threshold.
     pub threshold: ThresholdUuid,
 }

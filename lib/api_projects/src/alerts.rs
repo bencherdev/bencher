@@ -1,6 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk, TotalCount};
 use bencher_json::{
-    AlertUuid, JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
+    AlertUuid, JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ProjectResourceId,
     project::alert::{AlertStatus, JsonUpdateAlert},
 };
 use bencher_rbac::project::Permission;
@@ -28,7 +28,7 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAlertsParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 pub type ProjAlertsPagination = JsonPagination<ProjAlertsSort>;
@@ -283,7 +283,7 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAlertParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The UUID for an alert.
     pub alert: AlertUuid,
 }

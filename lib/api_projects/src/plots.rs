@@ -3,7 +3,7 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonNewPlot, JsonPagination, JsonPlot, JsonPlots, PlotUuid, ResourceId,
+    JsonDirection, JsonNewPlot, JsonPagination, JsonPlot, JsonPlots, PlotUuid, ProjectResourceId,
     ResourceName, Search, project::plot::JsonUpdatePlot,
 };
 use bencher_rbac::project::Permission;
@@ -31,7 +31,7 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPlotsParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 pub type ProjPlotsPagination = JsonPagination<ProjPlotsSort>;
@@ -233,7 +233,7 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPlotParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The UUID for a plot.
     pub plot: PlotUuid,
 }

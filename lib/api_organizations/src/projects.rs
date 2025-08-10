@@ -2,8 +2,8 @@ use bencher_endpoint::{
     CorsResponse, Endpoint, Get, Post, ResponseCreated, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, ResourceId,
-    ResourceName, Search,
+    JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects,
+    OrganizationResourceId, ResourceName, Search,
     project::measure::built_in::default::{Latency, Throughput},
 };
 use bencher_rbac::organization::Permission;
@@ -38,7 +38,7 @@ use slog::Logger;
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsParams {
     /// The slug or UUID for an organization.
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 }
 
 pub type OrgProjectsPagination = JsonPagination<OrgProjectsSort>;

@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{JsonNewRun, JsonReport, ResourceName, RunContext, Slug};
+use bencher_json::{JsonNewRun, JsonReport, ProjectSlug, ResourceName, RunContext};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     conn_lock,
@@ -105,11 +105,12 @@ fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {
         })
 }
 
-fn project_slug(json_run: &JsonNewRun) -> Result<Slug, HttpError> {
+fn project_slug(json_run: &JsonNewRun) -> Result<ProjectSlug, HttpError> {
     json_run
         .context
         .as_ref()
         .and_then(RunContext::slug)
+        .map(Into::into)
         .ok_or_else(|| {
             bad_request_error(
             "The `project` field was not specified nor was a run `context` provided for the slug",

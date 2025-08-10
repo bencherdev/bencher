@@ -4,7 +4,7 @@ use bencher_endpoint::{
 };
 use bencher_json::{
     JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations, JsonPagination,
-    ResourceId, ResourceName, Search, organization::JsonUpdateOrganization,
+    OrganizationResourceId, ResourceName, Search, organization::JsonUpdateOrganization,
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
@@ -189,7 +189,7 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct OrganizationParams {
     /// The slug or UUID for an organization.
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 }
 
 #[endpoint {

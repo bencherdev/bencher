@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
-    ReportUuid, ResourceId, TestbedUuid,
+    ProjectResourceId, ReportUuid, TestbedUuid,
     project::{
         alert::JsonPerfAlert,
         head::{JsonVersion, VersionNumber},
@@ -45,7 +45,7 @@ const MAX_PERMUTATIONS: usize = 255;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 #[endpoint {

@@ -5,7 +5,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonNewReport, JsonPagination, JsonReport, JsonReports, ReportUuid, ResourceId,
+    JsonDirection, JsonNewReport, JsonPagination, JsonReport, JsonReports, ProjectResourceId,
+    ReportUuid,
     project::{
         head::VersionNumber,
         report::{JsonReportQuery, JsonReportQueryParams},
@@ -43,7 +44,7 @@ use crate::macros::{filter_branch_name_id, filter_testbed_name_id};
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportsParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 pub type ProjReportsPagination = JsonPagination<ProjReportsSort>;
@@ -299,7 +300,7 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The UUID for a report.
     pub report: ReportUuid,
 }

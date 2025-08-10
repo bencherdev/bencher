@@ -2,7 +2,8 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, ResponseDeleted, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonPagination, JsonProject, JsonProjects, ResourceId, ResourceName, Search,
+    JsonDirection, JsonPagination, JsonProject, JsonProjects, ProjectResourceId, ResourceName,
+    Search,
     project::{JsonUpdateProject, Visibility},
 };
 use bencher_rbac::project::Permission;
@@ -178,7 +179,7 @@ fn get_ls_query<'q>(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjectParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 #[endpoint {

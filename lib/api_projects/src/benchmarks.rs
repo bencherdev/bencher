@@ -3,8 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    BenchmarkName, JsonBenchmark, JsonBenchmarks, JsonDirection, JsonPagination, ResourceId,
-    Search,
+    BenchmarkName, BenchmarkResourceId, JsonBenchmark, JsonBenchmarks, JsonDirection,
+    JsonPagination, ProjectResourceId, Search,
     project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
 };
 use bencher_rbac::project::Permission;
@@ -32,7 +32,7 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBenchmarksParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 pub type ProjBenchmarksPagination = JsonPagination<ProjBenchmarksSort>;
@@ -227,9 +227,9 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBenchmarkParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The slug or UUID for a benchmark.
-    pub benchmark: ResourceId,
+    pub benchmark: BenchmarkResourceId,
 }
 
 #[endpoint {

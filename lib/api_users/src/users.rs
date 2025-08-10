@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk, TotalCount};
 use bencher_json::{
-    JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, Sanitize as _, Search,
-    UserName, user::JsonUsers,
+    JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, Sanitize as _, Search, UserName,
+    UserResourceId, user::JsonUsers,
 };
 use bencher_schema::{
     conn_lock,
@@ -136,7 +136,7 @@ fn get_ls_query<'q>(
 #[derive(Deserialize, JsonSchema)]
 pub struct UserParams {
     /// The slug or UUID for a user.
-    pub user: ResourceId,
+    pub user: UserResourceId,
 }
 
 #[endpoint {

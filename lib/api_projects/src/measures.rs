@@ -3,8 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonMeasure, JsonMeasures, JsonNewMeasure, JsonPagination, ResourceId,
-    ResourceName, Search, project::measure::JsonUpdateMeasure,
+    JsonDirection, JsonMeasure, JsonMeasures, JsonNewMeasure, JsonPagination, MeasureResourceId,
+    ProjectResourceId, ResourceName, Search, project::measure::JsonUpdateMeasure,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -31,7 +31,7 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMeasuresParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 }
 
 pub type ProjMeasuresPagination = JsonPagination<ProjMeasuresSort>;
@@ -226,9 +226,9 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMeasureParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The slug or UUID for a measure.
-    pub measure: ResourceId,
+    pub measure: MeasureResourceId,
 }
 
 #[endpoint {

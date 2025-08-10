@@ -1,6 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    DateTime, JsonOneMetric, MetricUuid, ReportUuid, ResourceId, project::report::Iteration,
+    DateTime, JsonOneMetric, MetricUuid, ProjectResourceId, ReportUuid, project::report::Iteration,
 };
 use bencher_schema::{
     conn_lock,
@@ -35,7 +35,7 @@ use super::perf::threshold_model_alert;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMetricParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The UUID for a metric.
     pub metric: MetricUuid,
 }

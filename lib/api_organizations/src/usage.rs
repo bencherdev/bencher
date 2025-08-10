@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    DateTime, ResourceId,
+    DateTime, OrganizationResourceId,
     organization::usage::{JsonUsage, UsageKind},
 };
 use bencher_rbac::organization::Permission;
@@ -29,7 +29,7 @@ const DEFAULT_USAGE_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgUsageParams {
     /// The slug or UUID for an organization.
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 }
 
 #[endpoint {

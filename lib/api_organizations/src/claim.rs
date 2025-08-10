@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{JsonNewClaim, JsonOrganization, ResourceId};
+use bencher_json::{JsonNewClaim, JsonOrganization, OrganizationResourceId};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
@@ -15,7 +15,7 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgClaimParams {
     /// The slug or UUID for an organization.
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 }
 
 #[endpoint {

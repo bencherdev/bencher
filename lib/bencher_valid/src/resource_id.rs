@@ -10,7 +10,6 @@ use serde::{
 
 use crate::ValidError;
 
-#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(untagged)]
 pub enum ResourceId<U, S> {

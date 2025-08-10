@@ -7,12 +7,18 @@ export type BenchmarkName = string;
 /** A benchmark UUID, slug, or name. */
 export type BenchmarkNameId = Uuid | Slug | string;
 
+/** An benchmark UUID or slug. */
+export type BenchmarkResourceId = Uuid | Slug;
+
 export type Boundary = number;
 
 export type BranchName = string;
 
 /** A branch UUID, slug, or name. */
 export type BranchNameId = Uuid | Slug | string;
+
+/** An branch UUID or slug. */
+export type BranchResourceId = Uuid | Slug;
 
 export type CardCvc = string;
 
@@ -224,11 +230,18 @@ export type LastFour = string;
 
 export type LicensedPlanId = string;
 
+/** An measure UUID or slug. */
+export type MeasureResourceId = Uuid | Slug;
+
 export type MeteredPlanId = string;
 
 export type NonEmpty = string;
 
-export type ResourceId = string;
+/** An organization UUID or slug. */
+export type OrganizationResourceId = Uuid | Slug;
+
+/** An project UUID or slug. */
+export type ProjectResourceId = Uuid | Slug;
 
 export type RunContext = Record<string, string>;
 
@@ -239,9 +252,15 @@ export type Slug = string;
 /** A testbed UUID, slug, or name. */
 export type TestbedNameId = Uuid | Slug | string;
 
+/** An testbed UUID or slug. */
+export type TestbedResourceId = Uuid | Slug;
+
 export type Url = string;
 
 export type UserName = string;
+
+/** An user UUID or slug. */
+export type UserResourceId = Uuid | Slug;
 
 export type Uuid = string;
 
@@ -332,7 +351,7 @@ export interface JsonLogin {
 }
 
 export interface JsonNewCheckout {
-	organization: ResourceId;
+	organization: OrganizationResourceId;
 	level: PlanLevel;
 	entitlements?: Entitlements;
 	self_hosted?: Uuid;
@@ -443,7 +462,7 @@ export interface JsonNewProject {
 	 * If the provided or generated slug is already in use, a unique slug will be generated.
 	 * Maximum length is 64 characters.
 	 */
-	slug?: string;
+	slug?: Slug;
 	/**
 	 * The URL for the project.
 	 * If the project is public, the URL will be accessible listed on its Perf Page.
@@ -502,7 +521,7 @@ export interface JsonOneMetric {
 export interface JsonOrganization {
 	uuid: Uuid;
 	name: ResourceName;
-	slug: string;
+	slug: Slug;
 	license?: Jwt;
 	created: string;
 	modified: string;
@@ -518,7 +537,7 @@ export interface JsonProject {
 	uuid: Uuid;
 	organization: Uuid;
 	name: ResourceName;
-	slug: string;
+	slug: Slug;
 	url?: Url;
 	visibility: Visibility;
 	created: string;

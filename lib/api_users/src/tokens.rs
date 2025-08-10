@@ -2,8 +2,8 @@ use bencher_endpoint::{
     CorsResponse, Endpoint, Get, Patch, Post, ResponseCreated, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonNewToken, JsonPagination, JsonToken, JsonTokens, ResourceId, ResourceName,
-    Search, user::token::JsonUpdateToken,
+    JsonDirection, JsonNewToken, JsonPagination, JsonToken, JsonTokens, ResourceName, Search,
+    UserResourceId, user::token::JsonUpdateToken,
 };
 use bencher_schema::{
     conn_lock,
@@ -29,7 +29,7 @@ use uuid::Uuid;
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokensParams {
     /// The slug or UUID for a user.
-    pub user: ResourceId,
+    pub user: UserResourceId,
 }
 
 pub type UserTokensPagination = JsonPagination<UserTokensSort>;
@@ -221,7 +221,7 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokenParams {
     /// The slug or UUID for a user.
-    pub user: ResourceId,
+    pub user: UserResourceId,
     /// The UUID for a token.
     pub token: Uuid,
 }

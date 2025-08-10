@@ -1,5 +1,5 @@
 use bencher_json::{
-    DateTime, JsonNewToken, JsonToken, Jwt, ResourceId, ResourceName, TokenUuid, UserResourceId,
+    DateTime, JsonNewToken, JsonToken, Jwt, ResourceName, TokenUuid, UserResourceId,
     user::token::JsonUpdateToken,
 };
 use bencher_token::TokenKey;

@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
-use bencher_json::{JsonAllowed, ResourceId, project::ProjectPermission};
+use bencher_json::{JsonAllowed, ProjectResourceId, project::ProjectPermission};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
@@ -15,7 +15,7 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAllowedParams {
     /// The slug or UUID for a project.
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     /// The permission to check.
     pub permission: ProjectPermission,
 }
