@@ -373,7 +373,7 @@ impl InsertOrganization {
         let slug = ok_slug!(
             conn,
             &name,
-            Some(query_user.slug.clone()),
+            Some(query_user.slug.clone().into()),
             organization,
             QueryOrganization
         );

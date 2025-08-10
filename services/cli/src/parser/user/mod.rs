@@ -1,4 +1,4 @@
-use bencher_json::{Email, Slug, UserName, UserResourceId};
+use bencher_json::{Email, UserName, UserResourceId, UserSlug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -61,7 +61,7 @@ pub struct CliUserUpdate {
     pub name: Option<UserName>,
     /// User slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<UserSlug>,
     /// User email
     #[clap(long)]
     pub email: Option<Email>,

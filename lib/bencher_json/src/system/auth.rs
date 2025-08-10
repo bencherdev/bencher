@@ -1,18 +1,18 @@
-use bencher_valid::{DateTime, Email, Jwt, Slug, UserName};
+use bencher_valid::{DateTime, Email, Jwt, UserName};
 #[cfg(feature = "plus")]
 use bencher_valid::{PlanLevel, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{JsonUser, OrganizationUuid};
+use crate::{JsonUser, OrganizationUuid, UserSlug};
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSignup {
     pub name: UserName,
-    pub slug: Option<Slug>,
+    pub slug: Option<UserSlug>,
     pub email: Email,
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,

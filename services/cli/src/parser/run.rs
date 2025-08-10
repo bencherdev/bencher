@@ -1,4 +1,4 @@
-use bencher_json::{BranchNameId, DateTime, GitHash, ResourceId, TestbedNameId};
+use bencher_json::{BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId};
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
@@ -12,7 +12,7 @@ use super::project::report::{
 pub struct CliRun {
     /// Project slug or UUID
     #[clap(long, env = "BENCHER_PROJECT")]
-    pub project: Option<ResourceId>,
+    pub project: Option<ProjectResourceId>,
 
     #[clap(flatten)]
     pub branch: CliRunBranch,

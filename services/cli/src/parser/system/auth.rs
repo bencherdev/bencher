@@ -1,4 +1,4 @@
-use bencher_json::{Email, Jwt, OrganizationUuid, Slug, UserName};
+use bencher_json::{Email, Jwt, OrganizationUuid, UserName, UserSlug};
 use clap::{Parser, Subcommand};
 
 use crate::parser::CliBackend;
@@ -29,7 +29,7 @@ pub struct CliAuthSignup {
 
     /// User slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<UserSlug>,
 
     #[cfg(feature = "plus")]
     /// Plan level

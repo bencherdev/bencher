@@ -1,5 +1,5 @@
 pub mod token;
-use bencher_valid::{Email, ResourceId, Slug, UserName};
+use bencher_valid::{Email, ResourceId, UserName};
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -24,7 +24,7 @@ crate::from_vec!(JsonUsers[JsonUser]);
 pub struct JsonUser {
     pub uuid: UserUuid,
     pub name: UserName,
-    pub slug: Slug,
+    pub slug: UserSlug,
     pub email: Email,
     pub admin: bool,
     pub locked: bool,
@@ -36,7 +36,7 @@ pub struct JsonUser {
 pub struct JsonPubUser {
     pub uuid: UserUuid,
     pub name: UserName,
-    pub slug: Slug,
+    pub slug: UserSlug,
 }
 
 #[typeshare::typeshare]
@@ -49,7 +49,7 @@ pub struct JsonUpdateUser {
     pub name: Option<UserName>,
     /// The preferred new slug for the user.
     /// Maximum length is 64 characters.
-    pub slug: Option<Slug>,
+    pub slug: Option<UserSlug>,
     /// The new email for the user.
     pub email: Option<Email>,
     /// Update whether the user is an admin.

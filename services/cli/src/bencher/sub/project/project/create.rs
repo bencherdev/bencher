@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonNewProject, Visibility};
-use bencher_json::{OrganizationResourceId, ResourceName, Slug, Url};
+use bencher_json::{OrganizationResourceId, ProjectSlug, ResourceName, Url};
 
 use crate::{
     CliError,
@@ -11,7 +11,7 @@ use crate::{
 pub struct Create {
     pub organization: OrganizationResourceId,
     pub name: ResourceName,
-    pub slug: Option<Slug>,
+    pub slug: Option<ProjectSlug>,
     pub url: Option<Url>,
     pub visibility: Visibility,
     pub backend: AuthBackend,

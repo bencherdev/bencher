@@ -1,7 +1,7 @@
 use bencher_client::types::JsonSignup;
 #[cfg(feature = "plus")]
 use bencher_client::types::PlanLevel;
-use bencher_json::{Email, Jwt, OrganizationUuid, Slug, UserName};
+use bencher_json::{Email, Jwt, OrganizationUuid, UserName, UserSlug};
 
 use crate::{
     CliError,
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Signup {
     pub name: UserName,
-    pub slug: Option<Slug>,
+    pub slug: Option<UserSlug>,
     pub email: Email,
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,

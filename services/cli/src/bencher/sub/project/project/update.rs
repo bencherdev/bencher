@@ -1,7 +1,7 @@
 use bencher_client::types::{
     JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility,
 };
-use bencher_json::{ProjectResourceId, ResourceName, Slug, Url};
+use bencher_json::{ProjectResourceId, ProjectSlug, ResourceName, Url};
 
 use crate::{
     CliError,
@@ -14,7 +14,7 @@ use crate::{
 pub struct Update {
     pub project: ProjectResourceId,
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<ProjectSlug>,
     pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,
     pub backend: AuthBackend,

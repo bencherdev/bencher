@@ -12,18 +12,18 @@ use crate::ValidError;
 
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(untagged)]
-pub enum NameId<U, S, T> {
+pub enum NameId<U, S, N> {
     Uuid(U),
     Slug(S),
-    Name(T),
+    Name(N),
 }
 
 #[cfg(feature = "schema")]
-impl<U, S, T> JsonSchema for NameId<U, S, T>
+impl<U, S, N> JsonSchema for NameId<U, S, N>
 where
     U: JsonSchema,
     S: JsonSchema,
-    T: JsonSchema,
+    N: JsonSchema,
 {
     fn schema_name() -> String {
         "NameId".to_owned()
@@ -38,15 +38,15 @@ where
         // Otherwise, you get a runtime error: `can only flatten structs and maps (got a string)`
         // I believe this is a shortcoming of https://github.com/oxidecomputer/progenitor
         // For now, we just use the lowest common denominator's schema.
-        T::json_schema(generator)
+        N::json_schema(generator)
     }
 }
 
-impl<U, S, T> FromStr for NameId<U, S, T>
+impl<U, S, N> FromStr for NameId<U, S, N>
 where
     U: FromStr,
     S: FromStr,
-    T: FromStr,
+    N: FromStr,
 {
     type Err = ValidError;
 
@@ -55,7 +55,7 @@ where
             Ok(Self::Uuid(uuid))
         } else if let Ok(slug) = S::from_str(name_id) {
             Ok(Self::Slug(slug))
-        } else if let Ok(name) = T::from_str(name_id) {
+        } else if let Ok(name) = N::from_str(name_id) {
             Ok(Self::Name(name))
         } else {
             Err(ValidError::NameId(name_id.to_owned()))
@@ -63,11 +63,11 @@ where
     }
 }
 
-impl<'de, U, S, T> Deserialize<'de> for NameId<U, S, T>
+impl<'de, U, S, N> Deserialize<'de> for NameId<U, S, N>
 where
     U: FromStr,
     S: FromStr,
-    T: FromStr,
+    N: FromStr,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -79,17 +79,17 @@ where
     }
 }
 
-struct NameIdVisitor<U, S, T> {
-    marker: PhantomData<(U, S, T)>,
+struct NameIdVisitor<U, S, N> {
+    marker: PhantomData<(U, S, N)>,
 }
 
-impl<U, S, T> Visitor<'_> for NameIdVisitor<U, S, T>
+impl<U, S, N> Visitor<'_> for NameIdVisitor<U, S, N>
 where
     U: FromStr,
     S: FromStr,
-    T: FromStr,
+    N: FromStr,
 {
-    type Value = NameId<U, S, T>;
+    type Value = NameId<U, S, N>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("a valid UUID, slug, or name.")

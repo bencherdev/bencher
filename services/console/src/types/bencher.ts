@@ -275,7 +275,7 @@ export interface JsonAuthAck {
 export interface JsonUser {
 	uuid: Uuid;
 	name: UserName;
-	slug: string;
+	slug: Slug;
 	email: Email;
 	admin: boolean;
 	locked: boolean;
@@ -630,7 +630,7 @@ export interface JsonPlot {
 export interface JsonPubUser {
 	uuid: Uuid;
 	name: UserName;
-	slug: string;
+	slug: Slug;
 }
 
 export enum Adapter {
@@ -678,7 +678,7 @@ export interface JsonReport {
 
 export interface JsonSignup {
 	name: UserName;
-	slug?: string;
+	slug?: Slug;
 	email: Email;
 	plan?: PlanLevel;
 	invite?: Jwt;
@@ -719,7 +719,7 @@ export interface JsonUpdateUser {
 	 * The preferred new slug for the user.
 	 * Maximum length is 64 characters.
 	 */
-	slug?: string;
+	slug?: Slug;
 	/** The new email for the user. */
 	email?: Email;
 	/**

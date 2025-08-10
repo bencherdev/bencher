@@ -10630,7 +10630,7 @@
             "$ref": "#/components/schemas/UserName"
           },
           "slug": {
-            "$ref": "#/components/schemas/Slug"
+            "$ref": "#/components/schemas/UserSlug"
           },
           "uuid": {
             "$ref": "#/components/schemas/UserUuid"
@@ -11480,7 +11480,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/UserSlug"
               }
             ]
           }
@@ -12201,7 +12201,7 @@
             "description": "The preferred new slug for the user. Maximum length is 64 characters.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/UserSlug"
               }
             ]
           }
@@ -12291,7 +12291,7 @@
             "$ref": "#/components/schemas/UserName"
           },
           "slug": {
-            "$ref": "#/components/schemas/Slug"
+            "$ref": "#/components/schemas/UserSlug"
           },
           "uuid": {
             "$ref": "#/components/schemas/UserUuid"
@@ -12659,6 +12659,9 @@
       },
       "UserName": {
         "type": "string"
+      },
+      "UserSlug": {
+        "$ref": "#/components/schemas/Slug"
       },
       "UserUuid": {
         "type": "string",

@@ -1,4 +1,4 @@
-use bencher_json::{MeasureResourceId, MeasureSlug, ResourceId, ResourceName};
+use bencher_json::{MeasureResourceId, MeasureSlug, ProjectResourceId, ResourceName};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};

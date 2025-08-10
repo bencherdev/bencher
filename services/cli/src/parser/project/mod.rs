@@ -1,4 +1,4 @@
-use bencher_json::{OrganizationResourceId, ProjectResourceId, ResourceName, Slug, Url};
+use bencher_json::{OrganizationResourceId, ProjectResourceId, ProjectSlug, ResourceName, Url};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -75,7 +75,7 @@ pub struct CliProjectCreate {
 
     /// Project slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<ProjectSlug>,
 
     /// Project URL
     #[clap(long)]
@@ -118,7 +118,7 @@ pub struct CliProjectUpdate {
 
     /// Project slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<ProjectSlug>,
 
     /// Project URL
     /// To remove the current project URL without replacing it, use an underscore (`_`).

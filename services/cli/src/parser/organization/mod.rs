@@ -1,4 +1,4 @@
-use bencher_json::{OrganizationResourceId, ResourceName, Slug};
+use bencher_json::{OrganizationResourceId, OrganizationSlug, ResourceName};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use super::CliPagination;
@@ -76,7 +76,7 @@ pub struct CliOrganizationCreate {
 
     /// Organization slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<OrganizationSlug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -102,7 +102,7 @@ pub struct CliOrganizationUpdate {
 
     /// Organization slug
     #[clap(long)]
-    pub slug: Option<Slug>,
+    pub slug: Option<OrganizationSlug>,
 
     #[cfg(feature = "plus")]
     /// Organization license

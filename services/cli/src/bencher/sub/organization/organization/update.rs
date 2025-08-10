@@ -1,7 +1,7 @@
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonOrganizationPatchNull;
 use bencher_client::types::{JsonOrganizationPatch, JsonUpdateOrganization};
-use bencher_json::{OrganizationResourceId, ResourceName, Slug};
+use bencher_json::{OrganizationResourceId, OrganizationSlug, ResourceName};
 
 use crate::{
     CliError,
@@ -13,7 +13,7 @@ use crate::{
 pub struct Update {
     pub organization: OrganizationResourceId,
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<OrganizationSlug>,
     #[cfg(feature = "plus")]
     #[cfg_attr(feature = "plus", expect(clippy::option_option))]
     pub license: Option<Option<bencher_json::Jwt>>,

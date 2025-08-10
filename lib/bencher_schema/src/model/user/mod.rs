@@ -1,6 +1,6 @@
 use bencher_json::{
-    DateTime, Email, JsonPubUser, JsonSignup, JsonUpdateUser, JsonUser, Jwt, Sanitize, Slug,
-    UserName, UserUuid, organization::member::OrganizationRole,
+    DateTime, Email, JsonPubUser, JsonSignup, JsonUpdateUser, JsonUser, Jwt, Sanitize, UserName,
+    UserSlug, UserUuid, organization::member::OrganizationRole,
 };
 use bencher_token::TokenKey;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -45,7 +45,7 @@ pub struct QueryUser {
     pub id: UserId,
     pub uuid: UserUuid,
     pub name: UserName,
-    pub slug: Slug,
+    pub slug: UserSlug,
     pub email: Email,
     pub admin: bool,
     pub locked: bool,
@@ -174,7 +174,7 @@ impl Sanitize for QueryUser {
 pub struct InsertUser {
     pub uuid: UserUuid,
     pub name: UserName,
-    pub slug: Slug,
+    pub slug: UserSlug,
     pub email: Email,
     pub admin: bool,
     pub locked: bool,
@@ -183,13 +183,18 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn new(conn: &mut DbConnection, name: UserName, slug: Option<Slug>, email: Email) -> Self {
-        let slug = ok_slug!(conn, &name, slug, user, QueryUser);
+    pub fn new(
+        conn: &mut DbConnection,
+        name: UserName,
+        slug: Option<UserSlug>,
+        email: Email,
+    ) -> Self {
+        let slug = ok_slug!(conn, &name, slug.map(Into::into), user, QueryUser);
         let timestamp = DateTime::now();
         Self {
             uuid: UserUuid::new(),
             name,
-            slug,
+            slug: slug.into(),
             email,
             admin: false,
             locked: false,
@@ -300,7 +305,7 @@ impl InsertUser {
 #[diesel(table_name = user_table)]
 pub struct UpdateUser {
     pub name: Option<UserName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<UserSlug>,
     pub email: Option<Email>,
     pub admin: Option<bool>,
     pub locked: Option<bool>,

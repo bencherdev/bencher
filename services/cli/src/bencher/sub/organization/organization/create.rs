@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewOrganization;
-use bencher_json::{ResourceName, Slug};
+use bencher_json::{OrganizationSlug, ResourceName};
 
 use crate::{
     CliError,
@@ -10,7 +10,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub name: ResourceName,
-    pub slug: Option<Slug>,
+    pub slug: Option<OrganizationSlug>,
     pub backend: AuthBackend,
 }
 

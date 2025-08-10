@@ -253,7 +253,8 @@ from_slug!(
     BranchSlug,
     TestbedSlug,
     BenchmarkSlug,
-    MeasureSlug
+    MeasureSlug,
+    UserSlug
 );
 
 macro_rules! from_resource_id {
