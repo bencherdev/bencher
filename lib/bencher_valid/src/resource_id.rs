@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr};
+use std::{fmt, marker::PhantomData, str::FromStr};
 
 use derive_more::Display;
 #[cfg(feature = "schema")]
@@ -7,85 +7,83 @@ use serde::{
     Deserialize, Serialize,
     de::{self, Deserializer, Unexpected, Visitor},
 };
-use uuid::Uuid;
 
-use crate::{Slug, ValidError, slug::is_valid_slug};
+use crate::ValidError;
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct ResourceId(String);
-
-pub enum ResourceIdKind {
-    Uuid(Uuid),
-    Slug(Slug),
+#[serde(untagged)]
+pub enum ResourceId<U, S> {
+    Uuid(U),
+    Slug(S),
 }
 
-impl FromStr for ResourceId {
+#[cfg(feature = "schema")]
+impl<U, S> JsonSchema for ResourceId<U, S>
+where
+    U: JsonSchema,
+    S: JsonSchema,
+{
+    fn schema_name() -> String {
+        "ResourceId".to_owned()
+    }
+
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("bencher_valid::resource_id::ResourceId")
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::schema::Schema {
+        // Unfortunately, this seems to be required to have an untagged enum.
+        // Otherwise, you get a runtime error: `can only flatten structs and maps (got a string)`
+        // I believe this is a shortcoming of https://github.com/oxidecomputer/progenitor
+        // For now, we just use the lowest common denominator's schema.
+        S::json_schema(generator)
+    }
+}
+
+impl<U, S> FromStr for ResourceId<U, S>
+where
+    U: FromStr,
+    S: FromStr,
+{
     type Err = ValidError;
 
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        // A UUID is always a valid slug
-        // And a slug is always a valid resource ID
-        if is_valid_slug(value) {
-            Ok(Self(value.into()))
-        } else {
-            Err(ValidError::ResourceId(value.into()))
-        }
-    }
-}
-
-impl TryFrom<&ResourceId> for ResourceIdKind {
-    type Error = ValidError;
-
-    fn try_from(resource_id: &ResourceId) -> Result<Self, Self::Error> {
-        if let Ok(uuid) = Uuid::from_str(resource_id.as_ref()) {
+    fn from_str(name_id: &str) -> Result<Self, Self::Err> {
+        if let Ok(uuid) = U::from_str(name_id) {
             Ok(Self::Uuid(uuid))
-        } else if let Ok(slug) = Slug::from_str(resource_id.as_ref()) {
+        } else if let Ok(slug) = S::from_str(name_id) {
             Ok(Self::Slug(slug))
         } else {
-            Err(ValidError::ResourceId(resource_id.as_ref().into()))
+            Err(ValidError::ResourceId(name_id.to_owned()))
         }
     }
 }
 
-impl From<Uuid> for ResourceId {
-    fn from(uuid: Uuid) -> Self {
-        Self(uuid.to_string())
-    }
-}
-
-impl From<Slug> for ResourceId {
-    fn from(slug: Slug) -> Self {
-        Self(slug.into())
-    }
-}
-
-impl AsRef<str> for ResourceId {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl From<ResourceId> for String {
-    fn from(resource_id: ResourceId) -> Self {
-        resource_id.0
-    }
-}
-
-impl<'de> Deserialize<'de> for ResourceId {
-    fn deserialize<D>(deserializer: D) -> Result<ResourceId, D::Error>
+impl<'de, U, S> Deserialize<'de> for ResourceId<U, S>
+where
+    U: FromStr,
+    S: FromStr,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(ResourceIdVisitor)
+        deserializer.deserialize_str(ResourceIdVisitor {
+            marker: PhantomData,
+        })
     }
 }
 
-struct ResourceIdVisitor;
+struct ResourceIdVisitor<U, S> {
+    marker: PhantomData<(U, S)>,
+}
 
-impl Visitor<'_> for ResourceIdVisitor {
-    type Value = ResourceId;
+impl<U, S> Visitor<'_> for ResourceIdVisitor<U, S>
+where
+    U: FromStr,
+    S: FromStr,
+{
+    type Value = ResourceId<U, S>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("a valid UUID or slug.")
@@ -99,6 +97,36 @@ impl Visitor<'_> for ResourceIdVisitor {
     }
 }
 
-impl ResourceId {
-    pub const MAX_LEN: usize = crate::MAX_LEN;
+#[cfg(test)]
+mod tests {
+    use super::ResourceId;
+    use crate::Slug;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_resource_id_uuid() {
+        const UUID: &str = "123e4567-e89b-12d3-a456-426614174000";
+        let resource_id: ResourceId<Uuid, Slug> = UUID.parse().unwrap();
+        assert_eq!(
+            resource_id,
+            ResourceId::Uuid(Uuid::parse_str(UUID).unwrap())
+        );
+
+        let serialized = serde_json::to_string(&resource_id).unwrap();
+        assert_eq!(serialized, format!("\"{UUID}\""));
+        let deserialized: ResourceId<Uuid, Slug> = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, resource_id);
+    }
+
+    #[test]
+    fn test_resource_id_slug() {
+        const SLUG: &str = "my-slug";
+        let resource_id: ResourceId<Uuid, Slug> = SLUG.parse().unwrap();
+        assert_eq!(resource_id, ResourceId::Slug(SLUG.parse().unwrap()));
+
+        let serialized = serde_json::to_string(&resource_id).unwrap();
+        assert_eq!(serialized, format!("\"{SLUG}\""));
+        let deserialized: ResourceId<Uuid, Slug> = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, resource_id);
+    }
 }

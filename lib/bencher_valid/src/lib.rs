@@ -53,7 +53,7 @@ pub use plus::{
     CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
     LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus,
 };
-pub use resource_id::{ResourceId, ResourceIdKind};
+pub use resource_id::ResourceId;
 pub use resource_name::ResourceName;
 pub use search::Search;
 pub use secret::Secret;

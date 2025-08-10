@@ -1,10 +1,6 @@
-use std::{
-    borrow::Cow,
-    fmt::{self, Display},
-    marker::PhantomData,
-    str::FromStr,
-};
+use std::{fmt, marker::PhantomData, str::FromStr};
 
+use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -14,7 +10,7 @@ use serde::{
 
 use crate::ValidError;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(untagged)]
 pub enum NameId<U, S, T> {
     Uuid(U),
@@ -33,8 +29,8 @@ where
         "NameId".to_owned()
     }
 
-    fn schema_id() -> Cow<'static, str> {
-        Cow::Borrowed("bencher_valid::name_id::NameId")
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("bencher_valid::name_id::NameId")
     }
 
     fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::schema::Schema {
@@ -63,21 +59,6 @@ where
             Ok(Self::Name(name))
         } else {
             Err(ValidError::NameId(name_id.to_owned()))
-        }
-    }
-}
-
-impl<U, S, T> Display for NameId<U, S, T>
-where
-    U: Display,
-    S: Display,
-    T: Display,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Uuid(uuid) => uuid.fmt(f),
-            Self::Slug(slug) => slug.fmt(f),
-            Self::Name(name) => name.fmt(f),
         }
     }
 }
