@@ -250,32 +250,19 @@ macro_rules! from_slug {
 from_slug!(BranchSlug, TestbedSlug, BenchmarkSlug, MeasureSlug);
 
 macro_rules! from_name_id {
-    ($($from:ident => $to:ident),*) => {
+    ($($from:ident),*) => {
         $(
-            impl From<bencher_json::$from> for types::$to {
+            impl From<bencher_json::$from> for types::NameId {
                 fn from(json: bencher_json::$from) -> Self {
                     match json {
-                        bencher_json::$from::Uuid(uuid) => Self {
-                            subtype_0: Some(uuid.into()),
-                            ..Self::default()
-                        },
-                        bencher_json::$from::Slug(slug) => Self {
-                            subtype_1: Some(slug.into()),
-                            ..Self::default()
-                        },
-                        bencher_json::$from::Name(name) => Self {
-                            subtype_2: Some(name.into()),
-                            ..Self::default()
-                        },
-                    }
+                        bencher_json::$from::Uuid(uuid) => uuid.to_string(),
+                        bencher_json::$from::Slug(slug) => slug.to_string(),
+                        bencher_json::$from::Name(name) => name.to_string(),
+                    }.into()
                 }
             }
         )*
     };
 }
 
-from_name_id!(
-    BranchNameId => NameIdForBranchUuidAndBranchSlugAndBranchName,
-    TestbedNameId => NameIdForTestbedUuidAndTestbedSlugAndResourceName,
-    MeasureNameId => NameIdForMeasureUuidAndMeasureSlugAndResourceName
-);
+from_name_id!(BranchNameId, TestbedNameId, BenchmarkNameId, MeasureNameId);

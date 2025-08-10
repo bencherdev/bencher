@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     fmt::{self, Display},
     marker::PhantomData,
     str::FromStr,
@@ -13,13 +14,36 @@ use serde::{
 
 use crate::ValidError;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[cfg_attr(feature = "schema", schemars(untagged))]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[serde(untagged)]
 pub enum NameId<U, S, T> {
     Uuid(U),
     Slug(S),
     Name(T),
+}
+
+#[cfg(feature = "schema")]
+impl<U, S, T> JsonSchema for NameId<U, S, T>
+where
+    U: JsonSchema,
+    S: JsonSchema,
+    T: JsonSchema,
+{
+    fn schema_name() -> String {
+        "NameId".to_owned()
+    }
+
+    fn schema_id() -> Cow<'static, str> {
+        Cow::Borrowed("bencher_valid::name_id::NameId")
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::schema::Schema {
+        // Unfortunately, this seems to be required to have an untagged enum.
+        // Otherwise, you get a runtime error: `can only flatten structs and maps (got a string)`
+        // I believe this is a shortcoming of https://github.com/oxidecomputer/progenitor
+        // For now, we just use the lowest common denominator's schema.
+        T::json_schema(generator)
+    }
 }
 
 impl<U, S, T> FromStr for NameId<U, S, T>
@@ -54,24 +78,6 @@ where
             Self::Uuid(uuid) => uuid.fmt(f),
             Self::Slug(slug) => slug.fmt(f),
             Self::Name(name) => name.fmt(f),
-        }
-    }
-}
-
-impl<U, S, T> Serialize for NameId<U, S, T>
-where
-    U: Serialize,
-    S: Serialize,
-    T: Serialize,
-{
-    fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
-    where
-        SER: serde::Serializer,
-    {
-        match self {
-            Self::Uuid(uuid) => uuid.serialize(serializer),
-            Self::Slug(slug) => slug.serialize(serializer),
-            Self::Name(name) => name.serialize(serializer),
         }
     }
 }
