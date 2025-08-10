@@ -115,3 +115,49 @@ where
         NameId::from_str(v).map_err(|_e| E::invalid_value(Unexpected::Str(v), &self))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::NameId;
+    use crate::{BranchName, Slug};
+    use uuid::Uuid;
+
+    #[test]
+    fn test_name_id_uuid() {
+        const UUID: &str = "123e4567-e89b-12d3-a456-426614174000";
+        let name_id: NameId<Uuid, Slug, BranchName> = UUID.parse().unwrap();
+        assert_eq!(name_id, NameId::Uuid(Uuid::parse_str(UUID).unwrap()));
+
+        let serialized = serde_json::to_string(&name_id).unwrap();
+        assert_eq!(serialized, format!("\"{UUID}\""));
+        let deserialized: NameId<Uuid, Slug, BranchName> =
+            serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, name_id);
+    }
+
+    #[test]
+    fn test_name_id_slug() {
+        const SLUG: &str = "my-slug";
+        let name_id: NameId<Uuid, Slug, BranchName> = SLUG.parse().unwrap();
+        assert_eq!(name_id, NameId::Slug(SLUG.parse().unwrap()));
+
+        let serialized = serde_json::to_string(&name_id).unwrap();
+        assert_eq!(serialized, format!("\"{SLUG}\""));
+        let deserialized: NameId<Uuid, Slug, BranchName> =
+            serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, name_id);
+    }
+
+    #[test]
+    fn test_name_id_name() {
+        const NAME: &str = "my/branch";
+        let name_id: NameId<Uuid, Slug, BranchName> = NAME.parse().unwrap();
+        assert_eq!(name_id, NameId::Name(NAME.parse().unwrap()));
+
+        let serialized = serde_json::to_string(&name_id).unwrap();
+        assert_eq!(serialized, format!("\"{NAME}\""));
+        let deserialized: NameId<Uuid, Slug, BranchName> =
+            serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, name_id);
+    }
+}
