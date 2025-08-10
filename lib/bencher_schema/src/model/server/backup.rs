@@ -149,13 +149,14 @@ fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), ServerBackupEr
             error,
         })?
         .len();
-    // Calculate the number of pages per step in order to complete the backup in a reasonable time
+    // Calculate the number of pages per step in order to complete the backup in a reasonable time.
+    // Ensure that the pages per step is a positive integer.
     #[expect(
         clippy::cast_possible_truncation,
         clippy::integer_division,
         reason = "precision is not needed"
     )]
-    let pages_per_step = (src_size / PAGES_PER_STEP_COEFFICIENT as u64) as i32;
+    let pages_per_step = std::cmp::max((src_size / PAGES_PER_STEP_COEFFICIENT as u64) as i32, 1);
 
     let src_connection =
         rusqlite::Connection::open(src).map_err(|error| ServerBackupError::OpenSourceDatabase {
