@@ -1,5 +1,5 @@
 use bencher_client::types::{AlertStatus, JsonDirection, ProjAlertsSort};
-use bencher_json::ResourceId;
+use bencher_json::ProjectResourceId;
 
 use crate::{
     CliError,
@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct List {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub pagination: Pagination,
     pub status: Option<AlertStatus>,
     pub archived: bool,

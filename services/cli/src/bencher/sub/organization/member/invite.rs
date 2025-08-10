@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonNewMember, OrganizationRole};
-use bencher_json::{Email, ResourceId, UserName};
+use bencher_json::{Email, OrganizationResourceId, UserName};
 
 use crate::{
     CliError,
@@ -11,7 +11,7 @@ use crate::bencher::SubCmd;
 
 #[derive(Debug, Clone)]
 pub struct Invite {
-    organization: ResourceId,
+    organization: OrganizationResourceId,
     name: Option<UserName>,
     email: Email,
     role: OrganizationRole,

@@ -1,4 +1,4 @@
-use bencher_json::{ResourceId, ResourceName, Slug};
+use bencher_json::{OrganizationResourceId, ResourceName, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use super::CliPagination;
@@ -85,7 +85,7 @@ pub struct CliOrganizationCreate {
 #[derive(Parser, Debug)]
 pub struct CliOrganizationView {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -94,7 +94,7 @@ pub struct CliOrganizationView {
 #[derive(Parser, Debug)]
 pub struct CliOrganizationUpdate {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// Organization name
     #[clap(long)]
@@ -117,7 +117,7 @@ pub struct CliOrganizationUpdate {
 #[derive(Parser, Debug)]
 pub struct CliOrganizationAllowed {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// Organization permission
     #[clap(long)]
@@ -145,7 +145,7 @@ pub enum CliOrganizationPermission {
 #[derive(Parser, Debug)]
 pub struct CliOrganizationDelete {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

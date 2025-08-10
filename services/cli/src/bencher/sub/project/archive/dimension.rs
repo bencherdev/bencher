@@ -4,9 +4,10 @@ use bencher_client::types::{
     JsonUpdateBenchmark, JsonUpdateBranch, JsonUpdateMeasure, JsonUpdateTestbed,
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, BranchName, BranchNameId, JsonBenchmark, JsonBenchmarks,
-    JsonBranch, JsonBranches, JsonMeasure, JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId,
-    NameId, ResourceId, ResourceName, TestbedNameId,
+    BenchmarkName, BenchmarkNameId, BenchmarkResourceId, BranchName, BranchNameId,
+    BranchResourceId, IntoResourceId as _, JsonBenchmark, JsonBenchmarks, JsonBranch, JsonBranches,
+    JsonMeasure, JsonMeasures, JsonTestbed, JsonTestbeds, MeasureNameId, MeasureResourceId, NameId,
+    ProjectResourceId, ResourceName, TestbedNameId, TestbedResourceId,
 };
 
 use crate::{
@@ -54,7 +55,7 @@ impl fmt::Display for Dimension {
 impl Dimension {
     pub async fn archive(
         &self,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
@@ -68,7 +69,7 @@ impl Dimension {
 
     pub async fn archive_branch(
         &self,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
@@ -77,11 +78,11 @@ impl Dimension {
                 dimension: self.clone(),
             });
         };
-        let branch: &ResourceId = &match name_id {
-            NameId::Uuid(uuid) => uuid.into(),
-            NameId::Slug(slug) => slug.into(),
+        let branch: &BranchResourceId = &match name_id {
+            NameId::Uuid(uuid) => uuid.into_resource_id(),
+            NameId::Slug(slug) => slug.into_resource_id(),
             NameId::Name(name) => match get_branch_by_name(project, &name, action, backend).await {
-                Ok(json) => json.uuid.into(),
+                Ok(json) => json.uuid.into_resource_id(),
                 Err(err @ ArchiveError::NotFound { .. }) => {
                     return if get_branch_by_name(project, &name, !action, backend)
                         .await
@@ -124,7 +125,7 @@ impl Dimension {
 
     pub async fn archive_testbed(
         &self,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
@@ -133,12 +134,12 @@ impl Dimension {
                 dimension: self.clone(),
             });
         };
-        let testbed: &ResourceId = &match name_id {
-            NameId::Uuid(uuid) => uuid.into(),
-            NameId::Slug(slug) => slug.into(),
+        let testbed: &TestbedResourceId = &match name_id {
+            NameId::Uuid(uuid) => uuid.into_resource_id(),
+            NameId::Slug(slug) => slug.into_resource_id(),
             NameId::Name(name) => {
                 match get_testbed_by_name(project, &name, action, backend).await {
-                    Ok(json) => json.uuid.into(),
+                    Ok(json) => json.uuid.into_resource_id(),
                     Err(err @ ArchiveError::NotFound { .. }) => {
                         return if get_testbed_by_name(project, &name, !action, backend)
                             .await
@@ -180,7 +181,7 @@ impl Dimension {
 
     pub async fn archive_benchmark(
         &self,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
@@ -189,12 +190,12 @@ impl Dimension {
                 dimension: self.clone(),
             });
         };
-        let benchmark: &ResourceId = &match name_id {
-            NameId::Uuid(uuid) => uuid.into(),
-            NameId::Slug(slug) => slug.into(),
+        let benchmark: &BenchmarkResourceId = &match name_id {
+            NameId::Uuid(uuid) => uuid.into_resource_id(),
+            NameId::Slug(slug) => slug.into_resource_id(),
             NameId::Name(name) => {
                 match get_benchmark_by_name(project, &name, action, backend).await {
-                    Ok(json) => json.uuid.into(),
+                    Ok(json) => json.uuid.into_resource_id(),
                     Err(err @ ArchiveError::NotFound { .. }) => {
                         return if get_benchmark_by_name(project, &name, !action, backend)
                             .await
@@ -236,7 +237,7 @@ impl Dimension {
 
     pub async fn archive_measure(
         &self,
-        project: &ResourceId,
+        project: &ProjectResourceId,
         action: ArchiveAction,
         backend: &AuthBackend,
     ) -> Result<(), ArchiveError> {
@@ -245,12 +246,12 @@ impl Dimension {
                 dimension: self.clone(),
             });
         };
-        let measure: &ResourceId = &match name_id {
-            NameId::Uuid(uuid) => uuid.into(),
-            NameId::Slug(slug) => slug.into(),
+        let measure: &MeasureResourceId = &match name_id {
+            NameId::Uuid(uuid) => uuid.into_resource_id(),
+            NameId::Slug(slug) => slug.into_resource_id(),
             NameId::Name(name) => {
                 match get_measure_by_name(project, &name, action, backend).await {
-                    Ok(json) => json.uuid.into(),
+                    Ok(json) => json.uuid.into_resource_id(),
                     Err(err @ ArchiveError::NotFound { .. }) => {
                         return if get_measure_by_name(project, &name, !action, backend)
                             .await
@@ -301,7 +302,7 @@ impl Dimension {
 }
 
 async fn get_branch_by_name(
-    project: &ResourceId,
+    project: &ProjectResourceId,
     name: &BranchName,
     action: ArchiveAction,
     backend: &AuthBackend,
@@ -326,7 +327,7 @@ async fn get_branch_by_name(
 }
 
 async fn get_testbed_by_name(
-    project: &ResourceId,
+    project: &ProjectResourceId,
     name: &ResourceName,
     action: ArchiveAction,
     backend: &AuthBackend,
@@ -351,7 +352,7 @@ async fn get_testbed_by_name(
 }
 
 async fn get_benchmark_by_name(
-    project: &ResourceId,
+    project: &ProjectResourceId,
     name: &BenchmarkName,
     action: ArchiveAction,
     backend: &AuthBackend,
@@ -376,7 +377,7 @@ async fn get_benchmark_by_name(
 }
 
 async fn get_measure_by_name(
-    project: &ResourceId,
+    project: &ProjectResourceId,
     name: &ResourceName,
     action: ArchiveAction,
     backend: &AuthBackend,
@@ -401,7 +402,7 @@ async fn get_measure_by_name(
 }
 
 fn one_and_only_one<N, L, T>(
-    project: &ResourceId,
+    project: &ProjectResourceId,
     name: &N,
     json_list: L,
 ) -> Result<T, ArchiveError>

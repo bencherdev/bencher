@@ -1,5 +1,5 @@
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, HeadUuid, MeasureUuid, ResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, HeadUuid, MeasureUuid, ProjectResourceId, TestbedUuid,
 };
 use clap::{Parser, ValueEnum};
 
@@ -9,7 +9,7 @@ use crate::parser::{CliBackend, ElidedOption};
 #[expect(clippy::option_option)]
 pub struct CliPerf {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Branch UUIDs
     #[clap(long, required = true, value_name = "BRANCH")]

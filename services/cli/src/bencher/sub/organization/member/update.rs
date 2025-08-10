@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonUpdateMember, OrganizationRole};
-use bencher_json::ResourceId;
+use bencher_json::{OrganizationResourceId, UserResourceId};
 
 use crate::{
     CliError,
@@ -9,8 +9,8 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub organization: ResourceId,
-    pub user: ResourceId,
+    pub organization: OrganizationResourceId,
+    pub user: UserResourceId,
     pub role: Option<OrganizationRole>,
     pub backend: AuthBackend,
 }

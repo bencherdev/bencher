@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{Entitlements, NonEmpty, OrganizationUuid, ResourceId};
+use bencher_json::{Entitlements, NonEmpty, OrganizationResourceId, OrganizationUuid};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -21,7 +21,7 @@ pub enum CliOrganizationPlan {
 #[derive(Parser, Debug)]
 pub struct CliPlanCreate {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// Checkout session ID (subscription ID when `--skip-remote` is used)
     #[clap(long)]
@@ -50,7 +50,7 @@ pub struct CliPlanCreate {
 #[derive(Parser, Debug)]
 pub struct CliPlanView {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -59,7 +59,7 @@ pub struct CliPlanView {
 #[derive(Parser, Debug)]
 pub struct CliPlanDelete {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// Skip sending to remote provider
     #[clap(long)]

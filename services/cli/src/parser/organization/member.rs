@@ -1,4 +1,4 @@
-use bencher_json::{Email, ResourceId, UserName};
+use bencher_json::{Email, OrganizationResourceId, UserName, UserResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -24,7 +24,7 @@ pub enum CliMember {
 #[derive(Parser, Debug)]
 pub struct CliMemberList {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// Member name
     #[clap(long)]
@@ -51,7 +51,7 @@ pub enum CliMembersSort {
 #[derive(Parser, Debug)]
 pub struct CliMemberInvite {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// Name of user for invitation (optional)
     #[clap(long)]
@@ -72,10 +72,10 @@ pub struct CliMemberInvite {
 #[derive(Parser, Debug)]
 pub struct CliMemberView {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -84,10 +84,10 @@ pub struct CliMemberView {
 #[derive(Parser, Debug)]
 pub struct CliMemberUpdate {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     /// Member role
     #[clap(value_enum, long)]
@@ -100,10 +100,10 @@ pub struct CliMemberUpdate {
 #[derive(Parser, Debug)]
 pub struct CliMemberRemove {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

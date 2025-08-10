@@ -1,4 +1,4 @@
-use bencher_json::{ResourceId, ResourceName, TestbedSlug};
+use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -25,7 +25,7 @@ pub enum CliTestbed {
 #[derive(Parser, Debug)]
 pub struct CliTestbedList {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Testbed name
     #[clap(long)]
@@ -56,7 +56,7 @@ pub enum CliTestbedsSort {
 #[derive(Parser, Debug)]
 pub struct CliTestbedCreate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Testbed name
     #[clap(long)]
@@ -73,10 +73,10 @@ pub struct CliTestbedCreate {
 #[derive(Parser, Debug)]
 pub struct CliTestbedView {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Testbed slug or UUID
-    pub testbed: ResourceId,
+    pub testbed: TestbedResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -85,10 +85,10 @@ pub struct CliTestbedView {
 #[derive(Parser, Debug)]
 pub struct CliTestbedUpdate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Testbed slug or UUID
-    pub testbed: ResourceId,
+    pub testbed: TestbedResourceId,
 
     /// Testbed name
     #[clap(long)]
@@ -108,10 +108,10 @@ pub struct CliTestbedUpdate {
 #[derive(Parser, Debug)]
 pub struct CliTestbedDelete {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Testbed slug or UUID
-    pub testbed: ResourceId,
+    pub testbed: TestbedResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

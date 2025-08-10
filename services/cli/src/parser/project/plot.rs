@@ -1,6 +1,6 @@
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, Index, MeasureUuid, PlotUuid, ResourceId, ResourceName, TestbedUuid,
-    Window,
+    BenchmarkUuid, BranchUuid, Index, MeasureUuid, PlotUuid, ProjectResourceId, ResourceName,
+    TestbedUuid, Window,
 };
 use clap::{Parser, Subcommand, ValueEnum};
 
@@ -28,7 +28,7 @@ pub enum CliPlot {
 #[derive(Parser, Debug)]
 pub struct CliPlotList {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Plot title
     #[clap(long)]
@@ -58,7 +58,7 @@ pub enum CliPlotsSort {
 #[expect(clippy::struct_excessive_bools)]
 pub struct CliPlotCreate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// The index of the plot.
     /// Maximum index is 64.
@@ -130,7 +130,7 @@ pub enum CliXAxis {
 #[derive(Parser, Debug)]
 pub struct CliPlotView {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Plot UUID
     pub plot: PlotUuid,
@@ -142,7 +142,7 @@ pub struct CliPlotView {
 #[derive(Parser, Debug)]
 pub struct CliPlotUpdate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Plot UUID
     pub plot: PlotUuid,
@@ -170,7 +170,7 @@ pub struct CliPlotUpdate {
 #[derive(Parser, Debug)]
 pub struct CliPlotDelete {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Plot UUID
     pub plot: PlotUuid,

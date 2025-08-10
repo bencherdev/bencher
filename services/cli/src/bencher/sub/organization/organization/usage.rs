@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::ResourceId;
+use bencher_json::OrganizationResourceId;
 
 use crate::{
     CliError,
@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Usage {
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
     pub backend: AuthBackend,
 }
 

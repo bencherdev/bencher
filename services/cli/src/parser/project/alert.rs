@@ -1,4 +1,4 @@
-use bencher_json::{AlertUuid, ResourceId};
+use bencher_json::{AlertUuid, ProjectResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -19,7 +19,7 @@ pub enum CliAlert {
 #[derive(Parser, Debug)]
 pub struct CliAlertList {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliAlertsSort>,
@@ -59,7 +59,7 @@ pub enum CliAlertStatus {
 #[derive(Parser, Debug)]
 pub struct CliAlertView {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Alert UUID
     pub alert: AlertUuid,
@@ -71,7 +71,7 @@ pub struct CliAlertView {
 #[derive(Parser, Debug)]
 pub struct CliAlertUpdate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Alert UUID
     pub alert: AlertUuid,

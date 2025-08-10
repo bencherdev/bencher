@@ -1400,11 +1400,11 @@ impl SeedTest {
                 );
                 assert_eq!(json.project.name.as_ref(), REPO_NAME);
                 assert!(
-                    json.project.slug.as_ref().starts_with(REPO_NAME),
+                    json.project.slug.to_string().starts_with(REPO_NAME),
                     "{json:?}"
                 );
                 assert_eq!(
-                    json.project.slug.as_ref().len(),
+                    json.project.slug.to_string().len(),
                     REPO_NAME.len() + 1 + 7 + 1 + 13,
                     "{json:?}"
                 );
@@ -1435,7 +1435,7 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.name.as_ref(), REPO_NAME);
-        assert_eq!(json.project.slug.as_ref(), UNCLAIMED_SLUG);
+        assert_eq!(json.project.slug.to_string(), UNCLAIMED_SLUG);
         assert_eq!(json.project.claimed, None);
         let organization_uuid = json.project.organization;
         let organization_uuid_str = organization_uuid.to_string();
@@ -1459,7 +1459,7 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.uuid, organization_uuid);
         assert_eq!(json.name.as_ref(), REPO_NAME);
-        assert_eq!(json.slug.as_ref(), UNCLAIMED_SLUG);
+        assert_eq!(json.slug.to_string(), UNCLAIMED_SLUG);
         assert!(json.claimed.is_some(), "{json:?}");
 
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -1487,7 +1487,7 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, organization_uuid);
         assert_eq!(json.project.name.as_ref(), REPO_NAME);
-        assert_eq!(json.project.slug.as_ref(), UNCLAIMED_SLUG);
+        assert_eq!(json.project.slug.to_string(), UNCLAIMED_SLUG);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -1542,7 +1542,7 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
         assert_eq!(json.project.name.as_ref(), REPO_NAME);
-        assert_eq!(json.project.slug.as_ref(), CLAIMED_SLUG);
+        assert_eq!(json.project.slug.to_string(), CLAIMED_SLUG);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -1571,7 +1571,7 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
         assert_eq!(json.project.name.as_ref(), format!("{REPO_NAME} (1)"));
-        assert_eq!(json.project.slug.as_ref(), bencher_one);
+        assert_eq!(json.project.slug.to_string(), bencher_one);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -1600,7 +1600,7 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
         assert_eq!(json.project.name.as_ref(), format!("{REPO_NAME} (2)"));
-        assert_eq!(json.project.slug.as_ref(), bencher_two);
+        assert_eq!(json.project.slug.to_string(), bencher_two);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -1627,7 +1627,7 @@ impl SeedTest {
             let assert = cmd.assert().success();
             let json: bencher_json::JsonReport =
                 serde_json::from_slice(&assert.get_output().stdout).unwrap();
-            assert_eq!(json.project.slug.as_ref(), unclaimed_max);
+            assert_eq!(json.project.slug.to_string(), unclaimed_max);
             assert!(json.project.claimed.is_none(), "{json:?}");
         }
 

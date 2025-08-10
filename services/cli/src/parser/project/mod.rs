@@ -1,4 +1,4 @@
-use bencher_json::{ResourceId, ResourceName, Slug, Url};
+use bencher_json::{OrganizationResourceId, ProjectResourceId, ResourceName, Slug, Url};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -40,7 +40,7 @@ pub enum CliProject {
 #[derive(Parser, Debug)]
 pub struct CliProjectList {
     /// Organization slug or UUID
-    pub organization: Option<ResourceId>,
+    pub organization: Option<OrganizationResourceId>,
 
     /// Project name
     #[clap(long)]
@@ -67,7 +67,7 @@ pub enum CliProjectsSort {
 #[derive(Parser, Debug)]
 pub struct CliProjectCreate {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
 
     /// Project name
     #[clap(long)]
@@ -100,7 +100,7 @@ pub enum CliProjectVisibility {
 #[derive(Parser, Debug)]
 pub struct CliProjectView {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -110,7 +110,7 @@ pub struct CliProjectView {
 
 pub struct CliProjectUpdate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Project name
     #[clap(long)]
@@ -136,7 +136,7 @@ pub struct CliProjectUpdate {
 #[derive(Parser, Debug)]
 pub struct CliProjectDelete {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -145,7 +145,7 @@ pub struct CliProjectDelete {
 #[derive(Parser, Debug)]
 pub struct CliProjectAllowed {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Project permission
     #[clap(long)]

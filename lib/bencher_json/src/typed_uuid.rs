@@ -49,6 +49,12 @@ macro_rules! typed_uuid {
             }
         }
 
+        impl<S> $crate::IntoResourceId<$uuid, S> for $uuid {
+            fn into_resource_id(self) -> $crate::ResourceId<$uuid, S> {
+                $crate::ResourceId::Uuid(self)
+            }
+        }
+
         impl $uuid {
             pub fn new() -> Self {
                 Self(uuid::Uuid::new_v4())

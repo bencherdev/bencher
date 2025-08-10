@@ -1,4 +1,4 @@
-use bencher_json::{MeasureSlug, ResourceId, ResourceName};
+use bencher_json::{MeasureResourceId, MeasureSlug, ResourceId, ResourceName};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -25,7 +25,7 @@ pub enum CliMeasure {
 #[derive(Parser, Debug)]
 pub struct CliMeasureList {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Measure name
     #[clap(long)]
@@ -56,7 +56,7 @@ pub enum CliMeasuresSort {
 #[derive(Parser, Debug)]
 pub struct CliMeasureCreate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Measure name
     #[clap(long)]
@@ -77,10 +77,10 @@ pub struct CliMeasureCreate {
 #[derive(Parser, Debug)]
 pub struct CliMeasureView {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Measure slug or UUID
-    pub measure: ResourceId,
+    pub measure: MeasureResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -89,10 +89,10 @@ pub struct CliMeasureView {
 #[derive(Parser, Debug)]
 pub struct CliMeasureUpdate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Measure slug or UUID
-    pub measure: ResourceId,
+    pub measure: MeasureResourceId,
 
     /// Measure name
     #[clap(long)]
@@ -116,10 +116,10 @@ pub struct CliMeasureUpdate {
 #[derive(Parser, Debug)]
 pub struct CliMeasureDelete {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Measure slug or UUID
-    pub measure: ResourceId,
+    pub measure: MeasureResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

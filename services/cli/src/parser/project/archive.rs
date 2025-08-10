@@ -1,4 +1,6 @@
-use bencher_json::{BenchmarkNameId, BranchNameId, MeasureNameId, ResourceId, TestbedNameId};
+use bencher_json::{
+    BenchmarkNameId, BranchNameId, MeasureNameId, ProjectResourceId, TestbedNameId,
+};
 use clap::{ArgGroup, Args, Parser};
 
 use crate::parser::CliBackend;
@@ -7,7 +9,7 @@ use crate::parser::CliBackend;
 pub struct CliArchive {
     /// Project slug or UUID
     #[clap(long, env = "BENCHER_PROJECT")]
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     #[clap(flatten)]
     pub dimension: CliArchiveDimension,

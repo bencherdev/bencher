@@ -17,10 +17,8 @@ pub enum ResourceId<U, S> {
     Slug(S),
 }
 
-impl<U, S> From<S> for ResourceId<U, S> {
-    fn from(slug: S) -> Self {
-        Self::Slug(slug)
-    }
+pub trait IntoResourceId<U, S> {
+    fn into_resource_id(self) -> ResourceId<U, S>;
 }
 
 #[cfg(feature = "schema")]

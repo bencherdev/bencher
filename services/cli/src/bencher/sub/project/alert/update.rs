@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonUpdateAlert, UpdateAlertStatus};
-use bencher_json::{AlertUuid, ResourceId};
+use bencher_json::{AlertUuid, ProjectResourceId};
 
 use crate::{
     CliError,
@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub alert: AlertUuid,
     pub status: Option<UpdateAlertStatus>,
     pub backend: AuthBackend,

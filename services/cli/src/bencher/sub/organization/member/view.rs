@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::OrganizationResourceId;
 
 use crate::{
     CliError,
@@ -8,8 +8,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct View {
-    pub organization: ResourceId,
-    pub user: ResourceId,
+    pub organization: OrganizationResourceId,
+    pub user: UserResourceId,
     pub backend: AuthBackend,
 }
 

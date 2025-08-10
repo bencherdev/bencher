@@ -1,6 +1,6 @@
 use bencher_json::{
-    Boundary, BranchNameId, DateTime, GitHash, MeasureNameId, ReportUuid, ResourceId, SampleSize,
-    TestbedNameId, Window,
+    Boundary, BranchNameId, DateTime, GitHash, MeasureNameId, ProjectResourceId, ReportUuid,
+    SampleSize, TestbedNameId, Window,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -26,7 +26,7 @@ pub enum CliReport {
 #[derive(Parser, Debug)]
 pub struct CliReportList {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Branch name, slug, or UUID
     #[clap(long)]
@@ -65,7 +65,7 @@ pub enum CliReportsSort {
 #[derive(Parser, Debug)]
 pub struct CliReportCreate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Branch name, slug, or UUID
     #[clap(long)]
@@ -250,7 +250,7 @@ pub enum CliReportFold {
 #[derive(Parser, Debug)]
 pub struct CliReportView {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Report UUID
     pub report: ReportUuid,
@@ -262,7 +262,7 @@ pub struct CliReportView {
 #[derive(Parser, Debug)]
 pub struct CliReportDelete {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Report UUID
     pub report: ReportUuid,

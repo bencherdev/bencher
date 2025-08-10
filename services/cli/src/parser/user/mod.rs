@@ -1,4 +1,4 @@
-use bencher_json::{Email, ResourceId, Slug, UserName};
+use bencher_json::{Email, Slug, UserName, UserResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -45,7 +45,7 @@ pub enum CliUsersSort {
 #[derive(Parser, Debug)]
 pub struct CliUserView {
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -54,7 +54,7 @@ pub struct CliUserView {
 #[derive(Parser, Debug)]
 pub struct CliUserUpdate {
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     /// User name
     #[clap(long)]

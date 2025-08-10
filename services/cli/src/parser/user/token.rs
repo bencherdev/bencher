@@ -1,4 +1,4 @@
-use bencher_json::{ResourceId, ResourceName, TokenUuid};
+use bencher_json::{ResourceName, TokenUuid, UserResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -22,7 +22,7 @@ pub enum CliToken {
 #[derive(Parser, Debug)]
 pub struct CliTokenList {
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     /// Token name
     #[clap(long)]
@@ -49,7 +49,7 @@ pub enum CliTokensSort {
 #[derive(Parser, Debug)]
 pub struct CliTokenCreate {
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     /// Token name
     #[clap(long)]
@@ -66,7 +66,7 @@ pub struct CliTokenCreate {
 #[derive(Parser, Debug)]
 pub struct CliTokenView {
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     /// Token UUID
     pub uuid: TokenUuid,
@@ -78,7 +78,7 @@ pub struct CliTokenView {
 #[derive(Parser, Debug)]
 pub struct CliTokenUpdate {
     /// User slug or UUID
-    pub user: ResourceId,
+    pub user: UserResourceId,
 
     /// Token UUID
     pub uuid: TokenUuid,

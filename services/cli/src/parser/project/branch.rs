@@ -1,4 +1,6 @@
-use bencher_json::{BranchName, BranchNameId, BranchSlug, GitHash, HeadUuid, ResourceId};
+use bencher_json::{
+    BranchName, BranchNameId, BranchResourceId, BranchSlug, GitHash, HeadUuid, ProjectResourceId,
+};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -25,7 +27,7 @@ pub enum CliBranch {
 #[derive(Parser, Debug)]
 pub struct CliBranchList {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Branch name
     #[clap(long)]
@@ -56,7 +58,7 @@ pub enum CliBranchesSort {
 #[derive(Parser, Debug)]
 pub struct CliBranchCreate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Branch name
     #[clap(long)]
@@ -102,10 +104,10 @@ pub struct CliStartPointCreate {
 #[derive(Parser, Debug)]
 pub struct CliBranchView {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Branch slug or UUID
-    pub branch: ResourceId,
+    pub branch: BranchResourceId,
 
     /// Branch Head UUID
     #[clap(long)]
@@ -118,10 +120,10 @@ pub struct CliBranchView {
 #[derive(Parser, Debug)]
 pub struct CliBranchUpdate {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Branch slug or UUID
-    pub branch: ResourceId,
+    pub branch: BranchResourceId,
 
     /// Branch name
     #[clap(long)]
@@ -178,10 +180,10 @@ pub struct CliStartPointUpdate {
 #[derive(Parser, Debug)]
 pub struct CliBranchDelete {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Branch slug or UUID
-    pub branch: ResourceId,
+    pub branch: BranchResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

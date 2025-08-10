@@ -1,4 +1,4 @@
-use bencher_json::{MetricUuid, ResourceId};
+use bencher_json::{MetricUuid, ProjectResourceId};
 use clap::{Parser, Subcommand};
 
 use crate::parser::CliBackend;
@@ -13,7 +13,7 @@ pub enum CliMetric {
 #[derive(Parser, Debug)]
 pub struct CliMetricView {
     /// Project slug or UUID
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
 
     /// Metric UUID
     pub metric: MetricUuid,

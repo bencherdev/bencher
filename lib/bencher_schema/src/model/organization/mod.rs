@@ -1,8 +1,8 @@
 use std::string::ToString as _;
 
 use bencher_json::{
-    DateTime, JsonNewOrganization, JsonOrganization, Jwt, OrganizationResourceId, OrganizationSlug,
-    OrganizationUuid, ProjectSlug, ResourceName,
+    DateTime, IntoResourceId as _, JsonNewOrganization, JsonOrganization, Jwt,
+    OrganizationResourceId, OrganizationSlug, OrganizationUuid, ProjectSlug, ResourceName,
     organization::{
         JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization,
         member::OrganizationRole,
@@ -96,7 +96,7 @@ impl QueryOrganization {
         // The project organization should be created with the project's slug.
         if let Ok(query_organization) = Self::from_resource_id(
             conn_lock!(context),
-            &OrganizationSlug::from(project_slug.clone()).into(),
+            &OrganizationSlug::from(project_slug.clone()).into_resource_id(),
         ) {
             // If the project is part of an organization that is claimed,
             // then the project can not have anonymous reports.

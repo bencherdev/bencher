@@ -1,7 +1,7 @@
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonOrganizationPatchNull;
 use bencher_client::types::{JsonOrganizationPatch, JsonUpdateOrganization};
-use bencher_json::{ResourceId, ResourceName, Slug};
+use bencher_json::{OrganizationResourceId, ResourceName, Slug};
 
 use crate::{
     CliError,
@@ -11,7 +11,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
     pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     #[cfg(feature = "plus")]

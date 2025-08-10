@@ -1,5 +1,5 @@
 use bencher_client::types::{Entitlements, JsonNewPlan, NonEmpty, OrganizationUuid, PlanLevel};
-use bencher_json::ResourceId;
+use bencher_json::OrganizationResourceId;
 
 use crate::{
     CliError,
@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Create {
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
     pub checkout: NonEmpty,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,

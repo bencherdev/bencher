@@ -247,7 +247,40 @@ macro_rules! from_slug {
     };
 }
 
-from_slug!(BranchSlug, TestbedSlug, BenchmarkSlug, MeasureSlug);
+from_slug!(
+    OrganizationSlug,
+    ProjectSlug,
+    BranchSlug,
+    TestbedSlug,
+    BenchmarkSlug,
+    MeasureSlug,
+    UserSlug
+);
+
+macro_rules! from_resource_id {
+    ($($from:ident),*) => {
+        $(
+            impl From<bencher_json::$from> for types::ResourceId {
+                fn from(json: bencher_json::$from) -> Self {
+                    match json {
+                        bencher_json::$from::Uuid(uuid) => Self::Uuid(uuid.into()),
+                        bencher_json::$from::Slug(slug) => Self::Slug(slug.into()),
+                    }.into()
+                }
+            }
+        )*
+    };
+}
+
+from_resource_id!(
+    OrganizationResourceId,
+    ProjectResourceId,
+    BranchResourceId,
+    TestbedResourceId,
+    BenchmarkResourceId,
+    MeasureResourceId,
+    UserResourceId
+);
 
 macro_rules! from_name_id {
     ($($from:ident),*) => {

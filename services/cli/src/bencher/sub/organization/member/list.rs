@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonDirection, OrgMembersSort};
-use bencher_json::{ResourceId, UserName};
+use bencher_json::{OrganizationResourceId, UserName};
 
 use crate::{
     CliError,
@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct List {
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
     pub name: Option<UserName>,
     pub search: Option<String>,
     pub pagination: Pagination,

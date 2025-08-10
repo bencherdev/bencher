@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewClaim;
-use bencher_json::ResourceId;
+use bencher_json::OrganizationResourceId;
 
 use crate::{
     CliError,
@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Claim {
-    pub organization: ResourceId,
+    pub organization: OrganizationResourceId,
     pub backend: AuthBackend,
 }
 

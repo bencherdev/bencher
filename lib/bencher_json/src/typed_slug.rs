@@ -50,6 +50,12 @@ macro_rules! typed_slug {
             }
         }
 
+        impl<U> $crate::IntoResourceId<U, $slug> for $slug {
+            fn into_resource_id(self) -> $crate::ResourceId<U, $slug> {
+                $crate::ResourceId::Slug(self)
+            }
+        }
+
         $crate::typed_db::typed_db!($slug);
     };
     ($slug:ident, $name:ident) => {
