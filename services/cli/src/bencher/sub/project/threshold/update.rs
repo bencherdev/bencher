@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonRemoveModel, JsonUpdateModel, JsonUpdateThreshold};
-use bencher_json::{ResourceId, ThresholdUuid};
+use bencher_json::{ProjectResourceId, ThresholdUuid};
 
 use super::model::Model;
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub threshold: ThresholdUuid,
     pub model: Option<Model>,
     pub backend: AuthBackend,

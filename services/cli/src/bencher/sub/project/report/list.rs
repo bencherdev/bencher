@@ -1,6 +1,6 @@
 use bencher_client::types::{JsonDirection, ProjReportsSort};
 use bencher_json::{
-    BranchNameId, DateTime, ResourceId, TestbedNameId, project::report::JsonReportQuery,
+    BranchNameId, DateTime, ProjectResourceId, TestbedNameId, project::report::JsonReportQuery,
 };
 
 use crate::{
@@ -14,7 +14,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct List {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub branch: Option<BranchNameId>,
     pub testbed: Option<TestbedNameId>,
     pub start_time: Option<DateTime>,

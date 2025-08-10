@@ -253,8 +253,7 @@ from_slug!(
     BranchSlug,
     TestbedSlug,
     BenchmarkSlug,
-    MeasureSlug,
-    UserSlug
+    MeasureSlug
 );
 
 macro_rules! from_resource_id {
@@ -262,10 +261,10 @@ macro_rules! from_resource_id {
         $(
             impl From<bencher_json::$from> for types::ResourceId {
                 fn from(json: bencher_json::$from) -> Self {
-                    match json {
-                        bencher_json::$from::Uuid(uuid) => Self::Uuid(uuid.into()),
-                        bencher_json::$from::Slug(slug) => Self::Slug(slug.into()),
-                    }.into()
+                    types::Slug::from(match json {
+                        bencher_json::$from::Uuid(uuid) => uuid.to_string(),
+                        bencher_json::$from::Slug(slug) => slug.to_string(),
+                    }).into()
                 }
             }
         )*

@@ -1,5 +1,5 @@
 use bencher_client::types::JsonUpdateToken;
-use bencher_json::{ResourceId, ResourceName, TokenUuid};
+use bencher_json::{ResourceName, TokenUuid, UserResourceId};
 
 use crate::{
     CliError,
@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub user: ResourceId,
+    pub user: UserResourceId,
     pub token: TokenUuid,
     pub name: Option<ResourceName>,
     pub backend: AuthBackend,

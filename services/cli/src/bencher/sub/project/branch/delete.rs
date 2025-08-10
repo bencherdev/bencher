@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{BranchResourceId, ProjectResourceId};
 
 use crate::{
     CliError,
@@ -8,8 +8,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Delete {
-    pub project: ResourceId,
-    pub branch: ResourceId,
+    pub project: ProjectResourceId,
+    pub branch: BranchResourceId,
     pub backend: AuthBackend,
 }
 

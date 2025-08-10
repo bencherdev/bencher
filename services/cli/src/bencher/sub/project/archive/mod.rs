@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::ProjectResourceId;
 
 use crate::{
     CliError,
@@ -14,7 +14,7 @@ use dimension::Dimension;
 
 #[derive(Debug, Clone)]
 pub struct Archive {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub dimension: Dimension,
     pub action: ArchiveAction,
     pub backend: AuthBackend,

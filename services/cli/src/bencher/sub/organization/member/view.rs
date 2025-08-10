@@ -1,4 +1,4 @@
-use bencher_json::OrganizationResourceId;
+use bencher_json::{OrganizationResourceId, UserResourceId};
 
 use crate::{
     CliError,

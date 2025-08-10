@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewMeasure;
-use bencher_json::{MeasureSlug, ResourceId, ResourceName};
+use bencher_json::{MeasureSlug, ProjectResourceId, ResourceName};
 
 use crate::{
     CliError,
@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Create {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub name: ResourceName,
     pub slug: Option<MeasureSlug>,
     pub units: ResourceName,

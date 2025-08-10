@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, JsonReport, ResourceId, RunContext, TestbedNameId};
+use bencher_json::{DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId};
 
 use crate::{
     CliError,
@@ -32,7 +32,7 @@ use super::project::report::Thresholds;
 #[derive(Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct Run {
-    project: Option<ResourceId>,
+    project: Option<ProjectResourceId>,
     branch: Branch,
     testbed: Option<TestbedNameId>,
     adapter: Adapter,

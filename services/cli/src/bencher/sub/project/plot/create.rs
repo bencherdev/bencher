@@ -1,7 +1,7 @@
 use bencher_client::types::JsonNewPlot;
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, Index, MeasureUuid, ResourceId, ResourceName, TestbedUuid, Window,
-    project::plot::XAxis,
+    BenchmarkUuid, BranchUuid, Index, MeasureUuid, ProjectResourceId, ResourceName, TestbedUuid,
+    Window, project::plot::XAxis,
 };
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug, Clone)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct Create {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub index: Option<Index>,
     pub title: Option<ResourceName>,
     pub lower_value: bool,

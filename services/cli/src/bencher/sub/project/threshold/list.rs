@@ -1,6 +1,7 @@
 use bencher_client::types::{JsonDirection, ProjThresholdsSort};
 use bencher_json::{
-    BranchNameId, MeasureNameId, ResourceId, TestbedNameId, project::threshold::JsonThresholdQuery,
+    BranchNameId, MeasureNameId, ProjectResourceId, TestbedNameId,
+    project::threshold::JsonThresholdQuery,
 };
 
 use crate::{
@@ -14,7 +15,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct List {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub branch: Option<BranchNameId>,
     pub testbed: Option<TestbedNameId>,
     pub measure: Option<MeasureNameId>,

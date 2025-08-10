@@ -24,6 +24,12 @@ pub struct Slug(String);
 #[cfg(feature = "db")]
 crate::typed_string!(Slug);
 
+impl From<uuid::Uuid> for Slug {
+    fn from(uuid: uuid::Uuid) -> Self {
+        Self(uuid.to_string())
+    }
+}
+
 impl FromStr for Slug {
     type Err = ValidError;
 

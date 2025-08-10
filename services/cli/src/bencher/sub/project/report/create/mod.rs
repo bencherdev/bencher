@@ -2,7 +2,7 @@ use bencher_client::types::{
     Adapter, DateTime, GitHash, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings,
     JsonUpdateStartPoint,
 };
-use bencher_json::{BranchNameId, ResourceId, TestbedNameId};
+use bencher_json::{BranchNameId, ProjectResourceId, TestbedNameId};
 
 use crate::{
     CliError,
@@ -22,7 +22,7 @@ pub use thresholds::{Thresholds, ThresholdsError};
 
 #[derive(Debug, Clone)]
 pub struct Create {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub branch: BranchNameId,
     pub hash: Option<GitHash>,
     pub start_point: Option<JsonUpdateStartPoint>,

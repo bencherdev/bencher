@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewThreshold;
-use bencher_json::{BranchNameId, MeasureNameId, ResourceId, TestbedNameId};
+use bencher_json::{BranchNameId, MeasureNameId, ProjectResourceId, TestbedNameId};
 
 use super::{ThresholdError, model::Model};
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Create {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub branch: BranchNameId,
     pub testbed: TestbedNameId,
     pub measure: MeasureNameId,
@@ -41,7 +41,7 @@ impl TryFrom<CliThresholdCreate> for Create {
     }
 }
 
-fn unwrap_project(project: CliThresholdCreateProject) -> Result<ResourceId, ThresholdError> {
+fn unwrap_project(project: CliThresholdCreateProject) -> Result<ProjectResourceId, ThresholdError> {
     Ok(if let Some(project) = project.project {
         project
     } else if let Some(project) = project.threshold_project {

@@ -1,7 +1,7 @@
 use bencher_client::types::{
     JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility,
 };
-use bencher_json::{ResourceId, ResourceName, Slug, Url};
+use bencher_json::{ProjectResourceId, ResourceName, Slug, Url};
 
 use crate::{
     CliError,
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Clone)]
 #[expect(clippy::option_option)]
 pub struct Update {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub url: Option<Option<Url>>,

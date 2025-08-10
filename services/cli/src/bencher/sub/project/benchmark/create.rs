@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewBenchmark;
-use bencher_json::{BenchmarkName, BenchmarkSlug, ResourceId};
+use bencher_json::{BenchmarkName, BenchmarkSlug, ProjectResourceId};
 
 use crate::{
     CliError,
@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Create {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub name: BenchmarkName,
     pub slug: Option<BenchmarkSlug>,
     pub backend: AuthBackend,

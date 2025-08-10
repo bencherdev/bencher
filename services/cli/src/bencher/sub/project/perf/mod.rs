@@ -3,7 +3,7 @@ use std::pin::Pin;
 
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
-    ResourceId, TestbedUuid,
+    ProjectResourceId, TestbedUuid,
 };
 use tabled::Table;
 
@@ -19,7 +19,7 @@ use table_style::TableStyle;
 #[derive(Debug, Clone)]
 #[expect(clippy::option_option)]
 pub struct Perf {
-    project: ResourceId,
+    project: ProjectResourceId,
     branches: Vec<BranchUuid>,
     heads: Vec<Option<HeadUuid>>,
     testbeds: Vec<TestbedUuid>,
@@ -115,7 +115,7 @@ type PerfQueryResult = Pin<
     >,
 >;
 fn perf_sender(
-    project: ResourceId,
+    project: ProjectResourceId,
     json_perf_query: impl Into<JsonPerfQuery>,
 ) -> Box<dyn Fn(bencher_client::Client) -> PerfQueryResult + Send> {
     let json_perf_query: JsonPerfQuery = json_perf_query.into();

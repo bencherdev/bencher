@@ -1,5 +1,5 @@
 use bencher_client::types::ProjectPermission;
-use bencher_json::ResourceId;
+use bencher_json::ProjectResourceId;
 
 use crate::{
     CliError,
@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Allowed {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub perm: ProjectPermission,
     pub backend: AuthBackend,
 }

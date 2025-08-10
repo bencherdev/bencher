@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonDirection, ProjPlotsSort};
-use bencher_json::{ResourceId, ResourceName};
+use bencher_json::{ProjectResourceId, ResourceName};
 
 use crate::{
     CliError,
@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct List {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub title: Option<ResourceName>,
     pub search: Option<String>,
     pub pagination: Pagination,

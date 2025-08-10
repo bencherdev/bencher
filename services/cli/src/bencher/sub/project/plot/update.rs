@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot};
-use bencher_json::{Index, PlotUuid, ResourceId, ResourceName, Window};
+use bencher_json::{Index, PlotUuid, ProjectResourceId, ResourceName, Window};
 
 use crate::{
     CliError,
@@ -10,7 +10,7 @@ use crate::{
 #[derive(Debug, Clone)]
 #[expect(clippy::option_option)]
 pub struct Update {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub plot: PlotUuid,
     pub index: Option<Index>,
     pub title: Option<Option<ResourceName>>,

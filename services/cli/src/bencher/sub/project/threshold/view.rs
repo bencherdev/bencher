@@ -1,4 +1,4 @@
-use bencher_json::{ModelUuid, ResourceId, ThresholdUuid};
+use bencher_json::{ModelUuid, ProjectResourceId, ThresholdUuid};
 
 use crate::{
     CliError,
@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct View {
-    pub project: ResourceId,
+    pub project: ProjectResourceId,
     pub threshold: ThresholdUuid,
     pub model: Option<ModelUuid>,
     pub backend: PubBackend,

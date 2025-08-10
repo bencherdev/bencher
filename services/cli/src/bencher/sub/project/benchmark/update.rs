@@ -1,5 +1,5 @@
 use bencher_client::types::JsonUpdateBenchmark;
-use bencher_json::{BenchmarkName, BenchmarkSlug, ResourceId};
+use bencher_json::{BenchmarkName, BenchmarkResourceId, BenchmarkSlug, ProjectResourceId};
 
 use crate::{
     CliError,
@@ -9,8 +9,8 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub project: ResourceId,
-    pub benchmark: ResourceId,
+    pub project: ProjectResourceId,
+    pub benchmark: BenchmarkResourceId,
     pub name: Option<BenchmarkName>,
     pub slug: Option<BenchmarkSlug>,
     pub archived: Option<bool>,

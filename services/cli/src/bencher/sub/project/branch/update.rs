@@ -1,5 +1,5 @@
 use bencher_client::types::JsonUpdateBranch;
-use bencher_json::{BranchName, BranchSlug, ResourceId};
+use bencher_json::{BranchName, BranchResourceId, BranchSlug, ProjectResourceId};
 
 use crate::{
     CliError,
@@ -11,8 +11,8 @@ use super::start_point::StartPoint;
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub project: ResourceId,
-    pub branch: ResourceId,
+    pub project: ProjectResourceId,
+    pub branch: BranchResourceId,
     pub name: Option<BranchName>,
     pub slug: Option<BranchSlug>,
     pub start_point: StartPoint,

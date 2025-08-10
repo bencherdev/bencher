@@ -1,5 +1,5 @@
 use bencher_client::types::JsonUpdateTestbed;
-use bencher_json::{ResourceId, ResourceName, TestbedSlug};
+use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
 
 use crate::{
     CliError,
@@ -9,8 +9,8 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub project: ResourceId,
-    pub testbed: ResourceId,
+    pub project: ProjectResourceId,
+    pub testbed: TestbedResourceId,
     pub name: Option<ResourceName>,
     pub slug: Option<TestbedSlug>,
     pub archived: Option<bool>,
