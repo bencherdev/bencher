@@ -2,24 +2,21 @@ macro_rules! fn_eq_resource_id {
     ($table:ident, $resource_id:ident) => {
         pub fn eq_resource_id(
             resource_id: &bencher_json::$resource_id,
-        ) -> Result<
-            Box<
-                dyn diesel::BoxableExpression<
-                        $crate::schema::$table::table,
-                        diesel::sqlite::Sqlite,
-                        SqlType = diesel::sql_types::Bool,
-                    >,
-            >,
-            dropshot::HttpError,
+        ) -> Box<
+            dyn diesel::BoxableExpression<
+                    $crate::schema::$table::table,
+                    diesel::sqlite::Sqlite,
+                    SqlType = diesel::sql_types::Bool,
+                >,
         > {
-            Ok(match resource_id {
+            match resource_id {
                 bencher_json::ResourceId::Uuid(uuid) => {
                     Box::new($crate::schema::$table::uuid.eq(uuid.to_string()))
                 },
                 bencher_json::ResourceId::Slug(slug) => {
                     Box::new($crate::schema::$table::slug.eq(slug.to_string()))
                 },
-            })
+            }
         }
     };
 }
@@ -35,7 +32,7 @@ macro_rules! fn_from_resource_id {
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(schema::$table::$parent.eq(parent))
-                .filter(Self::eq_resource_id(resource_id)?)
+                .filter(Self::eq_resource_id(resource_id))
                 .first::<Self>(conn)
                 .map_err($crate::error::resource_not_found_err!(
                     $resource,
@@ -49,7 +46,7 @@ macro_rules! fn_from_resource_id {
             resource_id: &bencher_json::$resource_id,
         ) -> Result<Self, HttpError> {
             schema::$table::table
-                .filter(Self::eq_resource_id(resource_id)?)
+                .filter(Self::eq_resource_id(resource_id))
                 .first::<Self>(conn)
                 .map_err($crate::error::resource_not_found_err!(
                     $resource,

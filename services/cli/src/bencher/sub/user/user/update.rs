@@ -1,5 +1,5 @@
 use bencher_client::types::JsonUpdateUser;
-use bencher_json::{Email, UserSlug, UserName, UserResourceId};
+use bencher_json::{Email, UserName, UserResourceId, UserSlug};
 
 use crate::{
     CliError,

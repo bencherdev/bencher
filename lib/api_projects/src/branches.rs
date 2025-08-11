@@ -306,7 +306,7 @@ async fn get_one_inner(
     )?;
 
     let query_branch = QueryBranch::belonging_to(&query_project)
-        .filter(QueryBranch::eq_resource_id(&path_params.branch)?)
+        .filter(QueryBranch::eq_resource_id(&path_params.branch))
         .first::<QueryBranch>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Branch,

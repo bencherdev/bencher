@@ -41,7 +41,6 @@ from_client!(
     Index,
     Jwt,
     NonEmpty,
-    // ResourceId,
     ResourceName,
     SampleSize,
     Slug,

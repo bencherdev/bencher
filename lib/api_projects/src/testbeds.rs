@@ -281,7 +281,7 @@ async fn get_one_inner(
     )?;
 
     QueryTestbed::belonging_to(&query_project)
-        .filter(QueryTestbed::eq_resource_id(&path_params.testbed)?)
+        .filter(QueryTestbed::eq_resource_id(&path_params.testbed))
         .first::<QueryTestbed>(conn_lock!(context))
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(

@@ -282,7 +282,7 @@ async fn get_one_inner(
     )?;
 
     QueryBenchmark::belonging_to(&query_project)
-        .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark)?)
+        .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark))
         .first::<QueryBenchmark>(conn_lock!(context))
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(

@@ -2,17 +2,14 @@ macro_rules! fn_eq_name_id {
     ($name:ident, $table:ident, $name_id:ident) => {
         pub fn eq_name_id(
             name_id: &bencher_json::$name_id,
-        ) -> Result<
-            Box<
-                dyn diesel::BoxableExpression<
-                        $crate::schema::$table::table,
-                        diesel::sqlite::Sqlite,
-                        SqlType = diesel::sql_types::Bool,
-                    >,
-            >,
-            dropshot::HttpError,
+        ) -> Box<
+            dyn diesel::BoxableExpression<
+                    $crate::schema::$table::table,
+                    diesel::sqlite::Sqlite,
+                    SqlType = diesel::sql_types::Bool,
+                >,
         > {
-            Ok(match name_id {
+            match name_id {
                 bencher_json::NameId::Uuid(uuid) => {
                     Box::new($crate::schema::$table::uuid.eq(uuid.to_string()))
                 },
@@ -22,7 +19,7 @@ macro_rules! fn_eq_name_id {
                 bencher_json::NameId::Name(name) => {
                     Box::new($crate::schema::$table::name.eq(name.to_string()))
                 },
-            })
+            }
         }
     };
 }
@@ -38,7 +35,7 @@ macro_rules! fn_from_name_id {
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(schema::$table::project_id.eq(project_id))
-                .filter(Self::eq_name_id(name_id)?)
+                .filter(Self::eq_name_id(name_id))
                 .first::<Self>(conn)
                 .map_err(crate::error::resource_not_found_err!(
                     $resource,
