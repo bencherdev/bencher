@@ -4,22 +4,25 @@ use crate::{context::DbConnection, model::project::ProjectId};
 
 pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<ProjectId>, &str) -> bool;
 
-pub fn validate_slug<S>(
+pub fn validate_slug<N, S>(
     conn: &mut DbConnection,
     project_id: Option<ProjectId>,
-    name: S,
-    slug: Option<Slug>,
+    name: N,
+    slug: Option<S>,
     exists: Box<SlugExistsFn>,
-) -> Slug
+) -> S
 where
-    S: AsRef<str> + std::fmt::Display,
+    N: AsRef<str> + std::fmt::Display,
+    S: Into<Slug> + From<Slug>,
 {
+    let slug = slug.map(Into::into);
     let new_slug = Slug::unwrap_or_new(name, slug);
     if exists(conn, project_id, new_slug.as_ref()) {
         new_slug.with_rand_suffix()
     } else {
         new_slug
     }
+    .into()
 }
 
 macro_rules! ok_slug {

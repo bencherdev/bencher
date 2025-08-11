@@ -189,12 +189,12 @@ impl InsertUser {
         slug: Option<UserSlug>,
         email: Email,
     ) -> Self {
-        let slug = ok_slug!(conn, &name, slug.map(Into::into), user, QueryUser);
+        let slug = ok_slug!(conn, &name, slug, user, QueryUser);
         let timestamp = DateTime::now();
         Self {
             uuid: UserUuid::new(),
             name,
-            slug: slug.into(),
+            slug,
             email,
             admin: false,
             locked: false,

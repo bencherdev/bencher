@@ -254,20 +254,13 @@ impl InsertMeasure {
 
     fn from_json(conn: &mut DbConnection, project_id: ProjectId, measure: JsonNewMeasure) -> Self {
         let JsonNewMeasure { name, slug, units } = measure;
-        let slug = ok_slug!(
-            conn,
-            project_id,
-            &name,
-            slug.map(Into::into),
-            measure,
-            QueryMeasure
-        );
+        let slug = ok_slug!(conn, project_id, &name, slug, measure, QueryMeasure);
         let timestamp = DateTime::now();
         Self {
             uuid: MeasureUuid::new(),
             project_id,
             name,
-            slug: slug.into(),
+            slug,
             units,
             created: timestamp,
             modified: timestamp,

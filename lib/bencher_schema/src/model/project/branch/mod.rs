@@ -403,20 +403,13 @@ impl InsertBranch {
         name: BranchName,
         slug: Option<BranchSlug>,
     ) -> Self {
-        let slug = ok_slug!(
-            conn,
-            project_id,
-            &name,
-            slug.map(Into::into),
-            branch,
-            QueryBranch
-        );
+        let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch);
         let timestamp = DateTime::now();
         Self {
             uuid: BranchUuid::new(),
             project_id,
             name,
-            slug: slug.into(),
+            slug,
             head_id: None,
             created: timestamp,
             modified: timestamp,

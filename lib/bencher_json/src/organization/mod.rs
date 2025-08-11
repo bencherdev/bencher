@@ -9,7 +9,7 @@ use serde::{
     de::{self, Visitor},
 };
 
-use crate::{ProjectSlug, UserUuid};
+use crate::{ProjectSlug, UserSlug, UserUuid};
 
 pub mod claim;
 pub mod member;
@@ -23,7 +23,7 @@ crate::typed_slug::typed_slug!(OrganizationSlug, ResourceName);
 #[typeshare::typeshare]
 pub type OrganizationResourceId = ResourceId<OrganizationUuid, OrganizationSlug>;
 
-// Create a personal organization for a user.
+// Create an organization for a user.
 impl From<UserUuid> for OrganizationUuid {
     fn from(uuid: UserUuid) -> Self {
         uuid::Uuid::from(uuid).into()
@@ -33,6 +33,13 @@ impl From<UserUuid> for OrganizationUuid {
 // Create an organization for a project.
 impl From<ProjectSlug> for OrganizationSlug {
     fn from(slug: ProjectSlug) -> Self {
+        Self(slug.into())
+    }
+}
+
+/// Create an organization for a user.
+impl From<UserSlug> for OrganizationSlug {
+    fn from(slug: UserSlug) -> Self {
         Self(slug.into())
     }
 }

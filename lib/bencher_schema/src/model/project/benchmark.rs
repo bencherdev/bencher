@@ -168,20 +168,13 @@ impl InsertBenchmark {
         benchmark: JsonNewBenchmark,
     ) -> Self {
         let JsonNewBenchmark { name, slug } = benchmark;
-        let slug = ok_slug!(
-            conn,
-            project_id,
-            &name,
-            slug.map(Into::into),
-            benchmark,
-            QueryBenchmark
-        );
+        let slug = ok_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark);
         let timestamp = DateTime::now();
         Self {
             uuid: BenchmarkUuid::new(),
             project_id,
             name,
-            slug: slug.into(),
+            slug,
             created: timestamp,
             modified: timestamp,
             archived: None,

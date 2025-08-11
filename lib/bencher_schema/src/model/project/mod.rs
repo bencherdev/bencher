@@ -591,8 +591,8 @@ impl InsertProject {
             url,
             visibility,
         } = project;
-        let slug = ok_slug!(conn, &name, slug.map(Into::into), project, QueryProject);
-        Self::new(organization.id, name, slug.into(), url, visibility)
+        let slug = ok_slug!(conn, &name, slug, project, QueryProject);
+        Self::new(organization.id, name, slug, url, visibility)
     }
 
     fn from_organization(

@@ -156,20 +156,13 @@ impl InsertTestbed {
 
     fn from_json(conn: &mut DbConnection, project_id: ProjectId, testbed: JsonNewTestbed) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
-        let slug = ok_slug!(
-            conn,
-            project_id,
-            &name,
-            slug.map(Into::into),
-            testbed,
-            QueryTestbed
-        );
+        let slug = ok_slug!(conn, project_id, &name, slug, testbed, QueryTestbed);
         let timestamp = DateTime::now();
         Self {
             uuid: TestbedUuid::new(),
             project_id,
             name,
-            slug: slug.into(),
+            slug,
             created: timestamp,
             modified: timestamp,
             archived: None,

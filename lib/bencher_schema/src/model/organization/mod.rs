@@ -356,14 +356,8 @@ impl InsertOrganization {
 
     pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
-        let slug = ok_slug!(
-            conn,
-            &name,
-            slug.map(Into::into),
-            organization,
-            QueryOrganization
-        );
-        Self::new(name, slug.into())
+        let slug = ok_slug!(conn, &name, slug, organization, QueryOrganization);
+        Self::new(name, slug)
     }
 
     pub fn from_user(conn: &mut DbConnection, query_user: &QueryUser) -> Self {
@@ -378,7 +372,7 @@ impl InsertOrganization {
             QueryOrganization
         );
         // The user's organization should be created with the user's UUID.
-        Self::new_inner(query_user.uuid.into(), name.into(), slug.into())
+        Self::new_inner(query_user.uuid.into(), name.into(), slug)
     }
 }
 
