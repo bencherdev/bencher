@@ -49,7 +49,7 @@ protocol = "http"
 [[vm]]
 cpu_kind = "shared"
 cpus = 8
-memory_mb = 1024
+memory_mb = 2048
 
 [[restart]]
 policy = "on-failure"
