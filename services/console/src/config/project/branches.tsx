@@ -1,5 +1,6 @@
 import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
+import IconTitle from "../../components/site/IconTitle";
 import type { JsonBranch } from "../../types/bencher";
 import {
 	isAllowedProjectCreate,
@@ -18,7 +19,6 @@ import {
 	ThresholdDimension,
 } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
-import IconTitle from "../../components/site/IconTitle";
 
 export const BRANCH_ICON = "fas fa-code-branch";
 
@@ -179,6 +179,12 @@ const branchesConfig = {
 					label: "Branch UUID",
 					key: "uuid",
 					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Branch Version Hash",
+					keys: ["head", "version", "hash"],
+					display: Display.GIT_HASH,
 				},
 				{
 					kind: Card.NESTED_FIELD,

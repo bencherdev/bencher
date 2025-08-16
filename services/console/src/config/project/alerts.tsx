@@ -1,9 +1,9 @@
 import type { Params } from "astro";
 import { PubResourceKind } from "../../components/perf/util";
+import IconTitle from "../../components/site/IconTitle";
 import { isAllowedProjectEdit } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
-import IconTitle from "../../components/site/IconTitle";
 
 export const ALERT_ICON = "fas fa-bell";
 export const ALERT_OFF_ICON = "far fa-bell-slash";
@@ -95,6 +95,12 @@ const alertsConfig = {
 					label: "Branch",
 					keys: ["threshold", "branch"],
 					display: Display.BRANCH,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Branch Version Hash",
+					keys: ["threshold", "branch", "head", "version", "hash"],
+					display: Display.GIT_HASH,
 				},
 				{
 					kind: Card.NESTED_FIELD,

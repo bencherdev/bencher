@@ -1,6 +1,6 @@
 import type { Params } from "astro";
-import { Button, Card, Display } from "../types";
 import { PubResourceKind } from "../../components/perf/util";
+import { Button, Card, Display } from "../types";
 
 const reportsPubConfig = {
 	resource: PubResourceKind.Report,
@@ -42,6 +42,12 @@ const reportsPubConfig = {
 				label: "Branch",
 				key: "branch",
 				display: Display.BRANCH,
+			},
+			{
+				kind: Card.NESTED_FIELD,
+				label: "Branch Version Hash",
+				keys: ["branch", "head", "version", "hash"],
+				display: Display.GIT_HASH,
 			},
 			{
 				kind: Card.FIELD,

@@ -1,8 +1,8 @@
 import type { Params } from "astro";
+import IconTitle from "../../components/site/IconTitle";
 import { isAllowedProjectDelete } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
-import IconTitle from "../../components/site/IconTitle";
 
 export const REPORT_ICON = "far fa-list-alt";
 
@@ -81,6 +81,12 @@ const reportsConfig = {
 					label: "Branch",
 					key: "branch",
 					display: Display.BRANCH,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Branch Version Hash",
+					keys: ["branch", "head", "version", "hash"],
+					display: Display.GIT_HASH,
 				},
 				{
 					kind: Card.FIELD,
