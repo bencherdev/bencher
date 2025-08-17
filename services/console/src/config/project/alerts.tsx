@@ -98,6 +98,12 @@ const alertsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
+					label: "Branch Version Number",
+					keys: ["threshold", "branch", "head", "version", "number"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
 					label: "Branch Version Hash",
 					keys: ["threshold", "branch", "head", "version", "hash"],
 					display: Display.GIT_HASH,
