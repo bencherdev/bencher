@@ -1,12 +1,13 @@
 use std::sync::LazyLock;
 
-use bencher_valid::{Email, NonEmpty, Secret, Url, UserName};
+use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl,
     Scope, TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
 };
 use octocrab::Octocrab;
 use serde::Deserialize;
+use url::Url;
 
 #[expect(clippy::expect_used)]
 static AUTH_URL: LazyLock<AuthUrl> = LazyLock::new(|| {
@@ -31,12 +32,6 @@ pub struct GoogleClient {
 
 #[derive(Debug, thiserror::Error)]
 pub enum GoogleClientError {
-    #[error("Failed to parse callback URL ({callback_url}): {error}")]
-    CallbackUrl {
-        callback_url: Url,
-        error: bencher_valid::ValidError,
-    },
-
     #[error("Failed to create a reqwest client: {0}")]
     Reqwest(reqwest::Error),
     #[error("Failed to exchange code for access token: {0}")]
@@ -61,11 +56,7 @@ pub enum GoogleClientError {
 }
 
 impl GoogleClient {
-    pub fn new(
-        client_id: NonEmpty,
-        client_secret: Secret,
-        callback_url: Url,
-    ) -> Result<Self, GoogleClientError> {
+    pub fn new(client_id: NonEmpty, client_secret: Secret, callback_url: Url) -> Self {
         let client_id = ClientId::new(client_id.into());
         let client_secret = ClientSecret::new(client_secret.into());
 
@@ -73,16 +64,9 @@ impl GoogleClient {
             .set_client_secret(client_secret)
             .set_auth_uri(AUTH_URL.clone())
             .set_token_uri(TOKEN_URL.clone())
-            .set_redirect_uri(RedirectUrl::from_url(
-                callback_url.clone().try_into().map_err(|error| {
-                    GoogleClientError::CallbackUrl {
-                        callback_url,
-                        error,
-                    }
-                })?,
-            ));
+            .set_redirect_uri(RedirectUrl::from_url(callback_url));
 
-        Ok(Self { oauth2_client })
+        Self { oauth2_client }
     }
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GoogleClientError> {

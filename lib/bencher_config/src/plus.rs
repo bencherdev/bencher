@@ -27,8 +27,8 @@ pub enum PlusError {
     LicenseSelfHosted(bencher_license::LicenseError),
     #[error("Failed to handle Bencher Cloud licensing: {0}")]
     LicenseCloud(bencher_license::LicenseError),
-    #[error("Failed to create Google client: {0}")]
-    GoogleClient(bencher_google_client::GoogleClientError),
+    #[error("Failed to create Google OAuth callback URL: {0}")]
+    CallbackUrl(url::ParseError),
     #[error("Tried to init Bencher Cloud for other Console URL: {0}")]
     BencherCloud(Url),
     #[error("Failed to setup billing: {0}")]
@@ -63,10 +63,13 @@ impl Plus {
                 |JsonGoogle {
                      client_id,
                      client_secret,
-                     callback_url,
                  }| {
-                    GoogleClient::new(client_id, client_secret, callback_url)
-                        .map_err(PlusError::GoogleClient)
+                    console_url
+                        .join("/auth/google")
+                        .map(|callback_url| {
+                            GoogleClient::new(client_id, client_secret, callback_url)
+                        })
+                        .map_err(PlusError::CallbackUrl)
                 },
             )
             .transpose()?;
