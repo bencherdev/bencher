@@ -49,6 +49,7 @@ api_users = { path = "lib/api_users" }
 bencher_billing = { path = "plus/bencher_billing" }
 bencher_bing_index = { path = "plus/bencher_bing_index" }
 bencher_github_client = { path = "plus/bencher_github_client" }
+bencher_google_client = { path = "plus/bencher_google_client" }
 bencher_google_index = { path = "plus/bencher_google_index" }
 bencher_license = { path = "plus/bencher_license" }
 # crates.io
@@ -65,6 +66,7 @@ gix = { version = "0.70", default-features = false }
 http = "1.2"
 jsonwebtoken = "9.3"
 literally = "0.1"
+oauth2 = "5.0"
 octocrab = "0.43"
 ordered-float = "4.6"
 oso = "0.27"

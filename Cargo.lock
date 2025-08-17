@@ -1168,6 +1168,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_google_client"
+version = "0.5.4"
+dependencies = [
+ "bencher_valid",
+ "oauth2",
+ "octocrab",
+ "serde",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "bencher_google_index"
 version = "0.5.4"
 dependencies = [

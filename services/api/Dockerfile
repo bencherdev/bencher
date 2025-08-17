@@ -54,6 +54,7 @@ WORKDIR /usr/src/bencher/plus
 COPY plus/bencher_billing bencher_billing
 COPY plus/bencher_bing_index bencher_bing_index
 COPY plus/bencher_github_client bencher_github_client
+COPY plus/bencher_google_client bencher_google_client
 COPY plus/bencher_google_index bencher_google_index
 COPY plus/bencher_license bencher_license
 
