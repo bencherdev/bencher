@@ -72,12 +72,6 @@ pub struct CliRun {
 }
 
 #[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("run_project")
-        .required(false)
-        .multiple(false)
-        .args(&["project", "ci_on_the_fly"]),
-))]
 pub struct CliRunProject {
     /// Project slug or UUID
     #[clap(long, env = "BENCHER_PROJECT")]
