@@ -98,21 +98,6 @@ impl QueryHead {
             None
         };
 
-        let version = version
-            .or_else(|| {
-                schema::head_version::table
-                    .inner_join(
-                        schema::version::table
-                            .on(schema::head_version::version_id.eq(schema::version::id)),
-                    )
-                    .filter(schema::head_version::head_id.eq(query_head.id))
-                    .order(schema::version::number.desc())
-                    .select(QueryVersion::as_select())
-                    .first::<QueryVersion>(conn)
-                    .ok()
-            })
-            .map(QueryVersion::into_json);
-
         let Self {
             uuid,
             created,
@@ -122,7 +107,7 @@ impl QueryHead {
         Ok(JsonHead {
             uuid,
             start_point,
-            version,
+            version: version.map(QueryVersion::into_json),
             created,
             replaced,
         })

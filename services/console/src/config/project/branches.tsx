@@ -182,12 +182,6 @@ const branchesConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
-					label: "Branch Version Hash",
-					keys: ["head", "version", "hash"],
-					display: Display.GIT_HASH,
-				},
-				{
-					kind: Card.NESTED_FIELD,
 					label: "Branch Start Point",
 					keys: ["head", "start_point"],
 					display: Display.START_POINT,
