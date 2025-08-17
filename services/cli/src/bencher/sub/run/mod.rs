@@ -15,6 +15,7 @@ mod branch;
 mod ci;
 mod error;
 mod format;
+mod project;
 pub mod runner;
 mod sub_adapter;
 
@@ -22,6 +23,7 @@ use branch::Branch;
 use ci::Ci;
 pub use error::RunError;
 use format::Format;
+use project::map_project;
 use runner::Runner;
 use sub_adapter::SubAdapter;
 
@@ -76,7 +78,7 @@ impl TryFrom<CliRun> for Run {
             backend,
         } = run;
         Ok(Self {
-            project,
+            project: map_project(project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
             adapter: adapter.into(),

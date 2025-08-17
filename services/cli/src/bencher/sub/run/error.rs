@@ -7,6 +7,11 @@ pub enum RunError {
     #[error("Failed to check API version: {0}")]
     ApiVersion(crate::BackendError),
 
+    #[error(
+        "Attempting to create an on-the-fly project when the `CI` environment variable is set. If you are sure you want to do this, set the `--ci-on-the-fly` flag."
+    )]
+    CiOnTheFly,
+
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),
     #[error("{0}")]

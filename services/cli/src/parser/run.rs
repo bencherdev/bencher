@@ -10,9 +10,8 @@ use super::project::report::{
 
 #[derive(Parser, Debug)]
 pub struct CliRun {
-    /// Project slug or UUID
-    #[clap(long, env = "BENCHER_PROJECT")]
-    pub project: Option<ProjectResourceId>,
+    #[clap(flatten)]
+    pub project: CliRunProject,
 
     #[clap(flatten)]
     pub branch: CliRunBranch,
@@ -70,6 +69,22 @@ pub struct CliRun {
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("run_project")
+        .required(false)
+        .multiple(false)
+        .args(&["project", "ci_on_the_fly"]),
+))]
+pub struct CliRunProject {
+    /// Project slug or UUID
+    #[clap(long, env = "BENCHER_PROJECT")]
+    pub project: Option<ProjectResourceId>,
+    /// Allow on-the-fly project creation in CI environments.
+    /// Required if the `CI` environment variable is set.
+    pub ci_on_the_fly: bool,
 }
 
 #[derive(Args, Debug)]
