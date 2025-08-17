@@ -225,6 +225,7 @@ async fn into_context(
     #[cfg(feature = "plus")]
     let Plus {
         github_client,
+        google_client,
         stats,
         biller,
         licensor,
@@ -258,6 +259,8 @@ async fn into_context(
         rate_limiting,
         #[cfg(feature = "plus")]
         github_client,
+        #[cfg(feature = "plus")]
+        google_client,
         #[cfg(feature = "plus")]
         stats,
         #[cfg(feature = "plus")]

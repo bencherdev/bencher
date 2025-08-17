@@ -10,6 +10,7 @@ publish = false
 plus = [
     "dep:bencher_billing",
     "dep:bencher_github_client",
+    "dep:bencher_google_client",
     "dep:bencher_license",
     "bencher_endpoint/plus",
     "bencher_json/plus",
@@ -21,6 +22,7 @@ sentry = ["bencher_schema/sentry"]
 bencher_billing = { workspace = true, optional = true }
 bencher_endpoint.workspace = true
 bencher_github_client = { workspace = true, optional = true }
+bencher_google_client = { workspace = true, optional = true }
 bencher_json.workspace = true
 bencher_license = { workspace = true, optional = true }
 bencher_rbac.workspace = true

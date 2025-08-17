@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 use bencher_valid::{Email, NonEmpty, Secret, Url, UserName};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl,
-    TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
+    Scope, TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
 };
 use octocrab::Octocrab;
 use serde::Deserialize;
@@ -19,6 +19,9 @@ static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
     TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_owned())
         .expect("Invalid token endpoint URL")
 });
+
+static AUTH_SCOPE: LazyLock<Scope> =
+    LazyLock::new(|| Scope::new("https://www.googleapis.com/auth/plus.me".to_owned()));
 
 #[derive(Debug, Clone)]
 pub struct GoogleClient {

@@ -2,9 +2,10 @@
 
 use bencher_billing::Biller;
 use bencher_github_client::GitHubClient;
+use bencher_google_client::GoogleClient;
 use bencher_json::{
     is_bencher_cloud,
-    system::config::{JsonCloud, JsonPlus},
+    system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus},
 };
 use bencher_license::Licensor;
 use bencher_schema::context::{Indexer, StatsSettings};
@@ -13,6 +14,7 @@ use url::Url;
 
 pub struct Plus {
     pub github_client: Option<GitHubClient>,
+    pub google_client: Option<GoogleClient>,
     pub indexer: Option<Indexer>,
     pub stats: StatsSettings,
     pub biller: Option<Biller>,
@@ -25,6 +27,8 @@ pub enum PlusError {
     LicenseSelfHosted(bencher_license::LicenseError),
     #[error("Failed to handle Bencher Cloud licensing: {0}")]
     LicenseCloud(bencher_license::LicenseError),
+    #[error("Failed to create Google client: {0}")]
+    GoogleClient(bencher_google_client::GoogleClientError),
     #[error("Tried to init Bencher Cloud for other Console URL: {0}")]
     BencherCloud(Url),
     #[error("Failed to setup billing: {0}")]
@@ -38,6 +42,7 @@ impl Plus {
         let Some(plus) = plus else {
             return Ok(Self {
                 github_client: None,
+                google_client: None,
                 indexer: None,
                 stats: StatsSettings::default(),
                 biller: None,
@@ -45,9 +50,26 @@ impl Plus {
             });
         };
 
-        let github_client = plus
-            .github
-            .map(|github| GitHubClient::new(github.client_id, github.client_secret));
+        let github_client = plus.github.map(
+            |JsonGitHub {
+                 client_id,
+                 client_secret,
+             }| GitHubClient::new(client_id, client_secret),
+        );
+
+        let google_client = plus
+            .google
+            .map(
+                |JsonGoogle {
+                     client_id,
+                     client_secret,
+                     callback_url,
+                 }| {
+                    GoogleClient::new(client_id, client_secret, callback_url)
+                        .map_err(PlusError::GoogleClient)
+                },
+            )
+            .transpose()?;
 
         let stats = plus.stats.map(Into::into).unwrap_or_default();
 
@@ -60,6 +82,7 @@ impl Plus {
         else {
             return Ok(Self {
                 github_client,
+                google_client,
                 indexer: None,
                 stats,
                 biller: None,
@@ -84,6 +107,7 @@ impl Plus {
 
         Ok(Self {
             github_client,
+            google_client,
             indexer,
             stats,
             biller,

@@ -1,4 +1,4 @@
-use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted};
+use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonAuthAck, system::auth::JsonAccept};
 use bencher_schema::{
     conn_lock,
@@ -15,7 +15,7 @@ use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 pub async fn auth_accept_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+    Ok(Endpoint::cors(&[Post.into()]))
 }
 
 #[endpoint {

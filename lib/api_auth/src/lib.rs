@@ -1,6 +1,7 @@
 mod accept;
 mod confirm;
 mod github;
+mod google;
 mod login;
 mod signup;
 
@@ -42,6 +43,12 @@ impl bencher_endpoint::Registrar for Api {
                 api_description.register(github::auth_github_options)?;
             }
             api_description.register(github::auth_github_post)?;
+
+            // Google OAuth
+            if http_options {
+                api_description.register(google::auth_google_options)?;
+            }
+            api_description.register(google::auth_google_post)?;
         }
 
         Ok(())

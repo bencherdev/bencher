@@ -11,6 +11,7 @@ plus = [
     "dep:bencher_billing",
     "dep:bencher_bing_index",
     "dep:bencher_github_client",
+    "dep:bencher_google_client",
     "dep:bencher_google_index",
     "dep:bencher_license",
     "dep:reqwest",
@@ -28,6 +29,7 @@ bencher_billing = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
 bencher_boundary.workspace = true
 bencher_github_client = { workspace = true, optional = true }
+bencher_google_client = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }

@@ -3,6 +3,8 @@ use bencher_billing::Biller;
 #[cfg(feature = "plus")]
 use bencher_github_client::GitHubClient;
 #[cfg(feature = "plus")]
+use bencher_google_client::GoogleClient;
+#[cfg(feature = "plus")]
 use bencher_license::Licensor;
 use bencher_token::TokenKey;
 use tokio::sync::mpsc::Sender;
@@ -43,6 +45,8 @@ pub struct ApiContext {
     pub rate_limiting: RateLimiting,
     #[cfg(feature = "plus")]
     pub github_client: Option<GitHubClient>,
+    #[cfg(feature = "plus")]
+    pub google_client: Option<GoogleClient>,
     #[cfg(feature = "plus")]
     pub indexer: Option<Indexer>,
     #[cfg(feature = "plus")]

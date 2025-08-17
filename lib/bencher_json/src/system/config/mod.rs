@@ -16,7 +16,7 @@ pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]
 pub use plus::{
-    JsonPlus,
+    JsonGitHub, JsonGoogle, JsonPlus,
     cloud::{
         JsonCloud,
         billing::{JsonBilling, JsonProduct, JsonProducts},
