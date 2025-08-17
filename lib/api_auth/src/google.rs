@@ -1,20 +1,20 @@
 #![cfg(feature = "plus")]
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted};
-use bencher_json::{JsonAuthUser, JsonSignup, PlanLevel, system::auth::JsonOAuth};
+use bencher_json::{JsonAuthUser, JsonSignup, system::auth::JsonOAuth};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
     error::{issue_error, payment_required_error, unauthorized_error},
     model::{
-        organization::{QueryOrganization, plan::LicenseUsage},
+        organization::QueryOrganization,
         user::{InsertUser, QueryUser},
     },
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
-use super::CLIENT_TOKEN_TTL;
+use crate::{CLIENT_TOKEN_TTL, is_allowed_oauth2};
 
 pub const GOOGLE_OAUTH2: &str = "Google OAuth2";
 
@@ -52,20 +52,7 @@ async fn post_inner(
         slog::warn!(log, "{err}");
         return Err(payment_required_error(err));
     };
-    // If not on Bencher Cloud, then at least one organization must have a valid Bencher Plus license
-    if !context.is_bencher_cloud
-        && LicenseUsage::get_for_server(
-            &context.database.connection,
-            &context.licensor,
-            Some(PlanLevel::Enterprise),
-        )
-        .await?
-        .is_empty()
-    {
-        return Err(payment_required_error(
-            "You must have a valid Bencher Plus Enterprise license for at least one organization on the server to use Google OAuth2",
-        ));
-    }
+    is_allowed_oauth2(context).await?;
 
     let (name, email) = google_client
         .oauth_user(json_oauth.code)
