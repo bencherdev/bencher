@@ -1,8 +1,8 @@
 mod accept;
 mod confirm;
-mod github;
-mod google;
 mod login;
+#[cfg(feature = "plus")]
+mod oauth2;
 mod signup;
 
 // TODO Custom max TTL
@@ -40,42 +40,17 @@ impl bencher_endpoint::Registrar for Api {
         {
             // GitHub OAuth
             if http_options {
-                api_description.register(github::auth_github_options)?;
+                api_description.register(oauth2::github::auth_github_options)?;
             }
-            api_description.register(github::auth_github_post)?;
+            api_description.register(oauth2::github::auth_github_post)?;
 
             // Google OAuth
             if http_options {
-                api_description.register(google::auth_google_options)?;
+                api_description.register(oauth2::google::auth_google_options)?;
             }
-            api_description.register(google::auth_google_post)?;
+            api_description.register(oauth2::google::auth_google_post)?;
         }
 
         Ok(())
-    }
-}
-
-#[cfg(feature = "plus")]
-async fn is_allowed_oauth2(
-    context: &bencher_schema::context::ApiContext,
-) -> Result<(), dropshot::HttpError> {
-    use bencher_schema::{error::payment_required_error, model::organization::plan::LicenseUsage};
-
-    // Either the server is Bencher Cloud, or at least one organization must have a valid Bencher Plus license
-    let is_allowed = context.is_bencher_cloud
-        || !LicenseUsage::get_for_server(
-            &context.database.connection,
-            &context.licensor,
-            Some(bencher_json::PlanLevel::Enterprise),
-        )
-        .await?
-        .is_empty();
-
-    if is_allowed {
-        Ok(())
-    } else {
-        Err(payment_required_error(
-            "You must have a valid Bencher Plus Enterprise license for at least one organization on the server to use OAuth2",
-        ))
     }
 }

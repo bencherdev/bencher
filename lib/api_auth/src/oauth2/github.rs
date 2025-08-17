@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted};
+use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonAuthUser, JsonSignup, system::auth::JsonOAuth};
 use bencher_schema::{
     conn_lock,
@@ -14,27 +14,29 @@ use bencher_schema::{
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
-use crate::{CLIENT_TOKEN_TTL, is_allowed_oauth2};
+use crate::CLIENT_TOKEN_TTL;
 
-pub const GOOGLE_OAUTH2: &str = "Google OAuth2";
+use super::is_allowed_oauth2;
+
+pub const GITHUB_OAUTH2: &str = "GitHub OAuth2";
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/auth/google",
+    path =  "/v0/auth/github",
     tags = ["auth"]
 }]
-pub async fn auth_google_options(
+pub async fn auth_github_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+    Ok(Endpoint::cors(&[Post.into()]))
 }
 
 #[endpoint {
     method = POST,
-    path = "/v0/auth/google",
+    path = "/v0/auth/github",
     tags = ["auth"]
 }]
-pub async fn auth_google_post(
+pub async fn auth_github_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonOAuth>,
 ) -> Result<ResponseAccepted<JsonAuthUser>, HttpError> {
@@ -47,14 +49,14 @@ async fn post_inner(
     context: &ApiContext,
     json_oauth: JsonOAuth,
 ) -> Result<JsonAuthUser, HttpError> {
-    let Some(google_client) = &context.google_client else {
-        let err = "Google OAuth2 is not configured";
+    let Some(github_client) = &context.github_client else {
+        let err = "GitHub OAuth2 is not configured";
         slog::warn!(log, "{err}");
         return Err(payment_required_error(err));
     };
     is_allowed_oauth2(context).await?;
 
-    let (name, email) = google_client
+    let (name, email) = github_client
         .oauth_user(json_oauth.code)
         .await
         .map_err(unauthorized_error)?;
@@ -93,7 +95,7 @@ async fn post_inner(
             &context.messenger,
             &context.console_url,
             invited,
-            GOOGLE_OAUTH2,
+            GITHUB_OAUTH2,
         )?;
 
         QueryUser::get_with_email(conn_lock!(context), &email)?
