@@ -122,6 +122,12 @@ const alertsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
+					label: "Units",
+					keys: ["threshold", "measure", "units"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
 					label: "Metric",
 					keys: ["metric", "value"],
 					display: Display.FLOAT,

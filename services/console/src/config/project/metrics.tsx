@@ -58,6 +58,12 @@ const metricsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
+					label: "Units",
+					keys: ["measure", "units"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
 					label: "Metric Value",
 					keys: ["metric", "value"],
 					display: Display.FLOAT,
