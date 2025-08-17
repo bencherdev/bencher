@@ -1,4 +1,4 @@
-use bencher_valid::{NonEmpty, Sanitize, Secret};
+use bencher_valid::{NonEmpty, Sanitize, Secret, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct JsonGoogle {
     pub client_id: NonEmpty,
     pub client_secret: Secret,
+    pub callback_url: Url,
 }
 
 impl Sanitize for JsonGoogle {

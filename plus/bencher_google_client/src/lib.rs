@@ -1,8 +1,8 @@
 use std::sync::LazyLock;
 
-use bencher_valid::{Email, NonEmpty, Secret, UserName};
+use bencher_valid::{Email, NonEmpty, Secret, Url, UserName};
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, EndpointNotSet, EndpointSet,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl,
     TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
 };
 use octocrab::Octocrab;
@@ -10,13 +10,13 @@ use serde::Deserialize;
 
 #[expect(clippy::expect_used)]
 static AUTH_URL: LazyLock<AuthUrl> = LazyLock::new(|| {
-    AuthUrl::new("https://github.com/login/oauth/authorize".to_owned())
+    AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_owned())
         .expect("Invalid authorization endpoint URL")
 });
 
 #[expect(clippy::expect_used)]
 static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
-    TokenUrl::new("https://github.com/login/oauth/access_token".to_owned())
+    TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_owned())
         .expect("Invalid token endpoint URL")
 });
 
@@ -28,6 +28,12 @@ pub struct GoogleClient {
 
 #[derive(Debug, thiserror::Error)]
 pub enum GoogleClientError {
+    #[error("Failed to parse callback URL ({callback_url}): {error}")]
+    CallbackUrl {
+        callback_url: Url,
+        error: bencher_valid::ValidError,
+    },
+
     #[error("Failed to create a reqwest client: {0}")]
     Reqwest(reqwest::Error),
     #[error("Failed to exchange code for access token: {0}")]
@@ -52,16 +58,28 @@ pub enum GoogleClientError {
 }
 
 impl GoogleClient {
-    pub fn new(client_id: NonEmpty, client_secret: Secret) -> Self {
+    pub fn new(
+        client_id: NonEmpty,
+        client_secret: Secret,
+        callback_url: Url,
+    ) -> Result<Self, GoogleClientError> {
         let client_id = ClientId::new(client_id.into());
         let client_secret = ClientSecret::new(client_secret.into());
 
         let oauth2_client = BasicClient::new(client_id)
             .set_client_secret(client_secret)
             .set_auth_uri(AUTH_URL.clone())
-            .set_token_uri(TOKEN_URL.clone());
+            .set_token_uri(TOKEN_URL.clone())
+            .set_redirect_uri(RedirectUrl::from_url(
+                callback_url.clone().try_into().map_err(|error| {
+                    GoogleClientError::CallbackUrl {
+                        callback_url,
+                        error,
+                    }
+                })?,
+            ));
 
-        Self { oauth2_client }
+        Ok(Self { oauth2_client })
     }
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GoogleClientError> {
