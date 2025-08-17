@@ -1,7 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_billing::Biller;
-use bencher_github::GitHub;
+use bencher_github_client::GitHubClient;
 use bencher_json::{
     is_bencher_cloud,
     system::config::{JsonCloud, JsonPlus},
@@ -12,7 +12,7 @@ use tokio::runtime::Handle;
 use url::Url;
 
 pub struct Plus {
-    pub github: Option<GitHub>,
+    pub github_client: Option<GitHubClient>,
     pub indexer: Option<Indexer>,
     pub stats: StatsSettings,
     pub biller: Option<Biller>,
@@ -37,7 +37,7 @@ impl Plus {
     pub fn new(console_url: &Url, plus: Option<JsonPlus>) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
             return Ok(Self {
-                github: None,
+                github_client: None,
                 indexer: None,
                 stats: StatsSettings::default(),
                 biller: None,
@@ -45,9 +45,9 @@ impl Plus {
             });
         };
 
-        let github = plus
+        let github_client = plus
             .github
-            .map(|github| GitHub::new(github.client_id, github.client_secret));
+            .map(|github| GitHubClient::new(github.client_id, github.client_secret));
 
         let stats = plus.stats.map(Into::into).unwrap_or_default();
 
@@ -59,7 +59,7 @@ impl Plus {
         }) = plus.cloud
         else {
             return Ok(Self {
-                github,
+                github_client,
                 indexer: None,
                 stats,
                 biller: None,
@@ -83,7 +83,7 @@ impl Plus {
         let licensor = Licensor::bencher_cloud(&license_pem).map_err(PlusError::LicenseCloud)?;
 
         Ok(Self {
-            github,
+            github_client,
             indexer,
             stats,
             biller,

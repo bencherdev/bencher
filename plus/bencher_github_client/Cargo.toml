@@ -1,5 +1,5 @@
 [package]
-name = "bencher_github"
+name = "bencher_github_client"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

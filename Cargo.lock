@@ -1115,7 +1115,7 @@ version = "0.5.4"
 dependencies = [
  "bencher_billing",
  "bencher_endpoint",
- "bencher_github",
+ "bencher_github_client",
  "bencher_json",
  "bencher_license",
  "bencher_rbac",
@@ -1157,7 +1157,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bencher_github"
+name = "bencher_github_client"
 version = "0.5.4"
 dependencies = [
  "bencher_valid",
@@ -1267,7 +1267,7 @@ dependencies = [
  "bencher_billing",
  "bencher_bing_index",
  "bencher_boundary",
- "bencher_github",
+ "bencher_github_client",
  "bencher_google_index",
  "bencher_json",
  "bencher_license",

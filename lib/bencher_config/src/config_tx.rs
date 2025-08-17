@@ -224,7 +224,7 @@ async fn into_context(
     info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
     let Plus {
-        github,
+        github_client,
         stats,
         biller,
         licensor,
@@ -257,7 +257,7 @@ async fn into_context(
         #[cfg(feature = "plus")]
         rate_limiting,
         #[cfg(feature = "plus")]
-        github,
+        github_client,
         #[cfg(feature = "plus")]
         stats,
         #[cfg(feature = "plus")]

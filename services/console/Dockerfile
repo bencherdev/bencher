@@ -17,7 +17,6 @@ RUN cargo init --lib bencher_comment
 RUN cargo init --lib bencher_config
 RUN cargo init --lib bencher_context
 RUN cargo init --lib bencher_endpoint
-RUN cargo init --lib bencher_github
 RUN cargo init --lib bencher_json
 RUN cargo init --lib bencher_logger
 RUN cargo init --lib bencher_plot
@@ -29,8 +28,9 @@ COPY lib/bencher_valid bencher_valid
 WORKDIR /usr/src/bencher/plus
 RUN cargo init --lib bencher_billing
 RUN cargo init --lib bencher_bing_index
-RUN cargo init --lib bencher_license
+RUN cargo init --lib bencher_github_client
 RUN cargo init --lib bencher_google_index
+RUN cargo init --lib bencher_license
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version

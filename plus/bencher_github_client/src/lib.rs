@@ -21,13 +21,13 @@ static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
 });
 
 #[derive(Debug, Clone)]
-pub struct GitHub {
+pub struct GitHubClient {
     oauth2_client:
         BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum GitHubError {
+pub enum GitHubClientError {
     #[error("Failed to create a reqwest client: {0}")]
     Reqwest(reqwest::Error),
     #[error("Failed to exchange code for access token: {0}")]
@@ -51,7 +51,7 @@ pub enum GitHubError {
     BadEmail(bencher_valid::ValidError),
 }
 
-impl GitHub {
+impl GitHubClient {
     pub fn new(client_id: NonEmpty, client_secret: Secret) -> Self {
         let client_id = ClientId::new(client_id.into());
         let client_secret = ClientSecret::new(client_secret.into());
@@ -64,19 +64,19 @@ impl GitHub {
         Self { oauth2_client }
     }
 
-    pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GitHubError> {
+    pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GitHubClientError> {
         let code = AuthorizationCode::new(code.into());
         let http_client = reqwest::ClientBuilder::new()
             // Following redirects opens the client up to SSRF vulnerabilities.
             .redirect(reqwest::redirect::Policy::none())
             .build()
-            .map_err(GitHubError::Reqwest)?;
+            .map_err(GitHubClientError::Reqwest)?;
         let token = self
             .oauth2_client
             .exchange_code(code)
             .request_async(&http_client)
             .await
-            .map_err(GitHubError::Exchange)?;
+            .map_err(GitHubClientError::Exchange)?;
 
         let oauth = octocrab::auth::OAuth {
             access_token: token.access_token().secret().clone().into(),
@@ -92,23 +92,23 @@ impl GitHub {
         let github_client = Octocrab::builder()
             .oauth(oauth)
             .build()
-            .map_err(GitHubError::Auth)?;
+            .map_err(GitHubClientError::Auth)?;
 
         let user_name = github_client
             .current()
             .user()
             .await
-            .map_err(GitHubError::User)
-            .and_then(|user| user.login.parse().map_err(GitHubError::BadLogin))?;
+            .map_err(GitHubClientError::User)
+            .and_then(|user| user.login.parse().map_err(GitHubClientError::BadLogin))?;
 
         let email = github_client
             .get::<Vec<GitHubUserEmail>, _, &str>("/user/emails", None)
             .await
-            .map_err(GitHubError::Emails)?
+            .map_err(GitHubClientError::Emails)?
             .into_iter()
             .find_map(|email| (email.primary && email.verified).then_some(email.email))
-            .ok_or(GitHubError::NoPrimaryEmail)
-            .and_then(|email| email.parse().map_err(GitHubError::BadEmail))?;
+            .ok_or(GitHubClientError::NoPrimaryEmail)
+            .and_then(|email| email.parse().map_err(GitHubClientError::BadEmail))?;
 
         Ok((user_name, email))
     }

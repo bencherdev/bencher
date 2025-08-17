@@ -48,7 +48,7 @@ api_users = { path = "lib/api_users" }
 # plus
 bencher_billing = { path = "plus/bencher_billing" }
 bencher_bing_index = { path = "plus/bencher_bing_index" }
-bencher_github = { path = "plus/bencher_github" }
+bencher_github_client = { path = "plus/bencher_github_client" }
 bencher_google_index = { path = "plus/bencher_google_index" }
 bencher_license = { path = "plus/bencher_license" }
 # crates.io

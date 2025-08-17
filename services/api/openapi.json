@@ -8722,6 +8722,21 @@
           "client_secret"
         ]
       },
+      "JsonGoogle": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "client_secret": {
+            "$ref": "#/components/schemas/Secret"
+          }
+        },
+        "required": [
+          "client_id",
+          "client_secret"
+        ]
+      },
       "JsonGoogleIndex": {
         "type": "object",
         "properties": {
@@ -10418,6 +10433,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonGitHub"
+              }
+            ]
+          },
+          "google": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonGoogle"
               }
             ]
           },

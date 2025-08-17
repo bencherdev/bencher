@@ -41,7 +41,6 @@ COPY lib/bencher_comment bencher_comment
 COPY lib/bencher_config bencher_config
 COPY lib/bencher_context bencher_context
 COPY lib/bencher_endpoint bencher_endpoint
-COPY lib/bencher_github bencher_github
 COPY lib/bencher_json bencher_json
 COPY lib/bencher_logger bencher_logger
 COPY lib/bencher_plot bencher_plot
@@ -54,8 +53,9 @@ COPY lib/bencher_valid bencher_valid
 WORKDIR /usr/src/bencher/plus
 COPY plus/bencher_billing bencher_billing
 COPY plus/bencher_bing_index bencher_bing_index
-COPY plus/bencher_license bencher_license
+COPY plus/bencher_github_client bencher_github_client
 COPY plus/bencher_google_index bencher_google_index
+COPY plus/bencher_license bencher_license
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version

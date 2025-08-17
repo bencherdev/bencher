@@ -1,7 +1,7 @@
 #[cfg(feature = "plus")]
 use bencher_billing::Biller;
 #[cfg(feature = "plus")]
-use bencher_github::GitHub;
+use bencher_github_client::GitHubClient;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
 use bencher_token::TokenKey;
@@ -42,7 +42,7 @@ pub struct ApiContext {
     #[cfg(feature = "plus")]
     pub rate_limiting: RateLimiting,
     #[cfg(feature = "plus")]
-    pub github: Option<GitHub>,
+    pub github_client: Option<GitHubClient>,
     #[cfg(feature = "plus")]
     pub indexer: Option<Indexer>,
     #[cfg(feature = "plus")]
