@@ -8,7 +8,7 @@ pub enum RunError {
     ApiVersion(crate::BackendError),
 
     #[error(
-        "Attempting to create an on-the-fly project when the `CI` environment variable is set. If you are sure you want to do this, set the `--ci-on-the-fly` flag."
+        "Attempting to create an on-the-fly project when the `CI` environment variable is set. Use the `--project` option to specify the project slug or UUID. Otherwise, set the `--ci-on-the-fly` flag."
     )]
     CiOnTheFly,
 
@@ -18,11 +18,11 @@ pub enum RunError {
     Thresholds(#[from] crate::bencher::sub::ThresholdsError),
 
     #[error(
-        "No default shell command path for target family. Try setting a custom shell with the `--shell` argument."
+        "No default shell command path for target family. Try setting a custom shell with the `--shell` option."
     )]
     Shell,
     #[error(
-        "No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` argument."
+        "No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` option."
     )]
     Flag,
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]

@@ -1376,6 +1376,8 @@ impl SeedTest {
                 "run",
                 HOST_ARG,
                 host,
+                // This is needed to run in CI
+                "--ci-on-the-fly",
                 "--format",
                 "json",
                 "--quiet",
@@ -1501,6 +1503,8 @@ impl SeedTest {
             host,
             TOKEN_ARG,
             token,
+            // This is needed to run in CI
+            "--ci-on-the-fly",
             "--format",
             "json",
             "--quiet",
