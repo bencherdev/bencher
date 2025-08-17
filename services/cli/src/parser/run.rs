@@ -84,6 +84,7 @@ pub struct CliRunProject {
     pub project: Option<ProjectResourceId>,
     /// Allow on-the-fly project creation in CI environments.
     /// Required if the `CI` environment variable is set to `true`.
+    #[clap(long)]
     pub ci_on_the_fly: bool,
 }
 
