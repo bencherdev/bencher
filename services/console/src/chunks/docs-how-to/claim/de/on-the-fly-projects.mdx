@@ -1,19 +1,29 @@
-## Projekte im Handumdrehen
+## On-the-Fly-Projekte
 
-Bencher ermöglicht es Ihnen, sowohl `claimed` als auch `unclaimed` Projekte im Handumdrehen zu erstellen. Wenn Sie den <code><a href="/de/docs/explanation/bencher-run/">Bencher-Run</a></code>-CLI-Befehl ohne Einstellung der [Option `--project`][project option] ausführen oder wenn der angegebene Slug keinem bestehenden Projekt entspricht, wird Bencher ein neues Projekt im Handumdrehen für Ihre Benchmark-Ergebnisse erstellen. Wenn Sie die Tutorials [Schnellstart][quick start] oder [Selbstgehosteter Schnellstart][self-hosted quick start] gefolgt sind, haben Sie bereits von dieser Funktionalität Gebrauch gemacht.
+Bencher ermöglicht es Ihnen, sowohl `claimed` als auch `unclaimed` Projekte on-the-fly zu erstellen.
+Wenn Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl aufrufen,
+ohne die [Option `--project`][project option] anzugeben oder wenn der angegebene Slug keinem vorhandenen Projekt entspricht,
+wird Bencher ein neues On-the-Fly-Projekt für Ihre Benchmark-Ergebnisse erstellen.
+Wenn Sie das [Schnellstart][quick start] oder den [Self-Hosted Schnellstart][self-hosted quick start] Tutorials gefolgt sind,
+haben Sie diese Funktionalität bereits genutzt.
 
-Wenn die [Option `--project`][project option] nicht angegeben ist, wird ein Projekt-Slug im Handumdrehen für Sie generiert basierend auf:
+Wenn die [Option `--project`][project option] nicht angegeben ist, wird ein On-the-Fly-Projekt-Slug für Sie generiert basierend auf:
 
-1. Dem Namen des übergeordneten Verzeichnisses des `git`-Repositories, falls verfügbar.
-2. Dem 7-stelligen hexadezimalen Kurz-Hash des initialen Commits des `git`-Repositories, falls verfügbar.
-3. Dem 13-stelligen alphanumerischen Fingerabdruck der lokalen Maschine, für unterstützte Betriebssysteme.
+1. Dem Namen des übergeordneten Verzeichnisses des `git`-Repositorys, falls vorhanden.
+2. Dem 7-stelligen hexadezimalen Kurz-Hash für den Initial-Commit des `git`-Repositorys, falls vorhanden.
+3. Einem 13-stelligen alphanumerischen Fingerabdruck der lokalen Maschine, für unterstützte Betriebssysteme.
 
-Zum Beispiel könnte ein generierter Projekt-Slug im Handumdrehen folgendermaßen aussehen: `project-abc4567-wxyz123456789`
+Zum Beispiel könnte ein generierter On-the-Fly-Projekt-Slug so aussehen: `project-abc4567-wxyz123456789`
 
-> 🐰 WICHTIG: Wenn Sie sich auf einen Projekt-Slug im Handumdrehen verlassen und Benchmark-Ergebnisse über verschiedene Maschinen hinweg verfolgen möchten,
-> **müssen** Sie die [Option `--project`][project option] verwenden, um den Projekt-Slug anzugeben.
-> Andernfalls könnte ein neues Projekt im Handumdrehen für jede verschiedene Maschine erstellt werden.
+Wenn Sie sich auf einen On-the-Fly-Projekt-Slug verlassen und Benchmark-Ergebnisse über verschiedene Maschinen hinweg nachverfolgen möchten,
+müssen Sie zwingend die [Option `--project`][project option] verwenden, um das Projekt anzugeben.
+Andernfalls kann für jede Maschine ein neues On-the-Fly-Projekt erstellt werden.
+
+> 🐰 WICHTIG: Wenn die Umgebungsvariable `CI` auf `true` gesetzt ist,
+> müssen Sie entweder die [Option `--project`][project option] verwenden, um das Projekt anzugeben,
+> oder das [Flag `--ci-on-the-fly`][ci on the fly] setzen.
 
 [project option]: /de/docs/explanation/bencher-run/#--project-project
 [quick start]: /de/docs/tutorial/quick-start/
 [self-hosted quick start]: /de/docs/tutorial/docker/
+[ci on the fly]: /de/docs/explanation/bencher-run/#--ci-on-the-fly

@@ -83,7 +83,7 @@ pub struct CliRunProject {
     #[clap(long, env = "BENCHER_PROJECT")]
     pub project: Option<ProjectResourceId>,
     /// Allow on-the-fly project creation in CI environments.
-    /// Required if the `CI` environment variable is set.
+    /// Required if the `CI` environment variable is set to `true`.
     pub ci_on_the_fly: bool,
 }
 

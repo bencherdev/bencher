@@ -1,17 +1,26 @@
-## Projets à la Volée
+## Projets à la volée
 
-Bencher vous permet de créer des Projets `claimed` et `unclaimed` à la volée. Lorsque vous invoquez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> sans définir [l'option `--project`][project option] ou si le slug spécifié ne correspond pas à un Projet existant, Bencher créera un nouveau Projet à la volée pour vos résultats de benchmark. Si vous avez suivi les tutoriels [Démarrage Rapide][quick start] ou [Démarrage Rapide en Auto-Hébergement][self-hosted quick start], vous avez profité de cette fonctionnalité.
+Bencher vous permet de créer des Projets `claimed` et `unclaimed` à la volée.
+Lorsque vous invoquez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> sans définir [l'option `--project`][project option] ou si le slug spécifié ne correspond pas à un Projet existant, Bencher créera un nouveau Projet à la volée pour vos résultats de benchmark.
+Si vous avez suivi les tutoriels [Démarrage rapide][quick start] ou [Démarrage rapide auto-hébergé][self-hosted quick start],
+vous avez utilisé cette fonctionnalité.
 
-Si [l'option `--project`][project option] n'est pas spécifiée, alors un slug de Projet à la volée sera généré pour vous basé sur :
+Si [l'option `--project`][project option] n'est pas spécifiée, un slug de Projet à la volée sera généré pour vous en se basant sur :
 
-1. Le nom du répertoire parent pour le dépôt `git`, s'il est disponible.
-2. Le hash court hexadécimal de 7 chiffres pour le commit initial du dépôt `git`, s'il est disponible.
-3. Une empreinte alphanumérique de 13 chiffres de la machine locale, pour les systèmes d'exploitation pris en charge.
+1. Le nom du répertoire parent du dépôt `git`, si disponible.
+2. Le hash court hexadécimal de 7 caractères du commit initial du dépôt `git`, si disponible.
+3. Une empreinte alphanumérique de 13 caractères de la machine locale, pour les systèmes d'exploitation pris en charge.
 
 Par exemple, un slug de Projet généré à la volée pourrait ressembler à : `project-abc4567-wxyz123456789`
 
-> 🐰 IMPORTANT : Si vous vous appuyez sur un slug de Projet à la volée et que vous souhaitez suivre les résultats de benchmark sur différentes machines, vous **devez** utiliser [l'option `--project`][project option] pour spécifier le slug du Projet. Sinon, un nouveau Projet à la volée peut être créé pour chaque machine différente.
+Si vous comptez sur un slug de Projet à la volée et que vous souhaitez suivre les résultats de benchmark sur plusieurs machines, vous **devez** utiliser [l'option `--project`][project option] pour spécifier le Projet.
+Sinon, un nouveau Projet à la volée pourra être créé pour chaque machine différente.
+
+> 🐰 IMPORTANT : Si la variable d'environnement `CI` est définie sur `true`,
+> vous devez soit utiliser [l'option `--project`][project option] pour spécifier le Projet
+> soit définir [le flag `--ci-on-the-fly`][ci on the fly].
 
 [project option]: /fr/docs/explanation/bencher-run/#--project-project
 [quick start]: /fr/docs/tutorial/quick-start/
 [self-hosted quick start]: /fr/docs/tutorial/docker/
+[ci on the fly]: /fr/docs/explanation/bencher-run/#--ci-on-the-fly

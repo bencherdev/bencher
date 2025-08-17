@@ -16,10 +16,15 @@ If [the `--project` option][project option] is not specified, then an on-the-fly
 
 For example, a generated on-the-fly Project slug might look like: `project-abc4567-wxyz123456789`
 
-> 🐰 IMPORTANT: If you are relying on an on-the-fly Project slug and you want to track benchmark results across different machines,
-> you **must** use [the `--project` option][project option] to specify the Project slug.
-> Otherwise, a new on-the-fly Project may be created for each different machine.
+If you are relying on an on-the-fly Project slug and you want to track benchmark results across different machines,
+you **must** use [the `--project` option][project option] to specify the Project.
+Otherwise, a new on-the-fly Project may be created for each different machine.
+
+> 🐰 IMPORTANT: If the `CI` environment variable is set to `true`,
+> then you either need to use [the `--project` option][project option] to specify the Project
+> or set [the `--ci-on-the-fly` flag][ci on the fly].
 
 [project option]: /docs/explanation/bencher-run/#--project-project
 [quick start]: /docs/tutorial/quick-start/
 [self-hosted quick start]: /docs/tutorial/docker/
+[ci on the fly]: /docs/explanation/bencher-run/#--ci-on-the-fly

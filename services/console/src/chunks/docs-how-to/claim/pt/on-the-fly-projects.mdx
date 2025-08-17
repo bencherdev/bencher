@@ -1,25 +1,28 @@
-## Projetos "On-the-Fly"
+## Projetos on-the-fly
 
-O Bencher permite que você crie Projetos `claimed` e `unclaimed` "on-the-fly".
-Quando você invoca o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-sem definir [a opção `--project`][project option] ou se o slug especificado não corresponde a um Projeto existente,
-o Bencher criará um novo Projeto "on-the-fly"
-para seus resultados de benchmark.
-Se você seguiu os tutoriais de [Início Rápido][quick start] ou [Início Rápido Autogerido][self-hosted quick start],
+O Bencher permite criar tanto Projetos `claimed` quanto `unclaimed` on-the-fly.
+Quando você invoca o subcomando de CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> sem definir [a opção `--project`][project option] ou se o slug especificado não corresponder a um Projeto existente,
+o Bencher criará um novo Projeto on-the-fly para os resultados do seu benchmark.
+Se você seguiu os tutoriais [Início Rápido][quick start] ou [Início Rápido (auto-hospedado)][self-hosted quick start],
 você estava aproveitando essa funcionalidade.
 
-Se [a opção `--project`][project option] não for especificada, então um slug de Projeto "on-the-fly" será gerado para você com base em:
+Se [a opção `--project`][project option] não for especificada, um slug de Projeto on-the-fly será gerado para você com base em:
 
-1. O nome do diretório pai para o repositório `git`, se estiver disponível.
-2. O hash reduzido hexadecimal de 7 dígitos para o commit inicial do repositório `git`, se estiver disponível.
-3. Uma impressão digital alfanumérica de 13 dígitos da máquina local, para sistemas operacionais suportados.
+1. O nome do diretório pai do repositório `git`, se disponível.
+2. O hash curto hexadecimal de 7 dígitos do commit inicial do repositório `git`, se disponível.
+3. Uma impressão digital alfanumérica de 13 caracteres da máquina local, para sistemas operacionais suportados.
 
-Por exemplo, um slug de Projeto "on-the-fly" gerado pode se parecer com: `project-abc4567-wxyz123456789`
+Por exemplo, um slug de Projeto on-the-fly gerado pode ser: `project-abc4567-wxyz123456789`
 
-> 🐰 IMPORTANTE: Se você está dependendo de um slug de Projeto "on-the-fly" e quer acompanhar resultados de benchmark em diferentes máquinas,
-> você **deve** usar [a opção `--project`][project option] para especificar o slug do Projeto.
-> Caso contrário, um novo Projeto "on-the-fly" pode ser criado para cada máquina diferente.
+Se você está contando com um slug de Projeto on-the-fly e deseja rastrear resultados de benchmark entre máquinas diferentes,
+você **deve** usar [a opção `--project`][project option] para especificar o Projeto.
+Caso contrário, um novo Projeto on-the-fly poderá ser criado para cada máquina diferente.
+
+> 🐰 IMPORTANTE: Se a variável de ambiente `CI` estiver definida como `true`,
+> então você precisa ou usar [a opção `--project`][project option] para especificar o Projeto
+> ou definir [a opção `--ci-on-the-fly`][ci on the fly].
 
 [project option]: /pt/docs/explanation/bencher-run/#--project-project
 [quick start]: /pt/docs/tutorial/quick-start/
 [self-hosted quick start]: /pt/docs/tutorial/docker/
+[ci on the fly]: /pt/docs/explanation/bencher-run/#--ci-on-the-fly

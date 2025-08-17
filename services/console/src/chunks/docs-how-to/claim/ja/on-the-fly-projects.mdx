@@ -1,19 +1,29 @@
-## オンザフライプロジェクト
+## オンザフライのプロジェクト
 
-Bencherは、`claimed`および`unclaimed`プロジェクトをオンザフライで作成することができます。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを実行する際に、[the `--project` option][project option]を設定しないか、指定されたスラッグが既存のプロジェクトと一致しない場合、Bencherは新しいオンザフライプロジェクトをベンチマーク結果用に作成します。[クイックスタート][quick start]または[セルフホステッドクイックスタート][self-hosted quick start]チュートリアルに従った場合、この機能を利用していました。
+Bencherでは、`claimed` と `unclaimed` の両方のプロジェクトをオンザフライで作成できます。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを
+[`--project` オプション][project option] を設定せずに呼び出すか、指定したスラッグが既存のプロジェクトと一致しない場合、
+Bencher はベンチマーク結果用の新しいオンザフライプロジェクトを作成します。
+[クイックスタート][quick start] や [セルフホスト版クイックスタート][self-hosted quick start] チュートリアルに従った場合は、
+この機能を利用していたことになります。
 
-[the `--project` option][project option]が指定されていない場合、次の基準に基づいてオンザフライプロジェクトのスラッグが生成されます：
+[`--project` オプション][project option] が指定されていない場合、オンザフライのプロジェクトスラッグは次に基づいて生成されます:
 
-1. 利用可能な場合、`git`リポジトリの親ディレクトリの名前。
-2. 利用可能な場合、`git`リポジトリの初回コミットの7桁の16進ショートハッシュ。
-3. サポートされているオペレーティングシステムの場合、ローカルマシンの13桁のアルファベット数値のフィンガープリント。
+1. 利用可能であれば、`git` リポジトリの親ディレクトリ名。
+2. 利用可能であれば、`git` リポジトリの初回コミットの7桁の16進数短縮ハッシュ。
+3. 対応するOSでは、ローカルマシンの13桁の英数字フィンガープリント。
 
-たとえば、生成されたオンザフライプロジェクトのスラッグは次のようになります：`project-abc4567-wxyz123456789`
+たとえば、生成されるオンザフライのプロジェクトスラッグは次のようになります: `project-abc4567-wxyz123456789`
 
-> 🐰 重要: オンザフライプロジェクトのスラッグに依存しており、異なるマシン間でベンチマーク結果を追跡したい場合、
-> [the `--project` option][project option]を使用してプロジェクトスラッグを指定**しなければなりません**。
-> そうしないと、異なるマシンごとに新しいオンザフライプロジェクトが作成される可能性があります。
+オンザフライのプロジェクトスラッグに依存していて、複数のマシンでベンチマーク結果を追跡したい場合は、
+プロジェクトを指定するために必ず[`--project` オプション][project option] を使用してください。
+そうしないと、マシンごとに新しいオンザフライプロジェクトが作成される可能性があります。
+
+> 🐰 重要: `CI` 環境変数が `true` に設定されている場合は、
+> プロジェクトを指定するために[`--project` オプション][project option] を使用するか、
+> [`--ci-on-the-fly` フラグ][ci on the fly] を設定する必要があります。
 
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
 [quick start]: /ja/docs/tutorial/quick-start/
 [self-hosted quick start]: /ja/docs/tutorial/docker/
+[ci on the fly]: /ja/docs/explanation/bencher-run/#--ci-on-the-fly

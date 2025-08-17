@@ -13,8 +13,8 @@ use notify_rust::Notification;
 
 use crate::parser::{TaskLanguage, TaskTranslate};
 
-// https://platform.openai.com/docs/models/gpt-4o
-const GPT_MODEL: &str = "gpt-4o-2024-08-06";
+// https://platform.openai.com/docs/models/gpt-5-mini
+const GPT_MODEL: &str = "gpt-5-mini-2025-08-07";
 
 // export OPENAI_API_KEY=sk-xxx
 #[derive(Debug)]

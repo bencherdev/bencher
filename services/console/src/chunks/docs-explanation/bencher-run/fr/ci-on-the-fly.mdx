@@ -1,0 +1,16 @@
+### `--ci-on-the-fly`
+
+<br />
+
+Optionnel : Autoriser la création de [projets à la volée][on the fly projects] dans les environnements CI.
+Requis si la variable d'environnement `CI` est définie sur `true`.
+Tant [GitHub Actions][github actions] que [GitLab CI/CD][gitlab ci] définissent cette variable par défaut.
+
+En conflit avec [l'option `--project`][project option].
+
+[project option]: #--project-project
+
+[on the fly projects]: /fr/docs/how-to/claim/#on-the-fly-projects
+
+[github actions]: https://docs.github.com/fr/actions/reference/workflows-and-actions/variables#default-environment-variables
+[gitlab ci]: https://docs.gitlab.com/ci/variables/predefined_variables/#predefined-variables

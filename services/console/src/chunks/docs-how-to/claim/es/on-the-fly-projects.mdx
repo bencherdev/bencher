@@ -1,24 +1,25 @@
-## Proyectos al Vuelo
+## Proyectos sobre la marcha
 
-Bencher te permite crear Proyectos `claimed` y `unclaimed` al vuelo.
-Cuando invocas el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
-sin establecer [la opción `--project`][opción de proyecto] o si el identificador especificado no coincide con un Proyecto existente,
-Bencher creará un nuevo Proyecto al vuelo para tus resultados de benchmarck.
-Si seguiste los tutoriales de [Inicio Rápido][inicio rápido] o [Inicio Rápido Autohospedado][inicio rápido autohospedado],
-te estabas beneficiando de esta funcionalidad.
+Bencher permite crear Proyectos `claimed` y `unclaimed` sobre la marcha.
+Cuando invocas el subcomando de CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> sin indicar la opción `--project` o si el slug especificado no coincide con un Proyecto existente, Bencher creará un nuevo Proyecto sobre la marcha para tus resultados de benchmark.
+Si seguiste los tutoriales de [Inicio rápido][quick start] o [Inicio rápido autoalojado][self-hosted quick start], estabas aprovechando esta funcionalidad.
 
-Si no se especifica [la opción `--project`][opción de proyecto], entonces se generará un identificador de Proyecto al vuelo basado en:
+Si no se especifica [la opción `--project`][project option], se generará automáticamente un slug para el Proyecto sobre la marcha basado en:
 
 1. El nombre del directorio padre del repositorio `git`, si está disponible.
-2. El hash corto hexadecimal de 7 dígitos del commit inicial del repositorio `git`, si está disponible.
-3. Una huella dactilar alfanumérica de 13 dígitos de la máquina local, para sistemas operativos compatibles.
+2. El hash corto hexadecimal de 7 caracteres del commit inicial del repositorio `git`, si está disponible.
+3. Una huella alfanumérica de 13 caracteres del equipo local, para sistemas operativos compatibles.
 
-Por ejemplo, un identificador de Proyecto generado al vuelo podría verse así: `proyecto-abc4567-wxyz123456789`
+Por ejemplo, un slug de Proyecto sobre la marcha generado podría verse así: `project-abc4567-wxyz123456789`
 
-> 🐰 IMPORTANTE: Si dependes de un identificador de Proyecto al vuelo y deseas rastrear resultados de benchmark en diferentes máquinas,
-> **debes** usar [la opción `--project`][opción de proyecto] para especificar el identificador del Proyecto.
-> De lo contrario, se puede crear un nuevo Proyecto al vuelo para cada máquina diferente.
+Si dependes de un slug de Proyecto sobre la marcha y quieres rastrear resultados de benchmark entre diferentes máquinas, **debes** usar [la opción `--project`][project option] para especificar el Proyecto.
+De lo contrario, puede crearse un nuevo Proyecto sobre la marcha por cada máquina distinta.
 
-[opción de proyecto]: /es/docs/explanation/bencher-run/#--project-project
-[inicio rápido]: /es/docs/tutorial/quick-start/
-[inicio rápido autohospedado]: /es/docs/tutorial/docker/
+> 🐰 IMPORTANTE: Si la variable de entorno `CI` está establecida en `true`,
+> entonces necesitas usar [la opción `--project`][project option] para especificar el Proyecto
+> o establecer [la bandera `--ci-on-the-fly`][ci on the fly].
+
+[project option]: /es/docs/explanation/bencher-run/#--project-project
+[quick start]: /es/docs/tutorial/quick-start/
+[self-hosted quick start]: /es/docs/tutorial/docker/
+[ci on the fly]: /es/docs/explanation/bencher-run/#--ci-on-the-fly

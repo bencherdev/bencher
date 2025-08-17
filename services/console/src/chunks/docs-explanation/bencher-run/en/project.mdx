@@ -21,3 +21,9 @@ If the user is authenticated, then the Project is added under that user's person
 If the user is not authenticated, the Project will be created under a new `unclaimed` Organization.
 This Organization can then be `claimed` from the Project's public Perf Page
 or by using the Project slug while authenticated in a subsequent invocation of `bencher run`.
+
+> 🐰 IMPORTANT: If the `CI` environment variable is set to `true`,
+> then you either need to specify the Project
+> or set [the `--ci-on-the-fly` flag][ci on the fly].
+
+[ci on the fly]: #--ci-on-the-fly

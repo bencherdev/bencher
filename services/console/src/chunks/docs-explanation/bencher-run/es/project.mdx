@@ -2,12 +2,24 @@
 
 <br />
 
-Opcional: Se puede establecer la opción `--project` o la variable de entorno `BENCHER_PROJECT` al slug o UUID de un Proyecto. Si el valor especificado es un slug y el Proyecto no existe todavía, se creará para ti. Sin embargo, si el valor especificado es un UUID, entonces el Proyecto debe existir previamente. Si ambos están especificados, la opción `--project` tiene prioridad sobre la variable de entorno `BENCHER_PROJECT`. Si ninguno está especificado, entonces se generará un slug de Proyecto para ti basado en:
+Opcional: Se puede establecer el parámetro `--project` o la variable de entorno `BENCHER_PROJECT` con el slug o UUID de un Proyecto.
+Si el valor especificado es un slug y el Proyecto no existe aún, se creará por usted.
+Sin embargo, si el valor especificado es un UUID, el Proyecto debe existir previamente.
+Si se especifican ambos, la opción `--project` tiene prioridad sobre la variable de entorno `BENCHER_PROJECT`.
+Si no se especifica ninguno, se generará un slug para el Proyecto basado en:
 
 1. El nombre del directorio padre del repositorio `git`, si está disponible.
-2. El hash corto hexadecimal de 7 dígitos para el compromiso inicial del repositorio `git`, si está disponible.
-3. Una huella dactilar alfanumérica de 13 dígitos de la máquina local, para sistemas operativos compatibles.
+2. El hash corto hexadecimal de 7 dígitos del commit inicial del repositorio `git`, si está disponible.
+3. Una huella alfanumérica de 13 dígitos de la máquina local, para los sistemas operativos compatibles.
 
-Por ejemplo, un slug de Proyecto generado podría verse así: `project-abc4567-wxyz123456789`
+Por ejemplo, un slug de Proyecto generado podría ser: `project-abc4567-wxyz123456789`
 
-Cuando se crea un nuevo Proyecto para ti, ya sea que el slug sea especificado o generado, el Proyecto debe pertenecer a una Organización. Si el usuario está autenticado, entonces el Proyecto se agrega bajo la Organización personal de ese usuario. Si el usuario no está autenticado, el Proyecto se creará bajo una nueva Organización `unclaimed`. Esta Organización puede luego ser `claimed` desde la página pública de rendimiento del Proyecto o usando el slug del Proyecto mientras se está autenticado en una invocación posterior de `bencher run`.
+Cuando se crea un nuevo Proyecto para usted, ya sea que el slug sea especificado o generado, el Proyecto debe pertenecer a una Organización.
+Si el usuario está autenticado, el Proyecto se añade a la Organización personal de ese usuario.
+Si el usuario no está autenticado, el Proyecto se creará bajo una nueva Organización `unclaimed`.
+Esta Organización podrá ser `claimed` desde la página pública de rendimiento (Perf Page) del Proyecto o usando el slug del Proyecto mientras se esté autenticado en una invocación posterior de `bencher run`.
+
+> 🐰 IMPORTANTE: Si la variable de entorno `CI` está establecida en `true`,
+> entonces debe especificar el Proyecto o activar [la opción `--ci-on-the-fly`][ci on the fly].
+
+[ci on the fly]: #--ci-on-the-fly

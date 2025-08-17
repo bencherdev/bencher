@@ -2,12 +2,24 @@
 
 <br />
 
-Optional: Entweder die `--project` Option oder die `BENCHER_PROJECT` Umgebungsvariable kann auf den Slug oder die UUID eines Projekts gesetzt werden. Wenn der angegebene Wert ein Slug ist und das Projekt noch nicht existiert, wird es für Sie erstellt. Ist der angegebene Wert jedoch eine UUID, muss das Projekt bereits existieren. Wenn beide angegeben sind, hat die `--project` Option Vorrang vor der `BENCHER_PROJECT` Umgebungsvariable. Wenn keiner angegeben ist, wird für Sie ein Projektslug basierend auf folgendem generiert:
+Optional: Entweder die Option `--project` oder die Umgebungsvariable `BENCHER_PROJECT` kann auf den Slug oder die UUID für ein Project gesetzt werden.
+Wenn der angegebene Wert ein Slug ist und das Project noch nicht existiert, wird es für Sie erstellt.
+Wenn der angegebene Wert jedoch eine UUID ist, muss das Project bereits existieren.
+Wenn beide angegeben sind, hat die Option `--project` Vorrang vor der Umgebungsvariable `BENCHER_PROJECT`.
+Wenn keiner angegeben ist, wird ein Projekt-Slug für Sie generiert, basierend auf:
 
-1. Dem Namen des übergeordneten Verzeichnisses für das `git`-Repository, falls vorhanden.
-2. Dem 7-stelligen hexadezimalen Kurz-Hash des ersten Commits des `git`-Repositories, falls vorhanden.
+1. Dem Namen des übergeordneten Verzeichnisses des `git`-Repositories, falls verfügbar.
+2. Dem 7-stelligen hexadezimalen Kurz-Hash des initialen Commits des `git`-Repositories, falls verfügbar.
 3. Einem 13-stelligen alphanumerischen Fingerabdruck der lokalen Maschine, für unterstützte Betriebssysteme.
 
-Zum Beispiel könnte ein generierter Projektslug folgendermaßen aussehen: `project-abc4567-wxyz123456789`
+Zum Beispiel könnte ein erzeugter Projekt-Slug so aussehen: `project-abc4567-wxyz123456789`
 
-Wenn ein neues Projekt für Sie erstellt wird, egal ob der Slug angegeben oder generiert ist, muss das Projekt zu einer Organisation gehören. Wenn der Benutzer authentifiziert ist, wird das Projekt unter der persönlichen Organisation dieses Benutzers hinzugefügt. Wenn der Benutzer nicht authentifiziert ist, wird das Projekt unter einer neuen `unclaimed` Organisation erstellt. Diese Organisation kann dann von der öffentlichen Perf-Seite des Projekts beansprucht (`claimed`) werden oder durch Verwendung des Projektslugs im authentifizierten Zustand in einem späteren Aufruf von `bencher run`.
+Wenn ein neues Project für Sie erstellt wird, egal ob der Slug angegeben oder generiert wurde, muss das Project zu einer Organization gehören.
+Wenn der Benutzer authentifiziert ist, wird das Project unter der persönlichen Organization dieses Benutzers hinzugefügt.
+Wenn der Benutzer nicht authentifiziert ist, wird das Project unter einer neuen `unclaimed` Organization erstellt.
+Diese Organization kann dann per `claimed` von der öffentlichen Perf Page des Projects beansprucht werden oder indem man den Project-Slug bei Authentifizierung in einem späteren Aufruf von `bencher run` verwendet.
+
+> 🐰 WICHTIG: Wenn die Umgebungsvariable `CI` auf `true` gesetzt ist,
+> müssen Sie entweder das Project angeben oder das [the `--ci-on-the-fly` flag][ci on the fly] setzen.
+
+[ci on the fly]: #--ci-on-the-fly

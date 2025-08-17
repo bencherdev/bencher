@@ -2,22 +2,28 @@
 
 <br />
 
-Facultatif : Soit l'option `--project` soit la variable d'environnement `BENCHER_PROJECT`
-peut être définie sur le slug ou l'UUID d'un Projet.
-Si la valeur spécifiée est un slug et que le Projet n'existe pas déjà, il sera créé pour vous.
-Cependant, si la valeur spécifiée est un UUID alors le Projet doit déjà exister.
-Si les deux sont spécifiés, l'option `--project` prend le dessus sur la variable d'environnement `BENCHER_PROJECT`.
-Si aucun n'est spécifié, un slug de Projet sera généré pour vous basé sur :
+Optionnel : soit l'option `--project`, soit la variable d'environnement `BENCHER_PROJECT`
+peuvent être définies sur le slug ou l'UUID d'un Projet.
+Si la valeur spécifiée est un slug et que le Projet n'existe pas encore, il sera créé pour vous.
+En revanche, si la valeur spécifiée est un UUID, le Projet doit déjà exister.
+Si les deux sont spécifiés, l'option `--project` a préséance sur la variable d'environnement `BENCHER_PROJECT`.
+Si aucun n'est spécifié, un slug de Projet sera généré pour vous en se basant sur :
 
 1. Le nom du répertoire parent du dépôt `git`, s'il est disponible.
-2. Le hash court hexadécimal de 7 chiffres pour le commit initial du dépôt `git`, s'il est disponible.
-3. Une empreinte numérique alphanumérique de 13 chiffres de la machine locale, pour les systèmes d'exploitation pris en charge.
+2. Le hachage court hexadécimal de 7 caractères du commit initial du dépôt `git`, s'il est disponible.
+3. Une empreinte alphanumérique de 13 caractères de la machine locale, pour les systèmes d'exploitation pris en charge.
 
 Par exemple, un slug de Projet généré pourrait ressembler à : `project-abc4567-wxyz123456789`
 
 Lorsqu'un nouveau Projet est créé pour vous, que le slug soit spécifié ou généré,
 le Projet doit appartenir à une Organisation.
-Si l'utilisateur est authentifié, alors le Projet est ajouté sous l'Organisation personnelle de cet utilisateur.
+Si l'utilisateur est authentifié, le Projet est ajouté sous l'Organisation personnelle de cet utilisateur.
 Si l'utilisateur n'est pas authentifié, le Projet sera créé sous une nouvelle Organisation `unclaimed`.
 Cette Organisation peut ensuite être `claimed` depuis la page publique Perf du Projet
-ou en utilisant le slug du Projet tout en étant authentifié lors d'une exécution ultérieure de `bencher run`.
+ou en utilisant le slug du Projet tout en étant authentifié lors d'une invocation ultérieure de `bencher run`.
+
+> 🐰 IMPORTANT : Si la variable d'environnement `CI` est définie sur `true`,
+> alors vous devez soit spécifier le Projet,
+> soit définir [l'option `--ci-on-the-fly`][ci on the fly].
+
+[ci on the fly]: #--ci-on-the-fly
