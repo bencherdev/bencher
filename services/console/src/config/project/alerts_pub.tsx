@@ -25,6 +25,12 @@ const alertsPubConfig = {
 			`/v0/projects/${params?.project}/alerts/${params?.alert}`,
 		cards: [
 			{
+				kind: Card.FIELD,
+				label: "Alert",
+				key: "created",
+				display: Display.DATE_TIME,
+			},
+			{
 				kind: Card.NESTED_FIELD,
 				label: "Status",
 				keys: ["status"],
