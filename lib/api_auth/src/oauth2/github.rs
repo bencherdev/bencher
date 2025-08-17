@@ -1,22 +1,15 @@
 #![cfg(feature = "plus")]
 
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
-use bencher_json::{JsonAuthUser, JsonSignup, system::auth::JsonOAuth};
+use bencher_json::{JsonAuthUser, system::auth::JsonOAuth};
 use bencher_schema::{
-    conn_lock,
     context::ApiContext,
-    error::{issue_error, payment_required_error, unauthorized_error},
-    model::{
-        organization::QueryOrganization,
-        user::{InsertUser, QueryUser},
-    },
+    error::{payment_required_error, unauthorized_error},
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
-use crate::CLIENT_TOKEN_TTL;
-
-use super::is_allowed_oauth2;
+use super::{handle_oauth2_user, is_allowed_oauth2};
 
 pub const GITHUB_OAUTH2: &str = "GitHub OAuth2";
 
@@ -57,76 +50,9 @@ async fn post_inner(
     is_allowed_oauth2(context).await?;
 
     let (name, email) = github_client
-        .oauth_user(json_oauth.code)
+        .oauth_user(json_oauth.code.clone())
         .await
         .map_err(unauthorized_error)?;
 
-    // If the user already exists, then we just need to check if they are locked and possible accept an invite
-    // Otherwise, we need to create a new user and notify the admins
-    let query_user = QueryUser::get_with_email(conn_lock!(context), &email);
-    let user = if let Ok(query_user) = query_user {
-        query_user.check_is_locked()?;
-        if let Some(invite) = &json_oauth.invite {
-            query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
-        } else if let Some(organization_uuid) = json_oauth.claim {
-            let query_organization =
-                QueryOrganization::from_uuid(conn_lock!(context), organization_uuid)?;
-            query_organization.claim(context, &query_user).await?;
-        }
-        query_user
-    } else {
-        let json_signup = JsonSignup {
-            name,
-            slug: None,
-            email: email.clone(),
-            plan: json_oauth.plan,
-            invite: json_oauth.invite.clone(),
-            claim: json_oauth.claim,
-            i_agree: true,
-        };
-
-        let invited = json_signup.invite.is_some();
-        let insert_user =
-            InsertUser::from_json(conn_lock!(context), &context.token_key, &json_signup)?;
-
-        insert_user.notify(
-            log,
-            conn_lock!(context),
-            &context.messenger,
-            &context.console_url,
-            invited,
-            GITHUB_OAUTH2,
-        )?;
-
-        QueryUser::get_with_email(conn_lock!(context), &email)?
-    }
-    .into_json();
-
-    let token = context
-        .token_key
-        .new_client(email.clone(), CLIENT_TOKEN_TTL)
-        .map_err(|e| {
-            issue_error(
-                "Failed to create client JWT for GitHub OAuth2",
-                &format!(
-                    "Failed to create client JWT for GitHub OAuth2 ({email} | {CLIENT_TOKEN_TTL})"
-                ),
-                e,
-            )
-        })?;
-
-    let claims = context.token_key.validate_client(&token).map_err(|e| {
-        issue_error(
-            "Failed to validate new client JWT for GitHub OAuth2",
-            &format!("Failed to validate new client JWT for GitHub OAuth2: {token}"),
-            e,
-        )
-    })?;
-
-    Ok(JsonAuthUser {
-        user,
-        token,
-        creation: claims.issued_at(),
-        expiration: claims.expiration(),
-    })
+    handle_oauth2_user(log, context, json_oauth, name, email, GITHUB_OAUTH2).await
 }
