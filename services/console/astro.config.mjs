@@ -73,6 +73,12 @@ export default defineConfig({
 				access: SECRET,
 				optional: true,
 			}),
+			// https://developers.google.com/identity/protocols/oauth2
+			GOOGLE_CLIENT_ID: envField.string({
+				context: SERVER,
+				access: SECRET,
+				optional: true,
+			}),
 		},
 	},
 	// Do not use any trailing slashes in the paths below
