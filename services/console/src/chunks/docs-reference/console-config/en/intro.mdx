@@ -8,9 +8,9 @@ using the following environment variables:
   this is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`.
   Do not set this when using a remote `BENCHER_API_URL`, such as `https://bencher.example.com`.
   By default, this is not set.
-- `GITHUB_CLIENT_ID`: The GitHub Client ID for a [Self-Hosted GitHub App][github app] to enable "Login with GitHub".
+- `OAUTH_GITHUB`: Set to `true` to enable "Login with GitHub" using a [Self-Hosted GitHub App][github app].
   This requires a [Bencher Plus Enterprise plan][bencher plus enterprise]. By default, this is not set.
-- `GOOGLE_CLIENT_ID`: The Google Client ID for a [Self-Hosted Google OAuth2][google oauth2] to enable "Login with Google".
+- `OAUTH_GOOGLE`: Set to `true` to enable "Login with Google" using a [Self-Hosted Google OAuth2][google oauth2].
   This requires a [Bencher Plus Enterprise plan][bencher plus enterprise]. By default, this is not set.
 
 [server config]: /docs/reference/server-config/

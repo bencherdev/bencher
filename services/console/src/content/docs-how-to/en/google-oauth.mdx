@@ -61,7 +61,7 @@ and update your [console server configuration][console config] and [API sever co
 ## Google OAuth2 Client Configuration
 
 ### Console UI
-Set the `GOOGLE_CLIENT_ID` environment variable when you run the `bencher-console` Docker image. (ex: `GOOGLE_CLIENT_ID=012345-abcd6789envs.apps.googleusercontent.com`)
+Set the `OAUTH_GOOGLE` environment variable to `true` when you run the `bencher-console` Docker image. (ex: `OAUTH_GOOGLE=true`)
 If the Client ID is missing, then the Google buttons will not appear in the UI.
 
 ### API Server

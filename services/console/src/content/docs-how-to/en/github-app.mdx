@@ -51,7 +51,7 @@ and update your [console server configuration][console config] and [API sever co
 ## GitHub App Configuration
 
 ### Console UI
-Set the `GITHUB_CLIENT_ID` environment variable when you run the `bencher-console` Docker image. (ex: `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`)
+Set the `OAUTH_GITHUB` environment variable to `true` when you run the `bencher-console` Docker image. (ex: `OAUTH_GITHUB=true`)
 If the Client ID is missing, then the GitHub buttons will not appear in the UI.
 
 ### API Server

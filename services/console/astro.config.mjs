@@ -68,13 +68,13 @@ export default defineConfig({
 				optional: true,
 			}),
 			// https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authenticating-to-the-rest-api-with-an-oauth-app
-			GITHUB_CLIENT_ID: envField.string({
+			OAUTH_GITHUB: envField.string({
 				context: SERVER,
 				access: SECRET,
 				optional: true,
 			}),
 			// https://developers.google.com/identity/protocols/oauth2
-			GOOGLE_CLIENT_ID: envField.string({
+			OAUTH_GOOGLE: envField.string({
 				context: SERVER,
 				access: SECRET,
 				optional: true,

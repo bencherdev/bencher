@@ -6,8 +6,8 @@ import { CLAIM_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
 interface Props {
 	apiUrl: string;
 	newUser: boolean;
-	githubClientId: undefined | string;
-	googleClientId: undefined | string;
+	github: undefined | string;
+	google: undefined | string;
 }
 
 const OAuthForm = (props: Props) => {
@@ -15,7 +15,7 @@ const OAuthForm = (props: Props) => {
 
 	return (
 		<>
-			<Show when={props.githubClientId}>
+			<Show when={props.github === "true"}>
 				<button
 					type="button"
 					class="button is-fullwidth"
@@ -30,7 +30,7 @@ const OAuthForm = (props: Props) => {
 					<span>{props.newUser ? "Sign up" : "Log in"} with GitHub</span>
 				</button>
 			</Show>
-			<Show when={props.googleClientId}>
+			<Show when={props.google === "true"}>
 				<button
 					type="button"
 					class="button is-fullwidth"

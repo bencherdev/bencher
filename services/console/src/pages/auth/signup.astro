@@ -3,8 +3,8 @@ export const prerender = false;
 
 import {
 	BENCHER_API_URL,
-	GITHUB_CLIENT_ID,
-	GOOGLE_CLIENT_ID,
+	OAUTH_GITHUB,
+	OAUTH_GOOGLE,
 } from "astro:env/server";
 
 import AuthLayout from "../../layouts/auth/AuthLayout.astro";
@@ -27,7 +27,7 @@ const description =
   <AuthForm client:only="solid-js" apiUrl={BENCHER_API_URL} newUser={newUser} >
     <SignupForm slot="fallback"/>
   </AuthForm>
-  <OAuthForm client:only="solid-js" apiUrl={BENCHER_API_URL} newUser={newUser} githubClientId={GITHUB_CLIENT_ID} googleClientId={GOOGLE_CLIENT_ID}>
+  <OAuthForm client:only="solid-js" apiUrl={BENCHER_API_URL} newUser={newUser} github={OAUTH_GITHUB} google={OAUTH_GOOGLE}>
     <div slot="fallback">
 				<a class="button is-fullwidth" style="margin-top: 3rem;">
 					<span class="icon">
