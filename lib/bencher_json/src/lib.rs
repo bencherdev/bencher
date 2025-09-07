@@ -72,13 +72,6 @@ pub use project::{
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
 };
 pub use run::JsonNewRun;
-#[cfg(feature = "plus")]
-pub use system::{
-    auth::JsonOAuth,
-    config::JsonConsole,
-    payment::JsonPayment,
-    server::{JsonServer, JsonServerStats, ServerUuid},
-};
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},
@@ -86,6 +79,13 @@ pub use system::{
     restart::JsonRestart,
     spec::JsonSpec,
     version::JsonApiVersion,
+};
+#[cfg(feature = "plus")]
+pub use system::{
+    auth::{JsonOAuth, JsonOAuthUrl},
+    config::JsonConsole,
+    payment::JsonPayment,
+    server::{JsonServer, JsonServerStats, ServerUuid},
 };
 pub use user::{
     JsonPubUser, JsonUpdateUser, JsonUser, JsonUsers, UserResourceId, UserSlug, UserUuid,

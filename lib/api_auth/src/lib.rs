@@ -48,6 +48,7 @@ impl bencher_endpoint::Registrar for Api {
             if http_options {
                 api_description.register(oauth2::google::auth_google_options)?;
             }
+            api_description.register(oauth2::google::auth_google_get)?;
             api_description.register(oauth2::google::auth_google_post)?;
         }
 

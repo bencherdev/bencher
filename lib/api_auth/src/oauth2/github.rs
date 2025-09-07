@@ -44,7 +44,7 @@ async fn post_inner(
 ) -> Result<JsonAuthUser, HttpError> {
     let Some(github_client) = &context.github_client else {
         let err = "GitHub OAuth2 is not configured";
-        slog::warn!(log, "{err}");
+        slog::info!(log, "{err}");
         return Err(payment_required_error(err));
     };
     is_allowed_oauth2(context).await?;

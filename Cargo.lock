@@ -161,6 +161,8 @@ dependencies = [
  "bencher_json",
  "bencher_schema",
  "dropshot",
+ "schemars 0.8.22",
+ "serde",
  "slog",
 ]
 

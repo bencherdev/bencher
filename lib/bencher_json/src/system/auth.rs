@@ -4,6 +4,8 @@ use bencher_valid::{PlanLevel, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "plus")]
+use url::Url;
 
 use crate::{JsonUser, OrganizationUuid, UserSlug};
 
@@ -30,6 +32,14 @@ pub struct JsonLogin {
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
+}
+
+#[cfg(feature = "plus")]
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonOAuthUrl {
+    pub url: Url,
 }
 
 #[cfg(feature = "plus")]

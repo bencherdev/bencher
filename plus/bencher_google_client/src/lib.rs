@@ -4,11 +4,9 @@ use bencher_json::{Jwt, OrganizationUuid};
 use bencher_valid::{Email, NonEmpty, PlanLevel, Secret, UserName};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
-    RedirectUrl, Scope, TokenResponse as _, TokenUrl,
-    basic::BasicClient,
-    reqwest::{self, redirect},
+    RedirectUrl, Scope, TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
 };
-use octocrab::{Octocrab, models::orgs::Organization};
+use octocrab::Octocrab;
 use serde::Deserialize;
 use url::Url;
 
@@ -35,6 +33,8 @@ pub struct GoogleClient {
 
 #[derive(Debug, thiserror::Error)]
 pub enum GoogleClientError {
+    #[error("Failed to parse CSRF token: {0}")]
+    BadCsrfToken(bencher_valid::ValidError),
     #[error("Failed to create a reqwest client: {0}")]
     Reqwest(reqwest::Error),
     #[error("Failed to exchange code for access token: {0}")]
@@ -73,15 +73,18 @@ impl GoogleClient {
         Self { oauth2_client }
     }
 
-    pub async fn auth_url(&self, state: State) -> Url {
-        let state_fn = || {
-            CsrfToken::new(match state {
-                State::Invite(jwt) => jwt.into(),
-                State::Claim(org) => org.to_string(),
-                State::Plan(plan) => plan.to_string(),
-            })
-        };
-        self.oauth2_client.authorize_url(state_fn)
+    pub fn auth_url(&self, state: Secret) -> Result<(Url, Secret), GoogleClientError> {
+        let state_fn = || CsrfToken::new(state.into());
+        let (auth_url, csrf_token) = self
+            .oauth2_client
+            .authorize_url(state_fn)
+            .add_scope(AUTH_SCOPE.clone())
+            .url();
+        let csrf_token = csrf_token
+            .secret()
+            .parse()
+            .map_err(GoogleClientError::BadCsrfToken)?;
+        Ok((auth_url, csrf_token))
     }
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GoogleClientError> {
@@ -132,18 +135,6 @@ impl GoogleClient {
 
         Ok((user_name, email))
     }
-}
-
-// todo(ep): Currently, we do not protect against CSRF attacks,
-// as we allow any client to use our authentication endpoints.
-// So the `state` parameter is currently just used to pass callback information.
-// In the future, we may want to restrict allowed clients,
-// at which point we should generate and validate a CSRF token here
-// along with the callback information.
-pub enum State {
-    Invite(Jwt),
-    Claim(OrganizationUuid),
-    Plan(PlanLevel),
 }
 
 #[derive(Debug, Deserialize)]
