@@ -59,11 +59,11 @@ const authPath = async (
 	const claim = searchParams[CLAIM_PARAM];
 	const plan = searchParams[PLAN_PARAM];
 	if (invite) {
-		path += `&invite=${invite}`;
+		path += `?invite=${invite}`;
 	} else if (claim) {
-		path += `&claim=${claim}`;
+		path += `?claim=${claim}`;
 	} else if (plan) {
-		path += `&plan=${plan}`;
+		path += `?plan=${plan}`;
 	}
 	await httpGet(apiUrl, path, null)
 		.then((resp) => {
