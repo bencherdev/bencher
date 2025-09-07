@@ -1,4 +1,4 @@
-use bencher_json::{Email, JsonAuthUser, JsonOAuth, JsonSignup, PlanLevel, UserName};
+use bencher_json::{Email, JsonAuthUser, JsonSignup, PlanLevel, UserName};
 use bencher_schema::{
     ApiContext, conn_lock,
     error::{issue_error, payment_required_error},
@@ -14,8 +14,11 @@ use crate::CLIENT_TOKEN_TTL;
 
 pub mod github;
 pub mod google;
+mod oauth_state;
 
-async fn is_allowed_oauth2(context: &ApiContext) -> Result<(), HttpError> {
+use oauth_state::OAuthState;
+
+async fn is_allowed_oauth(context: &ApiContext) -> Result<(), HttpError> {
     // Either the server is Bencher Cloud, or at least one organization must have a valid Bencher Plus license
     let is_allowed = context.is_bencher_cloud
         || !LicenseUsage::get_for_server(
@@ -35,10 +38,10 @@ async fn is_allowed_oauth2(context: &ApiContext) -> Result<(), HttpError> {
     }
 }
 
-async fn handle_oauth2_user(
+async fn handle_oauth_user(
     log: &Logger,
     context: &ApiContext,
-    json_oauth: JsonOAuth,
+    oauth_state: OAuthState,
     name: UserName,
     email: Email,
     method: &str,
@@ -48,9 +51,9 @@ async fn handle_oauth2_user(
     let query_user = QueryUser::get_with_email(conn_lock!(context), &email);
     let user = if let Ok(query_user) = query_user {
         query_user.check_is_locked()?;
-        if let Some(invite) = &json_oauth.invite {
+        if let Some(invite) = oauth_state.invite() {
             query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
-        } else if let Some(organization_uuid) = json_oauth.claim {
+        } else if let Some(organization_uuid) = oauth_state.claim() {
             let query_organization =
                 QueryOrganization::from_uuid(conn_lock!(context), organization_uuid)?;
             query_organization.claim(context, &query_user).await?;
@@ -61,9 +64,9 @@ async fn handle_oauth2_user(
             name,
             slug: None,
             email: email.clone(),
-            plan: json_oauth.plan,
-            invite: json_oauth.invite.clone(),
-            claim: json_oauth.claim,
+            plan: oauth_state.plan(),
+            invite: oauth_state.invite().cloned(),
+            claim: oauth_state.claim(),
             i_agree: true,
         };
 

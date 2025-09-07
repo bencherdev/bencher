@@ -56,6 +56,7 @@ bencher_license = { path = "plus/bencher_license" }
 anyhow = "1.0"
 async-compression = "0.4"
 async-trait = "0.1"
+base64 = "0.22"
 camino = "1.1"
 chrono = { version = "0.4", default-features = false }
 clap = { version = "4.5", features = ["derive"] }

@@ -47,11 +47,8 @@ pub struct JsonOAuthUrl {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOAuth {
+    pub state: Secret,
     pub code: Secret,
-    #[cfg(feature = "plus")]
-    pub plan: Option<PlanLevel>,
-    pub invite: Option<Jwt>,
-    pub claim: Option<OrganizationUuid>,
 }
 
 #[typeshare::typeshare]

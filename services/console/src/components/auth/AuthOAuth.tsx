@@ -56,6 +56,7 @@ const AuthOAuth = (props: Props) => {
 			return null;
 		}
 		const oauth = {
+			state: fetcher.state,
 			code: fetcher.code,
 		} as JsonOAuth;
 		const state = fetcher.state;

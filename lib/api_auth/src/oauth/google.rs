@@ -1,19 +1,19 @@
-#![cfg(feature = "plus")]
-
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
 use bencher_json::{
     JsonAuthUser, JsonOAuthUrl, Jwt, OrganizationUuid, PlanLevel, system::auth::JsonOAuth,
 };
 use bencher_schema::{
     context::ApiContext,
-    error::{not_found_error, payment_required_error, unauthorized_error},
+    error::{payment_required_error, unauthorized_error},
 };
 use dropshot::{HttpError, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
 
-use super::{handle_oauth2_user, is_allowed_oauth2};
+use crate::oauth::oauth_state::OAuthState;
+
+use super::{handle_oauth_user, is_allowed_oauth};
 
 pub const GOOGLE_OAUTH2: &str = "Google OAuth2";
 
@@ -61,7 +61,7 @@ async fn get_inner(
         slog::warn!(log, "{err}");
         return Err(payment_required_error(err));
     };
-    is_allowed_oauth2(context).await?;
+    is_allowed_oauth(context).await?;
 
     // TODO: Currently, we do not protect against CSRF attacks,
     // as we allow any client to use our authentication endpoints.
@@ -75,15 +75,9 @@ async fn get_inner(
         claim,
         plan,
     } = query_params;
-    let state = invite
-        .map(Into::into)
-        .or_else(|| claim.as_ref().map(ToString::to_string))
-        .or_else(|| plan.as_ref().map(ToString::to_string))
-        .unwrap_or_else(|| "todo".to_owned())
-        .parse()
-        .inspect_err(|e| slog::warn!(log, "Failed to state: {e}"))
-        .map_err(not_found_error)?;
 
+    let state_struct = OAuthState::new(invite, claim, plan);
+    let state = state_struct.encode(log)?;
     let url = google_client.auth_url(state);
 
     Ok(JsonOAuthUrl { url })
@@ -112,12 +106,14 @@ async fn post_inner(
         slog::warn!(log, "{err}");
         return Err(payment_required_error(err));
     };
-    is_allowed_oauth2(context).await?;
+    is_allowed_oauth(context).await?;
+
+    let oauth_state = OAuthState::decode(log, &json_oauth.state)?;
 
     let (name, email) = google_client
         .oauth_user(json_oauth.code.clone())
         .await
         .map_err(unauthorized_error)?;
 
-    handle_oauth2_user(log, context, json_oauth, name, email, GOOGLE_OAUTH2).await
+    handle_oauth_user(log, context, oauth_state, name, email, GOOGLE_OAUTH2).await
 }

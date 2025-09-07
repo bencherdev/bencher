@@ -2,7 +2,7 @@ mod accept;
 mod confirm;
 mod login;
 #[cfg(feature = "plus")]
-mod oauth2;
+mod oauth;
 mod signup;
 
 // TODO Custom max TTL
@@ -40,17 +40,17 @@ impl bencher_endpoint::Registrar for Api {
         {
             // GitHub OAuth
             if http_options {
-                api_description.register(oauth2::github::auth_github_options)?;
+                api_description.register(oauth::github::auth_github_options)?;
             }
-            api_description.register(oauth2::github::auth_github_get)?;
-            api_description.register(oauth2::github::auth_github_post)?;
+            api_description.register(oauth::github::auth_github_get)?;
+            api_description.register(oauth::github::auth_github_post)?;
 
             // Google OAuth
             if http_options {
-                api_description.register(oauth2::google::auth_google_options)?;
+                api_description.register(oauth::google::auth_google_options)?;
             }
-            api_description.register(oauth2::google::auth_google_get)?;
-            api_description.register(oauth2::google::auth_google_post)?;
+            api_description.register(oauth::google::auth_google_get)?;
+            api_description.register(oauth::google::auth_google_post)?;
         }
 
         Ok(())
