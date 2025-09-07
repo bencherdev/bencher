@@ -1,0 +1,74 @@
+---
+title: "Google OAuth für Self-Hosted"
+description: "Erstellen Sie einen Google OAuth 2.0-Client, damit Bencher Self-Hosted sich mit Google authentifizieren kann"
+heading: "Erstellen eines Google OAuth 2.0-Clients für Bencher Self-Hosted"
+published: "2025-09-07T12:36:00Z"
+modified: "2025-09-07T12:36:00Z"
+sortOrder: 10
+---
+
+Wenn Sie Bencher Cloud verwenden, können Sie sich einfach über den `Google`-Button [registrieren](/auth/signup) oder [anmelden](/auth/login).
+
+Für Bencher Self-Hosted benötigen Sie einen [Bencher Plus Enterprise-Plan][bencher plus enterprise], müssen einen eigenen Google OAuth2-Client erstellen und Ihre [Console-Server-Konfiguration][console config] sowie die [API-Server-Konfiguration][server config] aktualisieren.
+
+[bencher plus enterprise]: /pricing/?level=enterprise
+[console config]: /de/docs/reference/console-config/
+[server config]: /de/docs/reference/server-config/
+
+## Einen Google OAuth 2.0-Client erstellen
+
+- Melden Sie sich bei der [Google API Console][google api console] an
+- Navigieren Sie in der linken Seitenleiste zur [Seite `Credentials`][google cloud credentials]
+- Erstellen Sie eine `OAuth 2.0 Client ID`
+  - Klicken Sie auf `➕ Create Credentials` > `OAuth client ID`
+  - Konfigurieren Sie den Einwilligungsbildschirm
+    - Get started
+      - App Information
+        - App name
+          - Wählen Sie einen Namen (z. B. `Bencher for My Enterprise`)
+        - User support email
+          - Wählen Sie eine E-Mail-Adresse
+      - Audience
+        - `Internal`
+          - Nur für Benutzer innerhalb Ihrer Organisation verfügbar.
+            Sie müssen Ihre App nicht zur Überprüfung einreichen.
+      - Contact Information
+        - Fügen Sie Ihre E-Mail-Adresse hinzu
+          - Diese E-Mail-Adressen verwendet Google, um Sie über Änderungen an Ihrem Projekt zu informieren.
+      - Finish
+        - Stimmen Sie der Google API Services User Data Policy zu
+  - Klicken Sie auf `Create OAuth Client`
+    - Application type
+      - Wählen Sie `Desktop app`
+      - Name
+        - Wählen Sie einen Namen (z. B. `Bencher for My Enterprise`)
+      - Klicken Sie auf `Create`
+  - OAuth-Client erstellt
+    - Notieren Sie die `Client ID` (z. B. `012345-abcd6789envs.apps.googleusercontent.com`)
+    - Klicken Sie auf `OK`
+    - Klicken Sie auf die neu erstellte OAuth 2.0 Client ID
+    - Notieren Sie das `Client Secret` (z. B. `GOCSPX-abcdefgh1234567890wxyz`)
+
+[google api console]: https://console.developers.google.com/
+[google cloud credentials]: https://console.cloud.google.com/apis/credentials
+
+> 🐰 Inaktive Google-OAuth-Clients können gelöscht werden, wenn sie 6 Monate lang nicht verwendet werden.
+> Google benachrichtigt Sie über eine Löschung wegen Inaktivität und Sie können Clients bis zu 30 Tage nach der Löschung wiederherstellen.
+
+## Konfiguration des Google OAuth-Clients
+
+### Console-Benutzeroberfläche
+Setzen Sie die Umgebungsvariable `OAUTH_GOOGLE` auf `true`, wenn Sie das Docker-Image `bencher-console` starten (z. B.: `OAUTH_GOOGLE=true`).
+Wenn die Client-ID fehlt, werden die Google-Buttons nicht in der UI angezeigt.
+
+### API-Server
+Fügen Sie `client_id` und `client_secret` in [den `plus.google`-Abschnitt der Server-Konfiguration](/de/docs/reference/server-config/#plusgoogle) ein.
+Wenn der Google-Abschnitt fehlt, schlägt der Server sämtliche Google-Authentifizierungsanfragen fehl.
+
+<br/>
+
+> 🐰 Herzlichen Glückwunsch! Sie haben gelernt, wie man einen Google OAuth2-Client einrichtet! 🎉
+
+<br/>
+
+<h2><a href="/de/docs/how-to/github-actions/">Bencher zu GitHub Actions hinzufügen ➡</a></h2>

@@ -1,0 +1,74 @@
+---
+title: "셀프 호스티드 Google OAuth"
+description: "Bencher Self-Hosted가 Google로 인증할 수 있도록 Google OAuth 2.0 클라이언트를 생성하는 방법"
+heading: "셀프 호스티드용 Google OAuth 2.0 클라이언트 생성 방법"
+published: "2025-09-07T12:36:00Z"
+modified: "2025-09-07T12:36:00Z"
+sortOrder: 10
+---
+
+Bencher Cloud를 사용 중이라면 `Google` 버튼으로 간단히 [가입](/auth/signup) 또는 [로그인](/auth/login)할 수 있습니다.
+
+Bencher Self-Hosted의 경우 [Bencher Plus Enterprise 플랜][bencher plus enterprise]이 필요하며, 자체 Google OAuth2 클라이언트를 생성하고 [콘솔 서버 구성][console config] 및 [API 서버 구성][server config]을 업데이트해야 합니다.
+
+[bencher plus enterprise]: /pricing/?level=enterprise
+[console config]: /ko/docs/reference/console-config/
+[server config]: /ko/docs/reference/server-config/
+
+## Google OAuth 2.0 클라이언트 생성
+
+- [Google API 콘솔][google api console]에 가입합니다.
+- 왼쪽 사이드바에서 [`Credentials` 페이지][google cloud credentials]로 이동합니다.
+- `OAuth 2.0 Client ID`를 생성합니다.
+  - `➕ Create Credentials` > `OAuth client ID`를 클릭합니다.
+  - 동의 화면(consent screen)을 구성합니다.
+    - 시작하기
+      - 앱 정보(App Information)
+        - 앱 이름
+          - 이름을 선택합니다 (예: `Bencher for My Enterprise`)
+        - 사용자 지원 이메일(User support email)
+          - 이메일 주소를 선택합니다.
+      - 대상(Audience)
+        - `Internal`
+          - 조직 내부 사용자에게만 사용 가능합니다.
+            앱 검증을 제출할 필요가 없습니다.
+      - 연락처 정보(Contact Information)
+        - 이메일 주소를 추가합니다.
+          - 이 이메일 주소들은 Google이 프로젝트 변경 사항을 알릴 때 사용됩니다.
+      - 완료(Finish)
+        - Google API Services User Data Policy에 동의합니다.
+  - `Create OAuth Client`를 클릭합니다.
+    - 애플리케이션 유형(Application type)
+      - `Desktop app`을 선택합니다.
+      - 이름(Name)
+        - 이름을 선택합니다 (예: `Bencher for My Enterprise`)
+      - `Create`를 클릭합니다.
+  - OAuth 클라이언트가 생성되면
+    - `Client ID`를 기록해 둡니다 (예: `012345-abcd6789envs.apps.googleusercontent.com`)
+    - `OK`를 클릭합니다.
+    - 새로 생성된 OAuth 2.0 Client ID를 클릭합니다.
+    - `Client Secret`를 기록해 둡니다 (예: `GOCSPX-abcdefgh1234567890wxyz`)
+
+[google api console]: https://console.developers.google.com/
+[google cloud credentials]: https://console.cloud.google.com/apis/credentials
+
+> 🐰 사용되지 않는 Google OAuth 클라이언트는 6개월 동안 사용되지 않으면 삭제될 수 있습니다.
+> Google이 비활성으로 인한 삭제를 알리며, 삭제 후 최대 30일 이내에 클라이언트를 복원할 수 있습니다.
+
+## Google OAuth 클라이언트 구성
+
+### 콘솔 UI
+`bencher-console` Docker 이미지를 실행할 때 `OAUTH_GOOGLE` 환경 변수를 `true`로 설정하십시오. (예: `OAUTH_GOOGLE=true`)
+Client ID가 누락되면 UI에 Google 버튼이 표시되지 않습니다.
+
+### API 서버
+서버 구성의 [`plus.google` 섹션][server config]에 `client_id`와 `client_secret`을 추가합니다.
+Google 섹션이 누락되면 서버는 모든 Google 인증 요청을 처리하지 못합니다.
+
+<br/>
+
+> 🐰 축하합니다! Google OAuth2 클라이언트 설정 방법을 배웠습니다! 🎉
+
+<br/>
+
+<h2><a href="/ko/docs/how-to/github-actions/">Bencher를 GitHub Actions에 추가 ➡</a></h2>

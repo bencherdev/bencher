@@ -1,5 +1,5 @@
 ---
-title: "Self-Hosted Google OAuth2"
+title: "Self-Hosted Google OAuth"
 description: "Create a Google OAuth 2.0 client to allow Bencher Self-Hosted to authenticate with Google"
 heading: "How to Create a Self-Hosted Google OAuth 2.0 Client"
 published: "2025-09-07T12:36:00Z"
@@ -18,7 +18,7 @@ and update your [console server configuration][console config] and [API sever co
 [console config]: /docs/reference/console-config/
 [server config]: /docs/reference/server-config/
 
-## Create a Google OAuth2 Client
+## Create a Google OAuth 2.0 Client
 
 - Signup for the [Google API Console][google api console]
 - Navigate to [the `Credentials` page][google cloud credentials] in the left sidebar
@@ -58,7 +58,7 @@ and update your [console server configuration][console config] and [API sever co
 > 🐰 Inactive Google OAuth clients are subject to deletion if they are not used for 6 months.
 > You will be notified of deletion due to inactivity by Google and can restore clients up to 30 days after deletion.
 
-## Google OAuth2 Client Configuration
+## Google OAuth Client Configuration
 
 ### Console UI
 Set the `OAUTH_GOOGLE` environment variable to `true` when you run the `bencher-console` Docker image. (ex: `OAUTH_GOOGLE=true`)
