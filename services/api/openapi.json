@@ -296,6 +296,93 @@
       }
     },
     "/v0/auth/github": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "auth_github_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "claim",
+            "description": "Organization UUID to claim.",
+            "schema": {
+              "$ref": "#/components/schemas/OrganizationUuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "invite",
+            "description": "Invitation JWT.",
+            "schema": {
+              "$ref": "#/components/schemas/Jwt"
+            }
+          },
+          {
+            "in": "query",
+            "name": "plan",
+            "description": "Plan level.",
+            "schema": {
+              "$ref": "#/components/schemas/PlanLevel"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonOAuthUrl"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "post": {
         "tags": [
           "auth"
@@ -369,6 +456,93 @@
       }
     },
     "/v0/auth/google": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "auth_google_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "claim",
+            "description": "Organization UUID to claim.",
+            "schema": {
+              "$ref": "#/components/schemas/OrganizationUuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "invite",
+            "description": "Invitation JWT.",
+            "schema": {
+              "$ref": "#/components/schemas/Jwt"
+            }
+          },
+          {
+            "in": "query",
+            "name": "plan",
+            "description": "Plan level.",
+            "schema": {
+              "$ref": "#/components/schemas/PlanLevel"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonOAuthUrl"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "post": {
         "tags": [
           "auth"
@@ -9966,6 +10140,18 @@
         },
         "required": [
           "code"
+        ]
+      },
+      "JsonOAuthUrl": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "url"
         ]
       },
       "JsonOneMetric": {
