@@ -1,12 +1,10 @@
 use std::sync::LazyLock;
 
-use bencher_json::{Jwt, OrganizationUuid};
-use bencher_valid::{Email, NonEmpty, PlanLevel, Secret, UserName};
+use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
     RedirectUrl, Scope, TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
 };
-use octocrab::Octocrab;
 use serde::Deserialize;
 use url::Url;
 
@@ -18,12 +16,14 @@ static AUTH_URL: LazyLock<AuthUrl> = LazyLock::new(|| {
 
 #[expect(clippy::expect_used)]
 static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
-    TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_owned())
+    TokenUrl::new("https://oauth2.googleapis.com/token".to_owned())
         .expect("Invalid token endpoint URL")
 });
 
-static AUTH_SCOPE: LazyLock<Scope> =
-    LazyLock::new(|| Scope::new("https://www.googleapis.com/auth/plus.me".to_owned()));
+// Replaced deprecated plus.me scope with OpenID Connect scopes
+static OPENID_SCOPE: LazyLock<Scope> = LazyLock::new(|| Scope::new("openid".to_owned()));
+static EMAIL_SCOPE: LazyLock<Scope> = LazyLock::new(|| Scope::new("email".to_owned()));
+static PROFILE_SCOPE: LazyLock<Scope> = LazyLock::new(|| Scope::new("profile".to_owned()));
 
 #[derive(Debug, Clone)]
 pub struct GoogleClient {
@@ -44,17 +44,15 @@ pub enum GoogleClientError {
             oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,
         >,
     ),
-    #[error("Failed to authenticate using access token: {0}")]
-    Auth(octocrab::Error),
-    #[error("Failed to get current authenticated user: {0}")]
-    User(octocrab::Error),
-    #[error("Failed to parse the current authenticated user login name: {0}")]
-    BadLogin(bencher_valid::ValidError),
-    #[error("Failed to get emails for the current authenticated user: {0}")]
-    Emails(octocrab::Error),
-    #[error("Failed to get a verified primary email for the current authenticated user")]
-    NoPrimaryEmail,
-    #[error("Failed to parse the verified primary email for the current authenticated user: {0}")]
+    #[error("Failed to call Google UserInfo endpoint: {0}")]
+    UserInfoReq(reqwest::Error),
+    #[error("Failed to parse Google UserInfo response: {0}")]
+    UserInfoJson(reqwest::Error),
+    #[error("Missing email in Google UserInfo response")]
+    NoEmail,
+    #[error("Failed to parse user name: {0}")]
+    BadUserName(bencher_valid::ValidError),
+    #[error("Failed to parse email: {0}")]
     BadEmail(bencher_valid::ValidError),
 }
 
@@ -78,7 +76,9 @@ impl GoogleClient {
         let (auth_url, csrf_token) = self
             .oauth2_client
             .authorize_url(state_fn)
-            .add_scope(AUTH_SCOPE.clone())
+            .add_scope(OPENID_SCOPE.clone())
+            .add_scope(PROFILE_SCOPE.clone())
+            .add_scope(EMAIL_SCOPE.clone())
             .url();
         let csrf_token = csrf_token
             .secret()
@@ -100,48 +100,48 @@ impl GoogleClient {
             .request_async(&http_client)
             .await
             .map_err(GoogleClientError::Exchange)?;
+        let access_token = token.access_token().secret();
 
-        let oauth = octocrab::auth::OAuth {
-            access_token: token.access_token().secret().clone().into(),
-            token_type: token.token_type().as_ref().to_owned(),
-            scope: token
-                .scopes()
-                .map(|s| s.iter().map(AsRef::as_ref).map(ToOwned::to_owned).collect())
-                .unwrap_or_default(),
-            expires_in: None,
-            refresh_token: None,
-            refresh_token_expires_in: None,
-        };
-        let github_client = Octocrab::builder()
-            .oauth(oauth)
-            .build()
-            .map_err(GoogleClientError::Auth)?;
-
-        let user_name = github_client
-            .current()
-            .user()
+        // Call OpenID Connect UserInfo endpoint
+        let user_info_resp = http_client
+            .get("https://openidconnect.googleapis.com/v1/userinfo")
+            .bearer_auth(access_token)
+            .send()
             .await
-            .map_err(GoogleClientError::User)
-            .and_then(|user| user.login.parse().map_err(GoogleClientError::BadLogin))?;
+            .map_err(GoogleClientError::UserInfoReq)?;
 
-        let email = github_client
-            .get::<Vec<GitHubUserEmail>, _, &str>("/user/emails", None)
+        let user_info: GoogleUserInfo = user_info_resp
+            .json()
             .await
-            .map_err(GoogleClientError::Emails)?
-            .into_iter()
-            .find_map(|email| (email.primary && email.verified).then_some(email.email))
-            .ok_or(GoogleClientError::NoPrimaryEmail)
-            .and_then(|email| email.parse().map_err(GoogleClientError::BadEmail))?;
+            .map_err(GoogleClientError::UserInfoJson)?;
+
+        let email_str = user_info
+            .email
+            .as_deref()
+            .ok_or(GoogleClientError::NoEmail)?;
+        let email: Email = email_str.parse().map_err(GoogleClientError::BadEmail)?;
+
+        // Choose a username: name > given_name > email local-part
+        let candidate_name = user_info
+            .name
+            .as_deref()
+            .or(user_info.given_name.as_deref())
+            .or(user_info.family_name.as_deref())
+            .unwrap_or_else(|| email_str.split('@').next().unwrap_or(email_str));
+        let user_name: UserName = candidate_name
+            .parse()
+            .map_err(GoogleClientError::BadUserName)?;
 
         Ok((user_name, email))
     }
 }
 
+/// Google `UserInfo` response
+/// <https://openid.net/specs/openid-connect-core-1_0.html#UserInfo>
 #[derive(Debug, Deserialize)]
-struct GitHubUserEmail {
-    email: String,
-    verified: bool,
-    primary: bool,
-    #[expect(dead_code)]
-    visibility: Option<String>,
+struct GoogleUserInfo {
+    name: Option<String>,
+    given_name: Option<String>,
+    family_name: Option<String>,
+    email: Option<String>,
 }

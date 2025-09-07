@@ -495,6 +495,10 @@ export interface JsonOAuth {
 	claim?: Uuid;
 }
 
+export interface JsonOAuthUrl {
+	url: Url;
+}
+
 export interface JsonPerfAlert {
 	uuid: Uuid;
 	limit: BoundaryLimit;

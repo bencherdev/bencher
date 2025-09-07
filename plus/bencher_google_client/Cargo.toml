@@ -7,10 +7,8 @@ license-file.workspace = true
 publish = false
 
 [dependencies]
-bencher_json.workspace = true
 bencher_valid.workspace = true
 oauth2.workspace = true
-octocrab.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 url.workspace = true

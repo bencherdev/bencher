@@ -4,13 +4,14 @@ export const prerender = false;
 import { BENCHER_API_URL } from "astro:env/server";
 
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import AuthGitHub from "../../components/auth/AuthGitHub";
+import AuthOAuth from "../../components/auth/AuthOAuth";
 
 const title = "Bencher GitHub App";
+const pathname = "/v0/auth/github";
 ---
 
 <BaseLayout title={title} description={title}>
   <div slot="navbar"></div>
-  <AuthGitHub client:only="solid-js" apiUrl={BENCHER_API_URL} />
+  <AuthOAuth client:only="solid-js" apiUrl={BENCHER_API_URL} pathname={pathname} />
   <div slot="footer"></div>
 </BaseLayout>

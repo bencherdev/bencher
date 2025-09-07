@@ -1174,10 +1174,8 @@ dependencies = [
 name = "bencher_google_client"
 version = "0.5.4"
 dependencies = [
- "bencher_json",
  "bencher_valid",
  "oauth2",
- "octocrab",
  "serde",
  "thiserror 2.0.12",
  "url",
