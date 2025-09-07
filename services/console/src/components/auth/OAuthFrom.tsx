@@ -17,7 +17,7 @@ const OAuthForm = (props: Props) => {
 	});
 
 	const googlePath = createMemo(() => {
-		const path = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${props.googleClientId}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=consent`;
+		const path = "/auth/google";
 		return authPath(path, searchParams);
 	});
 

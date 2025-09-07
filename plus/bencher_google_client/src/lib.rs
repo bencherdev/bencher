@@ -1,13 +1,14 @@
 use std::sync::LazyLock;
 
-use bencher_valid::{Email, NonEmpty, Secret, UserName};
+use bencher_json::{Jwt, OrganizationUuid};
+use bencher_valid::{Email, NonEmpty, PlanLevel, Secret, UserName};
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl,
-    Scope, TokenResponse as _, TokenUrl,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
+    RedirectUrl, Scope, TokenResponse as _, TokenUrl,
     basic::BasicClient,
     reqwest::{self, redirect},
 };
-use octocrab::Octocrab;
+use octocrab::{Octocrab, models::orgs::Organization};
 use serde::Deserialize;
 use url::Url;
 
@@ -72,6 +73,17 @@ impl GoogleClient {
         Self { oauth2_client }
     }
 
+    pub async fn auth_url(&self, state: State) -> Url {
+        let state_fn = || {
+            CsrfToken::new(match state {
+                State::Invite(jwt) => jwt.into(),
+                State::Claim(org) => org.to_string(),
+                State::Plan(plan) => plan.to_string(),
+            })
+        };
+        self.oauth2_client.authorize_url(state_fn)
+    }
+
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GoogleClientError> {
         let code = AuthorizationCode::new(code.into());
         let http_client = reqwest::ClientBuilder::new()
@@ -120,6 +132,18 @@ impl GoogleClient {
 
         Ok((user_name, email))
     }
+}
+
+// todo(ep): Currently, we do not protect against CSRF attacks,
+// as we allow any client to use our authentication endpoints.
+// So the `state` parameter is currently just used to pass callback information.
+// In the future, we may want to restrict allowed clients,
+// at which point we should generate and validate a CSRF token here
+// along with the callback information.
+pub enum State {
+    Invite(Jwt),
+    Claim(OrganizationUuid),
+    Plan(PlanLevel),
 }
 
 #[derive(Debug, Deserialize)]
