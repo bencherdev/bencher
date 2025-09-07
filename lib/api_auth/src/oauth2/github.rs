@@ -1,12 +1,16 @@
 #![cfg(feature = "plus")]
 
-use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
-use bencher_json::{JsonAuthUser, system::auth::JsonOAuth};
+use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
+use bencher_json::{
+    JsonAuthUser, JsonOAuthUrl, Jwt, OrganizationUuid, PlanLevel, system::auth::JsonOAuth,
+};
 use bencher_schema::{
     context::ApiContext,
-    error::{payment_required_error, unauthorized_error},
+    error::{not_found_error, payment_required_error, unauthorized_error},
 };
-use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
+use dropshot::{HttpError, Query, RequestContext, TypedBody, endpoint};
+use schemars::JsonSchema;
+use serde::Deserialize;
 use slog::Logger;
 
 use super::{handle_oauth2_user, is_allowed_oauth2};
@@ -21,7 +25,68 @@ pub const GITHUB_OAUTH2: &str = "GitHub OAuth2";
 pub async fn auth_github_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Post.into()]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct AuthGitHubQuery {
+    /// Invitation JWT.
+    pub invite: Option<Jwt>,
+    /// Organization UUID to claim.
+    pub claim: Option<OrganizationUuid>,
+    /// Plan level.
+    pub plan: Option<PlanLevel>,
+}
+
+#[endpoint {
+    method = GET,
+    path =  "/v0/auth/github",
+    tags = ["auth"]
+}]
+pub async fn auth_github_get(
+    rqctx: RequestContext<ApiContext>,
+    query_params: Query<AuthGitHubQuery>,
+) -> Result<ResponseOk<JsonOAuthUrl>, HttpError> {
+    let json = get_inner(&rqctx.log, rqctx.context(), query_params.into_inner()).await?;
+    Ok(Get::pub_response_ok(json))
+}
+
+async fn get_inner(
+    log: &Logger,
+    context: &ApiContext,
+    query_params: AuthGitHubQuery,
+) -> Result<JsonOAuthUrl, HttpError> {
+    let Some(github_client) = &context.github_client else {
+        let err = "GitHub OAuth2 is not configured";
+        slog::warn!(log, "{err}");
+        return Err(payment_required_error(err));
+    };
+    is_allowed_oauth2(context).await?;
+
+    // TODO: Currently, we do not protect against CSRF attacks,
+    // as we allow any client to use our authentication endpoints.
+    // So the `state` parameter is currently just used to pass callback information.
+    // In the future, we may want to restrict allowed clients,
+    // at which point we should generate and validate a CSRF token here
+    // along with the callback information.
+    // https://datatracker.ietf.org/doc/html/rfc6749#section-10.12
+    let AuthGitHubQuery {
+        invite,
+        claim,
+        plan,
+    } = query_params;
+    let state = invite
+        .map(Into::into)
+        .or_else(|| claim.as_ref().map(ToString::to_string))
+        .or_else(|| plan.as_ref().map(ToString::to_string))
+        .unwrap_or_else(|| "todo".to_owned())
+        .parse()
+        .inspect_err(|e| slog::warn!(log, "Failed to state: {e}"))
+        .map_err(not_found_error)?;
+
+    let url = github_client.auth_url(state);
+
+    Ok(JsonOAuthUrl { url })
 }
 
 #[endpoint {

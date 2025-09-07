@@ -1168,6 +1168,7 @@ dependencies = [
  "octocrab",
  "serde",
  "thiserror 2.0.12",
+ "url",
 ]
 
 [[package]]

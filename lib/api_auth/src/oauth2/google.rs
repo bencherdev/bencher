@@ -6,7 +6,7 @@ use bencher_json::{
 };
 use bencher_schema::{
     context::ApiContext,
-    error::{issue_error, not_found_error, payment_required_error, unauthorized_error},
+    error::{not_found_error, payment_required_error, unauthorized_error},
 };
 use dropshot::{HttpError, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
@@ -84,15 +84,9 @@ async fn get_inner(
         .inspect_err(|e| slog::warn!(log, "Failed to state: {e}"))
         .map_err(not_found_error)?;
 
-    let (auth_url, _csrf_token) = google_client.auth_url(state).map_err(|error| {
-        issue_error(
-            "Failed to get auth URL",
-            "Failed to get auth URL from Google OAuth2 client",
-            error,
-        )
-    })?;
+    let url = google_client.auth_url(state);
 
-    Ok(JsonOAuthUrl { url: auth_url })
+    Ok(JsonOAuthUrl { url })
 }
 
 #[endpoint {

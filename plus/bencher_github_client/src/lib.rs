@@ -2,11 +2,12 @@ use std::sync::LazyLock;
 
 use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, EndpointNotSet, EndpointSet,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
     TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
 };
 use octocrab::Octocrab;
 use serde::Deserialize;
+use url::Url;
 
 #[expect(clippy::expect_used)]
 static AUTH_URL: LazyLock<AuthUrl> = LazyLock::new(|| {
@@ -62,6 +63,12 @@ impl GitHubClient {
             .set_token_uri(TOKEN_URL.clone());
 
         Self { oauth2_client }
+    }
+
+    pub fn auth_url(&self, state: Secret) -> Url {
+        let state_fn = || CsrfToken::new(state.into());
+        let (auth_url, _csrf_token) = self.oauth2_client.authorize_url(state_fn).url();
+        auth_url
     }
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GitHubClientError> {

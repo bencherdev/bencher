@@ -12,6 +12,7 @@ oauth2.workspace = true
 octocrab.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+url.workspace = true
 
 [lints]
 workspace = true

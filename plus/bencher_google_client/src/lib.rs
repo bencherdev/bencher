@@ -33,8 +33,6 @@ pub struct GoogleClient {
 
 #[derive(Debug, thiserror::Error)]
 pub enum GoogleClientError {
-    #[error("Failed to parse CSRF token: {0}")]
-    BadCsrfToken(bencher_valid::ValidError),
     #[error("Failed to create a reqwest client: {0}")]
     Reqwest(reqwest::Error),
     #[error("Failed to exchange code for access token: {0}")]
@@ -71,20 +69,16 @@ impl GoogleClient {
         Self { oauth2_client }
     }
 
-    pub fn auth_url(&self, state: Secret) -> Result<(Url, Secret), GoogleClientError> {
+    pub fn auth_url(&self, state: Secret) -> Url {
         let state_fn = || CsrfToken::new(state.into());
-        let (auth_url, csrf_token) = self
+        let (auth_url, _csrf_token) = self
             .oauth2_client
             .authorize_url(state_fn)
             .add_scope(OPENID_SCOPE.clone())
             .add_scope(PROFILE_SCOPE.clone())
             .add_scope(EMAIL_SCOPE.clone())
             .url();
-        let csrf_token = csrf_token
-            .secret()
-            .parse()
-            .map_err(GoogleClientError::BadCsrfToken)?;
-        Ok((auth_url, csrf_token))
+        auth_url
     }
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GoogleClientError> {

@@ -1,4 +1,4 @@
-import { Show, createMemo } from "solid-js";
+import { Show } from "solid-js";
 import { httpGet } from "../../util/http";
 import { useNavigate, useSearchParams } from "../../util/url";
 import { CLAIM_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
@@ -13,31 +13,31 @@ interface Props {
 const OAuthForm = (props: Props) => {
 	const [searchParams, _setSearchParams] = useSearchParams();
 
-	const githubPath = createMemo(() => {
-		const path = `https://github.com/login/oauth/authorize?client_id=${props.githubClientId}`;
-		return authPath(path, searchParams);
-	});
-
 	return (
 		<>
 			<Show when={props.githubClientId}>
-				<a
+				<button
+					type="button"
 					class="button is-fullwidth"
-					href={githubPath()}
 					style="margin-top: 3rem;"
+					onMouseDown={() =>
+						authPath(props.apiUrl, "/v0/auth/github", searchParams)
+					}
 				>
 					<span class="icon">
 						<i class="fab fa-github" />
 					</span>
 					<span>{props.newUser ? "Sign up" : "Log in"} with GitHub</span>
-				</a>
+				</button>
 			</Show>
 			<Show when={props.googleClientId}>
 				<button
 					type="button"
 					class="button is-fullwidth"
 					style="margin-top: 1rem;"
-					onMouseDown={() => googlePath(props.apiUrl, searchParams)}
+					onMouseDown={() =>
+						authPath(props.apiUrl, "/v0/auth/google", searchParams)
+					}
 				>
 					<span class="icon">
 						<i class="fab fa-google" />
@@ -49,26 +49,12 @@ const OAuthForm = (props: Props) => {
 	);
 };
 
-const authPath = (path: string, searchParams: Record<string, string>) => {
-	let modifiedPath = path;
-	const invite = searchParams[INVITE_PARAM];
-	const claim = searchParams[CLAIM_PARAM];
-	const plan = searchParams[PLAN_PARAM];
-	if (invite) {
-		modifiedPath += `&state=${invite}`;
-	} else if (claim) {
-		modifiedPath += `&state=${claim}`;
-	} else if (plan) {
-		modifiedPath += `&state=${plan}`;
-	}
-	return modifiedPath;
-};
-
-const googlePath = async (
+const authPath = async (
 	apiUrl: string,
+	pathname: string,
 	searchParams: Record<string, string>,
 ) => {
-	let path = "/v0/auth/google";
+	let path = pathname;
 	const invite = searchParams[INVITE_PARAM];
 	const claim = searchParams[CLAIM_PARAM];
 	const plan = searchParams[PLAN_PARAM];
