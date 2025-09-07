@@ -1,9 +1,18 @@
-The Bencher Console UI no requiere ninguna configuración. Sin embargo, algunos valores predeterminados se pueden personalizar para satisfacer sus necesidades utilizando las siguientes variables de entorno:
+La interfaz de Bencher Console no requiere ninguna configuración.
+Sin embargo, algunos valores predeterminados se pueden personalizar para adaptarse a sus necesidades mediante las siguientes variables de entorno:
 
-- `BENCHER_API_URL`: La URL para [el servidor API de Bencher][server config]. Por defecto, está configurado en `http://localhost:61016`.
-- `INTERNAL_API_URL`: Cuando se utiliza una red basada en Docker, como con `docker compose`, esto es necesario para la comunicación Docker-a-Docker al usar un `BENCHER_API_URL` local. No lo configure cuando utilice un `BENCHER_API_URL` remoto, como `https://bencher.example.com`. Por defecto, esto no está configurado.
-- `GITHUB_CLIENT_ID`: La ID del Cliente de GitHub para una [Aplicación GitHub Autoalojada][github app] para habilitar "Iniciar sesión con GitHub". Esto requiere un [plan Bencher Plus Enterprise][bencher plus enterprise]. Por defecto, esto no está configurado.
+- `BENCHER_API_URL`: La URL del servidor de la API de Bencher ([the Bencher API server][server config]).
+  Por defecto, esto está establecido en `http://localhost:61016`.
+- `INTERNAL_API_URL`: Al usar redes basadas en Docker, como con `docker compose`,
+  esto es necesario para la comunicación Docker a Docker cuando se utiliza un `BENCHER_API_URL` local.
+  No establezca esto cuando use un `BENCHER_API_URL` remoto, como `https://bencher.example.com`.
+  De forma predeterminada, no está configurado.
+- `OAUTH_GITHUB`: Establézcalo en `true` para habilitar `Login with GitHub` usando un [GitHub App autohospedado][github app].
+  Esto requiere un [plan Bencher Plus Enterprise][bencher plus enterprise]. De forma predeterminada, no está configurado.
+- `OAUTH_GOOGLE`: Establézcalo en `true` para habilitar `Login with Google` usando un [OAuth2 de Google autohospedado][google oauth2].
+  Esto requiere un [plan Bencher Plus Enterprise][bencher plus enterprise]. De forma predeterminada, no está configurado.
 
 [server config]: /es/docs/reference/server-config/
 [github app]: /es/docs/how-to/github-app/
 [bencher plus enterprise]: /pricing/?level=enterprise
+[google oauth2]: /es/docs/how-to/google-oauth/

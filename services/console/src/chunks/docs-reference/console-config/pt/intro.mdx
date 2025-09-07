@@ -1,9 +1,19 @@
-A interface do console do Bencher não requer nenhuma configuração. No entanto, alguns padrões podem ser personalizados para atender às suas necessidades usando as seguintes variáveis de ambiente:
+A interface do Bencher Console não requer nenhuma configuração.
+No entanto, alguns valores padrão podem ser personalizados para atender às suas necessidades
+usando as seguintes variáveis de ambiente:
 
-- `BENCHER_API_URL`: A URL para [o servidor da API do Bencher][server config]. Por padrão, isso é definido como `http://localhost:61016`.
-- `INTERNAL_API_URL`: Ao usar redes baseadas em Docker, como com `docker compose`, isso é necessário para a comunicação Docker-para-Docker ao usar um `BENCHER_API_URL` local. Não defina isso ao usar um `BENCHER_API_URL` remoto, como `https://bencher.example.com`. Por padrão, isso não é definido.
-- `GITHUB_CLIENT_ID`: O ID do Cliente do GitHub para um [GitHub App Auto-Hospedado][github app] para habilitar o "Login com GitHub". Isso requer um [plano Bencher Plus Enterprise][bencher plus enterprise]. Por padrão, isso não é definido.
+- `BENCHER_API_URL`: A URL para [o servidor da API do Bencher][server config].
+  Por padrão, está definido como `http://localhost:61016`.
+- `INTERNAL_API_URL`: Ao usar redes baseadas em Docker, como com `docker compose`,
+  isto é necessário para a comunicação Docker-para-Docker ao usar um `BENCHER_API_URL` local.
+  Não defina esta variável quando estiver usando um `BENCHER_API_URL` remoto, como `https://bencher.example.com`.
+  Por padrão, não está definida.
+- `OAUTH_GITHUB`: Defina como `true` para habilitar `Login with GitHub` usando um [App do GitHub auto-hospedado][github app].
+  Isto requer um [plano Bencher Plus Enterprise][bencher plus enterprise]. Por padrão, não está definido.
+- `OAUTH_GOOGLE`: Defina como `true` para habilitar `Login with Google` usando um [Google OAuth2 auto-hospedado][google oauth2].
+  Isto requer um [plano Bencher Plus Enterprise][bencher plus enterprise]. Por padrão, não está definido.
 
 [server config]: /pt/docs/reference/server-config/
 [github app]: /pt/docs/how-to/github-app/
 [bencher plus enterprise]: /pricing/?level=enterprise
+[google oauth2]: /pt/docs/how-to/google-oauth/

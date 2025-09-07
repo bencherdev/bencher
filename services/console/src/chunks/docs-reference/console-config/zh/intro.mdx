@@ -1,14 +1,12 @@
-Bencher Console UI 不需要任何配置。
-但是，可以使用以下环境变量自定义一些默认设置以满足您的需求：
+Bencher 控制台 UI 不需要任何配置。
+但是，可以通过以下环境变量自定义一些默认设置以满足你的需求：
 
-- `BENCHER_API_URL`: [Bencher API 服务器][server config]的 URL。
-  默认情况下，此值设置为 `http://localhost:61016`。
-- `INTERNAL_API_URL`: 在使用基于 Docker 的网络（例如使用 `docker compose`）时，
-  当使用本地 `BENCHER_API_URL` 时，这对于 Docker 间的通信是必需的。
-  当使用远程 `BENCHER_API_URL` 时，例如 `https://bencher.example.com`，请不要设置此项。
-  默认情况下，此项未设置。
-- `GITHUB_CLIENT_ID`: [自托管 GitHub 应用][github app]的 GitHub 客户端 ID ，以启用“使用 GitHub 登录”。 这需要 [Bencher Plus 企业计划][bencher plus enterprise]。 默认情况下，此项未设置。
+- `BENCHER_API_URL`：用于访问 [Bencher API 服务器][server config] 的 URL。默认值为 `http://localhost:61016`。
+- `INTERNAL_API_URL`：在使用基于 Docker 的网络（例如 `docker compose`）时需要设置，用于在使用本地 `BENCHER_API_URL` 时进行 Docker 到 Docker 的通信。如果使用远程 `BENCHER_API_URL`（例如 `https://bencher.example.com`），则不要设置此项。默认情况下未设置。
+- `OAUTH_GITHUB`：设置为 `true` 可使用 [自托管的 GitHub 应用][github app] 启用 `Login with GitHub`。这需要 [Bencher Plus 企业版计划][bencher plus enterprise]。默认情况下未设置。
+- `OAUTH_GOOGLE`：设置为 `true` 可使用 [自托管的 Google OAuth2][google oauth2] 启用 `Login with Google`。这需要 [Bencher Plus 企业版计划][bencher plus enterprise]。默认情况下未设置。
 
 [server config]: /zh/docs/reference/server-config/
 [github app]: /zh/docs/how-to/github-app/
 [bencher plus enterprise]: /pricing/?level=enterprise
+[google oauth2]: /zh/docs/how-to/google-oauth/
