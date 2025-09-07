@@ -25,10 +25,9 @@ const STATE_PARAM = "state";
 
 interface Props {
 	apiUrl: string;
-	pathname: string;
 }
 
-const AuthOAuth2 = (props: Props) => {
+const AuthGitHub = (props: Props) => {
 	const [bencher_valid] = createResource(init_valid);
 
 	const [searchParams, _setSearchParams] = useSearchParams();
@@ -52,7 +51,7 @@ const AuthOAuth2 = (props: Props) => {
 		if (fetcher.user?.token) {
 			navigate("/console", { replace: true });
 		}
-		if (!fetcher.bencher_valid || !fetcher.code || !props.pathname) {
+		if (!fetcher.bencher_valid || !fetcher.code) {
 			return null;
 		}
 		const oauth = {
@@ -68,7 +67,7 @@ const AuthOAuth2 = (props: Props) => {
 			oauth.plan = state as PlanLevel;
 			setParams.push([PLAN_PARAM, state as PlanLevel]);
 		}
-		return await httpPost(props.apiUrl, props.pathname, null, oauth)
+		return await httpPost(props.apiUrl, "/v0/auth/github", null, oauth)
 			.then((resp) => {
 				const user = resp.data;
 				if (setUser(user)) {
@@ -106,4 +105,4 @@ const AuthOAuth2 = (props: Props) => {
 	return <></>;
 };
 
-export default AuthOAuth2;
+export default AuthGitHub;

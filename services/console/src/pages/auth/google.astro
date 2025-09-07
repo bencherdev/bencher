@@ -4,14 +4,11 @@ export const prerender = false;
 import { BENCHER_API_URL } from "astro:env/server";
 
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import AuthOAuth2 from "../../components/auth/AuthOAuth2";
 
 const title = "Bencher Google OAuth2";
-const pathname = "/v0/auth/google";
 ---
 
 <BaseLayout title={title} description={title}>
   <div slot="navbar"></div>
-  <AuthOAuth2 client:only="solid-js" apiUrl={BENCHER_API_URL} pathname={pathname} />
   <div slot="footer"></div>
 </BaseLayout>
