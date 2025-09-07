@@ -3,7 +3,9 @@ use std::sync::LazyLock;
 use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl,
-    Scope, TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
+    Scope, TokenResponse as _, TokenUrl,
+    basic::BasicClient,
+    reqwest::{self, redirect},
 };
 use octocrab::Octocrab;
 use serde::Deserialize;
@@ -56,15 +58,16 @@ pub enum GoogleClientError {
 }
 
 impl GoogleClient {
-    pub fn new(client_id: NonEmpty, client_secret: Secret, callback_url: Url) -> Self {
+    pub fn new(client_id: NonEmpty, client_secret: Secret, redirect_url: Url) -> Self {
         let client_id = ClientId::new(client_id.into());
         let client_secret = ClientSecret::new(client_secret.into());
+        let redirect_url = RedirectUrl::from_url(redirect_url);
 
         let oauth2_client = BasicClient::new(client_id)
             .set_client_secret(client_secret)
             .set_auth_uri(AUTH_URL.clone())
             .set_token_uri(TOKEN_URL.clone())
-            .set_redirect_uri(RedirectUrl::from_url(callback_url));
+            .set_redirect_uri(redirect_url);
 
         Self { oauth2_client }
     }
