@@ -1,4 +1,6 @@
-use bencher_json::{DateTime, Email, OrganizationUuid, organization::member::OrganizationRole};
+use bencher_json::{
+    DateTime, Email, Jwt, OrganizationUuid, PlanLevel, organization::member::OrganizationRole,
+};
 use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
 use serde::{Deserialize, Serialize};
@@ -7,18 +9,26 @@ use super::{TokenError, audience::Audience};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub aud: String,            // Audience
-    pub exp: i64,               // Expiration time (as UTC timestamp)
-    pub iat: i64,               // Issued at (as UTC timestamp)
-    pub iss: String,            // Issuer
-    pub sub: Email,             // Subject (whom token refers to)
-    pub org: Option<OrgClaims>, // Organization (for invitation)
+    pub aud: String,                // Audience
+    pub exp: i64,                   // Expiration time (as UTC timestamp)
+    pub iat: i64,                   // Issued at (as UTC timestamp)
+    pub iss: String,                // Issuer
+    pub sub: Email,                 // Subject (whom token refers to)
+    pub org: Option<OrgClaims>,     // Organization (for invitation)
+    pub state: Option<StateClaims>, // State (for OAuth)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrgClaims {
     pub uuid: OrganizationUuid,
     pub role: OrganizationRole,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateClaims {
+    pub invite: Option<Jwt>,
+    pub claim: Option<OrganizationUuid>,
+    pub plan: Option<PlanLevel>,
 }
 
 impl Claims {
@@ -28,6 +38,7 @@ impl Claims {
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
+        state: Option<StateClaims>,
     ) -> Self {
         let now = Utc::now().timestamp();
         Self {
@@ -37,6 +48,7 @@ impl Claims {
             iss: issuer,
             sub: email,
             org,
+            state,
         }
     }
 
@@ -90,5 +102,35 @@ impl TryFrom<Claims> for InviteClaims {
 impl InviteClaims {
     pub fn email(&self) -> &Email {
         &self.sub
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct OAuthClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub sub: Email,
+    pub state: StateClaims,
+}
+
+impl TryFrom<Claims> for OAuthClaims {
+    type Error = TokenError;
+
+    fn try_from(claims: Claims) -> Result<Self, Self::Error> {
+        match claims.state {
+            Some(state) => Ok(Self {
+                aud: claims.aud,
+                exp: claims.exp,
+                iat: claims.iat,
+                iss: claims.iss,
+                sub: claims.sub,
+                state,
+            }),
+            None => Err(TokenError::OAuthState {
+                error: JsonWebTokenErrorKind::MissingRequiredClaim("state".into()).into(),
+            }),
+        }
     }
 }

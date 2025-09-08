@@ -10114,7 +10114,7 @@
             "$ref": "#/components/schemas/Secret"
           },
           "state": {
-            "$ref": "#/components/schemas/Secret"
+            "$ref": "#/components/schemas/Jwt"
           }
         },
         "required": [

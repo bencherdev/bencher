@@ -489,7 +489,7 @@ export interface JsonNewToken {
 }
 
 export interface JsonOAuth {
-	state: Secret;
+	state: Jwt;
 	code: Secret;
 }
 

@@ -76,7 +76,7 @@ async fn get_inner(
         plan,
     } = query_params;
     let state_struct = OAuthState::new(invite, claim, plan);
-    let state = state_struct.encode(log)?;
+    let state = state_struct.encode(log, &context.token_key)?;
     let url = github_client.auth_url(state);
 
     Ok(JsonOAuthUrl { url })
@@ -107,7 +107,7 @@ async fn post_inner(
     };
     is_allowed_oauth(context).await?;
 
-    let oauth_state = OAuthState::decode(log, &json_oauth.state)?;
+    let oauth_state = OAuthState::decode(log, &context.token_key, &json_oauth.state)?;
 
     let (name, email) = github_client
         .oauth_user(json_oauth.code.clone())

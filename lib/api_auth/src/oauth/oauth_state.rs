@@ -1,14 +1,20 @@
-use base64::{Engine as _, prelude::BASE64_URL_SAFE_NO_PAD};
-use bencher_json::{Jwt, OrganizationUuid, PlanLevel, Secret};
+use std::sync::LazyLock;
+
+use bencher_json::{Email, Jwt, OrganizationUuid, PlanLevel};
 use bencher_schema::error::unauthorized_error;
+use bencher_token::TokenKey;
 use dropshot::HttpError;
 use serde::{Deserialize, Serialize};
 use slog::Logger;
-use uuid::Uuid;
+
+const OAUTH_TTL: u32 = 600;
+
+#[expect(clippy::expect_used, reason = "static")]
+static OAUTH_EMAIL: LazyLock<Email> =
+    LazyLock::new(|| "oauth@bencher.dev".parse().expect("Invalid OAuth email"));
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OAuthState {
-    csrf: Uuid,
     invite: Option<Jwt>,
     claim: Option<OrganizationUuid>,
     plan: Option<PlanLevel>,
@@ -21,33 +27,30 @@ impl OAuthState {
         plan: Option<PlanLevel>,
     ) -> Self {
         Self {
-            csrf: Uuid::new_v4(),
             invite,
             claim,
             plan,
         }
     }
 
-    pub fn encode(&self, log: &Logger) -> Result<Secret, HttpError> {
-        serde_json::to_vec(self)
-            .map(|bytes| BASE64_URL_SAFE_NO_PAD.encode(bytes))
-            .inspect_err(|e| slog::warn!(log, "Failed to serialize OAuth state: {e}"))
-            .map_err(unauthorized_error)?
-            .parse()
-            .map_err(unauthorized_error)
+    pub fn encode(self, log: &Logger, token_key: &TokenKey) -> Result<Jwt, HttpError> {
+        token_key
+            .new_oauth(OAUTH_EMAIL.clone(), OAUTH_TTL, self.into())
+            .map_err(|e| {
+                let err = "Failed to create OAuth state token";
+                slog::warn!(log, "{err}: {e}");
+                unauthorized_error(err)
+            })
     }
 
-    pub fn decode(log: &Logger, state: &Secret) -> Result<Self, HttpError> {
-        BASE64_URL_SAFE_NO_PAD
-            .decode(state.as_ref())
-            .inspect_err(|e| slog::warn!(log, "Failed to base64 decode OAuth state: {e}"))
-            .map_err(unauthorized_error)
-            .and_then(|bytes| {
-                serde_json::from_slice(&bytes)
-                    .inspect_err(|e| {
-                        slog::warn!(log, "Failed to JSON decode Google OAuth state: {e}");
-                    })
-                    .map_err(unauthorized_error)
+    pub fn decode(log: &Logger, token_key: &TokenKey, token: &Jwt) -> Result<Self, HttpError> {
+        token_key
+            .validate_oauth(token)
+            .map(Into::into)
+            .map_err(|e| {
+                let err = "Failed to validate OAuth state token";
+                slog::warn!(log, "{err}: {e}");
+                unauthorized_error(err)
             })
     }
 
@@ -61,5 +64,35 @@ impl OAuthState {
 
     pub fn plan(&self) -> Option<PlanLevel> {
         self.plan
+    }
+}
+
+impl From<OAuthState> for bencher_token::StateClaims {
+    fn from(state: OAuthState) -> Self {
+        let OAuthState {
+            invite,
+            claim,
+            plan,
+        } = state;
+        Self {
+            invite,
+            claim,
+            plan,
+        }
+    }
+}
+
+impl From<bencher_token::OAuthClaims> for OAuthState {
+    fn from(claims: bencher_token::OAuthClaims) -> Self {
+        let bencher_token::StateClaims {
+            invite,
+            claim,
+            plan,
+        } = claims.state;
+        Self {
+            invite,
+            claim,
+            plan,
+        }
     }
 }

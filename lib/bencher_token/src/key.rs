@@ -8,7 +8,7 @@ use jsonwebtoken::{
     errors::ErrorKind as JsonWebTokenErrorKind,
 };
 
-use crate::{Audience, Claims, InviteClaims, OrgClaims, TokenError};
+use crate::{Audience, Claims, InviteClaims, OAuthClaims, OrgClaims, StateClaims, TokenError};
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
 static ALGORITHM: LazyLock<Algorithm> = LazyLock::new(Algorithm::default);
@@ -34,25 +34,28 @@ impl TokenKey {
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
+        state: Option<StateClaims>,
     ) -> Result<Jwt, TokenError> {
-        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org);
-        Jwt::from_str(
-            &encode(&HEADER, &claims, &self.encoding)
-                .map_err(|e| TokenError::Encode { claims, error: e })?,
-        )
+        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, state);
+        Jwt::from_str(&encode(&HEADER, &claims, &self.encoding).map_err(|e| {
+            TokenError::Encode {
+                claims: Box::new(claims),
+                error: e,
+            }
+        })?)
         .map_err(TokenError::Parse)
     }
 
     pub fn new_auth(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Auth, email, ttl, None)
+        self.new_jwt(Audience::Auth, email, ttl, None, None)
     }
 
     pub fn new_client(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Client, email, ttl, None)
+        self.new_jwt(Audience::Client, email, ttl, None, None)
     }
 
     pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::ApiKey, email, ttl, None)
+        self.new_jwt(Audience::ApiKey, email, ttl, None, None)
     }
 
     pub fn new_invite(
@@ -66,7 +69,11 @@ impl TokenKey {
             uuid: org_uuid,
             role,
         };
-        self.new_jwt(Audience::Invite, email, ttl, Some(org_claims))
+        self.new_jwt(Audience::Invite, email, ttl, Some(org_claims), None)
+    }
+
+    pub fn new_oauth(&self, email: Email, ttl: u32, state: StateClaims) -> Result<Jwt, TokenError> {
+        self.new_jwt(Audience::OAuth, email, ttl, None, Some(state))
     }
 
     fn validate(
@@ -113,6 +120,10 @@ impl TokenKey {
 
     pub fn validate_invite(&self, token: &Jwt) -> Result<InviteClaims, TokenError> {
         self.validate(token, &[Audience::Invite])?.claims.try_into()
+    }
+
+    pub fn validate_oauth(&self, token: &Jwt) -> Result<OAuthClaims, TokenError> {
+        self.validate(token, &[Audience::OAuth])?.claims.try_into()
     }
 }
 

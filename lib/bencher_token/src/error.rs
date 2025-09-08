@@ -6,7 +6,7 @@ use crate::claims::Claims;
 pub enum TokenError {
     #[error("Failed to encode JSON Web Token: {error}")]
     Encode {
-        claims: Claims,
+        claims: Box<Claims>,
         error: jsonwebtoken::errors::Error,
     },
     #[error("Failed to decode JSON Web Token: {error}")]
@@ -24,4 +24,6 @@ pub enum TokenError {
     },
     #[error("Invalid organizational invite: {error}")]
     Invite { error: jsonwebtoken::errors::Error },
+    #[error("Failed to extract OAuth state: {error}")]
+    OAuthState { error: jsonwebtoken::errors::Error },
 }

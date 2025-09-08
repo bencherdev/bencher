@@ -4,6 +4,7 @@ const AUDIENCE_AUTH: &str = "auth";
 const AUDIENCE_CLIENT: &str = "client";
 const AUDIENCE_API_KEY: &str = "api_key";
 const AUDIENCE_INVITE: &str = "invite";
+const AUDIENCE_OAUTH: &str = "oauth";
 
 #[derive(Debug, Copy, Clone)]
 pub enum Audience {
@@ -11,6 +12,7 @@ pub enum Audience {
     Client,
     ApiKey,
     Invite,
+    OAuth,
 }
 impl fmt::Display for Audience {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -22,6 +24,7 @@ impl fmt::Display for Audience {
                 Self::Client => AUDIENCE_CLIENT,
                 Self::ApiKey => AUDIENCE_API_KEY,
                 Self::Invite => AUDIENCE_INVITE,
+                Self::OAuth => AUDIENCE_OAUTH,
             }
         )
     }

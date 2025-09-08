@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use bencher_valid::{Email, NonEmpty, Secret, UserName};
+use bencher_valid::{Email, Jwt, NonEmpty, Secret, UserName};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
     TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
@@ -65,7 +65,7 @@ impl GitHubClient {
         Self { oauth2_client }
     }
 
-    pub fn auth_url(&self, state: Secret) -> Url {
+    pub fn auth_url(&self, state: Jwt) -> Url {
         let state_fn = || CsrfToken::new(state.into());
         let (auth_url, _csrf_token) = self.oauth2_client.authorize_url(state_fn).url();
         auth_url

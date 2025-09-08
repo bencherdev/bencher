@@ -8,9 +8,7 @@ publish = false
 
 [features]
 plus = [
-    "dep:base64",
-    "dep:serde_json",
-    "dep:uuid",
+    "dep:bencher_token",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_schema/plus",
@@ -18,16 +16,14 @@ plus = [
 sentry = ["bencher_schema/sentry"]
 
 [dependencies]
-base64 = { workspace = true, optional = true }
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_schema.workspace = true
+bencher_token = { workspace = true, optional = true }
 dropshot.workspace = true
 schemars.workspace = true
 serde.workspace = true
-serde_json = { workspace = true, optional = true }
 slog.workspace = true
-uuid = { workspace = true, optional = true, features = ["v4"] }
 
 [lints]
 workspace = true
