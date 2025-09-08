@@ -1,6 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
 use bencher_json::{
-    JsonAuthUser, JsonOAuthUrl, Jwt, OrganizationUuid, PlanLevel, system::auth::JsonOAuth,
+    JsonOAuthUrl, JsonOAuthUser, Jwt, OrganizationUuid, PlanLevel, system::auth::JsonOAuth,
 };
 use bencher_schema::{
     context::ApiContext,
@@ -91,7 +91,7 @@ async fn get_inner(
 pub async fn auth_google_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonOAuth>,
-) -> Result<ResponseAccepted<JsonAuthUser>, HttpError> {
+) -> Result<ResponseAccepted<JsonOAuthUser>, HttpError> {
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
     Ok(Post::pub_response_accepted(json))
 }
@@ -100,7 +100,7 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     json_oauth: JsonOAuth,
-) -> Result<JsonAuthUser, HttpError> {
+) -> Result<JsonOAuthUser, HttpError> {
     let Some(google_client) = &context.google_client else {
         let err = "Google OAuth2 is not configured";
         slog::warn!(log, "{err}");

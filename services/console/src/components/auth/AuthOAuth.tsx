@@ -55,30 +55,21 @@ const AuthOAuth = (props: Props) => {
 		if (!fetcher.bencher_valid || !fetcher.code) {
 			return null;
 		}
-		const oauth = {
+		const json = {
 			state: fetcher.state,
 			code: fetcher.code,
 		} as JsonOAuth;
-		const state = fetcher.state;
-		const setParams: [string, string][] = [];
-		if (validJwt(state)) {
-			oauth.invite = state as Jwt;
-		} else if (validOptionUuid(state)) {
-			oauth.claim = state as Uuid;
-		} else if (validPlanLevel(state)) {
-			oauth.plan = state as PlanLevel;
-			setParams.push([PLAN_PARAM, state as PlanLevel]);
-		}
-		return await httpPost(props.apiUrl, props.pathname, null, oauth)
+		return await httpPost(props.apiUrl, props.pathname, null, json)
 			.then((resp) => {
-				const user = resp.data;
+				const user = resp.data?.user;
 				if (setUser(user)) {
+					const plan = resp.data?.plan;
 					navigateNotify(
 						NotifyKind.OK,
 						"Hoppy to git to see you!",
 						"/console",
 						null,
-						setParams,
+						plan ? [[PLAN_PARAM, plan]] : null,
 					);
 				} else {
 					navigateNotify(

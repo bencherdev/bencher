@@ -54,6 +54,15 @@ pub struct JsonOAuth {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonOAuthUser {
+    pub user: JsonAuthUser,
+    #[cfg(feature = "plus")]
+    pub plan: Option<PlanLevel>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfirm {
     pub token: Jwt,
 }

@@ -1,4 +1,4 @@
-use bencher_json::{Email, JsonAuthUser, JsonSignup, PlanLevel, UserName};
+use bencher_json::{Email, JsonAuthUser, JsonOAuthUser, JsonSignup, PlanLevel, UserName};
 use bencher_schema::{
     ApiContext, conn_lock,
     error::{issue_error, payment_required_error},
@@ -45,7 +45,7 @@ async fn handle_oauth_user(
     name: UserName,
     email: Email,
     method: &str,
-) -> Result<JsonAuthUser, HttpError> {
+) -> Result<JsonOAuthUser, HttpError> {
     // If the user already exists, then we just need to check if they are locked and possible accept an invite
     // Otherwise, we need to create a new user and notify the admins
     let query_user = QueryUser::get_with_email(conn_lock!(context), &email);
@@ -106,10 +106,14 @@ async fn handle_oauth_user(
         )
     })?;
 
-    Ok(JsonAuthUser {
+    let user = JsonAuthUser {
         user,
         token,
         creation: claims.issued_at(),
         expiration: claims.expiration(),
+    };
+    Ok(JsonOAuthUser {
+        user,
+        plan: oauth_state.plan(),
     })
 }
