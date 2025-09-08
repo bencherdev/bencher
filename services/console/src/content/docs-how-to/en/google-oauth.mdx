@@ -42,15 +42,18 @@ and update your [console server configuration][console config] and [API sever co
         - Agree to the Google API Services User Data Policy
   - Click `Create OAuth Client`
     - Application type
-      - Select `Desktop app`
+      - Select `Web application`
       - Name
         - Choose a name (ex: `Bencher for My Enterprise`)
-      - Click `Create`
+    - Authorized JavaScript origins
+      - Enter your Bencher Console URL (ex: `https://bencher.example.com`)
+    - Authorized redirect URIs
+      - Enter your Bencher Console URL suffixed with `/auth/google` (ex: `https://bencher.example.com/auth/google`)
+    - Click `Create`
   - OAuth Client created
     - Note the `Client ID` (ex: `012345-abcd6789envs.apps.googleusercontent.com`)
-    - Click `OK`
-    - Click on the newly created OAuth 2.0 Client ID
     - Note the `Client Secret` (ex: `GOCSPX-abcdefgh1234567890wxyz`)
+    - Click `OK`
 
 [google api console]: https://console.developers.google.com/
 [google cloud credentials]: https://console.cloud.google.com/apis/credentials

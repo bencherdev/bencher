@@ -1,15 +1,15 @@
 ---
 title: "自托管 Google OAuth"
-description: "创建 Google OAuth 2.0 客户端以允许 Bencher 自托管通过 Google 进行身份验证"
-heading: "如何为自托管创建 Google OAuth 2.0 客户端"
+description: "为 Bencher 自托管 创建 Google OAuth 2.0 客户端，以允许使用 Google 进行身份验证"
+heading: "如何为自托管环境创建 Google OAuth 2.0 客户端"
 published: "2025-09-07T12:36:00Z"
 modified: "2025-09-07T12:36:00Z"
 sortOrder: 10
 ---
 
-如果您使用的是 Bencher Cloud，则可以直接使用 `Google` 按钮[注册](/auth/signup)或[登录](/auth/login)。
+如果您使用 Bencher Cloud，您可以通过 `Google` 按钮直接[注册](/auth/signup)或[登录](/auth/login)。
 
-对于 Bencher 自托管，您需要拥有 [Bencher Plus 企业计划][bencher plus enterprise]，创建自己的 Google OAuth2 客户端，并更新您的 [控制台服务器配置][console config] 和 [API 服务器配置][server config]。
+对于 Bencher 自托管，您需要拥有 [Bencher Plus Enterprise 计划][bencher plus enterprise]，创建您自己的 Google OAuth2 客户端，并更新您的 [控制台服务器配置][console config] 和 [API 服务器配置][server config]。
 
 [bencher plus enterprise]: /pricing/?level=enterprise
 [console config]: /zh/docs/reference/console-config/
@@ -17,9 +17,9 @@ sortOrder: 10
 
 ## 创建 Google OAuth 2.0 客户端
 
-- 注册 [Google API Console][google api console]
-- 在左侧边栏中导航到 [the `Credentials` page][google cloud credentials]
-- 创建一个 `OAuth 2.0 Client ID`
+- 前往 [Google API 控制台][google api console]
+- 在左侧侧边栏转到 [ `Credentials` 页面][google cloud credentials]
+- 创建 `OAuth 2.0 Client ID`
   - 点击 `➕ Create Credentials` > `OAuth client ID`
   - 配置同意屏幕
     - 开始
@@ -30,43 +30,46 @@ sortOrder: 10
           - 选择一个邮箱地址
       - 受众
         - `Internal`
-          - 仅对组织内的用户可用。
+          - 仅对您组织内的用户可用。
             您无需提交应用以供验证。
       - 联系信息
-        - 添加您的电子邮件地址
-          - 这些电子邮件地址用于 Google 在项目发生变化时通知您。
+        - 添加您的电子邮箱地址
+          - 这些邮箱地址用于 Google 在项目发生更改时通知您。
       - 完成
         - 同意 Google API 服务用户数据政策
   - 点击 `Create OAuth Client`
     - 应用类型
-      - 选择 `Desktop app`
+      - 选择 `Web application`
       - 名称
         - 选择一个名称（例如：`Bencher for My Enterprise`）
-      - 点击 `Create`
-  - OAuth 客户端已创建
+    - 授权的 JavaScript 来源
+      - 输入您的 Bencher 控制台 URL（例如：`https://bencher.example.com`）
+    - 授权的重定向 URI
+      - 输入以 `/auth/google` 结尾的 Bencher 控制台 URL（例如：`https://bencher.example.com/auth/google`）
+    - 点击 `Create`
+  - 已创建 OAuth 客户端
     - 记录 `Client ID`（例如：`012345-abcd6789envs.apps.googleusercontent.com`）
-    - 点击 `OK`
-    - 点击新创建的 OAuth 2.0 Client ID
     - 记录 `Client Secret`（例如：`GOCSPX-abcdefgh1234567890wxyz`）
+    - 点击 `OK`
 
 [google api console]: https://console.developers.google.com/
 [google cloud credentials]: https://console.cloud.google.com/apis/credentials
 
-> 🐰 未激活的 Google OAuth 客户端如果 6 个月内未使用，可能会被删除。Google 会就因不活跃而删除的情况通知您，并且在删除后最多可在 30 天内恢复客户端。
+> 🐰 不活跃的 Google OAuth 客户端如果 6 个月未使用可能会被删除。Google 会在由于不活跃而删除前通知您，并且在删除后 30 天内可以恢复客户端。
 
 ## Google OAuth 客户端配置
 
 ### 控制台 UI
-在运行 `bencher-console` Docker 镜像时，将 `OAUTH_GOOGLE` 环境变量设置为 `true`（例如：`OAUTH_GOOGLE=true`）。
-如果缺少 Client ID，则 UI 中不会显示 Google 按钮。
+运行 `bencher-console` Docker 镜像时，将环境变量 `OAUTH_GOOGLE` 设置为 `true`（例如：`OAUTH_GOOGLE=true`）。
+如果缺少 Client ID，Google 按钮将不会出现在 UI 中。
 
 ### API 服务器
-将 `client_id` 和 `client_secret` 添加到[服务器配置的 `plus.google` 部分](/zh/docs/reference/server-config/#plusgoogle)。
-如果缺少 Google 部分，服务器将拒绝任何 Google 身份验证请求。
+将 `client_id` 和 `client_secret` 添加到 [服务器配置的 `plus.google` 部分](/zh/docs/reference/server-config/#plusgoogle)。
+如果缺少 Google 配置部分，服务器将无法处理任何 Google 身份验证请求。
 
 <br/>
 
-> 🐰 恭喜！您已学会如何设置 Google OAuth2 客户端！🎉
+> 🐰 恭喜！您已学会如何设置 Google OAuth2 客户端！ 🎉
 
 <br/>
 

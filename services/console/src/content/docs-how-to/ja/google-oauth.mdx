@@ -1,15 +1,15 @@
 ---
-title: "セルフホスト版 Google OAuth"
-description: "Bencher Self-Hosted が Google に対して認証できるようにする Google OAuth 2.0 クライアントの作成"
-heading: "セルフホスト向け Google OAuth 2.0 クライアントの作成方法"
+title: "セルフホストの Google OAuth"
+description: "Bencher Self-Hosted が Google による認証を行えるようにする Google OAuth 2.0 クライアントの作成方法"
+heading: "セルフホストでの Google OAuth 2.0 クライアントの作成方法"
 published: "2025-09-07T12:36:00Z"
 modified: "2025-09-07T12:36:00Z"
 sortOrder: 10
 ---
 
-Bencher Cloud をご利用の場合は、`Google` ボタンで簡単に [サインアップ](/auth/signup) または [ログイン](/auth/login) できます。
+Bencher Cloud をご利用の場合は、`Google` ボタンを使って [サインアップ](/auth/signup) または [ログイン](/auth/login) できます。
 
-Bencher Self-Hosted を利用する場合は、[Bencher Plus Enterprise プラン][bencher plus enterprise] が必要で、独自の Google OAuth2 クライアントを作成し、[コンソールサーバーの設定][console config] と [API サーバーの設定][server config] を更新する必要があります。
+Bencher Self-Hosted を利用するには、[Bencher Plus Enterprise プラン][bencher plus enterprise] を契約し、独自の Google OAuth2 クライアントを作成し、[コンソールサーバの設定][console config] と [API サーバの設定][server config] を更新する必要があります。
 
 [bencher plus enterprise]: /pricing/?level=enterprise
 [console config]: /ja/docs/reference/console-config/
@@ -17,52 +17,54 @@ Bencher Self-Hosted を利用する場合は、[Bencher Plus Enterprise プラ�
 
 ## Google OAuth 2.0 クライアントの作成
 
-- [Google API Console][google api console] にアクセスする
-- 左サイドバーの [ `Credentials` ページ][google cloud credentials] に移動する
+- [Google API コンソール][google api console] にサインアップする
+- 左側のサイドバーで [the `Credentials` page][google cloud credentials] に移動する
 - `OAuth 2.0 Client ID` を作成する
-  - `➕ Create Credentials` をクリック > `OAuth client ID`
+  - `➕ Create Credentials` > `OAuth client ID` をクリック
   - 同意画面を設定する
     - Get started
       - App Information
         - App name
-          - 名前を選択する（例: `Bencher for My Enterprise`）
+          - 名前を選択（例: `Bencher for My Enterprise`）
         - User support email
-          - メールアドレスを選択する
+          - サポート用のメールアドレスを選択
       - Audience
         - `Internal`
-          - 組織内のユーザーのみ利用可能です。アプリの検証を提出する必要はありません。
+          - 組織内のユーザーのみが利用できます。アプリの検証を提出する必要はありません。
       - Contact Information
-        - メールアドレスを追加する
-          - これらのメールアドレスは、プロジェクトの変更について Google が通知するためのものです。
+        - 連絡用のメールアドレスを追加
+          - これらのメールアドレスは、Google がプロジェクトに関する変更を通知するために使用されます。
       - Finish
-        - Google API Services User Data Policy（Google API サービスのユーザーデータポリシー）に同意する
+        - Google API Services User Data Policy に同意する
   - `Create OAuth Client` をクリック
     - Application type
-      - `Desktop app` を選択
+      - `Web application` を選択
       - Name
-        - 名前を選択する（例: `Bencher for My Enterprise`）
-      - `Create` をクリック
-  - OAuth Client が作成される
-    - `Client ID` をメモする（例: `012345-abcd6789envs.apps.googleusercontent.com`）
+        - 名前を選択（例: `Bencher for My Enterprise`）
+    - Authorized JavaScript origins
+      - Bencher Console の URL を入力（例: `https://bencher.example.com`）
+    - Authorized redirect URIs
+      - Bencher Console の URL に `/auth/google` を付けたものを入力（例: `https://bencher.example.com/auth/google`）
+    - `Create` をクリック
+  - OAuth クライアントが作成されます
+    - `Client ID` を控える（例: `012345-abcd6789envs.apps.googleusercontent.com`）
+    - `Client Secret` を控える（例: `GOCSPX-abcdefgh1234567890wxyz`）
     - `OK` をクリック
-    - 新しく作成した OAuth 2.0 Client ID をクリック
-    - `Client Secret` をメモする（例: `GOCSPX-abcdefgh1234567890wxyz`）
 
 [google api console]: https://console.developers.google.com/
 [google cloud credentials]: https://console.cloud.google.com/apis/credentials
 
-> 🐰 6 か月以上使用されていない Google OAuth クライアントは削除される可能性があります。
-> 削除に関する通知は Google から送られ、削除後 30 日以内であればクライアントを復元できます。
+> 🐰 使用されていない Google OAuth クライアントは、6 か月間使用されない場合に削除される可能性があります。削除される場合は Google から通知が届き、削除後 30 日以内であればクライアントを復元できます。
 
 ## Google OAuth クライアントの設定
 
 ### コンソール UI
-`bencher-console` の Docker イメージを実行する際に、環境変数 `OAUTH_GOOGLE` を `true` に設定します。（例: `OAUTH_GOOGLE=true`）
-Client ID が設定されていないと、UI に Google ボタンは表示されません。
+`bencher-console` Docker イメージを実行する際に、環境変数 `OAUTH_GOOGLE` を `true` に設定します（例: `OAUTH_GOOGLE=true`）。
+Client ID がないと、UI に Google ボタンが表示されません。
 
-### API サーバー
-`client_id` と `client_secret` を [サーバー設定の `plus.google` セクション](/ja/docs/reference/server-config/#plusgoogle) に追加してください。
-Google セクションが存在しない場合、サーバーは Google 認証のリクエストを処理できず失敗します。
+### API サーバ
+`client_id` と `client_secret` を [the `plus.google` section of the server config](/ja/docs/reference/server-config/#plusgoogle) に追加します。
+Google セクションが存在しない場合、サーバは Google 認証リクエストを失敗させます。
 
 <br/>
 
@@ -70,4 +72,4 @@ Google セクションが存在しない場合、サーバーは Google 認証�
 
 <br/>
 
-<h2><a href="/ja/docs/how-to/github-actions/">GitHub Actions に Bencher を追加 ➡</a></h2>
+<h2><a href="/ja/docs/how-to/github-actions/">Bencher を GitHub Actions に追加 ➡</a></h2>
