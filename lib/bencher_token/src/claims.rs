@@ -1,5 +1,7 @@
+#[cfg(feature = "plus")]
+use bencher_json::PlanLevel;
 use bencher_json::{
-    DateTime, Email, Jwt, OrganizationUuid, PlanLevel, organization::member::OrganizationRole,
+    DateTime, Email, Jwt, OrganizationUuid, organization::member::OrganizationRole,
 };
 use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
@@ -28,6 +30,7 @@ pub struct OrgClaims {
 pub struct StateClaims {
     pub invite: Option<Jwt>,
     pub claim: Option<OrganizationUuid>,
+    #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
 }
 

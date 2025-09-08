@@ -8,10 +8,10 @@ publish = false
 
 [features]
 plus = [
-    "dep:bencher_token",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_schema/plus",
+    "bencher_token/plus",
 ]
 sentry = ["bencher_schema/sentry"]
 

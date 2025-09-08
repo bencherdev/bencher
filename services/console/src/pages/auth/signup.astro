@@ -1,11 +1,7 @@
 ---
 export const prerender = false;
 
-import {
-	BENCHER_API_URL,
-	OAUTH_GITHUB,
-	OAUTH_GOOGLE,
-} from "astro:env/server";
+import { BENCHER_API_URL, OAUTH_GITHUB, OAUTH_GOOGLE } from "astro:env/server";
 
 import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import AuthForm from "../../components/auth/AuthForm";
