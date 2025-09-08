@@ -489,14 +489,17 @@ export interface JsonNewToken {
 }
 
 export interface JsonOAuth {
+	state: Secret;
 	code: Secret;
-	plan?: PlanLevel;
-	invite?: Jwt;
-	claim?: Uuid;
 }
 
 export interface JsonOAuthUrl {
 	url: Url;
+}
+
+export interface JsonOAuthUser {
+	user: JsonAuthUser;
+	plan?: PlanLevel;
 }
 
 export interface JsonPerfAlert {

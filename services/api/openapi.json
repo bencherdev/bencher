@@ -441,7 +441,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAuthUser"
+                  "$ref": "#/components/schemas/JsonOAuthUser"
                 }
               }
             }
@@ -601,7 +601,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAuthUser"
+                  "$ref": "#/components/schemas/JsonOAuthUser"
                 }
               }
             }
@@ -10110,36 +10110,16 @@
       "JsonOAuth": {
         "type": "object",
         "properties": {
-          "claim": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OrganizationUuid"
-              }
-            ]
-          },
           "code": {
             "$ref": "#/components/schemas/Secret"
           },
-          "invite": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Jwt"
-              }
-            ]
-          },
-          "plan": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PlanLevel"
-              }
-            ]
+          "state": {
+            "$ref": "#/components/schemas/Secret"
           }
         },
         "required": [
-          "code"
+          "code",
+          "state"
         ]
       },
       "JsonOAuthUrl": {
@@ -10152,6 +10132,25 @@
         },
         "required": [
           "url"
+        ]
+      },
+      "JsonOAuthUser": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanLevel"
+              }
+            ]
+          },
+          "user": {
+            "$ref": "#/components/schemas/JsonAuthUser"
+          }
+        },
+        "required": [
+          "user"
         ]
       },
       "JsonOneMetric": {
