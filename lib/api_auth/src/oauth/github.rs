@@ -1,14 +1,10 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
-use bencher_json::{
-    JsonOAuthUrl, JsonOAuthUser, Jwt, OrganizationUuid, PlanLevel, system::auth::JsonOAuth,
-};
+use bencher_json::{JsonOAuthUrl, JsonOAuthUser, system::auth::JsonOAuth};
 use bencher_schema::{
     context::ApiContext,
     error::{payment_required_error, unauthorized_error},
 };
 use dropshot::{HttpError, Query, RequestContext, TypedBody, endpoint};
-use schemars::JsonSchema;
-use serde::Deserialize;
 use slog::Logger;
 
 use crate::oauth::oauth_state::OAuthState;
@@ -28,16 +24,6 @@ pub async fn auth_github_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct AuthGitHubQuery {
-    /// Invitation JWT.
-    pub invite: Option<Jwt>,
-    /// Organization UUID to claim.
-    pub claim: Option<OrganizationUuid>,
-    /// Plan level.
-    pub plan: Option<PlanLevel>,
-}
-
 #[endpoint {
     method = GET,
     path =  "/v0/auth/github",
@@ -45,7 +31,7 @@ pub struct AuthGitHubQuery {
 }]
 pub async fn auth_github_get(
     rqctx: RequestContext<ApiContext>,
-    query_params: Query<AuthGitHubQuery>,
+    query_params: Query<OAuthState>,
 ) -> Result<ResponseOk<JsonOAuthUrl>, HttpError> {
     let json = get_inner(&rqctx.log, rqctx.context(), query_params.into_inner()).await?;
     Ok(Get::pub_response_ok(json))
@@ -54,7 +40,7 @@ pub async fn auth_github_get(
 async fn get_inner(
     log: &Logger,
     context: &ApiContext,
-    query_params: AuthGitHubQuery,
+    oauth_state: OAuthState,
 ) -> Result<JsonOAuthUrl, HttpError> {
     let Some(github_client) = &context.github_client else {
         let err = "GitHub OAuth2 is not configured";
@@ -63,20 +49,7 @@ async fn get_inner(
     };
     is_allowed_oauth(context).await?;
 
-    // TODO: Currently, we do not protect against CSRF attacks,
-    // as we allow any client to use our authentication endpoints.
-    // So the `state` parameter is currently just used to pass callback information.
-    // In the future, we may want to restrict allowed clients,
-    // at which point we should generate and validate a CSRF token here
-    // along with the callback information.
-    // https://datatracker.ietf.org/doc/html/rfc6749#section-10.12
-    let AuthGitHubQuery {
-        invite,
-        claim,
-        plan,
-    } = query_params;
-    let state_struct = OAuthState::new(invite, claim, plan);
-    let state = state_struct.encode(log, &context.token_key)?;
+    let state = oauth_state.encode(log, &context.token_key)?;
     let url = github_client.auth_url(state);
 
     Ok(JsonOAuthUrl { url })

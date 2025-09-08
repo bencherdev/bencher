@@ -4,6 +4,7 @@ use bencher_json::{Email, Jwt, OrganizationUuid, PlanLevel};
 use bencher_schema::error::unauthorized_error;
 use bencher_token::TokenKey;
 use dropshot::HttpError;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slog::Logger;
 
@@ -13,11 +14,14 @@ const OAUTH_TTL: u32 = 600;
 static OAUTH_EMAIL: LazyLock<Email> =
     LazyLock::new(|| "oauth@bencher.dev".parse().expect("Invalid OAuth email"));
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct OAuthState {
-    invite: Option<Jwt>,
-    claim: Option<OrganizationUuid>,
-    plan: Option<PlanLevel>,
+    /// Invitation JWT.
+    pub invite: Option<Jwt>,
+    /// Organization UUID to claim.
+    pub claim: Option<OrganizationUuid>,
+    /// Plan level.
+    pub plan: Option<PlanLevel>,
 }
 
 impl OAuthState {
