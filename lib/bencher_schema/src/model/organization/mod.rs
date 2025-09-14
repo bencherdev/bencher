@@ -282,7 +282,47 @@ impl QueryOrganization {
         QueryMetric::usage(conn_lock!(context), self.id, start_time, end_time)
     }
 
+    #[cfg(feature = "plus")]
+    fn sso(
+        &self,
+        conn: &mut DbConnection,
+    ) -> Result<Option<Vec<bencher_json::JsonSso>>, HttpError> {
+        use diesel::BelongingToDsl as _;
+
+        use sso::QuerySso;
+
+        let query_sso = QuerySso::belonging_to(self)
+            .load::<QuerySso>(conn)
+            .map_err(resource_not_found_err!(Sso, self.uuid))?;
+
+        Ok(if query_sso.is_empty() {
+            None
+        } else {
+            Some(query_sso.into_iter().map(QuerySso::into_json).collect())
+        })
+    }
+
+    pub fn into_json_full(self, conn: &mut DbConnection) -> Result<JsonOrganization, HttpError> {
+        #[cfg(feature = "plus")]
+        let sso = self.sso(conn)?;
+        #[cfg(not(feature = "plus"))]
+        let sso = None;
+        Ok(self.into_json_inner(conn, sso))
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {
+        self.into_json_inner(
+            conn,
+            #[cfg(feature = "plus")]
+            None,
+        )
+    }
+
+    fn into_json_inner(
+        self,
+        conn: &mut DbConnection,
+        #[cfg(feature = "plus")] sso: Option<Vec<bencher_json::JsonSso>>,
+    ) -> JsonOrganization {
         let claimed = self.claimed_at(conn).ok();
         let Self {
             uuid,
@@ -301,7 +341,7 @@ impl QueryOrganization {
             #[cfg(feature = "plus")]
             license,
             #[cfg(feature = "plus")]
-            sso: None,
+            sso,
             created,
             modified,
             claimed,

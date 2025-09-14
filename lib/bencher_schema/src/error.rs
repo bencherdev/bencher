@@ -36,6 +36,8 @@ pub enum BencherResource {
     #[cfg(feature = "plus")]
     Plan,
     #[cfg(feature = "plus")]
+    Sso,
+    #[cfg(feature = "plus")]
     Server,
 }
 
@@ -72,6 +74,8 @@ impl fmt::Display for BencherResource {
                 Self::Token => "Token",
                 #[cfg(feature = "plus")]
                 Self::Plan => "Plan",
+                #[cfg(feature = "plus")]
+                Self::Sso => "SSO",
                 #[cfg(feature = "plus")]
                 Self::Server => "Server",
             }

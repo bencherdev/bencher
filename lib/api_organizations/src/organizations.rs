@@ -229,14 +229,14 @@ async fn get_one_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
     conn_lock!(context, |conn| {
-        Ok(QueryOrganization::is_allowed_resource_id(
+        QueryOrganization::is_allowed_resource_id(
             conn,
             &context.rbac,
             &path_params.organization,
             auth_user,
             Permission::View,
         )?
-        .into_json(conn))
+        .into_json_full(conn)
     })
 }
 
@@ -319,11 +319,11 @@ async fn patch_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Organization, update_organization))?;
 
-    conn_lock!(context, |conn| Ok(QueryOrganization::get(
+    conn_lock!(context, |conn| QueryOrganization::get(
         conn,
         query_organization.id
     )?
-    .into_json(conn)))
+    .into_json_full(conn))
 }
 
 /// Delete an organization
