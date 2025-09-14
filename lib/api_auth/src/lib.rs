@@ -8,7 +8,6 @@ use serde as _;
 mod accept;
 mod confirm;
 mod login;
-#[cfg(feature = "plus")]
 mod oauth;
 mod signup;
 

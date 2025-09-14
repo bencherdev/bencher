@@ -14,6 +14,7 @@ use crate::{ProjectSlug, UserSlug, UserUuid};
 pub mod claim;
 pub mod member;
 pub mod plan;
+pub mod sso;
 pub mod usage;
 
 crate::typed_uuid::typed_uuid!(OrganizationUuid);
@@ -72,6 +73,9 @@ pub struct JsonOrganization {
     pub slug: OrganizationSlug,
     #[cfg(feature = "plus")]
     pub license: Option<bencher_valid::Jwt>,
+    #[cfg(feature = "plus")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sso: Option<Vec<sso::JsonSso>>,
     pub created: DateTime,
     pub modified: DateTime,
     pub claimed: Option<DateTime>,

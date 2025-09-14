@@ -1,5 +1,4 @@
 mod backup;
-#[cfg(feature = "plus")]
 mod plus;
 
 pub use backup::{ServerBackup, ServerBackupError};

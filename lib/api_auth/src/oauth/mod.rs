@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 use std::fmt;
 
 use bencher_json::{Email, JsonAuthUser, JsonOAuthUser, JsonSignup, PlanLevel, UserName};

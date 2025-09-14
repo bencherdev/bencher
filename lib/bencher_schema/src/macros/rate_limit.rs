@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 #[macro_export]
 macro_rules! fn_rate_limit {
     ($table:ident, $resource:ident) => {

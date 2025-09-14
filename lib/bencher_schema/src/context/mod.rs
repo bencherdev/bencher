@@ -16,10 +16,8 @@ use crate::model::project::QueryProject;
 mod database;
 mod indexer;
 mod messenger;
-#[cfg(feature = "plus")]
 mod rate_limiting;
 mod rbac;
-#[cfg(feature = "plus")]
 mod stats;
 
 #[cfg(feature = "plus")]

@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::{cmp, sync::Arc};

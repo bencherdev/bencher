@@ -30,15 +30,18 @@ pub(crate) mod typed_uuid;
 pub mod urlencoded;
 pub mod user;
 
-#[cfg(feature = "plus")]
-pub use organization::{plan::JsonPlan, usage::JsonUsage};
-
 pub use big_int::BigInt;
 pub use organization::{
     JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationResourceId,
     OrganizationSlug, OrganizationUuid,
     claim::JsonNewClaim,
     member::{JsonMember, JsonMembers},
+};
+#[cfg(feature = "plus")]
+pub use organization::{
+    plan::JsonPlan,
+    sso::{JsonNewSso, JsonSso},
+    usage::JsonUsage,
 };
 pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{

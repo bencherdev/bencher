@@ -34,6 +34,7 @@ use super::user::QueryUser;
 pub mod member;
 pub mod organization_role;
 pub mod plan;
+pub mod sso;
 
 crate::macros::typed_id::typed_id!(OrganizationId);
 
@@ -299,6 +300,8 @@ impl QueryOrganization {
             slug,
             #[cfg(feature = "plus")]
             license,
+            #[cfg(feature = "plus")]
+            sso: None,
             created,
             modified,
             claimed,
