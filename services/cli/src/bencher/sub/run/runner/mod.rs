@@ -50,15 +50,15 @@ impl TryFrom<CliRunCommand> for Runner {
                 Command::new_exec(program, arguments)
             };
             let build_time = cmd.build_time.then_some(BuildTime);
-            Ok(if let Some(file_path) = cmd.file {
-                Self::CommandToFile(command, FilePath::new(file_path))
+            Ok(if let Some(file_paths) = cmd.file {
+                Self::CommandToFile(command, FilePath::new(file_paths))
             } else if let Some(file_paths) = cmd.file_size {
                 Self::CommandToFileSize(command, build_time, FileSize::new(file_paths))
             } else {
                 Self::Command(command, build_time)
             })
-        } else if let Some(file_path) = cmd.file {
-            Ok(Self::File(FilePath::new(file_path)))
+        } else if let Some(file_paths) = cmd.file {
+            Ok(Self::File(FilePath::new(file_paths)))
         } else if let Some(file_paths) = cmd.file_size {
             Ok(Self::FileSize(FileSize::new(file_paths)))
         } else if let Some(pipe) = Pipe::new() {
@@ -103,10 +103,12 @@ impl fmt::Display for Runner {
 }
 
 impl Runner {
-    pub async fn run(&self, log: bool) -> Result<Output, RunError> {
+    pub async fn run(&self, log: bool) -> Result<Vec<Output>, RunError> {
         match self {
-            Self::Pipe(pipe) => Ok(pipe.output()),
-            Self::Command(command, build_time) => command.run(log, *build_time).await?.build(),
+            Self::Pipe(pipe) => Ok(pipe.output().into()),
+            Self::Command(command, build_time) => {
+                command.run(log, *build_time).await?.build().map(Into::into)
+            },
             Self::CommandToFile(command, file_path) => command
                 .run(log, None)
                 .await?
@@ -114,9 +116,12 @@ impl Runner {
             Self::CommandToFileSize(command, build_time, file_size) => command
                 .run(log, *build_time)
                 .await?
-                .build_with_file_size(file_size),
+                .build_with_file_size(file_size)
+                .map(Into::into),
             Self::File(file_path) => CommandOutput::default().build_with_file_path(file_path),
-            Self::FileSize(file_size) => CommandOutput::default().build_with_file_size(file_size),
+            Self::FileSize(file_size) => CommandOutput::default()
+                .build_with_file_size(file_size)
+                .map(Into::into),
         }
     }
 }

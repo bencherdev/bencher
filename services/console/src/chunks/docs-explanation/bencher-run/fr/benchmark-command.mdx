@@ -1,21 +1,50 @@
 import ShellForm from "../shell-form.mdx";
 import ExecForm from "../exec-form.mdx";
 
-## Commande de Benchmark
+## Commande de benchmark
 
-Le premier argument de `bencher run` est la commande de benchmark optionnelle. C'est la commande qui sera exécutée, invoquant votre harnais de benchmark. Elle peut également être définie en utilisant la variable d'environnement `BENCHER_CMD`. Par défaut, cette commande est exécutée dans un shell, qui peut être configuré avec les options [`--shell`][shell option] et [`--flag`][flag option]. Son output est analysé par un [adaptateur de harnais de benchmark][benchmark harness adapters], qui peut être défini en utilisant l'option [`--adapter`][adapter option] option. Toutefois, si le harnais de benchmark effectue une sortie vers un fichier, l'option [`--file`][file option] doit également être utilisée pour spécifier le chemin du fichier de sortie. Alternativement, pour suivre la taille du fichier de sortie (c'est-à-dire la taille binaire) au lieu de son contenu, utilisez l'option [`--file-size`][file size option] pour spécifier le chemin du fichier de sortie.
+Le premier argument de `bencher run` est la commande de benchmark optionnelle.
+Il s'agit de la commande qui sera exécutée et qui lancera votre harness de benchmark.
+Elle peut aussi être définie via la variable d'environnement `BENCHER_CMD`.
+Par défaut, cette commande est exécutée dans un shell, qui peut être configuré avec les options [`--shell`][shell option] et [`--flag`][flag option].
+Sa sortie est analysée par un [adaptateur pour le harness de benchmark][benchmark harness adapters], qui peut être défini avec l'option [`--adapter`][adapter option].
+Cependant, si le harness de benchmark écrit dans un fichier, l'option [`--file`][file option] doit également être utilisée pour spécifier le chemin du fichier de sortie.
+Alternativement, pour suivre la taille du fichier de sortie (par ex. la taille d'un binaire) plutôt que son contenu, utilisez l'option [`--file-size`][file size option] pour indiquer le chemin du fichier.
 
-Si vous préférez ne pas exécuter la commande dans un shell, vous pouvez utiliser l'indicateur `--exec` ou simplement fournir des arguments supplémentaires à votre commande comme arguments supplémentaires à `bencher run`.
+Si vous préférez que la commande ne soit pas exécutée dans un shell, vous pouvez utiliser l'option `--exec` ou simplement fournir des arguments supplémentaires à votre commande via `bencher run`.
 
-Formulaire Shell :
+Forme Shell :
 <ShellForm />
 
-Formulaire Exec :
+Forme Exec :
 <ExecForm />
 
-La commande de benchmark peut être exécutée plusieurs fois en utilisant l'option [`--iter`][iter option], et ces résultats peuvent être consolidés en un seul résultat en utilisant l'option [`--fold`][fold option]. Si l'une des itérations échoue, alors la commande entière est considérée comme ayant échoué, à moins que le drapeau [`--allow-failure`][allow failure flag] ne soit défini.
+La commande de benchmark peut être exécutée plusieurs fois en utilisant l'option [`--iter`][iter option], et ces résultats peuvent être agrégés en un seul résultat avec l'option [`--fold`][fold option].
+Si l'une des itérations échoue, la commande entière est considérée comme ayant échoué, sauf si le drapeau [`--allow-failure`][allow failure flag] est activé.
 
-Si la commande de benchmark n'est pas spécifiée mais que l'option [`--file`][file option] l'est, alors `bencher run` lira simplement à partir du chemin du fichier de sortie à la place. De même, si la commande de benchmark n'est pas spécifiée mais que l'option [`--file-size`][file size option] l'est, alors `bencher run` lira simplement la taille du fichier au chemin donné à la place. Si ni la commande de benchmark, ni l'option [`--file`][file option], ni l'option [`--file-size`][file size option] ne sont spécifiées, alors `bencher run` lira depuis `stdin` à la place. Cela vous permet de sauvegarder la sortie d'une autre commande dans un fichier ou de la rediriger vers `bencher run`.
+Si la commande de benchmark n'est pas spécifiée mais que l'option [`--file`][file option] l'est, alors `bencher run` lira simplement depuis le chemin du fichier de sortie indiqué.
+De même, si la commande n'est pas spécifiée mais que l'option [`--file-size`][file size option] l'est, `bencher run` lira simplement la taille du fichier au chemin donné.
+Les options `--file` et `--file-size` peuvent être spécifiées plusieurs fois pour lire plusieurs fichiers.
+
+<blockquote>
+<details>
+  <summary>🐰 Conseils pour l'utilisation de l'option <code>-&#8288;-file</code></summary>
+  L'option <code>-&#8288;-file</code> peut être utilisée pour lire des résultats de benchmark depuis un fichier.
+  Vous pouvez spécifier l'option <code>-&#8288;-file</code> plusieurs fois pour lire plusieurs fichiers.
+  Si vous spécifiez l'option <code>-&#8288;-file</code> plusieurs fois,
+  alors chaque fichier sera considéré comme une <code>itération</code> distincte de la commande de benchmark.
+  Lors de l'affichage, ces résultats seront présentés dans des tableaux séparés.
+
+  Si vous souhaitez combiner ces résultats en une seule <code>itération</code>,
+  vous pouvez régler l'option <code>-&#8288;-iter</code> sur <code>1</code>
+  et définir l'option <code>-&#8288;-fold</code> sur l'une des fonctions d'agrégation <code>min</code>, <code>max</code> ou <code>median</code>.
+  Cela regroupera les résultats en une seule <code>itération</code> et les affichera dans un seul tableau.
+  Ne réglez <b>pas</b> l'option <code>-&#8288;-fold</code> sur <code>mean</code>.
+</details>
+</blockquote>
+
+Si ni la commande de benchmark, ni l'option [`--file`][file option], ni l'option [`--file-size`][file size option] ne sont spécifiées, `bencher run` lira depuis `stdin`.
+Cela vous permet d'enregistrer la sortie d'une autre commande dans un fichier ou de la transmettre via un pipe à `bencher run`.
 
 [benchmark harness adapters]: /fr/docs/explanation/adapters/
 

@@ -3,38 +3,59 @@ import ExecForm from "../exec-form.mdx";
 
 ## Benchmark-Befehl
 
-Das erste Argument für `bencher run` ist der optionale Benchmark-Befehl.
-Dies ist der Befehl, der ausgeführt wird, um Ihr Benchmark-Harness zu starten.
+Das erste Argument von `bencher run` ist der optionale Benchmark-Befehl.
+Dies ist der Befehl, der ausgeführt wird und Ihr Benchmark-Harness aufruft.
 Er kann auch über die Umgebungsvariable `BENCHER_CMD` gesetzt werden.
 Standardmäßig wird dieser Befehl in einer Shell ausgeführt,
 die mit den Optionen [`--shell`][shell option] und [`--flag`][flag option] konfiguriert werden kann.
 Seine Ausgabe wird von einem [Benchmark-Harness-Adapter][benchmark harness adapters] geparst,
-der mit der Option [`--adapter`][adapter option] festgelegt werden kann.
-Wenn das Benchmark-Harness jedoch in eine Datei schreibt, dann muss auch die Option [`--file`][file option] verwendet werden, um den Pfad der Ausgabedatei anzugeben.
-Alternative, um die Größe der Ausgabedatei (z. B. Binärgröße) anstelle ihres Inhalts zu verfolgen,
+der mit der Option [`--adapter`][adapter option] gesetzt werden kann.
+Wenn das Benchmark-Harness jedoch in eine Datei schreibt, muss außerdem die Option [`--file`][file option] verwendet werden,
+um den Pfad der Ausgabedatei anzugeben.
+Alternativ, um die Größe der Ausgabedatei (z. B. Binärgröße) statt ihres Inhalts zu erfassen,
 verwenden Sie die Option [`--file-size`][file size option], um den Pfad der Ausgabedatei anzugeben.
 
-Wenn Sie bevorzugen, dass der Befehl nicht in einer Shell ausgeführt wird, können Sie den `--exec` Flag verwenden oder einfach zusätzliche Argumente zu Ihrem Befehl als zusätzliche Argumente zu `bencher run` hinzufügen.
+Wenn Sie nicht möchten, dass der Befehl in einer Shell ausgeführt wird, können Sie das Flag `--exec` verwenden oder zusätzliche Argumente für Ihren Befehl einfach als zusätzliche Argumente an `bencher run` übergeben.
 
-Shell-Formular:
+Shell-Form:
 <ShellForm />
 
-Ausführungsformular:
+Exec-Form:
 <ExecForm />
 
-Der Benchmark-Befehl kann mehrmals mit der Option [`--iter`][iter option] ausgeführt werden,
+Der Benchmark-Befehl kann mehrfach mit der Option [`--iter`][iter option] ausgeführt werden,
 und diese Ergebnisse können mit der Option [`--fold`][fold option] zu einem einzigen Ergebnis zusammengefasst werden.
 Wenn eine der Iterationen fehlschlägt, gilt der gesamte Befehl als fehlgeschlagen,
-es sei denn, der Flag [`--allow-failure`][allow failure flag] wird gesetzt.
+es sei denn, das Flag [`--allow-failure`][allow failure flag] ist gesetzt.
 
-Wenn der Benchmark-Befehl nicht angegeben ist, aber die Option [`--file`][file option] verwendet wird,
-dann wird `bencher run` stattdessen einfach den Pfad der Ausgabedatei lesen.
-Ähnlich, wenn der Benchmark-Befehl nicht angegeben ist, aber die Option [`--file-size`][file size option] verwendet wird,
-dann wird `bencher run` einfach die Größe der Datei am angegebenen Dateipfad lesen.
-Wenn weder der Benchmark-Befehl, die Option [`--file`][file option],
+Wenn der Benchmark-Befehl nicht angegeben ist, aber die Option [`--file`][file option],
+dann wird `bencher run` stattdessen einfach aus dem angegebenen Ausgabedateipfad lesen.
+Ähnlich, wenn der Benchmark-Befehl nicht angegeben ist, aber die Option [`--file-size`][file size option],
+dann liest `bencher run` stattdessen nur die Größe der Datei am angegebenen Pfad.
+Beide Optionen `--file` und `--file-size` können mehrfach angegeben werden, um aus mehreren Dateien zu lesen.
+
+<blockquote>
+<details>
+  <summary>🐰 Tipps zur Verwendung der <code>-&#8288;-file</code> Option</summary>
+  Die <code>-&#8288;-file</code>-Option kann verwendet werden, um Benchmark-Ergebnisse aus einer Datei zu lesen.
+  Sie können die <code>-&#8288;-file</code>-Option mehrfach angeben, um aus mehreren Dateien zu lesen.
+  Wenn Sie die <code>-&#8288;-file</code>-Option mehrfach angeben,
+  wird jede Datei als separate <code>iteration</code> des Benchmark-Befehls betrachtet.
+  Beim Anzeigen werden diese Ergebnisse in separaten Tabellen dargestellt.
+
+  Wenn Sie diese Ergebnisse zu einer einzigen <code>iteration</code> zusammenfassen möchten,
+  können Sie die Option <code>-&#8288;-iter</code> auf <code>1</code> setzen
+  und die Option <code>-&#8288;-fold</code> auf eine der Aggregatfunktionen <code>min</code>, <code>max</code> oder <code>median</code> setzen.
+  Dadurch werden die Ergebnisse zu einer einzigen <code>iteration</code> zusammengefasst
+  und in einer einzigen Tabelle angezeigt.
+  Setzen Sie die Option <code>-&#8288;-fold</code> <b>nicht</b> auf <code>mean</code>.
+</details>
+</blockquote>
+
+Wenn weder der Benchmark-Befehl noch die Option [`--file`][file option]
 noch die Option [`--file-size`][file size option] angegeben sind,
-wird `bencher run` stattdessen von `stdin` lesen.
-Dies ermöglicht es Ihnen, die Ausgabe eines anderen Befehls in eine Datei zu speichern oder in `bencher run` zu pipen.
+dann liest `bencher run` stattdessen von `stdin`.
+Das ermöglicht es Ihnen, die Ausgabe eines anderen Befehls in eine Datei zu speichern oder sie in `bencher run` zu pipen.
 
 [benchmark harness adapters]: /de/docs/explanation/adapters/
 

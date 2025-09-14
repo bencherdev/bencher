@@ -140,7 +140,7 @@ pub struct CliRunCommand {
 
     /// Benchmark command output file path
     #[clap(long, conflicts_with = "file_size")]
-    pub file: Option<Utf8PathBuf>,
+    pub file: Option<Vec<Utf8PathBuf>>,
 
     /// Track the size of a file at the given file path
     #[clap(long, conflicts_with = "file")]

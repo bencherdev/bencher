@@ -32,6 +32,26 @@ If the benchmark command is not specified but the [`--file`][file option] option
 then `bencher run` will just read from output file path instead.
 Similarly, if the the benchmark command is not specified but the [`--file-size`][file size option] option is,
 then `bencher run` will just read the size of the file at the given file path instead.
+Both `--file` and `--file-size` options can be specified multiple times to read from multiple files.
+
+<blockquote>
+<details>
+  <summary>🐰 Tips for using the <code>-&#8288;-file</code> option</summary>
+  The <code>-&#8288;-file</code> option can be used to read benchmark results from a file.
+  You can specify the <code>-&#8288;-file</code> option multiple times to read from multiple files.
+  If you do specify the <code>-&#8288;-file</code> option multiple times,
+  then each file will be considered a separate <code>iteration</code> of the benchmark command.
+  When displayed, these results will be shown in separate tables.
+
+  If you wish to combined these results into a single <code>iteration</code>,
+  then you can set the <code>-&#8288;-iter</code> option to <code>1</code>
+  and set the <code>-&#8288;-fold</code> option to either the <code>min</code>, <code>max</code>, or <code>median</code> aggregate functions.
+  This will fold the results into a single <code>iteration</code>
+  and display them in a single table.
+  Do <b>not</b> set the <code>-&#8288;-fold</code> option to <code>mean</code>.
+</details>
+</blockquote>
+
 If neither the benchmark command, [`--file`][file option] option,
 nor [`--file-size`][file size option] option are specified,
 then `bencher run` will read from `stdin` instead.

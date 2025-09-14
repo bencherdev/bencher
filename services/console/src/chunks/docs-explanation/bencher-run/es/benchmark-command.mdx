@@ -1,21 +1,21 @@
 import ShellForm from "../shell-form.mdx";
 import ExecForm from "../exec-form.mdx";
 
-## Comando de Benchmark
+## Comando de benchmark
 
-El primer argumento para `bencher run` es el comando de benchmark opcional.
-Este es el comando que se ejecutará, invocando tu arnés de referencia.
-También se puede establecer usando la variable de entorno `BENCHER_CMD`.
-Por defecto, este comando se ejecuta en una shell,
-que se puede configurar con las opciones [`--shell`][shell option] y [`--flag`][flag option].
-Su salida es analizada por un [adaptador del arnés de referencia][benchmark harness adapters],
-que se puede establecer usando la opción [`--adapter`][adapter option].
-Sin embargo, si el arnés de referencia genera salida a un archivo, entonces la opción [`--file`][file option]
-también debe usarse para especificar la ruta del archivo de salida.
-Alternativamente, para rastrear el tamaño del archivo de salida (es decir, tamaño binario) en lugar de su contenido,
+El primer argumento de `bencher run` es el comando de benchmark opcional.
+Este es el comando que se ejecutará para invocar tu harness de benchmark.
+También puede establecerse mediante la variable de entorno `BENCHER_CMD`.
+Por defecto este comando se ejecuta en un shell,
+el cual puede configurarse con las opciones [`--shell`][shell option] y [`--flag`][flag option].
+Su salida es analizada por un [benchmark harness adapter][benchmark harness adapters],
+que puede establecerse usando la opción [`--adapter`][adapter option].
+Sin embargo, si el harness de benchmark escribe en un archivo entonces también debe usarse la opción [`--file`][file option]
+para especificar la ruta del archivo de salida.
+Alternativamente, para rastrear el tamaño del archivo de salida (por ejemplo, el tamaño del binario) en lugar de su contenido,
 usa la opción [`--file-size`][file size option] para especificar la ruta del archivo de salida.
 
-Si prefieres que el comando no se ejecute en una shell, puedes usar la bandera `--exec` o simplemente proporcionar argumentos adicionales a tu comando como argumentos adicionales a `bencher run`.
+Si prefieres que el comando no se ejecute en un shell, puedes usar la bandera `--exec` o simplemente proporcionar argumentos adicionales a tu comando como argumentos adicionales a `bencher run`.
 
 Forma Shell:
 <ShellForm />
@@ -23,19 +23,39 @@ Forma Shell:
 Forma Exec:
 <ExecForm />
 
-El comando de benchmark se puede ejecutar múltiples veces usando la opción [`--iter`][iter option],
-y esos resultados pueden ser combinados en un solo resultado usando la opción [`--fold`][fold option].
+El comando de benchmark puede ejecutarse múltiples veces usando la opción [`--iter`][iter option],
+y esos resultados pueden combinarse en un único resultado usando la opción [`--fold`][fold option].
 Si alguna de las iteraciones falla, entonces se considera que todo el comando ha fallado
-a menos que la bandera [`--allow-failure`][allow failure flag] esté establecida.
+a menos que se haya establecido la bandera [`--allow-failure`][allow failure flag].
 
-Si el comando de benchmark no se especifica pero la opción [`--file`][file option] sí,
-entonces `bencher run` simplemente leerá de la ruta del archivo de salida en su lugar.
-De manera similar, si el comando de benchmark no se especifica pero la opción [`--file-size`][file size option] sí,
-entonces `bencher run` simplemente leerá el tamaño del archivo en la ruta de archivo dada en su lugar.
-Si ni el comando de benchmark, la opción [`--file`][file option],
-ni la opción [`--file-size`][file size option] están especificados,
-entonces `bencher run` leerá desde `stdin` en su lugar.
-Esto te permite guardar la salida de otro comando en un archivo o canalizarlo a `bencher run`.
+Si no se especifica el comando de benchmark pero sí la opción [`--file`][file option],
+entonces `bencher run` simplemente leerá desde la ruta del archivo de salida.
+De forma similar, si no se especifica el comando de benchmark pero sí la opción [`--file-size`][file size option],
+entonces `bencher run` simplemente leerá el tamaño del archivo en la ruta indicada.
+Las opciones `--file` y `--file-size` pueden especificarse varias veces para leer desde múltiples archivos.
+
+<blockquote>
+<details>
+  <summary>🐰 Consejos para usar la opción <code>-&#8288;-file</code></summary>
+  La opción <code>-&#8288;-file</code> se puede usar para leer resultados de benchmark desde un archivo.
+  Puedes especificar la opción <code>-&#8288;-file</code> varias veces para leer desde múltiples archivos.
+  Si especificas la opción <code>-&#8288;-file</code> varias veces,
+  entonces cada archivo se considerará una <code>iteración</code> separada del comando de benchmark.
+  Cuando se muestren, estos resultados aparecerán en tablas separadas.
+
+  Si deseas combinar estos resultados en una sola <code>iteración</code>,
+  puedes establecer la opción <code>-&#8288;-iter</code> en <code>1</code>
+  y establecer la opción <code>-&#8288;-fold</code> en una de las funciones de agregación <code>min</code>, <code>max</code> o <code>median</code>.
+  Esto plegará los resultados en una sola <code>iteración</code>
+  y los mostrará en una única tabla.
+  No establezcas la opción <code>-&#8288;-fold</code> en <code>mean</code>.
+</details>
+</blockquote>
+
+Si no se especifican ni el comando de benchmark, ni la opción [`--file`][file option],
+ni la opción [`--file-size`][file size option],
+entonces `bencher run` leerá desde `stdin`.
+Esto te permite guardar la salida de otro comando en un archivo o encadenarla (pipe) a `bencher run`.
 
 [benchmark harness adapters]: /es/docs/explanation/adapters/
 

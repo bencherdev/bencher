@@ -194,14 +194,20 @@ impl CommandOutput {
         Ok(self.output)
     }
 
-    pub fn build_with_file_path(mut self, file_path: &FilePath) -> Result<Output, RunError> {
+    pub fn build_with_file_path(self, file_path: &FilePath) -> Result<Vec<Output>, RunError> {
         debug_assert!(
             self.build_command.is_none(),
             "Build command should not be set for file path"
         );
         let results = file_path.get_results()?;
-        self.output.result = Some(results);
-        Ok(self.output)
+        let outputs = results
+            .into_iter()
+            .map(|result| Output {
+                result: Some(result),
+                ..self.output.clone()
+            })
+            .collect();
+        Ok(outputs)
     }
 
     pub fn build_with_file_size(mut self, file_size: &FileSize) -> Result<Output, RunError> {

@@ -3,47 +3,56 @@ import ExecForm from "../exec-form.mdx";
 
 ## Comando de Benchmark
 
-O primeiro argumento para `bencher run` é o comando de benchmark opcional.
-Este é o comando que será executado, invocando seu mecanismo de benchmark.
-Ele também pode ser definido usando a variável de ambiente `BENCHER_CMD`.
-Por padrão, esse comando é executado em um shell,
-o qual pode ser configurado com as opções [`--shell`][opção shell] e [`--flag`][opção flag].
-Seu output é analisado por um [adaptador de mecanismo de benchmark][adaptadores de mecanismos de benchmark],
-que pode ser definido usando a opção [`--adapter`][opção adapter].
-No entanto, se o mecanismo de benchmark gerar saída para um arquivo, então a opção [`--file`][opção file]
-também deve ser usada para especificar o caminho do arquivo de saída.
-Alternativamente, para acompanhar o tamanho do arquivo de saída (ou seja, o tamanho do binário) em vez de seu conteúdo,
-use a opção [`--file-size`][opção file size] para especificar o caminho do arquivo de saída.
+O primeiro argumento de `bencher run` é o comando de benchmark opcional.
+Este é o comando que será executado, invocando seu harness de benchmark.
+Também pode ser definido usando a variável de ambiente `BENCHER_CMD`.
+Por padrão este comando é executado em um shell, que pode ser configurado com as opções [`--shell`][shell option] e [`--flag`][flag option].
+Sua saída é analisada por um [adaptador de harness de benchmark][benchmark harness adapters], que pode ser definido usando a opção [`--adapter`][adapter option].
+No entanto, se o harness de benchmark gravar a saída em um arquivo, a opção [`--file`][file option] também deve ser usada para especificar o caminho do arquivo de saída.
+Como alternativa, para acompanhar o tamanho do arquivo de saída (por exemplo, o tamanho do binário) em vez do seu conteúdo, use a opção [`--file-size`][file size option] para especificar o caminho do arquivo de saída.
 
-Se você preferir não ter o comando executado em um shell, você pode usar a flag `--exec` ou simplesmente fornecer argumentos adicionais ao seu comando como argumentos adicionais para `bencher run`.
+Se preferir que o comando não seja executado em um shell, você pode usar a flag `--exec` ou simplesmente fornecer argumentos adicionais ao seu comando como argumentos adicionais para `bencher run`.
 
-Forma Shell:
+Shell Form:
 <ShellForm />
 
-Forma Exec:
+Exec Form:
 <ExecForm />
 
-O comando de benchmark pode ser executado várias vezes usando a opção [`--iter`][opção iter],
-e esses resultados podem ser consolidados em um único resultado usando a opção [`--fold`][opção fold].
-Se alguma das iterações falhar, então o comando inteiro é considerado como falho
-a menos que a flag [`--allow-failure`][flag allow failure] seja definida.
+O comando de benchmark pode ser executado várias vezes usando a opção [`--iter`][iter option], e esses resultados podem ser combinados em um único resultado usando a opção [`--fold`][fold option].
+Se qualquer uma das iterações falhar, então o comando inteiro será considerado como tendo falhado, a menos que a flag [`--allow-failure`][allow failure flag] esteja definida.
 
-Se o comando de benchmark não for especificado mas a opção [`--file`][opção file] for,
-então `bencher run` apenas lerá do caminho do arquivo de saída.
-Similarmente, se o comando de benchmark não for especificado mas a opção [`--file-size`][opção file size] for,
-então `bencher run` apenas lerá o tamanho do arquivo no caminho do arquivo especificado.
-Se nem o comando de benchmark, a opção [`--file`][opção file],
-nem a opção [`--file-size`][opção file size] forem especificados,
-então `bencher run` lerá de `stdin` em vez disso.
-Isso permite que você salve a saída de outro comando em um arquivo ou o encaminhe para `bencher run`.
+Se o comando de benchmark não for especificado, mas a opção [`--file`][file option] for, então o `bencher run` apenas lerá do caminho do arquivo de saída.
+Da mesma forma, se o comando de benchmark não for especificado, mas a opção [`--file-size`][file size option] for, então o `bencher run` apenas lerá o tamanho do arquivo no caminho fornecido.
+As opções `--file` e `--file-size` podem ser especificadas múltiplas vezes para ler de vários arquivos.
 
-[adaptadores de mecanismos de benchmark]: /pt/docs/explanation/adapters/
+<blockquote>
+<details>
+  <summary>🐰 Dicas para usar a opção <code>-&#8288;-file</code></summary>
+  A opção <code>-&#8288;-file</code> pode ser usada para ler resultados de benchmark de um arquivo.
+  Você pode especificar a opção <code>-&#8288;-file</code> várias vezes para ler de vários arquivos.
+  Se você especificar a opção <code>-&#8288;-file</code> várias vezes,
+  cada arquivo será considerado uma <code>iteração</code> separada do comando de benchmark.
+  Quando exibidos, esses resultados serão mostrados em tabelas separadas.
 
-[opção shell]: #--shell-shell
-[opção flag]: #--flag-flag
-[opção adapter]: #--adapter-adapter
-[opção file]: #--file-file
-[opção file size]: #--file-size-file
-[opção iter]: #--iter-iter
-[opção fold]: #--fold-fold
-[flag allow failure]: #--allow-failure
+  Se você desejar combinar esses resultados em uma única <code>iteração</code>,
+  então pode definir a opção <code>-&#8288;-iter</code> para <code>1</code>
+  e definir a opção <code>-&#8288;-fold</code> para uma das funções agregadas <code>min</code>, <code>max</code> ou <code>median</code>.
+  Isso irá consolidar os resultados em uma única <code>iteração</code> e exibi-los em uma única tabela.
+  Do <b>not</b> set the <code>-&#8288;-fold</code> option to <code>mean</code>.
+</details>
+</blockquote>
+
+Se nem o comando de benchmark, nem a opção [`--file`][file option], nem a opção [`--file-size`][file size option] forem especificados, então o `bencher run` lerá do `stdin`.
+Isso permite que você salve a saída de outro comando em um arquivo ou a passe via pipe para o `bencher run`.
+
+[benchmark harness adapters]: /pt/docs/explanation/adapters/
+
+[shell option]: #--shell-shell
+[flag option]: #--flag-flag
+[adapter option]: #--adapter-adapter
+[file option]: #--file-file
+[file size option]: #--file-size-file
+[iter option]: #--iter-iter
+[fold option]: #--fold-fold
+[allow failure flag]: #--allow-failure

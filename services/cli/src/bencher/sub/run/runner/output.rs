@@ -38,6 +38,12 @@ impl fmt::Display for ExitStatus {
     }
 }
 
+impl From<Output> for Vec<Output> {
+    fn from(output: Output) -> Self {
+        vec![output]
+    }
+}
+
 impl Output {
     pub fn is_success(&self) -> bool {
         self.status.is_success()

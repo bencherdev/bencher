@@ -3,15 +3,15 @@ import ExecForm from "../exec-form.mdx";
 
 ## ベンチマークコマンド
 
-`bencher run`への最初の引数は、オプションのベンチマークコマンドです。
-これは実行されるコマンドで、ベンチマークハーネスを呼び出します。
-`BENCHER_CMD`環境変数を使用して設定することもできます。
-デフォルトではこのコマンドはシェルで実行され、[`--shell`][shell option] オプションと [`--flag`][flag option] オプションで設定することができます。
-その出力は[ベンチマークハーネスアダプター][benchmark harness adapters]によって解析され、[`--adapter`][adapter option] オプションを使用して設定します。
-しかし、ベンチマークハーネスがファイルに出力する場合は、出力ファイルのパスを指定するためにも[`--file`][file option] オプションを使用しなければなりません。
-出力ファイルのサイズ（つまりバイナリサイズ）をその内容の代わりに追跡するためには、出力ファイルのパスを指定する[`--file-size`][file size option] オプションを使用します。
+`bencher run` の最初の引数は省略可能なベンチマークコマンドです。
+これはベンチマークハーネスを呼び出すために実行されるコマンドです。
+`BENCHER_CMD` 環境変数を使って設定することもできます。
+デフォルトではこのコマンドはシェル内で実行され、[`--shell`][shell option] および [`--flag`][flag option] オプションで設定できます。
+出力は [ベンチマークハーネスアダプタ][benchmark harness adapters] によってパースされ、これは [`--adapter`][adapter option] オプションで設定できます。
+ただし、ベンチマークハーネスがファイルに出力する場合は、出力ファイルパスを指定するために [`--file`][file option] オプションを使用する必要があります。
+出力ファイルの内容ではなくファイルサイズ（例：バイナリサイズ）を追跡したい場合は、代わりに [`--file-size`][file size option] オプションで出力ファイルパスを指定してください。
 
-コマンドをシェルで実行したくない場合は、`--exec` フラグを使用するか、追加の引数を `bencher run` への追加の引数として提供することができます。
+コマンドをシェルで実行したくない場合は、`--exec` フラグを使うか、単にコマンドへの追加引数を `bencher run` に追加して渡すことができます。
 
 Shell Form:
 <ShellForm />
@@ -19,13 +19,32 @@ Shell Form:
 Exec Form:
 <ExecForm />
 
-[`--iter`][iter option] オプションを使用してベンチマークコマンドを複数回実行し、[`--fold`][fold option] オプションを使用してそれらの結果を単一の結果にまとめることができます。
-いずれかの反復が失敗した場合、[`--allow-failure`][allow failure flag] フラグが設定されていない限り、コマンド全体が失敗とみなされます。
+ベンチマークコマンドは [`--iter`][iter option] オプションを使って複数回実行でき、これらの結果は [`--fold`][fold option] オプションを使って単一の結果にまとめることができます。
+いずれかのイテレーションが失敗した場合、[`--allow-failure`][allow failure flag] フラグが設定されていない限り、コマンド全体が失敗と見なされます。
 
-ベンチマークコマンドが指定されていないが[`--file`][file option] オプションが指定されている場合、`bencher run`は代わりに出力ファイルパスから読み取ります。
-同様に、ベンチマークコマンドが指定されていないが[`--file-size`][file size option] オプションが指定されている場合、`bencher run`は指定されたファイルパスのファイルサイズを読み取ります。
-ベンチマークコマンド、[`--file`][file option] オプション、[`--file-size`][file size option] オプションのいずれも指定されていない場合、`bencher run`は代わりに `stdin` から読み取ります。
-これにより、他のコマンドの出力をファイルに保存するか、`bencher run`にパイプすることができます。
+ベンチマークコマンドが指定されておらず、かつ [`--file`][file option] オプションが指定されている場合、`bencher run` は代わりに指定された出力ファイルパスから読み取ります。
+同様に、ベンチマークコマンドが指定されておらず、かつ [`--file-size`][file size option] オプションが指定されている場合、`bencher run` は指定されたファイルパスのファイルサイズを読み取ります。
+`--file` と `--file-size` の両方は複数回指定して、複数ファイルから読み取ることができます。
+
+<blockquote>
+<details>
+  <summary>🐰 <code>-&#8288;-file</code> オプションの使用に関するヒント</summary>
+  <code>-&#8288;-file</code> オプションはファイルからベンチマーク結果を読み取るために使用できます。
+  複数のファイルから読み取るために、<code>-&#8288;-file</code> オプションを複数回指定できます。
+  もし <code>-&#8288;-file</code> オプションを複数回指定した場合、
+  各ファイルはベンチマークコマンドの個別の <code>iteration</code> と見なされます。
+  表示される際には、これらの結果は別々のテーブルで表示されます。
+
+  これらの結果を単一の <code>iteration</code> に結合したい場合は、
+  <code>-&#8288;-iter</code> オプションを <code>1</code> に設定し、
+  <code>-&#8288;-fold</code> オプションを集約関数の <code>min</code>、<code>max</code>、または <code>median</code> のいずれかに設定してください。
+  これにより結果が単一の <code>iteration</code> に折りたたまれ、1つのテーブルで表示されます。
+  <b>絶対に</b> <code>-&#8288;-fold</code> オプションを <code>mean</code> に設定しないでください。
+</details>
+</blockquote>
+
+ベンチマークコマンド、[`--file`][file option] オプション、または [`--file-size`][file size option] オプションのいずれも指定されていない場合、`bencher run` は代わりに `stdin` から読み取ります。
+これにより、別のコマンドの出力をファイルに保存するか、あるいはパイプで `bencher run` に渡すことができます。
 
 [benchmark harness adapters]: /ja/docs/explanation/adapters/
 

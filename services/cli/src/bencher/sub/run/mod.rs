@@ -158,16 +158,18 @@ impl Run {
         let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
-            let output = self.runner.run(self.log).await?;
-            if output.is_success() {
-                results.push(output.result());
-            } else if self.allow_failure {
-                cli_eprintln_quietable!(self.log, "Skipping failure:\n{output}");
-            } else {
-                return Err(RunError::ExitStatus {
-                    runner: Box::new(self.runner.clone()),
-                    output,
-                });
+            let outputs = self.runner.run(self.log).await?;
+            for output in outputs {
+                if output.is_success() {
+                    results.push(output.result());
+                } else if self.allow_failure {
+                    cli_eprintln_quietable!(self.log, "Skipping failure:\n{output}");
+                } else {
+                    return Err(RunError::ExitStatus {
+                        runner: Box::new(self.runner.clone()),
+                        output,
+                    });
+                }
             }
         }
 
