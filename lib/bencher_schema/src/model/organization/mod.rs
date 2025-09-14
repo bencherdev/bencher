@@ -292,6 +292,7 @@ impl QueryOrganization {
         use sso::QuerySso;
 
         let query_sso = QuerySso::belonging_to(self)
+            .order(schema::sso::domain.asc())
             .load::<QuerySso>(conn)
             .map_err(resource_not_found_err!(Sso, self.uuid))?;
 

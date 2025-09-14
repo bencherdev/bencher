@@ -1,5 +1,6 @@
 CREATE TABLE sso (
     id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
     organization_id INTEGER NOT NULL,
     domain TEXT NOT NULL UNIQUE,
     created BIGINT NOT NULL,

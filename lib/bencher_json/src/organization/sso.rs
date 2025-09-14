@@ -5,6 +5,8 @@ use bencher_valid::{DateTime, NonEmpty};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+crate::typed_uuid::typed_uuid!(SsoUuid);
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -16,6 +18,7 @@ pub struct JsonNewSso {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSso {
+    pub uuid: SsoUuid,
     pub domain: NonEmpty,
     pub created: DateTime,
 }

@@ -40,7 +40,7 @@ pub use organization::{
 #[cfg(feature = "plus")]
 pub use organization::{
     plan::JsonPlan,
-    sso::{JsonNewSso, JsonSso},
+    sso::{JsonNewSso, JsonSso, SsoUuid},
     usage::JsonUsage,
 };
 pub use pagination::{JsonDirection, JsonPagination};

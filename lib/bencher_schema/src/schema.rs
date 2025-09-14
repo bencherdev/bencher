@@ -259,6 +259,7 @@ diesel::table! {
 diesel::table! {
     sso (id) {
         id -> Integer,
+        uuid -> Text,
         organization_id -> Integer,
         domain -> Text,
         created -> BigInt,

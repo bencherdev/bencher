@@ -4,7 +4,7 @@ mod members;
 mod organizations;
 mod plan;
 mod projects;
-// mod sso;
+mod sso;
 mod usage;
 
 pub struct Api;
@@ -74,6 +74,14 @@ impl bencher_endpoint::Registrar for Api {
                 api_description.register(usage::org_usage_options)?;
             }
             api_description.register(usage::org_usage_get)?;
+
+            // Organization SSO
+            if http_options {
+                api_description.register(sso::org_sso_post_options)?;
+                api_description.register(sso::org_sso_delete_options)?;
+            }
+            api_description.register(sso::org_sso_post)?;
+            api_description.register(sso::org_sso_delete)?;
         }
 
         Ok(())
