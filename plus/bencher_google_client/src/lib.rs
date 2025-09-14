@@ -48,6 +48,8 @@ pub enum GoogleClientError {
     UserInfoReq(reqwest::Error),
     #[error("Failed to parse Google UserInfo response: {0}")]
     UserInfoJson(reqwest::Error),
+    #[error("Google account email is not verified")]
+    NotEmailVerified,
     #[error("Missing email in Google UserInfo response")]
     NoEmail,
     #[error("Failed to parse user name: {0}")]
@@ -111,6 +113,10 @@ impl GoogleClient {
             .await
             .map_err(GoogleClientError::UserInfoJson)?;
 
+        if !user_info.email_verified {
+            return Err(GoogleClientError::NotEmailVerified);
+        }
+
         let email_str = user_info
             .email
             .as_deref()
@@ -140,4 +146,5 @@ struct GoogleUserInfo {
     given_name: Option<String>,
     family_name: Option<String>,
     email: Option<String>,
+    email_verified: bool,
 }
