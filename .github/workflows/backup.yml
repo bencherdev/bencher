@@ -2,8 +2,6 @@ name: Backup
 
 on:
   workflow_dispatch:
-  push:
-    branches: [cloud]
 
 env:
   CARGO_TERM_COLOR: always
