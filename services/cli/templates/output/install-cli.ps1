@@ -5,7 +5,7 @@
 <#
 .SYNOPSIS
 
-Bencher CLI v0.5.4 Installer
+Bencher CLI v0.5.5 Installer
 
 .DESCRIPTION
 
@@ -36,9 +36,9 @@ Print help
 
 param (
   [Parameter(HelpMessage = "The version of the application to install")]
-  [string]$AppVersion = $(if ($env:BENCHER_VERSION) { $env:BENCHER_VERSION } else { '0.5.4' }),
+  [string]$AppVersion = $(if ($env:BENCHER_VERSION) { $env:BENCHER_VERSION } else { '0.5.5' }),
   [Parameter(HelpMessage = "The URL of the directory where artifacts can be fetched from")]
-  [string]$ArtifactDownloadUrl = "https://bencher.dev/download/$(if ($env:BENCHER_VERSION) { $env:BENCHER_VERSION } else { '0.5.4' })",
+  [string]$ArtifactDownloadUrl = "https://bencher.dev/download/$(if ($env:BENCHER_VERSION) { $env:BENCHER_VERSION } else { '0.5.5' })",
   [Parameter(HelpMessage = "Don't add the install directory to PATH")]
   [switch]$NoModifyPath,
   [Parameter(HelpMessage = "Print Help")]
