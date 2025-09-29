@@ -1,0 +1,34 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+rust_iai_callgrind::bench::multiple_lines id:string with two
+lines
+  Instructions:                   1|N/A             (*********)
+  L1 Hits:                        2|N/A             (*********)
+  L2 Hits:                        3|N/A             (*********)
+  RAM Hits:                       4|N/A             (*********)
+  Total read+write:               5|N/A             (*********)
+  Estimated Cycles:               6|N/A             (*********)
+rust_iai_callgrind::bench::multiple_lines id:string with multiple
+lines
+and one more
+  Instructions:                   7|N/A             (*********)
+  L1 Hits:                        8|N/A             (*********)
+  L2 Hits:                        9|N/A             (*********)
+  RAM Hits:                      10|N/A             (*********)
+  Total read+write:              11|N/A             (*********)
+  Estimated Cycles:              12|N/A             (*********)
+
+
+
+
+
+
+
+
+
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...

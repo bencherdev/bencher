@@ -10,9 +10,9 @@ use bencher_json::{
 use nom::{
     IResult,
     branch::alt,
-    bytes::complete::{is_a, is_not, tag},
+    bytes::complete::{is_a, is_not, tag, take_until1},
     character::complete::{char, space0, space1},
-    combinator::{map, opt, recognize},
+    combinator::{map, opt, peek, recognize},
     multi::{many0, many1},
     sequence::{delimited, preceded, terminated, tuple},
 };
@@ -76,11 +76,11 @@ fn single_benchmark<'a>()
                 recognize(tuple((
                     is_not(":\r\n \t"),
                     tag("::"),
-                    is_not(":\r\n"),
+                    is_not(":\r\n \t"),
                     tag("::"),
-                    not_line_ending(),
+                    not_benchmark_name_end(),
                 ))),
-                line_ending(),
+                benchmark_name_end(),
             ),
             many0(alt((
                 // Callgrind tool if it was enabled:
@@ -98,7 +98,9 @@ fn single_benchmark<'a>()
             ))),
         )),
         |(benchmark_name, measures)| {
-            let benchmark_name = benchmark_name.parse().ok()?;
+            // trim here to avoid loose `\r` chars at the end of the string because of the
+            // `not_benchmark_name_end` parser. It's maybe not a bad idea anyways.
+            let benchmark_name = benchmark_name.trim().parse().ok()?;
             let measures = measures.into_iter().flatten().collect();
 
             Some((benchmark_name, measures))
@@ -481,6 +483,24 @@ fn line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
 fn not_line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
     // Note: `not(line_ending)` doesn't work here, as it won't consume the matched characters
     is_not("\r\n")
+}
+
+/// Parser that matches the benchmark name ending sequence, excluding the two spaces
+fn benchmark_name_end<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (&'a str, &'a str)> {
+    // we only peek here so the `metric_line` parser can match the first spaces too
+    tuple((line_ending(), peek(tag("  "))))
+}
+
+/// A parser that matches input until it encounters the benchmark name end sequence.
+///
+/// Similar to the `benchmark_name_end` parser, this parser addresses an unusual behavior in
+/// `gungraun` (iai-callgrind) by allowing benchmark names to span multiple lines. While this
+/// behavior is not a bug in `gungraun`, it deviates from the original intent. If there are multiple
+/// lines they don't start with two spaces, so we can use that as test for the end of the benchmark
+/// name.
+fn not_benchmark_name_end<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+    // Ignore the `\r\n` possibility here and instead trim the benchmark name later
+    take_until1("\n  ")
 }
 
 #[cfg(test)]
@@ -1041,6 +1061,123 @@ pub(crate) mod test_rust_iai_callgrind {
                 &expected,
                 &results,
                 "rust_iai_callgrind::custom_format::drd_format all_metrics",
+            );
+        }
+    }
+
+    #[test]
+    fn test_name_multiple_lines() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/name_on_multiple_lines.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let mut expected = HashMap::new();
+
+            expected.extend([
+                (Instructions::SLUG_STR, 1.0),
+                (L1Hits::SLUG_STR, 2.0),
+                (L2Hits::SLUG_STR, 3.0),
+                (RamHits::SLUG_STR, 4.0),
+                (TotalReadWrite::SLUG_STR, 5.0),
+                (EstimatedCycles::SLUG_STR, 6.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench::multiple_lines id:string with two\nlines",
+            );
+        }
+
+        {
+            let mut expected = HashMap::new();
+
+            expected.extend([
+                (Instructions::SLUG_STR, 7.0),
+                (L1Hits::SLUG_STR, 8.0),
+                (L2Hits::SLUG_STR, 9.0),
+                (RamHits::SLUG_STR, 10.0),
+                (TotalReadWrite::SLUG_STR, 11.0),
+                (EstimatedCycles::SLUG_STR, 12.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench::multiple_lines id:string with multiple\nlines\nand one more",
+            );
+        }
+    }
+
+    #[test]
+    fn test_name_multiple_lines_mixed() {
+        use iai_callgrind::*;
+
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/name_on_multiple_lines_mixed.txt",
+        );
+
+        assert_eq!(results.inner.len(), 3);
+
+        {
+            let mut expected = HashMap::new();
+
+            expected.extend([
+                (Instructions::SLUG_STR, 1.0),
+                (L1Hits::SLUG_STR, 2.0),
+                (L2Hits::SLUG_STR, 3.0),
+                (RamHits::SLUG_STR, 4.0),
+                (TotalReadWrite::SLUG_STR, 5.0),
+                (EstimatedCycles::SLUG_STR, 6.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench::multiple_lines id:first with one line",
+            );
+        }
+
+        {
+            let mut expected = HashMap::new();
+
+            expected.extend([
+                (Instructions::SLUG_STR, 7.0),
+                (L1Hits::SLUG_STR, 8.0),
+                (L2Hits::SLUG_STR, 9.0),
+                (RamHits::SLUG_STR, 10.0),
+                (TotalReadWrite::SLUG_STR, 11.0),
+                (EstimatedCycles::SLUG_STR, 12.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench::multiple_lines id:two\nlines",
+            );
+        }
+
+        {
+            let mut expected = HashMap::new();
+
+            expected.extend([
+                (Instructions::SLUG_STR, 13.0),
+                (L1Hits::SLUG_STR, 14.0),
+                (L2Hits::SLUG_STR, 15.0),
+                (RamHits::SLUG_STR, 16.0),
+                (TotalReadWrite::SLUG_STR, 17.0),
+                (EstimatedCycles::SLUG_STR, 18.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "rust_iai_callgrind::bench::multiple_lines id:last with one line",
             );
         }
     }
