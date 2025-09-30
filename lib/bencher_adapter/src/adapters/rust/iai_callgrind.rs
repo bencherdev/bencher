@@ -629,6 +629,15 @@ pub(crate) mod test_rust_iai_callgrind {
     }
 
     #[test]
+    fn test_with_gungraun_summary() {
+        let results = convert_file_path::<AdapterRustIaiCallgrind>(
+            "./tool_output/rust/iai_callgrind/with-gungraun-summary.txt",
+        );
+
+        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+    }
+
+    #[test]
     fn test_ansi_escapes_issue_345() {
         let results = convert_file_path::<AdapterRustIaiCallgrind>(
             "./tool_output/rust/iai_callgrind/ansi-escapes.txt",
