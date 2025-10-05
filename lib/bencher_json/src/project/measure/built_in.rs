@@ -94,7 +94,7 @@ pub mod iai {
     );
 }
 
-pub mod iai_callgrind {
+pub mod gungraun {
     use bencher_valid::BYTES;
 
     create_measure!(Unknown, "Unknown", "unknown-metric", "unknown");
@@ -117,6 +117,7 @@ pub mod iai_callgrind {
         "estimated-cycles",
         "cycles"
     );
+
     create_measure!(GlobalBusEvents, "Ge", "global-bus-events", "events");
 
     create_measure!(Dr, "Dr", "dr", "reads");

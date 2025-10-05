@@ -214,8 +214,11 @@ pub enum CliReportAdapter {
     RustCriterion,
     /// 🦀 Rust Iai
     RustIai,
-    /// 🦀 Rust Iai-Callgrind
-    RustIaiCallgrind,
+    /// 🦀 Rust Gungraun
+    // Iai-Callgrind was renamed to Gungraun
+    // https://github.com/bencherdev/bencher/issues/619
+    #[clap(alias = "rust_iai_callgrind")]
+    RustGungraun,
     // TODO remove in due time
     #[clap(hide = true)]
     Shell,

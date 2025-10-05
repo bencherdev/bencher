@@ -1,0 +1,15 @@
+import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+
+## 🦀 Rust Gungraun
+
+The Rust Gungraun Adapter (`rust_gungraun`) expects [Gungraun](https://github.com/gungraun/gungraun) output.
+The `instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write`, and `estimated-cycles` Measures are gathered by default.
+Additional Callgrind, Cachegrind, and DHAT metrics that Gungraun can produce are also supported.
+Only the reported value (ie `value`) is available is available for these Measures.
+Neither `lower_value` nor `upper_value` are collected.
+The Measures for this adapter are not created by default for all projects.
+However, when you use this adapter, these Measures will be automatically created for your Project.
+
+Gungraun is the renamed successor to Iai-Callgrind.
+
+<CargoRustGungraun />

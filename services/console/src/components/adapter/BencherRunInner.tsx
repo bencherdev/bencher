@@ -1,7 +1,7 @@
-import { adapter } from "./util";
-import { createResource, Match, Show, Switch } from "solid-js";
+import { Match, Show, Switch, createResource } from "solid-js";
 import { Adapter } from "../../types/bencher";
 import { useBash } from "../os/operating_system";
+import { adapter } from "./util";
 
 const BencherRunInner = (props) => {
 	const [bash] = createResource(useBash);
@@ -29,9 +29,9 @@ const BencherRunInner = (props) => {
 					{props.rust_iai_bash}
 				</Show>
 			</Match>
-			<Match when={adapter() === Adapter.RustIaiCallgrind}>
-				<Show when={bash()} fallback={props.rust_iai_callgrind_powershell}>
-					{props.rust_iai_callgrind_bash}
+			<Match when={adapter() === Adapter.RustGungraun}>
+				<Show when={bash()} fallback={props.rust_gungraun_powershell}>
+					{props.rust_gungraun_bash}
 				</Show>
 			</Match>
 			<Match when={adapter() === Adapter.CppGoogle}>

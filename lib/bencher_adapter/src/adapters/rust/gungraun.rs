@@ -3,7 +3,7 @@ use std::ops::Neg as _;
 use bencher_json::{
     BenchmarkName, JsonNewMetric,
     project::{
-        measure::built_in::{BuiltInMeasure as _, iai_callgrind},
+        measure::built_in::{BuiltInMeasure as _, gungraun},
         report::JsonAverage,
     },
 };
@@ -20,17 +20,17 @@ use nom::{
 use crate::{
     Adaptable, Settings,
     adapters::util::parse_f64,
-    results::adapter_results::{AdapterResults, IaiCallgrindMeasure},
+    results::adapter_results::{AdapterResults, GungraunMeasure},
 };
 
-pub struct AdapterRustIaiCallgrind;
+pub struct AdapterRustGungraun;
 
-impl Adaptable for AdapterRustIaiCallgrind {
+impl Adaptable for AdapterRustGungraun {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             None => {},
             Some(JsonAverage::Mean | JsonAverage::Median) => {
-                return None; // 'iai_callgrind' results are for a single run only.
+                return None; // 'gungraun' results are for a single run only.
             },
         }
 
@@ -48,12 +48,12 @@ impl Adaptable for AdapterRustIaiCallgrind {
             },
         };
 
-        AdapterResults::new_iai_callgrind(benchmarks)
+        AdapterResults::new_gungraun(benchmarks)
     }
 }
 
 fn multiple_benchmarks<'a>()
--> impl FnMut(&'a str) -> IResult<&'a str, Vec<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
+-> impl FnMut(&'a str) -> IResult<&'a str, Vec<(BenchmarkName, Vec<GungraunMeasure>)>> {
     map(
         many0(alt((
             // Try to parse a single benchmark:
@@ -69,7 +69,7 @@ fn multiple_benchmarks<'a>()
 }
 
 fn single_benchmark<'a>()
--> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<IaiCallgrindMeasure>)>> {
+-> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<GungraunMeasure>)>> {
     map(
         tuple((
             terminated(
@@ -108,276 +108,179 @@ fn single_benchmark<'a>()
     )
 }
 
-#[expect(clippy::too_many_lines)]
-fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
-{
+fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
     map(
         preceded(opt(tool_name_line("CALLGRIND")), many1(metric_line())),
         |metrics| {
             metrics
                 .into_iter()
                 .map(|(metric_name, json)| match metric_name.as_str() {
-                    iai_callgrind::Instructions::NAME_STR => {
-                        IaiCallgrindMeasure::Instructions(json)
+                    gungraun::Instructions::NAME_STR => GungraunMeasure::Instructions(json),
+                    gungraun::L1Hits::NAME_STR => GungraunMeasure::L1Hits(json),
+                    gungraun::L2Hits::NAME_STR => GungraunMeasure::L2Hits(json),
+                    gungraun::LLHits::NAME_STR => GungraunMeasure::LLHits(json),
+                    gungraun::RamHits::NAME_STR => GungraunMeasure::RamHits(json),
+                    gungraun::TotalReadWrite::NAME_STR => GungraunMeasure::TotalReadWrite(json),
+                    gungraun::EstimatedCycles::NAME_STR => GungraunMeasure::EstimatedCycles(json),
+                    gungraun::Dr::NAME_STR => GungraunMeasure::DataCacheReads(json),
+                    gungraun::Dw::NAME_STR => GungraunMeasure::DataCacheWrites(json),
+                    gungraun::I1mr::NAME_STR => GungraunMeasure::L1InstrCacheReadMisses(json),
+                    gungraun::D1mr::NAME_STR => GungraunMeasure::L1DataCacheReadMisses(json),
+                    gungraun::D1mw::NAME_STR => GungraunMeasure::L1DataCacheWriteMisses(json),
+                    gungraun::ILmr::NAME_STR => GungraunMeasure::LLInstrCacheReadMisses(json),
+                    gungraun::DLmr::NAME_STR => GungraunMeasure::LLDataCacheReadMisses(json),
+                    gungraun::DLmw::NAME_STR => GungraunMeasure::LLDataCacheWriteMisses(json),
+                    gungraun::I1MissRate::NAME_STR => GungraunMeasure::L1InstrCacheMissRate(json),
+                    gungraun::LLiMissRate::NAME_STR => GungraunMeasure::LLInstrCacheMissRate(json),
+                    gungraun::D1MissRate::NAME_STR => GungraunMeasure::L1DataCacheMissRate(json),
+                    gungraun::LLdMissRate::NAME_STR => GungraunMeasure::LLDataCacheMissRate(json),
+                    gungraun::LLMissRate::NAME_STR => GungraunMeasure::LLCacheMissRate(json),
+                    gungraun::L1HitRate::NAME_STR => GungraunMeasure::L1HitRate(json),
+                    gungraun::LLHitRate::NAME_STR => GungraunMeasure::LLHitRate(json),
+                    gungraun::RamHitRate::NAME_STR => GungraunMeasure::RamHitRate(json),
+                    gungraun::SysCount::NAME_STR => GungraunMeasure::NumberSystemCalls(json),
+                    gungraun::SysTime::NAME_STR => GungraunMeasure::TimeSystemCalls(json),
+                    gungraun::SysCpuTime::NAME_STR => GungraunMeasure::CpuTimeSystemCalls(json),
+                    gungraun::GlobalBusEvents::NAME_STR => GungraunMeasure::GlobalBusEvents(json),
+                    gungraun::Bc::NAME_STR => GungraunMeasure::ExecutedConditionalBranches(json),
+                    gungraun::Bcm::NAME_STR => {
+                        GungraunMeasure::MispredictedConditionalBranches(json)
                     },
-                    iai_callgrind::L1Hits::NAME_STR => IaiCallgrindMeasure::L1Hits(json),
-                    iai_callgrind::L2Hits::NAME_STR => IaiCallgrindMeasure::L2Hits(json),
-                    iai_callgrind::LLHits::NAME_STR => IaiCallgrindMeasure::LLHits(json),
-                    iai_callgrind::RamHits::NAME_STR => IaiCallgrindMeasure::RamHits(json),
-                    iai_callgrind::TotalReadWrite::NAME_STR => {
-                        IaiCallgrindMeasure::TotalReadWrite(json)
-                    },
-                    iai_callgrind::EstimatedCycles::NAME_STR => {
-                        IaiCallgrindMeasure::EstimatedCycles(json)
-                    },
-                    iai_callgrind::Dr::NAME_STR => IaiCallgrindMeasure::DataCacheReads(json),
-                    iai_callgrind::Dw::NAME_STR => IaiCallgrindMeasure::DataCacheWrites(json),
-                    iai_callgrind::I1mr::NAME_STR => {
-                        IaiCallgrindMeasure::L1InstrCacheReadMisses(json)
-                    },
-                    iai_callgrind::D1mr::NAME_STR => {
-                        IaiCallgrindMeasure::L1DataCacheReadMisses(json)
-                    },
-                    iai_callgrind::D1mw::NAME_STR => {
-                        IaiCallgrindMeasure::L1DataCacheWriteMisses(json)
-                    },
-                    iai_callgrind::ILmr::NAME_STR => {
-                        IaiCallgrindMeasure::LLInstrCacheReadMisses(json)
-                    },
-                    iai_callgrind::DLmr::NAME_STR => {
-                        IaiCallgrindMeasure::LLDataCacheReadMisses(json)
-                    },
-                    iai_callgrind::DLmw::NAME_STR => {
-                        IaiCallgrindMeasure::LLDataCacheWriteMisses(json)
-                    },
-                    iai_callgrind::I1MissRate::NAME_STR => {
-                        IaiCallgrindMeasure::L1InstrCacheMissRate(json)
-                    },
-                    iai_callgrind::LLiMissRate::NAME_STR => {
-                        IaiCallgrindMeasure::LLInstrCacheMissRate(json)
-                    },
-                    iai_callgrind::D1MissRate::NAME_STR => {
-                        IaiCallgrindMeasure::L1DataCacheMissRate(json)
-                    },
-                    iai_callgrind::LLdMissRate::NAME_STR => {
-                        IaiCallgrindMeasure::LLDataCacheMissRate(json)
-                    },
-                    iai_callgrind::LLMissRate::NAME_STR => {
-                        IaiCallgrindMeasure::LLCacheMissRate(json)
-                    },
-                    iai_callgrind::L1HitRate::NAME_STR => IaiCallgrindMeasure::L1HitRate(json),
-                    iai_callgrind::LLHitRate::NAME_STR => IaiCallgrindMeasure::LLHitRate(json),
-                    iai_callgrind::RamHitRate::NAME_STR => IaiCallgrindMeasure::RamHitRate(json),
-                    iai_callgrind::SysCount::NAME_STR => {
-                        IaiCallgrindMeasure::NumberSystemCalls(json)
-                    },
-                    iai_callgrind::SysTime::NAME_STR => IaiCallgrindMeasure::TimeSystemCalls(json),
-                    iai_callgrind::SysCpuTime::NAME_STR => {
-                        IaiCallgrindMeasure::CpuTimeSystemCalls(json)
-                    },
-                    iai_callgrind::GlobalBusEvents::NAME_STR => {
-                        IaiCallgrindMeasure::GlobalBusEvents(json)
-                    },
-                    iai_callgrind::Bc::NAME_STR => {
-                        IaiCallgrindMeasure::ExecutedConditionalBranches(json)
-                    },
-                    iai_callgrind::Bcm::NAME_STR => {
-                        IaiCallgrindMeasure::MispredictedConditionalBranches(json)
-                    },
-                    iai_callgrind::Bi::NAME_STR => {
-                        IaiCallgrindMeasure::ExecutedIndirectBranches(json)
-                    },
-                    iai_callgrind::Bim::NAME_STR => {
-                        IaiCallgrindMeasure::MispredictedIndirectBranches(json)
-                    },
-                    iai_callgrind::ILdmr::NAME_STR => {
-                        IaiCallgrindMeasure::DirtyMissInstructionRead(json)
-                    },
-                    iai_callgrind::DLdmr::NAME_STR => IaiCallgrindMeasure::DirtyMissDataRead(json),
-                    iai_callgrind::DLdmw::NAME_STR => IaiCallgrindMeasure::DirtyMissDataWrite(json),
-                    iai_callgrind::AcCost1::NAME_STR => {
-                        IaiCallgrindMeasure::L1BadTemporalLocality(json)
-                    },
-                    iai_callgrind::AcCost2::NAME_STR => {
-                        IaiCallgrindMeasure::LLBadTemporalLocality(json)
-                    },
-                    iai_callgrind::SpLoss1::NAME_STR => {
-                        IaiCallgrindMeasure::L1BadSpatialLocality(json)
-                    },
-                    iai_callgrind::SpLoss2::NAME_STR => {
-                        IaiCallgrindMeasure::LLBadSpatialLocality(json)
-                    },
-                    _ => IaiCallgrindMeasure::Unknown,
+                    gungraun::Bi::NAME_STR => GungraunMeasure::ExecutedIndirectBranches(json),
+                    gungraun::Bim::NAME_STR => GungraunMeasure::MispredictedIndirectBranches(json),
+                    gungraun::ILdmr::NAME_STR => GungraunMeasure::DirtyMissInstructionRead(json),
+                    gungraun::DLdmr::NAME_STR => GungraunMeasure::DirtyMissDataRead(json),
+                    gungraun::DLdmw::NAME_STR => GungraunMeasure::DirtyMissDataWrite(json),
+                    gungraun::AcCost1::NAME_STR => GungraunMeasure::L1BadTemporalLocality(json),
+                    gungraun::AcCost2::NAME_STR => GungraunMeasure::LLBadTemporalLocality(json),
+                    gungraun::SpLoss1::NAME_STR => GungraunMeasure::L1BadSpatialLocality(json),
+                    gungraun::SpLoss2::NAME_STR => GungraunMeasure::LLBadSpatialLocality(json),
+                    _ => GungraunMeasure::Unknown,
                 })
                 .collect()
         },
     )
 }
 
-fn cachegrind_tool_measures<'a>()
--> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
+fn cachegrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
     map(
         preceded(tool_name_line("CACHEGRIND"), many1(metric_line())),
         |metrics| {
             metrics
                 .into_iter()
                 .map(|(metric_name, json)| match metric_name.as_str() {
-                    iai_callgrind::Instructions::NAME_STR => {
-                        IaiCallgrindMeasure::Instructions(json)
-                    },
-                    iai_callgrind::L1Hits::NAME_STR => IaiCallgrindMeasure::L1Hits(json),
-                    iai_callgrind::L2Hits::NAME_STR => IaiCallgrindMeasure::L2Hits(json),
-                    iai_callgrind::LLHits::NAME_STR => IaiCallgrindMeasure::LLHits(json),
-                    iai_callgrind::RamHits::NAME_STR => IaiCallgrindMeasure::RamHits(json),
-                    iai_callgrind::TotalReadWrite::NAME_STR => {
-                        IaiCallgrindMeasure::TotalReadWrite(json)
-                    },
-                    iai_callgrind::EstimatedCycles::NAME_STR => {
-                        IaiCallgrindMeasure::EstimatedCycles(json)
-                    },
-                    iai_callgrind::Dr::NAME_STR => IaiCallgrindMeasure::DataCacheReads(json),
-                    iai_callgrind::Dw::NAME_STR => IaiCallgrindMeasure::DataCacheWrites(json),
-                    iai_callgrind::I1mr::NAME_STR => {
-                        IaiCallgrindMeasure::L1InstrCacheReadMisses(json)
-                    },
-                    iai_callgrind::D1mr::NAME_STR => {
-                        IaiCallgrindMeasure::L1DataCacheReadMisses(json)
-                    },
-                    iai_callgrind::D1mw::NAME_STR => {
-                        IaiCallgrindMeasure::L1DataCacheWriteMisses(json)
-                    },
-                    iai_callgrind::ILmr::NAME_STR => {
-                        IaiCallgrindMeasure::LLInstrCacheReadMisses(json)
-                    },
-                    iai_callgrind::DLmr::NAME_STR => {
-                        IaiCallgrindMeasure::LLDataCacheReadMisses(json)
-                    },
-                    iai_callgrind::DLmw::NAME_STR => {
-                        IaiCallgrindMeasure::LLDataCacheWriteMisses(json)
-                    },
-                    iai_callgrind::I1MissRate::NAME_STR => {
-                        IaiCallgrindMeasure::L1InstrCacheMissRate(json)
-                    },
-                    iai_callgrind::LLiMissRate::NAME_STR => {
-                        IaiCallgrindMeasure::LLInstrCacheMissRate(json)
-                    },
-                    iai_callgrind::D1MissRate::NAME_STR => {
-                        IaiCallgrindMeasure::L1DataCacheMissRate(json)
-                    },
-                    iai_callgrind::LLdMissRate::NAME_STR => {
-                        IaiCallgrindMeasure::LLDataCacheMissRate(json)
-                    },
-                    iai_callgrind::LLMissRate::NAME_STR => {
-                        IaiCallgrindMeasure::LLCacheMissRate(json)
-                    },
-                    iai_callgrind::L1HitRate::NAME_STR => IaiCallgrindMeasure::L1HitRate(json),
-                    iai_callgrind::LLHitRate::NAME_STR => IaiCallgrindMeasure::LLHitRate(json),
-                    iai_callgrind::RamHitRate::NAME_STR => IaiCallgrindMeasure::RamHitRate(json),
-                    _ => IaiCallgrindMeasure::Unknown,
+                    gungraun::Instructions::NAME_STR => GungraunMeasure::Instructions(json),
+                    gungraun::L1Hits::NAME_STR => GungraunMeasure::L1Hits(json),
+                    gungraun::L2Hits::NAME_STR => GungraunMeasure::L2Hits(json),
+                    gungraun::LLHits::NAME_STR => GungraunMeasure::LLHits(json),
+                    gungraun::RamHits::NAME_STR => GungraunMeasure::RamHits(json),
+                    gungraun::TotalReadWrite::NAME_STR => GungraunMeasure::TotalReadWrite(json),
+                    gungraun::EstimatedCycles::NAME_STR => GungraunMeasure::EstimatedCycles(json),
+                    gungraun::Dr::NAME_STR => GungraunMeasure::DataCacheReads(json),
+                    gungraun::Dw::NAME_STR => GungraunMeasure::DataCacheWrites(json),
+                    gungraun::I1mr::NAME_STR => GungraunMeasure::L1InstrCacheReadMisses(json),
+                    gungraun::D1mr::NAME_STR => GungraunMeasure::L1DataCacheReadMisses(json),
+                    gungraun::D1mw::NAME_STR => GungraunMeasure::L1DataCacheWriteMisses(json),
+                    gungraun::ILmr::NAME_STR => GungraunMeasure::LLInstrCacheReadMisses(json),
+                    gungraun::DLmr::NAME_STR => GungraunMeasure::LLDataCacheReadMisses(json),
+                    gungraun::DLmw::NAME_STR => GungraunMeasure::LLDataCacheWriteMisses(json),
+                    gungraun::I1MissRate::NAME_STR => GungraunMeasure::L1InstrCacheMissRate(json),
+                    gungraun::LLiMissRate::NAME_STR => GungraunMeasure::LLInstrCacheMissRate(json),
+                    gungraun::D1MissRate::NAME_STR => GungraunMeasure::L1DataCacheMissRate(json),
+                    gungraun::LLdMissRate::NAME_STR => GungraunMeasure::LLDataCacheMissRate(json),
+                    gungraun::LLMissRate::NAME_STR => GungraunMeasure::LLCacheMissRate(json),
+                    gungraun::L1HitRate::NAME_STR => GungraunMeasure::L1HitRate(json),
+                    gungraun::LLHitRate::NAME_STR => GungraunMeasure::LLHitRate(json),
+                    gungraun::RamHitRate::NAME_STR => GungraunMeasure::RamHitRate(json),
+                    _ => GungraunMeasure::Unknown,
                 })
                 .collect()
         },
     )
 }
 
-fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
+fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
     map(
         preceded(tool_name_line("DHAT"), many1(metric_line())),
         |metrics| {
             metrics
                 .into_iter()
                 .map(|(metric_name, json)| match metric_name.as_str() {
-                    iai_callgrind::TotalBytes::NAME_STR => IaiCallgrindMeasure::TotalBytes(json),
-                    iai_callgrind::TotalBlocks::NAME_STR => IaiCallgrindMeasure::TotalBlocks(json),
-                    iai_callgrind::AtTGmaxBytes::NAME_STR => {
-                        IaiCallgrindMeasure::AtTGmaxBytes(json)
-                    },
-                    iai_callgrind::AtTGmaxBlocks::NAME_STR => {
-                        IaiCallgrindMeasure::AtTGmaxBlocks(json)
-                    },
-                    iai_callgrind::AtTEndBytes::NAME_STR => IaiCallgrindMeasure::AtTEndBytes(json),
-                    iai_callgrind::AtTEndBlocks::NAME_STR => {
-                        IaiCallgrindMeasure::AtTEndBlocks(json)
-                    },
-                    iai_callgrind::ReadsBytes::NAME_STR => IaiCallgrindMeasure::ReadsBytes(json),
-                    iai_callgrind::WritesBytes::NAME_STR => IaiCallgrindMeasure::WritesBytes(json),
-                    _ => IaiCallgrindMeasure::Unknown,
+                    gungraun::TotalBytes::NAME_STR => GungraunMeasure::TotalBytes(json),
+                    gungraun::TotalBlocks::NAME_STR => GungraunMeasure::TotalBlocks(json),
+                    gungraun::AtTGmaxBytes::NAME_STR => GungraunMeasure::AtTGmaxBytes(json),
+                    gungraun::AtTGmaxBlocks::NAME_STR => GungraunMeasure::AtTGmaxBlocks(json),
+                    gungraun::AtTEndBytes::NAME_STR => GungraunMeasure::AtTEndBytes(json),
+                    gungraun::AtTEndBlocks::NAME_STR => GungraunMeasure::AtTEndBlocks(json),
+                    gungraun::ReadsBytes::NAME_STR => GungraunMeasure::ReadsBytes(json),
+                    gungraun::WritesBytes::NAME_STR => GungraunMeasure::WritesBytes(json),
+                    _ => GungraunMeasure::Unknown,
                 })
                 .collect()
         },
     )
 }
 
-fn memcheck_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
-{
+fn memcheck_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
     map(
         preceded(tool_name_line("MEMCHECK"), many1(metric_line())),
         |metrics| {
             metrics
                 .into_iter()
                 .map(|(metric_name, json)| match metric_name.as_str() {
-                    iai_callgrind::MemcheckErrors::NAME_STR => {
-                        IaiCallgrindMeasure::MemcheckErrors(json)
+                    gungraun::MemcheckErrors::NAME_STR => GungraunMeasure::MemcheckErrors(json),
+                    gungraun::MemcheckContexts::NAME_STR => GungraunMeasure::MemcheckContexts(json),
+                    gungraun::MemcheckSuppressedErrors::NAME_STR => {
+                        GungraunMeasure::MemcheckSuppressedErrors(json)
                     },
-                    iai_callgrind::MemcheckContexts::NAME_STR => {
-                        IaiCallgrindMeasure::MemcheckContexts(json)
+                    gungraun::MemcheckSuppressedContexts::NAME_STR => {
+                        GungraunMeasure::MemcheckSuppressedContexts(json)
                     },
-                    iai_callgrind::MemcheckSuppressedErrors::NAME_STR => {
-                        IaiCallgrindMeasure::MemcheckSuppressedErrors(json)
-                    },
-                    iai_callgrind::MemcheckSuppressedContexts::NAME_STR => {
-                        IaiCallgrindMeasure::MemcheckSuppressedContexts(json)
-                    },
-                    _ => IaiCallgrindMeasure::Unknown,
+                    _ => GungraunMeasure::Unknown,
                 })
                 .collect()
         },
     )
 }
 
-fn helgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>>
-{
+fn helgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
     map(
         preceded(tool_name_line("HELGRIND"), many1(metric_line())),
         |metrics| {
             metrics
                 .into_iter()
                 .map(|(metric_name, json)| match metric_name.as_str() {
-                    iai_callgrind::HelgrindErrors::NAME_STR => {
-                        IaiCallgrindMeasure::HelgrindErrors(json)
+                    gungraun::HelgrindErrors::NAME_STR => GungraunMeasure::HelgrindErrors(json),
+                    gungraun::HelgrindContexts::NAME_STR => GungraunMeasure::HelgrindContexts(json),
+                    gungraun::HelgrindSuppressedErrors::NAME_STR => {
+                        GungraunMeasure::HelgrindSuppressedErrors(json)
                     },
-                    iai_callgrind::HelgrindContexts::NAME_STR => {
-                        IaiCallgrindMeasure::HelgrindContexts(json)
+                    gungraun::HelgrindSuppressedContexts::NAME_STR => {
+                        GungraunMeasure::HelgrindSuppressedContexts(json)
                     },
-                    iai_callgrind::HelgrindSuppressedErrors::NAME_STR => {
-                        IaiCallgrindMeasure::HelgrindSuppressedErrors(json)
-                    },
-                    iai_callgrind::HelgrindSuppressedContexts::NAME_STR => {
-                        IaiCallgrindMeasure::HelgrindSuppressedContexts(json)
-                    },
-                    _ => IaiCallgrindMeasure::Unknown,
+                    _ => GungraunMeasure::Unknown,
                 })
                 .collect()
         },
     )
 }
 
-fn drd_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<IaiCallgrindMeasure>> {
+fn drd_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
     map(
         preceded(tool_name_line("DRD"), many1(metric_line())),
         |metrics| {
             metrics
                 .into_iter()
                 .map(|(metric_name, json)| match metric_name.as_str() {
-                    iai_callgrind::DrdErrors::NAME_STR => IaiCallgrindMeasure::DrdErrors(json),
-                    iai_callgrind::DrdContexts::NAME_STR => IaiCallgrindMeasure::DrdContexts(json),
-                    iai_callgrind::DrdSuppressedErrors::NAME_STR => {
-                        IaiCallgrindMeasure::DrdSuppressedErrors(json)
+                    gungraun::DrdErrors::NAME_STR => GungraunMeasure::DrdErrors(json),
+                    gungraun::DrdContexts::NAME_STR => GungraunMeasure::DrdContexts(json),
+                    gungraun::DrdSuppressedErrors::NAME_STR => {
+                        GungraunMeasure::DrdSuppressedErrors(json)
                     },
-                    iai_callgrind::DrdSuppressedContexts::NAME_STR => {
-                        IaiCallgrindMeasure::DrdSuppressedContexts(json)
+                    gungraun::DrdSuppressedContexts::NAME_STR => {
+                        GungraunMeasure::DrdSuppressedContexts(json)
                     },
-                    _ => IaiCallgrindMeasure::Unknown,
+                    _ => GungraunMeasure::Unknown,
                 })
                 .collect()
         },
@@ -504,31 +407,30 @@ fn not_benchmark_name_end<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a s
 }
 
 #[cfg(test)]
-pub(crate) mod test_rust_iai_callgrind {
+pub(crate) mod test_rust_gungraun {
     use crate::{AdapterResults, adapters::test_util::convert_file_path};
-    use bencher_json::project::measure::built_in::{BuiltInMeasure as _, iai_callgrind};
+    use bencher_json::project::measure::built_in::{BuiltInMeasure as _, gungraun};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
-    use super::AdapterRustIaiCallgrind;
+    use super::AdapterRustGungraun;
     use std::collections::HashMap;
 
     #[test]
     fn test_without_optional_metrics() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/without-optional-metrics.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/without-optional-metrics.txt",
         );
 
-        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+        validate_adapter_rust_gungraun(&results, &OptionalMetrics::default());
     }
 
     #[test]
     fn test_with_dhat() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/with-dhat.txt",
-        );
+        let results =
+            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/with-dhat.txt");
 
-        validate_adapter_rust_iai_callgrind(
+        validate_adapter_rust_gungraun(
             &results,
             &OptionalMetrics {
                 dhat: true,
@@ -539,11 +441,11 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_with_dhat_first_then_callgrind() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/dhat-then-callgrind.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/dhat-then-callgrind.txt",
         );
 
-        validate_adapter_rust_iai_callgrind(
+        validate_adapter_rust_gungraun(
             &results,
             &OptionalMetrics {
                 dhat: true,
@@ -554,11 +456,11 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_with_dhat_and_global_bus_events() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/with-dhat-and-global-bus-events.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/with-dhat-and-global-bus-events.txt",
         );
 
-        validate_adapter_rust_iai_callgrind(
+        validate_adapter_rust_gungraun(
             &results,
             &OptionalMetrics {
                 dhat: true,
@@ -569,29 +471,28 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_delta() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/delta.txt",
-        );
+        let results =
+            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/delta.txt");
 
-        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+        validate_adapter_rust_gungraun(&results, &OptionalMetrics::default());
     }
 
     #[test]
     fn test_delta_with_infinity() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/delta_with_inf.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/delta_with_inf.txt",
         );
 
         assert_eq!(results.inner.len(), 2);
 
         {
             let expected = HashMap::from([
-                (iai_callgrind::Instructions::SLUG_STR, 1_734.0),
-                (iai_callgrind::L1Hits::SLUG_STR, 2_359.0),
-                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
-                (iai_callgrind::RamHits::SLUG_STR, 3.0),
-                (iai_callgrind::TotalReadWrite::SLUG_STR, 0.0),
-                (iai_callgrind::EstimatedCycles::SLUG_STR, 2_464.0),
+                (gungraun::Instructions::SLUG_STR, 1_734.0),
+                (gungraun::L1Hits::SLUG_STR, 2_359.0),
+                (gungraun::L2Hits::SLUG_STR, 0.0),
+                (gungraun::RamHits::SLUG_STR, 3.0),
+                (gungraun::TotalReadWrite::SLUG_STR, 0.0),
+                (gungraun::EstimatedCycles::SLUG_STR, 2_464.0),
             ]);
 
             compare_benchmark(
@@ -603,12 +504,12 @@ pub(crate) mod test_rust_iai_callgrind {
 
         {
             let expected = HashMap::from([
-                (iai_callgrind::Instructions::SLUG_STR, 26_214_734.0),
-                (iai_callgrind::L1Hits::SLUG_STR, 35_638_619.0),
-                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
-                (iai_callgrind::RamHits::SLUG_STR, 3.0),
-                (iai_callgrind::TotalReadWrite::SLUG_STR, 35_638_622.0),
-                (iai_callgrind::EstimatedCycles::SLUG_STR, 35_638_724.0),
+                (gungraun::Instructions::SLUG_STR, 26_214_734.0),
+                (gungraun::L1Hits::SLUG_STR, 35_638_619.0),
+                (gungraun::L2Hits::SLUG_STR, 0.0),
+                (gungraun::RamHits::SLUG_STR, 3.0),
+                (gungraun::TotalReadWrite::SLUG_STR, 35_638_622.0),
+                (gungraun::EstimatedCycles::SLUG_STR, 35_638_724.0),
             ]);
 
             compare_benchmark(
@@ -621,38 +522,37 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_with_summary_and_regressions() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/with-summary-and-regressions.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/with-summary-and-regressions.txt",
         );
 
-        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+        validate_adapter_rust_gungraun(&results, &OptionalMetrics::default());
     }
 
     #[test]
     fn test_with_gungraun_summary() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/with-gungraun-summary.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/with-gungraun-summary.txt",
         );
 
-        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+        validate_adapter_rust_gungraun(&results, &OptionalMetrics::default());
     }
 
     #[test]
     fn test_ansi_escapes_issue_345() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/ansi-escapes.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/ansi-escapes.txt",
         );
 
-        validate_adapter_rust_iai_callgrind(&results, &OptionalMetrics::default());
+        validate_adapter_rust_gungraun(&results, &OptionalMetrics::default());
     }
 
     #[test]
     fn test_with_ge() {
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/with-ge.txt",
-        );
+        let results =
+            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/with-ge.txt");
 
-        validate_adapter_rust_iai_callgrind(
+        validate_adapter_rust_gungraun(
             &results,
             &OptionalMetrics {
                 global_bus_events: true,
@@ -663,10 +563,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_without_cachesim() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/without-cachesim.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/without-cachesim.txt",
         );
 
         assert_eq!(results.inner.len(), 2);
@@ -694,10 +594,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_callgrind_mixed_order() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/callgrind-mixed-order.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/callgrind-mixed-order.txt",
         );
 
         assert_eq!(results.inner.len(), 2);
@@ -723,10 +623,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_callgrind_ll_hits() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/callgrind-ll-hits.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/callgrind-ll-hits.txt",
         );
 
         assert_eq!(results.inner.len(), 2);
@@ -754,10 +654,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_callgrind_all() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/callgrind-all.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/callgrind-all.txt",
         );
 
         assert_eq!(results.inner.len(), 2);
@@ -854,11 +754,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_cachegrind() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/cachegrind.txt",
-        );
+        let results =
+            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/cachegrind.txt");
 
         assert_eq!(results.inner.len(), 3);
 
@@ -923,11 +822,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_memcheck() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/memcheck.txt",
-        );
+        let results =
+            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/memcheck.txt");
 
         assert_eq!(results.inner.len(), 3);
 
@@ -974,11 +872,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_helgrind() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/helgrind.txt",
-        );
+        let results =
+            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/helgrind.txt");
 
         assert_eq!(results.inner.len(), 3);
 
@@ -1025,11 +922,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_drd() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/drd.txt",
-        );
+        let results =
+            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/drd.txt");
 
         assert_eq!(results.inner.len(), 3);
 
@@ -1076,10 +972,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_name_multiple_lines() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/name_on_multiple_lines.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/name_on_multiple_lines.txt",
         );
 
         assert_eq!(results.inner.len(), 2);
@@ -1125,10 +1021,10 @@ pub(crate) mod test_rust_iai_callgrind {
 
     #[test]
     fn test_name_multiple_lines_mixed() {
-        use iai_callgrind::*;
+        use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustIaiCallgrind>(
-            "./tool_output/rust/iai_callgrind/name_on_multiple_lines_mixed.txt",
+        let results = convert_file_path::<AdapterRustGungraun>(
+            "./tool_output/rust/gungraun/name_on_multiple_lines_mixed.txt",
         );
 
         assert_eq!(results.inner.len(), 3);
@@ -1197,7 +1093,7 @@ pub(crate) mod test_rust_iai_callgrind {
         pub dhat: bool,
     }
 
-    pub fn validate_adapter_rust_iai_callgrind(
+    pub fn validate_adapter_rust_gungraun(
         results: &AdapterResults,
         optional_metrics: &OptionalMetrics,
     ) {
@@ -1207,28 +1103,28 @@ pub(crate) mod test_rust_iai_callgrind {
             let mut expected = HashMap::new();
 
             expected.extend([
-                (iai_callgrind::Instructions::SLUG_STR, 1_734.0),
-                (iai_callgrind::L1Hits::SLUG_STR, 2_359.0),
-                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
-                (iai_callgrind::RamHits::SLUG_STR, 3.0),
-                (iai_callgrind::TotalReadWrite::SLUG_STR, 2_362.0),
-                (iai_callgrind::EstimatedCycles::SLUG_STR, 2_464.0),
+                (gungraun::Instructions::SLUG_STR, 1_734.0),
+                (gungraun::L1Hits::SLUG_STR, 2_359.0),
+                (gungraun::L2Hits::SLUG_STR, 0.0),
+                (gungraun::RamHits::SLUG_STR, 3.0),
+                (gungraun::TotalReadWrite::SLUG_STR, 2_362.0),
+                (gungraun::EstimatedCycles::SLUG_STR, 2_464.0),
             ]);
 
             if optional_metrics.global_bus_events {
-                expected.insert(iai_callgrind::GlobalBusEvents::SLUG_STR, 2.0);
+                expected.insert(gungraun::GlobalBusEvents::SLUG_STR, 2.0);
             }
 
             if optional_metrics.dhat {
                 expected.extend([
-                    (iai_callgrind::TotalBytes::SLUG_STR, 29_499.0),
-                    (iai_callgrind::TotalBlocks::SLUG_STR, 2_806.0),
-                    (iai_callgrind::AtTGmaxBytes::SLUG_STR, 378.0),
-                    (iai_callgrind::AtTGmaxBlocks::SLUG_STR, 34.0),
-                    (iai_callgrind::AtTEndBytes::SLUG_STR, 0.0),
-                    (iai_callgrind::AtTEndBlocks::SLUG_STR, 0.0),
-                    (iai_callgrind::ReadsBytes::SLUG_STR, 57_725.0),
-                    (iai_callgrind::WritesBytes::SLUG_STR, 73_810.0),
+                    (gungraun::TotalBytes::SLUG_STR, 29_499.0),
+                    (gungraun::TotalBlocks::SLUG_STR, 2_806.0),
+                    (gungraun::AtTGmaxBytes::SLUG_STR, 378.0),
+                    (gungraun::AtTGmaxBlocks::SLUG_STR, 34.0),
+                    (gungraun::AtTEndBytes::SLUG_STR, 0.0),
+                    (gungraun::AtTEndBlocks::SLUG_STR, 0.0),
+                    (gungraun::ReadsBytes::SLUG_STR, 57_725.0),
+                    (gungraun::WritesBytes::SLUG_STR, 73_810.0),
                 ]);
             }
 
@@ -1243,28 +1139,28 @@ pub(crate) mod test_rust_iai_callgrind {
             let mut expected = HashMap::new();
 
             expected.extend([
-                (iai_callgrind::Instructions::SLUG_STR, 26_214_734.0),
-                (iai_callgrind::L1Hits::SLUG_STR, 35_638_619.0),
-                (iai_callgrind::L2Hits::SLUG_STR, 0.0),
-                (iai_callgrind::RamHits::SLUG_STR, 3.0),
-                (iai_callgrind::TotalReadWrite::SLUG_STR, 35_638_622.0),
-                (iai_callgrind::EstimatedCycles::SLUG_STR, 35_638_724.0),
+                (gungraun::Instructions::SLUG_STR, 26_214_734.0),
+                (gungraun::L1Hits::SLUG_STR, 35_638_619.0),
+                (gungraun::L2Hits::SLUG_STR, 0.0),
+                (gungraun::RamHits::SLUG_STR, 3.0),
+                (gungraun::TotalReadWrite::SLUG_STR, 35_638_622.0),
+                (gungraun::EstimatedCycles::SLUG_STR, 35_638_724.0),
             ]);
 
             if optional_metrics.global_bus_events {
-                expected.insert(iai_callgrind::GlobalBusEvents::SLUG_STR, 10.0);
+                expected.insert(gungraun::GlobalBusEvents::SLUG_STR, 10.0);
             }
 
             if optional_metrics.dhat {
                 expected.extend([
-                    (iai_callgrind::TotalBytes::SLUG_STR, 26_294_939.0),
-                    (iai_callgrind::TotalBlocks::SLUG_STR, 2_328_086.0),
-                    (iai_callgrind::AtTGmaxBytes::SLUG_STR, 933_718.0),
-                    (iai_callgrind::AtTGmaxBlocks::SLUG_STR, 18_344.0),
-                    (iai_callgrind::AtTEndBytes::SLUG_STR, 0.0),
-                    (iai_callgrind::AtTEndBlocks::SLUG_STR, 0.0),
-                    (iai_callgrind::ReadsBytes::SLUG_STR, 47_577_425.0),
-                    (iai_callgrind::WritesBytes::SLUG_STR, 37_733_810.0),
+                    (gungraun::TotalBytes::SLUG_STR, 26_294_939.0),
+                    (gungraun::TotalBlocks::SLUG_STR, 2_328_086.0),
+                    (gungraun::AtTGmaxBytes::SLUG_STR, 933_718.0),
+                    (gungraun::AtTGmaxBlocks::SLUG_STR, 18_344.0),
+                    (gungraun::AtTEndBytes::SLUG_STR, 0.0),
+                    (gungraun::AtTEndBlocks::SLUG_STR, 0.0),
+                    (gungraun::ReadsBytes::SLUG_STR, 47_577_425.0),
+                    (gungraun::WritesBytes::SLUG_STR, 37_733_810.0),
                 ]);
             }
 

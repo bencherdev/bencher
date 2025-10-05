@@ -8207,7 +8207,7 @@
           "rust_bench",
           "rust_criterion",
           "rust_iai",
-          "rust_iai_callgrind",
+          "rust_gungraun",
           "cpp",
           "cpp_google",
           "cpp_catch2",

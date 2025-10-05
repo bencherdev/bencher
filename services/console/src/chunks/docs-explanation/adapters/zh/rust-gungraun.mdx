@@ -1,0 +1,14 @@
+import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+
+## 🦀 Rust Gungraun
+
+Rust Gungraun 适配器（`rust_gungraun`）期望接收 [Gungraun](https://github.com/gungraun/gungraun) 的输出。
+`instructions`、`l1-hits`、`l2-hits`、`ram-hits`、`total-read-write` 和 `estimated-cycles` 这些 Measures 默认会被收集。Gungraun 还支持生成的额外 Callgrind、Cachegrind 和 DHAT 指标。
+对于这些 Measures，仅上报的值（即 `value`）可用。
+不会收集 `lower_value` 或 `upper_value`。
+该适配器的 Measures 不会在所有项目中默认创建。
+不过，当你使用此适配器时，这些 Measures 会自动为你的项目创建。
+
+Gungraun 是 Iai-Callgrind 的更名继任者。
+
+<CargoRustGungraun />

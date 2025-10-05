@@ -1,11 +1,9 @@
 pub mod bench;
 pub mod criterion;
+pub mod gungraun;
 pub mod iai;
-pub mod iai_callgrind;
 
-use self::{
-    criterion::AdapterRustCriterion, iai::AdapterRustIai, iai_callgrind::AdapterRustIaiCallgrind,
-};
+use self::{criterion::AdapterRustCriterion, gungraun::AdapterRustGungraun, iai::AdapterRustIai};
 use crate::{Adaptable, AdapterResults, Settings};
 use bench::AdapterRustBench;
 
@@ -16,7 +14,7 @@ impl Adaptable for AdapterRust {
         AdapterRustBench::parse(input, settings)
             .or_else(|| AdapterRustCriterion::parse(input, settings))
             .or_else(|| AdapterRustIai::parse(input, settings))
-            .or_else(|| AdapterRustIaiCallgrind::parse(input, settings))
+            .or_else(|| AdapterRustGungraun::parse(input, settings))
     }
 }
 
@@ -25,8 +23,8 @@ mod test_rust {
     use super::AdapterRust;
     use crate::adapters::{
         rust::{
-            bench::test_rust_bench, criterion::test_rust_criterion, iai::test_rust_iai,
-            iai_callgrind::test_rust_iai_callgrind,
+            bench::test_rust_bench, criterion::test_rust_criterion, gungraun::test_rust_gungraun,
+            iai::test_rust_iai,
         },
         test_util::convert_file_path,
     };
@@ -50,14 +48,14 @@ mod test_rust {
     }
 
     #[test]
-    fn test_adapter_rust_iai_callgrind() {
+    fn test_adapter_rust_gungraun() {
         let results = convert_file_path::<AdapterRust>(
-            "./tool_output/rust/iai_callgrind/without-optional-metrics.txt",
+            "./tool_output/rust/gungraun/without-optional-metrics.txt",
         );
 
-        test_rust_iai_callgrind::validate_adapter_rust_iai_callgrind(
+        test_rust_gungraun::validate_adapter_rust_gungraun(
             &results,
-            &test_rust_iai_callgrind::OptionalMetrics::default(),
+            &test_rust_gungraun::OptionalMetrics::default(),
         );
     }
 }

@@ -1,0 +1,14 @@
+import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+
+## 🦀 Rust Gungraun
+
+Rust Gungraun 어댑터(`rust_gungraun`)는 [Gungraun](https://github.com/gungraun/gungraun) 출력 형식을 기대합니다.
+`instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write`, 및 `estimated-cycles` 측정값은 기본적으로 수집됩니다. Gungraun이 생성할 수 있는 추가 Callgrind, Cachegrind 및 DHAT 메트릭도 지원됩니다.
+이러한 측정값에 대해서는 보고된 값(즉 `value`)만 제공됩니다.
+`lower_value`나 `upper_value`는 수집되지 않습니다.
+이 어댑터의 측정값은 모든 프로젝트에 기본으로 생성되지는 않습니다.
+그러나 이 어댑터를 사용하면 해당 측정값이 프로젝트에 자동으로 생성됩니다.
+
+Gungraun은 Iai-Callgrind의 개명된 후속 프로젝트입니다.
+
+<CargoRustGungraun />

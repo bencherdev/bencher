@@ -86,7 +86,7 @@ const RUST_INT: i32 = 20;
 const RUST_BENCH_INT: i32 = 21;
 const RUST_CRITERION_INT: i32 = 22;
 const RUST_IAI_INT: i32 = 23;
-const RUST_IAI_CALLGRIND_INT: i32 = 24;
+const RUST_GUNGRAUN_INT: i32 = 24;
 const CPP_INT: i32 = 30;
 const CPP_GOOGLE_INT: i32 = 31;
 const CPP_CATCH2_INT: i32 = 32;
@@ -122,7 +122,10 @@ pub enum Adapter {
     RustBench = RUST_BENCH_INT,
     RustCriterion = RUST_CRITERION_INT,
     RustIai = RUST_IAI_INT,
-    RustIaiCallgrind = RUST_IAI_CALLGRIND_INT,
+    // Iai-Callgrind was renamed to Gungraun
+    // https://github.com/bencherdev/bencher/issues/619
+    #[serde(alias = "rust_iai_callgrind")]
+    RustGungraun = RUST_GUNGRAUN_INT,
     Cpp = CPP_INT,
     CppGoogle = CPP_GOOGLE_INT,
     CppCatch2 = CPP_CATCH2_INT,
@@ -153,7 +156,7 @@ impl fmt::Display for Adapter {
             Self::RustBench => write!(f, "rust_bench"),
             Self::RustCriterion => write!(f, "rust_criterion"),
             Self::RustIai => write!(f, "rust_iai"),
-            Self::RustIaiCallgrind => write!(f, "rust_iai_callgrind"),
+            Self::RustGungraun => write!(f, "rust_gungraun"),
             Self::Cpp => write!(f, "cpp"),
             Self::CppGoogle => write!(f, "cpp_google"),
             Self::CppCatch2 => write!(f, "cpp_catch2"),
@@ -183,8 +186,8 @@ mod adapter {
         Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_GOOGLE_INT, CPP_INT,
         GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT, JS_BENCHMARK_INT, JS_INT, JS_TIME_INT,
         JSON_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT,
-        RUBY_INT, RUST_BENCH_INT, RUST_CRITERION_INT, RUST_IAI_CALLGRIND_INT, RUST_IAI_INT,
-        RUST_INT, SHELL_HYPERFINE_INT, SHELL_INT,
+        RUBY_INT, RUST_BENCH_INT, RUST_CRITERION_INT, RUST_GUNGRAUN_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -209,7 +212,7 @@ mod adapter {
                 Self::RustBench => RUST_BENCH_INT.to_sql(out),
                 Self::RustCriterion => RUST_CRITERION_INT.to_sql(out),
                 Self::RustIai => RUST_IAI_INT.to_sql(out),
-                Self::RustIaiCallgrind => RUST_IAI_CALLGRIND_INT.to_sql(out),
+                Self::RustGungraun => RUST_GUNGRAUN_INT.to_sql(out),
                 Self::Cpp => CPP_INT.to_sql(out),
                 Self::CppGoogle => CPP_GOOGLE_INT.to_sql(out),
                 Self::CppCatch2 => CPP_CATCH2_INT.to_sql(out),
@@ -246,7 +249,7 @@ mod adapter {
                 RUST_BENCH_INT => Ok(Self::RustBench),
                 RUST_CRITERION_INT => Ok(Self::RustCriterion),
                 RUST_IAI_INT => Ok(Self::RustIai),
-                RUST_IAI_CALLGRIND_INT => Ok(Self::RustIaiCallgrind),
+                RUST_GUNGRAUN_INT => Ok(Self::RustGungraun),
                 CPP_INT => Ok(Self::Cpp),
                 CPP_GOOGLE_INT => Ok(Self::CppGoogle),
                 CPP_CATCH2_INT => Ok(Self::CppCatch2),

@@ -40,14 +40,14 @@ const { isConsole } = Astro.props;
         code={adapterCommand(isConsole, Adapter.RustIai)}
     />
     <Code
-        slot="rust_iai_callgrind_bash"
+        slot="rust_gungraun_bash"
         lang="bash"
-        code={adapterCommand(isConsole, Adapter.RustIaiCallgrind)}
+        code={adapterCommand(isConsole, Adapter.RustGungraun)}
     />
     <Code
-        slot="rust_iai_callgrind_powershell"
+        slot="rust_gungraun_powershell"
         lang="powershell"
-        code={adapterCommand(isConsole, Adapter.RustIaiCallgrind)}
+        code={adapterCommand(isConsole, Adapter.RustGungraun)}
     />
     <Code
         slot="cpp_google_bash"

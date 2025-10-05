@@ -42,7 +42,7 @@ pub enum IaiMeasure {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum IaiCallgrindMeasure {
+pub enum GungraunMeasure {
     /*
      * Callgrind tool:
      */
@@ -213,8 +213,8 @@ impl AdapterResults {
     }
 
     #[expect(clippy::too_many_lines)]
-    pub fn new_iai_callgrind(
-        benchmark_metrics: Vec<(BenchmarkName, Vec<IaiCallgrindMeasure>)>,
+    pub fn new_gungraun(
+        benchmark_metrics: Vec<(BenchmarkName, Vec<GungraunMeasure>)>,
     ) -> Option<Self> {
         if benchmark_metrics.is_empty() {
             return None;
@@ -228,203 +228,192 @@ impl AdapterResults {
             for metric in metrics {
                 let (resource_id, metric) = match metric {
                     // Callgrind/Cachgrind
-                    IaiCallgrindMeasure::Instructions(json_metric) => (
-                        built_in::iai_callgrind::Instructions::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::L1Hits(json_metric) => {
-                        (built_in::iai_callgrind::L1Hits::name_id(), json_metric)
+                    GungraunMeasure::Instructions(json_metric) => {
+                        (built_in::gungraun::Instructions::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L2Hits(json_metric) => {
-                        (built_in::iai_callgrind::L2Hits::name_id(), json_metric)
+                    GungraunMeasure::L1Hits(json_metric) => {
+                        (built_in::gungraun::L1Hits::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLHits(json_metric) => {
-                        (built_in::iai_callgrind::LLHits::name_id(), json_metric)
+                    GungraunMeasure::L2Hits(json_metric) => {
+                        (built_in::gungraun::L2Hits::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::RamHits(json_metric) => {
-                        (built_in::iai_callgrind::RamHits::name_id(), json_metric)
+                    GungraunMeasure::LLHits(json_metric) => {
+                        (built_in::gungraun::LLHits::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::TotalReadWrite(json_metric) => (
-                        built_in::iai_callgrind::TotalReadWrite::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::EstimatedCycles(json_metric) => (
-                        built_in::iai_callgrind::EstimatedCycles::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::GlobalBusEvents(json_metric) => (
-                        built_in::iai_callgrind::GlobalBusEvents::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::DataCacheReads(json_metric) => {
-                        (built_in::iai_callgrind::Dr::name_id(), json_metric)
+                    GungraunMeasure::RamHits(json_metric) => {
+                        (built_in::gungraun::RamHits::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::DataCacheWrites(json_metric) => {
-                        (built_in::iai_callgrind::Dw::name_id(), json_metric)
+                    GungraunMeasure::TotalReadWrite(json_metric) => {
+                        (built_in::gungraun::TotalReadWrite::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L1InstrCacheReadMisses(json_metric) => {
-                        (built_in::iai_callgrind::I1mr::name_id(), json_metric)
+                    GungraunMeasure::EstimatedCycles(json_metric) => {
+                        (built_in::gungraun::EstimatedCycles::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L1DataCacheReadMisses(json_metric) => {
-                        (built_in::iai_callgrind::D1mr::name_id(), json_metric)
+                    GungraunMeasure::GlobalBusEvents(json_metric) => {
+                        (built_in::gungraun::GlobalBusEvents::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L1DataCacheWriteMisses(json_metric) => {
-                        (built_in::iai_callgrind::D1mw::name_id(), json_metric)
+                    GungraunMeasure::DataCacheReads(json_metric) => {
+                        (built_in::gungraun::Dr::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLInstrCacheReadMisses(json_metric) => {
-                        (built_in::iai_callgrind::ILmr::name_id(), json_metric)
+                    GungraunMeasure::DataCacheWrites(json_metric) => {
+                        (built_in::gungraun::Dw::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLDataCacheReadMisses(json_metric) => {
-                        (built_in::iai_callgrind::DLmr::name_id(), json_metric)
+                    GungraunMeasure::L1InstrCacheReadMisses(json_metric) => {
+                        (built_in::gungraun::I1mr::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLDataCacheWriteMisses(json_metric) => {
-                        (built_in::iai_callgrind::DLmw::name_id(), json_metric)
+                    GungraunMeasure::L1DataCacheReadMisses(json_metric) => {
+                        (built_in::gungraun::D1mr::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L1InstrCacheMissRate(json_metric) => {
-                        (built_in::iai_callgrind::I1MissRate::name_id(), json_metric)
+                    GungraunMeasure::L1DataCacheWriteMisses(json_metric) => {
+                        (built_in::gungraun::D1mw::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLInstrCacheMissRate(json_metric) => {
-                        (built_in::iai_callgrind::LLiMissRate::name_id(), json_metric)
+                    GungraunMeasure::LLInstrCacheReadMisses(json_metric) => {
+                        (built_in::gungraun::ILmr::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L1DataCacheMissRate(json_metric) => {
-                        (built_in::iai_callgrind::D1MissRate::name_id(), json_metric)
+                    GungraunMeasure::LLDataCacheReadMisses(json_metric) => {
+                        (built_in::gungraun::DLmr::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLDataCacheMissRate(json_metric) => {
-                        (built_in::iai_callgrind::LLdMissRate::name_id(), json_metric)
+                    GungraunMeasure::LLDataCacheWriteMisses(json_metric) => {
+                        (built_in::gungraun::DLmw::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLCacheMissRate(json_metric) => {
-                        (built_in::iai_callgrind::LLMissRate::name_id(), json_metric)
+                    GungraunMeasure::L1InstrCacheMissRate(json_metric) => {
+                        (built_in::gungraun::I1MissRate::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L1HitRate(json_metric) => {
-                        (built_in::iai_callgrind::L1HitRate::name_id(), json_metric)
+                    GungraunMeasure::LLInstrCacheMissRate(json_metric) => {
+                        (built_in::gungraun::LLiMissRate::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLHitRate(json_metric) => {
-                        (built_in::iai_callgrind::LLHitRate::name_id(), json_metric)
+                    GungraunMeasure::L1DataCacheMissRate(json_metric) => {
+                        (built_in::gungraun::D1MissRate::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::RamHitRate(json_metric) => {
-                        (built_in::iai_callgrind::RamHitRate::name_id(), json_metric)
+                    GungraunMeasure::LLDataCacheMissRate(json_metric) => {
+                        (built_in::gungraun::LLdMissRate::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::NumberSystemCalls(json_metric) => {
-                        (built_in::iai_callgrind::SysCount::name_id(), json_metric)
+                    GungraunMeasure::LLCacheMissRate(json_metric) => {
+                        (built_in::gungraun::LLMissRate::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::TimeSystemCalls(json_metric) => {
-                        (built_in::iai_callgrind::SysTime::name_id(), json_metric)
+                    GungraunMeasure::L1HitRate(json_metric) => {
+                        (built_in::gungraun::L1HitRate::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::CpuTimeSystemCalls(json_metric) => {
-                        (built_in::iai_callgrind::SysCpuTime::name_id(), json_metric)
+                    GungraunMeasure::LLHitRate(json_metric) => {
+                        (built_in::gungraun::LLHitRate::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::ExecutedConditionalBranches(json_metric) => {
-                        (built_in::iai_callgrind::Bc::name_id(), json_metric)
+                    GungraunMeasure::RamHitRate(json_metric) => {
+                        (built_in::gungraun::RamHitRate::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::MispredictedConditionalBranches(json_metric) => {
-                        (built_in::iai_callgrind::Bcm::name_id(), json_metric)
+                    GungraunMeasure::NumberSystemCalls(json_metric) => {
+                        (built_in::gungraun::SysCount::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::ExecutedIndirectBranches(json_metric) => {
-                        (built_in::iai_callgrind::Bi::name_id(), json_metric)
+                    GungraunMeasure::TimeSystemCalls(json_metric) => {
+                        (built_in::gungraun::SysTime::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::MispredictedIndirectBranches(json_metric) => {
-                        (built_in::iai_callgrind::Bim::name_id(), json_metric)
+                    GungraunMeasure::CpuTimeSystemCalls(json_metric) => {
+                        (built_in::gungraun::SysCpuTime::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::DirtyMissInstructionRead(json_metric) => {
-                        (built_in::iai_callgrind::ILdmr::name_id(), json_metric)
+                    GungraunMeasure::ExecutedConditionalBranches(json_metric) => {
+                        (built_in::gungraun::Bc::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::DirtyMissDataRead(json_metric) => {
-                        (built_in::iai_callgrind::DLdmr::name_id(), json_metric)
+                    GungraunMeasure::MispredictedConditionalBranches(json_metric) => {
+                        (built_in::gungraun::Bcm::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::DirtyMissDataWrite(json_metric) => {
-                        (built_in::iai_callgrind::DLdmw::name_id(), json_metric)
+                    GungraunMeasure::ExecutedIndirectBranches(json_metric) => {
+                        (built_in::gungraun::Bi::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L1BadTemporalLocality(json_metric) => {
-                        (built_in::iai_callgrind::AcCost1::name_id(), json_metric)
+                    GungraunMeasure::MispredictedIndirectBranches(json_metric) => {
+                        (built_in::gungraun::Bim::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLBadTemporalLocality(json_metric) => {
-                        (built_in::iai_callgrind::AcCost2::name_id(), json_metric)
+                    GungraunMeasure::DirtyMissInstructionRead(json_metric) => {
+                        (built_in::gungraun::ILdmr::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::L1BadSpatialLocality(json_metric) => {
-                        (built_in::iai_callgrind::SpLoss1::name_id(), json_metric)
+                    GungraunMeasure::DirtyMissDataRead(json_metric) => {
+                        (built_in::gungraun::DLdmr::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::LLBadSpatialLocality(json_metric) => {
-                        (built_in::iai_callgrind::SpLoss2::name_id(), json_metric)
+                    GungraunMeasure::DirtyMissDataWrite(json_metric) => {
+                        (built_in::gungraun::DLdmw::name_id(), json_metric)
+                    },
+                    GungraunMeasure::L1BadTemporalLocality(json_metric) => {
+                        (built_in::gungraun::AcCost1::name_id(), json_metric)
+                    },
+                    GungraunMeasure::LLBadTemporalLocality(json_metric) => {
+                        (built_in::gungraun::AcCost2::name_id(), json_metric)
+                    },
+                    GungraunMeasure::L1BadSpatialLocality(json_metric) => {
+                        (built_in::gungraun::SpLoss1::name_id(), json_metric)
+                    },
+                    GungraunMeasure::LLBadSpatialLocality(json_metric) => {
+                        (built_in::gungraun::SpLoss2::name_id(), json_metric)
                     },
                     // DHAT
-                    IaiCallgrindMeasure::TotalBytes(json_metric) => {
-                        (built_in::iai_callgrind::TotalBytes::name_id(), json_metric)
+                    GungraunMeasure::TotalBytes(json_metric) => {
+                        (built_in::gungraun::TotalBytes::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::TotalBlocks(json_metric) => {
-                        (built_in::iai_callgrind::TotalBlocks::name_id(), json_metric)
+                    GungraunMeasure::TotalBlocks(json_metric) => {
+                        (built_in::gungraun::TotalBlocks::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::AtTGmaxBytes(json_metric) => (
-                        built_in::iai_callgrind::AtTGmaxBytes::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::AtTGmaxBlocks(json_metric) => (
-                        built_in::iai_callgrind::AtTGmaxBlocks::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::AtTEndBytes(json_metric) => {
-                        (built_in::iai_callgrind::AtTEndBytes::name_id(), json_metric)
+                    GungraunMeasure::AtTGmaxBytes(json_metric) => {
+                        (built_in::gungraun::AtTGmaxBytes::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::AtTEndBlocks(json_metric) => (
-                        built_in::iai_callgrind::AtTEndBlocks::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::ReadsBytes(json_metric) => {
-                        (built_in::iai_callgrind::ReadsBytes::name_id(), json_metric)
+                    GungraunMeasure::AtTGmaxBlocks(json_metric) => {
+                        (built_in::gungraun::AtTGmaxBlocks::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::WritesBytes(json_metric) => {
-                        (built_in::iai_callgrind::WritesBytes::name_id(), json_metric)
+                    GungraunMeasure::AtTEndBytes(json_metric) => {
+                        (built_in::gungraun::AtTEndBytes::name_id(), json_metric)
+                    },
+                    GungraunMeasure::AtTEndBlocks(json_metric) => {
+                        (built_in::gungraun::AtTEndBlocks::name_id(), json_metric)
+                    },
+                    GungraunMeasure::ReadsBytes(json_metric) => {
+                        (built_in::gungraun::ReadsBytes::name_id(), json_metric)
+                    },
+                    GungraunMeasure::WritesBytes(json_metric) => {
+                        (built_in::gungraun::WritesBytes::name_id(), json_metric)
                     },
                     // Memcheck
-                    IaiCallgrindMeasure::MemcheckErrors(json_metric) => (
-                        built_in::iai_callgrind::MemcheckErrors::name_id(),
+                    GungraunMeasure::MemcheckErrors(json_metric) => {
+                        (built_in::gungraun::MemcheckErrors::name_id(), json_metric)
+                    },
+                    GungraunMeasure::MemcheckContexts(json_metric) => {
+                        (built_in::gungraun::MemcheckContexts::name_id(), json_metric)
+                    },
+                    GungraunMeasure::MemcheckSuppressedErrors(json_metric) => (
+                        built_in::gungraun::MemcheckSuppressedErrors::name_id(),
                         json_metric,
                     ),
-                    IaiCallgrindMeasure::MemcheckContexts(json_metric) => (
-                        built_in::iai_callgrind::MemcheckContexts::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::MemcheckSuppressedErrors(json_metric) => (
-                        built_in::iai_callgrind::MemcheckSuppressedErrors::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::MemcheckSuppressedContexts(json_metric) => (
-                        built_in::iai_callgrind::MemcheckSuppressedContexts::name_id(),
+                    GungraunMeasure::MemcheckSuppressedContexts(json_metric) => (
+                        built_in::gungraun::MemcheckSuppressedContexts::name_id(),
                         json_metric,
                     ),
                     // Helgrind
-                    IaiCallgrindMeasure::HelgrindErrors(json_metric) => (
-                        built_in::iai_callgrind::HelgrindErrors::name_id(),
+                    GungraunMeasure::HelgrindErrors(json_metric) => {
+                        (built_in::gungraun::HelgrindErrors::name_id(), json_metric)
+                    },
+                    GungraunMeasure::HelgrindContexts(json_metric) => {
+                        (built_in::gungraun::HelgrindContexts::name_id(), json_metric)
+                    },
+                    GungraunMeasure::HelgrindSuppressedErrors(json_metric) => (
+                        built_in::gungraun::HelgrindSuppressedErrors::name_id(),
                         json_metric,
                     ),
-                    IaiCallgrindMeasure::HelgrindContexts(json_metric) => (
-                        built_in::iai_callgrind::HelgrindContexts::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::HelgrindSuppressedErrors(json_metric) => (
-                        built_in::iai_callgrind::HelgrindSuppressedErrors::name_id(),
-                        json_metric,
-                    ),
-                    IaiCallgrindMeasure::HelgrindSuppressedContexts(json_metric) => (
-                        built_in::iai_callgrind::HelgrindSuppressedContexts::name_id(),
+                    GungraunMeasure::HelgrindSuppressedContexts(json_metric) => (
+                        built_in::gungraun::HelgrindSuppressedContexts::name_id(),
                         json_metric,
                     ),
                     // Drd
-                    IaiCallgrindMeasure::DrdErrors(json_metric) => {
-                        (built_in::iai_callgrind::DrdErrors::name_id(), json_metric)
+                    GungraunMeasure::DrdErrors(json_metric) => {
+                        (built_in::gungraun::DrdErrors::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::DrdContexts(json_metric) => {
-                        (built_in::iai_callgrind::DrdContexts::name_id(), json_metric)
+                    GungraunMeasure::DrdContexts(json_metric) => {
+                        (built_in::gungraun::DrdContexts::name_id(), json_metric)
                     },
-                    IaiCallgrindMeasure::DrdSuppressedErrors(json_metric) => (
-                        built_in::iai_callgrind::DrdSuppressedErrors::name_id(),
+                    GungraunMeasure::DrdSuppressedErrors(json_metric) => (
+                        built_in::gungraun::DrdSuppressedErrors::name_id(),
                         json_metric,
                     ),
-                    IaiCallgrindMeasure::DrdSuppressedContexts(json_metric) => (
-                        built_in::iai_callgrind::DrdSuppressedContexts::name_id(),
+                    GungraunMeasure::DrdSuppressedContexts(json_metric) => (
+                        built_in::gungraun::DrdSuppressedContexts::name_id(),
                         json_metric,
                     ),
                     // Unknown
-                    IaiCallgrindMeasure::Unknown => {
+                    GungraunMeasure::Unknown => {
                         continue;
                     },
                 };

@@ -28,7 +28,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::RustBench => Self::RustBench,
             CliReportAdapter::RustCriterion => Self::RustCriterion,
             CliReportAdapter::RustIai => Self::RustIai,
-            CliReportAdapter::RustIaiCallgrind => Self::RustIaiCallgrind,
+            CliReportAdapter::RustGungraun => Self::RustGungraun,
             CliReportAdapter::Shell => Self::Shell,
             CliReportAdapter::ShellHyperfine => Self::ShellHyperfine,
         }
