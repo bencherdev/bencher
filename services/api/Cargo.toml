@@ -9,6 +9,9 @@ publish = false
 [features]
 default = ["plus", "sentry"]
 plus = [
+    "dep:opentelemetry",
+    "dep:opentelemetry-otlp",
+    "dep:opentelemetry_sdk",
     "api_auth/plus",
     "api_checkout/plus",
     "api_organizations/plus",
@@ -49,6 +52,9 @@ bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_logger.workspace = true
 bencher_schema.workspace = true
 dropshot.workspace = true
+opentelemetry = { workspace = true, optional = true }
+opentelemetry-otlp = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
 sentry = { workspace = true, optional = true }
 serde_yaml.workspace = true
 slog.workspace = true

@@ -8,6 +8,8 @@ use bencher_api::{API_VERSION, api::Api};
 use bencher_config::{Config, ConfigTx};
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonLitestream;
+#[cfg(feature = "plus")]
+use opentelemetry::metrics::MeterProvider;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
 use slog::{Logger, error, info};
@@ -250,4 +252,33 @@ fn run_api_server(
             .await
             .map_err(ApiError::RunServer)
     })
+}
+
+#[cfg(feature = "plus")]
+#[derive(Debug, thiserror::Error)]
+pub enum OpenTelemetryError {
+    #[error("Failed to initialize OpenTelemetry: {0}")]
+    Build(opentelemetry_otlp::ExporterBuildError),
+}
+
+#[cfg(feature = "plus")]
+fn run_open_telemetry() -> Result<opentelemetry_sdk::metrics::SdkMeterProvider, OpenTelemetryError>
+{
+    use opentelemetry_otlp::WithExportConfig as _;
+
+    // Initialize OTLP exporter using HTTP binary protocol
+    let exporter = opentelemetry_otlp::MetricExporter::builder()
+        .with_http()
+        .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
+        .with_endpoint("http://0.0.0.0:9090/metrics")
+        .build()
+        .map_err(OpenTelemetryError::Build)?;
+
+    // Create a meter provider with the OTLP Metric exporter
+    let meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
+        .with_periodic_exporter(exporter)
+        .build();
+    opentelemetry::global::set_meter_provider(meter_provider.clone());
+
+    Ok(meter_provider)
 }
