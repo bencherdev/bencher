@@ -1,3 +1,8 @@
+#[cfg(not(feature = "plus"))]
+use schemars as _;
+#[cfg(not(feature = "plus"))]
+use serde as _;
+
 mod accept;
 mod confirm;
 mod login;

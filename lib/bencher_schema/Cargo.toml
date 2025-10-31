@@ -16,6 +16,7 @@ plus = [
     "dep:bencher_license",
     "dep:reqwest",
     "dep:serde_json",
+    "bencher_adapter/plus",
     "bencher_json/plus",
 ]
 sentry = ["dep:sentry"]

@@ -6,6 +6,9 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+plus = ["bencher_json/plus"]
+
 [dependencies]
 # Workspace
 bencher_json = { workspace = true, features = ["server"] }

@@ -75,7 +75,7 @@ pub use run::JsonNewRun;
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},
-    config::JsonConfig,
+    config::{JsonConfig, JsonConsole},
     restart::JsonRestart,
     spec::JsonSpec,
     version::JsonApiVersion,
@@ -83,7 +83,6 @@ pub use system::{
 #[cfg(feature = "plus")]
 pub use system::{
     auth::{JsonOAuth, JsonOAuthUrl, JsonOAuthUser},
-    config::JsonConsole,
     payment::JsonPayment,
     server::{JsonServer, JsonServerStats, ServerUuid},
 };

@@ -7,7 +7,6 @@ license-file.workspace = true
 publish = false
 
 [features]
-default = ["client", "plus", "rustls-tls"]
 client = ["bencher_json/client"]
 server = ["bencher_json/server"]
 plus = ["bencher_json/plus"]

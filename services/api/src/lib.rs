@@ -1,3 +1,5 @@
+#[cfg(not(feature = "plus"))]
+use api_checkout as _;
 // Needed for binary
 use bencher_config as _;
 use bencher_json as _;
