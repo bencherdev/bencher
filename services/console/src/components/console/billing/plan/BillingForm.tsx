@@ -32,8 +32,6 @@ import {
 	FREE_TEXT,
 	TEAM_TEXT,
 } from "../../../pricing/ConsoleFallbackPricingTable";
-// Toggle checkout flow
-// import PaymentCard from "./PaymentCard";
 import Checkout from "./Checkout";
 
 interface Props {

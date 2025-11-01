@@ -83,7 +83,6 @@ pub use system::{
 #[cfg(feature = "plus")]
 pub use system::{
     auth::{JsonOAuth, JsonOAuthUrl, JsonOAuthUser},
-    payment::JsonPayment,
     server::{JsonServer, JsonServerStats, ServerUuid},
 };
 pub use user::{

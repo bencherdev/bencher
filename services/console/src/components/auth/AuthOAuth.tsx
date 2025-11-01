@@ -1,23 +1,11 @@
 import * as Sentry from "@sentry/astro";
 import { createMemo, createResource } from "solid-js";
-import type {
-	JsonAuthUser,
-	JsonOAuth,
-	Jwt,
-	PlanLevel,
-	Uuid,
-} from "../../types/bencher";
+import type { JsonAuthUser, JsonOAuth } from "../../types/bencher";
 import { authUser, setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
 import { useNavigate, useSearchParams } from "../../util/url";
-import {
-	type InitValid,
-	init_valid,
-	validJwt,
-	validOptionUuid,
-	validPlanLevel,
-} from "../../util/valid";
+import { type InitValid, init_valid } from "../../util/valid";
 import { PLAN_PARAM } from "./auth";
 
 const CODE_PARAM = "code";

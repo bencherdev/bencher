@@ -12,7 +12,7 @@ resolver = "3"
 
 [workspace.package]
 homepage = "https://bencher.dev"
-version = "0.5.6"
+version = "0.5.8"
 authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2024"
 license-file = "LICENSE.md"
@@ -52,6 +52,7 @@ bencher_github_client = { path = "plus/bencher_github_client" }
 bencher_google_client = { path = "plus/bencher_google_client" }
 bencher_google_index = { path = "plus/bencher_google_index" }
 bencher_license = { path = "plus/bencher_license" }
+bencher_otel = { path = "plus/bencher_otel" }
 # crates.io
 anyhow = "1.0"
 async-compression = "0.4"
@@ -69,6 +70,9 @@ jsonwebtoken = "9.3"
 literally = "0.1"
 oauth2 = "5.0"
 octocrab = "0.43"
+opentelemetry = "0.31"
+opentelemetry-otlp = "0.31"
+opentelemetry_sdk = "0.31"
 ordered-float = "4.6"
 oso = "0.27"
 paste = "1.0"

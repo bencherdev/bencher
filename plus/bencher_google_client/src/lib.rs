@@ -5,6 +5,8 @@ use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
     RedirectUrl, Scope, TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
 };
+#[expect(unused_imports, reason = "Reqwest `json` feature")]
+use reqwest as _;
 use serde::Deserialize;
 use url::Url;
 

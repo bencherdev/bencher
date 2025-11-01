@@ -1,7 +1,7 @@
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 #[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use serde::{Deserialize, Serialize};
 

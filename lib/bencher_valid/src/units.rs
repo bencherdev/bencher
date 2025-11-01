@@ -1,6 +1,6 @@
 use ordered_float::OrderedFloat;
 #[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::ResourceName;
 

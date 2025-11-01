@@ -4,11 +4,7 @@ import bencher_valid_init, {
 	is_valid_benchmark_name,
 	is_valid_boundary,
 	is_valid_branch_name,
-	is_valid_card_cvc,
-	is_valid_card_number,
 	is_valid_email,
-	is_valid_expiration_month,
-	is_valid_expiration_year,
 	is_valid_index,
 	is_valid_jwt,
 	is_valid_non_empty,
@@ -117,7 +113,7 @@ export const validateNumber = (
 	return false;
 };
 
-export const validU32 = (input: undefined | number | string) => {
+export const validU32 = (input: undefined | number | string): boolean => {
 	if (input === undefined || input === null) {
 		return false;
 	}
@@ -131,7 +127,7 @@ export const validU32 = (input: undefined | number | string) => {
 const validNumberStr = (
 	numberStr: undefined | number | string,
 	validator: (input: number) => boolean,
-) =>
+): boolean =>
 	validU32(numberStr) && validateNumber(numberStr?.toString() ?? "", validator);
 
 export const validWindow = (window: undefined | number | string): boolean =>
@@ -152,82 +148,16 @@ export const validCdfBoundary = (boundary: string): boolean =>
 export const validIqrBoundary = (boundary: string): boolean =>
 	validateNumber(boundary, is_valid_iqr_boundary);
 
-export const validSampleSize = (sample_size: string) =>
+export const validSampleSize = (sample_size: string): boolean =>
 	validU32(sample_size) && validateNumber(sample_size, is_valid_sample_size);
 
-export const validModel = (model: object) => {
+export const validModel = (model: object): boolean => {
 	if (!model || typeof model !== "object") {
 		return false;
 	}
 	return is_valid_model(JSON.stringify(model));
 };
 
-// Billing
+// Bencher Plus
 export const validPlanLevel = (planLevel: undefined | null | string): boolean =>
 	validOptionString(planLevel, is_valid_plan_level);
-
-export const validCardNumber = (card_number: string): boolean => {
-	return validString(card_number, (card_number) => {
-		const number = cleanCardNumber(card_number);
-		return is_valid_card_number(number);
-	});
-};
-
-export const cleanCardNumber = (card_number: string): string => {
-	return card_number.replace(/ /g, "").replace(/-/g, "");
-};
-
-export const validExpiration = (expiration: string): boolean => {
-	return validString(expiration, (expiration) => {
-		if (!/^\d{1,2}\/\d{2,4}$/.test(expiration)) {
-			return false;
-		}
-
-		if (cleanExpiration(expiration) === null) {
-			return false;
-		}
-		return true;
-	});
-};
-
-export const cleanExpiration = (expiration: string): null | number[] => {
-	const exp = expiration.split("/");
-	if (exp.length !== 2) {
-		return null;
-	}
-
-	const month = exp?.[0];
-	if (month === undefined) {
-		return null;
-	}
-	const exp_month = Number.parseInt(month);
-	if (Number.isInteger(exp_month)) {
-		if (!is_valid_expiration_month(exp_month)) {
-			return null;
-		}
-	} else {
-		return null;
-	}
-
-	const year = exp?.[1];
-	if (year === undefined) {
-		return null;
-	}
-	let exp_year = Number.parseInt(year);
-	if (Number.isInteger(exp_year)) {
-		if (exp_year < 100) {
-			exp_year = 2000 + exp_year;
-		}
-		if (!is_valid_expiration_year(exp_year)) {
-			return null;
-		}
-	} else {
-		return null;
-	}
-
-	return [exp_month, exp_year];
-};
-
-export const validCardCvc = (card_cvc: string): boolean => {
-	return validString(card_cvc, is_valid_card_cvc);
-};

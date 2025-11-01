@@ -9,6 +9,7 @@ publish = false
 [features]
 default = ["plus", "sentry"]
 plus = [
+    "dep:bencher_otel",
     "api_auth/plus",
     "api_checkout/plus",
     "api_organizations/plus",
@@ -48,6 +49,7 @@ bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_logger.workspace = true
 bencher_schema.workspace = true
+bencher_otel = { workspace = true, optional = true }
 dropshot.workspace = true
 sentry = { workspace = true, optional = true }
 serde_yaml.workspace = true
