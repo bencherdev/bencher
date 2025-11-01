@@ -1,7 +1,9 @@
 use clap::{Parser, Subcommand};
 
+mod live;
 mod plus;
 
+pub use live::TaskLive;
 #[cfg(feature = "plus")]
 pub use plus::{
     email_list::TaskEmailList,
@@ -19,6 +21,8 @@ pub struct TaskTask {
 
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
+    /// Live API version
+    Live(TaskLive),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
     /// `URLindexing`

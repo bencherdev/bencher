@@ -6,6 +6,10 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+default = ["plus"]
+plus = ["bencher_cli/plus"]
+
 [dependencies]
 # Workspace
 bencher_cli.workspace = true

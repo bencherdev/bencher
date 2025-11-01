@@ -2,8 +2,10 @@ use clap::Parser as _;
 
 use crate::parser::{TaskSub, TaskTask};
 
+mod live;
 mod plus;
 
+use live::Live;
 #[cfg(feature = "plus")]
 use plus::{
     email_list::EmailList, image::Image, index::Index, license::License, prompt::Prompt,
@@ -18,6 +20,7 @@ pub struct Task {
 #[expect(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum Sub {
+    Live(Live),
     #[cfg(feature = "plus")]
     Index(Index),
     #[cfg(feature = "plus")]
@@ -49,6 +52,7 @@ impl TryFrom<TaskSub> for Sub {
 
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
+            TaskSub::Live(live) => Self::Live(live.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::Index(index) => Self::Index(index.try_into()?),
             #[cfg(feature = "plus")]
@@ -80,6 +84,7 @@ impl Task {
 impl Sub {
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
+            Self::Live(live) => live.exec().await,
             #[cfg(feature = "plus")]
             Self::Index(index) => index.exec().await,
             #[cfg(feature = "plus")]

@@ -321,9 +321,9 @@ jobs:
       - name: Run Smoke Test
         run: cargo test-api smoke docker
 
-  # Cargo Check (Minus)
-  cargo_check_api_minus:
-    name: Cargo Check API (Minus)
+  # Cargo Check (not(plus))
+  cargo_check_workspace_not_plus:
+    name: Cargo Check Workspace (not(plus))
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -331,19 +331,6 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo check
-        working-directory: ./services/api
-        run: cargo check --no-default-features
-
-  cargo_check_cli_minus:
-    name: Cargo Check CLI (Minus)
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: rui314/setup-mold@v1
-        with:
-          mold-version: ${{ env.MOLD_VERSION }}
-      - name: cargo check
-        working-directory: ./services/cli
         run: cargo check --no-default-features
 
   # Cargo Benchmark
@@ -1003,8 +990,7 @@ jobs:
       - cargo_test
       - api_smoke_test
       - release_api_smoke_test
-      - cargo_check_api_minus
-      - cargo_check_cli_minus
+      - cargo_check_workspace_not_plus
       - cargo_bench
       - cargo_audit
       - cargo_udeps

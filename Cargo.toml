@@ -19,8 +19,8 @@ license-file = "LICENSE.md"
 
 [workspace.dependencies]
 # services
-bencher_api = { path = "services/api" }
-bencher_cli = { path = "services/cli" }
+bencher_api = { path = "services/api", default-features = false }
+bencher_cli = { path = "services/cli", default-features = false }
 # lib
 bencher_adapter = { path = "lib/bencher_adapter" }
 bencher_boundary = { path = "lib/bencher_boundary" }

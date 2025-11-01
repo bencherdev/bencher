@@ -6,13 +6,25 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+default = []
+# Required due to feature unification
+# https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
+plus = [
+    "dep:bencher_json",
+    "dep:chrono",
+    "dep:jsonwebtoken",
+    "dep:thiserror",
+    "dep:serde",
+]
+
 [dependencies]
 # Workspace
-bencher_json = { workspace = true, features = ["server", "plus"] }
-chrono.workspace = true
-jsonwebtoken = { workspace = true, features = ["use_pem"] }
-thiserror.workspace = true
-serde.workspace = true
+bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
+chrono = { workspace = true, optional = true }
+jsonwebtoken = { workspace = true, optional = true, features = ["use_pem"] }
+thiserror = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 pretty_assertions.workspace = true

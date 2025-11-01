@@ -7,6 +7,7 @@ license-file.workspace = true
 publish = false
 
 [features]
+default = []
 client = ["dep:gix", "dep:uuid", "dep:windows", "bencher_valid/client"]
 server = ["bencher_valid/server"]
 schema = ["dep:schemars"]

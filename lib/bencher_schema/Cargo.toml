@@ -7,17 +7,18 @@ license-file.workspace = true
 publish = false
 
 [features]
+default = []
 plus = [
-    "dep:bencher_billing",
     "dep:bencher_bing_index",
     "dep:bencher_github_client",
     "dep:bencher_google_client",
     "dep:bencher_google_index",
-    "dep:bencher_license",
     "dep:reqwest",
     "dep:serde_json",
     "bencher_adapter/plus",
+    "bencher_billing/plus",
     "bencher_json/plus",
+    "bencher_license/plus",
 ]
 sentry = ["dep:sentry"]
 

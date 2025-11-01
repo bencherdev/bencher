@@ -10,6 +10,7 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [features]
+default = []
 client = ["dep:regex-lite"]
 server = ["dep:rand", "dep:regex"]
 schema = ["dep:schemars", "ordered-float/schemars"]

@@ -38,6 +38,7 @@ pub async fn checkouts_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonNewCheckout>,
 ) -> Result<ResponseCreated<JsonCheckout>, HttpError> {
+    #[cfg(feature = "sentry")]
     sentry::capture_message("Checkout endpoint activated", sentry::Level::Info);
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = checkouts_post_inner(rqctx.context(), body.into_inner(), &auth_user)
@@ -45,6 +46,8 @@ pub async fn checkouts_post(
         .inspect_err(|e| {
             #[cfg(feature = "sentry")]
             sentry::capture_error(&e);
+            #[cfg(not(feature = "sentry"))]
+            let _ = e;
         })?;
     Ok(Post::auth_response_created(json))
 }

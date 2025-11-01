@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 pub use stripe::{
     CardDetailsParams as PaymentCard, CheckoutSessionId, CustomerId, ParseIdError, PaymentMethodId,
     SubscriptionId,

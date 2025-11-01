@@ -124,6 +124,8 @@ pub async fn org_plan_post(
     .inspect_err(|e| {
         #[cfg(feature = "sentry")]
         sentry::capture_error(e);
+        #[cfg(not(feature = "sentry"))]
+        let _ = e;
     })?;
     Ok(Post::auth_response_created(json))
 }
@@ -255,6 +257,8 @@ pub async fn org_plan_delete(
     .inspect_err(|e| {
         #[cfg(feature = "sentry")]
         sentry::capture_error(&e);
+        #[cfg(not(feature = "sentry"))]
+        let _ = e;
     })?;
     Ok(Delete::auth_response_deleted())
 }
@@ -287,6 +291,8 @@ async fn delete_inner(
         .inspect_err(|e| {
             #[cfg(feature = "sentry")]
             sentry::capture_error(&e);
+            #[cfg(not(feature = "sentry"))]
+            let _ = e;
         });
 
     diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))

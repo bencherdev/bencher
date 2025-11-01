@@ -6,13 +6,24 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+default = []
+# Required due to feature unification
+# https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
+plus = [
+    "dep:bencher_json",
+    "dep:thiserror",
+    "dep:uuid",
+    "dep:async-stripe",
+]
+
 [dependencies]
 # Workspace
-bencher_json = { workspace = true, features = ["server", "plus"] }
-thiserror.workspace = true
-uuid.workspace = true
+bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
+thiserror = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
 # Crate
-async-stripe = { version = "0.39", features = ["runtime-tokio-hyper-rustls"] }
+async-stripe = { version = "0.39", optional = true, features = ["runtime-tokio-hyper-rustls"] }
 
 [dev-dependencies]
 chrono.workspace = true

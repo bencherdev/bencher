@@ -7,8 +7,9 @@ license-file.workspace = true
 publish = false
 
 [features]
+default = []
 plus = [
-    "dep:bencher_billing",
+    "bencher_billing/plus",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_schema/plus",

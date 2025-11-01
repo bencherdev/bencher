@@ -11,27 +11,31 @@ default = ["plus"]
 plus = [
     "dep:async-openai",
     "dep:bencher_bing_index",
-    "dep:bencher_client",
-    "dep:bencher_license",
     "dep:bencher_google_index",
+    "dep:camino",
+    "dep:chrono",
     "dep:notify-rust",
+    "dep:reqwest",
+    "dep:serde_json",
+    "bencher_client/plus",
     "bencher_json/plus",
+    "bencher_license/plus",
     "clap/env",
 ]
 
 [dependencies]
 # Workspace
 bencher_bing_index = { workspace = true, optional = true }
-bencher_client = { workspace = true, optional = true }
+bencher_client.workspace = true
 bencher_json = { workspace = true, features = ["client"] }
 bencher_license = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }
 anyhow.workspace = true
-camino.workspace = true
-chrono.workspace = true
+camino = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 clap.workspace = true
-reqwest = { workspace = true, features = ["rustls-tls"] }
-serde_json.workspace = true
+reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
+serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true
 # Crate

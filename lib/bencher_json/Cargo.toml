@@ -7,6 +7,7 @@ license-file.workspace = true
 publish = false
 
 [features]
+default = []
 client = ["bencher_context/client", "bencher_valid/client"]
 table = ["dep:tabled"]
 server = ["bencher_context/server", "bencher_valid/server"]

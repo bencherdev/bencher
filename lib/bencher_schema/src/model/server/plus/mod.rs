@@ -130,6 +130,7 @@ impl QueryServer {
                 } else {
                     let err = "Bencher Cloud server stats are disabled!";
                     slog::error!(log, "{err}");
+                    #[cfg(feature = "sentry")]
                     sentry::capture_message(err, sentry::Level::Error);
                 }
 

@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 mod audience;
 mod billing_cycle;
 mod claims;
