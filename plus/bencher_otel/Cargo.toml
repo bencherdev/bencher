@@ -6,6 +6,10 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+default = []
+server = []
+
 [dependencies]
 opentelemetry.workspace = true
 opentelemetry-otlp.workspace = true

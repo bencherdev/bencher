@@ -16,12 +16,17 @@ use tokio::process::Command;
 use tokio::{sync, task::JoinHandle};
 use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
 
+const OTEL_ENDPOINT: &str = "http://0.0.0.0:9090/metrics";
+
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
     #[error("Failed to install default AWS credentials provider: {0:?}")]
     Rustls(Arc<CryptoProvider>),
     #[error("{0}")]
     Config(bencher_config::ConfigError),
+    #[cfg(all(feature = "plus", feature = "otel"))]
+    #[error("Failed to initialize OpenTelemetry: {0}")]
+    OpenTelemetry(bencher_otel::OtelServerError),
     #[cfg(feature = "plus")]
     #[error("{0}")]
     Litestream(#[from] LitestreamError),
@@ -75,6 +80,15 @@ async fn run(
 
         #[cfg(all(feature = "plus", feature = "sentry"))]
         let _guard = init_sentry(&config);
+
+        #[cfg(all(feature = "plus", feature = "otel"))]
+        bencher_otel::run_open_telemetry(OTEL_ENDPOINT)
+            .inspect_err(|e| {
+                error!(log, "Failed to run OpenTelemetry: {e}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&e);
+            })
+            .map_err(ApiError::OpenTelemetry)?;
 
         let (restart_tx, mut restart_rx) = sync::mpsc::channel(1);
         #[cfg(feature = "plus")]
@@ -241,6 +255,9 @@ fn run_api_server(
     config: Config,
     restart_tx: sync::mpsc::Sender<()>,
 ) -> JoinHandle<Result<(), ApiError>> {
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ServerStartup);
+
     let config_tx = ConfigTx { config, restart_tx };
     tokio::spawn(async move {
         config_tx

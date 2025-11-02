@@ -1,26 +1,47 @@
-use opentelemetry_otlp::{MetricExporter, Protocol, WithExportConfig as _};
+#[cfg(feature = "server")]
+mod server;
 
-#[derive(Debug, thiserror::Error)]
-pub enum OpenTelemetryError {
-    #[error("Failed to initialize OpenTelemetry: {0}")]
-    Build(opentelemetry_otlp::ExporterBuildError),
+use opentelemetry::metrics::Meter;
+#[cfg(feature = "server")]
+pub use server::{OtelServerError, run_open_telemetry};
+
+pub struct ApiMeter {
+    meter: Meter,
 }
 
-fn run_open_telemetry() -> Result<opentelemetry_sdk::metrics::SdkMeterProvider, OpenTelemetryError>
-{
-    // Initialize OTLP exporter using HTTP binary protocol
-    let exporter = MetricExporter::builder()
-        .with_http()
-        .with_protocol(Protocol::HttpBinary)
-        .with_endpoint("http://0.0.0.0:9090/v0/server/metrics")
-        .build()
-        .map_err(OpenTelemetryError::Build)?;
+impl ApiMeter {
+    const NAME: &str = "bencher_api";
 
-    // Create a meter provider with the OTLP Metric exporter
-    let meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
-        .with_periodic_exporter(exporter)
-        .build();
-    opentelemetry::global::set_meter_provider(meter_provider.clone());
+    fn new() -> Self {
+        let meter = opentelemetry::global::meter(Self::NAME);
+        ApiMeter { meter }
+    }
 
-    Ok(meter_provider)
+    pub fn increment(counter: ApiCounter) {
+        let counter = Self::new()
+            .meter
+            .u64_counter(counter.name().to_owned())
+            .with_description(counter.description().to_owned())
+            .build();
+        counter.add(1, &[]);
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ApiCounter {
+    ServerStartup,
+}
+
+impl ApiCounter {
+    fn name(&self) -> &str {
+        match self {
+            ApiCounter::ServerStartup => "server_startup",
+        }
+    }
+
+    fn description(&self) -> &str {
+        match self {
+            ApiCounter::ServerStartup => "Counts the number of server startups",
+        }
+    }
 }
