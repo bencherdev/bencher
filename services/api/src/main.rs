@@ -16,7 +16,7 @@ use tokio::process::Command;
 use tokio::{sync, task::JoinHandle};
 use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
 
-const OTEL_ENDPOINT: &str = "http://0.0.0.0:9090/metrics";
+const OTEL_ENDPOINT: &str = "http://0.0.0.0:9464/metrics";
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {

@@ -51,5 +51,5 @@ policy = "on-failure"
 retries = 6
 
 [metrics]
-port = 9090
+port = 9464
 path = "/metrics"
