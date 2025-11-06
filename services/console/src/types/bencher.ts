@@ -288,13 +288,6 @@ export interface JsonAuthUser {
 	expiration: string;
 }
 
-export interface JsonCard {
-	number: CardNumber;
-	exp_month: ExpirationMonth;
-	exp_year: ExpirationYear;
-	cvc: CardCvc;
-}
-
 export enum CardBrand {
 	Amex = "amex",
 	Diners = "diners",
@@ -320,12 +313,6 @@ export interface JsonCheckout {
 
 export interface JsonConfirm {
 	token: Jwt;
-}
-
-export interface JsonCustomer {
-	uuid: Uuid;
-	name: NonEmpty;
-	email: Email;
 }
 
 export enum PlanLevel {
@@ -377,11 +364,6 @@ export interface JsonNewMember {
 	email: Email;
 	/** The organization role for the invitee. */
 	role: OrganizationRole;
-}
-
-export interface JsonNewPayment {
-	customer: JsonCustomer;
-	card: JsonCard;
 }
 
 export interface JsonNewPlan {
@@ -533,11 +515,6 @@ export interface JsonOrganization {
 	created: string;
 	modified: string;
 	claimed?: string;
-}
-
-export interface JsonPayment {
-	customer: NonEmpty;
-	payment_method: NonEmpty;
 }
 
 export interface JsonProject {

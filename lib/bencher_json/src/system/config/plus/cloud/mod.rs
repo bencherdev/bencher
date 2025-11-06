@@ -5,15 +5,18 @@ use serde::{Deserialize, Serialize};
 
 pub mod billing;
 pub mod index;
+pub mod otel;
 
 use billing::JsonBilling;
 use index::JsonIndex;
+use otel::JsonOtel;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonCloud {
     pub billing: JsonBilling,
     pub license_pem: Secret,
+    pub otel: Option<JsonOtel>,
     pub sentry: Option<Secret>,
     pub index: Option<JsonIndex>,
 }
