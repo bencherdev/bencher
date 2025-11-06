@@ -8,9 +8,11 @@ publish = false
 
 [features]
 default = []
-server = []
+server = ["dep:bencher_config"]
+plus = ["bencher_config/plus"]
 
 [dependencies]
+bencher_config = { workspace = true, optional = true }
 opentelemetry.workspace = true
 opentelemetry-otlp.workspace = true
 opentelemetry_sdk.workspace = true
