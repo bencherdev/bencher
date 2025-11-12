@@ -33,8 +33,7 @@ pub struct Benchmarks(pub Vec<Benchmark>);
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Benchmark {
-    #[serde(rename = "Namespace")]
-    pub opt_namespace: Option<BenchmarkName>,
+    pub namespace: Option<BenchmarkName>,
     pub method: BenchmarkName,
     pub statistics: Statistics,
 }
@@ -58,7 +57,7 @@ impl DotNet {
         let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());
         for benchmark in benchmarks {
             let Benchmark {
-                opt_namespace,
+                namespace,
                 method,
                 statistics,
             } = benchmark;
@@ -69,7 +68,7 @@ impl DotNet {
                 interquartile_range,
             } = statistics;
 
-            let benchmark_name = match opt_namespace {
+            let benchmark_name = match namespace {
                 Some(mut name) => {
                     name.try_push('.', &method)?;
                     name
