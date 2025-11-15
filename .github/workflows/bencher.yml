@@ -28,6 +28,7 @@ env:
   # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
   GLIBC_VERSION: 2.17
   # WASM
+  WASM_PACK_VERSION: 0.12.1
   WASM_BENCHER_VALID: bencher-valid-pkg
   # Typeshare
   TYPESHARE_VERSION: 1.13.2
@@ -321,7 +322,7 @@ jobs:
       - name: Run Smoke Test
         run: cargo test-api smoke docker
 
-  # Cargo Check (not(plus))
+  # FOSS (not(plus))
   cargo_check_workspace_not_plus:
     name: Cargo Check Workspace (not(plus))
     runs-on: ubuntu-22.04
@@ -332,6 +333,20 @@ jobs:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo check
         run: cargo check --no-default-features
+
+  bencher_console_not_plus:
+    name: Bencher Console (not(plus))
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install `wasm-pack`
+        run: cargo install wasm-pack --version ${{ env.WASM_PACK_VERSION }} --locked --force
+      - name: Build WASM
+        working-directory: ./services/console
+        run: npm run wasm:not-plus
+      - name: Build Console
+        working-directory: ./services/console
+        run: npm run node
 
   # Cargo Benchmark
   cargo_bench:
@@ -477,7 +492,7 @@ jobs:
     name: Build `bencher_valid` WASM
     runs-on: ubuntu-22.04
     env:
-      WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features plus,wasm"
+      WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features wasm,plus"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -490,7 +505,8 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-wasm
-      - run: cargo install wasm-pack --version 0.12.1 --locked --force
+      - name: Install `wasm-pack`
+        run: cargo install wasm-pack --version ${{ env.WASM_PACK_VERSION }} --locked --force
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
         run: |
@@ -887,16 +903,16 @@ jobs:
         run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
       - name: Rebase main on cloud
         run: |
-            git config --global user.name "Bencher"
-            git config --global user.email "git@bencher.dev"
-            git fetch origin cloud
-            git checkout cloud
-            git pull
-            git fetch origin main
-            git checkout main
-            git pull
-            git rebase origin/cloud
-            git push
+          git config --global user.name "Bencher"
+          git config --global user.email "git@bencher.dev"
+          git fetch origin cloud
+          git checkout cloud
+          git pull
+          git fetch origin main
+          git checkout main
+          git pull
+          git rebase origin/cloud
+          git push
 
   # UI Netlify
   deploy_console_netlify_dev:
@@ -986,11 +1002,13 @@ jobs:
       - npx_biome_lint
       - check_generated
       - cargo_deny
+      # FOSS
+      - cargo_check_workspace_not_plus
+      - bencher_console_not_plus
       # Test
       - cargo_test
       - api_smoke_test
       - release_api_smoke_test
-      - cargo_check_workspace_not_plus
       - cargo_bench
       - cargo_audit
       - cargo_udeps

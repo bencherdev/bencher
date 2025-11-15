@@ -8,7 +8,7 @@ use regex_lite::Regex;
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
 #[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use serde::{
     Deserialize, Deserializer, Serialize,

@@ -1,9 +1,5 @@
-use std::str::FromStr as _;
-
 #[cfg(feature = "server")]
 use regex as _;
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
 #[cfg(all(test, not(feature = "wasm")))]
 use wasm_bindgen_test as _;
 
@@ -27,6 +23,7 @@ mod slug;
 mod units;
 mod url;
 mod user_name;
+mod wasm;
 
 pub use crate::git_hash::GitHash;
 pub use crate::slug::{BASE_36, Slug};
@@ -62,23 +59,12 @@ pub use user_name::UserName;
 
 const MAX_LEN: usize = 64;
 
-#[cfg(feature = "wasm")]
-#[wasm_bindgen(start)]
-pub fn startup() {
-    console_error_panic_hook::set_once();
-}
-
 fn is_valid_non_empty(input: &str) -> bool {
     !input.is_empty() && input == input.trim()
 }
 
 fn is_valid_len(input: &str) -> bool {
     is_valid_non_empty(input) && input.len() <= MAX_LEN
-}
-
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn is_valid_uuid(uuid: &str) -> bool {
-    uuid::Uuid::from_str(uuid).is_ok()
 }
 
 pub trait Sanitize {
