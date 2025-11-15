@@ -33,7 +33,7 @@ pub struct Benchmarks(pub Vec<Benchmark>);
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Benchmark {
-    pub namespace: BenchmarkName,
+    pub namespace: Option<BenchmarkName>,
     pub method: BenchmarkName,
     pub statistics: Statistics,
 }
@@ -57,7 +57,7 @@ impl DotNet {
         let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());
         for benchmark in benchmarks {
             let Benchmark {
-                namespace: mut benchmark_name,
+                namespace,
                 method,
                 statistics,
             } = benchmark;
@@ -68,7 +68,13 @@ impl DotNet {
                 interquartile_range,
             } = statistics;
 
-            benchmark_name.try_push('.', &method)?;
+            let benchmark_name = match namespace {
+                Some(mut name) => {
+                    name.try_push('.', &method)?;
+                    name
+                },
+                None => method,
+            };
 
             // JSON output is always in nanos
             let units = Units::Nano;
@@ -119,6 +125,30 @@ pub(crate) mod test_c_sharp_dot_net {
 
     fn file_path(suffix: &str) -> String {
         format!("./tool_output/c_sharp/dot_net/{suffix}.json")
+    }
+
+    #[test]
+    fn test_adapter_c_sharp_dot_net_null_namespace() {
+        let null_namespace = "null_namespace";
+        let file_path = file_path(null_namespace);
+
+        let results = convert_c_sharp_dot_net(null_namespace);
+        validate_adapter_c_sharp_dot_net_null_namespace(&results);
+
+        let results = opt_convert_file_path::<AdapterCSharpDotNet>(
+            &file_path,
+            Settings {
+                average: Some(JsonAverage::Mean),
+            },
+        )
+        .unwrap();
+
+        validate_adapter_c_sharp_dot_net_null_namespace(&results);
+    }
+
+    fn validate_adapter_c_sharp_dot_net_null_namespace(results: &AdapterResults) {
+        assert_eq!(results.inner.len(), 1);
+        assert!(results.get("NullNamespaceMethod").is_some());
     }
 
     #[test]

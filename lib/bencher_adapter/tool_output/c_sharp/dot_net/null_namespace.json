@@ -1,0 +1,16 @@
+{
+    "HostEnvironmentInfo": {
+    },
+    "Benchmarks": [
+        {
+            "Namespace": null,
+            "Method": "NullNamespaceMethod",
+            "Statistics": {
+                "Median": 0,
+                "Mean": 0,
+                "InterquartileRange": 0,
+                "StandardDeviation": 0
+            }
+        }
+    ]
+}
