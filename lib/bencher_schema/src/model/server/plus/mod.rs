@@ -2,7 +2,10 @@ use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::{cmp, sync::Arc};
 
-use bencher_json::{BENCHER_API_URL, DateTime, JsonServer, JsonServerStats, PlanLevel, ServerUuid};
+use bencher_json::{
+    BENCHER_API_URL, BENCHER_API_VERSION, DateTime, JsonServer, JsonServerStats, PlanLevel,
+    ServerUuid,
+};
 use bencher_license::Licensor;
 use chrono::{Duration, Utc};
 use diesel::RunQueryDsl as _;
@@ -11,7 +14,7 @@ use slog::Logger;
 use tokio::sync::Mutex;
 
 use crate::{
-    API_VERSION, connection_lock,
+    connection_lock,
     context::StatsSettings,
     context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
     error::{request_timeout_error, resource_conflict_err},
@@ -237,7 +240,7 @@ impl QueryServer {
         JsonServer {
             uuid,
             created,
-            version: Some(API_VERSION.into()),
+            version: Some(BENCHER_API_VERSION.into()),
         }
     }
 }

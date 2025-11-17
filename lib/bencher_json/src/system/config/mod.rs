@@ -21,6 +21,7 @@ pub use plus::{
         JsonCloud,
         billing::{JsonBilling, JsonProduct, JsonProducts},
         index::{JsonBingIndex, JsonGoogleIndex, JsonIndex},
+        otel::{JsonOtel, OtelProtocol},
     },
     litestream::{JsonLitestream, JsonReplica},
     rate_limiting::JsonRateLimiting,

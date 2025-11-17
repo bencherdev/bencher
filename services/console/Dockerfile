@@ -32,6 +32,7 @@ RUN cargo init --lib bencher_github_client
 RUN cargo init --lib bencher_google_client
 RUN cargo init --lib bencher_google_index
 RUN cargo init --lib bencher_license
+RUN cargo init --lib bencher_otel
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version

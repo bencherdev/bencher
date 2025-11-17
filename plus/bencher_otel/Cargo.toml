@@ -1,0 +1,24 @@
+[package]
+name = "bencher_otel"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+server = ["dep:bencher_config", "dep:bencher_json"]
+plus = ["bencher_config/plus", "bencher_json/plus"]
+
+[dependencies]
+bencher_config = { workspace = true, optional = true }
+bencher_json = { workspace = true, optional = true }
+opentelemetry.workspace = true
+opentelemetry-otlp.workspace = true
+opentelemetry_sdk.workspace = true
+slog.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

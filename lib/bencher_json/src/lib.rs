@@ -90,6 +90,8 @@ pub use user::{
     token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
 };
 
+pub const BENCHER_API_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub const BENCHER_CONSOLE_PORT: u16 = 3000;
 pub const LOCALHOST_BENCHER_URL_STR: &str = "http://localhost:3000";
 pub const DEVEL_BENCHER_URL_STR: &str = "https://devel--bencher.netlify.app";

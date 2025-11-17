@@ -10,8 +10,6 @@ pub mod view;
 
 pub use context::ApiContext;
 
-pub const API_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 // TODO Custom max TTL

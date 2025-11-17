@@ -7,7 +7,7 @@ license-file.workspace = true
 publish = false
 
 [features]
-default = ["plus", "sentry"]
+default = ["plus", "otel", "sentry"]
 plus = [
     "api_auth/plus",
     "api_checkout/plus",
@@ -19,8 +19,10 @@ plus = [
     "bencher_endpoint/plus",
     "bencher_config/plus",
     "bencher_json/plus",
+    "bencher_otel/plus",
     "bencher_schema/plus",
 ]
+otel = ["dep:bencher_otel"]
 sentry = [
     "dep:sentry",
     "api_auth/sentry",
@@ -48,6 +50,7 @@ bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_logger.workspace = true
 bencher_schema.workspace = true
+bencher_otel = { workspace = true, optional = true, features = ["server"] }
 dropshot.workspace = true
 sentry = { workspace = true, optional = true }
 serde_yaml.workspace = true

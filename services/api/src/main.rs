@@ -4,8 +4,9 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use bencher_api::{API_VERSION, api::Api};
+use bencher_api::api::Api;
 use bencher_config::{Config, ConfigTx};
+use bencher_json::BENCHER_API_VERSION;
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonLitestream;
 #[cfg(feature = "sentry")]
@@ -22,6 +23,9 @@ pub enum ApiError {
     Rustls(Arc<CryptoProvider>),
     #[error("{0}")]
     Config(bencher_config::ConfigError),
+    #[cfg(all(feature = "plus", feature = "otel"))]
+    #[error("Failed to initialize OpenTelemetry: {0}")]
+    OpenTelemetry(bencher_otel::OtelServerError),
     #[cfg(feature = "plus")]
     #[error("{0}")]
     Litestream(#[from] LitestreamError),
@@ -43,7 +47,7 @@ async fn main() -> Result<(), ApiError> {
         release: sentry::release_name!(),
         ..Default::default()
     });
-    info!(&log, "🐰 Bencher API Server v{API_VERSION}");
+    info!(&log, "🐰 Bencher API Server v{BENCHER_API_VERSION}");
 
     let crypto_provider = ring::default_provider();
     crypto_provider
@@ -74,7 +78,16 @@ async fn run(
             .map_err(ApiError::Config)?;
 
         #[cfg(all(feature = "plus", feature = "sentry"))]
-        let _guard = init_sentry(&config);
+        let _guard = init_sentry(log, &config);
+
+        #[cfg(all(feature = "plus", feature = "otel"))]
+        bencher_otel::run_open_telemetry(log, &config)
+            .inspect_err(|e| {
+                error!(log, "Failed to run OpenTelemetry: {e}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&e);
+            })
+            .map_err(ApiError::OpenTelemetry)?;
 
         let (restart_tx, mut restart_rx) = sync::mpsc::channel(1);
         #[cfg(feature = "plus")]
@@ -135,13 +148,14 @@ async fn run(
 }
 
 #[cfg(all(feature = "plus", feature = "sentry"))]
-fn init_sentry(config: &Config) -> Option<ClientInitGuard> {
+fn init_sentry(log: &Logger, config: &Config) -> Option<ClientInitGuard> {
     config
         .plus
         .as_ref()
         .and_then(|plus| plus.cloud.as_ref())
         .and_then(|cloud| cloud.sentry.as_ref())
         .map(|sentry_dsn| {
+            info!(log, "Initializing Sentry for error tracking");
             sentry::init((
                 sentry_dsn.as_ref(),
                 sentry::ClientOptions {
@@ -241,6 +255,9 @@ fn run_api_server(
     config: Config,
     restart_tx: sync::mpsc::Sender<()>,
 ) -> JoinHandle<Result<(), ApiError>> {
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ServerStartup);
+
     let config_tx = ConfigTx { config, restart_tx };
     tokio::spawn(async move {
         config_tx

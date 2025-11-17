@@ -1,6 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
-use bencher_json::JsonApiVersion;
-use bencher_schema::{API_VERSION, context::ApiContext};
+use bencher_json::{BENCHER_API_VERSION, JsonApiVersion};
+use bencher_schema::context::ApiContext;
 use dropshot::{HttpError, RequestContext, endpoint};
 
 #[endpoint {
@@ -29,6 +29,6 @@ pub async fn server_version_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<JsonApiVersion>, HttpError> {
     Ok(Get::pub_response_ok(JsonApiVersion {
-        version: API_VERSION.into(),
+        version: BENCHER_API_VERSION.into(),
     }))
 }
