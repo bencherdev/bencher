@@ -16,8 +16,8 @@ use otel::JsonOtel;
 pub struct JsonCloud {
     pub billing: JsonBilling,
     pub license_pem: Secret,
-    pub otel: Option<JsonOtel>,
     pub sentry: Option<Secret>,
+    pub otel: Option<JsonOtel>,
     pub index: Option<JsonIndex>,
 }
 

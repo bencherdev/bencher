@@ -1,0 +1,11 @@
+app = "bencher-otel-collector"
+
+[http_service]
+internal_port = 4318
+force_https = true
+auto_start_machines = true
+min_machines_running = 1
+
+[metrics]
+port = 9464
+path = "/metrics"

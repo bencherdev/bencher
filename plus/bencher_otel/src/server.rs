@@ -65,14 +65,14 @@ fn otel_resource(log: &Logger) -> Resource {
     let attributes = [
         std::env::var(FLY_MACHINE_ID)
             .inspect_err(|e| {
-                slog::warn!(log, "Failed to get {FLY_MACHINE_ID} from environment: {e}");
+                slog::debug!(log, "Failed to get {FLY_MACHINE_ID} from environment: {e}");
             })
             .ok()
             .map(|id| ("service.instance.id".to_owned(), id)),
         Some(("service.namespace".to_owned(), BENCHER_NAMESPACE.to_owned())),
         std::env::var(FLY_APP_NAME)
             .inspect_err(|e| {
-                slog::warn!(log, "Failed to get {FLY_APP_NAME} from environment: {e}");
+                slog::debug!(log, "Failed to get {FLY_APP_NAME} from environment: {e}");
             })
             .ok()
             .map(|name| ("service.name".to_owned(), name)),
