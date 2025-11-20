@@ -45,6 +45,11 @@ async fn post_inner(
     query_user.check_is_locked()?;
     if let Some(invite) = &json_login.invite {
         query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
+
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(
+            bencher_otel::AuthMethod::Email,
+        )));
     }
 
     let token = context
@@ -101,6 +106,11 @@ async fn post_inner(
         body: Some(body),
     };
     context.messenger.send(log, message);
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserLogin(
+        bencher_otel::AuthMethod::Email,
+    ));
 
     Ok(JsonAuthAck {
         email: json_login.email,

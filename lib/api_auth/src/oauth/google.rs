@@ -7,11 +7,9 @@ use bencher_schema::{
 use dropshot::{HttpError, Query, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
-use crate::oauth::oauth_state::OAuthState;
+use crate::oauth::{OAuthProvider, oauth_state::OAuthState};
 
 use super::{handle_oauth_user, is_allowed_oauth};
-
-pub const GOOGLE_OAUTH2: &str = "Google OAuth2";
 
 #[endpoint {
     method = OPTIONS,
@@ -86,5 +84,13 @@ async fn post_inner(
         .await
         .map_err(unauthorized_error)?;
 
-    handle_oauth_user(log, context, oauth_state, name, email, GOOGLE_OAUTH2).await
+    handle_oauth_user(
+        log,
+        context,
+        oauth_state,
+        name,
+        email,
+        OAuthProvider::Google,
+    )
+    .await
 }

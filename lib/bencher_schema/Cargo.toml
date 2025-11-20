@@ -21,6 +21,7 @@ plus = [
     "bencher_license/plus",
 ]
 sentry = ["dep:sentry"]
+otel = ["dep:bencher_otel"]
 
 [dependencies]
 # Workspace
@@ -35,6 +36,7 @@ bencher_google_client = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }
+bencher_otel = { workspace = true, optional = true }
 bencher_rank.workspace = true
 bencher_rbac.workspace = true
 bencher_token.workspace = true

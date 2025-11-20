@@ -1,4 +1,4 @@
-#![cfg(feature = "server")]
+#![cfg(feature = "plus")]
 
 use std::time::Duration;
 
@@ -25,14 +25,14 @@ const BENCHER_NAMESPACE: &str = "bencher";
 const DEFAULT_EXPORT_INTERVAL: Duration = Duration::from_secs(15);
 
 #[derive(Debug, thiserror::Error)]
-pub enum OtelServerError {
+pub enum OtelProviderError {
     #[error("Failed to initialize OpenTelemetry: {0}")]
     Build(opentelemetry_otlp::ExporterBuildError),
 }
 
 /// Initialize and run OpenTelemetry for the server.
 // https://docs.rs/opentelemetry-otlp/0.31.0/opentelemetry_otlp/index.html#using-with-prometheus
-pub fn run_open_telemetry(log: &Logger, config: &Config) -> Result<(), OtelServerError> {
+pub fn run_open_telemetry(log: &Logger, config: &Config) -> Result<(), OtelProviderError> {
     let Some(otel_config) = config
         .plus
         .as_ref()
@@ -89,7 +89,7 @@ fn otel_reader(
     endpoint: &Url,
     protocol: &OtelProtocol,
     interval: Option<u64>,
-) -> Result<PeriodicReader<MetricExporter>, OtelServerError> {
+) -> Result<PeriodicReader<MetricExporter>, OtelProviderError> {
     let protocol = map_protocol(protocol);
 
     let exporter = MetricExporter::builder()
@@ -97,7 +97,7 @@ fn otel_reader(
         .with_endpoint(endpoint.as_ref())
         .with_protocol(protocol)
         .build()
-        .map_err(OtelServerError::Build)?;
+        .map_err(OtelProviderError::Build)?;
 
     Ok(PeriodicReader::builder(exporter)
         .with_interval(interval.map_or(DEFAULT_EXPORT_INTERVAL, Duration::from_secs))

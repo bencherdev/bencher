@@ -42,6 +42,9 @@ async fn post_inner(
         .user
         .accept_invite(conn_lock!(context), &context.token_key, &json_accept.invite)?;
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(None));
+
     Ok(JsonAuthAck {
         email: auth_user.user.email,
     })

@@ -159,6 +159,7 @@ version = "0.5.8"
 dependencies = [
  "bencher_endpoint",
  "bencher_json",
+ "bencher_otel",
  "bencher_schema",
  "bencher_token",
  "dropshot",
@@ -1008,6 +1009,7 @@ dependencies = [
  "bencher_json",
  "bencher_logger",
  "bencher_otel",
+ "bencher_otel_provider",
  "bencher_schema",
  "dropshot",
  "libsqlite3-sys",
@@ -1246,6 +1248,13 @@ dependencies = [
 name = "bencher_otel"
 version = "0.5.8"
 dependencies = [
+ "opentelemetry",
+]
+
+[[package]]
+name = "bencher_otel_provider"
+version = "0.5.8"
+dependencies = [
  "bencher_config",
  "bencher_json",
  "opentelemetry",
@@ -1303,6 +1312,7 @@ dependencies = [
  "bencher_google_index",
  "bencher_json",
  "bencher_license",
+ "bencher_otel",
  "bencher_rank",
  "bencher_rbac",
  "bencher_token",

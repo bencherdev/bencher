@@ -25,7 +25,7 @@ pub enum ApiError {
     Config(bencher_config::ConfigError),
     #[cfg(all(feature = "plus", feature = "otel"))]
     #[error("Failed to initialize OpenTelemetry: {0}")]
-    OpenTelemetry(bencher_otel::OtelServerError),
+    OpenTelemetry(bencher_otel_provider::OtelProviderError),
     #[cfg(feature = "plus")]
     #[error("{0}")]
     Litestream(#[from] LitestreamError),
@@ -81,7 +81,7 @@ async fn run(
         let _guard = init_sentry(log, &config);
 
         #[cfg(all(feature = "plus", feature = "otel"))]
-        bencher_otel::run_open_telemetry(log, &config)
+        bencher_otel_provider::run_open_telemetry(log, &config)
             .inspect_err(|e| {
                 error!(log, "Failed to run OpenTelemetry: {e}");
                 #[cfg(feature = "sentry")]

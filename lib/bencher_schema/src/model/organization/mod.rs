@@ -257,7 +257,12 @@ impl QueryOrganization {
                 )
             })?;
 
-        query_user.accept_invite(conn_lock!(context), &context.token_key, &invite)
+        query_user.accept_invite(conn_lock!(context), &context.token_key, &invite)?;
+
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
+
+        Ok(())
     }
 
     #[cfg(feature = "plus")]

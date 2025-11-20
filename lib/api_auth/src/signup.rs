@@ -104,6 +104,11 @@ async fn post_inner(
     };
     context.messenger.send(log, message);
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserSignup(
+        bencher_otel::AuthMethod::Email,
+    ));
+
     insert_user.notify(
         log,
         conn_lock!(context),

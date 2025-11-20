@@ -53,6 +53,7 @@ bencher_google_client = { path = "plus/bencher_google_client" }
 bencher_google_index = { path = "plus/bencher_google_index" }
 bencher_license = { path = "plus/bencher_license" }
 bencher_otel = { path = "plus/bencher_otel" }
+bencher_otel_provider = { path = "plus/bencher_otel_provider" }
 # crates.io
 anyhow = "1.0"
 async-compression = "0.4"

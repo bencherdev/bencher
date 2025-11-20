@@ -64,6 +64,9 @@ async fn post_inner(
         )
     })?;
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserConfirm);
+
     Ok(JsonAuthUser {
         user,
         token,

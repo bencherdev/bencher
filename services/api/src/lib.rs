@@ -6,6 +6,8 @@ use bencher_json as _;
 use bencher_logger as _;
 #[cfg(feature = "otel")]
 use bencher_otel as _;
+#[cfg(feature = "otel")]
+use bencher_otel_provider as _;
 #[cfg(feature = "sentry")]
 use sentry as _;
 use serde_yaml as _;
