@@ -490,5 +490,8 @@ async fn delete_inner(
             (&query_project, report_id, &query_version)
         ))?;
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportDelete);
+
     Ok(())
 }

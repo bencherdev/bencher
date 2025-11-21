@@ -8,16 +8,14 @@ publish = false
 
 [features]
 default = []
-plus = [
-    "bencher_endpoint/plus",
-    "bencher_json/plus",
-    "bencher_schema/plus",
-]
+plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_schema/plus"]
 sentry = ["dep:sentry", "bencher_schema/sentry"]
+otel = ["dep:bencher_otel"]
 
 [dependencies]
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_otel = { workspace = true, optional = true }
 bencher_plot.workspace = true
 bencher_rbac.workspace = true
 bencher_schema.workspace = true

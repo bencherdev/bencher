@@ -187,6 +187,7 @@ dependencies = [
  "bencher_billing",
  "bencher_endpoint",
  "bencher_json",
+ "bencher_otel",
  "bencher_rbac",
  "bencher_schema",
  "diesel",
@@ -203,6 +204,7 @@ version = "0.5.8"
 dependencies = [
  "bencher_endpoint",
  "bencher_json",
+ "bencher_otel",
  "bencher_plot",
  "bencher_rbac",
  "bencher_schema",

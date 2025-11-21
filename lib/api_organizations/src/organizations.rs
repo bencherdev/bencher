@@ -365,5 +365,8 @@ async fn delete_inner(
     .execute(conn_lock!(context))
     .map_err(resource_conflict_err!(Organization, query_organization))?;
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationDelete);
+
     Ok(())
 }

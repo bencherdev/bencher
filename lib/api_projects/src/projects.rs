@@ -365,5 +365,8 @@ async fn delete_inner(
     #[cfg(feature = "plus")]
     context.delete_index(log, &query_project).await;
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectDelete);
+
     Ok(())
 }

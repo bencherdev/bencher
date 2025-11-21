@@ -15,11 +15,13 @@ plus = [
     "bencher_schema/plus",
 ]
 sentry = ["dep:sentry", "bencher_schema/sentry"]
+otel = ["dep:bencher_otel"]
 
 [dependencies]
 bencher_endpoint.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_otel = { workspace = true, optional = true }
 bencher_rbac.workspace = true
 bencher_schema.workspace = true
 diesel.workspace = true

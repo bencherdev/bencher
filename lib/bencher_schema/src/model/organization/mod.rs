@@ -148,10 +148,16 @@ impl QueryOrganization {
             .values(&insert_organization)
             .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Organization, insert_organization))?;
-        schema::organization::table
+
+        let query_organization = schema::organization::table
             .filter(schema::organization::uuid.eq(&insert_organization.uuid))
             .first::<QueryOrganization>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Organization, insert_organization))
+            .map_err(resource_not_found_err!(Organization, insert_organization))?;
+
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
+
+        Ok(query_organization)
     }
 
     pub fn is_allowed_resource_id(

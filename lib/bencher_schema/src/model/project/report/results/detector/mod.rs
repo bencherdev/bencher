@@ -98,6 +98,9 @@ impl Detector {
             .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Boundary, insert_boundary))?;
 
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::MetricCreate);
+
         // If the boundary check detects an outlier then create an alert for it on the given side.
         // As long as the benchmark is not being ignored.
         if ignore_benchmark {

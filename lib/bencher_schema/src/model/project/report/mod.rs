@@ -181,6 +181,9 @@ impl QueryReport {
             .check_usage(context.biller.as_ref(), query_project, usage)
             .await?;
 
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportCreate);
+
         // Don't return the error from processing the report until after the metrics usage has been checked
         processed_report?;
         // If the report was processed successfully, then return the report with the results

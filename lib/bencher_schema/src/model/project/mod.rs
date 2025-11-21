@@ -310,6 +310,9 @@ impl QueryProject {
             .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
         slog::debug!(log, "Added project role: {insert_proj_role:?}");
 
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectCreate);
+
         Ok(query_project)
     }
 

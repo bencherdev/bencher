@@ -28,6 +28,18 @@ impl ApiMeter {
 #[derive(Debug, Clone, Copy)]
 pub enum ApiCounter {
     ServerStartup,
+
+    OrganizationCreate,
+    OrganizationDelete,
+
+    ProjectCreate,
+    ProjectDelete,
+
+    ReportCreate,
+    ReportDelete,
+
+    MetricCreate,
+
     UserSignup(AuthMethod),
     UserLogin(AuthMethod),
     UserMaxAttempts,
@@ -40,6 +52,18 @@ impl ApiCounter {
     fn name(&self) -> &str {
         match self {
             Self::ServerStartup => "server.startup",
+
+            Self::OrganizationCreate => "organization.create",
+            Self::OrganizationDelete => "organization.delete",
+
+            Self::ProjectCreate => "project.create",
+            Self::ProjectDelete => "project.delete",
+
+            Self::ReportCreate => "report.create",
+            Self::ReportDelete => "report.delete",
+
+            Self::MetricCreate => "metric.create",
+
             Self::UserSignup(_) => "user.signup",
             Self::UserLogin(_) => "user.login",
             Self::UserMaxAttempts => "user.max_attempts",
@@ -52,6 +76,18 @@ impl ApiCounter {
     fn description(&self) -> &str {
         match self {
             Self::ServerStartup => "Counts the number of server startups",
+
+            Self::OrganizationCreate => "Counts the number of organization creations",
+            Self::OrganizationDelete => "Counts the number of organization deletions",
+
+            Self::ProjectCreate => "Counts the number of project creations",
+            Self::ProjectDelete => "Counts the number of project deletions",
+
+            Self::ReportCreate => "Counts the number of report creations",
+            Self::ReportDelete => "Counts the number of report deletions",
+
+            Self::MetricCreate => "Counts the number of metric creations",
+
             Self::UserSignup(_) => "Counts the number of user signups",
             Self::UserLogin(_) => "Counts the number of user logins",
             Self::UserMaxAttempts => "Counts the number of user max attempts",
@@ -63,7 +99,16 @@ impl ApiCounter {
 
     fn attributes(self) -> Vec<opentelemetry::KeyValue> {
         match self {
-            Self::ServerStartup | Self::UserMaxAttempts | Self::UserClaim => Vec::new(),
+            Self::ServerStartup
+            | Self::OrganizationCreate
+            | Self::OrganizationDelete
+            | Self::ProjectCreate
+            | Self::ProjectDelete
+            | Self::ReportCreate
+            | Self::ReportDelete
+            | Self::MetricCreate
+            | Self::UserMaxAttempts
+            | Self::UserClaim => Vec::new(),
             Self::UserSignup(auth_method) | Self::UserLogin(auth_method) => {
                 auth_method.attributes()
             },
