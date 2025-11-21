@@ -51,6 +51,8 @@ async fn post_inner(
 
     let invited = json_signup.invite.is_some();
     let insert_user = InsertUser::from_json(conn_lock!(context), &context.token_key, &json_signup)?;
+    #[cfg(feature = "plus")]
+    insert_user.rate_limit(context)?;
 
     let token = context
         .token_key

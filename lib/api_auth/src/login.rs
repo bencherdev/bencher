@@ -43,6 +43,9 @@ async fn post_inner(
 ) -> Result<JsonAuthAck, HttpError> {
     let query_user = QueryUser::get_with_email(conn_lock!(context), &json_login.email)?;
     query_user.check_is_locked()?;
+    #[cfg(feature = "plus")]
+    query_user.rate_limit(context)?;
+
     if let Some(invite) = &json_login.invite {
         query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
 

@@ -1,11 +1,16 @@
-use std::time::Duration;
+use std::{
+    collections::VecDeque,
+    time::{Duration, SystemTime},
+};
 
-use bencher_json::{DateTime, PlanLevel, system::config::JsonRateLimiting};
+use bencher_json::{DateTime, PlanLevel, UserUuid, system::config::JsonRateLimiting};
 use bencher_license::Licensor;
+use dashmap::DashMap;
+use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
-    error::BencherResource,
+    error::{BencherResource, too_many_requests},
     model::{
         organization::{QueryOrganization, plan::LicenseUsage},
         project::{QueryProject, branch::QueryBranch, threshold::QueryThreshold},
@@ -15,16 +20,25 @@ use crate::{
 
 use super::DbConnection;
 
-const DAY: Duration = Duration::from_secs(24 * 60 * 60);
+const HOUR: Duration = Duration::from_secs(60 * 60);
+const DAY: Duration = Duration::from_secs(60 * 60 * 24);
+
 const USER_LIMIT: u32 = u8::MAX as u32;
 const UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const CLAIMED_LIMIT: u32 = u16::MAX as u32;
+
+// Allow for 1 login and 3 email retries
+const AUTH_MAX_ATTEMPTS: u32 = 4;
 
 pub struct RateLimiting {
     pub window: Duration,
     pub user_limit: u32,
     pub unclaimed_limit: u32,
     pub claimed_limit: u32,
+    pub auth_window: Duration,
+    pub auth_max_attempts: u32,
+    pub auth_global_max_per_hour: Option<u32>,
+    pub auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -65,6 +79,11 @@ pub enum RateLimitingError {
         resource: BencherResource,
         rate_limit: u32,
     },
+
+    #[error("Too many authentication attempts. Please, try again later.")]
+    GlobalAuthAttempts,
+    #[error("Too many authentication attempts for user. Please, try again later.")]
+    AuthAttempts,
 }
 
 impl From<JsonRateLimiting> for RateLimiting {
@@ -74,12 +93,19 @@ impl From<JsonRateLimiting> for RateLimiting {
             user_limit,
             unclaimed_limit,
             claimed_limit,
+            auth_window,
+            auth_max_attempts,
+            auth_global_max_per_hour,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
             user_limit: user_limit.unwrap_or(USER_LIMIT),
             unclaimed_limit: unclaimed_limit.unwrap_or(UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(CLAIMED_LIMIT),
+            auth_window: auth_window.map(u64::from).map_or(HOUR, Duration::from_secs),
+            auth_max_attempts: auth_max_attempts.unwrap_or(AUTH_MAX_ATTEMPTS),
+            auth_global_max_per_hour,
+            auth_attempts: DashMap::new(),
         }
     }
 }
@@ -91,6 +117,10 @@ impl Default for RateLimiting {
             user_limit: USER_LIMIT,
             unclaimed_limit: UNCLAIMED_LIMIT,
             claimed_limit: CLAIMED_LIMIT,
+            auth_window: HOUR,
+            auth_max_attempts: AUTH_MAX_ATTEMPTS,
+            auth_global_max_per_hour: None,
+            auth_attempts: DashMap::new(),
         }
     }
 }
@@ -133,5 +163,44 @@ impl RateLimiting {
         let end_time = chrono::Utc::now();
         let start_time = end_time - self.window;
         (start_time.into(), end_time.into())
+    }
+
+    pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        let now = SystemTime::now();
+
+        // Clean up old attempts for all users
+        self.auth_attempts.retain(|_, attempts| {
+            attempts.retain(|&time| time > now - self.auth_window);
+            !attempts.is_empty()
+        });
+
+        // Check global max per hour
+        if let Some(global_max) = self.auth_global_max_per_hour {
+            if self.auth_attempts.len() > global_max as usize {
+                let error = RateLimitingError::GlobalAuthAttempts;
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&error);
+
+                return Err(too_many_requests(error));
+            }
+        }
+
+        let mut entry = self.auth_attempts.entry(user_uuid).or_default();
+
+        // Check if limit exceeded
+        if entry.len() < self.auth_max_attempts as usize {
+            // Record this attempt
+            entry.push_back(now);
+            Ok(())
+        } else {
+            // Remove the oldest attempt and add the new one
+            entry.pop_front();
+            entry.push_back(now);
+
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserMaxAttempts);
+
+            Err(too_many_requests(RateLimitingError::AuthAttempts))
+        }
     }
 }

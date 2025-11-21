@@ -119,6 +119,12 @@ impl QueryUser {
         }
     }
 
+    /// Rate limit authentication attempts for this user
+    #[cfg(feature = "plus")]
+    pub fn rate_limit(&self, context: &crate::ApiContext) -> Result<(), HttpError> {
+        context.rate_limiting.auth_attempt(self.uuid)
+    }
+
     pub fn accept_invite(
         &self,
         conn: &mut DbConnection,
@@ -183,12 +189,7 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn new(
-        conn: &mut DbConnection,
-        name: UserName,
-        slug: Option<UserSlug>,
-        email: Email,
-    ) -> Self {
+    fn new(conn: &mut DbConnection, name: UserName, slug: Option<UserSlug>, email: Email) -> Self {
         let slug = ok_slug!(conn, &name, slug, user, QueryUser);
         let timestamp = DateTime::now();
         Self {
@@ -267,6 +268,12 @@ impl InsertUser {
             .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
         Ok(insert_user)
+    }
+
+    /// Rate limit authentication attempts for this user
+    #[cfg(feature = "plus")]
+    pub fn rate_limit(&self, context: &crate::ApiContext) -> Result<(), HttpError> {
+        context.rate_limiting.auth_attempt(self.uuid)
     }
 
     pub fn notify(

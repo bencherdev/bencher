@@ -145,6 +145,7 @@
     "chrono",
     "clippy",
     "codegen",
+    "dashmap",
     "devcontainer",
     "devel",
     "Dogfooding",

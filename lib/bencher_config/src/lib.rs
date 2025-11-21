@@ -33,7 +33,7 @@ const DEFAULT_CONFIG_PATH: &str = "/etc/bencher/bencher.json";
 const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
 // 1 megabyte or 1_048_576 bytes
-const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
+const DEFAULT_MAX_BODY_SIZE: usize = 1 << 20;
 #[cfg(debug_assertions)]
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 #[cfg(not(debug_assertions))]

@@ -13,6 +13,7 @@ plus = [
     "dep:bencher_github_client",
     "dep:bencher_google_client",
     "dep:bencher_google_index",
+    "dep:dashmap",
     "dep:reqwest",
     "dep:serde_json",
     "bencher_adapter/plus",
@@ -42,6 +43,7 @@ bencher_rbac.workspace = true
 bencher_token.workspace = true
 camino.workspace = true
 chrono.workspace = true
+dashmap = { workspace = true, optional = true }
 derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
