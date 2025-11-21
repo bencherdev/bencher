@@ -19,6 +19,7 @@ deb/
 # Ignore swap files on macOS
 **.DS_Store
 
+# Ignore output files
 out*.txt
 out*.json
 out*.html
@@ -32,6 +33,10 @@ data/
 # Ignore release notes
 release-notes.md
 
+# Jujutsu
+.jj/
+
+# Node.js
 node_modules/
 .netlify
 ./package.json
