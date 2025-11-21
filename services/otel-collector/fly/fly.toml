@@ -1,10 +1,31 @@
 app = "bencher-otel-collector"
 
-[http_service]
+[[services]]
 internal_port = 4318
-force_https = true
-auto_start_machines = true
-min_machines_running = 1
+protocol = "tcp"
+[[services.tcp_checks]]
+interval = "12s"
+timeout = "2s"
+grace_period = "24s"
+restart_limit = 0
+
+[[services]]
+internal_port = 9464
+protocol = "tcp"
+[[services.tcp_checks]]
+interval = "12s"
+timeout = "2s"
+grace_period = "24s"
+restart_limit = 0
+
+[[vm]]
+cpu_kind = "shared"
+cpus = 1
+memory_mb = 256
+
+[[restart]]
+policy = "on-failure"
+retries = 6
 
 [metrics]
 port = 9464

@@ -49,7 +49,3 @@ memory_mb = 256
 [[restart]]
 policy = "on-failure"
 retries = 6
-
-[metrics]
-port = 9464
-path = "/metrics"
