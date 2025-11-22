@@ -24,6 +24,7 @@ bencher_otel = { workspace = true, optional = true }
 bencher_schema.workspace = true
 bencher_token = { workspace = true, optional = true }
 dropshot.workspace = true
+http.workspace = true
 schemars.workspace = true
 serde.workspace = true
 slog.workspace = true
