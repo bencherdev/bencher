@@ -11,11 +11,11 @@ default = []
 plus = [
     "dep:bencher_github_client",
     "dep:bencher_google_client",
-    "dep:bencher_recaptcha",
     "bencher_billing/plus",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_license/plus",
+    "bencher_recaptcha/plus",
     "bencher_schema/plus",
 ]
 sentry = ["bencher_schema/sentry"]

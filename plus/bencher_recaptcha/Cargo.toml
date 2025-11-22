@@ -6,14 +6,29 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+default = []
+plus = [
+    "dep:chrono",
+    "dep:reqwest",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:thiserror",
+    "dep:slog",
+    "bencher_valid/plus",
+]
+
 [dependencies]
-bencher_valid.workspace = true
-chrono.workspace = true
-reqwest = { workspace = true, features = ["json", "rustls-tls"] }
-serde.workspace = true
-serde_json.workspace = true
-thiserror.workspace = true
-slog.workspace = true
+bencher_valid = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true, features = [
+    "json",
+    "rustls-tls",
+] }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
 
 [lints]
 workspace = true

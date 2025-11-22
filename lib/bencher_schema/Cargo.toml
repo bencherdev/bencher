@@ -13,7 +13,6 @@ plus = [
     "dep:bencher_github_client",
     "dep:bencher_google_client",
     "dep:bencher_google_index",
-    "dep:bencher_recaptcha",
     "dep:dashmap",
     "dep:reqwest",
     "dep:serde_json",
@@ -21,6 +20,7 @@ plus = [
     "bencher_billing/plus",
     "bencher_json/plus",
     "bencher_license/plus",
+    "bencher_recaptcha/plus",
 ]
 sentry = ["dep:sentry"]
 otel = ["dep:bencher_otel"]

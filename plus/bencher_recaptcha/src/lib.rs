@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 use std::{net::Ipv4Addr, sync::LazyLock};
 
 use bencher_valid::{NonEmpty, RecaptchaAction, RecaptchaScore, Secret, Url};

@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 use std::time::Duration;
 
 use bencher_config::Config;

@@ -6,14 +6,26 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+default = []
+plus = [
+    "dep:opentelemetry",
+    "dep:opentelemetry-otlp",
+    "dep:opentelemetry_sdk",
+    "dep:slog",
+    "dep:thiserror",
+    "bencher_config/plus",
+    "bencher_json/plus",
+]
+
 [dependencies]
-bencher_config.workspace = true
-bencher_json.workspace = true
-opentelemetry.workspace = true
-opentelemetry-otlp.workspace = true
-opentelemetry_sdk.workspace = true
-slog.workspace = true
-thiserror.workspace = true
+bencher_config = { workspace = true, optional = true }
+bencher_json = { workspace = true, optional = true }
+opentelemetry = { workspace = true, optional = true }
+opentelemetry-otlp = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
 
 [lints]
 workspace = true

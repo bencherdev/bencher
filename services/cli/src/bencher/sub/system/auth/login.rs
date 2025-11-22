@@ -57,7 +57,6 @@ impl From<Login> for JsonLogin {
             invite: invite.map(Into::into),
             // todo(epompeii): Bencher Plus logins will now fail due to the reCAPTCHA token missing here
             // Add a secure way to login from the CLI
-            #[cfg(feature = "plus")]
             recaptcha_token: None,
         }
     }

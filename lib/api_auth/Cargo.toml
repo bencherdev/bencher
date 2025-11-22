@@ -9,6 +9,7 @@ publish = false
 [features]
 default = []
 plus = [
+    "dep:http",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_schema/plus",
@@ -24,7 +25,7 @@ bencher_otel = { workspace = true, optional = true }
 bencher_schema.workspace = true
 bencher_token = { workspace = true, optional = true }
 dropshot.workspace = true
-http.workspace = true
+http = { workspace = true, optional = true }
 schemars.workspace = true
 serde.workspace = true
 slog.workspace = true
