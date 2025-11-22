@@ -799,3 +799,7 @@ export enum ProjectPermission {
 	DeleteRole = "delete_role",
 }
 
+export enum RecaptchaAction {
+	Signup = "signup",
+}
+

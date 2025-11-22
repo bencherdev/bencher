@@ -11021,6 +11021,14 @@
       "JsonRecaptcha": {
         "type": "object",
         "properties": {
+          "min_score": {
+            "description": "The minimum acceptable score for reCAPTCHA verification.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecaptchaScore"
+              }
+            ]
+          },
           "secret": {
             "description": "The shared key between your site and reCAPTCHA.",
             "allOf": [
@@ -11031,6 +11039,7 @@
           }
         },
         "required": [
+          "min_score",
           "secret"
         ]
       },
@@ -12887,6 +12896,10 @@
       "ProjectUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "RecaptchaScore": {
+        "type": "number",
+        "format": "float"
       },
       "ReportUuid": {
         "type": "string",

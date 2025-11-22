@@ -12,6 +12,7 @@ import {
 	type JsonSignup,
 	type Jwt,
 	PlanLevel,
+	RecaptchaAction,
 	type Uuid,
 } from "../../types/bencher";
 import { httpPost } from "../../util/http";
@@ -95,7 +96,7 @@ const AuthForm = (props: Props) => {
 				signup.claim = claim_uuid;
 			}
 
-			const recaptcha_token = await getRecaptchaToken("signup");
+			const recaptcha_token = await getRecaptchaToken(RecaptchaAction.Signup);
 			if (recaptcha_token) {
 				signup.recaptcha_token = recaptcha_token;
 			}
