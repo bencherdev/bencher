@@ -57,7 +57,10 @@ const ConfirmForm = (props: Props) => {
 	}>(initForm());
 
 	const [coolDown, setCoolDown] = createSignal(true);
-	setTimeout(() => setCoolDown(false), 10000);
+	setTimeout(() => setCoolDown(false), 15000);
+
+	const MAX_RESEND_COUNT = 3;
+	const [resendCount, setResendCount] = createSignal(0);
 
 	const handleField: FieldHandler = (key, value, valid) => {
 		setForm({
@@ -104,6 +107,7 @@ const ConfirmForm = (props: Props) => {
 
 	const handleResendEmail = () => {
 		setSubmitting(true);
+		setResendCount(resendCount() + 1);
 
 		const login: JsonLogin = {
 			email: email(),
@@ -212,7 +216,9 @@ const ConfirmForm = (props: Props) => {
 						<button
 							class="button is-small"
 							type="submit"
-							disabled={submitting() || coolDown()}
+							disabled={
+								submitting() || coolDown() || resendCount() >= MAX_RESEND_COUNT
+							}
 							onMouseDown={(e) => {
 								e.preventDefault();
 								handleResendEmail();
