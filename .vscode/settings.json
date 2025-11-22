@@ -170,6 +170,7 @@
     "Perfs",
     "pipenv",
     "pytest",
+    "recaptcha",
     "repr",
     "reqwest",
     "Roadmap",

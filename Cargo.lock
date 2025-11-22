@@ -1298,6 +1298,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_recaptcha"
+version = "0.5.8"
+dependencies = [
+ "bencher_valid",
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "bencher_schema"
 version = "0.5.8"
 dependencies = [
