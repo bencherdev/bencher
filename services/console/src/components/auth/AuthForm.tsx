@@ -16,6 +16,7 @@ import {
 } from "../../types/bencher";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
+import { getRecaptchaToken, loadRecaptcha } from "../../util/recaptcha";
 import { useSearchParams } from "../../util/url";
 import { init_valid, validJwt, validPlanLevel } from "../../util/valid";
 import Field, { type FieldHandler } from "../field/Field";
@@ -37,6 +38,7 @@ type JsonAuthForm = JsonSignup | JsonLogin;
 
 const AuthForm = (props: Props) => {
 	const [bencher_valid] = createResource(init_valid);
+	const [_recaptcha] = createResource(loadRecaptcha);
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const apiUrl = createMemo(() => props.apiUrl);
@@ -76,7 +78,7 @@ const AuthForm = (props: Props) => {
 		return false;
 	};
 
-	const handleSubmit = () => {
+	const handleSubmit = async () => {
 		setSubmitting(true);
 		const plan_level = plan();
 		const invite_token = invite();
@@ -92,6 +94,13 @@ const AuthForm = (props: Props) => {
 			if (claim_uuid) {
 				signup.claim = claim_uuid;
 			}
+
+			const token = await getRecaptchaToken("signup");
+			if (token) {
+				console.log("recaptcha token obtained", token);
+				signup.token = token;
+			}
+
 			authForm = signup;
 			if (!plan_level) {
 				setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
@@ -161,7 +170,7 @@ const AuthForm = (props: Props) => {
 			class="box"
 			onSubmit={(e) => {
 				e.preventDefault();
-				handleSubmit();
+				void handleSubmit();
 			}}
 		>
 			{props.newUser && (
@@ -207,7 +216,7 @@ const AuthForm = (props: Props) => {
 						disabled={!isSendable()}
 						onMouseDown={(e) => {
 							e.preventDefault();
-							handleSubmit();
+							void handleSubmit();
 						}}
 					>
 						{props.newUser ? "Sign up" : "Log in"}

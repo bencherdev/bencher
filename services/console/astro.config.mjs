@@ -52,6 +52,12 @@ export default defineConfig({
 				access: PUBLIC,
 				optional: true,
 			}),
+			// https://developers.google.com/recaptcha/docs/v3
+			GOOGLE_RECAPTCHA_SITE_KEY: envField.string({
+				context: CLIENT,
+				access: PUBLIC,
+				optional: true,
+			}),
 			// These values are marked as `secret` because they need to be able to be set by Bencher Self-Hosted users.
 			// However, they aren't really secrets in the normal sense of the term.
 			// Marking an Astro environment variable as `secret` is the only way to not have it get bundled-in at build time.
