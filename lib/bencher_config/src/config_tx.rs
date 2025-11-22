@@ -230,6 +230,7 @@ async fn into_context(
         biller,
         licensor,
         indexer,
+        recaptcha_client,
     } = Plus::new(&console_url, plus).map_err(ConfigTxError::Plus)?;
 
     #[cfg(feature = "plus")]
@@ -269,6 +270,8 @@ async fn into_context(
         licensor,
         #[cfg(feature = "plus")]
         indexer,
+        #[cfg(feature = "plus")]
+        recaptcha_client,
         #[cfg(feature = "plus")]
         is_bencher_cloud,
     })

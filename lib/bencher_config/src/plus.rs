@@ -5,9 +5,10 @@ use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 use bencher_json::{
     is_bencher_cloud,
-    system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus},
+    system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha},
 };
 use bencher_license::Licensor;
+use bencher_recaptcha::RecaptchaClient;
 use bencher_schema::context::{Indexer, StatsSettings};
 use tokio::runtime::Handle;
 use url::Url;
@@ -19,6 +20,7 @@ pub struct Plus {
     pub stats: StatsSettings,
     pub biller: Option<Biller>,
     pub licensor: Licensor,
+    pub recaptcha_client: Option<RecaptchaClient>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -47,6 +49,7 @@ impl Plus {
                 stats: StatsSettings::default(),
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
+                recaptcha_client: None,
             });
         };
 
@@ -80,6 +83,7 @@ impl Plus {
             billing,
             license_pem,
             index,
+            recaptcha,
             ..
         }) = plus.cloud
         else {
@@ -90,6 +94,7 @@ impl Plus {
                 stats,
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
+                recaptcha_client: None,
             });
         };
 
@@ -108,6 +113,9 @@ impl Plus {
         );
         let licensor = Licensor::bencher_cloud(&license_pem).map_err(PlusError::LicenseCloud)?;
 
+        let recaptcha_client = recaptcha
+            .map(|JsonRecaptcha { secret, min_score }| RecaptchaClient::new(secret, min_score));
+
         Ok(Self {
             github_client,
             google_client,
@@ -115,6 +123,7 @@ impl Plus {
             stats,
             biller,
             licensor,
+            recaptcha_client,
         })
     }
 }

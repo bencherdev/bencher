@@ -13,6 +13,7 @@ plus = [
     "dep:bencher_github_client",
     "dep:bencher_google_client",
     "dep:bencher_google_index",
+    "dep:bencher_recaptcha",
     "dep:dashmap",
     "dep:reqwest",
     "dep:serde_json",
@@ -40,6 +41,7 @@ bencher_license = { workspace = true, optional = true }
 bencher_otel = { workspace = true, optional = true }
 bencher_rank.workspace = true
 bencher_rbac.workspace = true
+bencher_recaptcha = { workspace = true, optional = true }
 bencher_token.workspace = true
 camino.workspace = true
 chrono.workspace = true

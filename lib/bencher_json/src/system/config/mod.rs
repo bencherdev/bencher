@@ -22,6 +22,7 @@ pub use plus::{
         billing::{JsonBilling, JsonProduct, JsonProducts},
         index::{JsonBingIndex, JsonGoogleIndex, JsonIndex},
         otel::{JsonOtel, OtelProtocol},
+        recaptcha::JsonRecaptcha,
     },
     litestream::{JsonLitestream, JsonReplica},
     rate_limiting::JsonRateLimiting,

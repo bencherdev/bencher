@@ -22,6 +22,8 @@ mod rbac;
 #[cfg(feature = "plus")]
 mod stats;
 
+#[cfg(feature = "plus")]
+use bencher_recaptcha::RecaptchaClient;
 pub use database::{DataStore, DataStoreError, Database, DbConnection};
 #[cfg(feature = "plus")]
 pub use indexer::{IndexError, Indexer};
@@ -55,6 +57,8 @@ pub struct ApiContext {
     pub biller: Option<Biller>,
     #[cfg(feature = "plus")]
     pub licensor: Licensor,
+    #[cfg(feature = "plus")]
+    pub recaptcha_client: Option<RecaptchaClient>,
     #[cfg(feature = "plus")]
     pub is_bencher_cloud: bool,
 }
