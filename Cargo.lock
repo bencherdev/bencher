@@ -1303,6 +1303,7 @@ dependencies = [
 name = "bencher_recaptcha"
 version = "0.5.8"
 dependencies = [
+ "bencher_otel",
  "bencher_valid",
  "chrono",
  "reqwest",

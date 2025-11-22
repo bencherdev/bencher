@@ -23,7 +23,7 @@ plus = [
     "bencher_recaptcha/plus",
 ]
 sentry = ["dep:sentry"]
-otel = ["dep:bencher_otel"]
+otel = ["dep:bencher_otel", "bencher_recaptcha/otel"]
 
 [dependencies]
 # Workspace

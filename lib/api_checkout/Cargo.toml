@@ -16,10 +16,14 @@ plus = [
     "bencher_schema/plus",
 ]
 sentry = ["dep:sentry", "bencher_schema/sentry"]
+otel = ["bencher_endpoint/otel", "bencher_schema/otel"]
 
 [dependencies]
 bencher_endpoint = { workspace = true, optional = true }
-bencher_json = { workspace = true, optional = true, features = ["server", "schema"] }
+bencher_json = { workspace = true, optional = true, features = [
+    "server",
+    "schema",
+] }
 bencher_rbac = { workspace = true, optional = true }
 bencher_schema = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }

@@ -9,6 +9,7 @@ publish = false
 [features]
 default = []
 plus = ["bencher_schema/plus"]
+otel = ["bencher_schema/otel"]
 
 [dependencies]
 bencher_schema.workspace = true

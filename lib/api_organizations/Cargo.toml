@@ -15,7 +15,7 @@ plus = [
     "bencher_schema/plus",
 ]
 sentry = ["dep:sentry", "bencher_schema/sentry"]
-otel = ["dep:bencher_otel"]
+otel = ["dep:bencher_otel", "bencher_schema/otel"]
 
 [dependencies]
 bencher_endpoint.workspace = true

@@ -60,6 +60,23 @@ impl RecaptchaClient {
         recaptcha_action: RecaptchaAction,
         remote_ip: Option<Ipv4Addr>,
     ) -> Result<(), RecaptchaError> {
+        self.verify_inner(log, response_token, recaptcha_action, remote_ip)
+            .await
+            .inspect_err(|err| {
+                slog::warn!(log, "reCAPTCHA verification failed"; "error" => %err);
+            })
+            .inspect_err(|_| {
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserRecaptchaFailure);
+            })
+    }
+
+    async fn verify_inner(
+        &self,
+        log: &Logger,
+        response_token: NonEmpty,
+        recaptcha_action: RecaptchaAction,
+        remote_ip: Option<Ipv4Addr>,
+    ) -> Result<(), RecaptchaError> {
         let body = RecaptchaBody {
             secret: self.secret.clone(),
             response: response_token,
@@ -76,7 +93,7 @@ impl RecaptchaClient {
 
         let json_value: serde_json::Value =
             resp.json().await.map_err(RecaptchaError::ParseResponse)?;
-        slog::debug!(log, "reCAPTCHA verification response"; "response" => %json_value);
+        slog::info!(log, "reCAPTCHA verification response"; "response" => %json_value);
 
         let recaptcha_response =
             serde_json::from_value(json_value.clone()).map_err(RecaptchaError::ParseJson)?;

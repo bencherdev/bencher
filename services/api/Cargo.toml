@@ -38,8 +38,13 @@ otel = [
     "dep:bencher_otel",
     "dep:bencher_otel_provider",
     "api_auth/otel",
+    "api_checkout/otel",
     "api_organizations/otel",
     "api_projects/otel",
+    "api_run/otel",
+    "api_server/otel",
+    "api_users/otel",
+    "bencher_config/otel",
     "bencher_schema/otel",
 ]
 

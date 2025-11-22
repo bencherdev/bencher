@@ -17,8 +17,10 @@ plus = [
     "dep:slog",
     "bencher_valid/plus",
 ]
+otel = ["dep:bencher_otel"]
 
 [dependencies]
+bencher_otel = { workspace = true, optional = true }
 bencher_valid = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true, features = [

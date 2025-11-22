@@ -8,12 +8,9 @@ publish = false
 
 [features]
 default = []
-plus = [
-    "bencher_endpoint/plus",
-    "bencher_json/plus",
-    "bencher_schema/plus",
-]
+plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_schema/plus"]
 sentry = ["bencher_schema/sentry"]
+otel = ["bencher_endpoint/otel", "bencher_schema/otel"]
 
 [dependencies]
 bencher_endpoint.workspace = true

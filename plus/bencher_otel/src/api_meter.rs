@@ -43,6 +43,7 @@ pub enum ApiCounter {
     UserSignup(AuthMethod),
     UserLogin(AuthMethod),
     UserMaxAttempts,
+    UserRecaptchaFailure,
     UserAccept(Option<AuthMethod>),
     UserConfirm,
     UserClaim,
@@ -67,6 +68,7 @@ impl ApiCounter {
             Self::UserSignup(_) => "user.signup",
             Self::UserLogin(_) => "user.login",
             Self::UserMaxAttempts => "user.max_attempts",
+            Self::UserRecaptchaFailure => "user.recaptcha_failure",
             Self::UserAccept(_) => "user.accept",
             Self::UserConfirm => "user.confirm",
             Self::UserClaim => "user.claim",
@@ -91,6 +93,7 @@ impl ApiCounter {
             Self::UserSignup(_) => "Counts the number of user signups",
             Self::UserLogin(_) => "Counts the number of user logins",
             Self::UserMaxAttempts => "Counts the number of user max attempts",
+            Self::UserRecaptchaFailure => "Counts the number of user recaptcha failures",
             Self::UserAccept(_) => "Counts the number of user acceptances",
             Self::UserConfirm => "Counts the number of user confirmations",
             Self::UserClaim => "Counts the number of user claims",
@@ -108,6 +111,7 @@ impl ApiCounter {
             | Self::ReportDelete
             | Self::MetricCreate
             | Self::UserMaxAttempts
+            | Self::UserRecaptchaFailure
             | Self::UserClaim => Vec::new(),
             Self::UserSignup(auth_method) | Self::UserLogin(auth_method) => {
                 auth_method.attributes()
