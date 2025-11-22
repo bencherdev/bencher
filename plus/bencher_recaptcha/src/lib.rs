@@ -2,6 +2,7 @@ use std::{net::Ipv4Addr, sync::LazyLock};
 
 use bencher_valid::{NonEmpty, RecaptchaAction, RecaptchaScore, Secret, Url};
 use chrono::{DateTime, Utc};
+use serde::de;
 
 #[expect(clippy::expect_used)]
 static VERIFY_URL: LazyLock<Url> = LazyLock::new(|| {
@@ -23,16 +24,9 @@ pub enum RecaptchaError {
     #[error("Failed to parse reCAPTCHA verification response: {0}")]
     ParseJson(reqwest::Error),
 
-    #[error(
-        "{action} reCAPTCHA verification failed for {hostname} at {challenge_ts}: {error_codes:?}"
-    )]
-    VerificationFailed {
-        action: RecaptchaAction,
-        challenge_ts: DateTime<Utc>,
-        hostname: NonEmpty,
-        error_codes: Option<Vec<ErrorCode>>,
-    },
-    #[error("{action} reCAPTCHA score too low ({score}) for {hostname} at {challenge_ts}")]
+    #[error("reCAPTCHA verification failed: {0:?}")]
+    VerificationFailed(Vec<ErrorCode>),
+    #[error("{action} reCAPTCHA score too low ({score}) for {hostname} at {challenge_ts:?}")]
     ScoreTooLow {
         action: RecaptchaAction,
         score: RecaptchaScore,
@@ -57,7 +51,7 @@ impl RecaptchaClient {
     ) -> Result<(), RecaptchaError> {
         let body = RecaptchaBody {
             secret: self.secret.clone(),
-            token: response_token,
+            response: response_token,
             remote_ip,
         };
 
@@ -69,34 +63,51 @@ impl RecaptchaClient {
             .await
             .map_err(RecaptchaError::SendRequest)?;
 
-        let RecaptchaResponse {
-            success,
-            score,
-            action,
-            challenge_ts,
-            hostname,
-            error_codes,
-        } = resp.json().await.map_err(RecaptchaError::ParseJson)?;
+        let json_value: serde_json::Value = resp.json().await.map_err(RecaptchaError::ParseJson)?;
+        println!("reCAPTCHA response JSON: {}", json_value);
 
-        if !success {
-            return Err(RecaptchaError::VerificationFailed {
-                action,
-                challenge_ts,
-                hostname,
-                error_codes,
-            });
-        }
+        let json_value_str = json_value.to_string();
+        let recaptcha_response = serde_json::from_value(json_value.clone()).expect(&json_value_str);
 
-        if score < self.min_score {
-            return Err(RecaptchaError::ScoreTooLow {
-                action,
+        match recaptcha_response {
+            RecaptchaResponse::Ok(RecaptchaResponseOk {
+                success,
                 score,
+                action,
                 challenge_ts,
                 hostname,
-            });
+            }) => {
+                if success {
+                    if score >= self.min_score {
+                        Ok(())
+                    } else {
+                        Err(RecaptchaError::ScoreTooLow {
+                            action,
+                            score,
+                            challenge_ts,
+                            hostname,
+                        })
+                    }
+                } else {
+                    debug_assert!(false, "RecaptchaResponse::Ok with success == false");
+                    Ok(())
+                }
+            },
+            RecaptchaResponse::Err(RecaptchaResponseErr {
+                success,
+                error_codes,
+            }) => {
+                if success {
+                    debug_assert!(
+                        false,
+                        "RecaptchaResponse::Err with success == true: {error_codes:?}"
+                    );
+                    Ok(())
+                } else {
+                    Err(RecaptchaError::VerificationFailed(error_codes))
+                }
+            },
         }
-
-        Ok(())
     }
 }
 
@@ -107,7 +118,7 @@ struct RecaptchaBody {
     /// The shared key between your site and reCAPTCHA.
     pub secret: Secret,
     /// The user response token provided by the reCAPTCHA client-side integration on your site.
-    pub token: NonEmpty,
+    pub response: NonEmpty,
     /// The user's IP address.
     #[serde(rename = "remoteip", skip_serializing_if = "Option::is_none")]
     pub remote_ip: Option<Ipv4Addr>,
@@ -115,8 +126,15 @@ struct RecaptchaBody {
 
 // https://developers.google.com/recaptcha/docs/v3#site_verify_response
 #[derive(Debug, serde::Deserialize)]
+#[serde(untagged)]
+enum RecaptchaResponse {
+    Ok(RecaptchaResponseOk),
+    Err(RecaptchaResponseErr),
+}
+
+#[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
-struct RecaptchaResponse {
+struct RecaptchaResponseOk {
     /// Whether this request was a valid reCAPTCHA token for your site.
     pub success: bool,
     /// The score for this request (0.0 - 1.0)
@@ -127,9 +145,16 @@ struct RecaptchaResponse {
     pub challenge_ts: DateTime<Utc>,
     /// The hostname of the site where the reCAPTCHA was solved.
     pub hostname: NonEmpty,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct RecaptchaResponseErr {
+    /// Whether this request was a valid reCAPTCHA token for your site.
+    pub success: bool,
     /// Optional error codes.
-    #[serde(rename = "error-codes")]
-    pub error_codes: Option<Vec<ErrorCode>>,
+    #[serde(default, rename = "error-codes")]
+    pub error_codes: Vec<ErrorCode>,
 }
 
 #[derive(Debug, serde::Deserialize)]
