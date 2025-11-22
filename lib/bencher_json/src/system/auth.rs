@@ -1,6 +1,6 @@
 use bencher_valid::{DateTime, Email, Jwt, UserName};
 #[cfg(feature = "plus")]
-use bencher_valid::{PlanLevel, Secret};
+use bencher_valid::{NonEmpty, PlanLevel, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,8 @@ pub struct JsonSignup {
     pub claim: Option<OrganizationUuid>,
     /// I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)
     pub i_agree: bool,
+    #[cfg(feature = "plus")]
+    pub token: Option<NonEmpty>,
 }
 
 #[typeshare::typeshare]

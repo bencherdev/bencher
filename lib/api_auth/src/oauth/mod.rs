@@ -99,6 +99,8 @@ async fn handle_oauth_user(
             invite: oauth_state.invite().cloned(),
             claim: oauth_state.claim(),
             i_agree: true,
+            #[cfg(feature = "plus")]
+            token: None,
         };
 
         let invited = json_signup.invite.is_some();

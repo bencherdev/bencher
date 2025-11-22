@@ -8770,6 +8770,14 @@
           "license_pem": {
             "$ref": "#/components/schemas/Secret"
           },
+          "otel": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonOtel"
+              }
+            ]
+          },
           "sentry": {
             "nullable": true,
             "allOf": [
@@ -10335,6 +10343,38 @@
           "$ref": "#/components/schemas/JsonOrganization"
         }
       },
+      "JsonOtel": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "description": "The OTEL collector URL.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
+          },
+          "interval": {
+            "nullable": true,
+            "description": "The OTEL export interval in seconds. Defaults to 15 seconds, if not specified.",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "protocol": {
+            "description": "The OTEL protocol.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OtelProtocol"
+              }
+            ]
+          }
+        },
+        "required": [
+          "endpoint",
+          "protocol"
+        ]
+      },
       "JsonPerf": {
         "type": "object",
         "properties": {
@@ -10926,6 +10966,24 @@
       "JsonRateLimiting": {
         "type": "object",
         "properties": {
+          "auth_global_max_per_hour": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "auth_max_attempts": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "auth_window": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "claimed_limit": {
             "nullable": true,
             "type": "integer",
@@ -11762,6 +11820,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/UserSlug"
+              }
+            ]
+          },
+          "token": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
               }
             ]
           }
@@ -12740,6 +12806,31 @@
       "OrganizationUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "OtelProtocol": {
+        "oneOf": [
+          {
+            "description": "GRPC protocol",
+            "type": "string",
+            "enum": [
+              "grpc"
+            ]
+          },
+          {
+            "description": "HTTP protocol with binary protobuf",
+            "type": "string",
+            "enum": [
+              "http/binary"
+            ]
+          },
+          {
+            "description": "HTTP protocol with JSON payload",
+            "type": "string",
+            "enum": [
+              "http/json"
+            ]
+          }
+        ]
       },
       "PlanLevel": {
         "type": "string",

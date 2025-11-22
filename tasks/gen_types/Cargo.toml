@@ -12,12 +12,12 @@ plus = [
     "bencher_api/plus",
     "bencher_config/plus",
     "bencher_endpoint/plus",
-    "bencher_json/plus"
+    "bencher_json/plus",
 ]
 
 [dependencies]
 # Workspace
-bencher_api.workspace = true
+bencher_api = { workspace = true, default-features = false }
 bencher_config.workspace = true
 bencher_endpoint.workspace = true
 bencher_json.workspace = true

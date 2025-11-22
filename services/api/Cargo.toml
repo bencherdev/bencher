@@ -19,7 +19,6 @@ plus = [
     "bencher_endpoint/plus",
     "bencher_config/plus",
     "bencher_json/plus",
-    "bencher_otel_provider/plus",
     "bencher_schema/plus",
 ]
 sentry = [

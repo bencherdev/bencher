@@ -75,6 +75,8 @@ impl From<Signup> for JsonSignup {
             invite: invite.map(Into::into),
             claim: claim.map(Into::into),
             i_agree,
+            #[cfg(feature = "plus")]
+            token: None,
         }
     }
 }
