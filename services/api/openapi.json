@@ -9166,6 +9166,14 @@
                 "$ref": "#/components/schemas/PlanLevel"
               }
             ]
+          },
+          "recaptcha_token": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
           }
         },
         "required": [
@@ -10974,12 +10982,6 @@
       "JsonRateLimiting": {
         "type": "object",
         "properties": {
-          "auth_global_max_per_hour": {
-            "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
-          },
           "auth_max_attempts": {
             "nullable": true,
             "type": "integer",

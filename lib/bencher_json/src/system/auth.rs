@@ -34,6 +34,8 @@ pub struct JsonLogin {
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
+    #[cfg(feature = "plus")]
+    pub recaptcha_token: Option<NonEmpty>,
 }
 
 #[cfg(feature = "plus")]

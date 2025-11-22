@@ -2,7 +2,7 @@ use std::{net::Ipv4Addr, sync::LazyLock};
 
 use bencher_valid::{NonEmpty, RecaptchaAction, RecaptchaScore, Secret, Url};
 use chrono::{DateTime, Utc};
-use serde::de;
+use slog::Logger;
 
 #[expect(clippy::expect_used)]
 static VERIFY_URL: LazyLock<Url> = LazyLock::new(|| {
@@ -22,7 +22,9 @@ pub enum RecaptchaError {
     #[error("Failed to send reCAPTCHA verification request: {0}")]
     SendRequest(reqwest::Error),
     #[error("Failed to parse reCAPTCHA verification response: {0}")]
-    ParseJson(reqwest::Error),
+    ParseResponse(reqwest::Error),
+    #[error("Failed to parse reCAPTCHA verification JSON: {0}")]
+    ParseJson(serde_json::Error),
 
     #[error("reCAPTCHA verification failed: {0:?}")]
     VerificationFailed(Vec<ErrorCode>),
@@ -32,6 +34,11 @@ pub enum RecaptchaError {
         score: RecaptchaScore,
         challenge_ts: DateTime<Utc>,
         hostname: NonEmpty,
+    },
+    #[error("reCAPTCHA action mismatch: expected {expected:?}, got {got:?}")]
+    ActionMismatch {
+        expected: RecaptchaAction,
+        got: RecaptchaAction,
     },
 }
 
@@ -46,7 +53,9 @@ impl RecaptchaClient {
 
     pub async fn verify(
         &self,
+        log: &Logger,
         response_token: NonEmpty,
+        recaptcha_action: RecaptchaAction,
         remote_ip: Option<Ipv4Addr>,
     ) -> Result<(), RecaptchaError> {
         let body = RecaptchaBody {
@@ -63,12 +72,14 @@ impl RecaptchaClient {
             .await
             .map_err(RecaptchaError::SendRequest)?;
 
-        let json_value: serde_json::Value = resp.json().await.map_err(RecaptchaError::ParseJson)?;
-        println!("reCAPTCHA response JSON: {}", json_value);
+        let json_value: serde_json::Value =
+            resp.json().await.map_err(RecaptchaError::ParseResponse)?;
+        slog::debug!(log, "reCAPTCHA verification response"; "response" => %json_value);
 
-        let json_value_str = json_value.to_string();
-        let recaptcha_response = serde_json::from_value(json_value.clone()).expect(&json_value_str);
+        let recaptcha_response =
+            serde_json::from_value(json_value.clone()).map_err(RecaptchaError::ParseJson)?;
 
+        // todo(epompeii): Create a custom deserializer round `success` for better handling of the response
         match recaptcha_response {
             RecaptchaResponse::Ok(RecaptchaResponseOk {
                 success,
@@ -78,15 +89,20 @@ impl RecaptchaClient {
                 hostname,
             }) => {
                 if success {
-                    if score >= self.min_score {
-                        Ok(())
-                    } else {
+                    if score < self.min_score {
                         Err(RecaptchaError::ScoreTooLow {
                             action,
                             score,
                             challenge_ts,
                             hostname,
                         })
+                    } else if action != recaptcha_action {
+                        Err(RecaptchaError::ActionMismatch {
+                            expected: recaptcha_action,
+                            got: action,
+                        })
+                    } else {
+                        Ok(())
                     }
                 } else {
                     debug_assert!(false, "RecaptchaResponse::Ok with success == false");
@@ -172,6 +188,8 @@ pub enum ErrorCode {
     BadRequest,
     // The response is no longer valid: either is too old or has been used previously.
     TimeoutOrDuplicate,
+    // The domain is not in the list of allowed domains for the site key.
+    BrowserError,
     // Future-proof for unknown codes
     #[serde(other)]
     Other,

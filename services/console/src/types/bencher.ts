@@ -341,6 +341,7 @@ export interface JsonLogin {
 	email: Email;
 	plan?: PlanLevel;
 	invite?: Jwt;
+	recaptcha_token?: NonEmpty;
 }
 
 export interface JsonNewCheckout {
@@ -799,7 +800,9 @@ export enum ProjectPermission {
 	DeleteRole = "delete_role",
 }
 
+/** https://docs.cloud.google.com/recaptcha/docs/actions-website */
 export enum RecaptchaAction {
 	Signup = "signup",
+	Login = "login",
 }
 

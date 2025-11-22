@@ -32,15 +32,33 @@ pub async fn auth_login_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonLogin>,
 ) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
-    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
+    let json = post_inner(
+        &rqctx.log,
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        body.into_inner(),
+    )
+    .await?;
     Ok(Post::pub_response_accepted(json))
 }
 
 async fn post_inner(
     log: &Logger,
+    #[cfg(feature = "plus")] headers: &http::HeaderMap,
     context: &ApiContext,
     json_login: JsonLogin,
 ) -> Result<JsonAuthAck, HttpError> {
+    #[cfg(feature = "plus")]
+    crate::verify_recaptcha(
+        log,
+        headers,
+        context,
+        json_login.recaptcha_token.as_ref(),
+        bencher_json::RecaptchaAction::Login,
+    )
+    .await?;
+
     let query_user = QueryUser::get_with_email(conn_lock!(context), &json_login.email)?;
     query_user.check_is_locked()?;
     #[cfg(feature = "plus")]

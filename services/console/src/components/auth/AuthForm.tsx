@@ -96,12 +96,6 @@ const AuthForm = (props: Props) => {
 				signup.claim = claim_uuid;
 			}
 
-			const recaptcha_token = await getRecaptchaToken(RecaptchaAction.Signup);
-			if (recaptcha_token) {
-				console.log("reCAPTCHA token obtained for signup:", recaptcha_token);
-				signup.recaptcha_token = recaptcha_token;
-			}
-
 			authForm = signup;
 			if (!plan_level) {
 				setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
@@ -118,6 +112,10 @@ const AuthForm = (props: Props) => {
 		}
 		if (invite_token) {
 			authForm.invite = invite_token;
+		}
+		const recaptcha_token = await getRecaptchaToken(RecaptchaAction.Signup);
+		if (recaptcha_token) {
+			authForm.recaptcha_token = recaptcha_token;
 		}
 
 		httpPost(

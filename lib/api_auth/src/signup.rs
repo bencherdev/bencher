@@ -57,7 +57,14 @@ async fn post_inner(
         ));
     }
     #[cfg(feature = "plus")]
-    verify_recaptcha(log, headers, context, &json_signup).await?;
+    crate::verify_recaptcha(
+        log,
+        headers,
+        context,
+        json_signup.recaptcha_token.as_ref(),
+        bencher_json::RecaptchaAction::Signup,
+    )
+    .await?;
 
     let invited = json_signup.invite.is_some();
     let insert_user = InsertUser::from_json(conn_lock!(context), &context.token_key, &json_signup)?;
@@ -133,58 +140,4 @@ async fn post_inner(
     Ok(JsonAuthAck {
         email: insert_user.email,
     })
-}
-
-#[cfg(feature = "plus")]
-async fn verify_recaptcha(
-    log: &Logger,
-    headers: &http::HeaderMap,
-    context: &ApiContext,
-    json_signup: &JsonSignup,
-) -> Result<(), HttpError> {
-    // If the recaptcha client is not configured, skip token verification
-    let Some(recaptcha_client) = &context.recaptcha_client else {
-        return Ok(());
-    };
-
-    // todo(epompeii): Add a way to signup with the CLI again
-    let Some(recaptcha_token) = json_signup.recaptcha_token.clone() else {
-        return Err(forbidden_error("Missing reCAPTCHA token"));
-    };
-
-    let remote_ip = remote_ip(headers);
-
-    recaptcha_client
-        .verify(recaptcha_token, remote_ip)
-        .await
-        .inspect_err(|error| {
-            slog::warn!(log, "reCAPTCHA verification failed: {error}");
-        })
-        .map_err(|_error| forbidden_error("reCAPTCHA verification failed"))
-}
-
-#[cfg(feature = "plus")]
-fn remote_ip(headers: &http::HeaderMap) -> Option<std::net::Ipv4Addr> {
-    // https://fly.io/docs/networking/request-headers/#fly-client-ip
-    if let ip @ Some(_) = headers
-        .get("Fly-Client-IP")
-        .or_else(|| headers.get("fly-client-ip"))
-        .and_then(|h| h.to_str().ok())
-        .and_then(|s| s.parse().ok())
-    {
-        return ip;
-    }
-
-    // https://fly.io/docs/networking/request-headers/#x-forwarded-for
-    if let ip @ Some(_) = headers
-        .get("X-Forwarded-For")
-        .or_else(|| headers.get("x-forwarded-for"))
-        .and_then(|h| h.to_str().ok())
-        .and_then(|s| s.split(',').map(str::trim).find(|s| !s.is_empty()))
-        .and_then(|s| s.parse().ok())
-    {
-        return ip;
-    }
-
-    None
 }

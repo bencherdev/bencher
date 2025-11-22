@@ -37,7 +37,6 @@ pub struct RateLimiting {
     pub claimed_limit: u32,
     pub auth_window: Duration,
     pub auth_max_attempts: u32,
-    pub auth_global_max_per_hour: Option<u32>,
     pub auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
 }
 
@@ -95,7 +94,6 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit,
             auth_window,
             auth_max_attempts,
-            auth_global_max_per_hour,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
@@ -104,7 +102,6 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit: claimed_limit.unwrap_or(CLAIMED_LIMIT),
             auth_window: auth_window.map(u64::from).map_or(HOUR, Duration::from_secs),
             auth_max_attempts: auth_max_attempts.unwrap_or(AUTH_MAX_ATTEMPTS),
-            auth_global_max_per_hour,
             auth_attempts: DashMap::new(),
         }
     }
@@ -119,7 +116,6 @@ impl Default for RateLimiting {
             claimed_limit: CLAIMED_LIMIT,
             auth_window: HOUR,
             auth_max_attempts: AUTH_MAX_ATTEMPTS,
-            auth_global_max_per_hour: None,
             auth_attempts: DashMap::new(),
         }
     }
@@ -173,17 +169,6 @@ impl RateLimiting {
             attempts.retain(|&time| time > now - self.auth_window);
             !attempts.is_empty()
         });
-
-        // Check global max per hour
-        if let Some(global_max) = self.auth_global_max_per_hour {
-            if self.auth_attempts.len() > global_max as usize {
-                let error = RateLimitingError::GlobalAuthAttempts;
-                #[cfg(feature = "sentry")]
-                sentry::capture_error(&error);
-
-                return Err(too_many_requests(error));
-            }
-        }
 
         let mut entry = self.auth_attempts.entry(user_uuid).or_default();
 
