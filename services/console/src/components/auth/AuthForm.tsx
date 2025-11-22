@@ -86,6 +86,7 @@ const AuthForm = (props: Props) => {
 		const claim_uuid = claim();
 
 		let authForm: JsonAuthForm;
+		let recaptcha_action: RecaptchaAction;
 		if (props.newUser) {
 			const signup: JsonSignup = {
 				name: form?.username?.value?.trim(),
@@ -100,12 +101,15 @@ const AuthForm = (props: Props) => {
 			if (!plan_level) {
 				setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
 			}
+
+			recaptcha_action = RecaptchaAction.Signup;
 		} else {
 			const login_form = form;
 			const login: JsonLogin = {
 				email: login_form.email.value?.trim(),
 			};
 			authForm = login;
+			recaptcha_action = RecaptchaAction.Login;
 		}
 		if (plan_level) {
 			authForm.plan = plan_level;
@@ -113,7 +117,7 @@ const AuthForm = (props: Props) => {
 		if (invite_token) {
 			authForm.invite = invite_token;
 		}
-		const recaptcha_token = await getRecaptchaToken(RecaptchaAction.Signup);
+		const recaptcha_token = await getRecaptchaToken(recaptcha_action);
 		if (recaptcha_token) {
 			authForm.recaptcha_token = recaptcha_token;
 		}
