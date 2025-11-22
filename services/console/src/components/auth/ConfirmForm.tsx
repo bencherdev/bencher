@@ -7,16 +7,18 @@ import {
 
 import * as Sentry from "@sentry/astro";
 import { createStore } from "solid-js/store";
-import type {
-	Email,
-	JsonConfirm,
-	JsonLogin,
-	Jwt,
-	PlanLevel,
+import {
+	type Email,
+	type JsonConfirm,
+	type JsonLogin,
+	type Jwt,
+	type PlanLevel,
+	RecaptchaAction,
 } from "../../types/bencher";
 import { setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
+import { getRecaptchaToken, loadRecaptcha } from "../../util/recaptcha";
 import { useSearchParams } from "../../util/url";
 import {
 	init_valid,
@@ -35,6 +37,7 @@ export interface Props {
 
 const ConfirmForm = (props: Props) => {
 	const [bencher_valid] = createResource(init_valid);
+	const [_recaptcha] = createResource(loadRecaptcha);
 
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [submitting, setSubmitting] = createSignal(false);
@@ -105,7 +108,7 @@ const ConfirmForm = (props: Props) => {
 			});
 	};
 
-	const handleResendEmail = () => {
+	const handleResendEmail = async () => {
 		setSubmitting(true);
 		setResendCount(resendCount() + 1);
 
@@ -113,6 +116,11 @@ const ConfirmForm = (props: Props) => {
 			email: email(),
 			plan: plan() as PlanLevel,
 		};
+		const recaptcha_token = await getRecaptchaToken(RecaptchaAction.Login);
+		if (recaptcha_token) {
+			login.recaptcha_token = recaptcha_token;
+		}
+
 		httpPost(props.apiUrl, "/v0/auth/login", null, login)
 			.then((_resp) => {
 				setSubmitting(false);
@@ -221,7 +229,7 @@ const ConfirmForm = (props: Props) => {
 							}
 							onMouseDown={(e) => {
 								e.preventDefault();
-								handleResendEmail();
+								void handleResendEmail();
 							}}
 						>
 							<div>Click to resend email to: {email()}</div>

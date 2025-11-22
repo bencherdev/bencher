@@ -40,6 +40,7 @@ type JsonAuthForm = JsonSignup | JsonLogin;
 const AuthForm = (props: Props) => {
 	const [bencher_valid] = createResource(init_valid);
 	const [_recaptcha] = createResource(loadRecaptcha);
+
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const apiUrl = createMemo(() => props.apiUrl);
@@ -109,6 +110,7 @@ const AuthForm = (props: Props) => {
 				email: login_form.email.value?.trim(),
 			};
 			authForm = login;
+
 			recaptcha_action = RecaptchaAction.Login;
 		}
 		if (plan_level) {
@@ -117,6 +119,7 @@ const AuthForm = (props: Props) => {
 		if (invite_token) {
 			authForm.invite = invite_token;
 		}
+
 		const recaptcha_token = await getRecaptchaToken(recaptcha_action);
 		if (recaptcha_token) {
 			authForm.recaptcha_token = recaptcha_token;
