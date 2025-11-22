@@ -45,6 +45,7 @@ otel = [
     "api_server/otel",
     "api_users/otel",
     "bencher_config/otel",
+    "bencher_endpoint/otel",
     "bencher_schema/otel",
 ]
 
