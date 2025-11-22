@@ -95,10 +95,9 @@ const AuthForm = (props: Props) => {
 				signup.claim = claim_uuid;
 			}
 
-			const token = await getRecaptchaToken("signup");
-			if (token) {
-				console.log("recaptcha token obtained", token);
-				signup.token = token;
+			const recaptcha_token = await getRecaptchaToken("signup");
+			if (recaptcha_token) {
+				signup.recaptcha_token = recaptcha_token;
 			}
 
 			authForm = signup;

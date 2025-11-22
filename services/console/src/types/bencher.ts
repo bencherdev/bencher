@@ -315,6 +315,12 @@ export interface JsonConfirm {
 	token: Jwt;
 }
 
+export interface JsonCustomer {
+	uuid: Uuid;
+	name: NonEmpty;
+	email: Email;
+}
+
 export enum PlanLevel {
 	Free = "free",
 	Team = "team",
@@ -669,7 +675,7 @@ export interface JsonSignup {
 	claim?: Uuid;
 	/** I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license) */
 	i_agree: boolean;
-	token?: NonEmpty;
+	recaptcha_token?: NonEmpty;
 }
 
 export interface JsonToken {

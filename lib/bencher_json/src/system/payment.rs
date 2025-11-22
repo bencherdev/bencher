@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{OrganizationResourceId, OrganizationUuid, UserUuid};
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonCustomer {

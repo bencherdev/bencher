@@ -8778,6 +8778,14 @@
               }
             ]
           },
+          "recaptcha": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRecaptcha"
+              }
+            ]
+          },
           "sentry": {
             "nullable": true,
             "allOf": [
@@ -11010,6 +11018,22 @@
           }
         }
       },
+      "JsonRecaptcha": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "description": "The shared key between your site and reCAPTCHA.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
+          }
+        },
+        "required": [
+          "secret"
+        ]
+      },
       "JsonRemoveModel": {
         "type": "object",
         "properties": {
@@ -11815,19 +11839,19 @@
               }
             ]
           },
+          "recaptcha_token": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          },
           "slug": {
             "nullable": true,
             "allOf": [
               {
                 "$ref": "#/components/schemas/UserSlug"
-              }
-            ]
-          },
-          "token": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NonEmpty"
               }
             ]
           }

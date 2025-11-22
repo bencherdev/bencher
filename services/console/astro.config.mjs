@@ -53,7 +53,7 @@ export default defineConfig({
 				optional: true,
 			}),
 			// https://developers.google.com/recaptcha/docs/v3
-			GOOGLE_RECAPTCHA_SITE_KEY: envField.string({
+			RECAPTCHA_SITE_KEY: envField.string({
 				context: CLIENT,
 				access: PUBLIC,
 				optional: true,

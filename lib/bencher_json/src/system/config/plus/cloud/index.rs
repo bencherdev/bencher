@@ -9,6 +9,7 @@ pub struct JsonIndex {
     pub bing: JsonBingIndex,
     pub google: JsonGoogleIndex,
 }
+
 impl Sanitize for JsonIndex {
     fn sanitize(&mut self) {
         self.google.sanitize();
