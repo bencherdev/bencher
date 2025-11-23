@@ -12,15 +12,9 @@ pub(super) struct OrganizationStats {
 }
 
 impl OrganizationStats {
-    pub fn new(
-        db_connection: &mut DbConnection,
-        is_bencher_cloud: bool,
-    ) -> Result<Self, HttpError> {
-        let organizations = if is_bencher_cloud {
-            None
-        } else {
-            Some(get_organizations(db_connection)?)
-        };
+    pub fn new(db_connection: &mut DbConnection) -> Result<Self, HttpError> {
+        let organizations = Some(get_organizations(db_connection)?);
+
         Ok(Self { organizations })
     }
 }

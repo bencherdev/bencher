@@ -122,31 +122,10 @@ impl ConfigTx {
         });
         let config_dropshot = into_config_dropshot(server);
 
+        // Bencher Cloud does not need to send stats, it uses OpenTelemetry.
         #[cfg(feature = "plus")]
-        {
-            use bencher_schema::conn_lock;
-
-            let query_server =
-                QueryServer::get_or_create(conn_lock!(context)).map_err(ConfigTxError::ServerId)?;
-            info!(log, "Bencher API Server ID: {}", query_server.uuid);
-
-            let db_path = context.database.path.clone();
-            // Bencher Cloud does not need to send stats to itself,
-            // so we just include the Messenger directly.
-            // Bencher Self-Hosted needs the Licensor in order to check for a valid license if stats are disabled.
-            let (licensor, messenger) = if context.is_bencher_cloud {
-                (None, Some(context.messenger.clone()))
-            } else {
-                (Some(context.licensor.clone()), None)
-            };
-            query_server.spawn_stats(
-                log.clone(),
-                db_path,
-                context.database.connection.clone(),
-                context.stats,
-                licensor,
-                messenger,
-            );
+        if !context.is_bencher_cloud {
+            spawn_stats(log.clone(), &context).await?;
         }
 
         let mut api_description = ApiDescription::new();
@@ -388,4 +367,21 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
         IfExists::Truncate => ConfigLoggingIfExists::Truncate,
         IfExists::Append => ConfigLoggingIfExists::Append,
     }
+}
+
+#[cfg(feature = "plus")]
+async fn spawn_stats(log: Logger, context: &ApiContext) -> Result<(), ConfigTxError> {
+    let query_server = QueryServer::get_or_create(bencher_schema::conn_lock!(context))
+        .map_err(ConfigTxError::ServerId)?;
+    info!(log, "Bencher API Server ID: {}", query_server.uuid);
+
+    query_server.spawn_stats(
+        log.clone(),
+        context.database.path.clone(),
+        context.database.connection.clone(),
+        context.stats,
+        context.licensor.clone(),
+    );
+
+    Ok(())
 }

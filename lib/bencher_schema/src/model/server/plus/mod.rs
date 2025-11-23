@@ -72,12 +72,10 @@ impl QueryServer {
         db_path: PathBuf,
         db_connection: Arc<Mutex<DbConnection>>,
         stats: StatsSettings,
-        licensor: Option<Licensor>,
-        messenger: Option<Messenger>,
+        licensor: Licensor,
     ) {
         tokio::spawn(async move {
             let StatsSettings { offset, enabled } = stats;
-            let is_bencher_cloud = messenger.is_some();
             let mut violations = 0;
             #[expect(clippy::infinite_loop)]
             loop {
@@ -93,10 +91,10 @@ impl QueryServer {
 
                 if enabled {
                     slog::info!(log, "Sending stats at {}", Utc::now());
-                } else if let Some(licensor) = licensor.as_ref() {
+                } else {
                     match LicenseUsage::get_for_server(
                         &db_connection,
-                        licensor,
+                        &licensor,
                         Some(PlanLevel::Team),
                     )
                     .await
@@ -130,44 +128,21 @@ impl QueryServer {
                             continue;
                         },
                     }
-                } else {
-                    let err = "Bencher Cloud server stats are disabled!";
-                    slog::error!(log, "{err}");
-                    #[cfg(feature = "sentry")]
-                    sentry::capture_message(err, sentry::Level::Error);
                 }
 
-                let Some(json_stats_str) = self
-                    .get_stats_str(&log, db_path.clone(), is_bencher_cloud)
-                    .await
-                else {
+                let Some(json_stats_str) = self.get_stats_str(&log, db_path.clone()).await else {
                     slog::error!(log, "Failed to get stats string");
                     continue;
                 };
 
-                if let Some(messenger) = messenger.as_ref() {
-                    slog::info!(log, "Bencher Cloud Stats: {json_stats_str:?}");
-                    if let Err(e) = Self::send_stats_to_backend(
-                        &log,
-                        &db_connection,
-                        messenger,
-                        &json_stats_str,
-                        None,
-                    )
+                let client = reqwest::Client::new();
+                if let Err(e) = client
+                    .post(BENCHER_STATS_API_URL.clone())
+                    .body(json_stats_str)
+                    .send()
                     .await
-                    {
-                        slog::error!(log, "Failed to send stats: {e}");
-                    }
-                } else {
-                    let client = reqwest::Client::new();
-                    if let Err(e) = client
-                        .post(BENCHER_STATS_API_URL.clone())
-                        .body(json_stats_str)
-                        .send()
-                        .await
-                    {
-                        slog::error!(log, "Failed to send stats: {e}");
-                    }
+                {
+                    slog::error!(log, "Failed to send stats: {e}");
                 }
             }
         });
@@ -177,23 +152,15 @@ impl QueryServer {
         self,
         log: Logger,
         db_path: PathBuf,
-        is_bencher_cloud: bool,
     ) -> Result<JsonServerStats, HttpError> {
-        tokio::task::spawn_blocking(move || {
-            stats::get_stats(&log, &db_path, self, is_bencher_cloud)
-        })
-        .await
-        .map_err(request_timeout_error)?
+        tokio::task::spawn_blocking(move || stats::get_stats(&log, &db_path, self))
+            .await
+            .map_err(request_timeout_error)?
     }
 
-    async fn get_stats_str(
-        self,
-        log: &Logger,
-        db_path: PathBuf,
-        is_bencher_cloud: bool,
-    ) -> Option<String> {
+    async fn get_stats_str(self, log: &Logger, db_path: PathBuf) -> Option<String> {
         let json_stats = self
-            .get_stats(log.clone(), db_path, is_bencher_cloud)
+            .get_stats(log.clone(), db_path)
             .await
             .inspect_err(|e| {
                 slog::error!(log, "Failed to get stats: {e}");

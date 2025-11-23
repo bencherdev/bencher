@@ -36,14 +36,13 @@ pub(super) fn get_stats(
     log: &Logger,
     db_path: &PathBuf,
     query_server: QueryServer,
-    is_bencher_cloud: bool,
 ) -> Result<JsonServerStats, HttpError> {
     let ServerBackup {
         file_path: backup_path,
         ..
     } = ServerBackup::backup_database(db_path).map_err(bad_request_error)?;
 
-    let server_stats = connect_and_get_stats(&backup_path, query_server, is_bencher_cloud);
+    let server_stats = connect_and_get_stats(&backup_path, query_server);
 
     if let Err(error) = std::fs::remove_file(&backup_path) {
         slog::error!(log, "Failed to remove database backup file: {error}");
@@ -55,28 +54,26 @@ pub(super) fn get_stats(
 fn connect_and_get_stats(
     backup_path: &Path,
     query_server: QueryServer,
-    is_bencher_cloud: bool,
 ) -> Result<JsonServerStats, HttpError> {
     let mut database_connection = DbConnection::establish(backup_path.to_string_lossy().as_ref())
         .map_err(bad_request_error)?;
 
-    get_stats_inner(&mut database_connection, query_server, is_bencher_cloud)
+    get_stats_inner(&mut database_connection, query_server)
 }
 
 fn get_stats_inner(
     db_connection: &mut DbConnection,
     query_server: QueryServer,
-    is_bencher_cloud: bool,
 ) -> Result<JsonServerStats, HttpError> {
     let now = DateTime::now();
     let timestamp = now.timestamp();
     let this_week = timestamp - THIS_WEEK;
     let this_month = timestamp - THIS_MONTH;
 
-    let organizations_stats = OrganizationStats::new(db_connection, is_bencher_cloud)?;
+    let organizations_stats = OrganizationStats::new(db_connection)?;
 
     // users
-    let users_stats = UsersStats::new(db_connection, this_week, this_month, is_bencher_cloud)?;
+    let users_stats = UsersStats::new(db_connection, this_week, this_month)?;
 
     // projects
     let projects_stats =

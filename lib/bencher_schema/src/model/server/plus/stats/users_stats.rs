@@ -14,13 +14,8 @@ impl UsersStats {
         db_connection: &mut DbConnection,
         this_week: i64,
         this_month: i64,
-        is_bencher_cloud: bool,
     ) -> Result<Self, HttpError> {
-        let admins = if is_bencher_cloud {
-            None
-        } else {
-            Some(get_admins(db_connection)?)
-        };
+        let admins = Some(get_admins(db_connection)?);
         let users = get_users(db_connection, this_week, this_month)?;
 
         Ok(Self { admins, users })

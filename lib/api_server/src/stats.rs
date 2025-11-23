@@ -46,10 +46,7 @@ pub async fn server_stats_get(
 async fn get_one_inner(log: &Logger, context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let query_server = QueryServer::get_server(conn_lock!(context))?;
     let db_path = context.database.path.clone();
-    let is_bencher_cloud = context.is_bencher_cloud;
-    query_server
-        .get_stats(log.clone(), db_path, is_bencher_cloud)
-        .await
+    query_server.get_stats(log.clone(), db_path).await
 }
 
 // TODO remove in due time
