@@ -89,9 +89,6 @@ async fn verify_recaptcha(
     recaptcha_client
         .verify(log, recaptcha_token, recaptcha_action, remote_ip)
         .await
-        .inspect_err(|error| {
-            slog::warn!(log, "reCAPTCHA verification failed: {error}");
-        })
         .map_err(|_error| bencher_schema::error::forbidden_error("reCAPTCHA verification failed"))
 }
 

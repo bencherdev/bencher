@@ -66,6 +66,7 @@ impl RecaptchaClient {
                 slog::warn!(log, "reCAPTCHA verification failed"; "error" => %err);
             })
             .inspect_err(|_| {
+                #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserRecaptchaFailure);
             })
     }
@@ -93,7 +94,7 @@ impl RecaptchaClient {
 
         let json_value: serde_json::Value =
             resp.json().await.map_err(RecaptchaError::ParseResponse)?;
-        slog::info!(log, "reCAPTCHA verification response"; "response" => %json_value);
+        slog::info!(log, "reCAPTCHA verification response"; "response" => %json_value, "ip" => ?remote_ip);
 
         let recaptcha_response =
             serde_json::from_value(json_value.clone()).map_err(RecaptchaError::ParseJson)?;
