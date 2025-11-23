@@ -1,5 +1,6 @@
 use std::{
     collections::VecDeque,
+    hash::Hash,
     net::Ipv4Addr,
     time::{Duration, SystemTime},
 };
@@ -168,66 +169,67 @@ impl RateLimiting {
     }
 
     pub fn unclaimed_run(&self, remote_ip: Ipv4Addr) -> Result<(), HttpError> {
-        let now = SystemTime::now();
-
-        // Clean up old runs for all unclaimed remote IPs
-        self.unclaimed_runs.retain(|_, runs| {
-            runs.retain(|&time| time > now - self.window);
-            !runs.is_empty()
-        });
-
-        let mut entry = self
-            .unclaimed_runs
-            .entry(remote_ip)
-            .or_insert_with(|| VecDeque::with_capacity(self.unclaimed_limit as usize));
-
-        // Check if limit exceeded
-        if entry.len() < self.unclaimed_limit as usize {
-            // Record the new run
-            entry.push_back(now);
-
-            Ok(())
-        } else {
-            // Remove the oldest run and add the new one
-            entry.pop_front();
-            entry.push_back(now);
-
+        check_rate_limit(
+            &self.unclaimed_runs,
+            remote_ip,
+            self.window,
+            self.unclaimed_limit as usize,
             #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimedMaxRuns);
-
-            Err(too_many_requests(RateLimitingError::UnclaimedRuns))
-        }
+            bencher_otel::ApiCounter::RunUnclaimedMaxRuns,
+            RateLimitingError::UnclaimedRuns,
+        )
     }
 
     pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        let now = SystemTime::now();
-
-        // Clean up old attempts for all users
-        self.auth_attempts.retain(|_, attempts| {
-            attempts.retain(|&time| time > now - self.auth_window);
-            !attempts.is_empty()
-        });
-
-        let mut entry = self
-            .auth_attempts
-            .entry(user_uuid)
-            .or_insert_with(|| VecDeque::with_capacity(self.auth_max_attempts as usize));
-
-        // Check if limit exceeded
-        if entry.len() < self.auth_max_attempts as usize {
-            // Record the new attempt
-            entry.push_back(now);
-
-            Ok(())
-        } else {
-            // Remove the oldest attempt and add the new one
-            entry.pop_front();
-            entry.push_back(now);
-
+        check_rate_limit(
+            &self.auth_attempts,
+            user_uuid,
+            self.auth_window,
+            self.auth_max_attempts as usize,
             #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserMaxAttempts);
+            bencher_otel::ApiCounter::UserMaxAttempts,
+            RateLimitingError::AuthAttempts,
+        )
+    }
+}
 
-            Err(too_many_requests(RateLimitingError::AuthAttempts))
-        }
+fn check_rate_limit<K>(
+    dash_map: &DashMap<K, VecDeque<SystemTime>>,
+    key: K,
+    window: Duration,
+    limit: usize,
+    #[cfg(feature = "otel")] api_counter: bencher_otel::ApiCounter,
+    error: RateLimitingError,
+) -> Result<(), HttpError>
+where
+    K: PartialEq + Eq + Hash,
+{
+    let now = SystemTime::now();
+
+    // Clean up old times for all keys
+    dash_map.retain(|_, times| {
+        times.retain(|&time| time > now - window);
+        !times.is_empty()
+    });
+
+    let mut entry = dash_map
+        .entry(key)
+        .or_insert_with(|| VecDeque::with_capacity(limit));
+
+    // Check if the limit has been exceeded
+    if entry.len() < limit {
+        // Record the new time for the key
+        entry.push_back(now);
+
+        Ok(())
+    } else {
+        // Remove the oldest time and add the new one
+        entry.pop_front();
+        entry.push_back(now);
+
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(api_counter);
+
+        Err(too_many_requests(error))
     }
 }

@@ -146,6 +146,7 @@
     "clippy",
     "codegen",
     "dashmap",
+    "Deque",
     "devcontainer",
     "devel",
     "Dogfooding",
