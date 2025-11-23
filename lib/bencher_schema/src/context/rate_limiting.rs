@@ -1,5 +1,6 @@
 use std::{
     collections::VecDeque,
+    net::Ipv4Addr,
     time::{Duration, SystemTime},
 };
 
@@ -27,7 +28,7 @@ const USER_LIMIT: u32 = u8::MAX as u32;
 const UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const CLAIMED_LIMIT: u32 = u16::MAX as u32;
 
-// Allow for 1 login and 3 email retries
+// Allow for 1 login and 3 email retries by default
 const AUTH_MAX_ATTEMPTS: u32 = 4;
 
 pub struct RateLimiting {
@@ -35,6 +36,7 @@ pub struct RateLimiting {
     pub user_limit: u32,
     pub unclaimed_limit: u32,
     pub claimed_limit: u32,
+    pub unclaimed_runs: DashMap<Ipv4Addr, VecDeque<SystemTime>>,
     pub auth_window: Duration,
     pub auth_max_attempts: u32,
     pub auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
@@ -79,8 +81,10 @@ pub enum RateLimitingError {
         rate_limit: u32,
     },
 
-    #[error("Too many authentication attempts. Please, try again later.")]
-    GlobalAuthAttempts,
+    #[error(
+        "Too many runs from unclaimed IP address. Please, claim the project or try again later."
+    )]
+    UnclaimedRuns,
     #[error("Too many authentication attempts for user. Please, try again later.")]
     AuthAttempts,
 }
@@ -100,6 +104,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             user_limit: user_limit.unwrap_or(USER_LIMIT),
             unclaimed_limit: unclaimed_limit.unwrap_or(UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(CLAIMED_LIMIT),
+            unclaimed_runs: DashMap::new(),
             auth_window: auth_window.map(u64::from).map_or(HOUR, Duration::from_secs),
             auth_max_attempts: auth_max_attempts.unwrap_or(AUTH_MAX_ATTEMPTS),
             auth_attempts: DashMap::new(),
@@ -114,6 +119,7 @@ impl Default for RateLimiting {
             user_limit: USER_LIMIT,
             unclaimed_limit: UNCLAIMED_LIMIT,
             claimed_limit: CLAIMED_LIMIT,
+            unclaimed_runs: DashMap::new(),
             auth_window: HOUR,
             auth_max_attempts: AUTH_MAX_ATTEMPTS,
             auth_attempts: DashMap::new(),
@@ -161,6 +167,38 @@ impl RateLimiting {
         (start_time.into(), end_time.into())
     }
 
+    pub fn unclaimed_run(&self, remote_ip: Ipv4Addr) -> Result<(), HttpError> {
+        let now = SystemTime::now();
+
+        // Clean up old runs for all unclaimed remote IPs
+        self.unclaimed_runs.retain(|_, runs| {
+            runs.retain(|&time| time > now - self.window);
+            !runs.is_empty()
+        });
+
+        let mut entry = self
+            .unclaimed_runs
+            .entry(remote_ip)
+            .or_insert_with(|| VecDeque::with_capacity(self.unclaimed_limit as usize));
+
+        // Check if limit exceeded
+        if entry.len() < self.unclaimed_limit as usize {
+            // Record the new run
+            entry.push_back(now);
+
+            Ok(())
+        } else {
+            // Remove the oldest run and add the new one
+            entry.pop_front();
+            entry.push_back(now);
+
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimedMaxRuns);
+
+            Err(too_many_requests(RateLimitingError::UnclaimedRuns))
+        }
+    }
+
     pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         let now = SystemTime::now();
 
@@ -170,12 +208,16 @@ impl RateLimiting {
             !attempts.is_empty()
         });
 
-        let mut entry = self.auth_attempts.entry(user_uuid).or_default();
+        let mut entry = self
+            .auth_attempts
+            .entry(user_uuid)
+            .or_insert_with(|| VecDeque::with_capacity(self.auth_max_attempts as usize));
 
         // Check if limit exceeded
         if entry.len() < self.auth_max_attempts as usize {
-            // Record this attempt
+            // Record the new attempt
             entry.push_back(now);
+
             Ok(())
         } else {
             // Remove the oldest attempt and add the new one

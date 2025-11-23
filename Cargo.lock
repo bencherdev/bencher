@@ -224,9 +224,11 @@ version = "0.5.8"
 dependencies = [
  "bencher_endpoint",
  "bencher_json",
+ "bencher_otel",
  "bencher_rbac",
  "bencher_schema",
  "dropshot",
+ "http 1.3.1",
  "slog",
 ]
 

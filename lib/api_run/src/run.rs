@@ -38,16 +38,39 @@ pub async fn run_post(
     body: TypedBody<JsonNewRun>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(&rqctx.log, rqctx.context(), auth_user, body.into_inner()).await?;
+    let json = post_inner(
+        &rqctx.log,
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        auth_user,
+        body.into_inner(),
+    )
+    .await?;
     Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(
     log: &Logger,
+    #[cfg(feature = "plus")] headers: &http::HeaderMap,
     context: &ApiContext,
     auth_user: Option<AuthUser>,
     json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
+    #[cfg(feature = "plus")]
+    if auth_user.is_some() {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunClaimed);
+    } else {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimed);
+
+        if let Some(remote_ip) = bencher_endpoint::remote_ip(headers) {
+            slog::info!(log, "Unclaimed run request from remote IP address"; "remote_ip" => ?remote_ip);
+            context.rate_limiting.unclaimed_run(remote_ip)?;
+        }
+    }
+
     let project_name_fn = || project_name(&json_run);
     let project_slug_fn = || project_slug(&json_run);
     let query_project = if let Some(project) = json_run.project.as_ref() {
@@ -83,6 +106,8 @@ async fn post_inner(
     } else if let Some(auth_user) = auth_user.as_ref() {
         query_organization.claim(context, &auth_user.user).await?;
     }
+
+    slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);
     QueryReport::create(
         log,
         context,

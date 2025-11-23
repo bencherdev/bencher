@@ -85,6 +85,7 @@ async fn verify_recaptcha(
     };
 
     let remote_ip = bencher_endpoint::remote_ip(headers);
+    slog::info!(log, "Verifying reCAPTCHA from remote IP address"; "remote_ip" => ?remote_ip);
 
     recaptcha_client
         .verify(log, recaptcha_token, recaptcha_action, remote_ip)

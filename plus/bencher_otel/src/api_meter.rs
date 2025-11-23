@@ -35,6 +35,10 @@ pub enum ApiCounter {
     ProjectCreate,
     ProjectDelete,
 
+    RunClaimed,
+    RunUnclaimed,
+    RunUnclaimedMaxRuns,
+
     ReportCreate,
     ReportDelete,
 
@@ -59,6 +63,10 @@ impl ApiCounter {
 
             Self::ProjectCreate => "project.create",
             Self::ProjectDelete => "project.delete",
+
+            Self::RunClaimed => "run.claimed",
+            Self::RunUnclaimed => "run.unclaimed",
+            Self::RunUnclaimedMaxRuns => "run.unclaimed.max_runs",
 
             Self::ReportCreate => "report.create",
             Self::ReportDelete => "report.delete",
@@ -85,6 +93,10 @@ impl ApiCounter {
             Self::ProjectCreate => "Counts the number of project creations",
             Self::ProjectDelete => "Counts the number of project deletions",
 
+            Self::RunClaimed => "Counts the number of claimed runs",
+            Self::RunUnclaimed => "Counts the number of unclaimed runs",
+            Self::RunUnclaimedMaxRuns => "Counts the number of unclaimed runs that hit max runs",
+
             Self::ReportCreate => "Counts the number of report creations",
             Self::ReportDelete => "Counts the number of report deletions",
 
@@ -107,6 +119,9 @@ impl ApiCounter {
             | Self::OrganizationDelete
             | Self::ProjectCreate
             | Self::ProjectDelete
+            | Self::RunClaimed
+            | Self::RunUnclaimed
+            | Self::RunUnclaimedMaxRuns
             | Self::ReportCreate
             | Self::ReportDelete
             | Self::MetricCreate
