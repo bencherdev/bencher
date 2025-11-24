@@ -26,8 +26,7 @@ macro_rules! fn_rate_limit {
                     )}
                 )?;
 
-            $crate::context::RateLimiting::check_claimable_limit(
-                &context.rate_limiting,
+            context.rate_limiting.check_claimable_limit(
                 is_claimed,
                 window_usage,
                 |rate_limit| $crate::context::RateLimitingError::UnclaimedProject {

@@ -180,7 +180,7 @@ impl RateLimiting {
 
     pub fn check_user_limit<F>(&self, window_usage: u32, error_fn: F) -> Result<(), HttpError>
     where
-        F: Fn(u32) -> RateLimitingError,
+        F: FnOnce(u32) -> RateLimitingError,
     {
         Self::check_inner(self.user_limit, window_usage, error_fn)
     }
@@ -193,8 +193,8 @@ impl RateLimiting {
         claimed_error_fn: FCl,
     ) -> Result<(), HttpError>
     where
-        FUn: Fn(u32) -> RateLimitingError,
-        FCl: Fn(u32) -> RateLimitingError,
+        FUn: FnOnce(u32) -> RateLimitingError,
+        FCl: FnOnce(u32) -> RateLimitingError,
     {
         if is_claimed {
             Self::check_inner(self.claimed_limit, window_usage, claimed_error_fn)
@@ -203,23 +203,16 @@ impl RateLimiting {
         }
     }
 
-    pub fn check_unclaimed_limit<F>(&self, window_usage: u32, error_fn: F) -> Result<(), HttpError>
-    where
-        F: Fn(u32) -> RateLimitingError,
-    {
-        Self::check_inner(self.unclaimed_limit, window_usage, error_fn)
-    }
-
     pub fn check_claimed_limit<F>(&self, window_usage: u32, error_fn: F) -> Result<(), HttpError>
     where
-        F: Fn(u32) -> RateLimitingError,
+        F: FnOnce(u32) -> RateLimitingError,
     {
         Self::check_inner(self.claimed_limit, window_usage, error_fn)
     }
 
     fn check_inner<F>(limit: u32, window_usage: u32, error_fn: F) -> Result<(), HttpError>
     where
-        F: Fn(u32) -> RateLimitingError,
+        F: FnOnce(u32) -> RateLimitingError,
     {
         if window_usage < limit {
             Ok(())
@@ -258,7 +251,7 @@ fn check_rate_limit<K>(
     key: K,
     window: Duration,
     limit: usize,
-    #[cfg(feature = "otel")] api_counter: bencher_otel::ApiCounter,
+    #[cfg(feature = "otel")] api_counter_max: bencher_otel::ApiCounter,
     error: RateLimitingError,
 ) -> Result<(), HttpError>
 where
@@ -288,7 +281,7 @@ where
         entry.push_back(now);
 
         #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(api_counter);
+        bencher_otel::ApiMeter::increment(api_counter_max);
 
         Err(too_many_requests(error))
     }

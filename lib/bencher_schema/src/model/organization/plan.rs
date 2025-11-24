@@ -258,32 +258,34 @@ impl PlanKind {
         } else if let Some(license_usage) =
             LicenseUsage::get(&context.database.connection, licensor, query_organization).await?
         {
-            if license_usage.usage >= license_usage.entitlements.into() {
-                return Err(payment_required_error(PlanKindError::LicensePlanOverage {
+            if license_usage.usage < license_usage.entitlements.into() {
+                Ok(Self::Licensed(license_usage))
+            } else {
+                Err(payment_required_error(PlanKindError::LicensePlanOverage {
                     organization: query_organization.clone(),
                     entitlements: license_usage.entitlements,
                     usage: license_usage.usage,
-                }));
+                }))
             }
-            Ok(Self::Licensed(license_usage))
         } else if visibility.is_public() {
             let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
             let window_usage = query_organization.window_usage(context).await?;
 
-            context.rate_limiting.check_claimable_limit(
-                is_claimed,
-                window_usage,
-                |rate_limit| RateLimitingError::UnclaimedOrganization {
-                    organization: query_organization.clone(),
-                    rate_limit,
-                },
-                |rate_limit| RateLimitingError::ClaimedOrganization {
-                    organization: query_organization.clone(),
-                    rate_limit,
-                },
-            )?;
-
-            Ok(Self::None)
+            context
+                .rate_limiting
+                .check_claimable_limit(
+                    is_claimed,
+                    window_usage,
+                    |rate_limit| RateLimitingError::UnclaimedOrganization {
+                        organization: query_organization.clone(),
+                        rate_limit,
+                    },
+                    |rate_limit| RateLimitingError::ClaimedOrganization {
+                        organization: query_organization.clone(),
+                        rate_limit,
+                    },
+                )
+                .map(|()| Self::None)
         } else {
             Err(payment_required_error(PlanKindError::NoPlan {
                 organization: query_organization.clone(),
