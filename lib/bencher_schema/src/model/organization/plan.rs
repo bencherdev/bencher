@@ -12,7 +12,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     ApiContext, conn_lock, connection_lock,
-    context::DbConnection,
+    context::{DbConnection, RateLimitingError},
     error::{
         issue_error, not_found_error, payment_required_error, resource_conflict_err,
         resource_not_found_err,
@@ -230,16 +230,6 @@ pub enum PlanKindError {
         entitlements: Entitlements,
         usage: u32,
     },
-    #[error("Unclaimed organization ({uuid}) has exceeded the daily rate limit ({rate_limit}). Please, reduce your daily usage or claim the organization: https://bencher.dev/auth/signup?claim={uuid}", uuid = organization.uuid)]
-    UnclaimedUsage {
-        organization: QueryOrganization,
-        rate_limit: u32,
-    },
-    #[error("No plan (subscription or license) found for claimed organization ({uuid}) that exceeds the daily rate limit ({rate_limit}). Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", uuid = organization.uuid)]
-    ClaimedUsage {
-        organization: QueryOrganization,
-        rate_limit: u32,
-    },
     #[error("No plan (subscription or license) found for organization ({uuid}) with private project", uuid = organization.uuid)]
     NoPlan { organization: QueryOrganization },
     #[error("No Biller has been configured for the server")]
@@ -278,22 +268,22 @@ impl PlanKind {
             Ok(Self::Licensed(license_usage))
         } else if visibility.is_public() {
             let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
-            let daily_usage = query_organization.daily_usage(context).await?;
-            match (is_claimed, daily_usage) {
-                (false, daily_usage) if daily_usage >= context.rate_limiting.unclaimed_limit => {
-                    Err(payment_required_error(PlanKindError::UnclaimedUsage {
-                        organization: query_organization.clone(),
-                        rate_limit: context.rate_limiting.unclaimed_limit,
-                    }))
+            let window_usage = query_organization.window_usage(context).await?;
+
+            context.rate_limiting.check_claimable_limit(
+                is_claimed,
+                window_usage,
+                |rate_limit| RateLimitingError::UnclaimedOrganization {
+                    organization: query_organization.clone(),
+                    rate_limit,
                 },
-                (true, daily_usage) if daily_usage >= context.rate_limiting.claimed_limit => {
-                    Err(payment_required_error(PlanKindError::ClaimedUsage {
-                        organization: query_organization.clone(),
-                        rate_limit: context.rate_limiting.claimed_limit,
-                    }))
+                |rate_limit| RateLimitingError::ClaimedOrganization {
+                    organization: query_organization.clone(),
+                    rate_limit,
                 },
-                (_, _) => Ok(Self::None),
-            }
+            )?;
+
+            Ok(Self::None)
         } else {
             Err(payment_required_error(PlanKindError::NoPlan {
                 organization: query_organization.clone(),

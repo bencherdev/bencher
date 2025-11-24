@@ -33,14 +33,14 @@ const CLAIMED_LIMIT: u32 = u16::MAX as u32;
 const AUTH_MAX_ATTEMPTS: u32 = 4;
 
 pub struct RateLimiting {
-    pub window: Duration,
-    pub user_limit: u32,
-    pub unclaimed_limit: u32,
-    pub claimed_limit: u32,
-    pub unclaimed_runs: DashMap<Ipv4Addr, VecDeque<SystemTime>>,
-    pub auth_window: Duration,
-    pub auth_max_attempts: u32,
-    pub auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
+    window: Duration,
+    user_limit: u32,
+    unclaimed_limit: u32,
+    claimed_limit: u32,
+    unclaimed_runs: DashMap<Ipv4Addr, VecDeque<SystemTime>>,
+    auth_window: Duration,
+    auth_max_attempts: u32,
+    auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -55,6 +55,16 @@ pub enum RateLimitingError {
     Organization {
         organization: QueryOrganization,
         resource: BencherResource,
+        rate_limit: u32,
+    },
+    #[error("Unclaimed organization ({uuid}) has exceeded the daily rate limit ({rate_limit}). Please, reduce your daily usage or claim the organization: https://bencher.dev/auth/signup?claim={uuid}", uuid = organization.uuid)]
+    UnclaimedOrganization {
+        organization: QueryOrganization,
+        rate_limit: u32,
+    },
+    #[error("No plan (subscription or license) found for claimed organization ({uuid}) that exceeds the daily rate limit ({rate_limit}). Please, reduce your daily usage or purchase a Bencher Plus plan: https://bencher.dev/pricing", uuid = organization.uuid)]
+    ClaimedOrganization {
+        organization: QueryOrganization,
         rate_limit: u32,
     },
     #[error("Unclaimed project ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage or claim the project: https://bencher.dev/auth/signup?claim={uuid}", uuid = project.uuid)]
@@ -166,6 +176,56 @@ impl RateLimiting {
         let end_time = chrono::Utc::now();
         let start_time = end_time - self.window;
         (start_time.into(), end_time.into())
+    }
+
+    pub fn check_user_limit<F>(&self, window_usage: u32, error_fn: F) -> Result<(), HttpError>
+    where
+        F: Fn(u32) -> RateLimitingError,
+    {
+        Self::check_inner(self.user_limit, window_usage, error_fn)
+    }
+
+    pub fn check_claimable_limit<FUn, FCl>(
+        &self,
+        is_claimed: bool,
+        window_usage: u32,
+        unclaimed_error_fn: FUn,
+        claimed_error_fn: FCl,
+    ) -> Result<(), HttpError>
+    where
+        FUn: Fn(u32) -> RateLimitingError,
+        FCl: Fn(u32) -> RateLimitingError,
+    {
+        if is_claimed {
+            Self::check_inner(self.claimed_limit, window_usage, claimed_error_fn)
+        } else {
+            Self::check_inner(self.unclaimed_limit, window_usage, unclaimed_error_fn)
+        }
+    }
+
+    pub fn check_unclaimed_limit<F>(&self, window_usage: u32, error_fn: F) -> Result<(), HttpError>
+    where
+        F: Fn(u32) -> RateLimitingError,
+    {
+        Self::check_inner(self.unclaimed_limit, window_usage, error_fn)
+    }
+
+    pub fn check_claimed_limit<F>(&self, window_usage: u32, error_fn: F) -> Result<(), HttpError>
+    where
+        F: Fn(u32) -> RateLimitingError,
+    {
+        Self::check_inner(self.claimed_limit, window_usage, error_fn)
+    }
+
+    fn check_inner<F>(limit: u32, window_usage: u32, error_fn: F) -> Result<(), HttpError>
+    where
+        F: Fn(u32) -> RateLimitingError,
+    {
+        if window_usage < limit {
+            Ok(())
+        } else {
+            Err(too_many_requests(error_fn(limit)))
+        }
     }
 
     pub fn unclaimed_run(&self, remote_ip: Ipv4Addr) -> Result<(), HttpError> {

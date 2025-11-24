@@ -272,7 +272,7 @@ impl QueryOrganization {
     }
 
     #[cfg(feature = "plus")]
-    pub async fn daily_usage(&self, context: &ApiContext) -> Result<u32, HttpError> {
+    pub async fn window_usage(&self, context: &ApiContext) -> Result<u32, HttpError> {
         use crate::model::project::metric::QueryMetric;
 
         let (start_time, end_time) = context.rate_limiting.window();
@@ -338,16 +338,13 @@ impl InsertOrganization {
                     )}
                 )?;
 
-        let rate_limit = context.rate_limiting.user_limit;
-        if creation_count >= rate_limit {
-            Err(crate::error::too_many_requests(RateLimitingError::User {
+        context
+            .rate_limiting
+            .check_user_limit(creation_count, |rate_limit| RateLimitingError::User {
                 user: query_user.clone(),
                 resource,
                 rate_limit,
-            }))
-        } else {
-            Ok(())
-        }
+            })
     }
 
     fn new(name: ResourceName, slug: OrganizationSlug) -> Self {

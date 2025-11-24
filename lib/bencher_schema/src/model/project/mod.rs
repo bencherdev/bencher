@@ -511,7 +511,7 @@ impl InsertProject {
 
         let resource = BencherResource::Project;
         let (start_time, end_time) = context.rate_limiting.window();
-        let creation_count: u32 = schema::project::table
+        let window_usage: u32 = schema::project::table
                 .filter(schema::project::organization_id.eq(query_organization.id))
                 .filter(schema::project::created.ge(start_time))
                 .filter(schema::project::created.le(end_time))
@@ -527,22 +527,20 @@ impl InsertProject {
                     )}
                 )?;
 
-        let rate_limit = if is_claimed {
-            context.rate_limiting.claimed_limit
-        } else {
-            context.rate_limiting.unclaimed_limit
-        };
-        if creation_count >= rate_limit {
-            Err(crate::error::too_many_requests(
-                RateLimitingError::Organization {
-                    organization: query_organization.clone(),
-                    resource,
-                    rate_limit,
-                },
-            ))
-        } else {
-            Ok(())
-        }
+        context.rate_limiting.check_claimable_limit(
+            is_claimed,
+            window_usage,
+            |rate_limit| RateLimitingError::Organization {
+                organization: query_organization.clone(),
+                resource,
+                rate_limit,
+            },
+            |rate_limit| RateLimitingError::Organization {
+                organization: query_organization.clone(),
+                resource,
+                rate_limit,
+            },
+        )
     }
 
     pub fn new(

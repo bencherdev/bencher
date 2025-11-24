@@ -102,7 +102,7 @@ impl InsertToken {
 
         let resource = BencherResource::Token;
         let (start_time, end_time) = context.rate_limiting.window();
-        let creation_count: u32 = schema::token::table
+        let window_usage: u32 = schema::token::table
                 .filter(schema::token::user_id.eq(query_user.id))
                 .filter(schema::token::creation.ge(start_time))
                 .filter(schema::token::creation.le(end_time))
@@ -118,16 +118,13 @@ impl InsertToken {
                     )}
                 )?;
 
-        let rate_limit = context.rate_limiting.user_limit;
-        if creation_count >= rate_limit {
-            Err(crate::error::too_many_requests(RateLimitingError::User {
+        context
+            .rate_limiting
+            .check_user_limit(window_usage, |rate_limit| RateLimitingError::User {
                 user: query_user.clone(),
                 resource,
                 rate_limit,
-            }))
-        } else {
-            Ok(())
-        }
+            })
     }
 
     pub fn from_json(
