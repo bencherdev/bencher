@@ -244,7 +244,7 @@ pub enum PlanKindError {
 }
 
 impl PlanKind {
-    pub async fn new(
+    async fn new(
         context: &ApiContext,
         biller: Option<&Biller>,
         licensor: &Licensor,

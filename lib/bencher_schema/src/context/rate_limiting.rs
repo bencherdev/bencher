@@ -28,6 +28,7 @@ const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 const USER_LIMIT: u32 = u8::MAX as u32;
 const UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const CLAIMED_LIMIT: u32 = u16::MAX as u32;
+const UNCLAIMED_RUN_LIMIT: u32 = u8::MAX as u32;
 
 // Allow for 1 login and 3 email retries by default
 const AUTH_MAX_ATTEMPTS: u32 = 4;
@@ -37,6 +38,7 @@ pub struct RateLimiting {
     user_limit: u32,
     unclaimed_limit: u32,
     claimed_limit: u32,
+    unclaimed_run_limit: u32,
     unclaimed_runs: DashMap<Ipv4Addr, VecDeque<SystemTime>>,
     auth_window: Duration,
     auth_max_attempts: u32,
@@ -107,6 +109,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             user_limit,
             unclaimed_limit,
             claimed_limit,
+            unclaimed_run_limit,
             auth_window,
             auth_max_attempts,
         } = json;
@@ -115,6 +118,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             user_limit: user_limit.unwrap_or(USER_LIMIT),
             unclaimed_limit: unclaimed_limit.unwrap_or(UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(CLAIMED_LIMIT),
+            unclaimed_run_limit: unclaimed_run_limit.unwrap_or(UNCLAIMED_RUN_LIMIT),
             unclaimed_runs: DashMap::new(),
             auth_window: auth_window.map(u64::from).map_or(HOUR, Duration::from_secs),
             auth_max_attempts: auth_max_attempts.unwrap_or(AUTH_MAX_ATTEMPTS),
@@ -130,6 +134,7 @@ impl Default for RateLimiting {
             user_limit: USER_LIMIT,
             unclaimed_limit: UNCLAIMED_LIMIT,
             claimed_limit: CLAIMED_LIMIT,
+            unclaimed_run_limit: UNCLAIMED_RUN_LIMIT,
             unclaimed_runs: DashMap::new(),
             auth_window: HOUR,
             auth_max_attempts: AUTH_MAX_ATTEMPTS,
@@ -226,7 +231,7 @@ impl RateLimiting {
             &self.unclaimed_runs,
             remote_ip,
             self.window,
-            self.unclaimed_limit as usize,
+            self.unclaimed_run_limit as usize,
             #[cfg(feature = "otel")]
             bencher_otel::ApiCounter::RunUnclaimedMaxRuns,
             RateLimitingError::UnclaimedRuns,

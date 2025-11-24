@@ -233,112 +233,6 @@ impl SeedTest {
         let _json: bencher_json::JsonProject =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- measure ls --host http://localhost:61016 the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["measure", "ls", HOST_ARG, host, PROJECT_SLUG])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let measures: bencher_json::JsonMeasures =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(measures.0.len(), 2);
-
-        // cargo run -- measure ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let measures: bencher_json::JsonMeasures =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(measures.0.len(), 2);
-
-        // cargo run -- measure create --host http://localhost:61016 --token $BENCHER_API_TOKEN --name Screams --slug screams --units "Decibels (dB)" the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "create",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            "--name",
-            "Screams",
-            "--slug",
-            MEASURE_SLUG,
-            "--units",
-            "Decibels (dB)",
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonMeasure =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-        // cargo run -- measure ls --host http://localhost:61016 the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["measure", "ls", HOST_ARG, host, PROJECT_SLUG])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let measures: bencher_json::JsonMeasures =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(measures.0.len(), 3);
-
-        // cargo run -- measure ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let measures: bencher_json::JsonMeasures =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(measures.0.len(), 3);
-
-        // cargo run -- measure view --host http://localhost:61016 the-computer screams
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "view",
-            HOST_ARG,
-            host,
-            PROJECT_SLUG,
-            MEASURE_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonMeasure =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-        // cargo run -- measure view --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer screams
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-            MEASURE_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonMeasure =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
         // cargo run -- branch ls --host http://localhost:61016 the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["branch", "ls", HOST_ARG, host, PROJECT_SLUG])
@@ -538,6 +432,112 @@ impl SeedTest {
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonTestbed =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // cargo run -- measure ls --host http://localhost:61016 the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["measure", "ls", HOST_ARG, host, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let measures: bencher_json::JsonMeasures =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(measures.0.len(), 2);
+
+        // cargo run -- measure ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "measure",
+            "ls",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let measures: bencher_json::JsonMeasures =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(measures.0.len(), 2);
+
+        // cargo run -- measure create --host http://localhost:61016 --token $BENCHER_API_TOKEN --name Screams --slug screams --units "Decibels (dB)" the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "measure",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "--name",
+            "Screams",
+            "--slug",
+            MEASURE_SLUG,
+            "--units",
+            "Decibels (dB)",
+            PROJECT_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonMeasure =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // cargo run -- measure ls --host http://localhost:61016 the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["measure", "ls", HOST_ARG, host, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let measures: bencher_json::JsonMeasures =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(measures.0.len(), 3);
+
+        // cargo run -- measure ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "measure",
+            "ls",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let measures: bencher_json::JsonMeasures =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(measures.0.len(), 3);
+
+        // cargo run -- measure view --host http://localhost:61016 the-computer screams
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "measure",
+            "view",
+            HOST_ARG,
+            host,
+            PROJECT_SLUG,
+            MEASURE_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonMeasure =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // cargo run -- measure view --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer screams
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "measure",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_SLUG,
+            MEASURE_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonMeasure =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
         // cargo run -- threshold ls --host http://localhost:61016 the-computer
@@ -1637,7 +1637,7 @@ impl SeedTest {
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        // This run should fail as we hit the rate limit
+        // This run should fail as we hit the unclaimed rate limit
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
@@ -1656,7 +1656,49 @@ impl SeedTest {
         let assert = cmd.assert().failure();
         let output = assert.get_output();
         assert!(
-            String::from_utf8_lossy(&output.stderr).contains("Status: 402 Payment Required"),
+            String::from_utf8_lossy(&output.stderr).contains("Status: 429 Too Many Requests"),
+            "{output:?}"
+        );
+
+        // Hit the rate limit for auth attempts for a user
+        // Signup Courage as a new user
+        // cargo run -- auth signup --host http://localhost:61016 --name "Courage" courage@nowhere.com
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "auth",
+            "signup",
+            HOST_ARG,
+            host,
+            "--name",
+            "Courage",
+            "--i-agree",
+            "courage@nowhere.com",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonAuthAck =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // Attempt to login Courage three time
+        for _ in 0..3 {
+            // cargo run -- auth login --host http://localhost:61016 courage@nowhere.com
+            let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+            cmd.args(["auth", "login", HOST_ARG, host, "courage@nowhere.com"])
+                .current_dir(CLI_DIR);
+            let assert = cmd.assert().success();
+            let _json: bencher_json::JsonAuthAck =
+                serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        }
+
+        // Fourth attempt should hit rate limit
+        // cargo run -- auth login --host http://localhost:61016 courage@nowhere
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["auth", "login", HOST_ARG, host, "courage@nowhere.com"])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("Status: 429 Too Many Requests"),
             "{output:?}"
         );
 
