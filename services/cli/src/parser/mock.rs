@@ -22,4 +22,8 @@ pub struct CliMock {
     /// Intermittently fail while running
     #[clap(long, conflicts_with = "fail")]
     pub flaky: bool,
+
+    /// Seed for random number generator
+    #[clap(long)]
+    pub seed: Option<u64>,
 }

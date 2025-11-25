@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use bencher_adapter::{AdapterResults, results::adapter_metrics::AdapterMetrics};
 use bencher_json::{JsonNewMetric, MeasureNameId};
 use rand::{
-    Rng as _,
+    Rng as _, SeedableRng as _,
     distr::{Distribution as _, Uniform},
+    rngs::StdRng,
 };
 
 use crate::{CliError, cli_println, parser::mock::CliMock};
@@ -20,6 +21,7 @@ pub struct Mock {
     pub pow: Option<i32>,
     pub fail: bool,
     pub flaky: bool,
+    pub seed: Option<u64>,
 }
 
 #[expect(clippy::absolute_paths)]
@@ -46,6 +48,7 @@ impl From<CliMock> for Mock {
             pow,
             fail,
             flaky,
+            seed,
         } = mock;
         Self {
             count,
@@ -53,6 +56,7 @@ impl From<CliMock> for Mock {
             pow,
             fail,
             flaky,
+            seed,
         }
     }
 }
@@ -85,14 +89,18 @@ impl Mock {
         let pow = self.pow.unwrap_or(1);
         let ten_pow = 10.0f64.powi(pow);
         let mut results = HashMap::with_capacity(count);
-        let mut rng = rand::rng();
+        let mut std_rng = if let Some(seed) = self.seed {
+            StdRng::seed_from_u64(seed)
+        } else {
+            StdRng::from_os_rng()
+        };
         for c in 0..count {
             let mut measures_map = HashMap::with_capacity(self.measures.len());
             for measure in self.measures.clone() {
                 let low = ten_pow * c as f64;
                 let high = ten_pow * (c + 1) as f64;
                 let uniform = Uniform::new(low, high).map_err(MockError::BadDistribution)?;
-                let value: f64 = uniform.sample(&mut rng);
+                let value: f64 = uniform.sample(&mut std_rng);
                 let variance = value * 0.1;
                 let metric = JsonNewMetric {
                     value: value.into(),
