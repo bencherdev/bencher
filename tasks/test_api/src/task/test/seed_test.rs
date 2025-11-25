@@ -26,6 +26,9 @@ const CLAIMED_SLUG: &str = "claimed";
 
 const CLI_DIR: &str = "./services/cli";
 
+// https://courage.fandom.com/wiki/Perfect#Plot
+const PERFECT_SEED: &str = "6";
+
 #[derive(Debug)]
 pub struct SeedTest {
     pub url: Url,
@@ -699,7 +702,7 @@ impl SeedTest {
                     "--format",
                     "json",
                     "--quiet",
-                    &format!("{bencher_cmd} mock --measure latency --measure {MEASURE_SLUG}"),
+                    &format!("{bencher_cmd} mock --seed {PERFECT_SEED} --measure latency --measure {MEASURE_SLUG}"),
                 ])
             } else {
                 // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch master --testbed base --quiet bencher mock
@@ -720,6 +723,8 @@ impl SeedTest {
                     "--quiet",
                     &bencher_cmd,
                     "mock",
+                    "--seed",
+                    PERFECT_SEED,
                     "--measure",
                     "latency",
                     "--measure",
@@ -772,6 +777,10 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
+            "--measure",
+            "latency",
             "--measure",
             MEASURE_SLUG,
         ])
@@ -817,6 +826,12 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
+            "--measure",
+            "latency",
+            "--measure",
+            MEASURE_SLUG,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -861,6 +876,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
             "--pow",
             "10",
         ])
@@ -907,6 +924,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
             "--measure",
             MEASURE_SLUG,
             "--pow",
@@ -952,6 +971,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1204,6 +1225,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
             "--measure",
             MEASURE_SLUG,
             "--pow",
@@ -1313,6 +1336,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1347,6 +1372,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1383,6 +1410,8 @@ impl SeedTest {
                 "--quiet",
                 &bencher_cmd,
                 "mock",
+                "--seed",
+                PERFECT_SEED,
             ])
             .current_dir(CLI_DIR);
             let assert = cmd.assert().success();
@@ -1431,6 +1460,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1482,6 +1513,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1510,6 +1543,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1539,6 +1574,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1568,6 +1605,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1597,6 +1636,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -1626,6 +1667,8 @@ impl SeedTest {
                 "--quiet",
                 &bencher_cmd,
                 "mock",
+                "--seed",
+                PERFECT_SEED,
             ])
             .current_dir(CLI_DIR);
             let assert = cmd.assert().success();
@@ -1651,6 +1694,8 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
+            "--seed",
+            PERFECT_SEED,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().failure();

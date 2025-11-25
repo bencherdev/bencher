@@ -3,6 +3,10 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 pub struct CliMock {
+    /// Seed for random number generator
+    #[clap(long)]
+    pub seed: Option<u64>,
+
     /// Number of mock benchmarks to generate
     #[clap(long)]
     pub count: Option<usize>,
@@ -22,8 +26,4 @@ pub struct CliMock {
     /// Intermittently fail while running
     #[clap(long, conflicts_with = "fail")]
     pub flaky: bool,
-
-    /// Seed for random number generator
-    #[clap(long)]
-    pub seed: Option<u64>,
 }
