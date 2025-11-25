@@ -8,12 +8,16 @@ use crate::parser::organization::plan::CliPlanLevel;
 #[derive(Subcommand, Debug)]
 pub enum CliAuth {
     // Create a user account
+    #[clap(hide = true)]
     Signup(CliAuthSignup),
     // Log in to a user account
+    #[clap(hide = true)]
     Login(CliAuthLogin),
     // Confirm token
+    #[clap(hide = true)]
     Confirm(CliAuthConfirm),
     // Accept invite
+    #[clap(hide = true)]
     Accept(CliAuthAccept),
 }
 

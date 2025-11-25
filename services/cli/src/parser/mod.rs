@@ -110,7 +110,7 @@ pub enum CliSub {
     Server(CliServer),
 
     /// Server authentication & authorization
-    #[clap(subcommand)]
+    #[clap(subcommand, hide = true)]
     Auth(CliAuth),
 }
 
