@@ -10982,7 +10982,7 @@
       "JsonRateLimiting": {
         "type": "object",
         "properties": {
-          "auth_max_attempts": {
+          "auth_limit": {
             "nullable": true,
             "type": "integer",
             "format": "uint32",

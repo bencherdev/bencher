@@ -25,13 +25,13 @@ use super::DbConnection;
 const HOUR: Duration = Duration::from_secs(60 * 60);
 const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
-const USER_LIMIT: u32 = u8::MAX as u32;
-const UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
-const CLAIMED_LIMIT: u32 = u16::MAX as u32;
-const UNCLAIMED_RUN_LIMIT: u32 = u8::MAX as u32;
+const DEFAULT_USER_LIMIT: u32 = u8::MAX as u32;
+const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
+const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
+const DEFAULT_UNCLAIMED_RUN_LIMIT: u32 = u8::MAX as u32;
 
 // Allow for 1 login and 3 email retries by default
-const AUTH_MAX_ATTEMPTS: u32 = 4;
+const DEFAULT_AUTH_LIMIT: u32 = 4;
 
 pub struct RateLimiting {
     window: Duration,
@@ -41,7 +41,7 @@ pub struct RateLimiting {
     unclaimed_run_limit: u32,
     unclaimed_runs: DashMap<Ipv4Addr, VecDeque<SystemTime>>,
     auth_window: Duration,
-    auth_max_attempts: u32,
+    auth_limit: u32,
     auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
 }
 
@@ -111,17 +111,17 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit,
             unclaimed_run_limit,
             auth_window,
-            auth_max_attempts,
+            auth_limit,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
-            user_limit: user_limit.unwrap_or(USER_LIMIT),
-            unclaimed_limit: unclaimed_limit.unwrap_or(UNCLAIMED_LIMIT),
-            claimed_limit: claimed_limit.unwrap_or(CLAIMED_LIMIT),
-            unclaimed_run_limit: unclaimed_run_limit.unwrap_or(UNCLAIMED_RUN_LIMIT),
+            user_limit: user_limit.unwrap_or(DEFAULT_USER_LIMIT),
+            unclaimed_limit: unclaimed_limit.unwrap_or(DEFAULT_UNCLAIMED_LIMIT),
+            claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
+            unclaimed_run_limit: unclaimed_run_limit.unwrap_or(DEFAULT_UNCLAIMED_RUN_LIMIT),
             unclaimed_runs: DashMap::new(),
             auth_window: auth_window.map(u64::from).map_or(HOUR, Duration::from_secs),
-            auth_max_attempts: auth_max_attempts.unwrap_or(AUTH_MAX_ATTEMPTS),
+            auth_limit: auth_limit.unwrap_or(DEFAULT_AUTH_LIMIT),
             auth_attempts: DashMap::new(),
         }
     }
@@ -131,13 +131,13 @@ impl Default for RateLimiting {
     fn default() -> Self {
         Self {
             window: DAY,
-            user_limit: USER_LIMIT,
-            unclaimed_limit: UNCLAIMED_LIMIT,
-            claimed_limit: CLAIMED_LIMIT,
-            unclaimed_run_limit: UNCLAIMED_RUN_LIMIT,
+            user_limit: DEFAULT_USER_LIMIT,
+            unclaimed_limit: DEFAULT_UNCLAIMED_LIMIT,
+            claimed_limit: DEFAULT_CLAIMED_LIMIT,
+            unclaimed_run_limit: DEFAULT_UNCLAIMED_RUN_LIMIT,
             unclaimed_runs: DashMap::new(),
             auth_window: HOUR,
-            auth_max_attempts: AUTH_MAX_ATTEMPTS,
+            auth_limit: DEFAULT_AUTH_LIMIT,
             auth_attempts: DashMap::new(),
         }
     }
@@ -243,7 +243,7 @@ impl RateLimiting {
             &self.auth_attempts,
             user_uuid,
             self.auth_window,
-            self.auth_max_attempts as usize,
+            self.auth_limit as usize,
             #[cfg(feature = "otel")]
             bencher_otel::ApiCounter::UserMaxAttempts,
             RateLimitingError::AuthAttempts,
