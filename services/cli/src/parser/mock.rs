@@ -3,7 +3,7 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 pub struct CliMock {
-    /// Seed for random number generator
+    /// Seed for pseudorandom number generator
     #[clap(long)]
     pub seed: Option<u64>,
 

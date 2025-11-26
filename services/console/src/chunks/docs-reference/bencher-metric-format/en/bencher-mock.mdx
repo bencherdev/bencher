@@ -2,12 +2,19 @@
 
 The `bencher mock` CLI subcommand is used to generate mock Bencher Metric Format (BMF) JSON data.
 
+### `--seed <SEED>`
+
+The seed for the pseudorandom number generator.
+If not specified, a random seed will be used.
+
 ### `--count <COUNT>`
+
 The number of mock [Benchmarks][benchmark] to generate.
 
 [benchmark]: /docs/explanation/benchmarking/#benchmark
 
 ### `--measure <MEASURE>`
+
 The [Measure][measure] to use for each [Benchmark][benchmark].
 Multiple Measures can be specified by using the `--measure` option multiple times.
 The default is the built-in `latency` Measure.
@@ -16,16 +23,20 @@ The default is the built-in `latency` Measure.
 [benchmark]: /docs/explanation/benchmarking/#benchmark
 
 ### `--pow <POW>`
+
 The power of 10 to use for the mock [Metrics][metric].
 The default is `1`.
 
 [metric]: /docs/explanation/benchmarking/#metric
 
 ### `--fail`
+
 Fail while running.
 
 ### `--flaky`
+
 Intermittently fail while running.
 
 ### `--help`
+
 Print the help message.

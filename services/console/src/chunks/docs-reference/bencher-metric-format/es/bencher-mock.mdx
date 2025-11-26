@@ -1,31 +1,42 @@
 ## `bencher mock`
 
-El subcomando de CLI `bencher mock` se utiliza para generar datos JSON de formato métrico de Bencher (BMF) simulados.
+El subcomando de la CLI `bencher mock` se usa para generar datos JSON simulados en el Bencher Metric Format (BMF).
+
+### `--seed <SEED>`
+
+La semilla para el generador de números pseudoaleatorios.
+Si no se especifica, se usará una semilla aleatoria.
 
 ### `--count <COUNT>`
-La cantidad de [Benchmarks][benchmark] simulados a generar.
+
+El número de [Benchmarks][benchmark] simulados a generar.
 
 [benchmark]: /es/docs/explanation/benchmarking/#benchmark
 
 ### `--measure <MEASURE>`
-La [Medida][measure] a utilizar para cada [Benchmark][benchmark].
-Se pueden especificar múltiples medidas utilizando la opción `--measure` varias veces.
-El valor predeterminado es la medida incorporada `latency`.
+
+La [Medida][measure] que se usará para cada [Benchmark][benchmark].
+Se pueden especificar varias Medidas usando la opción `--measure` varias veces.
+Por defecto se usa la Medida incorporada `latency`.
 
 [measure]: /es/docs/explanation/benchmarking/#measure
 [benchmark]: /es/docs/explanation/benchmarking/#benchmark
 
 ### `--pow <POW>`
-La potencia de 10 a utilizar para los [Métricos][metric] simulados.
-El valor predeterminado es `1`.
+
+La potencia de 10 que se usará para las [Métricas][metric] simuladas.
+El valor por defecto es `1`.
 
 [metric]: /es/docs/explanation/benchmarking/#metric
 
 ### `--fail`
+
 Fallar durante la ejecución.
 
 ### `--flaky`
-Fallar intermitentemente durante la ejecución.
+
+Fallar de forma intermitente durante la ejecución.
 
 ### `--help`
+
 Imprimir el mensaje de ayuda.
