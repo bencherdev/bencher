@@ -13,6 +13,6 @@ pub struct JsonRateLimiting {
     pub auth_window: Option<u32>,
     pub auth_limit: Option<u32>,
     // Requests
-    pub pub_requests_per_minute_limit: Option<u32>,
+    pub public_requests_per_minute_limit: Option<u32>,
     pub user_requests_per_minute_limit: Option<u32>,
 }

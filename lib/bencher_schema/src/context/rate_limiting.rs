@@ -34,7 +34,7 @@ const DEFAULT_UNCLAIMED_RUN_LIMIT: u32 = u8::MAX as u32;
 // Allow for 1 login and 3 email retries by default
 const DEFAULT_AUTH_LIMIT: u32 = 4;
 
-const DEFAULT_PUB_REQUESTS_PER_MINUTE_LIMIT: usize = u8::MAX as usize;
+const DEFAULT_PUBLIC_REQUESTS_PER_MINUTE_LIMIT: usize = u8::MAX as usize;
 const DEFAULT_USER_REQUESTS_PER_MINUTE_LIMIT: usize = u16::MAX as usize;
 
 pub struct RateLimiting {
@@ -49,8 +49,8 @@ pub struct RateLimiting {
     auth_limit: u32,
     auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
     // Requests
-    pub_requests_per_minute_limit: usize,
-    pub_requests_per_minute: DashMap<IpAddr, VecDeque<SystemTime>>,
+    public_requests_per_minute_limit: usize,
+    public_requests_per_minute: DashMap<IpAddr, VecDeque<SystemTime>>,
     user_requests_per_minute_limit: usize,
     user_requests_per_minute: DashMap<UserUuid, VecDeque<SystemTime>>,
 }
@@ -125,7 +125,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             auth_window,
             auth_limit,
             // Requests
-            pub_requests_per_minute_limit,
+            public_requests_per_minute_limit,
             user_requests_per_minute_limit,
         } = json;
         Self {
@@ -140,11 +140,11 @@ impl From<JsonRateLimiting> for RateLimiting {
             auth_limit: auth_limit.unwrap_or(DEFAULT_AUTH_LIMIT),
             auth_attempts: DashMap::new(),
             // Requests
-            pub_requests_per_minute_limit: pub_requests_per_minute_limit
-                .map_or(DEFAULT_PUB_REQUESTS_PER_MINUTE_LIMIT, |limit| {
+            public_requests_per_minute_limit: public_requests_per_minute_limit
+                .map_or(DEFAULT_PUBLIC_REQUESTS_PER_MINUTE_LIMIT, |limit| {
                     limit as usize
                 }),
-            pub_requests_per_minute: DashMap::new(),
+            public_requests_per_minute: DashMap::new(),
             user_requests_per_minute_limit: user_requests_per_minute_limit
                 .map_or(DEFAULT_USER_REQUESTS_PER_MINUTE_LIMIT, |limit| {
                     limit as usize
@@ -168,8 +168,8 @@ impl Default for RateLimiting {
             auth_limit: DEFAULT_AUTH_LIMIT,
             auth_attempts: DashMap::new(),
             // Requests
-            pub_requests_per_minute_limit: DEFAULT_PUB_REQUESTS_PER_MINUTE_LIMIT,
-            pub_requests_per_minute: DashMap::new(),
+            public_requests_per_minute_limit: DEFAULT_PUBLIC_REQUESTS_PER_MINUTE_LIMIT,
+            public_requests_per_minute: DashMap::new(),
             user_requests_per_minute_limit: DEFAULT_USER_REQUESTS_PER_MINUTE_LIMIT,
             user_requests_per_minute: DashMap::new(),
         }
@@ -261,10 +261,10 @@ impl RateLimiting {
 
     pub fn public_request(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
         check_rate_limit(
-            &self.pub_requests_per_minute,
+            &self.public_requests_per_minute,
             remote_ip,
             MINUTE,
-            self.pub_requests_per_minute_limit,
+            self.public_requests_per_minute_limit,
             #[cfg(feature = "otel")]
             bencher_otel::ApiCounter::RequestMax(
                 bencher_otel::IntervalKind::Minute,
