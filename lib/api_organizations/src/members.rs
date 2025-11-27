@@ -245,8 +245,8 @@ async fn post_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::CreateRole, &query_org)
         .map_err(forbidden_error)?;
-    // Check the rate limit for sending invite emails
-    auth_user.rate_limit_invite_email(context)?;
+    // Check the rate limit for sending invites
+    auth_user.rate_limit_invites(context)?;
 
     let email = json_new_member.email.clone();
     // If a user already exists for the email then direct them to login.

@@ -121,8 +121,8 @@ impl QueryUser {
 
     /// Rate limit authentication attempts for this user
     #[cfg(feature = "plus")]
-    pub fn rate_limit(&self, context: &crate::ApiContext) -> Result<(), HttpError> {
-        context.rate_limiting.auth_email(self.uuid)
+    pub fn rate_limit_auth(&self, context: &crate::ApiContext) -> Result<(), HttpError> {
+        context.rate_limiting.auth_attempt(self.uuid)
     }
 
     pub fn accept_invite(
@@ -272,8 +272,8 @@ impl InsertUser {
 
     /// Rate limit authentication attempts for this user
     #[cfg(feature = "plus")]
-    pub fn rate_limit(&self, context: &crate::ApiContext) -> Result<(), HttpError> {
-        context.rate_limiting.auth_email(self.uuid)
+    pub fn rate_limit_auth(&self, context: &crate::ApiContext) -> Result<(), HttpError> {
+        context.rate_limiting.auth_attempt(self.uuid)
     }
 
     pub fn notify(

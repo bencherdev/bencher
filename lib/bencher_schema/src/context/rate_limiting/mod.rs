@@ -256,11 +256,11 @@ impl RateLimiting {
         self.request.check_user(user_uuid)
     }
 
-    pub fn auth_email(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+    pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         self.email.check_auth(user_uuid)
     }
 
-    pub fn invite_email(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+    pub fn send_invite(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         self.email.check_invite(user_uuid)
     }
 
