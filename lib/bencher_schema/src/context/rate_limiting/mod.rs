@@ -21,7 +21,11 @@ use crate::{
     },
 };
 
+mod rate_limiter;
 mod remote_ip;
+mod requests;
+
+use rate_limiter::RateLimiter;
 
 use super::DbConnection;
 
@@ -57,7 +61,7 @@ pub struct RateLimiting {
     user_requests_per_minute: DashMap<UserUuid, VecDeque<SystemTime>>,
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum RateLimitingError {
     #[error("User ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
     User {
