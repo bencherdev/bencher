@@ -46,8 +46,8 @@ pub struct RateLimiting {
     claimed_limit: u32,
     unclaimed_run_limit: u32,
     unclaimed_runs: DashMap<IpAddr, VecDeque<SystemTime>>,
-    email: EmailRateLimiter,
     request: RequestRateLimiter,
+    email: EmailRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -123,8 +123,8 @@ impl Default for RateLimiting {
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
             unclaimed_run_limit: DEFAULT_UNCLAIMED_RUN_LIMIT,
             unclaimed_runs: DashMap::new(),
-            email: EmailRateLimiter::default(),
             request: RequestRateLimiter::default(),
+            email: EmailRateLimiter::default(),
         }
     }
 }
@@ -137,8 +137,8 @@ impl From<JsonRateLimiting> for RateLimiting {
             unclaimed_limit,
             claimed_limit,
             unclaimed_run_limit,
-            email,
             request,
+            email,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
@@ -147,8 +147,8 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
             unclaimed_run_limit: unclaimed_run_limit.unwrap_or(DEFAULT_UNCLAIMED_RUN_LIMIT),
             unclaimed_runs: DashMap::new(),
-            email: email.map_or_else(EmailRateLimiter::default, Into::into),
             request: request.map_or_else(RequestRateLimiter::default, Into::into),
+            email: email.map_or_else(EmailRateLimiter::default, Into::into),
         }
     }
 }
@@ -236,14 +236,6 @@ impl RateLimiting {
         }
     }
 
-    pub fn public_request(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
-        self.request.check_public(remote_ip)
-    }
-
-    pub fn user_request(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.request.check_user(user_uuid)
-    }
-
     pub fn unclaimed_run(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
         check_rate_limit(
             &self.unclaimed_runs,
@@ -254,6 +246,14 @@ impl RateLimiting {
             bencher_otel::ApiCounter::RunUnclaimedMax,
             RateLimitingError::UnclaimedRuns,
         )
+    }
+
+    pub fn public_request(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
+        self.request.check_public(remote_ip)
+    }
+
+    pub fn user_request(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.request.check_user(user_uuid)
     }
 
     pub fn auth_email(&self, user_uuid: UserUuid) -> Result<(), HttpError> {

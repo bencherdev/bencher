@@ -238,6 +238,10 @@ impl AuthUser {
             .collect()
     }
 
+    pub fn rate_limit_invite_email(&self, context: &ApiContext) -> Result<(), HttpError> {
+        context.rate_limiting.invite_email(self.user.uuid)
+    }
+
     #[cfg(feature = "plus")]
     pub fn to_customer(&self) -> JsonCustomer {
         JsonCustomer {
