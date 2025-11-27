@@ -25,7 +25,7 @@ pub use plus::{
         recaptcha::JsonRecaptcha,
     },
     litestream::{JsonLitestream, JsonReplica},
-    rate_limiting::JsonRateLimiting,
+    rate_limiting::{JsonRateLimiting, JsonRateLimits, JsonRequestsRateLimiter},
     stats::JsonStats,
 };
 pub use security::JsonSecurity;

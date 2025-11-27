@@ -13,6 +13,19 @@ pub struct JsonRateLimiting {
     pub auth_window: Option<u32>,
     pub auth_limit: Option<u32>,
     // Requests
-    pub public_requests_per_minute_limit: Option<u32>,
-    pub user_requests_per_minute_limit: Option<u32>,
+    pub requests: Option<JsonRequestsRateLimiter>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRequestsRateLimiter {
+    pub public: Option<JsonRateLimits>,
+    pub user: Option<JsonRateLimits>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRateLimits {
+    pub minute_limit: Option<usize>,
+    pub day_limit: Option<usize>,
 }

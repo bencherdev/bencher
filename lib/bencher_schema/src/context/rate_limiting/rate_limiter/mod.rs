@@ -14,6 +14,12 @@ pub(super) struct RateLimiter<K> {
     day: RateLimiterInner<K>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct RateLimits {
+    pub minute_limit: usize,
+    pub day_limit: usize,
+}
+
 impl<K> RateLimiter<K>
 where
     K: PartialEq + Eq + Hash + Clone + Copy,
