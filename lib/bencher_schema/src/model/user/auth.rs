@@ -38,7 +38,13 @@ impl AuthUser {
     // This is required due to a limitation in `dropshot` where only four extractors are allowed.
     pub async fn new_pub(rqctx: &RequestContext<ApiContext>) -> Result<Option<Self>, HttpError> {
         let pub_bearer_token = PubBearerToken::from_request(rqctx).await?;
-        Self::from_pub_token(rqctx.context(), pub_bearer_token).await
+        Self::from_pub_token(
+            #[cfg(feature = "plus")]
+            rqctx.request.headers(),
+            rqctx.context(),
+            pub_bearer_token,
+        )
+        .await
     }
 
     // This is required due to a limitation in `dropshot` where only four extractors are allowed.
@@ -48,12 +54,17 @@ impl AuthUser {
     }
 
     pub async fn from_pub_token(
+        #[cfg(feature = "plus")] headers: &crate::HeaderMap,
         context: &ApiContext,
         bearer_token: PubBearerToken,
     ) -> Result<Option<Self>, HttpError> {
         Ok(if let Some(bearer_token) = bearer_token.0 {
             Some(Self::from_token(context, bearer_token).await?)
         } else {
+            #[cfg(feature = "plus")]
+            crate::RateLimiting::remote_ip(headers)
+                .map(|remote_ip| context.rate_limiting.public_request(remote_ip))
+                .transpose()?;
             None
         })
     }

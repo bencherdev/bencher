@@ -332,7 +332,13 @@ pub async fn proj_report_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     let json = get_one_inner(
         &rqctx.log,
         rqctx.context(),

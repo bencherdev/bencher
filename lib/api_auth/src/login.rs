@@ -45,7 +45,7 @@ pub async fn auth_login_post(
 
 async fn post_inner(
     log: &Logger,
-    #[cfg(feature = "plus")] headers: &http::HeaderMap,
+    #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     context: &ApiContext,
     json_login: JsonLogin,
 ) -> Result<JsonAuthAck, HttpError> {

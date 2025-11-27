@@ -265,7 +265,13 @@ pub async fn proj_plot_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjPlotParams>,
 ) -> Result<ResponseOk<JsonPlot>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),

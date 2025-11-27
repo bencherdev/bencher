@@ -8,7 +8,7 @@ pub mod model;
 pub mod schema;
 pub mod view;
 
-pub use context::ApiContext;
+pub use context::{ApiContext, HeaderMap, RateLimiting};
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 

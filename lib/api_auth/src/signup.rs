@@ -47,7 +47,7 @@ pub async fn auth_signup_post(
 
 async fn post_inner(
     log: &Logger,
-    #[cfg(feature = "plus")] headers: &http::HeaderMap,
+    #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     context: &ApiContext,
     json_signup: JsonSignup,
 ) -> Result<JsonAuthAck, HttpError> {

@@ -349,7 +349,13 @@ pub async fn proj_threshold_get(
     path_params: Path<ProjThresholdParams>,
     query_params: Query<ProjThresholdQuery>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),

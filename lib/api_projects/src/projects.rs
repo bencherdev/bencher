@@ -79,7 +79,13 @@ pub async fn projects_get(
     pagination_params: Query<ProjectsPagination>,
     query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
@@ -210,7 +216,13 @@ pub async fn project_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),

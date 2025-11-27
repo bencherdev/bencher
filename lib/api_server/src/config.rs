@@ -136,7 +136,13 @@ pub async fn server_config_console_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
 ) -> Result<ResponseOk<JsonConsole>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     Ok(Get::response_ok(
         JsonConsole {
             url: rqctx.context().console_url.clone().into(),

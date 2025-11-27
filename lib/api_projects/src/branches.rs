@@ -281,7 +281,13 @@ pub async fn proj_branch_get(
     path_params: Path<ProjBranchParams>,
     query_params: Query<ProjBranchQuery>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),

@@ -54,7 +54,13 @@ pub async fn proj_perf_img_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     let jpeg = get_inner(
         rqctx.context(),
         path_params.into_inner(),

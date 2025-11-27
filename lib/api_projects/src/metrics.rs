@@ -67,7 +67,13 @@ pub async fn proj_metric_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjMetricParams>,
 ) -> Result<ResponseOk<JsonOneMetric>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let auth_user = AuthUser::from_pub_token(
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        rqctx.context(),
+        bearer_token,
+    )
+    .await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
