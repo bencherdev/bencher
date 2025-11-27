@@ -10,49 +10,34 @@ use dropshot::HttpError;
 use crate::{context::RateLimitingError, error::too_many_requests};
 
 pub(super) struct RateLimiterInner<K> {
-    event_map: DashMap<K, VecDeque<SystemTime>>,
     window: Duration,
     limit: usize,
+    event_map: DashMap<K, VecDeque<SystemTime>>,
     #[cfg(feature = "otel")]
     api_counter_max: bencher_otel::ApiCounter,
     error: RateLimitingError,
-}
-
-pub struct RateLimiterConfig {
-    pub window: Duration,
-    pub limit: usize,
-    #[cfg(feature = "otel")]
-    pub api_counter_max: bencher_otel::ApiCounter,
-    pub error: RateLimitingError,
-}
-
-impl<K> From<RateLimiterConfig> for RateLimiterInner<K>
-where
-    K: PartialEq + Eq + Hash,
-{
-    fn from(config: RateLimiterConfig) -> Self {
-        let RateLimiterConfig {
-            window,
-            limit,
-            #[cfg(feature = "otel")]
-            api_counter_max,
-            error,
-        } = config;
-        Self {
-            event_map: DashMap::new(),
-            window,
-            limit,
-            #[cfg(feature = "otel")]
-            api_counter_max,
-            error,
-        }
-    }
 }
 
 impl<K> RateLimiterInner<K>
 where
     K: PartialEq + Eq + Hash,
 {
+    pub fn new(
+        window: Duration,
+        limit: usize,
+        #[cfg(feature = "otel")] api_counter_max: bencher_otel::ApiCounter,
+        error: RateLimitingError,
+    ) -> Self {
+        Self {
+            window,
+            limit,
+            event_map: DashMap::new(),
+            #[cfg(feature = "otel")]
+            api_counter_max,
+            error,
+        }
+    }
+
     pub fn check(&self, key: K) -> Result<(), HttpError> {
         let now = SystemTime::now();
         let cutoff = now - self.window;
