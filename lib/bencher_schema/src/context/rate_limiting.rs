@@ -326,10 +326,14 @@ where
     K: PartialEq + Eq + Hash,
 {
     let now = SystemTime::now();
+    let cutoff = now - window;
 
     // Clean up old times for all keys
     dash_map.retain(|_, times| {
-        times.retain(|&time| time > now - window);
+        // Since times are in ascending order, remove from front until we hit a recent one
+        while times.front().is_some_and(|&time| time < cutoff) {
+            times.pop_front();
+        }
         !times.is_empty()
     });
 
