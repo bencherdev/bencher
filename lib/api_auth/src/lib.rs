@@ -67,7 +67,7 @@ impl bencher_endpoint::Registrar for Api {
 #[cfg(feature = "plus")]
 async fn verify_recaptcha(
     log: &slog::Logger,
-    headers: &http::HeaderMap,
+    headers: &bencher_schema::context::HeaderMap,
     context: &bencher_schema::ApiContext,
     recaptcha_token: Option<&NonEmpty>,
     recaptcha_action: bencher_json::RecaptchaAction,
@@ -84,7 +84,7 @@ async fn verify_recaptcha(
         ));
     };
 
-    let remote_ip = bencher_endpoint::remote_ip(headers);
+    let remote_ip = bencher_schema::context::RateLimiting::remote_ip(headers);
     slog::info!(log, "Verifying reCAPTCHA from remote IP address"; "remote_ip" => ?remote_ip);
 
     recaptcha_client

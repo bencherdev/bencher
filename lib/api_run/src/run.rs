@@ -52,7 +52,7 @@ pub async fn run_post(
 
 async fn post_inner(
     log: &Logger,
-    #[cfg(feature = "plus")] headers: &http::HeaderMap,
+    #[cfg(feature = "plus")] headers: &bencher_schema::context::HeaderMap,
     context: &ApiContext,
     auth_user: Option<AuthUser>,
     json_run: JsonNewRun,
@@ -65,7 +65,7 @@ async fn post_inner(
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimed);
 
-        if let Some(remote_ip) = bencher_endpoint::remote_ip(headers) {
+        if let Some(remote_ip) = bencher_schema::context::RateLimiting::remote_ip(headers) {
             slog::info!(log, "Unclaimed run request from remote IP address"; "remote_ip" => ?remote_ip);
             context.rate_limiting.unclaimed_run(remote_ip)?;
         }

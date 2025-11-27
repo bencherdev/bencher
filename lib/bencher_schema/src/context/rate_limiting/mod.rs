@@ -9,6 +9,7 @@ use bencher_json::{DateTime, PlanLevel, UserUuid, system::config::JsonRateLimiti
 use bencher_license::Licensor;
 use dashmap::DashMap;
 use dropshot::HttpError;
+pub use http::HeaderMap;
 use slog::Logger;
 
 use crate::{
@@ -19,6 +20,8 @@ use crate::{
         user::QueryUser,
     },
 };
+
+mod remote_ip;
 
 use super::DbConnection;
 
@@ -311,6 +314,10 @@ impl RateLimiting {
             bencher_otel::ApiCounter::UserMaxAttempts,
             RateLimitingError::AuthAttempts,
         )
+    }
+
+    pub fn remote_ip(headers: &HeaderMap) -> Option<IpAddr> {
+        remote_ip::remote_ip(headers)
     }
 }
 
