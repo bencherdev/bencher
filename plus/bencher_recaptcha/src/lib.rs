@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use std::{net::Ipv4Addr, sync::LazyLock};
+use std::{net::IpAddr, sync::LazyLock};
 
 use bencher_valid::{NonEmpty, RecaptchaAction, RecaptchaScore, Secret, Url};
 use chrono::{DateTime, Utc};
@@ -58,7 +58,7 @@ impl RecaptchaClient {
         log: &Logger,
         response_token: NonEmpty,
         recaptcha_action: RecaptchaAction,
-        remote_ip: Option<Ipv4Addr>,
+        remote_ip: Option<IpAddr>,
     ) -> Result<(), RecaptchaError> {
         self.verify_inner(log, response_token, recaptcha_action, remote_ip)
             .await
@@ -76,7 +76,7 @@ impl RecaptchaClient {
         log: &Logger,
         response_token: NonEmpty,
         recaptcha_action: RecaptchaAction,
-        remote_ip: Option<Ipv4Addr>,
+        remote_ip: Option<IpAddr>,
     ) -> Result<(), RecaptchaError> {
         let body = RecaptchaBody {
             secret: self.secret.clone(),
@@ -157,7 +157,7 @@ struct RecaptchaBody {
     pub response: NonEmpty,
     /// The user's IP address.
     #[serde(rename = "remoteip", skip_serializing_if = "Option::is_none")]
-    pub remote_ip: Option<Ipv4Addr>,
+    pub remote_ip: Option<IpAddr>,
 }
 
 // https://developers.google.com/recaptcha/docs/v3#site_verify_response
