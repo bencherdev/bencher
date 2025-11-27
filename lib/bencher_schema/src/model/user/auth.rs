@@ -82,6 +82,9 @@ impl AuthUser {
         // Hold the connection for all permissions related queries
         let conn = conn_lock!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
+        query_user.check_is_locked()?;
+        context.rate_limiting.user_request(query_user.uuid)?;
+
         Self::load(conn, query_user)
     }
 
@@ -90,8 +93,6 @@ impl AuthUser {
     }
 
     fn load(conn: &mut DbConnection, query_user: QueryUser) -> Result<Self, HttpError> {
-        query_user.check_is_locked()?;
-
         let (org_ids, org_roles) = Self::organization_roles(conn, &query_user)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, &query_user)?;
 

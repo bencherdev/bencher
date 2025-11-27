@@ -47,7 +47,6 @@ pub struct RateLimiting {
     claimed_limit: u32,
     unclaimed_run_limit: u32,
     unclaimed_runs: DashMap<IpAddr, VecDeque<SystemTime>>,
-    user_actions: DashMap<UserUuid, VecDeque<SystemTime>>,
     auth_window: Duration,
     auth_limit: u32,
     auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
@@ -107,8 +106,11 @@ pub enum RateLimitingError {
         rate_limit: u32,
     },
 
-    #[error("Too many actions from user. Please, try again later.")]
-    UserActions,
+    #[error("Too many requests for IP address. Please, try again later.")]
+    IpAddressRequests,
+    #[error("Too many requests for user. Please, try again later.")]
+    UserRequests,
+
     #[error(
         "Too many runs from unclaimed IP address. Please, claim the project or try again later."
     )]
@@ -134,7 +136,6 @@ impl From<JsonRateLimiting> for RateLimiting {
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
             user_limit: user_limit.unwrap_or(DEFAULT_USER_LIMIT),
-            user_actions: DashMap::new(),
             unclaimed_limit: unclaimed_limit.unwrap_or(DEFAULT_UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
             unclaimed_run_limit: unclaimed_run_limit.unwrap_or(DEFAULT_UNCLAIMED_RUN_LIMIT),
@@ -162,7 +163,6 @@ impl Default for RateLimiting {
         Self {
             window: DAY,
             user_limit: DEFAULT_USER_LIMIT,
-            user_actions: DashMap::new(),
             unclaimed_limit: DEFAULT_UNCLAIMED_LIMIT,
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
             unclaimed_run_limit: DEFAULT_UNCLAIMED_RUN_LIMIT,
@@ -273,7 +273,7 @@ impl RateLimiting {
                 bencher_otel::IntervalKind::Minute,
                 bencher_otel::AuthorizationKind::Public,
             ),
-            RateLimitingError::UserActions,
+            RateLimitingError::IpAddressRequests,
         )
     }
 
@@ -288,7 +288,7 @@ impl RateLimiting {
                 bencher_otel::IntervalKind::Minute,
                 bencher_otel::AuthorizationKind::User,
             ),
-            RateLimitingError::UserActions,
+            RateLimitingError::UserRequests,
         )
     }
 
