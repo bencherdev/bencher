@@ -1,7 +1,7 @@
 use std::{
     collections::VecDeque,
     hash::Hash,
-    net::Ipv4Addr,
+    net::IpAddr,
     time::{Duration, SystemTime},
 };
 
@@ -22,6 +22,7 @@ use crate::{
 
 use super::DbConnection;
 
+const MINUTE: Duration = Duration::from_secs(60);
 const HOUR: Duration = Duration::from_secs(60 * 60);
 const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
@@ -33,17 +34,25 @@ const DEFAULT_UNCLAIMED_RUN_LIMIT: u32 = u8::MAX as u32;
 // Allow for 1 login and 3 email retries by default
 const DEFAULT_AUTH_LIMIT: u32 = 4;
 
+const DEFAULT_PUB_REQUESTS_PER_MINUTE_LIMIT: usize = u8::MAX as usize;
+const DEFAULT_USER_REQUESTS_PER_MINUTE_LIMIT: usize = u16::MAX as usize;
+
 pub struct RateLimiting {
     window: Duration,
     user_limit: u32,
     unclaimed_limit: u32,
     claimed_limit: u32,
     unclaimed_run_limit: u32,
-    unclaimed_runs: DashMap<Ipv4Addr, VecDeque<SystemTime>>,
+    unclaimed_runs: DashMap<IpAddr, VecDeque<SystemTime>>,
     user_actions: DashMap<UserUuid, VecDeque<SystemTime>>,
     auth_window: Duration,
     auth_limit: u32,
     auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
+    // Requests
+    pub_requests_per_minute_limit: usize,
+    pub_requests_per_minute: DashMap<IpAddr, VecDeque<SystemTime>>,
+    user_requests_per_minute_limit: usize,
+    user_requests_per_minute: DashMap<UserUuid, VecDeque<SystemTime>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -115,6 +124,9 @@ impl From<JsonRateLimiting> for RateLimiting {
             unclaimed_run_limit,
             auth_window,
             auth_limit,
+            // Requests
+            pub_requests_per_minute_limit,
+            user_requests_per_minute_limit,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
@@ -127,6 +139,17 @@ impl From<JsonRateLimiting> for RateLimiting {
             auth_window: auth_window.map(u64::from).map_or(HOUR, Duration::from_secs),
             auth_limit: auth_limit.unwrap_or(DEFAULT_AUTH_LIMIT),
             auth_attempts: DashMap::new(),
+            // Requests
+            pub_requests_per_minute_limit: pub_requests_per_minute_limit
+                .map_or(DEFAULT_PUB_REQUESTS_PER_MINUTE_LIMIT, |limit| {
+                    limit as usize
+                }),
+            pub_requests_per_minute: DashMap::new(),
+            user_requests_per_minute_limit: user_requests_per_minute_limit
+                .map_or(DEFAULT_USER_REQUESTS_PER_MINUTE_LIMIT, |limit| {
+                    limit as usize
+                }),
+            user_requests_per_minute: DashMap::new(),
         }
     }
 }
@@ -144,6 +167,11 @@ impl Default for RateLimiting {
             auth_window: HOUR,
             auth_limit: DEFAULT_AUTH_LIMIT,
             auth_attempts: DashMap::new(),
+            // Requests
+            pub_requests_per_minute_limit: DEFAULT_PUB_REQUESTS_PER_MINUTE_LIMIT,
+            pub_requests_per_minute: DashMap::new(),
+            user_requests_per_minute_limit: DEFAULT_USER_REQUESTS_PER_MINUTE_LIMIT,
+            user_requests_per_minute: DashMap::new(),
         }
     }
 }
@@ -231,19 +259,37 @@ impl RateLimiting {
         }
     }
 
-    pub fn user_action(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+    pub fn public_request(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
         check_rate_limit(
-            &self.user_actions,
-            user_uuid,
-            self.window,
-            self.user_limit as usize,
+            &self.pub_requests_per_minute,
+            remote_ip,
+            MINUTE,
+            self.pub_requests_per_minute_limit,
             #[cfg(feature = "otel")]
-            bencher_otel::ApiCounter::UserMaxActions,
+            bencher_otel::ApiCounter::RequestMax(
+                bencher_otel::IntervalKind::Minute,
+                bencher_otel::AuthorizationKind::Public,
+            ),
             RateLimitingError::UserActions,
         )
     }
 
-    pub fn unclaimed_run(&self, remote_ip: Ipv4Addr) -> Result<(), HttpError> {
+    pub fn user_request(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        check_rate_limit(
+            &self.user_requests_per_minute,
+            user_uuid,
+            MINUTE,
+            self.user_requests_per_minute_limit,
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiCounter::RequestMax(
+                bencher_otel::IntervalKind::Minute,
+                bencher_otel::AuthorizationKind::User,
+            ),
+            RateLimitingError::UserActions,
+        )
+    }
+
+    pub fn unclaimed_run(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
         check_rate_limit(
             &self.unclaimed_runs,
             remote_ip,

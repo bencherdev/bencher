@@ -51,7 +51,8 @@ pub enum ApiCounter {
     UserAccept(Option<AuthMethod>),
     UserConfirm,
     UserClaim,
-    UserMaxActions,
+
+    RequestMax(IntervalKind, AuthorizationKind),
 }
 
 impl ApiCounter {
@@ -81,7 +82,8 @@ impl ApiCounter {
             Self::UserAccept(_) => "user.accept",
             Self::UserConfirm => "user.confirm",
             Self::UserClaim => "user.claim",
-            Self::UserMaxActions => "user.max_actions",
+
+            Self::RequestMax(_, _) => "request.max",
         }
     }
 
@@ -111,7 +113,8 @@ impl ApiCounter {
             Self::UserAccept(_) => "Counts the number of user acceptances",
             Self::UserConfirm => "Counts the number of user confirmations",
             Self::UserClaim => "Counts the number of user claims",
-            Self::UserMaxActions => "Counts the number of user max actions",
+
+            Self::RequestMax(_, _) => "Counts the number of request maximums reached",
         }
     }
 
@@ -130,13 +133,15 @@ impl ApiCounter {
             | Self::MetricCreate
             | Self::UserMaxAttempts
             | Self::UserRecaptchaFailure
-            | Self::UserClaim
-            | Self::UserMaxActions => Vec::new(),
+            | Self::UserClaim => Vec::new(),
             Self::UserSignup(auth_method) | Self::UserLogin(auth_method) => {
                 auth_method.attributes()
             },
             Self::UserAccept(auth_method) => AuthMethod::nullable_attributes(auth_method),
             Self::UserConfirm => AuthMethod::Email.attributes(),
+            Self::RequestMax(interval_kind, authorization_kind) => {
+                vec![interval_kind.into(), authorization_kind.into()]
+            },
         }
     }
 }
@@ -209,4 +214,58 @@ impl From<OAuthProvider> for opentelemetry::KeyValue {
 
 impl OAuthProvider {
     const KEY: &str = "auth.provider";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum IntervalKind {
+    Second,
+    Minute,
+    Hour,
+    Day,
+}
+
+impl fmt::Display for IntervalKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Second => write!(f, "second"),
+            Self::Minute => write!(f, "minute"),
+            Self::Hour => write!(f, "hour"),
+            Self::Day => write!(f, "day"),
+        }
+    }
+}
+
+impl From<IntervalKind> for opentelemetry::KeyValue {
+    fn from(interval_kind: IntervalKind) -> Self {
+        opentelemetry::KeyValue::new(IntervalKind::KEY, interval_kind.to_string())
+    }
+}
+
+impl IntervalKind {
+    const KEY: &str = "interval";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AuthorizationKind {
+    Public,
+    User,
+}
+
+impl fmt::Display for AuthorizationKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Public => write!(f, "public"),
+            Self::User => write!(f, "user"),
+        }
+    }
+}
+
+impl From<AuthorizationKind> for opentelemetry::KeyValue {
+    fn from(authorization_kind: AuthorizationKind) -> Self {
+        opentelemetry::KeyValue::new(AuthorizationKind::KEY, authorization_kind.to_string())
+    }
+}
+
+impl AuthorizationKind {
+    const KEY: &str = "authorization";
 }

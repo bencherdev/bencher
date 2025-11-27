@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-pub fn remote_ip(headers: &http::HeaderMap) -> Option<std::net::Ipv4Addr> {
+pub fn remote_ip(headers: &http::HeaderMap) -> Option<std::net::IpAddr> {
     // https://fly.io/docs/networking/request-headers/#fly-client-ip
     if let ip @ Some(_) = headers
         .get("Fly-Client-IP")
