@@ -37,7 +37,7 @@ pub enum ApiCounter {
 
     RunClaimed,
     RunUnclaimed,
-    RunUnclaimedMaxRuns,
+    RunUnclaimedMax,
 
     ReportCreate,
     ReportDelete,
@@ -46,13 +46,13 @@ pub enum ApiCounter {
 
     UserSignup(AuthMethod),
     UserLogin(AuthMethod),
-    UserMaxAttempts,
     UserRecaptchaFailure,
     UserAccept(Option<AuthMethod>),
     UserConfirm,
     UserClaim,
 
     RequestMax(IntervalKind, AuthorizationKind),
+    EmailMax(IntervalKind, EmailKind),
 }
 
 impl ApiCounter {
@@ -68,7 +68,7 @@ impl ApiCounter {
 
             Self::RunClaimed => "run.claimed",
             Self::RunUnclaimed => "run.unclaimed",
-            Self::RunUnclaimedMaxRuns => "run.unclaimed.max_runs",
+            Self::RunUnclaimedMax => "run.unclaimed.max",
 
             Self::ReportCreate => "report.create",
             Self::ReportDelete => "report.delete",
@@ -77,13 +77,13 @@ impl ApiCounter {
 
             Self::UserSignup(_) => "user.signup",
             Self::UserLogin(_) => "user.login",
-            Self::UserMaxAttempts => "user.max_attempts",
             Self::UserRecaptchaFailure => "user.recaptcha_failure",
             Self::UserAccept(_) => "user.accept",
             Self::UserConfirm => "user.confirm",
             Self::UserClaim => "user.claim",
 
             Self::RequestMax(_, _) => "request.max",
+            Self::EmailMax(_, _) => "email.max",
         }
     }
 
@@ -99,7 +99,7 @@ impl ApiCounter {
 
             Self::RunClaimed => "Counts the number of claimed runs",
             Self::RunUnclaimed => "Counts the number of unclaimed runs",
-            Self::RunUnclaimedMaxRuns => "Counts the number of unclaimed runs that hit max runs",
+            Self::RunUnclaimedMax => "Counts the number of unclaimed runs that hit max runs",
 
             Self::ReportCreate => "Counts the number of report creations",
             Self::ReportDelete => "Counts the number of report deletions",
@@ -108,13 +108,13 @@ impl ApiCounter {
 
             Self::UserSignup(_) => "Counts the number of user signups",
             Self::UserLogin(_) => "Counts the number of user logins",
-            Self::UserMaxAttempts => "Counts the number of user max attempts",
             Self::UserRecaptchaFailure => "Counts the number of user recaptcha failures",
             Self::UserAccept(_) => "Counts the number of user acceptances",
             Self::UserConfirm => "Counts the number of user confirmations",
             Self::UserClaim => "Counts the number of user claims",
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
+            Self::EmailMax(_, _) => "Counts the number of email maximums reached",
         }
     }
 
@@ -127,11 +127,10 @@ impl ApiCounter {
             | Self::ProjectDelete
             | Self::RunClaimed
             | Self::RunUnclaimed
-            | Self::RunUnclaimedMaxRuns
+            | Self::RunUnclaimedMax
             | Self::ReportCreate
             | Self::ReportDelete
             | Self::MetricCreate
-            | Self::UserMaxAttempts
             | Self::UserRecaptchaFailure
             | Self::UserClaim => Vec::new(),
             Self::UserSignup(auth_method) | Self::UserLogin(auth_method) => {
@@ -141,6 +140,9 @@ impl ApiCounter {
             Self::UserConfirm => AuthMethod::Email.attributes(),
             Self::RequestMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
+            },
+            Self::EmailMax(interval_kind, email_kind) => {
+                vec![interval_kind.into(), email_kind.into()]
             },
         }
     }
@@ -243,6 +245,31 @@ impl From<IntervalKind> for opentelemetry::KeyValue {
 
 impl IntervalKind {
     const KEY: &str = "interval";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum EmailKind {
+    Auth,
+    Invite,
+}
+
+impl fmt::Display for EmailKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Auth => write!(f, "auth"),
+            Self::Invite => write!(f, "invite"),
+        }
+    }
+}
+
+impl From<EmailKind> for opentelemetry::KeyValue {
+    fn from(email_kind: EmailKind) -> Self {
+        opentelemetry::KeyValue::new(EmailKind::KEY, email_kind.to_string())
+    }
+}
+
+impl EmailKind {
+    const KEY: &str = "email";
 }
 
 #[derive(Debug, Clone, Copy)]

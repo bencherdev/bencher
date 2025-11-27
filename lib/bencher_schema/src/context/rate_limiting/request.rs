@@ -1,6 +1,6 @@
 use std::net::IpAddr;
 
-use bencher_json::{UserUuid, system::config::JsonRequestsRateLimiter};
+use bencher_json::{UserUuid, system::config::JsonRequestRateLimiter};
 
 use crate::context::{
     RateLimitingError,
@@ -13,12 +13,12 @@ const DEFAULT_PUBLIC_DAY_LIMIT: usize = 1 << 13;
 const DEFAULT_USER_MINUTE_LIMIT: usize = 1 << 11;
 const DEFAULT_USER_DAY_LIMIT: usize = 1 << 14;
 
-pub(super) struct RequestsRateLimiter {
+pub(super) struct RequestRateLimiter {
     public: RateLimiter<IpAddr>,
     user: RateLimiter<UserUuid>,
 }
 
-impl Default for RequestsRateLimiter {
+impl Default for RequestRateLimiter {
     fn default() -> Self {
         let public = RateLimits {
             minute_limit: DEFAULT_PUBLIC_MINUTE_LIMIT,
@@ -34,8 +34,8 @@ impl Default for RequestsRateLimiter {
     }
 }
 
-impl From<JsonRequestsRateLimiter> for RequestsRateLimiter {
-    fn from(json: JsonRequestsRateLimiter) -> Self {
+impl From<JsonRequestRateLimiter> for RequestRateLimiter {
+    fn from(json: JsonRequestRateLimiter) -> Self {
         let minute_limit = json
             .public
             .and_then(|r| r.minute_limit)
@@ -66,7 +66,7 @@ impl From<JsonRequestsRateLimiter> for RequestsRateLimiter {
     }
 }
 
-impl RequestsRateLimiter {
+impl RequestRateLimiter {
     pub fn new(public: RateLimits, user: RateLimits) -> Self {
         let RateLimits {
             minute_limit,

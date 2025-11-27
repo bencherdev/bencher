@@ -10,14 +10,20 @@ pub struct JsonRateLimiting {
     pub unclaimed_limit: Option<u32>,
     pub claimed_limit: Option<u32>,
     pub unclaimed_run_limit: Option<u32>,
-    pub auth_window: Option<u32>,
-    pub auth_limit: Option<u32>,
-    pub requests: Option<JsonRequestsRateLimiter>,
+    pub email: Option<JsonEmailRateLimiter>,
+    pub request: Option<JsonRequestRateLimiter>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonRequestsRateLimiter {
+pub struct JsonEmailRateLimiter {
+    pub auth: Option<JsonRateLimits>,
+    pub invite: Option<JsonRateLimits>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRequestRateLimiter {
     pub public: Option<JsonRateLimits>,
     pub user: Option<JsonRateLimits>,
 }

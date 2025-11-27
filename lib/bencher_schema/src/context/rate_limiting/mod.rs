@@ -21,25 +21,23 @@ use crate::{
     },
 };
 
+mod email;
 mod rate_limiter;
 mod remote_ip;
-mod requests;
+mod request;
 
+use email::EmailRateLimiter;
 use rate_limiter::{RateLimiter, RateLimits};
-use requests::RequestsRateLimiter;
+use request::RequestRateLimiter;
 
 use super::DbConnection;
 
-const HOUR: Duration = Duration::from_secs(60 * 60);
 const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 const DEFAULT_USER_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 const DEFAULT_UNCLAIMED_RUN_LIMIT: u32 = u8::MAX as u32;
-
-// Allow for 1 login and 3 email retries by default
-const DEFAULT_AUTH_LIMIT: u32 = 4;
 
 pub struct RateLimiting {
     window: Duration,
@@ -48,10 +46,8 @@ pub struct RateLimiting {
     claimed_limit: u32,
     unclaimed_run_limit: u32,
     unclaimed_runs: DashMap<IpAddr, VecDeque<SystemTime>>,
-    auth_window: Duration,
-    auth_limit: u32,
-    auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
-    requests: RequestsRateLimiter,
+    email: EmailRateLimiter,
+    request: RequestRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -113,7 +109,9 @@ pub enum RateLimitingError {
     )]
     UnclaimedRuns,
     #[error("Too many authentication attempts for user. Please, try again later.")]
-    AuthAttempts,
+    AuthEmail,
+    #[error("Too many invitation emails for user. Please, try again later.")]
+    InviteEmail,
 }
 
 impl Default for RateLimiting {
@@ -125,10 +123,8 @@ impl Default for RateLimiting {
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
             unclaimed_run_limit: DEFAULT_UNCLAIMED_RUN_LIMIT,
             unclaimed_runs: DashMap::new(),
-            auth_window: HOUR,
-            auth_limit: DEFAULT_AUTH_LIMIT,
-            auth_attempts: DashMap::new(),
-            requests: RequestsRateLimiter::default(),
+            email: EmailRateLimiter::default(),
+            request: RequestRateLimiter::default(),
         }
     }
 }
@@ -141,9 +137,8 @@ impl From<JsonRateLimiting> for RateLimiting {
             unclaimed_limit,
             claimed_limit,
             unclaimed_run_limit,
-            auth_window,
-            auth_limit,
-            requests,
+            email,
+            request,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
@@ -152,10 +147,8 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
             unclaimed_run_limit: unclaimed_run_limit.unwrap_or(DEFAULT_UNCLAIMED_RUN_LIMIT),
             unclaimed_runs: DashMap::new(),
-            auth_window: auth_window.map(u64::from).map_or(HOUR, Duration::from_secs),
-            auth_limit: auth_limit.unwrap_or(DEFAULT_AUTH_LIMIT),
-            auth_attempts: DashMap::new(),
-            requests: requests.map_or_else(RequestsRateLimiter::default, Into::into),
+            email: email.map_or_else(EmailRateLimiter::default, Into::into),
+            request: request.map_or_else(RequestRateLimiter::default, Into::into),
         }
     }
 }
@@ -244,11 +237,11 @@ impl RateLimiting {
     }
 
     pub fn public_request(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
-        self.requests.check_public(remote_ip)
+        self.request.check_public(remote_ip)
     }
 
     pub fn user_request(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.requests.check_user(user_uuid)
+        self.request.check_user(user_uuid)
     }
 
     pub fn unclaimed_run(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
@@ -258,21 +251,17 @@ impl RateLimiting {
             self.window,
             self.unclaimed_run_limit as usize,
             #[cfg(feature = "otel")]
-            bencher_otel::ApiCounter::RunUnclaimedMaxRuns,
+            bencher_otel::ApiCounter::RunUnclaimedMax,
             RateLimitingError::UnclaimedRuns,
         )
     }
 
-    pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        check_rate_limit(
-            &self.auth_attempts,
-            user_uuid,
-            self.auth_window,
-            self.auth_limit as usize,
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiCounter::UserMaxAttempts,
-            RateLimitingError::AuthAttempts,
-        )
+    pub fn auth_email(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.email.check_auth(user_uuid)
+    }
+
+    pub fn invite_email(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.email.check_invite(user_uuid)
     }
 
     pub fn remote_ip(headers: &HeaderMap) -> Option<IpAddr> {
