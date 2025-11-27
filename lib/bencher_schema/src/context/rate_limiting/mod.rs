@@ -51,7 +51,6 @@ pub struct RateLimiting {
     auth_window: Duration,
     auth_limit: u32,
     auth_attempts: DashMap<UserUuid, VecDeque<SystemTime>>,
-    // Requests
     requests: RequestsRateLimiter,
 }
 
@@ -129,7 +128,6 @@ impl Default for RateLimiting {
             auth_window: HOUR,
             auth_limit: DEFAULT_AUTH_LIMIT,
             auth_attempts: DashMap::new(),
-            // Requests
             requests: RequestsRateLimiter::default(),
         }
     }
@@ -145,7 +143,6 @@ impl From<JsonRateLimiting> for RateLimiting {
             unclaimed_run_limit,
             auth_window,
             auth_limit,
-            // Requests
             requests,
         } = json;
         Self {
@@ -158,7 +155,6 @@ impl From<JsonRateLimiting> for RateLimiting {
             auth_window: auth_window.map(u64::from).map_or(HOUR, Duration::from_secs),
             auth_limit: auth_limit.unwrap_or(DEFAULT_AUTH_LIMIT),
             auth_attempts: DashMap::new(),
-            // Requests
             requests: requests.map_or_else(RequestsRateLimiter::default, Into::into),
         }
     }

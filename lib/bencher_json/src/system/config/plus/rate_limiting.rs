@@ -12,7 +12,6 @@ pub struct JsonRateLimiting {
     pub unclaimed_run_limit: Option<u32>,
     pub auth_window: Option<u32>,
     pub auth_limit: Option<u32>,
-    // Requests
     pub requests: Option<JsonRequestsRateLimiter>,
 }
 
