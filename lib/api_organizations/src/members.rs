@@ -322,6 +322,9 @@ async fn post_inner(
     };
     context.messenger.send(log, message);
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserInvite);
+
     Ok(JsonAuthAck { email })
 }
 

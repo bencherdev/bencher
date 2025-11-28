@@ -8,7 +8,9 @@ pub mod model;
 pub mod schema;
 pub mod view;
 
-pub use context::{ApiContext, HeaderMap, RateLimiting};
+pub use context::ApiContext;
+#[cfg(feature = "plus")]
+pub use context::{HeaderMap, RateLimiting};
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 

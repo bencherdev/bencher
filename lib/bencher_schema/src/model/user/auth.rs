@@ -83,6 +83,7 @@ impl AuthUser {
         let conn = conn_lock!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;
+        #[cfg(feature = "plus")]
         context.rate_limiting.user_request(query_user.uuid)?;
 
         Self::load(conn, query_user)
@@ -240,7 +241,7 @@ impl AuthUser {
 
     #[cfg(feature = "plus")]
     pub fn rate_limit_invites(&self, context: &ApiContext) -> Result<(), HttpError> {
-        context.rate_limiting.send_invite(self.user.uuid)
+        context.rate_limiting.user_invite(self.user.uuid)
     }
 
     #[cfg(feature = "plus")]

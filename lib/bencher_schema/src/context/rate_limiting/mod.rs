@@ -260,7 +260,7 @@ impl RateLimiting {
         self.auth.check_auth(user_uuid)
     }
 
-    pub fn send_invite(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+    pub fn user_invite(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         self.auth.check_invite(user_uuid)
     }
 
