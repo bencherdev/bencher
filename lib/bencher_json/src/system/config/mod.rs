@@ -26,7 +26,7 @@ pub use plus::{
     },
     litestream::{JsonLitestream, JsonReplica},
     rate_limiting::{
-        JsonEmailRateLimiter, JsonRateLimiting, JsonRateLimits, JsonRequestRateLimiter,
+        JsonAuthRateLimiter, JsonRateLimiting, JsonRateLimits, JsonRequestRateLimiter,
     },
     stats::JsonStats,
 };

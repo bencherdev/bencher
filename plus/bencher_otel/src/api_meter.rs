@@ -52,7 +52,7 @@ pub enum ApiCounter {
     UserClaim,
 
     RequestMax(IntervalKind, AuthorizationKind),
-    EmailMax(IntervalKind, EmailKind),
+    AuthMax(IntervalKind, AuthKind),
 }
 
 impl ApiCounter {
@@ -83,7 +83,7 @@ impl ApiCounter {
             Self::UserClaim => "user.claim",
 
             Self::RequestMax(_, _) => "request.max",
-            Self::EmailMax(_, _) => "email.max",
+            Self::AuthMax(_, _) => "auth.max",
         }
     }
 
@@ -114,7 +114,7 @@ impl ApiCounter {
             Self::UserClaim => "Counts the number of user claims",
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
-            Self::EmailMax(_, _) => "Counts the number of email maximums reached",
+            Self::AuthMax(_, _) => "Counts the number of auth maximums reached",
         }
     }
 
@@ -141,8 +141,8 @@ impl ApiCounter {
             Self::RequestMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
             },
-            Self::EmailMax(interval_kind, email_kind) => {
-                vec![interval_kind.into(), email_kind.into()]
+            Self::AuthMax(interval_kind, auth_kind) => {
+                vec![interval_kind.into(), auth_kind.into()]
             },
         }
     }
@@ -248,27 +248,27 @@ impl IntervalKind {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum EmailKind {
-    Auth,
+pub enum AuthKind {
+    Attempt,
     Invite,
 }
 
-impl fmt::Display for EmailKind {
+impl fmt::Display for AuthKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Auth => write!(f, "auth"),
+            Self::Attempt => write!(f, "attempt"),
             Self::Invite => write!(f, "invite"),
         }
     }
 }
 
-impl From<EmailKind> for opentelemetry::KeyValue {
-    fn from(email_kind: EmailKind) -> Self {
-        opentelemetry::KeyValue::new(EmailKind::KEY, email_kind.to_string())
+impl From<AuthKind> for opentelemetry::KeyValue {
+    fn from(auth_kind: AuthKind) -> Self {
+        opentelemetry::KeyValue::new(AuthKind::KEY, auth_kind.to_string())
     }
 }
 
-impl EmailKind {
+impl AuthKind {
     const KEY: &str = "email";
 }
 

@@ -21,12 +21,12 @@ use crate::{
     },
 };
 
-mod email;
+mod auth;
 mod rate_limiter;
 mod remote_ip;
 mod request;
 
-use email::EmailRateLimiter;
+use auth::AuthRateLimiter;
 use rate_limiter::{RateLimiter, RateLimits};
 use request::RequestRateLimiter;
 
@@ -47,7 +47,7 @@ pub struct RateLimiting {
     unclaimed_run_limit: u32,
     unclaimed_runs: DashMap<IpAddr, VecDeque<SystemTime>>,
     request: RequestRateLimiter,
-    email: EmailRateLimiter,
+    auth: AuthRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -124,7 +124,7 @@ impl Default for RateLimiting {
             unclaimed_run_limit: DEFAULT_UNCLAIMED_RUN_LIMIT,
             unclaimed_runs: DashMap::new(),
             request: RequestRateLimiter::default(),
-            email: EmailRateLimiter::default(),
+            auth: AuthRateLimiter::default(),
         }
     }
 }
@@ -138,7 +138,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit,
             unclaimed_run_limit,
             request,
-            email,
+            auth,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
@@ -148,7 +148,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             unclaimed_run_limit: unclaimed_run_limit.unwrap_or(DEFAULT_UNCLAIMED_RUN_LIMIT),
             unclaimed_runs: DashMap::new(),
             request: request.map_or_else(RequestRateLimiter::default, Into::into),
-            email: email.map_or_else(EmailRateLimiter::default, Into::into),
+            auth: auth.map_or_else(AuthRateLimiter::default, Into::into),
         }
     }
 }
@@ -257,11 +257,11 @@ impl RateLimiting {
     }
 
     pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.email.check_auth(user_uuid)
+        self.auth.check_auth(user_uuid)
     }
 
     pub fn send_invite(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.email.check_invite(user_uuid)
+        self.auth.check_invite(user_uuid)
     }
 
     pub fn remote_ip(headers: &HeaderMap) -> Option<IpAddr> {
