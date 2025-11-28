@@ -8961,6 +8961,27 @@
           "file"
         ]
       },
+      "JsonEmailRateLimiter": {
+        "type": "object",
+        "properties": {
+          "auth": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
+          "invite": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          }
+        }
+      },
       "JsonFold": {
         "type": "string",
         "enum": [
@@ -10982,29 +11003,25 @@
       "JsonRateLimiting": {
         "type": "object",
         "properties": {
-          "auth_limit": {
-            "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
-          },
-          "auth_window": {
-            "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
-          },
           "claimed_limit": {
             "nullable": true,
             "type": "integer",
             "format": "uint32",
             "minimum": 0
           },
-          "requests": {
+          "email": {
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonRequestsRateLimiter"
+                "$ref": "#/components/schemas/JsonEmailRateLimiter"
+              }
+            ]
+          },
+          "request": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRequestRateLimiter"
               }
             ]
           },
@@ -11519,7 +11536,7 @@
           "$ref": "#/components/schemas/JsonReport"
         }
       },
-      "JsonRequestsRateLimiter": {
+      "JsonRequestRateLimiter": {
         "type": "object",
         "properties": {
           "public": {

@@ -238,6 +238,7 @@ impl AuthUser {
             .collect()
     }
 
+    #[cfg(feature = "plus")]
     pub fn rate_limit_invites(&self, context: &ApiContext) -> Result<(), HttpError> {
         context.rate_limiting.send_invite(self.user.uuid)
     }

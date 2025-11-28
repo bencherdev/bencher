@@ -246,6 +246,7 @@ async fn post_inner(
         .is_allowed_organization(auth_user, Permission::CreateRole, &query_org)
         .map_err(forbidden_error)?;
     // Check the rate limit for sending invites
+    #[cfg(feature = "plus")]
     auth_user.rate_limit_invites(context)?;
 
     let email = json_new_member.email.clone();
