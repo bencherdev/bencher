@@ -62,6 +62,9 @@ pub enum ApiCounter {
     UserTokenMax(IntervalKind),
     UserOrganizationMax(IntervalKind),
     UserInviteMax(IntervalKind),
+
+    Create(IntervalKind, AuthorizationKind),
+    CreateMax(IntervalKind, AuthorizationKind),
 }
 
 impl ApiCounter {
@@ -103,6 +106,9 @@ impl ApiCounter {
             Self::UserTokenMax(_) => "user.token.max",
             Self::UserOrganizationMax(_) => "user.organization.max",
             Self::UserInviteMax(_) => "user.invite.max",
+
+            Self::Create(_, _) => "create",
+            Self::CreateMax(_, _) => "create.max",
         }
     }
 
@@ -148,6 +154,9 @@ impl ApiCounter {
                 "Counts the number of user organization maximums reached"
             },
             Self::UserInviteMax(_) => "Counts the number of user invite maximums reached",
+
+            Self::Create(_, _) => "Counts the number of creations",
+            Self::CreateMax(_, _) => "Counts the number of creation maximums reached",
         }
     }
 
@@ -174,7 +183,9 @@ impl ApiCounter {
             Self::UserAccept(auth_method) => AuthMethod::nullable_attributes(auth_method),
             Self::UserConfirm => AuthMethod::Email.attributes(),
             Self::RequestMax(interval_kind, authorization_kind)
-            | Self::UserAttemptMax(interval_kind, authorization_kind) => {
+            | Self::UserAttemptMax(interval_kind, authorization_kind)
+            | Self::Create(interval_kind, authorization_kind)
+            | Self::CreateMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
             },
             Self::RunUnclaimedMax(interval_kind)

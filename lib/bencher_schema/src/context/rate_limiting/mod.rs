@@ -187,9 +187,23 @@ impl RateLimiting {
         FCl: FnOnce(u32) -> RateLimitingError,
     {
         if is_claimed {
-            Self::check_inner(self.claimed_limit, window_usage, claimed_error_fn)
+            self.check_claimed_limit(window_usage, claimed_error_fn)
         } else {
             Self::check_inner(self.unclaimed_limit, window_usage, unclaimed_error_fn)
+                .inspect(|()| {
+                    #[cfg(feature = "otel")]
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::Create(
+                        bencher_otel::IntervalKind::Day,
+                        bencher_otel::AuthorizationKind::Public,
+                    ));
+                })
+                .inspect_err(|_| {
+                    #[cfg(feature = "otel")]
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CreateMax(
+                        bencher_otel::IntervalKind::Day,
+                        bencher_otel::AuthorizationKind::Public,
+                    ));
+                })
         }
     }
 
@@ -198,6 +212,20 @@ impl RateLimiting {
         F: FnOnce(u32) -> RateLimitingError,
     {
         Self::check_inner(self.claimed_limit, window_usage, error_fn)
+            .inspect(|()| {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::Create(
+                    bencher_otel::IntervalKind::Day,
+                    bencher_otel::AuthorizationKind::User,
+                ));
+            })
+            .inspect_err(|_| {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CreateMax(
+                    bencher_otel::IntervalKind::Day,
+                    bencher_otel::AuthorizationKind::User,
+                ));
+            })
     }
 
     fn check_inner<F>(limit: u32, window_usage: u32, error_fn: F) -> Result<(), HttpError>
