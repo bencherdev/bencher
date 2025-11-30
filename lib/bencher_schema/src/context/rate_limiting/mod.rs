@@ -15,16 +15,14 @@ use crate::{
     },
 };
 
-mod auth;
+mod public;
 mod rate_limiter;
 mod remote_ip;
-mod request;
-mod unclaimed;
+mod user;
 
-use auth::AuthRateLimiter;
+use public::PublicRateLimiter;
 use rate_limiter::{RateLimiter, RateLimits};
-use request::RequestRateLimiter;
-use unclaimed::UnclaimedRateLimiter;
+use user::UserRateLimiter;
 
 use super::DbConnection;
 
@@ -39,9 +37,8 @@ pub struct RateLimiting {
     user_limit: u32,
     unclaimed_limit: u32,
     claimed_limit: u32,
-    request: RequestRateLimiter,
-    auth: AuthRateLimiter,
-    unclaimed: UnclaimedRateLimiter,
+    public: PublicRateLimiter,
+    user: UserRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -116,9 +113,8 @@ impl Default for RateLimiting {
             user_limit: DEFAULT_USER_LIMIT,
             unclaimed_limit: DEFAULT_UNCLAIMED_LIMIT,
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
-            request: RequestRateLimiter::default(),
-            auth: AuthRateLimiter::default(),
-            unclaimed: UnclaimedRateLimiter::default(),
+            public: PublicRateLimiter::default(),
+            user: UserRateLimiter::default(),
         }
     }
 }
@@ -130,18 +126,16 @@ impl From<JsonRateLimiting> for RateLimiting {
             user_limit,
             unclaimed_limit,
             claimed_limit,
-            request,
-            auth,
-            unclaimed,
+            public,
+            user,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
             user_limit: user_limit.unwrap_or(DEFAULT_USER_LIMIT),
             unclaimed_limit: unclaimed_limit.unwrap_or(DEFAULT_UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
-            request: request.map_or_else(RequestRateLimiter::default, Into::into),
-            auth: auth.map_or_else(AuthRateLimiter::default, Into::into),
-            unclaimed: unclaimed.map_or_else(UnclaimedRateLimiter::default, Into::into),
+            public: public.map_or_else(PublicRateLimiter::default, Into::into),
+            user: user.map_or_else(UserRateLimiter::default, Into::into),
         }
     }
 }
@@ -230,23 +224,23 @@ impl RateLimiting {
     }
 
     pub fn public_request(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
-        self.request.check_public(remote_ip)
-    }
-
-    pub fn user_request(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.request.check_user(user_uuid)
-    }
-
-    pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.auth.check_auth(user_uuid)
-    }
-
-    pub fn user_invite(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.auth.check_invite(user_uuid)
+        self.public.check_request(remote_ip)
     }
 
     pub fn unclaimed_run(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
-        self.unclaimed.check_run(remote_ip)
+        self.public.check_run(remote_ip)
+    }
+
+    pub fn user_request(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.user.check_request(user_uuid)
+    }
+
+    pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.user.check_auth(user_uuid)
+    }
+
+    pub fn user_invite(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.user.check_invite(user_uuid)
     }
 
     pub fn remote_ip(headers: &HeaderMap) -> Option<IpAddr> {
