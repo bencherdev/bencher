@@ -16,6 +16,7 @@ pub struct JsonRateLimiting {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPublicRateLimiter {
     pub requests: Option<JsonRateLimits>,
+    pub attempts: Option<JsonRateLimits>,
     pub runs: Option<JsonRateLimits>,
 }
 

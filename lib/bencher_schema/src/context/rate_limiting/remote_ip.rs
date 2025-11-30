@@ -1,4 +1,18 @@
 pub(super) fn remote_ip(headers: &http::HeaderMap) -> Option<std::net::IpAddr> {
+    if let Some(remote_ip) = remote_ip_inner(headers) {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIp);
+
+        Some(remote_ip)
+    } else {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIpNotFound);
+
+        None
+    }
+}
+
+fn remote_ip_inner(headers: &http::HeaderMap) -> Option<std::net::IpAddr> {
     // https://fly.io/docs/networking/request-headers/#fly-client-ip
     if let ip @ Some(_) = headers
         .get("Fly-Client-IP")

@@ -1,6 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
 use bencher_json::{JsonOAuthUrl, JsonOAuthUser, system::auth::JsonOAuth};
 use bencher_schema::{
+    HeaderMap,
     context::ApiContext,
     error::{payment_required_error, unauthorized_error},
 };
@@ -31,12 +32,19 @@ pub async fn auth_github_get(
     rqctx: RequestContext<ApiContext>,
     query_params: Query<OAuthState>,
 ) -> Result<ResponseOk<JsonOAuthUrl>, HttpError> {
-    let json = get_inner(&rqctx.log, rqctx.context(), query_params.into_inner()).await?;
+    let json = get_inner(
+        &rqctx.log,
+        rqctx.request.headers(),
+        rqctx.context(),
+        query_params.into_inner(),
+    )
+    .await?;
     Ok(Get::pub_response_ok(json))
 }
 
 async fn get_inner(
     log: &Logger,
+    headers: &HeaderMap,
     context: &ApiContext,
     oauth_state: OAuthState,
 ) -> Result<JsonOAuthUrl, HttpError> {
@@ -45,7 +53,12 @@ async fn get_inner(
         slog::warn!(log, "{err}");
         return Err(payment_required_error(err));
     };
+
     is_allowed_oauth(context).await?;
+
+    if let Some(remote_ip) = bencher_schema::RateLimiting::remote_ip(headers) {
+        context.rate_limiting.public_auth_attempt(remote_ip)?;
+    }
 
     let state = oauth_state.encode(log, &context.token_key)?;
     let url = github_client.auth_url(state);

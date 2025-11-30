@@ -43,6 +43,8 @@ pub enum ApiCounter {
 
     MetricCreate,
 
+    UserIp,
+    UserIpNotFound,
     UserSignup(AuthMethod),
     UserLogin(AuthMethod),
     UserRecaptchaFailure,
@@ -55,7 +57,7 @@ pub enum ApiCounter {
 
     RunUnclaimedMax(IntervalKind),
 
-    UserAttemptMax(IntervalKind),
+    UserAttemptMax(IntervalKind, AuthorizationKind),
     UserTokenMax(IntervalKind),
     UserOrganizationMax(IntervalKind),
     UserInviteMax(IntervalKind),
@@ -80,6 +82,9 @@ impl ApiCounter {
 
             Self::MetricCreate => "metric.create",
 
+            Self::UserIp => "user.ip",
+            Self::UserIpNotFound => "user.ip.not_found",
+
             Self::UserSignup(_) => "user.signup",
             Self::UserLogin(_) => "user.login",
             Self::UserRecaptchaFailure => "user.recaptcha_failure",
@@ -92,7 +97,7 @@ impl ApiCounter {
 
             Self::RunUnclaimedMax(_) => "run.unclaimed.max",
 
-            Self::UserAttemptMax(_) => "user.auth.max",
+            Self::UserAttemptMax(_, _) => "user.auth.max",
             Self::UserTokenMax(_) => "user.token.max",
             Self::UserOrganizationMax(_) => "user.organization.max",
             Self::UserInviteMax(_) => "user.invite.max",
@@ -117,6 +122,9 @@ impl ApiCounter {
 
             Self::MetricCreate => "Counts the number of metric creations",
 
+            Self::UserIp => "Counts the number of user IP address found occurrences",
+            Self::UserIpNotFound => "Counts the number of user IP address not found occurrences",
+
             Self::UserSignup(_) => "Counts the number of user signups",
             Self::UserLogin(_) => "Counts the number of user logins",
             Self::UserRecaptchaFailure => "Counts the number of user recaptcha failures",
@@ -129,7 +137,7 @@ impl ApiCounter {
 
             Self::RunUnclaimedMax(_) => "Counts the number of unclaimed run maximums reached",
 
-            Self::UserAttemptMax(_) => {
+            Self::UserAttemptMax(_, _) => {
                 "Counts the number of user authentication attempt maximums reached"
             },
             Self::UserTokenMax(_) => "Counts the number of user token maximums reached",
@@ -152,6 +160,8 @@ impl ApiCounter {
             | Self::ReportCreate
             | Self::ReportDelete
             | Self::MetricCreate
+            | Self::UserIp
+            | Self::UserIpNotFound
             | Self::UserRecaptchaFailure
             | Self::UserInvite
             | Self::UserClaim => Vec::new(),
@@ -160,11 +170,11 @@ impl ApiCounter {
             },
             Self::UserAccept(auth_method) => AuthMethod::nullable_attributes(auth_method),
             Self::UserConfirm => AuthMethod::Email.attributes(),
-            Self::RequestMax(interval_kind, authorization_kind) => {
+            Self::RequestMax(interval_kind, authorization_kind)
+            | Self::UserAttemptMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
             },
             Self::RunUnclaimedMax(interval_kind)
-            | Self::UserAttemptMax(interval_kind)
             | Self::UserTokenMax(interval_kind)
             | Self::UserOrganizationMax(interval_kind)
             | Self::UserInviteMax(interval_kind) => {

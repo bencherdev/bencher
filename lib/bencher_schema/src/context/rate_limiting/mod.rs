@@ -31,11 +31,12 @@ const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 
 pub struct RateLimiting {
+    public: PublicRateLimiter,
+    user: UserRateLimiter,
+    // Metrics
     window: Duration,
     unclaimed_limit: u32,
     claimed_limit: u32,
-    public: PublicRateLimiter,
-    user: UserRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -209,6 +210,10 @@ impl RateLimiting {
 
     pub fn public_request(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
         self.public.check_request(remote_ip)
+    }
+
+    pub fn public_auth_attempt(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
+        self.public.check_attempt(remote_ip)
     }
 
     pub fn unclaimed_run(&self, remote_ip: IpAddr) -> Result<(), HttpError> {

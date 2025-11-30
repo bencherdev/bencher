@@ -167,7 +167,12 @@ impl UserRateLimiter {
             hour,
             day,
             #[cfg(feature = "otel")]
-            &bencher_otel::ApiCounter::UserAttemptMax,
+            &|interval| {
+                bencher_otel::ApiCounter::UserAttemptMax(
+                    interval,
+                    bencher_otel::AuthorizationKind::User,
+                )
+            },
             RateLimitingError::UserAttempts,
         );
 
