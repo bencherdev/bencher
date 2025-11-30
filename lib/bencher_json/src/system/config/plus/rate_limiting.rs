@@ -32,5 +32,6 @@ pub struct JsonRequestRateLimiter {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonRateLimits {
     pub minute_limit: Option<usize>,
+    pub hour_limit: Option<usize>,
     pub day_limit: Option<usize>,
 }

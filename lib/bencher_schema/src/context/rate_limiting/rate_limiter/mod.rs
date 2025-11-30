@@ -7,17 +7,20 @@ use inner::RateLimiterInner;
 use crate::context::RateLimitingError;
 
 const MINUTE: Duration = Duration::from_secs(60);
+const HOUR: Duration = Duration::from_secs(60 * 60);
 const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 pub(super) struct RateLimiter<K> {
     minute: RateLimiterInner<K>,
+    hour: RateLimiterInner<K>,
     day: RateLimiterInner<K>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct RateLimits {
-    pub minute_limit: usize,
-    pub day_limit: usize,
+    pub minute: usize,
+    pub hour: usize,
+    pub day: usize,
 }
 
 impl<K> RateLimiter<K>
@@ -26,6 +29,7 @@ where
 {
     pub fn new(
         minute_limit: usize,
+        hour_limit: usize,
         day_limit: usize,
         #[cfg(feature = "otel")] api_counter_fn: &dyn Fn(
             bencher_otel::IntervalKind,
@@ -40,6 +44,14 @@ where
             error.clone(),
         );
 
+        let hour = RateLimiterInner::new(
+            HOUR,
+            hour_limit,
+            #[cfg(feature = "otel")]
+            api_counter_fn(bencher_otel::IntervalKind::Hour),
+            error.clone(),
+        );
+
         let day = RateLimiterInner::new(
             DAY,
             day_limit,
@@ -48,11 +60,12 @@ where
             error,
         );
 
-        Self { minute, day }
+        Self { minute, hour, day }
     }
 
     pub fn check(&self, key: K) -> Result<(), dropshot::HttpError> {
         self.minute.check(key)?;
+        self.hour.check(key)?;
         self.day.check(key)?;
 
         Ok(())

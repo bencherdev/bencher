@@ -59,8 +59,9 @@ const ConfirmForm = (props: Props) => {
 		};
 	}>(initForm());
 
+	const EMAIL_COOL_DOWN_MS = 60000;
 	const [coolDown, setCoolDown] = createSignal(true);
-	setTimeout(() => setCoolDown(false), 15000);
+	setTimeout(() => setCoolDown(false), EMAIL_COOL_DOWN_MS);
 
 	const MAX_RESEND_COUNT = 3;
 	const [resendCount, setResendCount] = createSignal(0);
@@ -143,7 +144,7 @@ const ConfirmForm = (props: Props) => {
 			});
 
 		setCoolDown(true);
-		setTimeout(() => setCoolDown(false), 30000);
+		setTimeout(() => setCoolDown(false), EMAIL_COOL_DOWN_MS);
 	};
 
 	createEffect(() => {

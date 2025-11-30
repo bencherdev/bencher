@@ -11060,6 +11060,12 @@
             "format": "uint",
             "minimum": 0
           },
+          "hour_limit": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
           "minute_limit": {
             "nullable": true,
             "type": "integer",

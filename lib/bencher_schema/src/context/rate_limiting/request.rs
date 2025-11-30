@@ -8,9 +8,11 @@ use crate::context::{
 };
 
 const DEFAULT_PUBLIC_MINUTE_LIMIT: usize = 1 << 10;
+const DEFAULT_PUBLIC_HOUR_LIMIT: usize = 1 << 12;
 const DEFAULT_PUBLIC_DAY_LIMIT: usize = 1 << 13;
 
 const DEFAULT_USER_MINUTE_LIMIT: usize = 1 << 11;
+const DEFAULT_USER_HOUR_LIMIT: usize = 1 << 13;
 const DEFAULT_USER_DAY_LIMIT: usize = 1 << 14;
 
 pub(super) struct RequestRateLimiter {
@@ -21,13 +23,15 @@ pub(super) struct RequestRateLimiter {
 impl Default for RequestRateLimiter {
     fn default() -> Self {
         let public = RateLimits {
-            minute_limit: DEFAULT_PUBLIC_MINUTE_LIMIT,
-            day_limit: DEFAULT_PUBLIC_DAY_LIMIT,
+            minute: DEFAULT_PUBLIC_MINUTE_LIMIT,
+            hour: DEFAULT_PUBLIC_HOUR_LIMIT,
+            day: DEFAULT_PUBLIC_DAY_LIMIT,
         };
 
         let user = RateLimits {
-            minute_limit: DEFAULT_USER_MINUTE_LIMIT,
-            day_limit: DEFAULT_USER_DAY_LIMIT,
+            minute: DEFAULT_USER_MINUTE_LIMIT,
+            hour: DEFAULT_USER_HOUR_LIMIT,
+            day: DEFAULT_USER_DAY_LIMIT,
         };
 
         Self::new(public, user)
@@ -36,31 +40,33 @@ impl Default for RequestRateLimiter {
 
 impl From<JsonRequestRateLimiter> for RequestRateLimiter {
     fn from(json: JsonRequestRateLimiter) -> Self {
-        let minute_limit = json
+        let minute = json
             .public
             .and_then(|r| r.minute_limit)
             .unwrap_or(DEFAULT_PUBLIC_MINUTE_LIMIT);
-        let day_limit = json
+        let hour = json
+            .public
+            .and_then(|r| r.hour_limit)
+            .unwrap_or(DEFAULT_PUBLIC_HOUR_LIMIT);
+        let day = json
             .public
             .and_then(|r| r.day_limit)
             .unwrap_or(DEFAULT_PUBLIC_DAY_LIMIT);
-        let public = RateLimits {
-            minute_limit,
-            day_limit,
-        };
+        let public = RateLimits { minute, hour, day };
 
-        let minute_limit = json
+        let minute = json
             .user
             .and_then(|r| r.minute_limit)
             .unwrap_or(DEFAULT_USER_MINUTE_LIMIT);
-        let day_limit = json
+        let hour = json
+            .user
+            .and_then(|r| r.hour_limit)
+            .unwrap_or(DEFAULT_USER_HOUR_LIMIT);
+        let day = json
             .user
             .and_then(|r| r.day_limit)
             .unwrap_or(DEFAULT_USER_DAY_LIMIT);
-        let user = RateLimits {
-            minute_limit,
-            day_limit,
-        };
+        let user = RateLimits { minute, hour, day };
 
         Self::new(public, user)
     }
@@ -68,13 +74,11 @@ impl From<JsonRequestRateLimiter> for RequestRateLimiter {
 
 impl RequestRateLimiter {
     pub fn new(public: RateLimits, user: RateLimits) -> Self {
-        let RateLimits {
-            minute_limit,
-            day_limit,
-        } = public;
+        let RateLimits { minute, hour, day } = public;
         let public = RateLimiter::new(
-            minute_limit,
-            day_limit,
+            minute,
+            hour,
+            day,
             #[cfg(feature = "otel")]
             &|interval| {
                 bencher_otel::ApiCounter::RequestMax(
@@ -85,13 +89,11 @@ impl RequestRateLimiter {
             RateLimitingError::IpAddressRequests,
         );
 
-        let RateLimits {
-            minute_limit,
-            day_limit,
-        } = user;
+        let RateLimits { minute, hour, day } = user;
         let user = RateLimiter::new(
-            minute_limit,
-            day_limit,
+            minute,
+            hour,
+            day,
             #[cfg(feature = "otel")]
             &|interval| {
                 bencher_otel::ApiCounter::RequestMax(
