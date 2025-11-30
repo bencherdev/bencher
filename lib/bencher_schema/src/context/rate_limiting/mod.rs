@@ -33,7 +33,7 @@ const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 pub struct RateLimiting {
     public: PublicRateLimiter,
     user: UserRateLimiter,
-    // Metrics
+    // Project Resources
     window: Duration,
     unclaimed_limit: u32,
     claimed_limit: u32,
@@ -244,3 +244,14 @@ impl RateLimiting {
         remote_ip::remote_ip(headers)
     }
 }
+
+macro_rules! extract_rate_limits {
+    ($opt:expr, $default_minute:expr, $default_hour:expr, $default_day:expr) => {{
+        let minute = $opt.and_then(|r| r.minute).unwrap_or($default_minute);
+        let hour = $opt.and_then(|r| r.hour).unwrap_or($default_hour);
+        let day = $opt.and_then(|r| r.day).unwrap_or($default_day);
+        RateLimits { minute, hour, day }
+    }};
+}
+
+pub(crate) use extract_rate_limits;

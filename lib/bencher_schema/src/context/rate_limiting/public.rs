@@ -4,7 +4,7 @@ use bencher_json::system::config::JsonPublicRateLimiter;
 
 use crate::context::{
     RateLimitingError,
-    rate_limiting::{RateLimiter, RateLimits},
+    rate_limiting::{RateLimiter, RateLimits, extract_rate_limits},
 };
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 10;
@@ -57,38 +57,26 @@ impl From<JsonPublicRateLimiter> for PublicRateLimiter {
             runs,
         } = json;
 
-        let minute = requests
-            .and_then(|r| r.minute)
-            .unwrap_or(DEFAULT_REQUESTS_PER_MINUTE_LIMIT);
-        let hour = requests
-            .and_then(|r| r.hour)
-            .unwrap_or(DEFAULT_REQUESTS_PER_HOUR_LIMIT);
-        let day = requests
-            .and_then(|r| r.day)
-            .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT);
-        let requests = RateLimits { minute, hour, day };
+        let requests = extract_rate_limits!(
+            requests,
+            DEFAULT_REQUESTS_PER_MINUTE_LIMIT,
+            DEFAULT_REQUESTS_PER_HOUR_LIMIT,
+            DEFAULT_REQUESTS_PER_DAY_LIMIT
+        );
 
-        let minute = attempts
-            .and_then(|r| r.minute)
-            .unwrap_or(DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT);
-        let hour = attempts
-            .and_then(|r| r.hour)
-            .unwrap_or(DEFAULT_ATTEMPTS_PER_HOUR_LIMIT);
-        let day = attempts
-            .and_then(|r| r.day)
-            .unwrap_or(DEFAULT_ATTEMPTS_PER_DAY_LIMIT);
-        let attempts = RateLimits { minute, hour, day };
+        let attempts = extract_rate_limits!(
+            attempts,
+            DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT,
+            DEFAULT_ATTEMPTS_PER_HOUR_LIMIT,
+            DEFAULT_ATTEMPTS_PER_DAY_LIMIT
+        );
 
-        let minute = runs
-            .and_then(|r| r.minute)
-            .unwrap_or(DEFAULT_RUNS_PER_MINUTE_LIMIT);
-        let hour = runs
-            .and_then(|r| r.hour)
-            .unwrap_or(DEFAULT_RUNS_PER_HOUR_LIMIT);
-        let day = runs
-            .and_then(|r| r.day)
-            .unwrap_or(DEFAULT_RUNS_PER_DAY_LIMIT);
-        let runs = RateLimits { minute, hour, day };
+        let runs = extract_rate_limits!(
+            runs,
+            DEFAULT_RUNS_PER_MINUTE_LIMIT,
+            DEFAULT_RUNS_PER_HOUR_LIMIT,
+            DEFAULT_RUNS_PER_DAY_LIMIT
+        );
 
         Self::new(requests, attempts, runs)
     }

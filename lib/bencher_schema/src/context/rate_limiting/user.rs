@@ -2,7 +2,7 @@ use bencher_json::{UserUuid, system::config::JsonUserRateLimiter};
 
 use crate::context::{
     RateLimitingError,
-    rate_limiting::{RateLimiter, RateLimits},
+    rate_limiting::{RateLimiter, RateLimits, extract_rate_limits},
 };
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 11;
@@ -79,60 +79,40 @@ impl From<JsonUserRateLimiter> for UserRateLimiter {
             invites,
         } = json;
 
-        let minute = requests
-            .and_then(|r| r.minute)
-            .unwrap_or(DEFAULT_REQUESTS_PER_MINUTE_LIMIT);
-        let hour = requests
-            .and_then(|r| r.hour)
-            .unwrap_or(DEFAULT_REQUESTS_PER_HOUR_LIMIT);
-        let day = requests
-            .and_then(|r| r.day)
-            .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT);
-        let requests = RateLimits { minute, hour, day };
+        let requests = extract_rate_limits!(
+            requests,
+            DEFAULT_REQUESTS_PER_MINUTE_LIMIT,
+            DEFAULT_REQUESTS_PER_HOUR_LIMIT,
+            DEFAULT_REQUESTS_PER_DAY_LIMIT
+        );
 
-        let minute = attempts
-            .and_then(|r| r.minute)
-            .unwrap_or(DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT);
-        let hour = attempts
-            .and_then(|r| r.hour)
-            .unwrap_or(DEFAULT_ATTEMPTS_PER_HOUR_LIMIT);
-        let day = attempts
-            .and_then(|r| r.day)
-            .unwrap_or(DEFAULT_ATTEMPTS_PER_DAY_LIMIT);
-        let attempts = RateLimits { minute, hour, day };
+        let attempts = extract_rate_limits!(
+            attempts,
+            DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT,
+            DEFAULT_ATTEMPTS_PER_HOUR_LIMIT,
+            DEFAULT_ATTEMPTS_PER_DAY_LIMIT
+        );
 
-        let minute = tokens
-            .and_then(|r| r.minute)
-            .unwrap_or(DEFAULT_TOKENS_PER_MINUTE_LIMIT);
-        let hour = tokens
-            .and_then(|r| r.hour)
-            .unwrap_or(DEFAULT_TOKENS_PER_HOUR_LIMIT);
-        let day = tokens
-            .and_then(|r| r.day)
-            .unwrap_or(DEFAULT_TOKENS_PER_DAY_LIMIT);
-        let tokens = RateLimits { minute, hour, day };
+        let tokens = extract_rate_limits!(
+            tokens,
+            DEFAULT_TOKENS_PER_MINUTE_LIMIT,
+            DEFAULT_TOKENS_PER_HOUR_LIMIT,
+            DEFAULT_TOKENS_PER_DAY_LIMIT
+        );
 
-        let minute = organizations
-            .and_then(|r| r.minute)
-            .unwrap_or(DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT);
-        let hour = organizations
-            .and_then(|r| r.hour)
-            .unwrap_or(DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT);
-        let day = organizations
-            .and_then(|r| r.day)
-            .unwrap_or(DEFAULT_ORGANIZATIONS_PER_DAY_LIMIT);
-        let organizations = RateLimits { minute, hour, day };
+        let organizations = extract_rate_limits!(
+            organizations,
+            DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT,
+            DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT,
+            DEFAULT_ORGANIZATIONS_PER_DAY_LIMIT
+        );
 
-        let minute = invites
-            .and_then(|r| r.minute)
-            .unwrap_or(DEFAULT_INVITES_PER_MINUTE_LIMIT);
-        let hour = invites
-            .and_then(|r| r.hour)
-            .unwrap_or(DEFAULT_INVITES_PER_HOUR_LIMIT);
-        let day = invites
-            .and_then(|r| r.day)
-            .unwrap_or(DEFAULT_INVITES_PER_DAY_LIMIT);
-        let invites = RateLimits { minute, hour, day };
+        let invites = extract_rate_limits!(
+            invites,
+            DEFAULT_INVITES_PER_MINUTE_LIMIT,
+            DEFAULT_INVITES_PER_HOUR_LIMIT,
+            DEFAULT_INVITES_PER_DAY_LIMIT
+        );
 
         Self::new(requests, attempts, tokens, organizations, invites)
     }
