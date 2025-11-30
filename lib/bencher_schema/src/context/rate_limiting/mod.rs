@@ -92,6 +92,8 @@ pub enum RateLimitingError {
 
     #[error("Too many requests for user. Please, try again later.")]
     UserRequests,
+    #[error("Too many runs for user. Please, try again later.")]
+    UserRuns,
     #[error("Too many authentication attempts for user. Please, try again later.")]
     UserAttempts,
     #[error("Too many token generations for user. Please, try again later.")]
@@ -239,6 +241,10 @@ impl RateLimiting {
 
     pub fn user_invite(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         self.user.check_invite(user_uuid)
+    }
+
+    pub fn claimed_run(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.user.check_run(user_uuid)
     }
 
     pub fn remote_ip(headers: &HeaderMap) -> Option<IpAddr> {

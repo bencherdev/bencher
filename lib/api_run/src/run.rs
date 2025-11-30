@@ -64,9 +64,11 @@ async fn post_inner(
     json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
     #[cfg(feature = "plus")]
-    if auth_user.is_some() {
+    if let Some(auth_user) = auth_user.as_ref() {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunClaimed);
+
+        context.rate_limiting.claimed_run(auth_user.user.uuid)?;
     } else {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimed);

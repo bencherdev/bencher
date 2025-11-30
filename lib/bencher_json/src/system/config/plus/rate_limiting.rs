@@ -28,6 +28,7 @@ pub struct JsonUserRateLimiter {
     pub tokens: Option<JsonRateLimits>,
     pub organizations: Option<JsonRateLimits>,
     pub invites: Option<JsonRateLimits>,
+    pub runs: Option<JsonRateLimits>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

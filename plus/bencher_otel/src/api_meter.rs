@@ -55,6 +55,7 @@ pub enum ApiCounter {
 
     RequestMax(IntervalKind, AuthorizationKind),
 
+    RunClaimedMax(IntervalKind),
     RunUnclaimedMax(IntervalKind),
 
     UserAttemptMax(IntervalKind, AuthorizationKind),
@@ -95,6 +96,7 @@ impl ApiCounter {
 
             Self::RequestMax(_, _) => "request.max",
 
+            Self::RunClaimedMax(_) => "run.claimed.max",
             Self::RunUnclaimedMax(_) => "run.unclaimed.max",
 
             Self::UserAttemptMax(_, _) => "user.auth.max",
@@ -135,6 +137,7 @@ impl ApiCounter {
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
+            Self::RunClaimedMax(_) => "Counts the number of claimed run maximums reached",
             Self::RunUnclaimedMax(_) => "Counts the number of unclaimed run maximums reached",
 
             Self::UserAttemptMax(_, _) => {
@@ -175,6 +178,7 @@ impl ApiCounter {
                 vec![interval_kind.into(), authorization_kind.into()]
             },
             Self::RunUnclaimedMax(interval_kind)
+            | Self::RunClaimedMax(interval_kind)
             | Self::UserTokenMax(interval_kind)
             | Self::UserOrganizationMax(interval_kind)
             | Self::UserInviteMax(interval_kind) => {
