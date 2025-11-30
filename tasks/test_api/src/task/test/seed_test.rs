@@ -1724,18 +1724,16 @@ impl SeedTest {
         let _json: bencher_json::JsonAuthAck =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // Attempt to login Courage three time
-        for _ in 0..3 {
-            // cargo run -- auth login --host http://localhost:61016 courage@nowhere.com
-            let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-            cmd.args(["auth", "login", HOST_ARG, host, "courage@nowhere.com"])
-                .current_dir(CLI_DIR);
-            let assert = cmd.assert().success();
-            let _json: bencher_json::JsonAuthAck =
-                serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        }
+        // Attempt to login Courage one more time
+        // cargo run -- auth login --host http://localhost:61016 courage@nowhere.com
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["auth", "login", HOST_ARG, host, "courage@nowhere.com"])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonAuthAck =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // Fourth attempt should hit rate limit
+        // Third attempt should hit rate limit
         // cargo run -- auth login --host http://localhost:61016 courage@nowhere
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["auth", "login", HOST_ARG, host, "courage@nowhere.com"])
