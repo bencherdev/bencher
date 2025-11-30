@@ -31,13 +31,13 @@ const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 
 pub struct RateLimiting {
-    // In-memory rate limiters
-    public: PublicRateLimiter,
-    user: UserRateLimiter,
     // Database-backed rate limits
     window: Duration,
     unclaimed_limit: u32,
     claimed_limit: u32,
+    // In-memory rate limiters
+    public: PublicRateLimiter,
+    user: UserRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]

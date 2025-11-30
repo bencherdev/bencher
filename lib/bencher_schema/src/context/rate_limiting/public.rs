@@ -15,7 +15,7 @@ const DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT: usize = 1 << 5;
 const DEFAULT_ATTEMPTS_PER_HOUR_LIMIT: usize = 1 << 6;
 const DEFAULT_ATTEMPTS_PER_DAY_LIMIT: usize = 1 << 7;
 
-const DEFAULT_RUNS_PER_MINUTE_LIMIT: usize = 1 << 5;
+const DEFAULT_RUNS_PER_MINUTE_LIMIT: usize = 1 << 6;
 const DEFAULT_RUNS_PER_HOUR_LIMIT: usize = 1 << 7;
 const DEFAULT_RUNS_PER_DAY_LIMIT: usize = 1 << 8;
 
