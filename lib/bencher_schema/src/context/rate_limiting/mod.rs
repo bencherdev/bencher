@@ -239,6 +239,10 @@ impl RateLimiting {
         self.user.check_auth(user_uuid)
     }
 
+    pub fn create_organization(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.user.check_organization(user_uuid)
+    }
+
     pub fn user_invite(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         self.user.check_invite(user_uuid)
     }

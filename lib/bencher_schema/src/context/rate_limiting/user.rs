@@ -13,6 +13,10 @@ const DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT: usize = 1 << 1;
 const DEFAULT_ATTEMPTS_PER_HOUR_LIMIT: usize = 1 << 2;
 const DEFAULT_ATTEMPTS_PER_DAY_LIMIT: usize = 1 << 3;
 
+const DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT: usize = 1 << 1;
+const DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT: usize = 1 << 2;
+const DEFAULT_ORGANIZATIONS_PER_DAY_LIMIT: usize = 1 << 3;
+
 const DEFAULT_INVITES_PER_MINUTE_LIMIT: usize = 1 << 3;
 const DEFAULT_INVITES_PER_HOUR_LIMIT: usize = 1 << 4;
 const DEFAULT_INVITES_PER_DAY_LIMIT: usize = 1 << 5;
@@ -20,6 +24,7 @@ const DEFAULT_INVITES_PER_DAY_LIMIT: usize = 1 << 5;
 pub(super) struct UserRateLimiter {
     requests: RateLimiter<UserUuid>,
     attempts: RateLimiter<UserUuid>,
+    organizations: RateLimiter<UserUuid>,
     invites: RateLimiter<UserUuid>,
 }
 
@@ -37,13 +42,19 @@ impl Default for UserRateLimiter {
             day: DEFAULT_ATTEMPTS_PER_DAY_LIMIT,
         };
 
+        let organizations = RateLimits {
+            minute: DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT,
+            hour: DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT,
+            day: DEFAULT_ORGANIZATIONS_PER_DAY_LIMIT,
+        };
+
         let invites = RateLimits {
             minute: DEFAULT_INVITES_PER_MINUTE_LIMIT,
             hour: DEFAULT_INVITES_PER_HOUR_LIMIT,
             day: DEFAULT_INVITES_PER_DAY_LIMIT,
         };
 
-        Self::new(requests, attempts, invites)
+        Self::new(requests, attempts, organizations, invites)
     }
 }
 
@@ -52,6 +63,7 @@ impl From<JsonUserRateLimiter> for UserRateLimiter {
         let JsonUserRateLimiter {
             requests,
             attempts,
+            organizations,
             invites,
         } = json;
 
@@ -77,6 +89,17 @@ impl From<JsonUserRateLimiter> for UserRateLimiter {
             .unwrap_or(DEFAULT_ATTEMPTS_PER_DAY_LIMIT);
         let attempts = RateLimits { minute, hour, day };
 
+        let minute = organizations
+            .and_then(|r| r.minute)
+            .unwrap_or(DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT);
+        let hour = organizations
+            .and_then(|r| r.hour)
+            .unwrap_or(DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT);
+        let day = organizations
+            .and_then(|r| r.day)
+            .unwrap_or(DEFAULT_ORGANIZATIONS_PER_DAY_LIMIT);
+        let organizations = RateLimits { minute, hour, day };
+
         let minute = invites
             .and_then(|r| r.minute)
             .unwrap_or(DEFAULT_INVITES_PER_MINUTE_LIMIT);
@@ -88,12 +111,17 @@ impl From<JsonUserRateLimiter> for UserRateLimiter {
             .unwrap_or(DEFAULT_INVITES_PER_DAY_LIMIT);
         let invites = RateLimits { minute, hour, day };
 
-        Self::new(requests, attempts, invites)
+        Self::new(requests, attempts, organizations, invites)
     }
 }
 
 impl UserRateLimiter {
-    pub fn new(requests: RateLimits, attempts: RateLimits, invites: RateLimits) -> Self {
+    pub fn new(
+        requests: RateLimits,
+        attempts: RateLimits,
+        organizations: RateLimits,
+        invites: RateLimits,
+    ) -> Self {
         let RateLimits { minute, hour, day } = requests;
         let requests = RateLimiter::new(
             minute,
@@ -115,9 +143,17 @@ impl UserRateLimiter {
             hour,
             day,
             #[cfg(feature = "otel")]
-            &|interval| {
-                bencher_otel::ApiCounter::AuthMax(interval, bencher_otel::AuthKind::Attempt)
-            },
+            &bencher_otel::ApiCounter::UserAttemptMax,
+            RateLimitingError::AuthEmail,
+        );
+
+        let RateLimits { minute, hour, day } = organizations;
+        let organizations = RateLimiter::new(
+            minute,
+            hour,
+            day,
+            #[cfg(feature = "otel")]
+            &bencher_otel::ApiCounter::UserOrganizationMax,
             RateLimitingError::AuthEmail,
         );
 
@@ -127,13 +163,14 @@ impl UserRateLimiter {
             hour,
             day,
             #[cfg(feature = "otel")]
-            &|interval| bencher_otel::ApiCounter::AuthMax(interval, bencher_otel::AuthKind::Invite),
+            &bencher_otel::ApiCounter::UserInviteMax,
             RateLimitingError::InviteEmail,
         );
 
         Self {
             requests,
             attempts,
+            organizations,
             invites,
         }
     }
@@ -144,6 +181,10 @@ impl UserRateLimiter {
 
     pub fn check_auth(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
         self.attempts.check(user_uuid)
+    }
+
+    pub fn check_organization(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
+        self.organizations.check(user_uuid)
     }
 
     pub fn check_invite(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {

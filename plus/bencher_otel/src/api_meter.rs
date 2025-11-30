@@ -52,8 +52,12 @@ pub enum ApiCounter {
     UserClaim,
 
     RequestMax(IntervalKind, AuthorizationKind),
-    AuthMax(IntervalKind, AuthKind),
-    UnclaimedMax(IntervalKind, UnclaimedKind),
+
+    RunUnclaimedMax(IntervalKind),
+
+    UserAttemptMax(IntervalKind),
+    UserOrganizationMax(IntervalKind),
+    UserInviteMax(IntervalKind),
 }
 
 impl ApiCounter {
@@ -84,8 +88,12 @@ impl ApiCounter {
             Self::UserClaim => "user.claim",
 
             Self::RequestMax(_, _) => "request.max",
-            Self::AuthMax(_, _) => "auth.max",
-            Self::UnclaimedMax(_, _) => "unclaimed.max",
+
+            Self::RunUnclaimedMax(_) => "run.unclaimed.max",
+
+            Self::UserAttemptMax(_) => "user.auth.max",
+            Self::UserOrganizationMax(_) => "user.organization.max",
+            Self::UserInviteMax(_) => "user.invite.max",
         }
     }
 
@@ -116,8 +124,16 @@ impl ApiCounter {
             Self::UserClaim => "Counts the number of user claims",
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
-            Self::AuthMax(_, _) => "Counts the number of auth maximums reached",
-            Self::UnclaimedMax(_, _) => "Counts the number of unclaimed maximums reached",
+
+            Self::RunUnclaimedMax(_) => "Counts the number of unclaimed run maximums reached",
+
+            Self::UserAttemptMax(_) => {
+                "Counts the number of user authentication attempt maximums reached"
+            },
+            Self::UserOrganizationMax(_) => {
+                "Counts the number of user organization maximums reached"
+            },
+            Self::UserInviteMax(_) => "Counts the number of user invite maximums reached",
         }
     }
 
@@ -144,11 +160,11 @@ impl ApiCounter {
             Self::RequestMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
             },
-            Self::AuthMax(interval_kind, auth_kind) => {
-                vec![interval_kind.into(), auth_kind.into()]
-            },
-            Self::UnclaimedMax(interval_kind, unclaimed_kind) => {
-                vec![interval_kind.into(), unclaimed_kind.into()]
+            Self::RunUnclaimedMax(interval_kind)
+            | Self::UserAttemptMax(interval_kind)
+            | Self::UserOrganizationMax(interval_kind)
+            | Self::UserInviteMax(interval_kind) => {
+                vec![interval_kind.into()]
             },
         }
     }
@@ -276,52 +292,4 @@ impl From<AuthorizationKind> for opentelemetry::KeyValue {
 
 impl AuthorizationKind {
     const KEY: &str = "authorization";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum AuthKind {
-    Attempt,
-    Invite,
-}
-
-impl fmt::Display for AuthKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Attempt => write!(f, "attempt"),
-            Self::Invite => write!(f, "invite"),
-        }
-    }
-}
-
-impl From<AuthKind> for opentelemetry::KeyValue {
-    fn from(auth_kind: AuthKind) -> Self {
-        opentelemetry::KeyValue::new(AuthKind::KEY, auth_kind.to_string())
-    }
-}
-
-impl AuthKind {
-    const KEY: &str = "email";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum UnclaimedKind {
-    Run,
-}
-
-impl fmt::Display for UnclaimedKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Run => write!(f, "run"),
-        }
-    }
-}
-
-impl From<UnclaimedKind> for opentelemetry::KeyValue {
-    fn from(unclaimed_kind: UnclaimedKind) -> Self {
-        opentelemetry::KeyValue::new(UnclaimedKind::KEY, unclaimed_kind.to_string())
-    }
-}
-
-impl UnclaimedKind {
-    const KEY: &str = "unclaimed";
 }

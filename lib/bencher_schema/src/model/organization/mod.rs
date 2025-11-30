@@ -120,7 +120,9 @@ impl QueryOrganization {
         insert_organization: InsertOrganization,
     ) -> Result<Self, HttpError> {
         #[cfg(feature = "plus")]
-        InsertOrganization::rate_limit(context, auth_user).await?;
+        context
+            .rate_limiting
+            .create_organization(auth_user.user.uuid)?;
         let query_organization = Self::create_inner(context, insert_organization).await?;
 
         let timestamp = DateTime::now();
@@ -315,38 +317,6 @@ pub struct InsertOrganization {
 }
 
 impl InsertOrganization {
-    #[cfg(feature = "plus")]
-    pub async fn rate_limit(context: &ApiContext, query_user: &QueryUser) -> Result<(), HttpError> {
-        use crate::context::RateLimitingError;
-
-        let resource = BencherResource::Organization;
-        let (start_time, end_time) = context.rate_limiting.window();
-        let creation_count: u32 = schema::organization::table
-                .inner_join(schema::organization_role::table)
-                .filter(schema::organization_role::user_id.eq(query_user.id))
-                .filter(schema::organization::created.ge(start_time))
-                .filter(schema::organization::created.le(end_time))
-                .count()
-                .get_result::<i64>(conn_lock!(context))
-                .map_err(resource_not_found_err!(Organization, (query_user, start_time, end_time)))?
-                .try_into()
-                .map_err(|e| {
-                    issue_error(
-                        "Failed to count creation",
-                        &format!("Failed to count {resource} creation for user ({uuid}) between {start_time} and {end_time}.", uuid = query_user.uuid),
-                    e
-                    )}
-                )?;
-
-        context
-            .rate_limiting
-            .check_user_limit(creation_count, |rate_limit| RateLimitingError::User {
-                user: query_user.clone(),
-                resource,
-                rate_limit,
-            })
-    }
-
     fn new(name: ResourceName, slug: OrganizationSlug) -> Self {
         Self::new_inner(OrganizationUuid::new(), name, slug)
     }

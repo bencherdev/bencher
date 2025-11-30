@@ -91,9 +91,7 @@ impl PublicRateLimiter {
             hour,
             day,
             #[cfg(feature = "otel")]
-            &|interval| {
-                bencher_otel::ApiCounter::UnclaimedMax(interval, bencher_otel::UnclaimedKind::Run)
-            },
+            &bencher_otel::ApiCounter::RunUnclaimedMax,
             RateLimitingError::UnclaimedRun,
         );
 
