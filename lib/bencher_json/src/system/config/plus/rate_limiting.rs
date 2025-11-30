@@ -9,16 +9,9 @@ pub struct JsonRateLimiting {
     pub user_limit: Option<u32>,
     pub unclaimed_limit: Option<u32>,
     pub claimed_limit: Option<u32>,
-    pub unclaimed_run_limit: Option<u32>,
-    pub auth: Option<JsonAuthRateLimiter>,
     pub request: Option<JsonRequestRateLimiter>,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAuthRateLimiter {
-    pub attempt: Option<JsonRateLimits>,
-    pub invite: Option<JsonRateLimits>,
+    pub auth: Option<JsonAuthRateLimiter>,
+    pub unclaimed: Option<JsonUnclaimedRateLimiter>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -30,8 +23,21 @@ pub struct JsonRequestRateLimiter {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonAuthRateLimiter {
+    pub attempt: Option<JsonRateLimits>,
+    pub invite: Option<JsonRateLimits>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUnclaimedRateLimiter {
+    pub run: Option<JsonRateLimits>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonRateLimits {
-    pub minute_limit: Option<usize>,
-    pub hour_limit: Option<usize>,
-    pub day_limit: Option<usize>,
+    pub minute: Option<usize>,
+    pub hour: Option<usize>,
+    pub day: Option<usize>,
 }

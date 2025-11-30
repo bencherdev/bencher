@@ -11025,13 +11025,15 @@
               }
             ]
           },
-          "unclaimed_limit": {
+          "unclaimed": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonUnclaimedRateLimiter"
+              }
+            ]
           },
-          "unclaimed_run_limit": {
+          "unclaimed_limit": {
             "nullable": true,
             "type": "integer",
             "format": "uint32",
@@ -11054,19 +11056,19 @@
       "JsonRateLimits": {
         "type": "object",
         "properties": {
-          "day_limit": {
+          "day": {
             "nullable": true,
             "type": "integer",
             "format": "uint",
             "minimum": 0
           },
-          "hour_limit": {
+          "hour": {
             "nullable": true,
             "type": "integer",
             "format": "uint",
             "minimum": 0
           },
-          "minute_limit": {
+          "minute": {
             "nullable": true,
             "type": "integer",
             "format": "uint",
@@ -12291,6 +12293,19 @@
           "percentage",
           "uuid"
         ]
+      },
+      "JsonUnclaimedRateLimiter": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          }
+        }
       },
       "JsonUpdateAlert": {
         "type": "object",

@@ -1,13 +1,7 @@
-use std::{
-    collections::VecDeque,
-    hash::Hash,
-    net::IpAddr,
-    time::{Duration, SystemTime},
-};
+use std::{net::IpAddr, time::Duration};
 
 use bencher_json::{DateTime, PlanLevel, UserUuid, system::config::JsonRateLimiting};
 use bencher_license::Licensor;
-use dashmap::DashMap;
 use dropshot::HttpError;
 pub use http::HeaderMap;
 use slog::Logger;
@@ -25,10 +19,12 @@ mod auth;
 mod rate_limiter;
 mod remote_ip;
 mod request;
+mod unclaimed;
 
 use auth::AuthRateLimiter;
 use rate_limiter::{RateLimiter, RateLimits};
 use request::RequestRateLimiter;
+use unclaimed::UnclaimedRateLimiter;
 
 use super::DbConnection;
 
@@ -37,17 +33,15 @@ const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 const DEFAULT_USER_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
-const DEFAULT_UNCLAIMED_RUN_LIMIT: u32 = u8::MAX as u32;
 
 pub struct RateLimiting {
     window: Duration,
     user_limit: u32,
     unclaimed_limit: u32,
     claimed_limit: u32,
-    unclaimed_run_limit: u32,
-    unclaimed_runs: DashMap<IpAddr, VecDeque<SystemTime>>,
     request: RequestRateLimiter,
     auth: AuthRateLimiter,
+    unclaimed: UnclaimedRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -104,14 +98,15 @@ pub enum RateLimitingError {
     #[error("Too many requests for user. Please, try again later.")]
     UserRequests,
 
-    #[error(
-        "Too many runs from unclaimed IP address. Please, claim the project or try again later."
-    )]
-    UnclaimedRuns,
     #[error("Too many authentication attempts for user. Please, try again later.")]
     AuthEmail,
     #[error("Too many invitation emails for user. Please, try again later.")]
     InviteEmail,
+
+    #[error(
+        "Too many runs from unclaimed IP address. Please, claim the project or try again later."
+    )]
+    UnclaimedRun,
 }
 
 impl Default for RateLimiting {
@@ -121,10 +116,9 @@ impl Default for RateLimiting {
             user_limit: DEFAULT_USER_LIMIT,
             unclaimed_limit: DEFAULT_UNCLAIMED_LIMIT,
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
-            unclaimed_run_limit: DEFAULT_UNCLAIMED_RUN_LIMIT,
-            unclaimed_runs: DashMap::new(),
             request: RequestRateLimiter::default(),
             auth: AuthRateLimiter::default(),
+            unclaimed: UnclaimedRateLimiter::default(),
         }
     }
 }
@@ -136,19 +130,18 @@ impl From<JsonRateLimiting> for RateLimiting {
             user_limit,
             unclaimed_limit,
             claimed_limit,
-            unclaimed_run_limit,
             request,
             auth,
+            unclaimed,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
             user_limit: user_limit.unwrap_or(DEFAULT_USER_LIMIT),
             unclaimed_limit: unclaimed_limit.unwrap_or(DEFAULT_UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
-            unclaimed_run_limit: unclaimed_run_limit.unwrap_or(DEFAULT_UNCLAIMED_RUN_LIMIT),
-            unclaimed_runs: DashMap::new(),
             request: request.map_or_else(RequestRateLimiter::default, Into::into),
             auth: auth.map_or_else(AuthRateLimiter::default, Into::into),
+            unclaimed: unclaimed.map_or_else(UnclaimedRateLimiter::default, Into::into),
         }
     }
 }
@@ -236,18 +229,6 @@ impl RateLimiting {
         }
     }
 
-    pub fn unclaimed_run(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
-        check_rate_limit(
-            &self.unclaimed_runs,
-            remote_ip,
-            self.window,
-            self.unclaimed_run_limit as usize,
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiCounter::RunUnclaimedMax,
-            RateLimitingError::UnclaimedRuns,
-        )
-    }
-
     pub fn public_request(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
         self.request.check_public(remote_ip)
     }
@@ -264,52 +245,11 @@ impl RateLimiting {
         self.auth.check_invite(user_uuid)
     }
 
+    pub fn unclaimed_run(&self, remote_ip: IpAddr) -> Result<(), HttpError> {
+        self.unclaimed.check_run(remote_ip)
+    }
+
     pub fn remote_ip(headers: &HeaderMap) -> Option<IpAddr> {
         remote_ip::remote_ip(headers)
-    }
-}
-
-fn check_rate_limit<K>(
-    dash_map: &DashMap<K, VecDeque<SystemTime>>,
-    key: K,
-    window: Duration,
-    limit: usize,
-    #[cfg(feature = "otel")] api_counter_max: bencher_otel::ApiCounter,
-    error: RateLimitingError,
-) -> Result<(), HttpError>
-where
-    K: PartialEq + Eq + Hash,
-{
-    let now = SystemTime::now();
-    let cutoff = now - window;
-
-    // Clean up old times for all keys
-    dash_map.retain(|_, times| {
-        // Since times are in ascending order, remove from front until we hit a recent one
-        while times.front().is_some_and(|&time| time < cutoff) {
-            times.pop_front();
-        }
-        !times.is_empty()
-    });
-
-    let mut entry = dash_map
-        .entry(key)
-        .or_insert_with(|| VecDeque::with_capacity(limit));
-
-    // Check if the limit has been exceeded
-    if entry.len() < limit {
-        // Record the new time for the key
-        entry.push_back(now);
-
-        Ok(())
-    } else {
-        // Remove the oldest time and add the new one
-        entry.pop_front();
-        entry.push_back(now);
-
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(api_counter_max);
-
-        Err(too_many_requests(error))
     }
 }

@@ -40,29 +40,29 @@ impl From<JsonAuthRateLimiter> for AuthRateLimiter {
     fn from(json: JsonAuthRateLimiter) -> Self {
         let minute = json
             .attempt
-            .and_then(|r| r.minute_limit)
+            .and_then(|r| r.minute)
             .unwrap_or(DEFAULT_ATTEMPT_MINUTE_LIMIT);
         let hour = json
             .attempt
-            .and_then(|r| r.hour_limit)
+            .and_then(|r| r.hour)
             .unwrap_or(DEFAULT_ATTEMPT_HOUR_LIMIT);
         let day = json
             .attempt
-            .and_then(|r| r.day_limit)
+            .and_then(|r| r.day)
             .unwrap_or(DEFAULT_ATTEMPT_DAY_LIMIT);
         let attempt = RateLimits { minute, hour, day };
 
         let minute = json
             .invite
-            .and_then(|r| r.minute_limit)
+            .and_then(|r| r.minute)
             .unwrap_or(DEFAULT_INVITE_MINUTE_LIMIT);
         let hour = json
             .invite
-            .and_then(|r| r.hour_limit)
+            .and_then(|r| r.hour)
             .unwrap_or(DEFAULT_INVITE_HOUR_LIMIT);
         let day = json
             .invite
-            .and_then(|r| r.day_limit)
+            .and_then(|r| r.day)
             .unwrap_or(DEFAULT_INVITE_DAY_LIMIT);
         let invite = RateLimits { minute, hour, day };
 

@@ -42,29 +42,29 @@ impl From<JsonRequestRateLimiter> for RequestRateLimiter {
     fn from(json: JsonRequestRateLimiter) -> Self {
         let minute = json
             .public
-            .and_then(|r| r.minute_limit)
+            .and_then(|r| r.minute)
             .unwrap_or(DEFAULT_PUBLIC_MINUTE_LIMIT);
         let hour = json
             .public
-            .and_then(|r| r.hour_limit)
+            .and_then(|r| r.hour)
             .unwrap_or(DEFAULT_PUBLIC_HOUR_LIMIT);
         let day = json
             .public
-            .and_then(|r| r.day_limit)
+            .and_then(|r| r.day)
             .unwrap_or(DEFAULT_PUBLIC_DAY_LIMIT);
         let public = RateLimits { minute, hour, day };
 
         let minute = json
             .user
-            .and_then(|r| r.minute_limit)
+            .and_then(|r| r.minute)
             .unwrap_or(DEFAULT_USER_MINUTE_LIMIT);
         let hour = json
             .user
-            .and_then(|r| r.hour_limit)
+            .and_then(|r| r.hour)
             .unwrap_or(DEFAULT_USER_HOUR_LIMIT);
         let day = json
             .user
-            .and_then(|r| r.day_limit)
+            .and_then(|r| r.day)
             .unwrap_or(DEFAULT_USER_DAY_LIMIT);
         let user = RateLimits { minute, hour, day };
 
