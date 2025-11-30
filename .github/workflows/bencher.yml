@@ -277,6 +277,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
         run: cargo test-api smoke ci
 
   release_api_smoke_test:
@@ -296,6 +298,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
         run: cargo test-api smoke localhost
 
   docker_api_smoke_test:
@@ -320,6 +324,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
         run: cargo test-api smoke docker
 
   # FOSS (not(plus))
@@ -831,6 +837,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
         run: cargo test-api smoke dev
 
   deploy_api_fly_test:
@@ -858,6 +866,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
         run: cargo test-api smoke test
 
   deploy_api_fly:
@@ -950,6 +960,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Netlify Dev Test
+        env:
+          RUST_BACKTRACE: full
         run: cargo test-netlify dev ${{ github.ref_name }}
 
   deploy_console_netlify:
@@ -987,6 +999,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Netlify Test
+        env:
+          RUST_BACKTRACE: full
         run: cargo test-netlify prod ${{ github.ref_name }}
 
   # Release
