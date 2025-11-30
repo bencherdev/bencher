@@ -8502,6 +8502,27 @@
           "email"
         ]
       },
+      "JsonAuthRateLimiter": {
+        "type": "object",
+        "properties": {
+          "attempt": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
+          "invite": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          }
+        }
+      },
       "JsonAuthUser": {
         "type": "object",
         "properties": {
@@ -8960,27 +8981,6 @@
         "required": [
           "file"
         ]
-      },
-      "JsonEmailRateLimiter": {
-        "type": "object",
-        "properties": {
-          "auth": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          },
-          "invite": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          }
-        }
       },
       "JsonFold": {
         "type": "string",
@@ -11003,19 +11003,19 @@
       "JsonRateLimiting": {
         "type": "object",
         "properties": {
+          "auth": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonAuthRateLimiter"
+              }
+            ]
+          },
           "claimed_limit": {
             "nullable": true,
             "type": "integer",
             "format": "uint32",
             "minimum": 0
-          },
-          "email": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonEmailRateLimiter"
-              }
-            ]
           },
           "request": {
             "nullable": true,
