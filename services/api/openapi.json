@@ -10982,6 +10982,14 @@
       "JsonPublicRateLimiter": {
         "type": "object",
         "properties": {
+          "attempts": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
           "requests": {
             "nullable": true,
             "allOf": [
