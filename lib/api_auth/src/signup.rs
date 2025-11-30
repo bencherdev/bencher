@@ -36,9 +36,9 @@ pub async fn auth_signup_post(
 ) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
     let json = post_inner(
         &rqctx.log,
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         body.into_inner(),
     )
     .await?;
@@ -47,8 +47,8 @@ pub async fn auth_signup_post(
 
 async fn post_inner(
     log: &Logger,
-    #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     context: &ApiContext,
+    #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     json_signup: JsonSignup,
 ) -> Result<JsonAuthAck, HttpError> {
     if !json_signup.i_agree {
@@ -59,8 +59,8 @@ async fn post_inner(
     #[cfg(feature = "plus")]
     crate::verify_recaptcha(
         log,
-        headers,
         context,
+        headers,
         json_signup.recaptcha_token.as_ref(),
         bencher_json::RecaptchaAction::Signup,
     )

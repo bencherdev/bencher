@@ -68,9 +68,9 @@ pub async fn proj_metric_get(
     path_params: Path<ProjMetricParams>,
 ) -> Result<ResponseOk<JsonOneMetric>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         bearer_token,
     )
     .await?;

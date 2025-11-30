@@ -39,9 +39,9 @@ impl AuthUser {
     pub async fn new_pub(rqctx: &RequestContext<ApiContext>) -> Result<Option<Self>, HttpError> {
         let pub_bearer_token = PubBearerToken::from_request(rqctx).await?;
         Self::from_pub_token(
+            rqctx.context(),
             #[cfg(feature = "plus")]
             rqctx.request.headers(),
-            rqctx.context(),
             pub_bearer_token,
         )
         .await
@@ -54,8 +54,8 @@ impl AuthUser {
     }
 
     pub async fn from_pub_token(
-        #[cfg(feature = "plus")] headers: &crate::HeaderMap,
         context: &ApiContext,
+        #[cfg(feature = "plus")] headers: &crate::HeaderMap,
         bearer_token: PubBearerToken,
     ) -> Result<Option<Self>, HttpError> {
         Ok(if let Some(bearer_token) = bearer_token.0 {

@@ -67,8 +67,8 @@ impl bencher_endpoint::Registrar for Api {
 #[cfg(feature = "plus")]
 async fn verify_recaptcha(
     log: &slog::Logger,
-    headers: &bencher_schema::HeaderMap,
     context: &bencher_schema::ApiContext,
+    headers: &bencher_schema::HeaderMap,
     recaptcha_token: Option<&NonEmpty>,
     recaptcha_action: bencher_json::RecaptchaAction,
 ) -> Result<(), dropshot::HttpError> {

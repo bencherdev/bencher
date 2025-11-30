@@ -260,9 +260,9 @@ pub async fn proj_benchmark_get(
     path_params: Path<ProjBenchmarkParams>,
 ) -> Result<ResponseOk<JsonBenchmark>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         bearer_token,
     )
     .await?;

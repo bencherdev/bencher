@@ -87,9 +87,9 @@ pub async fn proj_perf_get(
         .map_err(bad_request_error)?;
 
     let auth_user = AuthUser::from_pub_token(
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         bearer_token,
     )
     .await?;

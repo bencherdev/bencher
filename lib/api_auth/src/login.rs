@@ -34,9 +34,9 @@ pub async fn auth_login_post(
 ) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
     let json = post_inner(
         &rqctx.log,
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         body.into_inner(),
     )
     .await?;
@@ -45,15 +45,15 @@ pub async fn auth_login_post(
 
 async fn post_inner(
     log: &Logger,
-    #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     context: &ApiContext,
+    #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     json_login: JsonLogin,
 ) -> Result<JsonAuthAck, HttpError> {
     #[cfg(feature = "plus")]
     crate::verify_recaptcha(
         log,
-        headers,
         context,
+        headers,
         json_login.recaptcha_token.as_ref(),
         bencher_json::RecaptchaAction::Login,
     )

@@ -137,9 +137,9 @@ pub async fn server_config_console_get(
     bearer_token: PubBearerToken,
 ) -> Result<ResponseOk<JsonConsole>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         bearer_token,
     )
     .await?;

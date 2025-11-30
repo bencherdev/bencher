@@ -316,9 +316,9 @@ pub async fn proj_alert_get(
     path_params: Path<ProjAlertParams>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         bearer_token,
     )
     .await?;

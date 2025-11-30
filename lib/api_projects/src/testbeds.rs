@@ -259,9 +259,9 @@ pub async fn proj_testbed_get(
     path_params: Path<ProjTestbedParams>,
 ) -> Result<ResponseOk<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         bearer_token,
     )
     .await?;

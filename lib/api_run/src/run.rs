@@ -38,17 +38,17 @@ pub async fn run_post(
     body: TypedBody<JsonNewRun>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         bearer_token,
     )
     .await?;
     let json = post_inner(
         &rqctx.log,
+        rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        rqctx.context(),
         auth_user,
         body.into_inner(),
     )
@@ -58,8 +58,8 @@ pub async fn run_post(
 
 async fn post_inner(
     log: &Logger,
-    #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     context: &ApiContext,
+    #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     auth_user: Option<AuthUser>,
     json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {

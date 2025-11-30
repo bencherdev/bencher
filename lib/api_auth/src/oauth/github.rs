@@ -34,8 +34,8 @@ pub async fn auth_github_get(
 ) -> Result<ResponseOk<JsonOAuthUrl>, HttpError> {
     let json = get_inner(
         &rqctx.log,
-        rqctx.request.headers(),
         rqctx.context(),
+        rqctx.request.headers(),
         query_params.into_inner(),
     )
     .await?;
@@ -44,8 +44,8 @@ pub async fn auth_github_get(
 
 async fn get_inner(
     log: &Logger,
-    headers: &HeaderMap,
     context: &ApiContext,
+    headers: &HeaderMap,
     oauth_state: OAuthState,
 ) -> Result<JsonOAuthUrl, HttpError> {
     let Some(github_client) = &context.github_client else {
