@@ -8502,27 +8502,6 @@
           "email"
         ]
       },
-      "JsonAuthRateLimiter": {
-        "type": "object",
-        "properties": {
-          "attempt": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          },
-          "invite": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          }
-        }
-      },
       "JsonAuthUser": {
         "type": "object",
         "properties": {
@@ -11000,36 +10979,41 @@
           "uuid"
         ]
       },
-      "JsonRateLimiting": {
+      "JsonPublicRateLimiter": {
         "type": "object",
         "properties": {
-          "auth": {
+          "requests": {
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonAuthRateLimiter"
+                "$ref": "#/components/schemas/JsonRateLimits"
               }
             ]
           },
+          "runs": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          }
+        }
+      },
+      "JsonRateLimiting": {
+        "type": "object",
+        "properties": {
           "claimed_limit": {
             "nullable": true,
             "type": "integer",
             "format": "uint32",
             "minimum": 0
           },
-          "request": {
+          "public": {
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonRequestRateLimiter"
-              }
-            ]
-          },
-          "unclaimed": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonUnclaimedRateLimiter"
+                "$ref": "#/components/schemas/JsonPublicRateLimiter"
               }
             ]
           },
@@ -11039,11 +11023,13 @@
             "format": "uint32",
             "minimum": 0
           },
-          "user_limit": {
+          "user": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonUserRateLimiter"
+              }
+            ]
           },
           "window": {
             "nullable": true,
@@ -11542,27 +11528,6 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/JsonReport"
-        }
-      },
-      "JsonRequestRateLimiter": {
-        "type": "object",
-        "properties": {
-          "public": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          },
-          "user": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          }
         }
       },
       "JsonRestart": {
@@ -12294,19 +12259,6 @@
           "uuid"
         ]
       },
-      "JsonUnclaimedRateLimiter": {
-        "type": "object",
-        "properties": {
-          "run": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          }
-        }
-      },
       "JsonUpdateAlert": {
         "type": "object",
         "properties": {
@@ -12777,6 +12729,51 @@
           "slug",
           "uuid"
         ]
+      },
+      "JsonUserRateLimiter": {
+        "type": "object",
+        "properties": {
+          "attempts": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
+          "invites": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
+          "organizations": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
+          "requests": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
+          "tokens": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          }
+        }
       },
       "JsonUsers": {
         "type": "array",

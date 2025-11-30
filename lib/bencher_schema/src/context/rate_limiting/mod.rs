@@ -11,7 +11,6 @@ use crate::{
     model::{
         organization::{QueryOrganization, plan::LicenseUsage},
         project::{QueryProject, branch::QueryBranch, threshold::QueryThreshold},
-        user::QueryUser,
     },
 };
 
@@ -28,13 +27,11 @@ use super::DbConnection;
 
 const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
-const DEFAULT_USER_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 
 pub struct RateLimiting {
     window: Duration,
-    user_limit: u32,
     unclaimed_limit: u32,
     claimed_limit: u32,
     public: PublicRateLimiter,
@@ -43,12 +40,6 @@ pub struct RateLimiting {
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum RateLimitingError {
-    #[error("User ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = user.uuid)]
-    User {
-        user: QueryUser,
-        resource: BencherResource,
-        rate_limit: u32,
-    },
     #[error("Organization ({uuid}) has exceeded the daily rate limit ({rate_limit}) for {resource} creation. Please, reduce your daily usage.", uuid = organization.uuid)]
     Organization {
         organization: QueryOrganization,
@@ -92,25 +83,27 @@ pub enum RateLimitingError {
 
     #[error("Too many requests for IP address. Please, try again later.")]
     IpAddressRequests,
-    #[error("Too many requests for user. Please, try again later.")]
-    UserRequests,
-
-    #[error("Too many authentication attempts for user. Please, try again later.")]
-    AuthEmail,
-    #[error("Too many invitation emails for user. Please, try again later.")]
-    InviteEmail,
-
     #[error(
         "Too many runs from unclaimed IP address. Please, claim the project or try again later."
     )]
     UnclaimedRun,
+
+    #[error("Too many requests for user. Please, try again later.")]
+    UserRequests,
+    #[error("Too many authentication attempts for user. Please, try again later.")]
+    UserAttempts,
+    #[error("Too many token generations for user. Please, try again later.")]
+    UserTokens,
+    #[error("Too many organization creations for user. Please, try again later.")]
+    UserOrganizations,
+    #[error("Too many invitation emails for user. Please, try again later.")]
+    UserInvites,
 }
 
 impl Default for RateLimiting {
     fn default() -> Self {
         Self {
             window: DAY,
-            user_limit: DEFAULT_USER_LIMIT,
             unclaimed_limit: DEFAULT_UNCLAIMED_LIMIT,
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
             public: PublicRateLimiter::default(),
@@ -123,7 +116,6 @@ impl From<JsonRateLimiting> for RateLimiting {
     fn from(json: JsonRateLimiting) -> Self {
         let JsonRateLimiting {
             window,
-            user_limit,
             unclaimed_limit,
             claimed_limit,
             public,
@@ -131,7 +123,6 @@ impl From<JsonRateLimiting> for RateLimiting {
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
-            user_limit: user_limit.unwrap_or(DEFAULT_USER_LIMIT),
             unclaimed_limit: unclaimed_limit.unwrap_or(DEFAULT_UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
             public: public.map_or_else(PublicRateLimiter::default, Into::into),
@@ -178,13 +169,6 @@ impl RateLimiting {
         let end_time = chrono::Utc::now();
         let start_time = end_time - self.window;
         (start_time.into(), end_time.into())
-    }
-
-    pub fn check_user_limit<F>(&self, window_usage: u32, error_fn: F) -> Result<(), HttpError>
-    where
-        F: FnOnce(u32) -> RateLimitingError,
-    {
-        Self::check_inner(self.user_limit, window_usage, error_fn)
     }
 
     pub fn check_claimable_limit<FUn, FCl>(
@@ -236,7 +220,11 @@ impl RateLimiting {
     }
 
     pub fn auth_attempt(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.user.check_auth(user_uuid)
+        self.user.check_attempt(user_uuid)
+    }
+
+    pub fn create_token(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.user.check_token(user_uuid)
     }
 
     pub fn create_organization(&self, user_uuid: UserUuid) -> Result<(), HttpError> {

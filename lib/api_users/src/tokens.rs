@@ -195,7 +195,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonToken, HttpError> {
     #[cfg(feature = "plus")]
-    InsertToken::rate_limit(context, &auth_user.user).await?;
+    context.rate_limiting.create_token(auth_user.user.uuid)?;
 
     let insert_token = InsertToken::from_json(
         conn_lock!(context),

@@ -13,6 +13,10 @@ const DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT: usize = 1 << 1;
 const DEFAULT_ATTEMPTS_PER_HOUR_LIMIT: usize = 1 << 2;
 const DEFAULT_ATTEMPTS_PER_DAY_LIMIT: usize = 1 << 3;
 
+const DEFAULT_TOKENS_PER_MINUTE_LIMIT: usize = 1 << 2;
+const DEFAULT_TOKENS_PER_HOUR_LIMIT: usize = 1 << 3;
+const DEFAULT_TOKENS_PER_DAY_LIMIT: usize = 1 << 4;
+
 const DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT: usize = 1 << 1;
 const DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT: usize = 1 << 2;
 const DEFAULT_ORGANIZATIONS_PER_DAY_LIMIT: usize = 1 << 3;
@@ -24,6 +28,7 @@ const DEFAULT_INVITES_PER_DAY_LIMIT: usize = 1 << 5;
 pub(super) struct UserRateLimiter {
     requests: RateLimiter<UserUuid>,
     attempts: RateLimiter<UserUuid>,
+    tokens: RateLimiter<UserUuid>,
     organizations: RateLimiter<UserUuid>,
     invites: RateLimiter<UserUuid>,
 }
@@ -42,6 +47,12 @@ impl Default for UserRateLimiter {
             day: DEFAULT_ATTEMPTS_PER_DAY_LIMIT,
         };
 
+        let tokens = RateLimits {
+            minute: DEFAULT_TOKENS_PER_MINUTE_LIMIT,
+            hour: DEFAULT_TOKENS_PER_HOUR_LIMIT,
+            day: DEFAULT_TOKENS_PER_DAY_LIMIT,
+        };
+
         let organizations = RateLimits {
             minute: DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT,
             hour: DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT,
@@ -54,7 +65,7 @@ impl Default for UserRateLimiter {
             day: DEFAULT_INVITES_PER_DAY_LIMIT,
         };
 
-        Self::new(requests, attempts, organizations, invites)
+        Self::new(requests, attempts, tokens, organizations, invites)
     }
 }
 
@@ -63,6 +74,7 @@ impl From<JsonUserRateLimiter> for UserRateLimiter {
         let JsonUserRateLimiter {
             requests,
             attempts,
+            tokens,
             organizations,
             invites,
         } = json;
@@ -89,6 +101,17 @@ impl From<JsonUserRateLimiter> for UserRateLimiter {
             .unwrap_or(DEFAULT_ATTEMPTS_PER_DAY_LIMIT);
         let attempts = RateLimits { minute, hour, day };
 
+        let minute = tokens
+            .and_then(|r| r.minute)
+            .unwrap_or(DEFAULT_TOKENS_PER_MINUTE_LIMIT);
+        let hour = tokens
+            .and_then(|r| r.hour)
+            .unwrap_or(DEFAULT_TOKENS_PER_HOUR_LIMIT);
+        let day = tokens
+            .and_then(|r| r.day)
+            .unwrap_or(DEFAULT_TOKENS_PER_DAY_LIMIT);
+        let tokens = RateLimits { minute, hour, day };
+
         let minute = organizations
             .and_then(|r| r.minute)
             .unwrap_or(DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT);
@@ -111,7 +134,7 @@ impl From<JsonUserRateLimiter> for UserRateLimiter {
             .unwrap_or(DEFAULT_INVITES_PER_DAY_LIMIT);
         let invites = RateLimits { minute, hour, day };
 
-        Self::new(requests, attempts, organizations, invites)
+        Self::new(requests, attempts, tokens, organizations, invites)
     }
 }
 
@@ -119,6 +142,7 @@ impl UserRateLimiter {
     pub fn new(
         requests: RateLimits,
         attempts: RateLimits,
+        tokens: RateLimits,
         organizations: RateLimits,
         invites: RateLimits,
     ) -> Self {
@@ -144,7 +168,17 @@ impl UserRateLimiter {
             day,
             #[cfg(feature = "otel")]
             &bencher_otel::ApiCounter::UserAttemptMax,
-            RateLimitingError::AuthEmail,
+            RateLimitingError::UserAttempts,
+        );
+
+        let RateLimits { minute, hour, day } = tokens;
+        let tokens = RateLimiter::new(
+            minute,
+            hour,
+            day,
+            #[cfg(feature = "otel")]
+            &bencher_otel::ApiCounter::UserTokenMax,
+            RateLimitingError::UserTokens,
         );
 
         let RateLimits { minute, hour, day } = organizations;
@@ -154,7 +188,7 @@ impl UserRateLimiter {
             day,
             #[cfg(feature = "otel")]
             &bencher_otel::ApiCounter::UserOrganizationMax,
-            RateLimitingError::AuthEmail,
+            RateLimitingError::UserOrganizations,
         );
 
         let RateLimits { minute, hour, day } = invites;
@@ -164,12 +198,13 @@ impl UserRateLimiter {
             day,
             #[cfg(feature = "otel")]
             &bencher_otel::ApiCounter::UserInviteMax,
-            RateLimitingError::InviteEmail,
+            RateLimitingError::UserInvites,
         );
 
         Self {
             requests,
             attempts,
+            tokens,
             organizations,
             invites,
         }
@@ -179,8 +214,12 @@ impl UserRateLimiter {
         self.requests.check(user_uuid)
     }
 
-    pub fn check_auth(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
+    pub fn check_attempt(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
         self.attempts.check(user_uuid)
+    }
+
+    pub fn check_token(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
+        self.tokens.check(user_uuid)
     }
 
     pub fn check_organization(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {

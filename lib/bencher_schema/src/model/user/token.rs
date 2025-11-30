@@ -93,40 +93,6 @@ pub struct InsertToken {
 }
 
 impl InsertToken {
-    #[cfg(feature = "plus")]
-    pub async fn rate_limit(
-        context: &crate::ApiContext,
-        query_user: &QueryUser,
-    ) -> Result<(), HttpError> {
-        use crate::{conn_lock, context::RateLimitingError};
-
-        let resource = BencherResource::Token;
-        let (start_time, end_time) = context.rate_limiting.window();
-        let window_usage: u32 = schema::token::table
-                .filter(schema::token::user_id.eq(query_user.id))
-                .filter(schema::token::creation.ge(start_time))
-                .filter(schema::token::creation.le(end_time))
-                .count()
-                .get_result::<i64>(conn_lock!(context))
-                .map_err(resource_not_found_err!(Token, (query_user, start_time, end_time)))?
-                .try_into()
-                .map_err(|e| {
-                    issue_error(
-                        "Failed to count creation",
-                        &format!("Failed to count {resource} creation for user ({uuid}) between {start_time} and {end_time}.", uuid = query_user.uuid),
-                    e
-                    )}
-                )?;
-
-        context
-            .rate_limiting
-            .check_user_limit(window_usage, |rate_limit| RateLimitingError::User {
-                user: query_user.clone(),
-                resource,
-                rate_limit,
-            })
-    }
-
     pub fn from_json(
         conn: &mut DbConnection,
         rbac: &Rbac,

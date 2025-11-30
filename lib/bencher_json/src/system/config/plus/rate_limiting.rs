@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonRateLimiting {
     pub window: Option<u32>,
-    pub user_limit: Option<u32>,
     pub unclaimed_limit: Option<u32>,
     pub claimed_limit: Option<u32>,
     pub public: Option<JsonPublicRateLimiter>,
@@ -25,6 +24,7 @@ pub struct JsonPublicRateLimiter {
 pub struct JsonUserRateLimiter {
     pub requests: Option<JsonRateLimits>,
     pub attempts: Option<JsonRateLimits>,
+    pub tokens: Option<JsonRateLimits>,
     pub organizations: Option<JsonRateLimits>,
     pub invites: Option<JsonRateLimits>,
 }
