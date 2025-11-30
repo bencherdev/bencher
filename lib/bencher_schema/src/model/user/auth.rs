@@ -268,25 +268,6 @@ impl Sanitize for AuthUser {
     }
 }
 
-// https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/http.rs
-pub struct Headers(pub http::HeaderMap);
-
-#[async_trait]
-impl SharedExtractor for Headers {
-    async fn from_request<Context: ServerContext>(
-        rqctx: &RequestContext<Context>,
-    ) -> Result<Headers, HttpError> {
-        Ok(Headers(rqctx.request.headers().clone()))
-    }
-
-    fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
-        ExtractorMetadata {
-            extension_mode: ExtensionMode::None,
-            parameters: Vec::new(),
-        }
-    }
-}
-
 // https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
 pub struct BearerToken(Jwt);
 
@@ -309,9 +290,9 @@ impl SharedExtractor for BearerToken {
     async fn from_request<Context: ServerContext>(
         rqctx: &RequestContext<Context>,
     ) -> Result<Self, HttpError> {
-        let headers = Headers::from_request(rqctx).await?;
+        let headers = rqctx.request.headers();
 
-        let Some(authorization) = headers.0.get("Authorization") else {
+        let Some(authorization) = headers.get("Authorization") else {
             return Err(bad_request_error(format!(
                 "Request is missing \"Authorization\" header. {BEARER_TOKEN_FORMAT}"
             )));
