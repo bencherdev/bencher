@@ -213,7 +213,7 @@ impl UserRateLimiter {
             day,
             #[cfg(feature = "otel")]
             &bencher_otel::ApiCounter::RunClaimedMax,
-            RateLimitingError::UserRequests,
+            RateLimitingError::UserRuns,
         );
 
         Self {
