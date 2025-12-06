@@ -1,6 +1,6 @@
-#[cfg(not(feature = "plus"))]
-use api_checkout as _;
 // Needed for binary
+#[cfg(feature = "plus")]
+use api_checkout as _;
 use bencher_config as _;
 use bencher_json as _;
 use bencher_logger as _;
@@ -19,6 +19,5 @@ use tokio_rustls as _;
 use libsqlite3_sys as _;
 
 pub mod api;
-mod startup;
 
 pub use api_server::{SPEC, SPEC_STR};

@@ -1135,6 +1135,7 @@ dependencies = [
  "diesel",
  "dropshot",
  "oso",
+ "reqwest",
  "serde_json",
  "slog",
  "thiserror 2.0.12",

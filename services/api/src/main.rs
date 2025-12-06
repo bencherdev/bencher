@@ -260,7 +260,8 @@ fn run_api_server(
 
     let config_tx = ConfigTx { config, restart_tx };
     tokio::spawn(async move {
-        Box::pin(config_tx.into_server::<Api>())
+        config_tx
+            .into_server::<Api>()
             .await
             .map_err(ApiError::ConfigTxError)?
             .await

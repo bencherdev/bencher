@@ -52,7 +52,7 @@ otel = [
 [dependencies]
 # Workspace
 api_auth.workspace = true
-api_checkout.workspace = true
+api_checkout = { workspace = true, optional = true }
 api_organizations.workspace = true
 api_projects.workspace = true
 api_run.workspace = true

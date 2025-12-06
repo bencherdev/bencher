@@ -1,9 +1,8 @@
 use std::path::PathBuf;
-use std::sync::LazyLock;
 use std::{cmp, sync::Arc};
 
 use bencher_json::{
-    BENCHER_API_URL, BENCHER_API_VERSION, DateTime, JsonServer, JsonServerStats, PlanLevel,
+    BENCHER_API_VERSION, BENCHER_STATS_API_URL, DateTime, JsonServer, JsonServerStats, PlanLevel,
     ServerUuid,
 };
 use bencher_license::Licensor;
@@ -30,14 +29,6 @@ crate::macros::typed_id::typed_id!(ServerId);
 const SERVER_ID: ServerId = ServerId(1);
 
 const LICENSE_GRACE_PERIOD: usize = 7;
-
-#[expect(clippy::panic)]
-pub static BENCHER_STATS_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
-    BENCHER_API_URL
-        .clone()
-        .join("/v0/server/stats")
-        .unwrap_or_else(|e| panic!("Failed to parse stats API endpoint: {e}"))
-});
 
 #[derive(Debug, Clone, Copy, diesel::Queryable)]
 pub struct QueryServer {

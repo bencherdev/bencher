@@ -14,6 +14,7 @@ plus = [
     "dep:bencher_google_client",
     "dep:bencher_google_index",
     "dep:dashmap",
+    "dep:http",
     "dep:reqwest",
     "dep:serde_json",
     "bencher_adapter/plus",
@@ -49,7 +50,7 @@ dashmap = { workspace = true, optional = true }
 derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
-http.workspace = true
+http = { workspace = true, optional = true }
 regex.workspace = true
 rusqlite = { workspace = true, features = ["backup"] }
 serde_json = { workspace = true, optional = true }

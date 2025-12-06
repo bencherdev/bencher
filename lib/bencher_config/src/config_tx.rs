@@ -74,10 +74,9 @@ impl ConfigTx {
         R: Registrar,
     {
         let log = into_log(self.config.0.logging.clone())?;
-        self.into_inner::<R>(&log).await.map_err(|e| {
-            error!(&log, "{e}");
-            e
-        })
+        Box::pin(self.into_inner::<R>(&log))
+            .await
+            .inspect_err(|e| error!(&log, "{e}"))
     }
 
     async fn into_inner<R>(self, log: &Logger) -> Result<HttpServer<ApiContext>, ConfigTxError>
@@ -125,6 +124,7 @@ impl ConfigTx {
         // Bencher Cloud does not need to send stats, it uses OpenTelemetry.
         #[cfg(feature = "plus")]
         if !context.is_bencher_cloud {
+            register_startup(log).await;
             spawn_stats(log.clone(), &context).await?;
         }
 
@@ -366,6 +366,18 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
         IfExists::Fail => ConfigLoggingIfExists::Fail,
         IfExists::Truncate => ConfigLoggingIfExists::Truncate,
         IfExists::Append => ConfigLoggingIfExists::Append,
+    }
+}
+
+#[cfg(feature = "plus")]
+async fn register_startup(log: &Logger) {
+    let client = reqwest::Client::new();
+    if let Err(e) = client
+        .get(bencher_json::BENCHER_STATS_API_URL.clone())
+        .send()
+        .await
+    {
+        slog::warn!(log, "Failed to register startup: {e}");
     }
 }
 
