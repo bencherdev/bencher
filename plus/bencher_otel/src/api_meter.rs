@@ -54,6 +54,7 @@ pub enum ApiCounter {
     UserAccept(Option<AuthMethod>),
     UserConfirm,
     UserClaim,
+    UserSsoJoin(AuthMethod),
 
     RequestMax(IntervalKind, AuthorizationKind),
 
@@ -101,6 +102,7 @@ impl ApiCounter {
             Self::UserAccept(_) => "user.accept",
             Self::UserConfirm => "user.confirm",
             Self::UserClaim => "user.claim",
+            Self::UserSsoJoin(_) => "user.sso.join",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -148,6 +150,7 @@ impl ApiCounter {
             Self::UserAccept(_) => "Counts the number of user acceptances",
             Self::UserConfirm => "Counts the number of user confirmations",
             Self::UserClaim => "Counts the number of user claims",
+            Self::UserSsoJoin(_) => "Counts the number of user SSO joins",
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
@@ -188,9 +191,9 @@ impl ApiCounter {
             | Self::UserRecaptchaFailure
             | Self::UserInvite
             | Self::UserClaim => Vec::new(),
-            Self::UserSignup(auth_method) | Self::UserLogin(auth_method) => {
-                auth_method.attributes()
-            },
+            Self::UserSignup(auth_method)
+            | Self::UserLogin(auth_method)
+            | Self::UserSsoJoin(auth_method) => auth_method.attributes(),
             Self::UserAccept(auth_method) => AuthMethod::nullable_attributes(auth_method),
             Self::UserConfirm => AuthMethod::Email.attributes(),
             Self::RequestMax(interval_kind, authorization_kind)

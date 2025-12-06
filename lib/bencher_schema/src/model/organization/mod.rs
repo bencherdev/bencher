@@ -249,7 +249,7 @@ impl QueryOrganization {
             )));
         }
 
-        self.join(context, query_user).await?;
+        Self::join(context, self.uuid, query_user).await?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
@@ -258,8 +258,8 @@ impl QueryOrganization {
     }
 
     pub async fn join(
-        &self,
         context: &ApiContext,
+        organization_uuid: OrganizationUuid,
         query_user: &QueryUser,
     ) -> Result<(), HttpError> {
         // Create an invite token to join the organization
@@ -268,7 +268,7 @@ impl QueryOrganization {
             .new_invite(
                 query_user.email.clone(),
                 CLAIM_TOKEN_TTL,
-                self.uuid,
+                organization_uuid,
                 OrganizationRole::Leader,
             )
             .map_err(|e| {

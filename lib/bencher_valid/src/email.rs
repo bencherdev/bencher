@@ -79,6 +79,15 @@ impl Visitor<'_> for EmailVisitor {
     }
 }
 
+impl Email {
+    pub fn domain(&self) -> String {
+        // This is safe because the `Email` struct guarantees validity
+        EmailAddress::new_unchecked(self.as_ref())
+            .domain()
+            .to_owned()
+    }
+}
+
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_email(email: &str) -> bool {
     EmailAddress::is_valid(email)
