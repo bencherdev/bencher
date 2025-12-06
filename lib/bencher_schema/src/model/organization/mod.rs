@@ -249,7 +249,20 @@ impl QueryOrganization {
             )));
         }
 
-        // Create an invite token to claim the organization
+        self.join(context, query_user).await?;
+
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
+
+        Ok(())
+    }
+
+    pub async fn join(
+        &self,
+        context: &ApiContext,
+        query_user: &QueryUser,
+    ) -> Result<(), HttpError> {
+        // Create an invite token to join the organization
         let invite = context
             .token_key
             .new_invite(
@@ -266,10 +279,8 @@ impl QueryOrganization {
                 )
             })?;
 
+        // Accept the invite to join the organization
         query_user.accept_invite(conn_lock!(context), &context.token_key, &invite)?;
-
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
 
         Ok(())
     }
