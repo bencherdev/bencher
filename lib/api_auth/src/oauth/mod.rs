@@ -7,7 +7,7 @@ use bencher_schema::{
     ApiContext, conn_lock,
     error::{issue_error, payment_required_error},
     model::{
-        organization::{QueryOrganization, plan::LicenseUsage},
+        organization::{QueryOrganization, plan::LicenseUsage, sso::QuerySso},
         user::{InsertUser, QueryUser},
     },
 };
@@ -74,7 +74,7 @@ async fn handle_oauth_user(
     // If the user already exists, then we just need to check if they are locked and possible accept an invite
     // Otherwise, we need to create a new user and notify the admins
     let query_user = QueryUser::get_with_email(conn_lock!(context), &email);
-    let (user, auth_action) = if let Ok(query_user) = query_user {
+    let (query_user, auth_action) = if let Ok(query_user) = query_user {
         query_user.check_is_locked()?;
         query_user.rate_limit_auth(context)?;
 
@@ -90,7 +90,7 @@ async fn handle_oauth_user(
                 QueryOrganization::from_uuid(conn_lock!(context), organization_uuid)?;
             query_organization.claim(context, &query_user).await?;
         }
-        (query_user.into_json(), AuthAction::Login)
+        (query_user, AuthAction::Login)
     } else {
         let json_signup = JsonSignup {
             name,
@@ -119,8 +119,20 @@ async fn handle_oauth_user(
 
         let query_user = QueryUser::get_with_email(conn_lock!(context), &email)?;
 
-        (query_user.into_json(), AuthAction::Signup)
+        (query_user, AuthAction::Signup)
     };
+
+    #[cfg(feature = "otel")]
+    let auth_method = bencher_otel::AuthMethod::OAuth(provider.into());
+
+    #[cfg(feature = "plus")]
+    QuerySso::join(
+        context,
+        &query_user,
+        #[cfg(feature = "otel")]
+        auth_method,
+    )
+    .await?;
 
     let token = context
         .token_key
@@ -145,16 +157,12 @@ async fn handle_oauth_user(
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(match auth_action {
-        AuthAction::Signup => {
-            bencher_otel::ApiCounter::UserSignup(bencher_otel::AuthMethod::OAuth(provider.into()))
-        },
-        AuthAction::Login => {
-            bencher_otel::ApiCounter::UserLogin(bencher_otel::AuthMethod::OAuth(provider.into()))
-        },
+        AuthAction::Signup => bencher_otel::ApiCounter::UserSignup(auth_method),
+        AuthAction::Login => bencher_otel::ApiCounter::UserLogin(auth_method),
     });
 
     let user = JsonAuthUser {
-        user,
+        user: query_user.into_json(),
         token,
         creation: claims.issued_at(),
         expiration: claims.expiration(),
