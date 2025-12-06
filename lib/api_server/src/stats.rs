@@ -111,11 +111,11 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct StatsParams {
-    /// The UUID for the server.
+    /// The UUID for the self-hosted server.
     pub server: ServerUuid,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
 pub struct StatsQuery {
     /// Server startup.
     pub startup: BooleanParam<SelfHostedStartup>,
@@ -144,11 +144,16 @@ pub async fn server_startup_stats_get(
     path_params: Path<StatsParams>,
     query_params: Query<StatsQuery>,
 ) -> Result<ResponseOk<JsonUuid>, HttpError> {
-    let uuid = path_params.into_inner().server.into();
+    let json = get_startup_inner(&path_params.into_inner(), query_params.into_inner());
+    Ok(Get::pub_response_ok(json))
+}
+
+fn get_startup_inner(path_params: &StatsParams, query_params: StatsQuery) -> JsonUuid {
+    let uuid = path_params.server.into();
 
     #[cfg(feature = "otel")]
     {
-        let StatsQuery { startup } = query_params.into_inner();
+        let StatsQuery { startup } = query_params;
 
         if startup.into() {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SelfHostedServerStartup(
@@ -157,5 +162,5 @@ pub async fn server_startup_stats_get(
         }
     }
 
-    Ok(Get::pub_response_ok(JsonUuid { uuid }))
+    JsonUuid { uuid }
 }
