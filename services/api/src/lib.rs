@@ -19,5 +19,6 @@ use tokio_rustls as _;
 use libsqlite3_sys as _;
 
 pub mod api;
+mod startup;
 
 pub use api_server::{SPEC, SPEC_STR};
