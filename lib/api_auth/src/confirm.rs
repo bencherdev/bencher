@@ -48,7 +48,7 @@ async fn post_inner(
     let query_user = QueryUser::get_with_email(conn_lock!(context), email)?;
 
     #[cfg(feature = "plus")]
-    QuerySso::join(
+    QuerySso::join_all(
         context,
         &query_user,
         #[cfg(feature = "otel")]

@@ -126,7 +126,7 @@ async fn handle_oauth_user(
     let auth_method = bencher_otel::AuthMethod::OAuth(provider.into());
 
     #[cfg(feature = "plus")]
-    QuerySso::join(
+    QuerySso::join_all(
         context,
         &query_user,
         #[cfg(feature = "otel")]

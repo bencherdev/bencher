@@ -41,7 +41,7 @@ impl QuerySso {
             .map_err(resource_not_found_err!(Sso, uuid))
     }
 
-    pub async fn join(
+    pub async fn join_all(
         context: &ApiContext,
         query_user: &QueryUser,
         #[cfg(feature = "otel")] auth_method: bencher_otel::AuthMethod,
