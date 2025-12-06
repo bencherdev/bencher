@@ -77,9 +77,10 @@ impl bencher_endpoint::Registrar for Api {
 
             // Organization SSO
             if http_options {
-                api_description.register(sso::org_sso_post_options)?;
+                api_description.register(sso::org_ssos_options)?;
                 api_description.register(sso::org_sso_delete_options)?;
             }
+            api_description.register(sso::org_ssos_get)?;
             api_description.register(sso::org_sso_post)?;
             api_description.register(sso::org_sso_delete)?;
         }

@@ -1,7 +1,13 @@
 #![cfg(feature = "plus")]
 
-use bencher_endpoint::{CorsResponse, Delete, Endpoint, Post, ResponseAccepted, ResponseDeleted};
-use bencher_json::{JsonNewSso, JsonSso, OrganizationResourceId, SsoUuid};
+use bencher_endpoint::{
+    CorsResponse, Delete, Endpoint, Get, Post, ResponseAccepted, ResponseDeleted, ResponseOk,
+    TotalCount,
+};
+use bencher_json::{
+    JsonDirection, JsonNewSso, JsonPagination, JsonSso, JsonSsos, OrganizationResourceId, SsoUuid,
+};
+use bencher_rbac::organization::Permission;
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
@@ -12,19 +18,32 @@ use bencher_schema::{
             plan::LicenseUsage,
             sso::{InsertSso, QuerySso},
         },
-        user::{admin::AdminUser, auth::BearerToken},
+        user::{
+            admin::AdminUser,
+            auth::{AuthUser, BearerToken},
+        },
     },
     resource_not_found_err, schema,
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
+use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OrgSsoPostParams {
+pub struct OrgSsosParams {
     /// The slug or UUID for an organization.
     pub organization: OrganizationResourceId,
+}
+
+pub type OrgSsoPagination = JsonPagination<OrgSsoSort>;
+
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OrgSsoSort {
+    /// Sort by SSO domain.
+    #[default]
+    Domain,
 }
 
 #[endpoint {
@@ -32,11 +51,89 @@ pub struct OrgSsoPostParams {
     path =  "/v0/organizations/{organization}/sso",
     tags = ["organizations", "sso"]
 }]
-pub async fn org_sso_post_options(
+pub async fn org_ssos_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OrgSsoPostParams>,
+    _path_params: Path<OrgSsosParams>,
+    _pagination_params: Query<OrgSsoPagination>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Post.into()]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+}
+
+/// List SSO domains for an organization
+///
+/// ➕ Bencher Plus: List all single sign-on (SSO) domains for an organization.
+/// The user must be a member of the organization to use this route.
+#[endpoint {
+    method = GET,
+    path =  "/v0/organizations/{organization}/sso",
+    tags = ["organizations", "sso"]
+}]
+pub async fn org_ssos_get(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<OrgSsosParams>,
+    pagination_params: Query<OrgSsoPagination>,
+) -> Result<ResponseOk<JsonSsos>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let (json, total_count) = get_ls_inner(
+        rqctx.context(),
+        &auth_user,
+        path_params.into_inner(),
+        pagination_params.into_inner(),
+    )
+    .await?;
+    Ok(Get::auth_response_ok_with_total_count(json, total_count))
+}
+
+async fn get_ls_inner(
+    context: &ApiContext,
+    auth_user: &AuthUser,
+    path_params: OrgSsosParams,
+    pagination_params: OrgSsoPagination,
+) -> Result<(JsonSsos, TotalCount), HttpError> {
+    let query_organization = QueryOrganization::is_allowed_resource_id(
+        conn_lock!(context),
+        &context.rbac,
+        &path_params.organization,
+        auth_user,
+        Permission::ViewRole,
+    )?;
+
+    let ssos = get_ls_query(&query_organization, &pagination_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QuerySso>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Sso,
+            (&query_organization, &pagination_params)
+        ))?;
+
+    // Drop connection lock before iterating
+    let json_ssos = ssos.into_iter().map(QuerySso::into_json).collect();
+
+    let total_count = get_ls_query(&query_organization, &pagination_params)
+        .count()
+        .get_result::<i64>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Sso,
+            (&query_organization, &pagination_params)
+        ))?
+        .try_into()?;
+
+    Ok((json_ssos, total_count))
+}
+
+fn get_ls_query<'q>(
+    query_organization: &'q QueryOrganization,
+    pagination_params: &OrgSsoPagination,
+) -> schema::sso::BoxedQuery<'q, diesel::sqlite::Sqlite> {
+    let query = QuerySso::belonging_to(query_organization).into_boxed();
+
+    match pagination_params.order() {
+        OrgSsoSort::Domain => match pagination_params.direction {
+            Some(JsonDirection::Asc) | None => query.order(schema::sso::domain.asc()),
+            Some(JsonDirection::Desc) => query.order(schema::sso::domain.desc()),
+        },
+    }
 }
 
 /// Add an SSO domain to an organization
@@ -51,7 +148,7 @@ pub async fn org_sso_post_options(
 pub async fn org_sso_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    path_params: Path<OrgSsoPostParams>,
+    path_params: Path<OrgSsosParams>,
     body: TypedBody<JsonNewSso>,
 ) -> Result<ResponseAccepted<JsonSso>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
@@ -61,7 +158,7 @@ pub async fn org_sso_post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: OrgSsoPostParams,
+    path_params: OrgSsosParams,
     json_new_sso: JsonNewSso,
 ) -> Result<JsonSso, HttpError> {
     // Get the organization

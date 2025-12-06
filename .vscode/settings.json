@@ -179,6 +179,7 @@
     "rustls",
     "schemars",
     "signup",
+    "Ssos",
     "starttls",
     "thiserror",
     "typeshare",

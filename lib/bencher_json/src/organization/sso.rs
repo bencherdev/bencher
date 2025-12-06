@@ -14,6 +14,12 @@ pub struct JsonNewSso {
     pub domain: NonEmpty,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonSsos(pub Vec<JsonSso>);
+
+crate::from_vec!(JsonSsos[JsonSso]);
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
