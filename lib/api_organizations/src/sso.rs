@@ -5,10 +5,11 @@ use bencher_json::{JsonNewSso, JsonSso, OrganizationResourceId, SsoUuid};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    error::resource_conflict_err,
+    error::{payment_required_error, resource_conflict_err},
     model::{
         organization::{
             QueryOrganization,
+            plan::LicenseUsage,
             sso::{InsertSso, QuerySso},
         },
         user::{admin::AdminUser, auth::BearerToken},
@@ -64,17 +65,36 @@ async fn post_inner(
     json_new_sso: JsonNewSso,
 ) -> Result<JsonSso, HttpError> {
     // Get the organization
-    let query_org =
+    let query_organization =
         QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
 
-    let insert_sso = InsertSso::from_json(query_org.id, json_new_sso);
+    // Either the server is Bencher Cloud or the organization must have a valid Bencher Plus license
+    let is_allowed = context.is_bencher_cloud
+        || LicenseUsage::get(
+            &context.database.connection,
+            &context.licensor,
+            &query_organization,
+        )
+        .await?
+        .is_some();
+    if !is_allowed {
+        return Err(payment_required_error(
+            "You must have a valid Bencher Plus Enterprise license for the organization to add SSO",
+        ));
+    }
+
+    let insert_sso = InsertSso::from_json(query_organization.id, json_new_sso);
     diesel::insert_into(schema::sso::table)
         .values(&insert_sso)
         .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Sso, (&query_org, &insert_sso)))?;
+        .map_err(resource_conflict_err!(
+            Sso,
+            (&query_organization, &insert_sso)
+        ))?;
 
-    let query_sso = QuerySso::from_uuid(conn_lock!(context), insert_sso.uuid)
-        .map_err(resource_not_found_err!(Sso, (&query_org, &insert_sso)))?;
+    let query_sso = QuerySso::from_uuid(conn_lock!(context), insert_sso.uuid).map_err(
+        resource_not_found_err!(Sso, (&query_organization, &insert_sso)),
+    )?;
 
     Ok(query_sso.into_json())
 }
@@ -123,16 +143,19 @@ async fn delete_inner(
     path_params: OrgSsoDeleteParams,
 ) -> Result<(), HttpError> {
     // Get the organization
-    let query_org =
+    let query_organization =
         QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
 
     diesel::delete(
         schema::sso::table
-            .filter(schema::sso::organization_id.eq(query_org.id))
+            .filter(schema::sso::organization_id.eq(query_organization.id))
             .filter(schema::sso::uuid.eq(path_params.sso)),
     )
     .execute(conn_lock!(context))
-    .map_err(resource_conflict_err!(Sso, (&query_org, path_params.sso)))?;
+    .map_err(resource_conflict_err!(
+        Sso,
+        (&query_organization, path_params.sso)
+    ))?;
 
     Ok(())
 }
