@@ -1,11 +1,10 @@
 use std::path::PathBuf;
-#[cfg(feature = "plus")]
 use std::sync::LazyLock;
 use std::{cmp, sync::Arc};
 
 use bencher_json::{
-    BENCHER_API_URL, BENCHER_API_VERSION, DateTime, JsonServer, JsonServerStats, PlanLevel,
-    ServerUuid,
+    BENCHER_API_URL, BENCHER_API_VERSION, BooleanParam, DateTime, JsonServer, JsonServerStats,
+    PlanLevel, SelfHostedStartup, ServerUuid,
 };
 use bencher_license::Licensor;
 use chrono::{Duration, Utc};
@@ -83,7 +82,7 @@ impl QueryServer {
             let client = reqwest::Client::new();
             if let Err(e) = client
                 .get(server_stats_url)
-                .query(&bencher_json::SelfHostedStartup)
+                .query(&BooleanParam::True(SelfHostedStartup))
                 .send()
                 .await
             {

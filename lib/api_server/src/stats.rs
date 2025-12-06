@@ -1,7 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
-use bencher_json::{JsonServerStats, JsonUuid, ServerUuid};
+use bencher_json::{BooleanParam, JsonServerStats, JsonUuid, SelfHostedStartup, ServerUuid};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
@@ -118,7 +118,7 @@ pub struct StatsParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct StatsQuery {
     /// Server startup.
-    pub startup: Option<bool>,
+    pub startup: BooleanParam<SelfHostedStartup>,
 }
 
 #[endpoint {
@@ -150,7 +150,7 @@ pub async fn server_startup_stats_get(
     {
         let StatsQuery { startup } = query_params.into_inner();
 
-        if startup.unwrap_or_default() {
+        if startup.into() {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SelfHostedServerStartup(
                 uuid,
             ));

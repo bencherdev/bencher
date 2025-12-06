@@ -114,15 +114,129 @@ pub struct JsonTopProject {
     pub percentage: f64,
 }
 
-// Marker structs for self-hosted server telemetry query parameters
+// Marker structs for self-hosted server telemetry boolean query parameters
 
-pub struct SelfHostedStartup;
+#[derive(Debug, Clone, Copy)]
+pub enum BooleanParam<T> {
+    True(T),
+    False,
+}
 
-impl Serialize for SelfHostedStartup {
+impl<T> From<BooleanParam<T>> for bool {
+    fn from(param: BooleanParam<T>) -> Self {
+        matches!(param, BooleanParam::True(_))
+    }
+}
+
+impl<T> Serialize for BooleanParam<T>
+where
+    T: ParamKey,
+{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        [("startup", "true")].serialize(serializer)
+        match self {
+            BooleanParam::True(_) => [(T::KEY, "true")].serialize(serializer),
+            BooleanParam::False => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<'de, T> Deserialize<'de> for BooleanParam<T>
+where
+    T: Default,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let opt = Option::<bool>::deserialize(deserializer)?;
+        match opt {
+            Some(true) => Ok(BooleanParam::True(T::default())),
+            Some(false) | None => Ok(BooleanParam::False),
+        }
+    }
+}
+
+#[cfg(feature = "schema")]
+impl<T> JsonSchema for BooleanParam<T> {
+    fn schema_name() -> String {
+        "BooleanParam".to_owned()
+    }
+
+    fn json_schema(_gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::SchemaObject {
+            instance_type: Some(schemars::schema::InstanceType::Boolean.into()),
+            metadata: Some(Box::new(schemars::schema::Metadata {
+                description: Some("Optional boolean parameter".to_owned()),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+        .into()
+    }
+}
+
+trait ParamKey {
+    const KEY: &'static str;
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SelfHostedStartup;
+
+impl ParamKey for SelfHostedStartup {
+    const KEY: &'static str = "startup";
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BooleanParam, SelfHostedStartup};
+
+    #[test]
+    fn test_boolean_param_from_true() {
+        let param = BooleanParam::True(SelfHostedStartup);
+        assert!(bool::from(param));
+    }
+
+    #[test]
+    fn test_boolean_param_from_false() {
+        let param: BooleanParam<SelfHostedStartup> = BooleanParam::False;
+        assert!(!bool::from(param));
+    }
+
+    #[test]
+    fn test_boolean_param_deserialize_null() {
+        let json = "null";
+        let param: BooleanParam<SelfHostedStartup> = serde_json::from_str(json).unwrap();
+        assert!(matches!(param, BooleanParam::False));
+    }
+
+    #[test]
+    fn test_boolean_param_deserialize_true() {
+        let json = "true";
+        let param: BooleanParam<SelfHostedStartup> = serde_json::from_str(json).unwrap();
+        assert!(matches!(param, BooleanParam::True(SelfHostedStartup)));
+    }
+
+    #[test]
+    fn test_boolean_param_deserialize_false() {
+        let json = "false";
+        let param: BooleanParam<SelfHostedStartup> = serde_json::from_str(json).unwrap();
+        assert!(matches!(param, BooleanParam::False));
+    }
+
+    #[test]
+    fn test_boolean_param_serialize_true() {
+        let param = BooleanParam::True(SelfHostedStartup);
+        let json = serde_json::to_string(&param).unwrap();
+        assert_eq!(json, r#"[["startup","true"]]"#);
+    }
+
+    #[test]
+    fn test_boolean_param_serialize_false() {
+        let param: BooleanParam<SelfHostedStartup> = BooleanParam::False;
+        let json = serde_json::to_string(&param).unwrap();
+        assert_eq!(json, "null");
     }
 }
