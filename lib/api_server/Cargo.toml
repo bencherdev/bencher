@@ -9,20 +9,30 @@ publish = false
 [features]
 default = []
 plus = [
+    "dep:schemars",
+    "dep:serde",
     "bencher_endpoint/plus",
     "bencher_config/plus",
     "bencher_json/plus",
     "bencher_schema/plus",
 ]
 sentry = ["bencher_config/sentry", "bencher_schema/sentry"]
-otel = ["bencher_config/otel", "bencher_endpoint/otel", "bencher_schema/otel"]
+otel = [
+    "dep:bencher_otel",
+    "bencher_config/otel",
+    "bencher_endpoint/otel",
+    "bencher_schema/otel",
+]
 
 [dependencies]
 bencher_endpoint.workspace = true
 bencher_config.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_otel = { workspace = true, optional = true }
 bencher_schema.workspace = true
 dropshot.workspace = true
+schemars = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 serde_json.workspace = true
 slog.workspace = true
 tokio = { workspace = true, features = ["fs"] }

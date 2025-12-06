@@ -113,3 +113,16 @@ pub struct JsonTopProject {
     pub metrics: u64,
     pub percentage: f64,
 }
+
+// Marker structs for self-hosted server telemetry query parameters
+
+pub struct SelfHostedStartup;
+
+impl Serialize for SelfHostedStartup {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        [("startup", "true")].serialize(serializer)
+    }
+}

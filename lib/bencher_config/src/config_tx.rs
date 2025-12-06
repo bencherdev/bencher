@@ -374,6 +374,7 @@ async fn register_startup(log: &Logger) {
     let client = reqwest::Client::new();
     if let Err(e) = client
         .get(bencher_json::BENCHER_STATS_API_URL.clone())
+        .query(&bencher_json::SelfHostedStartup)
         .send()
         .await
     {

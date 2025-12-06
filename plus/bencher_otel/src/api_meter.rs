@@ -1,6 +1,7 @@
 use core::fmt;
 
 use opentelemetry::metrics::Meter;
+use uuid::Uuid;
 
 pub struct ApiMeter {
     meter: Meter,
@@ -25,6 +26,7 @@ impl ApiMeter {
     }
 }
 
+#[expect(variant_size_differences, reason = "UUID is only 16 bytes")]
 #[derive(Debug, Clone, Copy)]
 pub enum ApiCounter {
     ServerStartup,
@@ -65,6 +67,9 @@ pub enum ApiCounter {
 
     Create(IntervalKind, AuthorizationKind),
     CreateMax(IntervalKind, AuthorizationKind),
+
+    // Self-hosted specific metrics
+    SelfHostedServerStartup(Uuid),
 }
 
 impl ApiCounter {
@@ -109,6 +114,9 @@ impl ApiCounter {
 
             Self::Create(_, _) => "create",
             Self::CreateMax(_, _) => "create.max",
+
+            // Self-hosted specific metrics
+            Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
         }
     }
 
@@ -157,6 +165,9 @@ impl ApiCounter {
 
             Self::Create(_, _) => "Counts the number of creations",
             Self::CreateMax(_, _) => "Counts the number of creation maximums reached",
+
+            // Self-hosted specific metrics
+            Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
         }
     }
 
@@ -195,6 +206,8 @@ impl ApiCounter {
             | Self::UserInviteMax(interval_kind) => {
                 vec![interval_kind.into()]
             },
+            // Self-hosted specific metrics
+            Self::SelfHostedServerStartup(server_uuid) => self_hosted_attributes(server_uuid),
         }
     }
 }
@@ -321,4 +334,10 @@ impl From<AuthorizationKind> for opentelemetry::KeyValue {
 
 impl AuthorizationKind {
     const KEY: &str = "authorization";
+}
+
+fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
+    const KEY: &str = "server.uuid";
+
+    vec![opentelemetry::KeyValue::new(KEY, server_uuid.to_string())]
 }

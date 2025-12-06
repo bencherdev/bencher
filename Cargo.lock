@@ -237,8 +237,11 @@ dependencies = [
  "bencher_config",
  "bencher_endpoint",
  "bencher_json",
+ "bencher_otel",
  "bencher_schema",
  "dropshot",
+ "schemars 0.8.22",
+ "serde",
  "serde_json",
  "slog",
  "tokio",
@@ -1254,6 +1257,7 @@ name = "bencher_otel"
 version = "0.5.8"
 dependencies = [
  "opentelemetry",
+ "uuid 1.17.0",
 ]
 
 [[package]]

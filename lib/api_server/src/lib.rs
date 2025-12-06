@@ -46,11 +46,18 @@ impl bencher_endpoint::Registrar for Api {
                 api_description.register(stats::server_stats_options)?;
             }
             api_description.register(stats::server_stats_get)?;
+
             // Bencher Cloud only
             if is_bencher_cloud {
+                if http_options {
+                    api_description.register(stats::server_startup_stats_options)?;
+                }
+
                 // TODO remove in due time
                 api_description.register(stats::root_server_stats_post)?;
                 api_description.register(stats::server_stats_post)?;
+
+                api_description.register(stats::server_startup_stats_get)?;
             }
         }
 

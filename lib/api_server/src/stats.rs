@@ -1,7 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
-use bencher_json::JsonServerStats;
+use bencher_json::{JsonServerStats, JsonUuid, ServerUuid};
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
@@ -11,7 +11,9 @@ use bencher_schema::{
         user::{admin::AdminUser, auth::BearerToken},
     },
 };
-use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
+use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
+use schemars::JsonSchema;
+use serde::Deserialize;
 use slog::Logger;
 
 #[endpoint {
@@ -105,4 +107,55 @@ async fn post_inner(
     .await?;
 
     Ok(())
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct StatsParams {
+    /// The UUID for the server.
+    pub server: ServerUuid,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct StatsQuery {
+    /// Server startup.
+    pub startup: Option<bool>,
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/server/stats/{server}",
+    tags = ["server", "stats"]
+}]
+pub async fn server_startup_stats_options(
+    _rqctx: RequestContext<ApiContext>,
+    _path_params: Path<StatsParams>,
+    _query_params: Query<StatsQuery>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into()]))
+}
+
+#[endpoint {
+    method = GET,
+    path =  "/v0/server/stats/{server}",
+    tags = ["server", "stats"]
+}]
+pub async fn server_startup_stats_get(
+    _rqctx: RequestContext<ApiContext>,
+    path_params: Path<StatsParams>,
+    query_params: Query<StatsQuery>,
+) -> Result<ResponseOk<JsonUuid>, HttpError> {
+    let uuid = path_params.into_inner().server.into();
+
+    #[cfg(feature = "otel")]
+    {
+        let StatsQuery { startup } = query_params.into_inner();
+
+        if startup.unwrap_or_default() {
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SelfHostedServerStartup(
+                uuid,
+            ));
+        }
+    }
+
+    Ok(Get::pub_response_ok(JsonUuid { uuid }))
 }
