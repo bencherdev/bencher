@@ -3,7 +3,7 @@
 use bencher_json::{DateTime, JsonNewSso, JsonSso, NonEmpty, OrganizationUuid, SsoUuid};
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    RunQueryDsl as _,
 };
 use dropshot::HttpError;
 
@@ -12,7 +12,7 @@ use crate::{
     context::DbConnection,
     model::{
         organization::{OrganizationId, QueryOrganization},
-        user::{QueryUser, auth::AuthUser},
+        user::QueryUser,
     },
     resource_not_found_err,
     schema::{self, sso as sso_table},
