@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{NonEmpty, OrganizationResourceId};
+use bencher_json::{NonEmpty, OrganizationResourceId, SsoUuid};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -18,7 +18,7 @@ pub enum CliSso {
     View(CliSsoView),
     /// Remove an organization SSO domain
     #[clap(alias = "rm")]
-    Remove(CliSsoRemove),
+    Delete(CliSsoDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -45,7 +45,7 @@ pub struct CliSsoCreate {
     /// Organization slug or UUID
     pub organization: OrganizationResourceId,
 
-    /// Domain for SSO
+    /// SSO domain
     #[clap(long)]
     pub domain: NonEmpty,
 
@@ -58,14 +58,20 @@ pub struct CliSsoView {
     /// Organization slug or UUID
     pub organization: OrganizationResourceId,
 
+    /// SSO UUID
+    pub sso: SsoUuid,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
-pub struct CliSsoRemove {
+pub struct CliSsoDelete {
     /// Organization slug or UUID
     pub organization: OrganizationResourceId,
+
+    /// SSO UUID
+    pub sso: SsoUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,

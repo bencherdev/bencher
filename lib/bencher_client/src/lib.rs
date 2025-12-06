@@ -51,6 +51,7 @@ from_client!(
 
 from_client!(
     OrganizationUuid,
+    SsoUuid,
     ProjectUuid,
     ReportUuid,
     PlotUuid,
@@ -112,6 +113,8 @@ try_from_client!(
     JsonOrganization,
     JsonMembers,
     JsonMember,
+    JsonSsos,
+    JsonSso,
     JsonAllowed,
     JsonProjects,
     JsonProject,
@@ -191,6 +194,7 @@ macro_rules! into_uuids {
 into_uuids!(
     JsonOrganizations[JsonOrganization],
     JsonMembers[JsonMember],
+    JsonSsos[JsonSso],
     JsonProjects[JsonProject],
     JsonReports[JsonReport],
     JsonPlots[JsonPlot],
@@ -222,6 +226,7 @@ macro_rules! into_uuid {
 into_uuid!(
     JsonOrganization,
     JsonMember,
+    JsonSso,
     JsonProject,
     JsonReport,
     JsonPlot,

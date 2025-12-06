@@ -48,7 +48,7 @@ pub enum Sub {
     #[cfg(feature = "plus")]
     Plan(organization::plan::Plan),
     #[cfg(feature = "plus")]
-    Sso,
+    Sso(organization::sso::Sso),
     Project(Project),
     Report(Report),
     Perf(Perf),
@@ -87,7 +87,7 @@ impl TryFrom<CliSub> for Sub {
             #[cfg(feature = "plus")]
             CliSub::Plan(plan) => Self::Plan(plan.try_into()?),
             #[cfg(feature = "plus")]
-            CliSub::Sso(sso) => Self::Sso,
+            CliSub::Sso(sso) => Self::Sso(sso.try_into()?),
             CliSub::Project(project) => Self::Project(project.try_into()?),
             CliSub::Report(report) => Self::Report(report.try_into()?),
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
@@ -121,7 +121,7 @@ impl SubCmd for Sub {
             #[cfg(feature = "plus")]
             Self::Plan(plan) => plan.exec().await,
             #[cfg(feature = "plus")]
-            Self::Sso => Ok(()),
+            Self::Sso(sso) => sso.exec().await,
             Self::Project(project) => project.exec().await,
             Self::Report(report) => report.exec().await,
             Self::Perf(perf) => perf.exec().await,
