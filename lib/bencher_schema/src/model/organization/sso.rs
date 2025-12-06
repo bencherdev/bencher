@@ -1,11 +1,14 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{DateTime, JsonNewSso, JsonSso, NonEmpty, SsoUuid};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use dropshot::HttpError;
 
 use crate::{
-    macros::fn_get::fn_from_uuid,
+    context::DbConnection,
     model::organization::{OrganizationId, QueryOrganization},
-    schema::sso as sso_table,
+    resource_not_found_err,
+    schema::{self, sso as sso_table},
 };
 
 crate::macros::typed_id::typed_id!(SsoId);
@@ -24,7 +27,12 @@ pub struct QuerySso {
 }
 
 impl QuerySso {
-    fn_from_uuid!(sso, SsoUuid, Sso);
+    pub fn from_uuid(conn: &mut DbConnection, uuid: SsoUuid) -> Result<Self, HttpError> {
+        schema::sso::table
+            .filter(schema::sso::uuid.eq(uuid))
+            .first(conn)
+            .map_err(resource_not_found_err!(Sso, uuid))
+    }
 
     pub fn into_json(self) -> JsonSso {
         let Self {

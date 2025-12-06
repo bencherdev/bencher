@@ -45,6 +45,7 @@ impl Spec {
             tags: literally::hmap!{
                 "run" => TagDetails { description: Some("Run".into()), external_docs: None},
                 "auth" => TagDetails { description: Some("Auth".into()), external_docs: None},
+                "sso" => TagDetails { description: Some("Single Sign-On (SSO)".into()), external_docs: None},
                 "organizations" => TagDetails { description: Some("Organizations".into()), external_docs: None},
                 "projects" => TagDetails { description: Some("Projects".into()), external_docs: None},
                 "reports" => TagDetails { description: Some("Reports".into()), external_docs: None},

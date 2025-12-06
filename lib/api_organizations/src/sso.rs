@@ -1,16 +1,19 @@
 #![cfg(feature = "plus")]
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Post, ResponseAccepted, ResponseDeleted};
-use bencher_json::{JsonNewSso, JsonOrganization, OrganizationResourceId, SsoUuid};
+use bencher_json::{JsonNewSso, JsonSso, OrganizationResourceId, SsoUuid};
 use bencher_schema::{
     conn_lock,
-    context::{ApiContext, e},
+    context::ApiContext,
     error::resource_conflict_err,
     model::{
-        organization::{QueryOrganization, sso::InsertSso},
+        organization::{
+            QueryOrganization,
+            sso::{InsertSso, QuerySso},
+        },
         user::{admin::AdminUser, auth::BearerToken},
     },
-    schema,
+    resource_not_found_err, schema,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
@@ -37,7 +40,7 @@ pub async fn org_sso_post_options(
 
 /// Add an SSO domain to an organization
 ///
-/// Add a single sign-on (SSO) domain to an organization.
+/// ➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization.
 /// The user must be an admin on the server to use this route.
 #[endpoint {
     method = POST,
@@ -57,7 +60,7 @@ pub async fn org_sso_post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: OrgSsoParams,
+    path_params: OrgSsoPostParams,
     json_new_sso: JsonNewSso,
 ) -> Result<JsonSso, HttpError> {
     // Get the organization
@@ -98,11 +101,11 @@ pub async fn org_sso_delete_options(
 
 /// Remove an SSO domain from an organization
 ///
-/// Remove a single sign-on (SSO) domain from an organization.
+/// ➕ Bencher Plus: Remove a single sign-on (SSO) domain from an organization.
 /// The user must be an admin on the server to use this route.
 #[endpoint {
     method = DELETE,
-    path =  "/v0/organizations/{organization}/sso/{domain}",
+    path =  "/v0/organizations/{organization}/sso/{sso}",
     tags = ["organizations", "sso"]
 }]
 pub async fn org_sso_delete(
@@ -129,7 +132,7 @@ async fn delete_inner(
             .filter(schema::sso::uuid.eq(path_params.sso)),
     )
     .execute(conn_lock!(context))
-    .map_err(resource_conflict_err!(Sso, (&query_org, &path_params)))?;
+    .map_err(resource_conflict_err!(Sso, (&query_org, path_params.sso)))?;
 
     Ok(())
 }
