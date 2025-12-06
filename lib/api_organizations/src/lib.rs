@@ -82,6 +82,7 @@ impl bencher_endpoint::Registrar for Api {
             }
             api_description.register(sso::org_ssos_get)?;
             api_description.register(sso::org_sso_post)?;
+            api_description.register(sso::org_sso_get)?;
             api_description.register(sso::org_sso_delete)?;
         }
 

@@ -95,7 +95,7 @@ async fn get_ls_inner(
         &context.rbac,
         &path_params.organization,
         auth_user,
-        Permission::ViewRole,
+        Permission::View,
     )?;
 
     let ssos = get_ls_query(&query_organization, &pagination_params)
@@ -197,7 +197,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OrgSsoDeleteParams {
+pub struct OrgSsoParams {
     /// The slug or UUID for an organization.
     pub organization: OrganizationResourceId,
     /// The UUID for an SSO domain.
@@ -211,9 +211,51 @@ pub struct OrgSsoDeleteParams {
 }]
 pub async fn org_sso_delete_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OrgSsoDeleteParams>,
+    _path_params: Path<OrgSsoParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Delete.into()]))
+    Ok(Endpoint::cors(&[Get.into(), Delete.into()]))
+}
+
+/// View an SSO domain for an organization
+///
+/// ➕ Bencher Plus: View a single sign-on (SSO) domain from an organization.
+/// The user must be a member of the organization to use this route.
+#[endpoint {
+    method = GET,
+    path =  "/v0/organizations/{organization}/sso/{sso}",
+    tags = ["organizations", "sso"]
+}]
+pub async fn org_sso_get(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<OrgSsoParams>,
+) -> Result<ResponseOk<JsonSso>, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Get::auth_response_ok(json))
+}
+
+async fn get_one_inner(
+    context: &ApiContext,
+    path_params: OrgSsoParams,
+    auth_user: &AuthUser,
+) -> Result<JsonSso, HttpError> {
+    let query_organization = QueryOrganization::is_allowed_resource_id(
+        conn_lock!(context),
+        &context.rbac,
+        &path_params.organization,
+        auth_user,
+        Permission::View,
+    )?;
+
+    QuerySso::belonging_to(&query_organization)
+        .filter(schema::sso::uuid.eq(path_params.sso))
+        .first::<QuerySso>(conn_lock!(context))
+        .map(QuerySso::into_json)
+        .map_err(resource_not_found_err!(
+            Sso,
+            (&query_organization, path_params.sso)
+        ))
 }
 
 /// Remove an SSO domain from an organization
@@ -228,17 +270,14 @@ pub async fn org_sso_delete_options(
 pub async fn org_sso_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    path_params: Path<OrgSsoDeleteParams>,
+    path_params: Path<OrgSsoParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
     delete_inner(rqctx.context(), path_params.into_inner()).await?;
     Ok(Delete::auth_response_deleted())
 }
 
-async fn delete_inner(
-    context: &ApiContext,
-    path_params: OrgSsoDeleteParams,
-) -> Result<(), HttpError> {
+async fn delete_inner(context: &ApiContext, path_params: OrgSsoParams) -> Result<(), HttpError> {
     // Get the organization
     let query_organization =
         QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
