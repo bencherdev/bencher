@@ -51,7 +51,6 @@ from_client!(
 
 from_client!(
     OrganizationUuid,
-    SsoUuid,
     ProjectUuid,
     ReportUuid,
     PlotUuid,
@@ -69,7 +68,7 @@ from_client!(
 );
 
 #[cfg(feature = "plus")]
-from_client!(Entitlements, ExpirationMonth, ExpirationYear);
+from_client!(SsoUuid, Entitlements, ExpirationMonth, ExpirationYear);
 
 /// This type allows for forwards compatibility with the API response types.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -113,8 +112,6 @@ try_from_client!(
     JsonOrganization,
     JsonMembers,
     JsonMember,
-    JsonSsos,
-    JsonSso,
     JsonAllowed,
     JsonProjects,
     JsonProject,
@@ -156,7 +153,14 @@ try_from_client!(
 );
 
 #[cfg(feature = "plus")]
-try_from_client!(JsonOAuth, JsonPlan, JsonUsage, JsonServerStats);
+try_from_client!(
+    JsonOAuth,
+    JsonPlan,
+    JsonSsos,
+    JsonSso,
+    JsonUsage,
+    JsonServerStats
+);
 
 impl From<bencher_json::DateTime> for types::DateTime {
     fn from(date_time: bencher_json::DateTime) -> Self {
@@ -226,7 +230,6 @@ macro_rules! into_uuid {
 into_uuid!(
     JsonOrganization,
     JsonMember,
-    JsonSso,
     JsonProject,
     JsonReport,
     JsonPlot,
@@ -238,6 +241,9 @@ into_uuid!(
     JsonModel,
     JsonAlert
 );
+
+#[cfg(feature = "plus")]
+into_uuid!(JsonSso);
 
 macro_rules! from_slug {
     ($($name:ident),*) => {

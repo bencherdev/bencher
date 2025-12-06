@@ -1,5 +1,3 @@
-#![cfg(feature = "plus")]
-
 use std::sync::LazyLock;
 
 use bencher_json::system::config::JsonStats;

@@ -317,9 +317,11 @@ impl QueryOrganization {
     pub fn into_json_full(self, conn: &mut DbConnection) -> Result<JsonOrganization, HttpError> {
         #[cfg(feature = "plus")]
         let sso = self.sso(conn)?;
-        #[cfg(not(feature = "plus"))]
-        let sso = None;
-        Ok(self.into_json_inner(conn, sso))
+        Ok(self.into_json_inner(
+            conn,
+            #[cfg(feature = "plus")]
+            sso,
+        ))
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> JsonOrganization {
