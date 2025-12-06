@@ -464,6 +464,10 @@ export interface JsonNewProject {
 	visibility?: Visibility;
 }
 
+export interface JsonNewSso {
+	domain: NonEmpty;
+}
+
 export interface JsonNewToken {
 	/**
 	 * The name of the token.
@@ -514,11 +518,18 @@ export interface JsonOneMetric {
 	alert?: JsonPerfAlert;
 }
 
+export interface JsonSso {
+	uuid: SsoUuid;
+	domain: NonEmpty;
+	created: string;
+}
+
 export interface JsonOrganization {
 	uuid: Uuid;
 	name: ResourceName;
 	slug: Slug;
 	license?: Jwt;
+	sso?: JsonSso[];
 	created: string;
 	modified: string;
 	claimed?: string;

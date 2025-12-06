@@ -115,6 +115,7 @@ pub struct StatsParams {
     pub server: ServerUuid,
 }
 
+#[cfg_attr(not(feature = "otel"), allow(dead_code))]
 #[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
 pub struct StatsQuery {
     /// Server startup.
@@ -140,16 +141,25 @@ pub async fn server_startup_stats_options(
     tags = ["server", "stats"]
 }]
 pub async fn server_startup_stats_get(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<StatsParams>,
     query_params: Query<StatsQuery>,
 ) -> Result<ResponseOk<JsonUuid>, HttpError> {
-    let json = get_startup_inner(&path_params.into_inner(), query_params.into_inner());
+    let json = get_startup_inner(
+        &rqctx.log,
+        &path_params.into_inner(),
+        query_params.into_inner(),
+    );
     Ok(Get::pub_response_ok(json))
 }
 
-fn get_startup_inner(path_params: &StatsParams, query_params: StatsQuery) -> JsonUuid {
+fn get_startup_inner(
+    log: &Logger,
+    path_params: &StatsParams,
+    query_params: StatsQuery,
+) -> JsonUuid {
     let uuid = path_params.server.into();
+    slog::debug!(log, "Self-Hosted ({uuid}) stats: {query_params:?}");
 
     #[cfg(feature = "otel")]
     {

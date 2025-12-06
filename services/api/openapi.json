@@ -2348,6 +2348,172 @@
         }
       }
     },
+    "/v0/organizations/{organization}/sso": {
+      "post": {
+        "tags": [
+          "organizations",
+          "sso"
+        ],
+        "summary": "Add an SSO domain to an organization",
+        "description": "➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization. The user must be an admin on the server to use this route.",
+        "operationId": "org_sso_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "description": "The slug or UUID for an organization.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewSso"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSso"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/organizations/{organization}/sso/{sso}": {
+      "delete": {
+        "tags": [
+          "organizations",
+          "sso"
+        ],
+        "summary": "Remove an SSO domain from an organization",
+        "description": "➕ Bencher Plus: Remove a single sign-on (SSO) domain from an organization. The user must be an admin on the server to use this route.",
+        "operationId": "org_sso_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "description": "The slug or UUID for an organization.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sso",
+            "description": "The UUID for an SSO domain.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SsoUuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/organizations/{organization}/usage": {
       "get": {
         "tags": [
@@ -7451,6 +7617,90 @@
         }
       }
     },
+    "/v0/server/stats/{server}": {
+      "get": {
+        "tags": [
+          "server",
+          "stats"
+        ],
+        "operationId": "server_startup_stats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "server",
+            "description": "The UUID for the self-hosted server.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ServerUuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startup",
+            "description": "Server startup.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BooleanParam"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUuid"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/server/version": {
       "get": {
         "tags": [
@@ -9958,6 +10208,17 @@
           "start_time"
         ]
       },
+      "JsonNewSso": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "$ref": "#/components/schemas/NonEmpty"
+          }
+        },
+        "required": [
+          "domain"
+        ]
+      },
       "JsonNewStartPoint": {
         "type": "object",
         "properties": {
@@ -10278,6 +10539,13 @@
           },
           "slug": {
             "$ref": "#/components/schemas/OrganizationSlug"
+          },
+          "sso": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonSso"
+            }
           },
           "uuid": {
             "$ref": "#/components/schemas/OrganizationUuid"
@@ -11965,6 +12233,25 @@
         ]
       },
       "JsonSpec": {},
+      "JsonSso": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "domain": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/SsoUuid"
+          }
+        },
+        "required": [
+          "created",
+          "domain",
+          "uuid"
+        ]
+      },
       "JsonStartPoint": {
         "type": "object",
         "properties": {
@@ -12797,6 +13084,18 @@
           "$ref": "#/components/schemas/JsonUser"
         }
       },
+      "JsonUuid": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
       "JsonVersion": {
         "type": "object",
         "properties": {
@@ -13088,6 +13387,10 @@
       },
       "Slug": {
         "type": "string"
+      },
+      "SsoUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "TestbedSlug": {
         "$ref": "#/components/schemas/Slug"
@@ -13403,6 +13706,10 @@
           }
         ]
       },
+      "BooleanParam": {
+        "description": "Optional boolean parameter",
+        "type": "boolean"
+      },
       "UsersSort": {
         "oneOf": [
           {
@@ -13507,6 +13814,10 @@
     {
       "name": "server",
       "description": "Server"
+    },
+    {
+      "name": "sso",
+      "description": "Single Sign-On (SSO)"
     },
     {
       "name": "stats"
