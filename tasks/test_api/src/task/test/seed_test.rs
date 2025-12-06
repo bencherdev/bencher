@@ -32,6 +32,7 @@ const PERFECT_SEED: &str = "6";
 #[derive(Debug)]
 pub struct SeedTest {
     pub url: Url,
+    pub admin_token: Jwt,
     pub token: Jwt,
 }
 
@@ -39,9 +40,14 @@ impl TryFrom<TaskSeedTest> for SeedTest {
     type Error = anyhow::Error;
 
     fn try_from(test: TaskSeedTest) -> Result<Self, Self::Error> {
-        let TaskSeedTest { url, token } = test;
+        let TaskSeedTest {
+            url,
+            admin_token,
+            token,
+        } = test;
         Ok(Self {
             url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
+            admin_token: admin_token.unwrap_or_else(Jwt::test_admin_token),
             token: token.unwrap_or_else(Jwt::test_token),
         })
     }
@@ -51,6 +57,7 @@ impl SeedTest {
     #[expect(clippy::too_many_lines)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
+        let admin_token = self.admin_token.as_ref();
         let token = self.token.as_ref();
 
         // Signup Eustace Bagge first so he is admin
@@ -107,12 +114,30 @@ impl SeedTest {
 
         // cargo run -- org view --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "org",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            ORG_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonOrganization =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let admin_muriel_bagge_org_uuid = json.uuid;
+
+        // cargo run -- org view --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["org", "view", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let json: bencher_json::JsonOrganization =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         let muriel_bagge_org_uuid = json.uuid;
+        assert_eq!(admin_muriel_bagge_org_uuid, muriel_bagge_org_uuid);
 
         // cargo run -- member invite --host http://localhost:61016 --token $BENCHER_API_TOKEN --name Courage --email courage@nowhere.com --role leader muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -1744,6 +1769,121 @@ impl SeedTest {
             String::from_utf8_lossy(&output.stderr).contains("Status: 429 Too Many Requests"),
             "{output:?}"
         );
+
+        #[cfg(feature = "plus")]
+        self.plus_exec()?;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "plus")]
+    fn plus_exec(&self) -> anyhow::Result<()> {
+        let host = self.url.as_ref();
+        let admin_token = self.admin_token.as_ref();
+        let token = self.token.as_ref();
+
+        // cargo run -- sso list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "sso",
+            "list",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "muriel-bagge",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonSsos =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.0.len(), 0);
+
+        // cargo run -- sso create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --domain nowhere.com muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "sso",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--domain",
+            "nowhere.com",
+            "muriel-bagge",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonSso =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let sso_uuid = json.uuid;
+
+        // cargo run -- sso list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "sso",
+            "list",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "muriel-bagge",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonSsos =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.0.len(), 1);
+
+        // cargo run -- sso view --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge [sso_uuid]
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "sso",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "muriel-bagge",
+            &sso_uuid.to_string(),
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonSso =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.uuid, sso_uuid);
+
+        // cargo run -- sso delete --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN [sso_uuid]
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "sso",
+            "delete",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            &sso_uuid.to_string(),
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: () = serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // cargo run -- sso list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "sso",
+            "list",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "muriel-bagge",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonSsos =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.0.len(), 0);
 
         Ok(())
     }

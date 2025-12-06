@@ -19,7 +19,16 @@ use serde::{
 use crate::ValidError;
 
 // Valid until 2159-12-06T18:53:44Z
-pub const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
+const TEST_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQzNjA5LCJpYXQiOjE2OTg2NzYzMTQsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJldXN0YWNlLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.xumYID-R4waqhyjhcbSlwartbiRJ2AwngVkevLUBVCA";
+// Valid until 2159-12-06T18:53:44Z
+const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
+
+#[expect(clippy::expect_used)]
+pub static TEST_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
+    TEST_ADMIN_BENCHER_API_TOKEN_STR
+        .parse()
+        .expect("Invalid test JWT")
+});
 
 #[expect(clippy::expect_used)]
 pub static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
@@ -62,7 +71,13 @@ impl From<Jwt> for String {
     }
 }
 
+#[cfg(debug_assertions)]
 impl Jwt {
+    /// Create a valid admin test token
+    pub fn test_admin_token() -> Self {
+        TEST_ADMIN_BENCHER_API_TOKEN.clone()
+    }
+
     /// Create a valid test token
     pub fn test_token() -> Self {
         TEST_BENCHER_API_TOKEN.clone()
@@ -175,6 +190,11 @@ mod test {
                 "{HEADER}.!Jmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc.{SIGNATURE}"
             ))
         );
+    }
+
+    #[test]
+    fn test_jwt_test_admin_token() {
+        assert_eq!(true, is_valid_jwt(Jwt::test_admin_token().as_ref()));
     }
 
     #[test]

@@ -17,7 +17,15 @@ use crate::{
     task::test::{examples::Examples, seed_test::SeedTest},
 };
 
+const DEV_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo2MDYwMDI5NDE0LCJpYXQiOjE3NjUwNjIxMTksImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoiZXVzdGFjZS5iYWdnZUBub3doZXJlLmNvbSIsIm9yZyI6bnVsbCwic3RhdGUiOm51bGx9.jY6749lVWe3pJ53LBXoNSl19b59xifOLdwMwQUNMZ5g";
 const DEV_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
+
+pub static DEV_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
+    DEV_ADMIN_BENCHER_API_TOKEN_STR
+        .parse()
+        .expect("Invalid test JWT")
+});
+
 pub static DEV_BENCHER_API_TOKEN: LazyLock<Jwt> =
     LazyLock::new(|| DEV_BENCHER_API_TOKEN_STR.parse().expect("Invalid test JWT"));
 
@@ -73,15 +81,20 @@ impl SmokeTest {
 
         match self.environment {
             Environment::Ci => {
-                test(&api_url, None, false)?;
+                test(&api_url, None, None, false)?;
                 kill_child(child)?;
             },
             Environment::Localhost => {
-                test(&api_url, None, true)?;
+                test(&api_url, None, None, true)?;
                 kill_child(child)?;
             },
             Environment::Docker => bencher_down()?,
-            Environment::Dev => test(&api_url, Some(&DEV_BENCHER_API_TOKEN), false)?,
+            Environment::Dev => test(
+                &api_url,
+                Some(&DEV_ADMIN_BENCHER_API_TOKEN),
+                Some(&DEV_BENCHER_API_TOKEN),
+                false,
+            )?,
             Environment::Test | Environment::Prod => {},
         }
 
@@ -169,18 +182,24 @@ fn test_api_version(api_url: &Url) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn test(api_url: &Url, token: Option<&Jwt>, run_examples: bool) -> anyhow::Result<()> {
-    seed(api_url, token)?;
+fn test(
+    api_url: &Url,
+    admin_token: Option<&Jwt>,
+    token: Option<&Jwt>,
+    run_examples: bool,
+) -> anyhow::Result<()> {
+    seed(api_url, admin_token, token)?;
     if run_examples {
         examples(api_url, token)?;
     }
     Ok(())
 }
 
-fn seed(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
+fn seed(api_url: &Url, admin_token: Option<&Jwt>, token: Option<&Jwt>) -> anyhow::Result<()> {
     println!("Seeding API deploy at {api_url}");
     let seed_test = SeedTest::try_from(TaskSeedTest {
         url: Some(api_url.clone()),
+        admin_token: admin_token.cloned(),
         token: token.cloned(),
     })?;
     seed_test.exec()
