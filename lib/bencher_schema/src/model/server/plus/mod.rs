@@ -1,8 +1,10 @@
 use std::path::PathBuf;
+#[cfg(feature = "plus")]
+use std::sync::LazyLock;
 use std::{cmp, sync::Arc};
 
 use bencher_json::{
-    BENCHER_API_VERSION, BENCHER_STATS_API_URL, DateTime, JsonServer, JsonServerStats, PlanLevel,
+    BENCHER_API_URL, BENCHER_API_VERSION, DateTime, JsonServer, JsonServerStats, PlanLevel,
     ServerUuid,
 };
 use bencher_license::Licensor;
@@ -11,6 +13,7 @@ use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 use tokio::sync::Mutex;
+use url::Url;
 
 use crate::{
     connection_lock,
@@ -29,6 +32,14 @@ crate::macros::typed_id::typed_id!(ServerId);
 const SERVER_ID: ServerId = ServerId(1);
 
 const LICENSE_GRACE_PERIOD: usize = 7;
+
+#[expect(clippy::panic)]
+static BENCHER_STATS_API_URL: LazyLock<Url> = LazyLock::new(|| {
+    BENCHER_API_URL
+        .clone()
+        .join("/v0/server/stats")
+        .unwrap_or_else(|e| panic!("Failed to parse stats API endpoint: {e}"))
+});
 
 #[derive(Debug, Clone, Copy, diesel::Queryable)]
 pub struct QueryServer {
@@ -60,6 +71,7 @@ impl QueryServer {
     pub fn spawn_stats(
         self,
         log: Logger,
+        server_stats_url: Url,
         db_path: PathBuf,
         db_connection: Arc<Mutex<DbConnection>>,
         stats: StatsSettings,
@@ -67,6 +79,17 @@ impl QueryServer {
     ) {
         tokio::spawn(async move {
             let StatsSettings { offset, enabled } = stats;
+
+            let client = reqwest::Client::new();
+            if let Err(e) = client
+                .get(server_stats_url)
+                .query(&bencher_json::SelfHostedStartup)
+                .send()
+                .await
+            {
+                slog::warn!(log, "Failed to register startup: {e}");
+            }
+
             let mut violations = 0;
             #[expect(clippy::infinite_loop)]
             loop {
@@ -137,6 +160,10 @@ impl QueryServer {
                 }
             }
         });
+    }
+
+    pub fn server_stats_url(&self) -> Result<Url, url::ParseError> {
+        BENCHER_STATS_API_URL.clone().join(&self.uuid.to_string())
     }
 
     pub async fn get_stats(

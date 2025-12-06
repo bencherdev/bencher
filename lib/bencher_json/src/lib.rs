@@ -174,15 +174,6 @@ pub static PROD_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_API_URL_STR}\": {e}"))
 });
 
-#[cfg(feature = "plus")]
-#[expect(clippy::panic)]
-pub static BENCHER_STATS_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
-    BENCHER_API_URL
-        .clone()
-        .join("/v0/server/stats")
-        .unwrap_or_else(|e| panic!("Failed to parse stats API endpoint: {e}"))
-});
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAny {}

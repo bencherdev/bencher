@@ -64,6 +64,9 @@ pub enum ConfigTxError {
     #[error("Failed to get server ID: {0}")]
     ServerId(dropshot::HttpError),
     #[cfg(feature = "plus")]
+    #[error("Failed to parse server stats endpoint: {0}")]
+    ServerStatsUrl(url::ParseError),
+    #[cfg(feature = "plus")]
     #[error("Failed to configure rate limits: {0}")]
     RateLimiting(Box<bencher_schema::context::RateLimitingError>),
 }
@@ -124,7 +127,6 @@ impl ConfigTx {
         // Bencher Cloud does not need to send stats, it uses OpenTelemetry.
         #[cfg(feature = "plus")]
         if !context.is_bencher_cloud {
-            register_startup(log).await;
             spawn_stats(log.clone(), &context).await?;
         }
 
@@ -370,26 +372,19 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
 }
 
 #[cfg(feature = "plus")]
-async fn register_startup(log: &Logger) {
-    let client = reqwest::Client::new();
-    if let Err(e) = client
-        .get(bencher_json::BENCHER_STATS_API_URL.clone())
-        .query(&bencher_json::SelfHostedStartup)
-        .send()
-        .await
-    {
-        slog::warn!(log, "Failed to register startup: {e}");
-    }
-}
-
-#[cfg(feature = "plus")]
 async fn spawn_stats(log: Logger, context: &ApiContext) -> Result<(), ConfigTxError> {
     let query_server = QueryServer::get_or_create(bencher_schema::conn_lock!(context))
         .map_err(ConfigTxError::ServerId)?;
     info!(log, "Bencher API Server ID: {}", query_server.uuid);
 
+    let server_stats_url = query_server
+        .server_stats_url()
+        .map_err(ConfigTxError::ServerStatsUrl)?;
+    info!(log, "Server stats endpoint: {server_stats_url}");
+
     query_server.spawn_stats(
         log.clone(),
+        server_stats_url,
         context.database.path.clone(),
         context.database.connection.clone(),
         context.stats,

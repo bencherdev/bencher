@@ -11,7 +11,6 @@ default = []
 plus = [
     "dep:bencher_github_client",
     "dep:bencher_google_client",
-    "dep:reqwest",
     "bencher_billing/plus",
     "bencher_endpoint/plus",
     "bencher_json/plus",
@@ -36,7 +35,6 @@ bencher_token.workspace = true
 diesel.workspace = true
 dropshot.workspace = true
 oso.workspace = true
-reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
 serde_json.workspace = true
 slog.workspace = true
 thiserror.workspace = true
