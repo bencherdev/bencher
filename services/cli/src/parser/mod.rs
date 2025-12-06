@@ -61,6 +61,10 @@ pub enum CliSub {
     /// Organization metered subscription plan
     #[clap(subcommand)]
     Plan(organization::plan::CliOrganizationPlan),
+    #[cfg(feature = "plus")]
+    /// Manage organization SSO domains
+    #[clap(subcommand)]
+    Sso(organization::sso::CliSso),
 
     /// Manage projects
     #[clap(subcommand)]

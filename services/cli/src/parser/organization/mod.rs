@@ -9,6 +9,7 @@ use crate::parser::CliBackend;
 pub mod claim;
 pub mod member;
 pub mod plan;
+pub mod sso;
 pub mod usage;
 
 use claim::CliOrganizationClaim;
