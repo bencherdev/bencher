@@ -1,0 +1,2 @@
+- https://github.com/rust-lang/rust-project-goals/issues/275
+- https://hackmd.io/wq30YNEIQMSFLWWcWDSI9A
