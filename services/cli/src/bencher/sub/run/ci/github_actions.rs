@@ -218,12 +218,13 @@ impl GitHubActions {
         let summary = report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref());
         // https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#adding-a-job-summary
         if let Ok(file_path) = std::env::var(GITHUB_STEP_SUMMARY)
-            && let Err(err) = std::fs::write(&file_path, summary) {
-                cli_eprintln_quietable!(
-                    log,
-                    "Failed to write GitHub Actions job summary to {file_path}: {err}"
-                );
-            }
+            && let Err(err) = std::fs::write(&file_path, summary)
+        {
+            cli_eprintln_quietable!(
+                log,
+                "Failed to write GitHub Actions job summary to {file_path}: {err}"
+            );
+        }
     }
 
     async fn create_github_check(
@@ -409,9 +410,10 @@ pub async fn get_comment(
 
         for comment in comments.items {
             if let Some(body) = comment.body
-                && body.ends_with(bencher_tag) {
-                    return Ok(Some(comment.id));
-                }
+                && body.ends_with(bencher_tag)
+            {
+                return Ok(Some(comment.id));
+            }
         }
 
         if comments_len < usize::from(PER_PAGE) {
