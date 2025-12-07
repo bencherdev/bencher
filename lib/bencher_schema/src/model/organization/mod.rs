@@ -1,5 +1,7 @@
 use std::string::ToString as _;
 
+#[cfg(feature = "plus")]
+use bencher_json::JsonSsos;
 use bencher_json::{
     DateTime, IntoResourceId as _, JsonNewOrganization, JsonOrganization, Jwt,
     OrganizationResourceId, OrganizationSlug, OrganizationUuid, ProjectSlug, ResourceName,
@@ -9,9 +11,13 @@ use bencher_json::{
     },
 };
 use bencher_rbac::{Organization, organization::Permission};
+#[cfg(feature = "plus")]
+use diesel::BelongingToDsl as _;
 use diesel::{ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
 use dropshot::HttpError;
 use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
+#[cfg(feature = "plus")]
+use sso::QuerySso;
 
 use crate::{
     ApiContext, CLAIM_TOKEN_TTL, conn_lock,
@@ -294,14 +300,7 @@ impl QueryOrganization {
     }
 
     #[cfg(feature = "plus")]
-    fn sso(
-        &self,
-        conn: &mut DbConnection,
-    ) -> Result<Option<Vec<bencher_json::JsonSso>>, HttpError> {
-        use diesel::BelongingToDsl as _;
-
-        use sso::QuerySso;
-
+    fn sso(&self, conn: &mut DbConnection) -> Result<Option<JsonSsos>, HttpError> {
         let query_sso = QuerySso::belonging_to(self)
             .order(schema::sso::domain.asc())
             .load::<QuerySso>(conn)
@@ -335,7 +334,7 @@ impl QueryOrganization {
     fn into_json_inner(
         self,
         conn: &mut DbConnection,
-        #[cfg(feature = "plus")] sso: Option<Vec<bencher_json::JsonSso>>,
+        #[cfg(feature = "plus")] sso: Option<JsonSsos>,
     ) -> JsonOrganization {
         let claimed = self.claimed_at(conn).ok();
         let Self {
@@ -355,7 +354,7 @@ impl QueryOrganization {
             #[cfg(feature = "plus")]
             license,
             #[cfg(feature = "plus")]
-            sso,
+            sso: sso.map(Into::into),
             created,
             modified,
             claimed,

@@ -2,6 +2,7 @@
 # Typed UUIDs
 "Uuid" = "string"
 "OrganizationUuid" = "Uuid"
+"SsoUuid" = "Uuid"
 "ProjectUuid" = "Uuid"
 "ReportUuid" = "Uuid"
 "PlotUuid" = "Uuid"

@@ -10,6 +10,7 @@ use dropshot::HttpError;
 use crate::{
     ApiContext, conn_lock,
     context::DbConnection,
+    error::issue_error,
     model::{
         organization::{OrganizationId, QueryOrganization},
         user::QueryUser,
@@ -62,7 +63,18 @@ impl QuerySso {
             .load::<OrganizationUuid>(conn_lock!(context))
             .map_err(resource_not_found_err!(Sso, &email_domain))?;
 
-        for organization_uuid in organization_uuids {
+        if organization_uuids.len() > 1 {
+            return Err(issue_error(
+                "Multiple SSO organizations found for user",
+                &format!(
+                    "Multiple SSO organizations found for user with email ({email}) at domain ({email_domain})",
+                    email = query_user.email,
+                ),
+                format!("{}", organization_uuids.len()),
+            ));
+        }
+
+        if let Some(organization_uuid) = organization_uuids.first().copied() {
             QueryOrganization::join(context, organization_uuid, query_user).await?;
 
             #[cfg(feature = "otel")]

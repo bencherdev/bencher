@@ -209,7 +209,7 @@ pub struct OrgSsoParams {
     path =  "/v0/organizations/{organization}/sso/{sso}",
     tags = ["organizations", "sso"]
 }]
-pub async fn org_sso_delete_options(
+pub async fn org_sso_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgSsoParams>,
 ) -> Result<CorsResponse, HttpError> {

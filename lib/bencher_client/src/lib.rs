@@ -198,7 +198,6 @@ macro_rules! into_uuids {
 into_uuids!(
     JsonOrganizations[JsonOrganization],
     JsonMembers[JsonMember],
-    JsonSsos[JsonSso],
     JsonProjects[JsonProject],
     JsonReports[JsonReport],
     JsonPlots[JsonPlot],
@@ -209,6 +208,9 @@ into_uuids!(
     JsonThresholds[JsonThreshold],
     JsonAlerts[JsonAlert]
 );
+
+#[cfg(feature = "plus")]
+into_uuids!(JsonSsos[JsonSso]);
 
 macro_rules! into_uuid {
     ($($name:ident),*) => {

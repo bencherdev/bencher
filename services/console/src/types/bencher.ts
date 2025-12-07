@@ -519,7 +519,7 @@ export interface JsonOneMetric {
 }
 
 export interface JsonSso {
-	uuid: SsoUuid;
+	uuid: Uuid;
 	domain: NonEmpty;
 	created: string;
 }
