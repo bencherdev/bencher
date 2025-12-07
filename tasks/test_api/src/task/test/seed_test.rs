@@ -1911,9 +1911,12 @@ impl SeedTest {
             ORG_SLUG,
         ])
         .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let json = serde_json::from_slice::<bencher_json::JsonSso>(&assert.get_output().stdout);
-        assert!(json.is_err(), "{json:?}");
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("Status: 402 Payment Required"),
+            "{output:?}"
+        );
 
         // cargo run -- sso list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
