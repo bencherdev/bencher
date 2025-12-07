@@ -12,6 +12,9 @@ pub struct TaskSeedTest {
     /// Test token
     #[clap(long)]
     pub token: Option<Jwt>,
+    /// Is Bencher Cloud
+    #[clap(long)]
+    pub is_bencher_cloud: bool,
 }
 
 #[derive(Parser, Debug)]

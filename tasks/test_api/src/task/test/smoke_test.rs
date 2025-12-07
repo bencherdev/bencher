@@ -81,11 +81,11 @@ impl SmokeTest {
 
         match self.environment {
             Environment::Ci => {
-                test(&api_url, None, None, false)?;
+                test(&api_url, None, None, false, false)?;
                 kill_child(child)?;
             },
             Environment::Localhost => {
-                test(&api_url, None, None, true)?;
+                test(&api_url, None, None, false, true)?;
                 kill_child(child)?;
             },
             Environment::Docker => bencher_down()?,
@@ -93,6 +93,7 @@ impl SmokeTest {
                 &api_url,
                 Some(&DEV_ADMIN_BENCHER_API_TOKEN),
                 Some(&DEV_BENCHER_API_TOKEN),
+                true,
                 false,
             )?,
             Environment::Test | Environment::Prod => {},
@@ -186,21 +187,28 @@ fn test(
     api_url: &Url,
     admin_token: Option<&Jwt>,
     token: Option<&Jwt>,
+    is_bencher_cloud: bool,
     run_examples: bool,
 ) -> anyhow::Result<()> {
-    seed(api_url, admin_token, token)?;
+    seed(api_url, admin_token, token, is_bencher_cloud)?;
     if run_examples {
         examples(api_url, token)?;
     }
     Ok(())
 }
 
-fn seed(api_url: &Url, admin_token: Option<&Jwt>, token: Option<&Jwt>) -> anyhow::Result<()> {
+fn seed(
+    api_url: &Url,
+    admin_token: Option<&Jwt>,
+    token: Option<&Jwt>,
+    is_bencher_cloud: bool,
+) -> anyhow::Result<()> {
     println!("Seeding API deploy at {api_url}");
     let seed_test = SeedTest::try_from(TaskSeedTest {
         url: Some(api_url.clone()),
         admin_token: admin_token.cloned(),
         token: token.cloned(),
+        is_bencher_cloud,
     })?;
     seed_test.exec()
 }

@@ -34,6 +34,7 @@ pub struct SeedTest {
     pub url: Url,
     pub admin_token: Jwt,
     pub token: Jwt,
+    pub is_bencher_cloud: bool,
 }
 
 impl TryFrom<TaskSeedTest> for SeedTest {
@@ -44,11 +45,13 @@ impl TryFrom<TaskSeedTest> for SeedTest {
             url,
             admin_token,
             token,
+            is_bencher_cloud,
         } = test;
         Ok(Self {
             url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
             admin_token: admin_token.unwrap_or_else(Jwt::test_admin_token),
             token: token.unwrap_or_else(Jwt::test_token),
+            is_bencher_cloud,
         })
     }
 }
@@ -59,6 +62,12 @@ impl SeedTest {
         let host = self.url.as_ref();
         let admin_token = self.admin_token.as_ref();
         let token = self.token.as_ref();
+
+        if self.is_bencher_cloud {
+            println!("Running seed test as Bencher Cloud: {host}");
+        } else {
+            println!("Running seed test as Bencher Self-Hosted: {host}");
+        }
 
         // Signup Eustace Bagge first so he is admin
         // cargo run -- auth signup --host http://localhost:61016 --name "Eustace Bagge" eustace.bagge@nowhere.com
@@ -1771,7 +1780,9 @@ impl SeedTest {
         );
 
         #[cfg(feature = "plus")]
-        self.plus_exec()?;
+        if self.is_bencher_cloud {
+            self.plus_exec()?;
+        }
 
         Ok(())
     }
