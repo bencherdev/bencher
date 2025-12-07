@@ -114,7 +114,7 @@ mod tests {
             "abc.xyz@example",
             "abc@example",
             "a@example",
-            "{LEN_64_STR}@example.com",
+            format!("{LEN_64_STR}@example.com").as_str(),
         ] {
             assert_eq!(true, is_valid_email(email), "{email}");
         }
@@ -130,7 +130,7 @@ mod tests {
             "example.com",
             "abc.example.com",
             "abc!example.com",
-            &format!("{LEN_65_STR}@example.com"),
+            format!("{LEN_65_STR}@example.com").as_str(),
         ] {
             assert_eq!(false, is_valid_email(email), "{email}");
         }

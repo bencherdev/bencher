@@ -765,7 +765,7 @@ mod tests {
             .unwrap();
         assert_eq!(plan_status, PlanStatus::Active);
 
-        test_record_metered_usage(biller, metered_plan_id, usage_count).await;
+        record_metered_usage(biller, metered_plan_id, usage_count).await;
 
         biller
             .cancel_metered_subscription(&subscription_id.parse().unwrap())

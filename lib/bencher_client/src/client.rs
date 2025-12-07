@@ -45,10 +45,6 @@ pub enum ClientError {
 
     #[error("Invalid request. The request did not conform to API requirements: {0}")]
     InvalidRequest(String),
-    #[error("Error processing the request pre-hook: {0}")]
-    PreHookError(String),
-    #[error("Error processing the request post-hook: {0}")]
-    PostHookError(String),
     #[error("Error processing request:\n{0}")]
     ErrorResponse(Box<ErrorResponse>),
     #[error("Error upgrading request: {0}")]
@@ -65,6 +61,8 @@ pub enum ClientError {
     UnexpectedResponseOk(reqwest::Error),
     #[error("Request failed with an unexpected response: {0:?}")]
     UnexpectedResponseErr(Box<reqwest::Response>),
+    #[error("Custom error: {0}")]
+    Custom(String),
 
     #[error("Failed to send after {0} attempts")]
     SendTimeout(usize),
@@ -181,12 +179,6 @@ impl BencherClient {
                 Err(codegen::Error::InvalidRequest(e)) => {
                     return Err(ClientError::InvalidRequest(e));
                 },
-                Err(codegen::Error::PreHookError(e)) => {
-                    return Err(ClientError::PreHookError(e));
-                },
-                Err(codegen::Error::PostHookError(e)) => {
-                    return Err(ClientError::PostHookError(e));
-                },
                 Err(codegen::Error::ErrorResponse(e)) => {
                     let status = e.status();
                     let headers = e.headers().clone();
@@ -234,6 +226,9 @@ impl BencherClient {
                     } else {
                         Err(ClientError::UnexpectedResponseErr(Box::new(response)))
                     };
+                },
+                Err(codegen::Error::Custom(e)) => {
+                    return Err(ClientError::Custom(e));
                 },
             }
         }

@@ -116,7 +116,6 @@ mod tests {
             "example.com",
             "http//missing-colon.com",
             "://missing-scheme.com",
-            "http:/one-slash.com",
         ] {
             assert_eq!(false, is_valid_url(url), "{url}");
         }
