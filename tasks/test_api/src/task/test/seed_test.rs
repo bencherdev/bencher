@@ -1790,15 +1790,35 @@ impl SeedTest {
         );
 
         #[cfg(feature = "plus")]
-        if self.is_bencher_cloud {
-            self.plus_exec()?;
-        }
+        self.plus_exec()?;
 
         Ok(())
     }
 
     #[cfg(feature = "plus")]
     fn plus_exec(&self) -> anyhow::Result<()> {
+        if self.is_bencher_cloud {
+            self.bencher_cloud_exec()?;
+        } else {
+            self.bencher_self_hosted_exec()?;
+        }
+
+        let host = self.url.as_ref();
+        let admin_token = self.admin_token.as_ref();
+
+        // cargo run -- server stats --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["server", "stats", HOST_ARG, host, TOKEN_ARG, admin_token])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonServerStats =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        Ok(())
+    }
+
+    #[cfg(feature = "plus")]
+    fn bencher_cloud_exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
         let admin_token = self.admin_token.as_ref();
         let token = self.token.as_ref();
@@ -1858,13 +1878,51 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.uuid, sso_uuid);
 
-        // cargo run -- server stats --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
+        Ok(())
+    }
+
+    #[cfg(feature = "plus")]
+    fn bencher_self_hosted_exec(&self) -> anyhow::Result<()> {
+        let host = self.url.as_ref();
+        let admin_token = self.admin_token.as_ref();
+        let token = self.token.as_ref();
+
+        // cargo run -- sso list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["server", "stats", HOST_ARG, host, TOKEN_ARG, admin_token])
+        cmd.args(["sso", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
-        let _json: bencher_json::JsonServerStats =
+        let json: bencher_json::JsonSsos =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.0.len(), 0);
+
+        // This should error for the self-hosted admin, since the organization doesn't have a valid license
+        // cargo run -- sso create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --domain nowhere.com muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "sso",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--domain",
+            "nowhere.com",
+            ORG_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json = serde_json::from_slice::<bencher_json::JsonSso>(&assert.get_output().stdout);
+        assert!(json.is_err(), "{json:?}");
+
+        // cargo run -- sso list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["sso", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonSsos =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.0.len(), 0);
 
         Ok(())
     }
