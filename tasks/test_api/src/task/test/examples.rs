@@ -52,6 +52,8 @@ impl From<TaskExample> for Example {
 
 impl Examples {
     pub fn exec(&self) -> anyhow::Result<()> {
+        println!("Running examples: {}", self.url);
+
         // Install `bencher` CLI
         let status = Command::new("cargo")
             .args([

@@ -81,20 +81,20 @@ impl SmokeTest {
 
         match self.environment {
             Environment::Ci => {
-                test(&api_url, None, None, false, false)?;
+                test(&api_url, MockSetup::SelfHosted { examples: false })?;
                 kill_child(child)?;
             },
             Environment::Localhost => {
-                test(&api_url, None, None, false, true)?;
+                test(&api_url, MockSetup::SelfHosted { examples: true })?;
                 kill_child(child)?;
             },
             Environment::Docker => bencher_down()?,
             Environment::Dev => test(
                 &api_url,
-                Some(&DEV_ADMIN_BENCHER_API_TOKEN),
-                Some(&DEV_BENCHER_API_TOKEN),
-                true,
-                false,
+                MockSetup::BencherCloud {
+                    admin_token: DEV_ADMIN_BENCHER_API_TOKEN.clone(),
+                    token: DEV_BENCHER_API_TOKEN.clone(),
+                },
             )?,
             Environment::Test | Environment::Prod => {},
         }
@@ -183,44 +183,43 @@ fn test_api_version(api_url: &Url) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn test(
-    api_url: &Url,
-    admin_token: Option<&Jwt>,
-    token: Option<&Jwt>,
-    is_bencher_cloud: bool,
-    run_examples: bool,
-) -> anyhow::Result<()> {
-    seed(api_url, admin_token, token, is_bencher_cloud)?;
-    if run_examples {
-        examples(api_url, token)?;
+enum MockSetup {
+    BencherCloud { admin_token: Jwt, token: Jwt },
+    SelfHosted { examples: bool },
+}
+
+fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
+    match mock_setup {
+        MockSetup::BencherCloud { admin_token, token } => {
+            let task = TaskSeedTest {
+                url: Some(api_url.clone()),
+                admin_token: Some(admin_token),
+                token: Some(token),
+                is_bencher_cloud: true,
+            };
+            SeedTest::try_from(task)?.exec()
+        },
+        MockSetup::SelfHosted { examples } => {
+            let task = TaskSeedTest {
+                url: Some(api_url.clone()),
+                admin_token: None,
+                token: None,
+                is_bencher_cloud: false,
+            };
+            SeedTest::try_from(task)?.exec()?;
+
+            if examples {
+                let examples = Examples::try_from(TaskExamples {
+                    url: Some(api_url.clone()),
+                    token: None,
+                    example: None,
+                })?;
+                examples.exec()?;
+            }
+
+            Ok(())
+        },
     }
-    Ok(())
-}
-
-fn seed(
-    api_url: &Url,
-    admin_token: Option<&Jwt>,
-    token: Option<&Jwt>,
-    is_bencher_cloud: bool,
-) -> anyhow::Result<()> {
-    println!("Seeding API deploy at {api_url}");
-    let seed_test = SeedTest::try_from(TaskSeedTest {
-        url: Some(api_url.clone()),
-        admin_token: admin_token.cloned(),
-        token: token.cloned(),
-        is_bencher_cloud,
-    })?;
-    seed_test.exec()
-}
-
-fn examples(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
-    println!("Running examples at {api_url}");
-    let examples = Examples::try_from(TaskExamples {
-        url: Some(api_url.clone()),
-        token: token.cloned(),
-        example: None,
-    })?;
-    examples.exec()
 }
 
 fn kill_child(child: Option<Child>) -> anyhow::Result<()> {
