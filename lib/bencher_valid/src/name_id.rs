@@ -110,7 +110,7 @@ mod tests {
     use uuid::Uuid;
 
     #[test]
-    fn test_name_id_uuid() {
+    fn name_id_uuid() {
         const UUID: &str = "123e4567-e89b-12d3-a456-426614174000";
         let name_id: NameId<Uuid, Slug, BranchName> = UUID.parse().unwrap();
         assert_eq!(name_id, NameId::Uuid(Uuid::parse_str(UUID).unwrap()));
@@ -123,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    fn test_name_id_slug() {
+    fn name_id_slug() {
         const SLUG: &str = "my-slug";
         let name_id: NameId<Uuid, Slug, BranchName> = SLUG.parse().unwrap();
         assert_eq!(name_id, NameId::Slug(SLUG.parse().unwrap()));
@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn test_name_id_name() {
+    fn name_id_name() {
         const NAME: &str = "my/branch";
         let name_id: NameId<Uuid, Slug, BranchName> = NAME.parse().unwrap();
         assert_eq!(name_id, NameId::Name(NAME.parse().unwrap()));

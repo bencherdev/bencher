@@ -19,13 +19,13 @@ mod test_js {
     use crate::adapters::{js::benchmark::test_js_benchmark, test_util::convert_file_path};
 
     #[test]
-    fn test_adapter_js_benchmark() {
+    fn adapter_js_benchmark() {
         let results = convert_file_path::<AdapterJs>("./tool_output/js/benchmark/four.txt");
         test_js_benchmark::validate_adapter_js_benchmark(&results);
     }
 
     #[test]
-    fn test_adapter_js_time() {
+    fn adapter_js_time() {
         let results = convert_file_path::<AdapterJs>("./tool_output/js/time/four.txt");
         test_js_time::validate_adapter_js_time(&results);
     }

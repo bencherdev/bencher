@@ -93,13 +93,14 @@ mod tests {
     use super::{Index, is_valid_index};
 
     #[test]
-    fn test_boundary() {
-        assert_eq!(true, is_valid_index(Index::MIN.into()));
-        assert_eq!(true, is_valid_index(1));
-        assert_eq!(true, is_valid_index(2));
-        assert_eq!(true, is_valid_index(3));
-        assert_eq!(true, is_valid_index(Index::MAX.into()));
+    fn is_valid_index_true() {
+        for index in [Index::MIN.into(), 1, 2, 3, Index::MAX.into()] {
+            assert_eq!(true, is_valid_index(index), "{index}");
+        }
+    }
 
+    #[test]
+    fn is_valid_index_false() {
         assert_eq!(false, is_valid_index(65));
     }
 }

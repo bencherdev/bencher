@@ -444,10 +444,9 @@ impl LicenseUsage {
         for query_organization in organizations {
             if let Ok(Some(license_usage)) =
                 Self::get(db_connection, licensor, &query_organization).await
+                && license_usage.level >= min_level
             {
-                if license_usage.level >= min_level {
-                    license_usages.push(license_usage);
-                }
+                license_usages.push(license_usage);
             }
         }
         Ok(license_usages)

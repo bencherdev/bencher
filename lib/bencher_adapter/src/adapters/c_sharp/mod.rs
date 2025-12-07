@@ -17,7 +17,7 @@ mod test_c_sharp {
     use crate::adapters::{c_sharp::dot_net::test_c_sharp_dot_net, test_util::convert_file_path};
 
     #[test]
-    fn test_adapter_c_sharp_dot_net() {
+    fn adapter_c_sharp_dot_net() {
         let results = convert_file_path::<AdapterCSharp>("./tool_output/c_sharp/dot_net/two.json");
         test_c_sharp_dot_net::validate_adapter_c_sharp_dot_net(&results);
     }

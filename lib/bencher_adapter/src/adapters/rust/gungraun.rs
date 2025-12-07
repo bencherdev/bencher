@@ -417,7 +417,7 @@ pub(crate) mod test_rust_gungraun {
     use std::collections::HashMap;
 
     #[test]
-    fn test_without_optional_metrics() {
+    fn without_optional_metrics() {
         let results = convert_file_path::<AdapterRustGungraun>(
             "./tool_output/rust/gungraun/without-optional-metrics.txt",
         );
@@ -426,7 +426,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_with_dhat() {
+    fn with_dhat() {
         let results =
             convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/with-dhat.txt");
 
@@ -440,7 +440,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_with_dhat_first_then_callgrind() {
+    fn with_dhat_first_then_callgrind() {
         let results = convert_file_path::<AdapterRustGungraun>(
             "./tool_output/rust/gungraun/dhat-then-callgrind.txt",
         );
@@ -455,7 +455,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_with_dhat_and_global_bus_events() {
+    fn with_dhat_and_global_bus_events() {
         let results = convert_file_path::<AdapterRustGungraun>(
             "./tool_output/rust/gungraun/with-dhat-and-global-bus-events.txt",
         );
@@ -470,7 +470,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_delta() {
+    fn delta() {
         let results =
             convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/delta.txt");
 
@@ -478,7 +478,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_delta_with_infinity() {
+    fn delta_with_infinity() {
         let results = convert_file_path::<AdapterRustGungraun>(
             "./tool_output/rust/gungraun/delta_with_inf.txt",
         );
@@ -521,7 +521,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_with_summary_and_regressions() {
+    fn with_summary_and_regressions() {
         let results = convert_file_path::<AdapterRustGungraun>(
             "./tool_output/rust/gungraun/with-summary-and-regressions.txt",
         );
@@ -530,7 +530,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_with_gungraun_summary() {
+    fn with_gungraun_summary() {
         let results = convert_file_path::<AdapterRustGungraun>(
             "./tool_output/rust/gungraun/with-gungraun-summary.txt",
         );
@@ -539,7 +539,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_ansi_escapes_issue_345() {
+    fn ansi_escapes_issue_345() {
         let results = convert_file_path::<AdapterRustGungraun>(
             "./tool_output/rust/gungraun/ansi-escapes.txt",
         );
@@ -548,7 +548,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_with_ge() {
+    fn with_ge() {
         let results =
             convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/with-ge.txt");
 
@@ -562,7 +562,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_without_cachesim() {
+    fn without_cachesim() {
         use gungraun::*;
 
         let results = convert_file_path::<AdapterRustGungraun>(
@@ -593,7 +593,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_callgrind_mixed_order() {
+    fn callgrind_mixed_order() {
         use gungraun::*;
 
         let results = convert_file_path::<AdapterRustGungraun>(
@@ -622,7 +622,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_callgrind_ll_hits() {
+    fn callgrind_ll_hits() {
         use gungraun::*;
 
         let results = convert_file_path::<AdapterRustGungraun>(
@@ -653,7 +653,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_callgrind_all() {
+    fn callgrind_all() {
         use gungraun::*;
 
         let results = convert_file_path::<AdapterRustGungraun>(
@@ -753,7 +753,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_cachegrind() {
+    fn cachegrind() {
         use gungraun::*;
 
         let results =
@@ -821,7 +821,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_memcheck() {
+    fn memcheck() {
         use gungraun::*;
 
         let results =
@@ -871,7 +871,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_helgrind() {
+    fn helgrind() {
         use gungraun::*;
 
         let results =
@@ -921,7 +921,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_drd() {
+    fn drd() {
         use gungraun::*;
 
         let results =
@@ -971,7 +971,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_name_multiple_lines() {
+    fn name_multiple_lines() {
         use gungraun::*;
 
         let results = convert_file_path::<AdapterRustGungraun>(
@@ -1020,7 +1020,7 @@ pub(crate) mod test_rust_gungraun {
     }
 
     #[test]
-    fn test_name_multiple_lines_mixed() {
+    fn name_multiple_lines_mixed() {
         use gungraun::*;
 
         let results = convert_file_path::<AdapterRustGungraun>(

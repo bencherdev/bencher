@@ -140,7 +140,7 @@ mod tests {
     use super::{SampleSize, is_valid_sample_size};
 
     #[test]
-    fn test_boundary() {
+    fn boundary() {
         assert_eq!(true, is_valid_sample_size(SampleSize::MIN.into()));
         assert_eq!(true, is_valid_sample_size(2));
         assert_eq!(true, is_valid_sample_size(3));

@@ -110,7 +110,7 @@ pub(crate) mod test_rust_bench {
     }
 
     #[test]
-    fn test_adapter_rust_zero() {
+    fn adapter_rust_zero() {
         let file_path = "./tool_output/rust/bench/zero.txt";
         assert_eq!(
             None,
@@ -119,7 +119,7 @@ pub(crate) mod test_rust_bench {
     }
 
     #[test]
-    fn test_adapter_rust_average() {
+    fn adapter_rust_average() {
         let file_path = "./tool_output/rust/bench/many.txt";
         assert_eq!(
             None,
@@ -142,7 +142,7 @@ pub(crate) mod test_rust_bench {
     }
 
     #[test]
-    fn test_parse_cargo() {
+    fn parse_cargo_line() {
         for (index, (expected, input)) in [(
             Ok((
                 "",
@@ -178,21 +178,21 @@ pub(crate) mod test_rust_bench {
     }
 
     #[test]
-    fn test_adapter_rust_one() {
+    fn adapter_rust_one() {
         let results = convert_rust_bench("one");
         assert_eq!(results.inner.len(), 1);
         validate_bench_metrics(&results, "tests::benchmark");
     }
 
     #[test]
-    fn test_adapter_rust_ignore() {
+    fn adapter_rust_ignore() {
         let results = convert_rust_bench("ignore");
         assert_eq!(results.inner.len(), 1);
         validate_bench_metrics(&results, "tests::benchmark");
     }
 
     #[test]
-    fn test_adapter_rust_many() {
+    fn adapter_rust_many() {
         let results = convert_rust_bench("many");
         validate_adapter_rust_bench(&results);
     }
@@ -217,7 +217,7 @@ pub(crate) mod test_rust_bench {
     }
 
     #[test]
-    fn test_adapter_rust_multi_target() {
+    fn adapter_rust_multi_target() {
         let results = convert_rust_bench("multi_target");
         assert_eq!(results.inner.len(), 2);
         validate_bench_metrics(&results, "tests::benchmark");
@@ -225,7 +225,7 @@ pub(crate) mod test_rust_bench {
     }
 
     #[test]
-    fn test_adapter_rust_failed() {
+    fn adapter_rust_failed() {
         let results = convert_rust_bench("failed");
         assert_eq!(results.inner.len(), 2);
 
@@ -238,7 +238,7 @@ pub(crate) mod test_rust_bench {
 
     #[test]
     #[expect(clippy::unreadable_literal)]
-    fn test_issue_390() {
+    fn issue_390() {
         let results = convert_rust_bench("issue_390");
         assert_eq!(results.inner.len(), 4);
 

@@ -111,7 +111,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_expiration_year() {
+    fn expiration_year() {
         assert_eq!(true, is_valid_expiration_year(2030));
         assert_eq!(true, is_valid_expiration_year(2040));
         assert_eq!(true, is_valid_expiration_year(2050));

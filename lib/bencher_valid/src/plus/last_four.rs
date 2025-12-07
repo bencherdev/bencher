@@ -88,7 +88,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_last_four() {
+    fn last_four() {
         let valid_numbers = vec![
             // visa electron
             "0000", // maestro

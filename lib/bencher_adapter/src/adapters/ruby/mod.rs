@@ -17,7 +17,7 @@ mod test_go {
     use crate::adapters::{ruby::benchmark::test_ruby_benchmark, test_util::convert_file_path};
 
     #[test]
-    fn test_adapter_ruby_benchmark() {
+    fn adapter_ruby_benchmark() {
         let results = convert_file_path::<AdapterRuby>("./tool_output/ruby/benchmark/five.txt");
         test_ruby_benchmark::validate_adapter_ruby_benchmark(&results);
     }

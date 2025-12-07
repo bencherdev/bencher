@@ -79,55 +79,55 @@ mod tests {
     static MEAN_NEG_FIVE: LazyLock<Mean> = LazyLock::new(|| Mean { mean: -3.0 });
 
     #[test]
-    fn test_mean_zero() {
+    fn mean_zero() {
         let m = Mean::new(DATA_ZERO);
         assert_eq!(m, None);
     }
 
     #[test]
-    fn test_mean_one() {
+    fn mean_one() {
         let m = Mean::new(DATA_ONE).unwrap();
         assert_eq!(m, *MEAN_ONE);
     }
 
     #[test]
-    fn test_mean_two() {
+    fn mean_two() {
         let m = Mean::new(DATA_TWO).unwrap();
         assert_eq!(m, *MEAN_TWO);
     }
 
     #[test]
-    fn test_mean_three() {
+    fn mean_three() {
         let m = Mean::new(DATA_THREE).unwrap();
         assert_eq!(m, *MEAN_THREE);
     }
 
     #[test]
-    fn test_mean_five() {
+    fn mean_five() {
         let m = Mean::new(DATA_FIVE).unwrap();
         assert_eq!(m, *MEAN_FIVE);
     }
 
     #[test]
-    fn test_mean_five_desc() {
+    fn mean_five_desc() {
         let m = Mean::new(DATA_FIVE_DESC).unwrap();
         assert_eq!(m, *MEAN_FIVE);
     }
 
     #[test]
-    fn test_mean_five_neg() {
+    fn mean_five_neg() {
         let m = Mean::new(DATA_FIVE_NEG).unwrap();
         assert_eq!(m, Mean { mean: -3.0 });
     }
 
     #[test]
-    fn test_mean_five_const() {
+    fn mean_five_const() {
         let m = Mean::new(DATA_FIVE_CONST).unwrap();
         assert_eq!(m, *MEAN_ONE);
     }
 
     #[test]
-    fn test_variance_zero() {
+    fn variance_zero() {
         let v = variance(MEAN_ZERO.mean, DATA_ZERO);
         assert_eq!(v, None);
 
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variance_one() {
+    fn variance_one() {
         let v = variance(MEAN_ZERO.mean, DATA_ONE);
         assert_eq!(v, None);
 
@@ -163,7 +163,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variance_two() {
+    fn variance_two() {
         let v = variance(MEAN_ZERO.mean, DATA_TWO).unwrap();
         assert_eq!(v, 2.5);
 
@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variance_three() {
+    fn variance_three() {
         let v = variance(MEAN_ZERO.mean, DATA_THREE).unwrap();
         assert_eq!(v, 4.666666666666667);
 
@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variance_five() {
+    fn variance_five() {
         let v = variance(MEAN_ZERO.mean, DATA_FIVE).unwrap();
         assert_eq!(v, 11.0);
 
@@ -217,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variance_five_desc() {
+    fn variance_five_desc() {
         let v = variance(MEAN_ZERO.mean, DATA_FIVE_DESC).unwrap();
         assert_eq!(v, 11.0);
 
@@ -235,7 +235,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variance_five_neg() {
+    fn variance_five_neg() {
         let v = variance(MEAN_ZERO.mean, DATA_FIVE_NEG).unwrap();
         assert_eq!(v, 11.0);
 
@@ -253,7 +253,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variance_five_const() {
+    fn variance_five_const() {
         let v = variance(MEAN_ZERO.mean, DATA_FIVE_CONST).unwrap();
         assert_eq!(v, 1.0);
 
@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn test_std_dev_zero() {
+    fn std_dev_zero() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_ZERO);
         assert_eq!(std_dev, None);
 
@@ -289,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn test_std_dev_one() {
+    fn std_dev_one() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_ONE);
         assert_eq!(std_dev, None);
 
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     #[expect(clippy::approx_constant)]
-    fn test_std_dev_two() {
+    fn std_dev_two() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_TWO).unwrap();
         assert_eq!(std_dev, 1.5811388300841898);
 
@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn test_std_dev_three() {
+    fn std_dev_three() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_THREE).unwrap();
         assert_eq!(std_dev, 2.160246899469287);
 
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     #[expect(clippy::approx_constant)]
-    fn test_std_dev_five() {
+    fn std_dev_five() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE).unwrap();
         assert_eq!(std_dev, 3.3166247903554);
 
@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     #[expect(clippy::approx_constant)]
-    fn test_std_dev_five_desc() {
+    fn std_dev_five_desc() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE_DESC).unwrap();
         assert_eq!(std_dev, 3.3166247903554);
 
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     #[expect(clippy::approx_constant)]
-    fn test_std_dev_five_neg() {
+    fn std_dev_five_neg() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE_NEG).unwrap();
         assert_eq!(std_dev, 3.3166247903554);
 
@@ -401,7 +401,7 @@ mod tests {
     }
 
     #[test]
-    fn test_std_dev_five_const() {
+    fn std_dev_five_const() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE_CONST).unwrap();
         assert_eq!(std_dev, 1.0);
 

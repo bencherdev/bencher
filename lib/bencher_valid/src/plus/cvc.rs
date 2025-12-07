@@ -97,7 +97,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_card_cvc() {
+    fn card_cvc() {
         assert_eq!(true, is_valid_card_cvc("012"));
         assert_eq!(true, is_valid_card_cvc("0123"));
         assert_eq!(true, is_valid_card_cvc("123"));

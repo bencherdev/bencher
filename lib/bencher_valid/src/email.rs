@@ -103,29 +103,44 @@ mod tests {
     use crate::tests::{LEN_64_STR, LEN_65_STR};
 
     #[test]
-    fn test_email() {
-        assert_eq!(true, is_valid_email("abc.xyz@example.com"));
-        assert_eq!(true, is_valid_email("abc@example.com"));
-        assert_eq!(true, is_valid_email("a@example.com"));
-        assert_eq!(true, is_valid_email("abc.xyz@example.co"));
-        assert_eq!(true, is_valid_email("abc@example.co"));
-        assert_eq!(true, is_valid_email("a@example.co"));
-        assert_eq!(true, is_valid_email("abc.xyz@example"));
-        assert_eq!(true, is_valid_email("abc@example"));
-        assert_eq!(true, is_valid_email("a@example"));
+    fn is_valid_email_true() {
+        for email in [
+            "abc.xyz@example.com",
+            "abc@example.com",
+            "a@example.com",
+            "abc.xyz@example.co",
+            "abc@example.co",
+            "a@example.co",
+            "abc.xyz@example",
+            "abc@example",
+            "a@example",
+            "{LEN_64_STR}@example.com",
+        ] {
+            assert_eq!(true, is_valid_email(email), "{email}");
+        }
+    }
+
+    #[test]
+    fn is_valid_email_false() {
+        for email in [
+            "",
+            " abc@example.com",
+            "abc @example.com",
+            "abc@example.com ",
+            "example.com",
+            "abc.example.com",
+            "abc!example.com",
+            &format!("{LEN_65_STR}@example.com"),
+        ] {
+            assert_eq!(false, is_valid_email(email), "{email}");
+        }
+    }
+
+    #[test]
+    fn email_from_str_case_insensitive() {
         assert_eq!(
             Email::from_str("abc.xyz@example.com").unwrap(),
             Email::from_str("ABC.xYz@Example.coM").unwrap()
         );
-        assert_eq!(true, is_valid_email(&format!("{LEN_64_STR}@example.com")));
-
-        assert_eq!(false, is_valid_email(""));
-        assert_eq!(false, is_valid_email(" abc@example.com"));
-        assert_eq!(false, is_valid_email("abc @example.com"));
-        assert_eq!(false, is_valid_email("abc@example.com "));
-        assert_eq!(false, is_valid_email("example.com"));
-        assert_eq!(false, is_valid_email("abc.example.com"));
-        assert_eq!(false, is_valid_email("abc!example.com"));
-        assert_eq!(false, is_valid_email(&format!("{LEN_65_STR}@example.com")));
     }
 }

@@ -95,15 +95,14 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_non_empty() {
-        assert_eq!(true, is_valid_non_empty("a"));
-        assert_eq!(true, is_valid_non_empty("ab"));
-        assert_eq!(true, is_valid_non_empty("abc"));
-        assert_eq!(true, is_valid_non_empty("ABC"));
-        assert_eq!(true, is_valid_non_empty("abc ~ABC!"));
-        assert_eq!(true, is_valid_non_empty(LEN_64_STR));
-        assert_eq!(true, is_valid_non_empty(LEN_65_STR));
+    fn is_valid_non_empty_true() {
+        for value in ["a", "ab", "abc", "ABC", "abc ~ABC!", LEN_64_STR, LEN_65_STR] {
+            assert_eq!(true, is_valid_non_empty(value), "{value}");
+        }
+    }
 
+    #[test]
+    fn is_valid_non_empty_false() {
         assert_eq!(false, is_valid_non_empty(LEN_0_STR));
     }
 }

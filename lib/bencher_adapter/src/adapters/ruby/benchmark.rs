@@ -115,7 +115,7 @@ pub(crate) mod test_ruby_benchmark {
     }
 
     #[test]
-    fn test_adapter_ruby_average() {
+    fn adapter_ruby_average() {
         let file_path = "./tool_output/ruby/benchmark/two.txt";
         assert_eq!(
             None,
@@ -139,7 +139,7 @@ pub(crate) mod test_ruby_benchmark {
     }
 
     #[test]
-    fn test_adapter_ruby_benchmark_two() {
+    fn adapter_ruby_benchmark_two() {
         let results = convert_ruby_benchmark("two");
         assert_eq!(results.inner.len(), 2);
 
@@ -151,7 +151,7 @@ pub(crate) mod test_ruby_benchmark {
     }
 
     #[test]
-    fn test_adapter_ruby_benchmark_five() {
+    fn adapter_ruby_benchmark_five() {
         let results = convert_ruby_benchmark("five");
         validate_adapter_ruby_benchmark(&results);
     }

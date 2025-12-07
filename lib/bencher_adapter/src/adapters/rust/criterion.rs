@@ -118,7 +118,7 @@ pub(crate) mod test_rust_criterion {
     }
 
     #[test]
-    fn test_parse_criterion() {
+    fn parse_criterion_line() {
         for (index, (expected, input)) in [
             (
                 Ok((
@@ -171,7 +171,7 @@ pub(crate) mod test_rust_criterion {
     }
 
     #[test]
-    fn test_adapter_rust_criterion_average() {
+    fn adapter_rust_criterion_average() {
         let file_path = "./tool_output/rust/criterion/many.txt";
         let results = opt_convert_file_path::<AdapterRustCriterion>(
             file_path,
@@ -194,7 +194,7 @@ pub(crate) mod test_rust_criterion {
     }
 
     #[test]
-    fn test_adapter_rust_criterion() {
+    fn adapter_rust_criterion() {
         let results = convert_rust_criterion("many");
         validate_adapter_rust_criterion(&results);
     }
@@ -229,14 +229,14 @@ pub(crate) mod test_rust_criterion {
     }
 
     #[test]
-    fn test_adapter_rust_criterion_failed() {
+    fn adapter_rust_criterion_failed() {
         let contents = std::fs::read_to_string("./tool_output/rust/criterion/failed.txt").unwrap();
         let results = AdapterRustCriterion::parse(&contents, Settings::default()).unwrap();
         assert_eq!(results.inner.len(), 4);
     }
 
     #[test]
-    fn test_adapter_rust_criterion_dogfood() {
+    fn adapter_rust_criterion_dogfood() {
         let results = convert_rust_criterion("dogfood");
         assert_eq!(results.inner.len(), 4);
 

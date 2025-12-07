@@ -86,7 +86,7 @@ pub(crate) mod test_cpp_google {
     }
 
     #[test]
-    fn test_adapter_cpp_google_average() {
+    fn adapter_cpp_google_average() {
         let file_path = "./tool_output/cpp/google/two.txt";
         let results = opt_convert_file_path::<AdapterCppGoogle>(
             file_path,
@@ -109,7 +109,7 @@ pub(crate) mod test_cpp_google {
     }
 
     #[test]
-    fn test_adapter_cpp_google() {
+    fn adapter_cpp_google() {
         let results = convert_cpp_google("two");
         validate_adapter_cpp_google(&results);
     }

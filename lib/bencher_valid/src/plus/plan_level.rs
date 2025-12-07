@@ -103,7 +103,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_plan_level() {
+    fn plan_level() {
         assert_eq!(true, is_valid_plan_level("free"));
         assert_eq!(true, is_valid_plan_level("team"));
         assert_eq!(true, is_valid_plan_level("enterprise"));

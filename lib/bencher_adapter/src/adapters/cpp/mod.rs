@@ -23,13 +23,13 @@ mod test_cpp {
     };
 
     #[test]
-    fn test_adapter_cpp_catch2() {
+    fn adapter_cpp_catch2() {
         let results = convert_file_path::<AdapterCpp>("./tool_output/cpp/catch2/four.txt");
         test_cpp_catch2::validate_adapter_cpp_catch2(&results);
     }
 
     #[test]
-    fn test_adapter_cpp_google() {
+    fn adapter_cpp_google() {
         let results = convert_file_path::<AdapterCpp>("./tool_output/cpp/google/two.txt");
         test_cpp_google::validate_adapter_cpp_google(&results);
     }

@@ -153,7 +153,7 @@ fn median(array: &mut [i64]) -> f64 {
     array.sort_unstable();
 
     let size = array.len();
-    if (size % 2) == 0 {
+    if size.is_multiple_of(2) {
         let left = size / 2 - 1;
         let right = size / 2;
         f64::midpoint(array[left] as f64, array[right] as f64)

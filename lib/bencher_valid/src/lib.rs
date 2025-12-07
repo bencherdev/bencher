@@ -140,17 +140,22 @@ pub mod tests {
     const INNER_SPACE_STR: &str = "01 23";
 
     #[test]
-    fn test_is_valid_len() {
-        assert_eq!(true, is_valid_len(LEN_1_STR));
-        assert_eq!(true, is_valid_len(LEN_2_STR));
-        assert_eq!(true, is_valid_len(LEN_3_STR));
-        assert_eq!(true, is_valid_len(LEN_64_STR));
-        assert_eq!(true, is_valid_len(INNER_SPACE_STR));
+    fn is_valid_len_true() {
+        for value in [LEN_1_STR, LEN_2_STR, LEN_3_STR, LEN_64_STR, INNER_SPACE_STR] {
+            assert_eq!(true, is_valid_len(value), "{value}");
+        }
+    }
 
-        assert_eq!(false, is_valid_len(LEN_0_STR));
-        assert_eq!(false, is_valid_len(LEN_65_STR));
-        assert_eq!(false, is_valid_len(PRE_SPACE_STR));
-        assert_eq!(false, is_valid_len(POST_SPACE_STR));
-        assert_eq!(false, is_valid_len(BOTH_SPACE_STR));
+    #[test]
+    fn is_valid_len_false() {
+        for value in [
+            LEN_0_STR,
+            LEN_65_STR,
+            PRE_SPACE_STR,
+            POST_SPACE_STR,
+            BOTH_SPACE_STR,
+        ] {
+            assert_eq!(false, is_valid_len(value), "{value}");
+        }
     }
 }

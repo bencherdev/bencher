@@ -130,7 +130,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_card_number() {
+    fn card_number() {
         let valid_numbers = vec![
             // visa electron
             "4917300800000000",

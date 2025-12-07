@@ -95,7 +95,7 @@ pub(crate) mod test_go_bench {
     }
 
     #[test]
-    fn test_parse_go() {
+    fn parse_go_line() {
         for (index, (expected, input)) in [
             (
                 Ok((
@@ -190,7 +190,7 @@ pub(crate) mod test_go_bench {
     }
 
     #[test]
-    fn test_adapter_go_bench_average() {
+    fn adapter_go_bench_average() {
         let file_path = "./tool_output/go/bench/five.txt";
         let results = opt_convert_file_path::<AdapterGoBench>(
             file_path,
@@ -213,7 +213,7 @@ pub(crate) mod test_go_bench {
     }
 
     #[test]
-    fn test_adapter_go_bench() {
+    fn adapter_go_bench() {
         let results = convert_go_bench("five");
         validate_adapter_go_bench(&results);
     }
@@ -244,7 +244,7 @@ pub(crate) mod test_go_bench {
     }
 
     #[test]
-    fn test_adapter_go_bench_three() {
+    fn adapter_go_bench_three() {
         let results = convert_go_bench("three");
         assert_eq!(results.inner.len(), 3);
 

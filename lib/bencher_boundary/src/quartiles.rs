@@ -136,13 +136,13 @@ mod tests {
     static FIVE_BOUNDARY: LazyLock<IqrBoundary> = LazyLock::new(|| 5.0.try_into().unwrap());
 
     #[test]
-    fn test_quartiles_zero() {
+    fn quartiles_zero() {
         let q = Quartiles::new(DATA_ZERO);
         assert_eq!(q, None);
     }
 
     #[test]
-    fn test_quartiles_one() {
+    fn quartiles_one() {
         let q = Quartiles::new(DATA_ONE).unwrap();
         assert_eq!(
             q,
@@ -161,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quartiles_two() {
+    fn quartiles_two() {
         let q = Quartiles::new(DATA_TWO).unwrap();
         assert_eq!(
             q,
@@ -180,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quartiles_three() {
+    fn quartiles_three() {
         let q = Quartiles::new(DATA_THREE).unwrap();
         assert_eq!(
             q,
@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quartiles_five() {
+    fn quartiles_five() {
         let q = Quartiles::new(DATA_FIVE).unwrap();
         assert_eq!(
             q,
@@ -218,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quartiles_five_desc() {
+    fn quartiles_five_desc() {
         let q = Quartiles::new(DATA_FIVE_DESC).unwrap();
         assert_eq!(
             q,
@@ -237,7 +237,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quartiles_five_neg() {
+    fn quartiles_five_neg() {
         let q = Quartiles::new(DATA_FIVE_NEG).unwrap();
         assert_eq!(
             q,
@@ -256,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quartiles_five_const() {
+    fn quartiles_five_const() {
         let q = Quartiles::new(DATA_FIVE_CONST).unwrap();
         assert_eq!(
             q,
@@ -275,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quartiles_six_bi() {
+    fn quartiles_six_bi() {
         let q = Quartiles::new(DATA_SIX_BI).unwrap();
         assert_eq!(
             q,
@@ -294,19 +294,19 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_quartiles_zero() {
+    fn delta_quartiles_zero() {
         let q = Quartiles::new_delta(DATA_ZERO);
         assert_eq!(q, None);
     }
 
     #[test]
-    fn test_delta_quartiles_one() {
+    fn delta_quartiles_one() {
         let q = Quartiles::new_delta(DATA_ONE);
         assert_eq!(q, None);
     }
 
     #[test]
-    fn test_delta_quartiles_two() {
+    fn delta_quartiles_two() {
         let q = Quartiles::new_delta(DATA_TWO).unwrap();
         assert_eq!(
             q,
@@ -325,7 +325,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_quartiles_three() {
+    fn delta_quartiles_three() {
         let q = Quartiles::new_delta(DATA_THREE).unwrap();
         assert_eq!(
             q,
@@ -344,7 +344,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_quartiles_five() {
+    fn delta_quartiles_five() {
         let q = Quartiles::new_delta(DATA_FIVE).unwrap();
         assert_eq!(
             q,
@@ -363,7 +363,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_quartiles_five_desc() {
+    fn delta_quartiles_five_desc() {
         let q = Quartiles::new_delta(DATA_FIVE_DESC).unwrap();
         assert_eq!(
             q,
@@ -382,7 +382,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_quartiles_five_neg() {
+    fn delta_quartiles_five_neg() {
         let q = Quartiles::new_delta(DATA_FIVE_NEG).unwrap();
         assert_eq!(
             q,
@@ -401,7 +401,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_quartiles_five_const() {
+    fn delta_quartiles_five_const() {
         let q = Quartiles::new_delta(DATA_FIVE_CONST).unwrap();
         assert_eq!(
             q,
@@ -420,7 +420,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_quartiles_six_bi() {
+    fn delta_quartiles_six_bi() {
         let q = Quartiles::new_delta(DATA_SIX_BI).unwrap();
         assert_eq!(
             q,

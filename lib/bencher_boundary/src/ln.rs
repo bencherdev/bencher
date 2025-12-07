@@ -33,19 +33,19 @@ mod tests {
     const DATA_FIVE_CONST: &[f64] = &[1.0, 1.0, 1.0, 1.0, 1.0];
 
     #[test]
-    fn test_ln_zero() {
+    fn ln_zero() {
         let ln = Ln::new(DATA_ZERO);
         assert_eq!(ln, None);
     }
 
     #[test]
-    fn test_ln_one() {
+    fn ln_one() {
         let ln = Ln::new(DATA_ONE);
         assert_eq!(ln, None);
     }
 
     #[test]
-    fn test_ln_two() {
+    fn ln_two() {
         let ln = Ln::new(DATA_TWO).unwrap();
         assert_eq!(
             ln,
@@ -57,7 +57,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ln_three() {
+    fn ln_three() {
         let ln = Ln::new(DATA_THREE).unwrap();
         assert_eq!(
             ln,
@@ -69,7 +69,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ln_five() {
+    fn ln_five() {
         let ln = Ln::new(DATA_FIVE).unwrap();
         assert_eq!(
             ln,
@@ -81,7 +81,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ln_five_desc() {
+    fn ln_five_desc() {
         let ln = Ln::new(DATA_FIVE_DESC).unwrap();
         assert_eq!(
             ln,
@@ -93,13 +93,13 @@ mod tests {
     }
 
     #[test]
-    fn test_ln_five_neg() {
+    fn ln_five_neg() {
         let ln = Ln::new(DATA_FIVE_NEG);
         assert_eq!(ln, None);
     }
 
     #[test]
-    fn test_ln_five_const() {
+    fn ln_five_const() {
         let ln = Ln::new(DATA_FIVE_CONST);
         assert_eq!(ln, None);
     }

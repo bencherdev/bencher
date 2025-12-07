@@ -316,15 +316,15 @@ fn into_report_results_json(
     {
         // If onto a new iteration, then add the result to the report iteration list.
         // Then add the report iteration list to the report results list.
-        if let Some(prev_iteration) = prev_iteration.take() {
-            if iteration != prev_iteration {
-                slog::trace!(log, "Iteration {prev_iteration} => {iteration}");
-                if let Some(result) = report_result.take() {
-                    report_iteration.push(result);
-                }
-                if !report_iteration.is_empty() {
-                    report_results.push(std::mem::take(&mut report_iteration));
-                }
+        if let Some(prev_iteration) = prev_iteration.take()
+            && iteration != prev_iteration
+        {
+            slog::trace!(log, "Iteration {prev_iteration} => {iteration}");
+            if let Some(result) = report_result.take() {
+                report_iteration.push(result);
+            }
+            if !report_iteration.is_empty() {
+                report_results.push(std::mem::take(&mut report_iteration));
             }
         }
         prev_iteration = Some(iteration);

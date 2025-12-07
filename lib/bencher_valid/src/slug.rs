@@ -193,32 +193,35 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_slug() {
-        assert_eq!(true, is_valid_slug("a-valid-slug"));
-        assert_eq!(true, is_valid_slug("2nd-valid-slug"));
-        assert_eq!(true, is_valid_slug(LEN_64_STR));
-
-        assert_eq!(false, is_valid_slug(""));
-        assert_eq!(false, is_valid_slug(" a-valid-slug"));
-        assert_eq!(false, is_valid_slug("a- valid-slug"));
-        assert_eq!(false, is_valid_slug("a-valid-slug "));
-        assert_eq!(false, is_valid_slug(" a-valid-slug "));
-        assert_eq!(false, is_valid_slug("-a-valid-slug"));
-        assert_eq!(false, is_valid_slug("a-valid-slug-"));
-        assert_eq!(false, is_valid_slug("-a-valid-slug-"));
-        assert_eq!(false, is_valid_slug("a--valid-slug"));
-        assert_eq!(false, is_valid_slug("a-Valid-slug"));
-        assert_eq!(false, is_valid_slug(LEN_65_STR));
-        assert_eq!(
-            false,
-            is_valid_slug(
-                "client-submit-serialize-deserialize-handle-client-submit-serialize-deserialize-handle-1996529012"
-            )
-        );
+    fn is_valid_slug_true() {
+        for slug in ["a-valid-slug", "2nd-valid-slug", LEN_64_STR] {
+            assert_eq!(true, is_valid_slug(slug), "{slug}");
+        }
     }
 
     #[test]
-    fn test_benchmark_name_issue_610() {
+    fn is_valid_slug_false() {
+        for slug in [
+            "",
+            " a-valid-slug",
+            "a- valid-slug",
+            "a-valid-slug ",
+            " a-valid-slug ",
+            "-a-valid-slug",
+            "a-valid-slug-",
+            "-a-valid-slug-",
+            "a--valid-slug",
+            "a-Valid-slug",
+            LEN_65_STR,
+            "client-submit-serialize-deserialize-handle-client-submit-serialize-deserialize-handle-1996529012",
+            "...",
+        ] {
+            assert_eq!(false, is_valid_slug(slug), "{slug}");
+        }
+    }
+
+    #[test]
+    fn benchmark_name_issue_610() {
         assert!(Slug::new("...").is_none());
     }
 }

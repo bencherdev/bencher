@@ -90,25 +90,24 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_git_hash() {
-        assert_eq!(
-            true,
-            is_valid_git_hash("1234567890ABCDEFAAAAAAAAAAAAAAAAAAAAAAAA")
-        );
-        assert_eq!(
-            true,
-            is_valid_git_hash("1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa")
-        );
+    fn is_valid_git_hash_true() {
+        for hash in [
+            "1234567890ABCDEFAAAAAAAAAAAAAAAAAAAAAAAA",
+            "1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa",
+        ] {
+            assert_eq!(true, is_valid_git_hash(hash), "{hash}");
+        }
+    }
 
-        assert_eq!(false, is_valid_git_hash(""));
-        assert_eq!(false, is_valid_git_hash("abcd"));
-        assert_eq!(
-            false,
-            is_valid_git_hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf")
-        );
-        assert_eq!(
-            false,
-            is_valid_git_hash("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
-        );
+    #[test]
+    fn is_valid_git_hash_false() {
+        for hash in [
+            "",
+            "abcd",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf",
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        ] {
+            assert_eq!(false, is_valid_git_hash(hash), "{hash}");
+        }
     }
 }

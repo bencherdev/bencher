@@ -127,7 +127,7 @@ pub(crate) mod test_java_jmh {
     }
 
     #[test]
-    fn test_adapter_java_jmh_latency() {
+    fn adapter_java_jmh_latency() {
         let results = convert_java_jmh("latency");
         assert_eq!(results.inner.len(), 1);
 
@@ -143,7 +143,7 @@ pub(crate) mod test_java_jmh {
     }
 
     #[test]
-    fn test_adapter_java_jmh_throughput() {
+    fn adapter_java_jmh_throughput() {
         let results = convert_java_jmh("throughput");
         assert_eq!(results.inner.len(), 1);
 
@@ -159,7 +159,7 @@ pub(crate) mod test_java_jmh {
     }
 
     #[test]
-    fn test_adapter_java_jmh_average() {
+    fn adapter_java_jmh_average() {
         let file_path = "./tool_output/java/jmh/six.json";
         let results = opt_convert_file_path::<AdapterJavaJmh>(
             file_path,
@@ -182,7 +182,7 @@ pub(crate) mod test_java_jmh {
     }
 
     #[test]
-    fn test_adapter_java_jmh_six() {
+    fn adapter_java_jmh_six() {
         let results = convert_java_jmh("six");
         validate_adapter_java_jmh(&results);
     }

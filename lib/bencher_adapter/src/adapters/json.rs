@@ -25,7 +25,7 @@ pub(crate) mod test_json {
     }
 
     #[test]
-    fn test_adapter_json_latency() {
+    fn adapter_json_latency() {
         let results = convert_json("latency");
         validate_adapter_json_latency(&results);
     }
@@ -44,7 +44,7 @@ pub(crate) mod test_json {
     }
 
     #[test]
-    fn test_adapter_json_dhat() {
+    fn adapter_json_dhat() {
         let results = convert_json("dhat");
         validate_adapter_json_dhat(&results);
     }

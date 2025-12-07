@@ -30,7 +30,7 @@ pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 const DEFAULT_CONFIG_PATH: &str = "etc/bencher.json";
 #[cfg(not(debug_assertions))]
 const DEFAULT_CONFIG_PATH: &str = "/etc/bencher/bencher.json";
-const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 
 // 1 megabyte or 1_048_576 bytes
 const DEFAULT_MAX_BODY_SIZE: usize = 1 << 20;

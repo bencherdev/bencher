@@ -118,7 +118,7 @@ pub(crate) mod test_python_pytest {
     }
 
     #[test]
-    fn test_adapter_python_pytest_two() {
+    fn adapter_python_pytest_two() {
         let results = convert_python_pytest("two");
         assert_eq!(results.inner.len(), 2);
 
@@ -140,7 +140,7 @@ pub(crate) mod test_python_pytest {
     }
 
     #[test]
-    fn test_adapter_python_pytest_two_median() {
+    fn adapter_python_pytest_two_median() {
         let results = convert_python_pytest_median("two");
         assert_eq!(results.inner.len(), 2);
 
@@ -162,7 +162,7 @@ pub(crate) mod test_python_pytest {
     }
 
     #[test]
-    fn test_adapter_python_pytest_four() {
+    fn adapter_python_pytest_four() {
         let four = "four";
         let file_path = file_path(four);
 

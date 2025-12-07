@@ -705,11 +705,11 @@ mod tests {
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
 
-    fn test_billing_key() -> Option<String> {
+    fn billing_key() -> Option<String> {
         std::env::var(TEST_BILLING_KEY).ok()
     }
 
-    fn test_products() -> JsonProducts {
+    fn products() -> JsonProducts {
         JsonProducts {
             team: JsonProduct {
                 id: "prod_NKz5B9dGhDiSY1".into(),
@@ -732,7 +732,7 @@ mod tests {
         }
     }
 
-    async fn test_metered_subscription(
+    async fn metered_subscription(
         biller: &Biller,
         organization: OrganizationUuid,
         customer_id: CustomerId,
@@ -778,7 +778,7 @@ mod tests {
         assert_eq!(plan_status, PlanStatus::Canceled);
     }
 
-    async fn test_licensed_subscription(
+    async fn licensed_subscription(
         biller: &Biller,
         organization: OrganizationUuid,
         customer_id: CustomerId,
@@ -824,7 +824,7 @@ mod tests {
         assert_eq!(plan_status, PlanStatus::Canceled);
     }
 
-    async fn test_record_metered_usage(
+    async fn record_metered_usage(
         biller: &Biller,
         metered_plan_id: &MeteredPlanId,
         usage_count: usize,
@@ -841,13 +841,13 @@ mod tests {
     // Note: To run this test locally run:
     // `export TEST_BILLING_KEY=...`
     #[tokio::test]
-    async fn test_biller() {
-        let Some(billing_key) = test_billing_key() else {
+    async fn biller() {
+        let Some(billing_key) = billing_key() else {
             return;
         };
         let json_billing = JsonBilling {
             secret_key: billing_key.parse().unwrap(),
-            products: test_products(),
+            products: products(),
         };
         let biller = Biller::new(json_billing).await.unwrap();
 
@@ -894,7 +894,7 @@ mod tests {
 
         // Team Metered Plan
         let organization = OrganizationUuid::new();
-        test_metered_subscription(
+        metered_subscription(
             &biller,
             organization,
             customer_id.clone(),
@@ -907,7 +907,7 @@ mod tests {
 
         // Team Licensed Plan
         let organization = OrganizationUuid::new();
-        test_licensed_subscription(
+        licensed_subscription(
             &biller,
             organization,
             customer_id.clone(),
@@ -920,7 +920,7 @@ mod tests {
 
         // Enterprise Metered Plan
         let organization = OrganizationUuid::new();
-        test_metered_subscription(
+        metered_subscription(
             &biller,
             organization,
             customer_id.clone(),
@@ -933,7 +933,7 @@ mod tests {
 
         // Enterprise Licensed Plan
         let organization = OrganizationUuid::new();
-        test_licensed_subscription(
+        licensed_subscription(
             &biller,
             organization,
             customer_id.clone(),

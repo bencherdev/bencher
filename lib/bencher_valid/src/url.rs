@@ -97,12 +97,28 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_email() {
-        assert_eq!(true, is_valid_url("http://example.com"));
-        assert_eq!(true, is_valid_url("https://example.com"));
+    fn is_valid_url_true() {
+        for url in [
+            "http://example.com",
+            "https://example.com",
+            "http://example.com/path?query=string#fragment",
+            "https://user:password@example.com",
+        ] {
+            assert_eq!(true, is_valid_url(url), "{url}");
+        }
+    }
 
-        assert_eq!(false, is_valid_url(""));
-        assert_eq!(false, is_valid_url("bad"));
-        assert_eq!(false, is_valid_url("example.com"));
+    #[test]
+    fn is_valid_url_false() {
+        for url in [
+            "",
+            "bad",
+            "example.com",
+            "http//missing-colon.com",
+            "://missing-scheme.com",
+            "http:/one-slash.com",
+        ] {
+            assert_eq!(false, is_valid_url(url), "{url}");
+        }
     }
 }

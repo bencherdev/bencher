@@ -128,7 +128,7 @@ pub(crate) mod test_c_sharp_dot_net {
     }
 
     #[test]
-    fn test_adapter_c_sharp_dot_net_null_namespace() {
+    fn adapter_c_sharp_dot_net_null_namespace() {
         let null_namespace = "null_namespace";
         let file_path = file_path(null_namespace);
 
@@ -152,7 +152,7 @@ pub(crate) mod test_c_sharp_dot_net {
     }
 
     #[test]
-    fn test_adapter_c_sharp_dot_net_two() {
+    fn adapter_c_sharp_dot_net_two() {
         let two = "two";
         let file_path = file_path(two);
 
@@ -221,7 +221,7 @@ pub(crate) mod test_c_sharp_dot_net {
     }
 
     #[test]
-    fn test_adapter_c_sharp_dot_net_two_more() {
+    fn adapter_c_sharp_dot_net_two_more() {
         let results = convert_c_sharp_dot_net("two_more");
         assert_eq!(results.inner.len(), 2);
 
@@ -243,7 +243,7 @@ pub(crate) mod test_c_sharp_dot_net {
     }
 
     #[test]
-    fn test_adapter_c_sharp_dot_net_two_more_median() {
+    fn adapter_c_sharp_dot_net_two_more_median() {
         let results = convert_c_sharp_dot_net_median("two_more");
         assert_eq!(results.inner.len(), 2);
 

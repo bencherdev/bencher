@@ -136,7 +136,7 @@ mod tests {
     use super::{Window, is_valid_window};
 
     #[test]
-    fn test_boundary() {
+    fn boundary() {
         assert_eq!(true, is_valid_window(Window::MIN.into()));
         assert_eq!(true, is_valid_window(Window::THIRTY.into()));
         assert_eq!(true, is_valid_window(Window::SIXTY.into()));

@@ -104,7 +104,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rank_is_sorted() {
+    fn rank_is_sorted() {
         let ranks = vec![TestRank::new(1), TestRank::new(2), TestRank::new(3)];
         assert!(Rank::is_sorted(&ranks));
 
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     #[expect(clippy::decimal_literal_representation)]
-    fn test_rank_calculate() {
+    fn rank_calculate() {
         let ranks = vec![
             TestRank::new(0),
             TestRank::new(1),

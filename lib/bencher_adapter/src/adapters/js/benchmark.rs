@@ -102,7 +102,7 @@ pub(crate) mod test_js_benchmark {
     }
 
     #[test]
-    fn test_adapter_js_benchmark_average() {
+    fn adapter_js_benchmark_average() {
         let file_path = "./tool_output/js/benchmark/four.txt";
         assert_eq!(
             None,
@@ -125,7 +125,7 @@ pub(crate) mod test_js_benchmark {
     }
 
     #[test]
-    fn test_adapter_js_benchmark() {
+    fn adapter_js_benchmark() {
         let results = convert_js_benchmark("four");
         validate_adapter_js_benchmark(&results);
     }
@@ -152,7 +152,7 @@ pub(crate) mod test_js_benchmark {
     }
 
     #[test]
-    fn test_adapter_js_benchmark_issue_506() {
+    fn adapter_js_benchmark_issue_506() {
         let results = convert_js_benchmark("issue_506");
         assert_eq!(results.inner.len(), 6);
 

@@ -421,7 +421,7 @@ mod db {
     }
 
     #[test]
-    fn test_into_yaml() {
+    fn into_yaml() {
         let json_litestream = JsonLitestream {
             busy_timeout: None,
             replicas: vec![JsonReplica::S3 {

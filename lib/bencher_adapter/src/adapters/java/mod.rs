@@ -17,7 +17,7 @@ mod test_java {
     use crate::adapters::{java::jmh::test_java_jmh, test_util::convert_file_path};
 
     #[test]
-    fn test_adapter_java_jmh() {
+    fn adapter_java_jmh() {
         let results = convert_file_path::<AdapterJava>("./tool_output/java/jmh/six.json");
         test_java_jmh::validate_adapter_java_jmh(&results);
     }

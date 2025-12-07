@@ -101,15 +101,16 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_resource_name() {
-        assert_eq!(true, is_valid_resource_name("a"));
-        assert_eq!(true, is_valid_resource_name("ab"));
-        assert_eq!(true, is_valid_resource_name("abc"));
-        assert_eq!(true, is_valid_resource_name("ABC"));
-        assert_eq!(true, is_valid_resource_name("abc ~ABC!"));
-        assert_eq!(true, is_valid_resource_name(LEN_64_STR));
+    fn is_valid_resource_name_true() {
+        for value in ["a", "ab", "abc", "ABC", "abc ~ABC!", LEN_64_STR] {
+            assert_eq!(true, is_valid_resource_name(value), "{value}");
+        }
+    }
 
-        assert_eq!(false, is_valid_resource_name(LEN_0_STR));
-        assert_eq!(false, is_valid_resource_name(LEN_65_STR));
+    #[test]
+    fn is_valid_resource_name_false() {
+        for value in [LEN_0_STR, LEN_65_STR] {
+            assert_eq!(false, is_valid_resource_name(value), "{value}");
+        }
     }
 }

@@ -1,15 +1,14 @@
 pub(super) fn remote_ip(headers: &http::HeaderMap) -> Option<std::net::IpAddr> {
-    if let Some(remote_ip) = remote_ip_inner(headers) {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIp);
-
-        Some(remote_ip)
-    } else {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIpNotFound);
-
-        None
-    }
+    remote_ip_inner(headers)
+        .inspect(|_| {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIp);
+        })
+        .or_else(|| {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIpNotFound);
+            None
+        })
 }
 
 fn remote_ip_inner(headers: &http::HeaderMap) -> Option<std::net::IpAddr> {

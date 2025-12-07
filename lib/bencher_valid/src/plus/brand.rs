@@ -120,7 +120,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_card_brand() {
+    fn card_brand() {
         assert_eq!(true, is_valid_card_brand("amex"));
         assert_eq!(true, is_valid_card_brand("diners"));
         assert_eq!(true, is_valid_card_brand("discover"));

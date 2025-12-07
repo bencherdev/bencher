@@ -205,7 +205,7 @@ pub(crate) mod test_cpp_catch2 {
     }
 
     #[test]
-    fn test_parse_benchmark_name() {
+    fn parse_benchmark_name() {
         for (index, (expected, input)) in [
             (
                 Ok(("", "Fibonacci 10".parse().unwrap())),
@@ -236,7 +236,7 @@ pub(crate) mod test_cpp_catch2 {
     }
 
     #[test]
-    fn test_adapter_cpp_catch2_average() {
+    fn adapter_cpp_catch2_average() {
         let file_path = "./tool_output/cpp/catch2/four.txt";
         let results = opt_convert_file_path::<AdapterCppCatch2>(
             file_path,
@@ -259,7 +259,7 @@ pub(crate) mod test_cpp_catch2 {
     }
 
     #[test]
-    fn test_adapter_cpp_catch2() {
+    fn adapter_cpp_catch2() {
         let results = convert_cpp_catch2("four");
         validate_adapter_cpp_catch2(&results);
     }
@@ -281,7 +281,7 @@ pub(crate) mod test_cpp_catch2 {
     }
 
     #[test]
-    fn test_adapter_cpp_catch2_two() {
+    fn adapter_cpp_catch2_two() {
         let results = convert_cpp_catch2("two");
         assert_eq!(results.inner.len(), 2);
 
@@ -293,7 +293,7 @@ pub(crate) mod test_cpp_catch2 {
     }
 
     #[test]
-    fn test_adapter_cpp_catch2_issue_351() {
+    fn adapter_cpp_catch2_issue_351() {
         let results = convert_cpp_catch2("issue_351");
         assert_eq!(results.inner.len(), 6);
 

@@ -178,7 +178,7 @@ pub(crate) mod test_rust_iai {
     }
 
     #[test]
-    fn test_adapter_rust_iai_parse_line() {
+    fn adapter_rust_iai_parse_line() {
         assert_eq!(
             super::parse_iai_metric("  Instructions:  1234", Instructions::NAME_STR),
             Ok((
@@ -217,7 +217,7 @@ pub(crate) mod test_rust_iai {
     }
 
     #[test]
-    fn test_adapter_rust_iai_parse_multiple_lines() {
+    fn adapter_rust_iai_parse_multiple_lines() {
         let input = "bench_fibonacci_short
   Instructions:                1735
   L1 Accesses:                 2364
@@ -229,7 +229,7 @@ pub(crate) mod test_rust_iai {
     }
 
     #[test]
-    fn test_adapter_rust_iai() {
+    fn adapter_rust_iai() {
         let results = convert_rust_iai("two");
         validate_adapter_rust_iai(&results);
     }
@@ -262,7 +262,7 @@ pub(crate) mod test_rust_iai {
     }
 
     #[test]
-    fn test_adapter_rust_iai_change() {
+    fn adapter_rust_iai_change() {
         let results = convert_rust_iai("change");
         assert_eq!(results.inner.len(), 2);
 

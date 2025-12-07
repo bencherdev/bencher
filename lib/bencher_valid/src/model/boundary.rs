@@ -283,7 +283,7 @@ mod tests {
     use super::{Boundary, is_valid_boundary};
 
     #[test]
-    fn test_boundary() {
+    fn boundary() {
         assert_eq!(true, is_valid_boundary(0.0));
         assert_eq!(true, is_valid_boundary(-1.0));
         assert_eq!(true, is_valid_boundary(1.0));
@@ -296,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_boundary_serde() {
+    fn boundary_serde() {
         let boundary: Boundary = serde_json::from_str("0.0").unwrap();
         assert_eq!(Boundary(0.0.into()), boundary);
         let boundary: Boundary = serde_json::from_str("-1.0").unwrap();

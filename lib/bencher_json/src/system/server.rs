@@ -194,47 +194,47 @@ mod tests {
     use super::{BooleanParam, SelfHostedStartup};
 
     #[test]
-    fn test_boolean_param_from_true() {
+    fn boolean_param_from_true() {
         let param = BooleanParam::True(SelfHostedStartup);
         assert!(bool::from(param));
     }
 
     #[test]
-    fn test_boolean_param_from_false() {
+    fn boolean_param_from_false() {
         let param: BooleanParam<SelfHostedStartup> = BooleanParam::False;
         assert!(!bool::from(param));
     }
 
     #[test]
-    fn test_boolean_param_deserialize_null() {
+    fn boolean_param_deserialize_null() {
         let json = "null";
         let param: BooleanParam<SelfHostedStartup> = serde_json::from_str(json).unwrap();
         assert!(matches!(param, BooleanParam::False));
     }
 
     #[test]
-    fn test_boolean_param_deserialize_true() {
+    fn boolean_param_deserialize_true() {
         let json = "true";
         let param: BooleanParam<SelfHostedStartup> = serde_json::from_str(json).unwrap();
         assert!(matches!(param, BooleanParam::True(SelfHostedStartup)));
     }
 
     #[test]
-    fn test_boolean_param_deserialize_false() {
+    fn boolean_param_deserialize_false() {
         let json = "false";
         let param: BooleanParam<SelfHostedStartup> = serde_json::from_str(json).unwrap();
         assert!(matches!(param, BooleanParam::False));
     }
 
     #[test]
-    fn test_boolean_param_serialize_true() {
+    fn boolean_param_serialize_true() {
         let param = BooleanParam::True(SelfHostedStartup);
         let json = serde_json::to_string(&param).unwrap();
         assert_eq!(json, r#"[["startup","true"]]"#);
     }
 
     #[test]
-    fn test_boolean_param_serialize_false() {
+    fn boolean_param_serialize_false() {
         let param: BooleanParam<SelfHostedStartup> = BooleanParam::False;
         let json = serde_json::to_string(&param).unwrap();
         assert_eq!(json, "null");

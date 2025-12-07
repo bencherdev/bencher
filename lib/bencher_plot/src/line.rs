@@ -824,7 +824,7 @@ mod tests {
     }
 
     #[test]
-    fn test_plot() {
+    fn plot() {
         let plot = LinePlot::new();
         let plot_buffer = plot
             .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF)
@@ -833,7 +833,7 @@ mod tests {
     }
 
     #[test]
-    fn test_plot_log() {
+    fn plot_log() {
         let plot = LinePlot::new();
         let plot_buffer = plot
             .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF_LOG)
@@ -842,7 +842,7 @@ mod tests {
     }
 
     #[test]
-    fn test_plot_dual_axes() {
+    fn plot_dual_axes() {
         let plot = LinePlot::new();
         let plot_buffer = plot
             .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF_DUAL_AXES)
@@ -851,7 +851,7 @@ mod tests {
     }
 
     #[test]
-    fn test_plot_decimal() {
+    fn plot_decimal() {
         let plot = LinePlot::new();
         let plot_buffer = plot
             .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF_DECIMAL)
@@ -860,7 +860,7 @@ mod tests {
     }
 
     #[test]
-    fn test_plot_empty() {
+    fn plot_empty() {
         let plot = LinePlot::new();
         let mut json_perf = JSON_PERF.clone();
         json_perf.results.clear();

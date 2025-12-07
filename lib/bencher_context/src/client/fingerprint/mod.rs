@@ -71,18 +71,18 @@ fn hash_combined(lhs: u64, rhs: u64) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::encode_uuid;
     use uuid::Uuid;
 
     #[test]
-    fn test_encode_uuid() {
-        let uuid = Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap();
-        assert_eq!(encode_uuid(uuid), "p78ezm4408me2");
-
-        let uuid = Uuid::parse_str("ffffffff-ffff-ffff-ffff-ffffffffffff").unwrap();
-        assert_eq!(encode_uuid(uuid), "sojl95mcwtr81");
-
-        let uuid = Uuid::parse_str("12345678-1234-5678-1234-567812345678").unwrap();
-        assert_eq!(encode_uuid(uuid), "cws1tbnfkj8h3");
+    fn encode_uuid_equals() {
+        for (uuid, encoded) in [
+            ("00000000-0000-0000-0000-000000000000", "p78ezm4408me2"),
+            ("ffffffff-ffff-ffff-ffff-ffffffffffff", "sojl95mcwtr81"),
+            ("12345678-1234-5678-1234-567812345678", "cws1tbnfkj8h3"),
+        ] {
+            let uuid = Uuid::parse_str(uuid).unwrap();
+            assert_eq!(encode_uuid(uuid), encoded);
+        }
     }
 }

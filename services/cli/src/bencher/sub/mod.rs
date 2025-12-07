@@ -108,6 +108,7 @@ impl TryFrom<CliSub> for Sub {
 }
 
 impl SubCmd for Sub {
+    #[expect(clippy::cognitive_complexity, reason = "Match arms for each variant")]
     async fn exec(&self) -> Result<(), CliError> {
         match self {
             Self::Run(run) => run.exec().await,

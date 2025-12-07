@@ -148,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jwt_auth() {
+    fn jwt_auth() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
@@ -162,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jwt_auth_expired() {
+    fn jwt_auth_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_auth(EMAIL.clone(), 0).unwrap();
@@ -173,7 +173,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jwt_client() {
+    fn jwt_client() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_client(EMAIL.clone(), TTL).unwrap();
@@ -187,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jwt_client_expired() {
+    fn jwt_client_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_client(EMAIL.clone(), 0).unwrap();
@@ -198,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jwt_api_key() {
+    fn jwt_api_key() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
@@ -212,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jwt_api_key_expired() {
+    fn jwt_api_key_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_api_key(EMAIL.clone(), 0).unwrap();
@@ -223,7 +223,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jwt_invite() {
+    fn jwt_invite() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let org_uuid = OrganizationUuid::new();
@@ -245,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jwt_invite_expired() {
+    fn jwt_invite_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let org_uuid = OrganizationUuid::new();

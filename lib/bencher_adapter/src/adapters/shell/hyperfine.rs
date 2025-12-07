@@ -113,7 +113,7 @@ pub(crate) mod test_shell_hyperfine {
     }
 
     #[test]
-    fn test_adapter_shell_hyperfine_two() {
+    fn adapter_shell_hyperfine_two() {
         let two = "two";
         let file_path = file_path(two);
 
@@ -174,7 +174,7 @@ pub(crate) mod test_shell_hyperfine {
     }
 
     #[test]
-    fn test_adapter_shell_hyperfine_one() {
+    fn adapter_shell_hyperfine_one() {
         let results = convert_shell_hyperfine("one");
         assert_eq!(results.inner.len(), 1);
 
@@ -188,7 +188,7 @@ pub(crate) mod test_shell_hyperfine {
     }
 
     #[test]
-    fn test_adapter_shell_hyperfine_one_median() {
+    fn adapter_shell_hyperfine_one_median() {
         let results = convert_shell_hyperfine_median("one");
         assert_eq!(results.inner.len(), 1);
 

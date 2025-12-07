@@ -107,7 +107,7 @@ mod tests {
     use uuid::Uuid;
 
     #[test]
-    fn test_resource_id_uuid() {
+    fn resource_id_uuid() {
         const UUID: &str = "123e4567-e89b-12d3-a456-426614174000";
         let resource_id: ResourceId<Uuid, Slug> = UUID.parse().unwrap();
         assert_eq!(
@@ -122,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_id_slug() {
+    fn resource_id_slug() {
         const SLUG: &str = "my-slug";
         let resource_id: ResourceId<Uuid, Slug> = SLUG.parse().unwrap();
         assert_eq!(resource_id, ResourceId::Slug(SLUG.parse().unwrap()));

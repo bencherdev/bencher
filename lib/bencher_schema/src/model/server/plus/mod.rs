@@ -92,7 +92,6 @@ impl QueryServer {
             }
 
             let mut violations = 0;
-            #[expect(clippy::infinite_loop)]
             loop {
                 let now = Utc::now().naive_utc().time();
                 let sleep_time = match now.cmp(&offset) {

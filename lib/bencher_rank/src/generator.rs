@@ -43,7 +43,7 @@ mod tests {
 
     #[test]
     #[expect(clippy::decimal_literal_representation)]
-    fn test_rank_generator() {
+    fn rank_generator() {
         let mut generator = RankGenerator::new(5);
         assert_eq!(generator.next(), Some(Rank(1_537_228_672_809_129_301)));
         assert_eq!(generator.next(), Some(Rank(3_074_457_345_618_258_602)));
@@ -54,7 +54,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rank_generator_zero() {
+    fn rank_generator_zero() {
         let mut generator = RankGenerator::new(0);
         assert_eq!(generator.next(), None);
     }

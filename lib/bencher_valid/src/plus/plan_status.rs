@@ -125,7 +125,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_plan_status() {
+    fn plan_status() {
         assert_eq!(true, is_valid_plan_status("active"));
         assert_eq!(true, is_valid_plan_status("canceled"));
         assert_eq!(true, is_valid_plan_status("incomplete"));

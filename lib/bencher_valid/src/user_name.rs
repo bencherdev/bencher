@@ -109,25 +109,36 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_is_valid_user_name() {
-        assert_eq!(true, is_valid_user_name("muriel"));
-        assert_eq!(true, is_valid_user_name("Muriel"));
-        assert_eq!(true, is_valid_user_name("Muriel Bagge"));
-        assert_eq!(true, is_valid_user_name("Muriel    Bagge"));
-        assert_eq!(true, is_valid_user_name("Muriel Linda Bagge"));
-        assert_eq!(true, is_valid_user_name("Bagge, Muriel"));
-        assert_eq!(true, is_valid_user_name("Mrs. Muriel Bagge"));
-        assert_eq!(true, is_valid_user_name("Muriel Linda-Bagge"));
-        assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
-        assert_eq!(true, is_valid_user_name("Mrs. Muriel Linda-De'Bagge"));
-        assert_eq!(true, is_valid_user_name(LEN_64_STR));
+    fn is_valid_user_name_true() {
+        for name in [
+            "muriel",
+            "Muriel",
+            "Muriel Bagge",
+            "Muriel    Bagge",
+            "Muriel Linda Bagge",
+            "Bagge, Muriel",
+            "Mrs. Muriel Bagge",
+            "Muriel Linda-Bagge",
+            "Muriel De'Bagge",
+            "Mrs. Muriel Linda-De'Bagge",
+            LEN_64_STR,
+        ] {
+            assert_eq!(true, is_valid_user_name(name), "{name}");
+        }
+    }
 
-        assert_eq!(false, is_valid_user_name(LEN_0_STR));
-        assert_eq!(false, is_valid_user_name(LEN_65_STR));
-        assert_eq!(false, is_valid_user_name(" Muriel Bagge"));
-        assert_eq!(false, is_valid_user_name("Muriel Bagge "));
-        assert_eq!(false, is_valid_user_name(" Muriel Bagge "));
-        assert_eq!(false, is_valid_user_name("Muriel!"));
-        assert_eq!(false, is_valid_user_name("Muriel! Bagge"));
+    #[test]
+    fn is_valid_user_name_false() {
+        for name in [
+            LEN_0_STR,
+            LEN_65_STR,
+            " Muriel Bagge",
+            "Muriel Bagge ",
+            " Muriel Bagge ",
+            "Muriel!",
+            "Muriel! Bagge",
+        ] {
+            assert_eq!(false, is_valid_user_name(name), "{name}");
+        }
     }
 }

@@ -66,12 +66,12 @@ mod tests {
     use bencher_valid::{ExpirationMonth, ExpirationYear};
 
     #[test]
-    fn test_expiration_month_parse() {
+    fn expiration_month_parse() {
         serde_json::from_str::<ExpirationMonth>("12").unwrap();
     }
 
     #[test]
-    fn test_expiration_year_parse() {
+    fn expiration_year_parse() {
         serde_json::from_str::<ExpirationYear>("2048").unwrap();
     }
 }

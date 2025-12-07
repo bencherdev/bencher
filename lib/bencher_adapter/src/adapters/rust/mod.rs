@@ -30,25 +30,25 @@ mod test_rust {
     };
 
     #[test]
-    fn test_adapter_rust_bench() {
+    fn adapter_rust_bench() {
         let results = convert_file_path::<AdapterRust>("./tool_output/rust/bench/many.txt");
         test_rust_bench::validate_adapter_rust_bench(&results);
     }
 
     #[test]
-    fn test_adapter_rust_criterion() {
+    fn adapter_rust_criterion() {
         let results = convert_file_path::<AdapterRust>("./tool_output/rust/criterion/many.txt");
         test_rust_criterion::validate_adapter_rust_criterion(&results);
     }
 
     #[test]
-    fn test_adapter_rust_iai() {
+    fn adapter_rust_iai() {
         let results = convert_file_path::<AdapterRust>("./tool_output/rust/iai/two.txt");
         test_rust_iai::validate_adapter_rust_iai(&results);
     }
 
     #[test]
-    fn test_adapter_rust_gungraun() {
+    fn adapter_rust_gungraun() {
         let results = convert_file_path::<AdapterRust>(
             "./tool_output/rust/gungraun/without-optional-metrics.txt",
         );

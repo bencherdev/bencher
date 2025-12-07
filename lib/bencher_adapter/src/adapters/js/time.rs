@@ -97,7 +97,7 @@ pub(crate) mod test_js_time {
     }
 
     #[test]
-    fn test_adapter_js_time_average() {
+    fn adapter_js_time_average() {
         let file_path = "./tool_output/js/time/four.txt";
         assert_eq!(
             None,
@@ -121,7 +121,7 @@ pub(crate) mod test_js_time {
     }
 
     #[test]
-    fn test_adapter_js_time() {
+    fn adapter_js_time() {
         let results = convert_js_time("four");
         validate_adapter_js_time(&results);
     }

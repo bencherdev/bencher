@@ -132,18 +132,19 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_benchmark_name() {
-        assert_eq!(true, is_valid_benchmark_name("a"));
-        assert_eq!(true, is_valid_benchmark_name("ab"));
-        assert_eq!(true, is_valid_benchmark_name("abc"));
-        assert_eq!(true, is_valid_benchmark_name("ABC"));
-        assert_eq!(true, is_valid_benchmark_name("abc ~ABC!"));
-
-        assert_eq!(false, is_valid_benchmark_name(""));
+    fn is_valid_benchmark_name_true() {
+        for name in ["a", "ab", "abc", "ABC", "abc ~ABC!"] {
+            assert_eq!(true, is_valid_benchmark_name(name), "{name}");
+        }
     }
 
     #[test]
-    fn test_benchmark_name_try_push_ok() {
+    fn is_valid_benchmark_name_false() {
+        assert_eq!(false, is_valid_benchmark_name(""), "");
+    }
+
+    #[test]
+    fn benchmark_name_try_push_ok() {
         let mut benchmark_name: BenchmarkName = "0123456789".parse().unwrap();
         let benchmark_name_len = benchmark_name.0.len();
         assert_eq!(benchmark_name_len, 10);
@@ -169,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn test_benchmark_name_try_push_err() {
+    fn benchmark_name_try_push_err() {
         let mut benchmark_name: BenchmarkName = "0123456789".parse().unwrap();
         let benchmark_name_len = benchmark_name.0.len();
         assert_eq!(benchmark_name_len, 10);
@@ -194,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn test_benchmark_name_is_ignored() {
+    fn benchmark_name_is_ignored() {
         let name = "a";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);

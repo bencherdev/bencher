@@ -238,7 +238,7 @@ mod tests {
     static PRIVATE_PEM_SECRET: LazyLock<Secret> = LazyLock::new(|| PRIVATE_PEM.parse().unwrap());
 
     #[test]
-    fn test_self_hosted() {
+    fn self_hosted() {
         let licensor = Licensor::self_hosted().unwrap();
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();
@@ -258,7 +258,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bencher_cloud_monthly() {
+    fn bencher_cloud_monthly() {
         let licensor = Licensor::bencher_cloud(&PRIVATE_PEM_SECRET).unwrap();
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();
@@ -282,7 +282,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bencher_cloud_annual() {
+    fn bencher_cloud_annual() {
         let licensor = Licensor::bencher_cloud(&PRIVATE_PEM_SECRET).unwrap();
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();

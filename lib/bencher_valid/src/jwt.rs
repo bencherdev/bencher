@@ -156,55 +156,50 @@ mod tests {
     use super::is_valid_jwt;
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn test_jwt() {
-        const HEADER: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9";
-        const PAYLOAD: &str = "eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjY5Mjk5NjExLCJpYXQiOjE2NjkyOTc4MTEsImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoiYUBhLmNvIiwib3JnIjpudWxsfQ";
-        const SIGNATURE: &str = "jJmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc";
+    const HEADER: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9";
+    const PAYLOAD: &str = "eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjY5Mjk5NjExLCJpYXQiOjE2NjkyOTc4MTEsImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoiYUBhLmNvIiwib3JnIjpudWxsfQ";
+    const SIGNATURE: &str = "jJmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc";
 
+    #[test]
+    fn is_valid_jwt_true() {
         assert_eq!(
             true,
             is_valid_jwt(&format!("{HEADER}.{PAYLOAD}.{SIGNATURE}"))
         );
-
-        assert_eq!(false, is_valid_jwt(""));
-        assert_eq!(false, is_valid_jwt(&format!(".{PAYLOAD}.{SIGNATURE}")));
-        assert_eq!(false, is_valid_jwt(&format!("{HEADER}..{SIGNATURE}")));
-        assert_eq!(false, is_valid_jwt(&format!("{HEADER}.{PAYLOAD}.")));
-        assert_eq!(false, is_valid_jwt(&format!("{HEADER}..")));
-        assert_eq!(false, is_valid_jwt(&format!(".{PAYLOAD}.")));
-        assert_eq!(false, is_valid_jwt(&format!("..{SIGNATURE}")));
-
-        assert_eq!(
-            false,
-            is_valid_jwt(&format!(" {HEADER}.{PAYLOAD}.{SIGNATURE}"))
-        );
-        assert_eq!(
-            false,
-            is_valid_jwt(&format!("{HEADER}.{PAYLOAD}.{SIGNATURE} "))
-        );
-        assert_eq!(false, is_valid_jwt(&format!("{HEADER}.{PAYLOAD}")));
-        assert_eq!(false, is_valid_jwt(&format!("{HEADER}.")));
-        assert_eq!(false, is_valid_jwt(&format!("{PAYLOAD}.{SIGNATURE}")));
-        assert_eq!(false, is_valid_jwt(&format!(".{SIGNATURE}")));
-        assert_eq!(false, is_valid_jwt(&format!("bad.{PAYLOAD}.{SIGNATURE}")));
-        assert_eq!(false, is_valid_jwt(&format!("{HEADER}.bad.{SIGNATURE}")));
-        assert_eq!(false, is_valid_jwt(&format!("{HEADER}.{PAYLOAD}.bad")));
-        assert_eq!(
-            false,
-            is_valid_jwt(&format!(
-                "{HEADER}.!Jmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc.{SIGNATURE}"
-            ))
-        );
     }
 
     #[test]
-    fn test_jwt_test_admin_token() {
+    fn is_valid_jwt_false() {
+        for jwt in [
+            "",
+            &format!(".{PAYLOAD}.{SIGNATURE}"),
+            &format!("{HEADER}..{SIGNATURE}"),
+            &format!("{HEADER}.{PAYLOAD}."),
+            &format!("{HEADER}.."),
+            &format!(".{PAYLOAD}."),
+            &format!("..{SIGNATURE}"),
+            &format!(" {HEADER}.{PAYLOAD}.{SIGNATURE}"),
+            &format!("{HEADER}.{PAYLOAD}.{SIGNATURE} "),
+            &format!("{HEADER}.{PAYLOAD}"),
+            &format!("{HEADER}."),
+            &format!("{PAYLOAD}.{SIGNATURE}"),
+            &format!(".{SIGNATURE}"),
+            &format!("bad.{PAYLOAD}.{SIGNATURE}"),
+            &format!("{HEADER}.bad.{SIGNATURE}"),
+            &format!("{HEADER}.{PAYLOAD}.bad"),
+            &format!("{HEADER}.!Jmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc.{SIGNATURE}"),
+        ] {
+            assert_eq!(false, is_valid_jwt(jwt), "{jwt}");
+        }
+    }
+
+    #[test]
+    fn jwt_test_admin_token() {
         assert_eq!(true, is_valid_jwt(Jwt::test_admin_token().as_ref()));
     }
 
     #[test]
-    fn test_jwt_test_token() {
+    fn jwt_test_token() {
         assert_eq!(true, is_valid_jwt(Jwt::test_token().as_ref()));
     }
 }

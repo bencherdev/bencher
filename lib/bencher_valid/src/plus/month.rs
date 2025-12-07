@@ -106,7 +106,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_expiration_month() {
+    fn expiration_month() {
         for month in 1..13 {
             assert_eq!(true, is_valid_expiration_month(month));
         }

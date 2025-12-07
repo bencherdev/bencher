@@ -300,7 +300,7 @@ mod tests {
     const IQR_POSITIVE_OUTLIER: f64 = 6.0;
 
     #[test]
-    fn test_limits_static_none() {
+    fn limits_static_none() {
         let limits = MetricsLimits::new_static(None, None);
         assert_eq!(limits.baseline, None);
         assert_eq!(limits.lower, None);
@@ -323,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_static_lower() {
+    fn limits_static_lower() {
         let limits = MetricsLimits::new_static(Some(*NEGATIVE_STATIC_LIMIT), None);
         assert_eq!(limits.baseline, None);
         assert_eq!(
@@ -351,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_static_upper() {
+    fn limits_static_upper() {
         let _log = bootstrap_logger();
         let limits = MetricsLimits::new_static(None, Some(*STATIC_LIMIT));
         assert_eq!(limits.baseline, None);
@@ -380,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_static_both() {
+    fn limits_static_both() {
         let limits = MetricsLimits::new_static(Some(*NEGATIVE_STATIC_LIMIT), Some(*STATIC_LIMIT));
         assert_eq!(limits.baseline, None);
         assert_eq!(
@@ -413,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_percentage_none() {
+    fn limits_percentage_none() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_percentage(&log, STATIC_ONE, None, None);
         assert_eq!(limits.baseline, None);
@@ -437,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_percentage_lower() {
+    fn limits_percentage_lower() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_percentage(&log, STATIC_ONE, Some(*PERCENTAGE), None);
         assert_eq!(
@@ -469,7 +469,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_percentage_upper() {
+    fn limits_percentage_upper() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_percentage(&log, STATIC_ONE, None, Some(*PERCENTAGE));
         assert_eq!(
@@ -501,7 +501,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_percentage_both() {
+    fn limits_percentage_both() {
         let log = bootstrap_logger();
         let limits =
             MetricsLimits::new_percentage(&log, STATIC_ONE, Some(*PERCENTAGE), Some(*PERCENTAGE));
@@ -539,7 +539,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_z_none() {
+    fn limits_z_none() {
         let log = bootstrap_logger();
         let limits =
             MetricsLimits::new_normal(&log, MEAN, STD_DEV, NormalTestKind::Z, None, None).unwrap();
@@ -564,7 +564,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_z_lower() {
+    fn limits_z_lower() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_normal(
             &log,
@@ -599,7 +599,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_z_upper() {
+    fn limits_z_upper() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_normal(
             &log,
@@ -634,7 +634,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_z_both() {
+    fn limits_z_both() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_normal(
             &log,
@@ -669,7 +669,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_z_docs() {
+    fn limits_z_docs() {
         const MEAN_100: f64 = 100.0;
         let log = bootstrap_logger();
         let boundary = 0.977.try_into().expect("Failed to create boundary.");
@@ -716,7 +716,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_t_none() {
+    fn limits_t_none() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_normal(
             &log,
@@ -748,7 +748,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_t_lower() {
+    fn limits_t_lower() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_normal(
             &log,
@@ -783,7 +783,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_t_upper() {
+    fn limits_t_upper() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_normal(
             &log,
@@ -818,7 +818,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_t_both() {
+    fn limits_t_both() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_normal(
             &log,
@@ -853,7 +853,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_t_docs() {
+    fn limits_t_docs() {
         const MEAN_100: f64 = 100.0;
         let log = bootstrap_logger();
         let boundary = 0.977.try_into().expect("Failed to create boundary.");
@@ -902,7 +902,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_log_normal_none() {
+    fn limits_log_normal_none() {
         let log = bootstrap_logger();
         let ln = Ln::new(LOG_DATA).unwrap();
         let limits = MetricsLimits::new_log_normal(&log, ln, None, None).unwrap();
@@ -933,7 +933,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_log_normal_lower() {
+    fn limits_log_normal_lower() {
         let log = bootstrap_logger();
         let ln = Ln::new(LOG_DATA).unwrap();
         let limits = MetricsLimits::new_log_normal(&log, ln, Some(*PERCENTILE), None).unwrap();
@@ -955,7 +955,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_log_normal_upper() {
+    fn limits_log_normal_upper() {
         let log = bootstrap_logger();
         let ln = Ln::new(LOG_DATA).unwrap();
         let limits = MetricsLimits::new_log_normal(&log, ln, None, Some(*PERCENTILE)).unwrap();
@@ -977,7 +977,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_long_normal_both() {
+    fn limits_long_normal_both() {
         let log = bootstrap_logger();
         let ln = Ln::new(LOG_DATA).unwrap();
         let limits =
@@ -1000,7 +1000,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_log_normal_docs() {
+    fn limits_log_normal_docs() {
         let log = bootstrap_logger();
         let ln = Ln::new(&[
             98.0, 99.0, 100.0, 101.0, 102.0, 98.0, 99.0, 100.0, 101.0, 102.0, 98.0, 99.0, 100.0,
@@ -1044,7 +1044,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_iqr_none() {
+    fn limits_iqr_none() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_iqr(&log, QUARTILES, None, None, None);
         assert_eq!(limits.baseline, None);
@@ -1068,7 +1068,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_iqr_lower() {
+    fn limits_iqr_lower() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_iqr(&log, QUARTILES, None, Some(*IQR_MULTIPLIER), None);
         assert_eq!(
@@ -1100,7 +1100,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_iqr_upper() {
+    fn limits_iqr_upper() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_iqr(&log, QUARTILES, None, None, Some(*IQR_MULTIPLIER));
         assert_eq!(
@@ -1132,7 +1132,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_iqr_both() {
+    fn limits_iqr_both() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_iqr(
             &log,
@@ -1175,7 +1175,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_delta_iqr_none() {
+    fn limits_delta_iqr_none() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_iqr(&log, QUARTILES, Some(DELTA_QUARTILES), None, None);
         assert_eq!(limits.baseline, None);
@@ -1199,7 +1199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_delta_iqr_lower() {
+    fn limits_delta_iqr_lower() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_iqr(
             &log,
@@ -1237,7 +1237,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_delta_iqr_upper() {
+    fn limits_delta_iqr_upper() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_iqr(
             &log,
@@ -1275,7 +1275,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_delta_iqr_both() {
+    fn limits_delta_iqr_both() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new_iqr(
             &log,
@@ -1318,7 +1318,7 @@ mod tests {
     }
 
     #[test]
-    fn test_limits_delta_iqr_docs() {
+    fn limits_delta_iqr_docs() {
         let log = bootstrap_logger();
         let quartiles = Quartiles {
             q1: 95.0,

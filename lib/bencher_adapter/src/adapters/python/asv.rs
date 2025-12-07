@@ -94,7 +94,7 @@ pub(crate) mod test_python_asv {
     }
 
     #[test]
-    fn test_adapter_python_asv_average() {
+    fn adapter_python_asv_average() {
         let file_path = "./tool_output/python/asv/six.txt";
         assert_eq!(
             None,
@@ -117,7 +117,7 @@ pub(crate) mod test_python_asv {
     }
 
     #[test]
-    fn test_adapter_python_asv() {
+    fn adapter_python_asv() {
         let results = convert_python_asv("six");
         validate_adapter_python_asv(&results);
     }
