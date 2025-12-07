@@ -3,10 +3,8 @@ use std::sync::LazyLock;
 use bencher_valid::{Email, Jwt, NonEmpty, Secret, UserName};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
-    RedirectUrl, Scope, TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
+    RedirectUrl, Scope, TokenResponse as _, TokenUrl, basic::BasicClient,
 };
-#[expect(unused_imports, reason = "Reqwest `json` feature")]
-use reqwest as _;
 use serde::Deserialize;
 use url::Url;
 

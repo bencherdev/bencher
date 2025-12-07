@@ -13,10 +13,10 @@ impl super::Fingerprint {
             .and_then(|out| String::from_utf8(out.stdout).ok())
             .and_then(|output| {
                 for line in output.lines() {
-                    if let Some((_, uuid)) = line.split_once(r#""IOPlatformUUID" = ""#) {
-                        if let Some((uuid, _)) = uuid.split_once('"') {
-                            return Uuid::parse_str(uuid).ok();
-                        }
+                    if let Some((_, uuid_quote)) = line.split_once(r#""IOPlatformUUID" = ""#)
+                        && let Some((uuid, _)) = uuid_quote.split_once('"')
+                    {
+                        return Uuid::parse_str(uuid).ok();
                     }
                 }
                 None

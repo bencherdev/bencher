@@ -117,13 +117,13 @@ fn validate_sample_size(
     min_sample_size: Option<SampleSize>,
     max_sample_size: Option<SampleSize>,
 ) -> Result<(), ValidError> {
-    if let (Some(min), Some(max)) = (min_sample_size, max_sample_size) {
-        if u32::from(min) > u32::from(max) {
-            return Err(ValidError::SampleSizes { min, max });
-        }
+    if let (Some(min), Some(max)) = (min_sample_size, max_sample_size)
+        && u32::from(min) > u32::from(max)
+    {
+        Err(ValidError::SampleSizes { min, max })
+    } else {
+        Ok(())
     }
-
-    Ok(())
 }
 
 fn validate_boundary<B>(lower: Option<Boundary>, upper: Option<Boundary>) -> Result<(), ValidError>

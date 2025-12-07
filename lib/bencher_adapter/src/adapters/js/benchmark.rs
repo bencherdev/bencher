@@ -30,10 +30,10 @@ impl Adaptable for AdapterJsBenchmark {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
-            if let Ok((remainder, benchmark_metric)) = parse_benchmark(line) {
-                if remainder.is_empty() {
-                    benchmark_metrics.push(benchmark_metric);
-                }
+            if let Ok((remainder, benchmark_metric)) = parse_benchmark(line)
+                && remainder.is_empty()
+            {
+                benchmark_metrics.push(benchmark_metric);
             }
         }
 

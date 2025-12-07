@@ -31,11 +31,11 @@ impl Adaptable for AdapterRubyBenchmark {
                 continue;
             }
 
-            if let Ok((remainder, benchmark_metric)) = parse_ruby(line) {
-                if remainder.is_empty() {
-                    benchmark_metrics.push(benchmark_metric);
-                    continue;
-                }
+            if let Ok((remainder, benchmark_metric)) = parse_ruby(line)
+                && remainder.is_empty()
+            {
+                benchmark_metrics.push(benchmark_metric);
+                continue;
             }
 
             header = false;

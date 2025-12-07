@@ -14,7 +14,7 @@ disallowed-methods = [
     # https://docs.rs/tokio/latest/tokio/sync/mpsc/fn.unbounded_channel.html
     { path = "tokio::sync::mpsc::unbounded_channel", reason = "unbounded channels can lead to unbounded memory usage", replacement = "tokio::sync::mpsc::channel" },
     # https://docs.rs/futures/latest/futures/macro.select.html
-    { path = "futures::select", reason = "the select! macro is a footgun", replacement = "futures_concurrency::stream::Merge::merge" },
+    { path = "futures::select", reason = "the select! macro is a footgun", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
     # https://docs.rs/tokio/latest/tokio/macro.select.html
-    { path = "tokio::select", reason = "the select! macro is a footgun", replacement = "futures_concurrency::stream::Merge::merge" },
+    { path = "tokio::select", reason = "the select! macro is a footgun", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
 ]

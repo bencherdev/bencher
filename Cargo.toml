@@ -205,7 +205,6 @@ str_to_string = "warn"                     # This lint checks for .to_string() m
 string_add = "warn"                        # Checks for all instances of x + _ where x is of type String, but only if string_add_assign does not match.
 string_lit_chars_any = "warn"              # Checks for <string_lit>.chars().any(|i| i == c).
 string_slice = "warn"                      # Checks for slice operations on strings
-string_to_string = "warn"                  # This lint checks for .to_string() method calls on values of type String.
 struct_field_names = "warn"                # Detects struct fields that are prefixed or suffixed by the same characters or the name of the struct itself.
 suspicious_xor_used_as_pow = "warn"        # Warns for a Bitwise XOR (^) operator being probably confused as a powering. It will not trigger if any of the numbers are not in decimal.
 todo = "warn"                              # Checks for usage of todo!.

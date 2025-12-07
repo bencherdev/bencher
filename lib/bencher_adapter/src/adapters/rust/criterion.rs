@@ -30,10 +30,10 @@ impl Adaptable for AdapterRustCriterion {
 
         let mut prior_line = None;
         for line in input.lines() {
-            if let Ok((remainder, benchmark_metric)) = parse_criterion(prior_line, line) {
-                if remainder.is_empty() {
-                    benchmark_metrics.push(benchmark_metric);
-                }
+            if let Ok((remainder, benchmark_metric)) = parse_criterion(prior_line, line)
+                && remainder.is_empty()
+            {
+                benchmark_metrics.push(benchmark_metric);
             }
 
             prior_line = Some(line);

@@ -12,7 +12,7 @@ pub trait Median {
         array.sort_unstable();
 
         let size = array.len();
-        if (size % 2) == 0 {
+        if size.is_multiple_of(2) {
             let left = size / 2 - 1;
             let right = size / 2;
             Some((array[left] + array[right]) / 2)

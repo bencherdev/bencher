@@ -20,6 +20,7 @@ pub struct JsonSignup {
     pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
     pub claim: Option<OrganizationUuid>,
+    #[expect(clippy::doc_markdown, reason = "OpenAPI spec")]
     /// I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)
     pub i_agree: bool,
     #[cfg(feature = "plus")]

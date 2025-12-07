@@ -28,10 +28,10 @@ impl Adaptable for AdapterJsTime {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
-            if let Ok((remainder, benchmark_metric)) = parse_time(line) {
-                if remainder.is_empty() {
-                    benchmark_metrics.push(benchmark_metric);
-                }
+            if let Ok((remainder, benchmark_metric)) = parse_time(line)
+                && remainder.is_empty()
+            {
+                benchmark_metrics.push(benchmark_metric);
             }
         }
 

@@ -27,10 +27,10 @@ impl Adaptable for AdapterPythonAsv {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
-            if let Ok((remainder, benchmark_metric)) = parse_asv(line) {
-                if remainder.is_empty() {
-                    benchmark_metrics.push(benchmark_metric);
-                }
+            if let Ok((remainder, benchmark_metric)) = parse_asv(line)
+                && remainder.is_empty()
+            {
+                benchmark_metrics.push(benchmark_metric);
             }
         }
 

@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 
 use serde::{Deserialize, Serialize};
 
-/// https://docs.cloud.google.com/recaptcha/docs/actions-website
+/// <https://docs.cloud.google.com/recaptcha/docs/actions-website>
 #[typeshare::typeshare]
 #[derive(
     Debug, Display, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,

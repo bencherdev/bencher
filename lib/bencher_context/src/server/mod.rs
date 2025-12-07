@@ -71,7 +71,6 @@ fn truncate_name(name: &str) -> String {
 const SHORT_NAME_LEN: usize = 42;
 const SHORT_HASH_LEN: usize = 7;
 const SHORT_FINGERPRINT_LEN: usize = 13;
-#[expect(dead_code)]
 const DASH_LEN: usize = 1;
 
 // Statically assert that the sum of the lengths of the short names
