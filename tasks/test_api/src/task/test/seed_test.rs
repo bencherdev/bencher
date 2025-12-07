@@ -277,7 +277,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let branches: bencher_json::JsonBranches =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(branches.0.len(), 1);
+        assert_eq!(branches.0.len(), 0);
 
         // cargo run -- branch ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -294,7 +294,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let branches: bencher_json::JsonBranches =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(branches.0.len(), 1);
+        assert_eq!(branches.0.len(), 0);
 
         // cargo run -- branch create --host http://localhost:61016 --token $BENCHER_API_TOKEN --name master --slug master the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -323,7 +323,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let branches: bencher_json::JsonBranches =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(branches.0.len(), 2);
+        assert_eq!(branches.0.len(), 1);
 
         // cargo run -- branch ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -340,7 +340,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let branches: bencher_json::JsonBranches =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(branches.0.len(), 2);
+        assert_eq!(branches.0.len(), 1);
 
         // cargo run -- branch view --host http://localhost:61016 the-computer master
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -374,7 +374,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let testbeds: bencher_json::JsonTestbeds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(testbeds.0.len(), 1);
+        assert_eq!(testbeds.0.len(), 0);
 
         // cargo run -- testbed ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -391,7 +391,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let testbeds: bencher_json::JsonTestbeds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(testbeds.0.len(), 1);
+        assert_eq!(testbeds.0.len(), 0);
 
         // cargo run -- testbed create --host http://localhost:61016  --name Base --slug base the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -420,7 +420,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let testbeds: bencher_json::JsonTestbeds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(testbeds.0.len(), 2);
+        assert_eq!(testbeds.0.len(), 1);
 
         // cargo run -- testbed ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -437,7 +437,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let testbeds: bencher_json::JsonTestbeds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(testbeds.0.len(), 2);
+        assert_eq!(testbeds.0.len(), 1);
 
         // cargo run -- testbed view --host http://localhost:61016 the-computer base
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -478,7 +478,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let measures: bencher_json::JsonMeasures =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(measures.0.len(), 2);
+        assert_eq!(measures.0.len(), 0);
 
         // cargo run -- measure ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -495,7 +495,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let measures: bencher_json::JsonMeasures =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(measures.0.len(), 2);
+        assert_eq!(measures.0.len(), 0);
 
         // cargo run -- measure create --host http://localhost:61016 --token $BENCHER_API_TOKEN --name Screams --slug screams --units "Decibels (dB)" the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -526,7 +526,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let measures: bencher_json::JsonMeasures =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(measures.0.len(), 3);
+        assert_eq!(measures.0.len(), 1);
 
         // cargo run -- measure ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -543,7 +543,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let measures: bencher_json::JsonMeasures =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(measures.0.len(), 3);
+        assert_eq!(measures.0.len(), 1);
 
         // cargo run -- measure view --host http://localhost:61016 the-computer screams
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -584,7 +584,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let thresholds: bencher_json::JsonThresholds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(thresholds.0.len(), 2);
+        assert_eq!(thresholds.0.len(), 0);
 
         // cargo run -- threshold ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -601,7 +601,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let thresholds: bencher_json::JsonThresholds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(thresholds.0.len(), 2);
+        assert_eq!(thresholds.0.len(), 0);
 
         // cargo run -- threshold create --host http://localhost:61016 --token $BENCHER_API_TOKEN --branch master --testbed base --measure latency --test t --upper-boundary 0.99 the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -636,7 +636,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let thresholds: bencher_json::JsonThresholds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(thresholds.0.len(), 3);
+        assert_eq!(thresholds.0.len(), 1);
 
         // cargo run -- threshold ls --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -653,7 +653,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let thresholds: bencher_json::JsonThresholds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(thresholds.0.len(), 3);
+        assert_eq!(thresholds.0.len(), 1);
 
         // cargo run -- threshold view --host http://localhost:61016 the-computer [threshold.uuid]
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
