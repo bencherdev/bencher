@@ -1858,6 +1858,14 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.uuid, sso_uuid);
 
+        // cargo run -- server stats --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["server", "stats", HOST_ARG, host, TOKEN_ARG, admin_token])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonServerStats =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
         Ok(())
     }
 }

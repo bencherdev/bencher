@@ -13,7 +13,7 @@ use bencher_json::{
 use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
-use bencher_schema::{context::RateLimiting, model::server::QueryServer};
+use bencher_schema::{conn_lock, context::RateLimiting, model::server::QueryServer};
 use bencher_token::TokenKey;
 use diesel::Connection as _;
 #[cfg(feature = "plus")]
@@ -124,9 +124,12 @@ impl ConfigTx {
         });
         let config_dropshot = into_config_dropshot(server);
 
-        // Bencher Cloud does not need to send stats, it uses OpenTelemetry.
         #[cfg(feature = "plus")]
-        if !context.is_bencher_cloud {
+        if context.is_bencher_cloud {
+            // This is only needed for testing. In production, Bencher Cloud should already have a server ID.
+            QueryServer::get_or_create(conn_lock!(context)).map_err(ConfigTxError::ServerId)?;
+        } else {
+            // Bencher Cloud does not need to send stats, it uses OpenTelemetry.
             spawn_stats(log.clone(), &context).await?;
         }
 
