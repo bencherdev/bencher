@@ -5,3 +5,16 @@ absolute-paths-max-segments = 3
 
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
+
+cognitive-complexity-threshold = 25
+
+disallowed-methods = [
+    # https://docs.rs/futures/latest/futures/channel/mpsc/fn.unbounded.html
+    { path = "futures::channel::mpsc::unbounded", reason = "unbounded channels can lead to unbounded memory usage", replacement = "futures::channel::mpsc::channel" },
+    # https://docs.rs/tokio/latest/tokio/sync/mpsc/fn.unbounded_channel.html
+    { path = "tokio::sync::mpsc::unbounded_channel", reason = "unbounded channels can lead to unbounded memory usage", replacement = "tokio::sync::mpsc::channel" },
+    # https://docs.rs/futures/latest/futures/macro.select.html
+    { path = "futures::select", reason = "the select! macro is a footgun", replacement = "futures_concurrency::stream::Merge::merge" },
+    # https://docs.rs/tokio/latest/tokio/macro.select.html
+    { path = "tokio::select", reason = "the select! macro is a footgun", replacement = "futures_concurrency::stream::Merge::merge" },
+]
