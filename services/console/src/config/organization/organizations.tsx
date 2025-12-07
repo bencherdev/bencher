@@ -176,6 +176,9 @@ const organizationsConfig = {
 						config: ORGANIZATION_FIELDS.license,
 					},
 				},
+				{
+					kind: Card.SSO,
+				},
 			],
 			buttons: [
 				{

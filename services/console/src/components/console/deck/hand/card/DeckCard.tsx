@@ -7,6 +7,7 @@ import type CardConfig from "./CardConfig";
 import FieldCard from "./FieldCard";
 import ReportCard from "./ReportCard";
 import ReportTableCard from "./ReportTableCard";
+import SsoTableCard from "./SsoTableCard";
 import ThresholdTableCard from "./ThresholdTableCard";
 
 export interface Props {
@@ -60,6 +61,9 @@ const DeckCard = (props: Props) => {
 						handleRefresh={props.handleRefresh}
 						handleLoopback={props.handleLoopback}
 					/>
+				</Match>
+				<Match when={props.card?.kind === Card.SSO}>
+					<SsoTableCard isBencherCloud={isBencherCloud} value={props.data} />
 				</Match>
 				<Match when={props.card?.kind === Card.REPORT}>
 					<ReportCard

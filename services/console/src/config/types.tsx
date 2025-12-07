@@ -135,6 +135,7 @@ export enum Row {
 export enum Card {
 	FIELD = "field",
 	NESTED_FIELD = "nested_field",
+	SSO = "sso",
 	REPORT = "report",
 	REPORT_TABLE = "report_table",
 	THRESHOLD_TABLE = "threshold_table",
