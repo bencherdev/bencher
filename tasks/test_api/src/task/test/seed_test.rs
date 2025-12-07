@@ -63,6 +63,10 @@ impl SeedTest {
         let host = self.url.as_ref();
         let admin_token = self.admin_token.as_ref();
         let token = self.token.as_ref();
+        let bencher_cmd = Command::cargo_bin(BENCHER_CMD)?
+            .get_program()
+            .to_string_lossy()
+            .to_string();
 
         if self.is_bencher_cloud {
             println!("Running seed test as Bencher Cloud: {host}");
@@ -578,6 +582,29 @@ impl SeedTest {
         let _json: bencher_json::JsonMeasure =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
+        // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --quiet bencher mock --seed 6
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+            "--seed",
+            PERFECT_SEED,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
         // cargo run -- threshold ls --host http://localhost:61016 the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["threshold", "ls", HOST_ARG, host, PROJECT_SLUG])
@@ -717,7 +744,6 @@ impl SeedTest {
         let mut hash = Hash::new();
         for i in 0..30i32 {
             let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-            let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
             if i.rem_euclid(2) == 0 {
                 // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch master --testbed base --quiet "bencher mock"
                 cmd.args([
@@ -785,7 +811,6 @@ impl SeedTest {
 
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -837,7 +862,6 @@ impl SeedTest {
 
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -887,7 +911,6 @@ impl SeedTest {
         // This shouldn't generate any alerts because we reset the thresholds on the start point branch
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -935,7 +958,6 @@ impl SeedTest {
         // This should generate alerts because we are using the measure that has a thresholds set for it on the start point branch
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -985,7 +1007,6 @@ impl SeedTest {
         // Reset the feature branch
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1240,7 +1261,6 @@ impl SeedTest {
         // Generate alerts on the master branch using already defined Thresholds
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch master --testbed base --quiet bencher mock --pow 10
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1347,7 +1367,6 @@ impl SeedTest {
         // https://github.com/bencherdev/bencher/issues/450
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash badbadbadbadbadbadbadbadbadbadbadbadbad1 --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1383,7 +1402,6 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1433,7 +1451,6 @@ impl SeedTest {
         let mut anonymous_project: Option<bencher_json::JsonProject> = None;
         for _ in 0..3 {
             let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-            let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
             cmd.args([
                 "run",
                 HOST_ARG,
@@ -1483,7 +1500,6 @@ impl SeedTest {
 
         // Anonymous report with project slug
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1534,7 +1550,6 @@ impl SeedTest {
 
         // Claimed report with project slug
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1564,7 +1579,6 @@ impl SeedTest {
 
         // On-the-fly project for user
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1595,7 +1609,6 @@ impl SeedTest {
 
         // On-the-fly project for user with project slug
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1626,7 +1639,6 @@ impl SeedTest {
         // Another on-the-fly project for user with project slug
         let bencher_one = "bencher-one";
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1657,7 +1669,6 @@ impl SeedTest {
         // Yet another on-the-fly project for user with project slug
         let bencher_two = "bencher-two";
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
@@ -1690,7 +1701,6 @@ impl SeedTest {
         let unclaimed_max = "unclaimed-max";
         for _ in 0..51 {
             let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-            let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
             cmd.args([
                 "run",
                 HOST_ARG,
@@ -1717,7 +1727,6 @@ impl SeedTest {
 
         // This run should fail as we hit the unclaimed rate limit
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        let bencher_cmd = cmd.get_program().to_string_lossy().to_string();
         cmd.args([
             "run",
             HOST_ARG,
