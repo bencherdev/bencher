@@ -3,6 +3,7 @@ Profile guided optimization is on the to do list.
 - https://blog.rust-lang.org/inside-rust/2020/11/11/exploring-pgo-for-the-rust-compiler.html
 - https://github.com/Kobzol/cargo-pgo
 - https://en.wikipedia.org/wiki/Profile-guided_optimization
+- https://github.com/rust-lang/rust-analyzer/pull/19582
 
 A further extension of this would be also profile the application
 with the same test load to analyze its call stack.

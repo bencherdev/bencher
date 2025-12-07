@@ -227,8 +227,14 @@ wildcard_enum_match_arm = "warn"           # Checks for wildcard enum matches us
 inherits = "release"
 opt-level = "s"
 
-# https://benw.is/posts/how-i-improved-my-rust-compile-times-by-seventy-five-percent#optimization-level
-# [profile.dev]
-# opt-level = 1
-# [profile.dev.package."*"]
-# opt-level = 3
+# https://github.com/rust-lang/cargo/pull/15924
+# https://doc.rust-lang.org/nightly/cargo/guide/build-performance.html#reduce-amount-of-generated-debug-information
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true
