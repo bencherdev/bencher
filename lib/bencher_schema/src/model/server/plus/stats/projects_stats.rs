@@ -1,5 +1,7 @@
 use bencher_json::system::server::JsonCohort;
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    AggregateExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+};
 use dropshot::HttpError;
 
 use crate::{context::DbConnection, error::resource_not_found_err, schema};
@@ -49,7 +51,7 @@ fn get_project_count(
     match state {
         ProjectState::All => {
             let mut query = schema::project::table
-                .select(diesel::dsl::count_distinct(schema::project::id))
+                .select(diesel::dsl::count(schema::project::id).aggregate_distinct())
                 .into_boxed();
 
             if let Some(since) = since {
@@ -63,7 +65,7 @@ fn get_project_count(
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::project::table
                 .inner_join(schema::organization::table.left_join(schema::organization_role::table))
-                .select(diesel::dsl::count_distinct(schema::project::id))
+                .select(diesel::dsl::count(schema::project::id).aggregate_distinct())
                 .into_boxed();
 
             query = match state {

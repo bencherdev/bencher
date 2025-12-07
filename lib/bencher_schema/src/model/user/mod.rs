@@ -3,7 +3,9 @@ use bencher_json::{
     UserSlug, UserUuid, organization::member::OrganizationRole,
 };
 use bencher_token::TokenKey;
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    AggregateExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+};
 use dropshot::HttpError;
 use slog::Logger;
 use url::Url;
@@ -215,7 +217,7 @@ impl InsertUser {
         let mut insert_user = Self::new(conn, name, slug, email);
 
         let count = schema::user::table
-            .select(diesel::dsl::count_distinct(schema::user::id))
+            .select(diesel::dsl::count(schema::user::id).aggregate_distinct())
             .first::<i64>(conn)
             .map_err(resource_not_found_err!(User, json_signup))?;
         // The first user to signup is admin

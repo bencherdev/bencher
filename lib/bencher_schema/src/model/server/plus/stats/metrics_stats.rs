@@ -1,7 +1,10 @@
 use bencher_json::system::server::{
     JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects,
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
+use diesel::{
+    AggregateExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
+};
 use dropshot::HttpError;
 
 use crate::{
@@ -75,7 +78,7 @@ fn get_metrics_by_report(
             let mut query = schema::metric::table
                 .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
                 .group_by(schema::report::id)
-                .select(diesel::dsl::count_distinct(schema::metric::id))
+                .select(diesel::dsl::count(schema::metric::id).aggregate_distinct())
                 .into_boxed();
 
             if let Some(since) = since {
@@ -94,7 +97,7 @@ fn get_metrics_by_report(
                     )),
                 ))
                 .group_by(schema::report::id)
-                .select(diesel::dsl::count_distinct(schema::metric::id))
+                .select(diesel::dsl::count(schema::metric::id).aggregate_distinct())
                 .into_boxed();
 
             query = match state {
@@ -134,9 +137,13 @@ fn get_top_projects(
                 .group_by(schema::project::id)
                 .select((
                     QueryProject::as_select(),
-                    diesel::dsl::count_distinct(schema::metric::id),
+                    diesel::dsl::count(schema::metric::id).aggregate_distinct(),
                 ))
-                .order(diesel::dsl::count_distinct(schema::metric::id).desc())
+                .order(
+                    diesel::dsl::count(schema::metric::id)
+                        .aggregate_distinct()
+                        .desc(),
+                )
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
@@ -159,9 +166,13 @@ fn get_top_projects(
                 .group_by(schema::project::id)
                 .select((
                     QueryProject::as_select(),
-                    diesel::dsl::count_distinct(schema::metric::id),
+                    diesel::dsl::count(schema::metric::id).aggregate_distinct(),
                 ))
-                .order(diesel::dsl::count_distinct(schema::metric::id).desc())
+                .order(
+                    diesel::dsl::count(schema::metric::id)
+                        .aggregate_distinct()
+                        .desc(),
+                )
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 

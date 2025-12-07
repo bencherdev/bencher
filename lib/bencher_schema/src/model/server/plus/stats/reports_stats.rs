@@ -1,5 +1,7 @@
 use bencher_json::system::server::{JsonCohort, JsonCohortAvg};
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    AggregateExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+};
 use dropshot::HttpError;
 
 use crate::{context::DbConnection, error::resource_not_found_err, schema};
@@ -70,7 +72,7 @@ fn get_reports_by_project(
         ProjectState::All => {
             let mut query = schema::report::table
                 .group_by(schema::report::project_id)
-                .select(diesel::dsl::count_distinct(schema::report::id))
+                .select(diesel::dsl::count(schema::report::id).aggregate_distinct())
                 .into_boxed();
 
             if let Some(since) = since {
@@ -87,7 +89,7 @@ fn get_reports_by_project(
                     schema::organization::table.left_join(schema::organization_role::table),
                 ))
                 .group_by(schema::report::project_id)
-                .select(diesel::dsl::count_distinct(schema::report::id))
+                .select(diesel::dsl::count(schema::report::id).aggregate_distinct())
                 .into_boxed();
 
             query = match state {
