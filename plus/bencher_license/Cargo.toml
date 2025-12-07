@@ -19,7 +19,6 @@ plus = [
 ]
 
 [dependencies]
-# Workspace
 bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
 chrono = { workspace = true, optional = true }
 jsonwebtoken = { workspace = true, optional = true, features = ["use_pem"] }

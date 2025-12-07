@@ -7,15 +7,13 @@ license-file.workspace = true
 publish = false
 
 [dependencies]
-# Workspace
 http.workspace = true
 reqwest = { workspace = true, features = ["rustls-tls"] }
 serde.workspace = true
 serde_json.workspace = true
+tame-oauth.workspace = true
 thiserror.workspace = true
 url = { workspace = true, features = ["serde"] }
-# Crate
-tame-oauth = "0.10"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros"] }

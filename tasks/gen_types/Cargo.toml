@@ -16,7 +16,6 @@ plus = [
 ]
 
 [dependencies]
-# Workspace
 bencher_api.workspace = true
 bencher_config.workspace = true
 bencher_endpoint.workspace = true

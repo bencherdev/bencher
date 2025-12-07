@@ -27,9 +27,10 @@ sentry = ["dep:sentry"]
 otel = ["dep:bencher_otel", "bencher_recaptcha/otel"]
 
 [dependencies]
-# Workspace
 async-compression = { workspace = true, features = ["tokio", "gzip"] }
 async-trait.workspace = true
+aws-credential-types.workspace = true
+aws-sdk-s3.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
@@ -46,33 +47,27 @@ bencher_recaptcha = { workspace = true, optional = true }
 bencher_token.workspace = true
 camino.workspace = true
 chrono.workspace = true
+css-inline.workspace = true
 dashmap = { workspace = true, optional = true }
 derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
+diesel_migrations.workspace = true
 dropshot.workspace = true
 http = { workspace = true, optional = true }
+mail-send.workspace = true
 regex.workspace = true
 rusqlite = { workspace = true, features = ["backup"] }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true
 oso.workspace = true
 reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
+sentry = { workspace = true, optional = true }
 slog.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
 tokio-rustls.workspace = true
 url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
-# Crate
-aws-credential-types = "1.2"
-aws-sdk-s3 = { version = "1.57", features = ["behavior-version-latest"] }
-css-inline = "0.14"
-diesel_migrations = "2.2"
-mail-send = "0.5"
-sentry = { version = "0.36", optional = true, default-features = false, features = [
-    "reqwest",
-    "rustls",
-] }
 
 [lints]
 workspace = true

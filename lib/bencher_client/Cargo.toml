@@ -16,8 +16,8 @@ native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls", "reqwest/rustls-tls-native-roots"]
 
 [dependencies]
-# Workspace
 bencher_json.workspace = true
+bytes.workspace = true
 chrono = { workspace = true, features = ["serde"] }
 fs-err.workspace = true
 progenitor-client.workspace = true
@@ -28,15 +28,12 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["time"] }
 url.workspace = true
 uuid = { workspace = true, features = ["serde", "v4"] }
-# Crate
-bytes = "1.10"
 
 [build-dependencies]
+prettyplease.workspace = true
 progenitor.workspace = true
 serde_json.workspace = true
-# Crate
-prettyplease = "0.2"
-syn = "2.0"
+syn.workspace = true
 
 [lints]
 workspace = true

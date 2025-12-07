@@ -11,13 +11,11 @@ default = ["plus"]
 plus = ["bencher_cli/plus"]
 
 [dependencies]
-# Workspace
 bencher_cli.workspace = true
 anyhow.workspace = true
 camino.workspace = true
 clap.workspace = true
-# Crate
-clap_mangen = "0.2"
+clap_mangen.workspace = true
 
 [lints]
 workspace = true

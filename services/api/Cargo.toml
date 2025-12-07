@@ -50,7 +50,6 @@ otel = [
 ]
 
 [dependencies]
-# Workspace
 api_auth.workspace = true
 api_checkout = { workspace = true, optional = true }
 api_organizations.workspace = true
@@ -73,11 +72,11 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
 tokio-rustls.workspace = true
 
-# https://github.com/diesel-rs/diesel/blob/ba2f567b038179d16cea939c0bcaaecc216ea947/diesel/Cargo.toml#L19
+# https://github.com/diesel-rs/diesel/blob/2e85ba060d3d70ea605ea58a79b8a435749a7adc/diesel/Cargo.toml#L53
 # https://github.com/tauri-apps/tauri/discussions/6183
 # Always needed for Windows and all other targets when building a distroless image
 [dependencies.libsqlite3-sys]
-version = ">=0.17.2, <0.36.0"
+workspace = true
 features = ["bundled"]
 
 [lints]

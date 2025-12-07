@@ -18,12 +18,10 @@ plus = [
 ]
 
 [dependencies]
-# Workspace
+async-stripe = { workspace = true, optional = true, features = ["runtime-tokio-hyper-rustls"] }
 bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
 thiserror = { workspace = true, optional = true }
 uuid = { workspace = true, optional = true }
-# Crate
-async-stripe = { version = "0.39", optional = true, features = ["runtime-tokio-hyper-rustls"] }
 
 [dev-dependencies]
 chrono.workspace = true

@@ -7,7 +7,6 @@ license-file.workspace = true
 publish = false
 
 [dependencies]
-# Workspace
 anyhow.workspace = true
 camino.workspace = true
 clap.workspace = true

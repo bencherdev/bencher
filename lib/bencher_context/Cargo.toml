@@ -13,7 +13,6 @@ server = ["bencher_valid/server"]
 schema = ["dep:schemars"]
 
 [dependencies]
-# Workspace
 bencher_valid = { workspace = true, optional = true }
 gix = { workspace = true, optional = true, features = ["revision"] }
 schemars = { workspace = true, optional = true }
@@ -22,7 +21,7 @@ typeshare.workspace = true
 uuid = { workspace = true, optional = true, features = ["serde"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.60", optional = true, features = [
+windows = { workspace = true, optional = true, features = [
     "System_Profile_SystemManufacturers",
     "Win32_System_Registry",
 ] }

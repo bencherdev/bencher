@@ -9,12 +9,11 @@ publish = false
 [dependencies]
 bencher_json = {workspace = true, features = ["server"] }
 chrono.workspace = true
+image.workspace = true
 ordered-float.workspace = true
+plotters = { workspace = true, features = ["datetime"] }
+plotters-bitmap.workspace = true
 thiserror.workspace = true
-# Crate
-image = "0.25"
-plotters = { version = "0.3", features = ["datetime"] }
-plotters-bitmap = "0.3"
 
 [dev-dependencies]
 serde_json.workspace = true

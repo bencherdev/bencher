@@ -16,14 +16,15 @@ plus = [
 ]
 
 [dependencies]
-# Workspace
 bencher_adapter.workspace = true
 bencher_client = { workspace = true, features = ["client", "rustls-tls"] }
 bencher_comment.workspace = true
 bencher_json = { workspace = true, features = ["client", "table"] }
+bollard.workspace = true
 camino.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 clap = { workspace = true, features = ["env"] }
+futures-util.workspace = true
 literally.workspace = true
 octocrab.workspace = true
 progenitor-client.workspace = true
@@ -35,9 +36,6 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt", "signal"] }
 tokio-rustls.workspace = true
 url.workspace = true
-# Crate
-bollard = "0.18"
-futures-util = "0.3"
 
 [lints]
 workspace = true

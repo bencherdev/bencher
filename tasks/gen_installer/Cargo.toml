@@ -7,13 +7,11 @@ license-file.workspace = true
 publish = false
 
 [dependencies]
-# Workspace
 anyhow.workspace = true
 clap.workspace = true
+minijinja = { workspace = true, features = ["loader"] }
+newline-converter.workspace = true
 serde.workspace = true
-# Crate
-minijinja = { version = "2.3", features = ["loader"] }
-newline-converter = "0.3"
 
 [lints]
 workspace = true

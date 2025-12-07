@@ -24,7 +24,7 @@ plus = [
 ]
 
 [dependencies]
-# Workspace
+async-openai = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
 bencher_client.workspace = true
 bencher_json = { workspace = true, features = ["client"] }
@@ -34,14 +34,12 @@ anyhow.workspace = true
 camino = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 clap.workspace = true
+dotenvy.workspace = true
+notify-rust = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
 serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true
-# Crate
-async-openai = { version = "0.27", optional = true }
-dotenvy = "0.15"
-notify-rust = { version = "4.11", optional = true }
 
 [lints]
 workspace = true

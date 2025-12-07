@@ -11,23 +11,19 @@ default = []
 plus = ["bencher_json/plus"]
 
 [dependencies]
-# Workspace
 bencher_json = { workspace = true, features = ["server"] }
 literally.workspace = true
+nom.workspace = true
 ordered-float.workspace = true
+rust_decimal = { workspace = true, features = ["serde-with-float"] }
 serde.workspace = true
 serde_json.workspace = true
+strip-ansi-escapes.workspace = true
 thiserror.workspace = true
-# Crate
-nom = "7.1"
-rust_decimal = { version = "1.36", features = ["serde-with-float"] }
-strip-ansi-escapes = "0.2"
 
 [dev-dependencies]
-# Workspace
+criterion.workspace = true
 pretty_assertions.workspace = true
-# Crate
-criterion = "0.5"
 
 [lints]
 workspace = true

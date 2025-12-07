@@ -15,9 +15,8 @@ plus = ["bencher_json/plus"]
 [dependencies]
 bencher_json.workspace = true
 slog.workspace = true
+statrs.workspace = true
 thiserror.workspace = true
-# Crate
-statrs = "0.18"
 
 [dev-dependencies]
 bencher_logger.workspace = true

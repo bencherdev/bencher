@@ -25,11 +25,14 @@ wasm = [
 ]
 
 [dependencies]
-# Workspace
 base64.workspace = true
 chrono = { workspace = true, features = ["serde"] }
+console_error_panic_hook = { workspace = true, optional = true }
 derive_more.workspace = true
 diesel = { workspace = true, optional = true }
+email_address.workspace = true
+gix-hash.workspace = true
+git-validate.workspace = true
 ordered-float = { workspace = true, features = ["serde"] }
 rand = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
@@ -42,19 +45,12 @@ thiserror.workspace = true
 typeshare.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["serde"] }
-# Crate
-console_error_panic_hook = { version = "0.1", optional = true }
-email_address = "0.2"
-gix-hash = "0.16"
-git-validate = "0.7"
-wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
-# Workspace
 pretty_assertions.workspace = true
 serde_json.workspace = true
-# Crate
-wasm-bindgen-test = "0.3"
+wasm-bindgen-test.workspace = true
 
 # TODO use per-target profiles
 # https://github.com/rust-lang/cargo/issues/4897

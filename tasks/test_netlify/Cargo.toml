@@ -7,7 +7,6 @@ license-file.workspace = true
 publish = false
 
 [dependencies]
-# Workspace
 bencher_json = { workspace = true, features = ["client"] }
 anyhow.workspace = true
 camino.workspace = true

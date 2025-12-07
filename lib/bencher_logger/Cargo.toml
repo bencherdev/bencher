@@ -8,8 +8,7 @@ publish = false
 
 [dependencies]
 slog.workspace = true
-# Crate
-slog-term = "2.9"
+slog-term.workspace = true
 
 [lints]
 workspace = true

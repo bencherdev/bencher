@@ -11,14 +11,12 @@ default = ["plus"]
 plus = ["bencher_json/plus"]
 
 [dependencies]
-# Workspace
+assert_cmd.workspace = true
 bencher_json = { workspace = true, features = ["client"] }
 anyhow.workspace = true
 clap.workspace = true
 pretty_assertions.workspace = true
 serde_json.workspace = true
-# Crate
-assert_cmd = "2.0"
 
 [lints]
 workspace = true
