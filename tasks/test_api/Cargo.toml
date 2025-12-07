@@ -7,7 +7,7 @@ license-file.workspace = true
 publish = false
 
 [features]
-default = []
+default = ["plus"]
 plus = ["bencher_json/plus"]
 
 [dependencies]
