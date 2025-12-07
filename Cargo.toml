@@ -104,9 +104,9 @@ typeshare = "1.0"
 url = "2.5"
 uuid = "1.13"
 # oxide
-dropshot = "0.15"
-progenitor = "0.9"
-progenitor-client = "0.9"
+dropshot = "0.16"
+progenitor = "0.11"
+progenitor-client = "0.11"
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html
