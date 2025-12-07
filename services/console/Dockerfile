@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.87.0-bookworm AS wasm-builder
+FROM rust:1.91.1-bookworm@sha256:8fed34f697cc63b2c9bb92233b4c078667786834d94dd51880cd0184285eefcf AS wasm-builder
 
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
@@ -60,7 +60,7 @@ RUN chmod +x build_wasm.sh
 RUN ./build_wasm.sh
 
 # https://hub.docker.com/_/node
-FROM node:20.11.0-bookworm AS builder
+FROM node:20.11.0-bookworm@sha256:7bf4a586b423aac858176b3f683e35f08575c84500fbcfd1d433ad8568972ec6 AS builder
 COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 COPY services/cli/templates/output /usr/src/bencher/services/cli/templates/output
 COPY --from=wasm-builder /usr/src/bencher/lib/bencher_valid/pkg /usr/src/bencher/lib/bencher_valid/pkg
@@ -82,7 +82,7 @@ COPY services/console/.env.runtime .env.runtime
 RUN npm run node
 
 # https://hub.docker.com/_/node
-FROM node:20.11.0-bookworm AS packager
+FROM node:20.11.0-bookworm@sha256:7bf4a586b423aac858176b3f683e35f08575c84500fbcfd1d433ad8568972ec6 AS packager
 COPY --from=builder /usr/src/bencher/services/console/dist /usr/src/bencher/services/console/dist
 COPY --from=builder /usr/src/bencher/services/console/package-lock.json /usr/src/bencher/services/console/package-lock.json
 COPY --from=builder /usr/src/bencher/services/console/package.json /usr/src/bencher/services/console/package.json
@@ -93,7 +93,7 @@ WORKDIR /usr/src/bencher/services/console
 RUN npm ci --omit=dev
 
 # https://github.com/GoogleContainerTools/distroless/tree/main/nodejs
-FROM gcr.io/distroless/nodejs20-debian12
+FROM gcr.io/distroless/nodejs20-debian12@sha256:7fff8fb4a6463da2765532290c958f7e6fc01d54d7539f0d2bda1e93c7636d7c
 COPY --from=packager /usr/src/bencher/services/console /usr/src/bencher
 
 ENV HOST=0.0.0.0
