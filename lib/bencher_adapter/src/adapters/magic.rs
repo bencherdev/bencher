@@ -42,97 +42,97 @@ mod test_magic {
     };
 
     #[test]
-    fn test_adapter_magic_json_latency() {
+    fn adapter_magic_json_latency() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_latency.json");
         test_json::validate_adapter_json_latency(&results);
     }
 
     #[test]
-    fn test_adapter_magic_json_dhat() {
+    fn adapter_magic_json_dhat() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_dhat.json");
         test_json::validate_adapter_json_dhat(&results);
     }
 
     #[test]
-    fn test_adapter_magic_c_sharp_dot_net() {
+    fn adapter_magic_c_sharp_dot_net() {
         let results = convert_file_path::<AdapterCSharp>("./tool_output/c_sharp/dot_net/two.json");
         test_c_sharp_dot_net::validate_adapter_c_sharp_dot_net(&results);
     }
 
     #[test]
-    fn test_adapter_magic_cpp_google() {
+    fn adapter_magic_cpp_google() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/cpp/google/two.txt");
         test_cpp_google::validate_adapter_cpp_google(&results);
     }
 
     #[test]
-    fn test_adapter_magic_cpp_catch2() {
+    fn adapter_magic_cpp_catch2() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/cpp/catch2/four.txt");
         test_cpp_catch2::validate_adapter_cpp_catch2(&results);
     }
 
     #[test]
-    fn test_adapter_magic_go_bench() {
+    fn adapter_magic_go_bench() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/go/bench/five.txt");
         test_go_bench::validate_adapter_go_bench(&results);
     }
 
     #[test]
-    fn test_adapter_magic_java_jmh() {
+    fn adapter_magic_java_jmh() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/java/jmh/six.json");
         test_java_jmh::validate_adapter_java_jmh(&results);
     }
 
     #[test]
-    fn test_adapter_magic_js_benchmark() {
+    fn adapter_magic_js_benchmark() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/js/benchmark/four.txt");
         test_js_benchmark::validate_adapter_js_benchmark(&results);
     }
 
     #[test]
-    fn test_adapter_magic_js_time() {
+    fn adapter_magic_js_time() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/js/time/four.txt");
         test_js_time::validate_adapter_js_time(&results);
     }
 
     #[test]
-    fn test_adapter_python_asv() {
+    fn adapter_python_asv() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/python/asv/six.txt");
         test_python_asv::validate_adapter_python_asv(&results);
     }
 
     #[test]
-    fn test_adapter_python_pytest() {
+    fn adapter_python_pytest() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/python/pytest/four.json");
         test_python_pytest::validate_adapter_python_pytest(&results);
     }
 
     #[test]
-    fn test_adapter_ruby_benchmark() {
+    fn adapter_ruby_benchmark() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/ruby/benchmark/five.txt");
         test_ruby_benchmark::validate_adapter_ruby_benchmark(&results);
     }
 
     #[test]
-    fn test_adapter_magic_rust_bench() {
+    fn adapter_magic_rust_bench() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/rust/bench/many.txt");
         test_rust_bench::validate_adapter_rust_bench(&results);
     }
 
     #[test]
-    fn test_adapter_magic_rust_criterion() {
+    fn adapter_magic_rust_criterion() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/rust/criterion/many.txt");
         test_rust_criterion::validate_adapter_rust_criterion(&results);
     }
 
     #[test]
-    fn test_adapter_magic_rust_iai() {
+    fn adapter_magic_rust_iai() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/rust/iai/two.txt");
         test_rust_iai::validate_adapter_rust_iai(&results);
     }
 
     #[test]
-    fn test_adapter_magic_rust_gungraun() {
+    fn adapter_magic_rust_gungraun() {
         let results = convert_file_path::<AdapterMagic>(
             "./tool_output/rust/gungraun/without-optional-metrics.txt",
         );
@@ -144,7 +144,7 @@ mod test_magic {
     }
 
     #[test]
-    fn test_adapter_magic_shell_hyperfine() {
+    fn adapter_magic_shell_hyperfine() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/shell/hyperfine/two.json");
         test_shell_hyperfine::validate_adapter_shell_hyperfine(&results);
     }

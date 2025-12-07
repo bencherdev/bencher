@@ -4,7 +4,6 @@ use bencher_endpoint::{
 use bencher_json::{
     JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects,
     OrganizationResourceId, ResourceName, Search,
-    project::measure::built_in::default::{Latency, Throughput},
 };
 use bencher_rbac::organization::Permission;
 #[cfg(feature = "plus")]
@@ -12,16 +11,10 @@ use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
     conn_lock,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err},
+    error::resource_not_found_err,
     model::{
         organization::QueryOrganization,
-        project::{
-            InsertProject, QueryProject,
-            branch::InsertBranch,
-            measure::{InsertMeasure, QueryMeasure},
-            testbed::{InsertTestbed, QueryTestbed},
-            threshold::InsertThreshold,
-        },
+        project::{InsertProject, QueryProject},
         user::auth::{AuthUser, BearerToken},
     },
     schema,
@@ -229,61 +222,8 @@ async fn post_inner(
 
     let insert_project =
         InsertProject::from_json(conn_lock!(context), &query_organization, json_project);
-    // Create a new project
-    let query_project =
-        QueryProject::create(log, context, auth_user, &query_organization, insert_project).await?;
 
-    // Add a `main` branch to the project
-    let query_branch = InsertBranch::main(log, context, query_project.id).await?;
-    slog::debug!(log, "Added project branch: {query_branch:?}");
-    let branch_id = query_branch.id;
-
-    // Add a `localhost` testbed to the project
-    let insert_testbed = InsertTestbed::localhost(conn_lock!(context), query_project.id);
-    diesel::insert_into(schema::testbed::table)
-        .values(&insert_testbed)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
-    let testbed_id = QueryTestbed::get_id(conn_lock!(context), insert_testbed.uuid)?;
-    slog::debug!(log, "Added project testbed: {insert_testbed:?}");
-
-    // Add a `latency` measure to the project
-    let insert_measure =
-        InsertMeasure::from_measure::<Latency>(conn_lock!(context), query_project.id);
-    diesel::insert_into(schema::measure::table)
-        .values(&insert_measure)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Measure, insert_measure))?;
-    let measure_id = QueryMeasure::get_id(conn_lock!(context), insert_measure.uuid)?;
-    slog::debug!(log, "Added project measure: {insert_measure:?}");
-    // Add a `latency` threshold to the project
-    let threshold_id = InsertThreshold::upper_boundary(
-        conn_lock!(context),
-        query_project.id,
-        branch_id,
-        testbed_id,
-        measure_id,
-    )?;
-    slog::debug!(log, "Added project threshold: {threshold_id}");
-
-    // Add a `throughput` measure to the project
-    let insert_measure =
-        InsertMeasure::from_measure::<Throughput>(conn_lock!(context), query_project.id);
-    diesel::insert_into(schema::measure::table)
-        .values(&insert_measure)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Measure, insert_measure))?;
-    let measure_id = QueryMeasure::get_id(conn_lock!(context), insert_measure.uuid)?;
-    slog::debug!(log, "Added project measure: {insert_measure:?}");
-    // Add a `throughput` threshold to the project
-    let threshold_id = InsertThreshold::lower_boundary(
-        conn_lock!(context),
-        query_project.id,
-        branch_id,
-        testbed_id,
-        measure_id,
-    )?;
-    slog::debug!(log, "Added project threshold: {threshold_id}");
-
-    query_project.into_json(conn_lock!(context))
+    QueryProject::create(log, context, auth_user, &query_organization, insert_project)
+        .await?
+        .into_json(conn_lock!(context))
 }

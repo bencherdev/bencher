@@ -214,7 +214,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore]
+    #[ignore = "Google Index API"]
     async fn google() {
         let service_key = std::fs::read_to_string("google.json").unwrap();
         let google = GoogleIndex::from_str(&service_key).unwrap();
