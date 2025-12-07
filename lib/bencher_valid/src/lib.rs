@@ -121,7 +121,7 @@ macro_rules! typed_string {
 pub(crate) use typed_string;
 
 #[cfg(test)]
-pub mod test {
+pub mod tests {
 
     use super::is_valid_len;
     use pretty_assertions::assert_eq;

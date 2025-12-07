@@ -36,7 +36,7 @@ impl Iterator for RankGenerator {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::Rank;
 
     use super::RankGenerator;

@@ -92,7 +92,7 @@ pub fn is_valid_card_cvc(card_cvc: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::is_valid_card_cvc;
     use pretty_assertions::assert_eq;
 

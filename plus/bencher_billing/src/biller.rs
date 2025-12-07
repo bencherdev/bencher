@@ -686,7 +686,7 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
 
     use bencher_json::{
         Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,

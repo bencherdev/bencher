@@ -123,7 +123,7 @@ pub fn is_valid_benchmark_name(benchmark_name: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::str::FromStr as _;
 
     use crate::BenchmarkName;

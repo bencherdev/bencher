@@ -130,7 +130,7 @@ pub fn is_valid_window(window: u32) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{Window, is_valid_window};

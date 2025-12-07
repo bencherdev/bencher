@@ -62,7 +62,7 @@ pub struct JsonLicense {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use bencher_valid::{ExpirationMonth, ExpirationYear};
 
     #[test]

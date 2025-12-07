@@ -92,7 +92,7 @@ pub fn is_valid_url(url: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::is_valid_url;
     use pretty_assertions::assert_eq;
 

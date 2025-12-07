@@ -790,7 +790,7 @@ impl LineData {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::{fs::File, io::Write as _, sync::LazyLock};
 
     use bencher_json::JsonPerf;

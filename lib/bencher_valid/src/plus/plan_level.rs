@@ -98,7 +98,7 @@ pub fn is_valid_plan_level(plan_level: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::is_valid_plan_level;
     use pretty_assertions::assert_eq;
 

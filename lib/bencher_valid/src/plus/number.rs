@@ -125,7 +125,7 @@ fn numeric_char_to_u32(c: char) -> u32 {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::is_valid_card_number;
     use pretty_assertions::assert_eq;
 

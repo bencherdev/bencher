@@ -277,7 +277,7 @@ pub fn is_valid_iqr_boundary(boundary: f64) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{Boundary, is_valid_boundary};

@@ -134,7 +134,7 @@ pub fn is_valid_sample_size(sample_size: u32) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{SampleSize, is_valid_sample_size};

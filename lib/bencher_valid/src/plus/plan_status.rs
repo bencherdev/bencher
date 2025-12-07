@@ -120,7 +120,7 @@ pub fn is_valid_plan_status(plan_status: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::is_valid_plan_status;
     use pretty_assertions::assert_eq;
 

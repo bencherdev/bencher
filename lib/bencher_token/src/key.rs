@@ -128,7 +128,7 @@ impl TokenKey {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::{sync::LazyLock, thread, time};
 
     use bencher_json::{Email, OrganizationUuid, organization::member::OrganizationRole};

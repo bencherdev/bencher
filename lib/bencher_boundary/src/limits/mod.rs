@@ -218,7 +218,7 @@ impl MetricsLimits {
 
 #[cfg(test)]
 #[expect(clippy::unreadable_literal)]
-mod test {
+mod tests {
     use std::sync::LazyLock;
 
     use bencher_json::{

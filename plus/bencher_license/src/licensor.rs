@@ -226,7 +226,7 @@ fn check_expiration(time: i64) -> Result<(), LicenseError> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::sync::LazyLock;
 
     use bencher_json::{BENCHER_URL_STR, OrganizationUuid, PlanLevel, Secret};

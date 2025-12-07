@@ -94,8 +94,8 @@ pub fn is_valid_resource_name(resource_name: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
-    use crate::test::{LEN_0_STR, LEN_64_STR, LEN_65_STR};
+mod tests {
+    use crate::tests::{LEN_0_STR, LEN_64_STR, LEN_65_STR};
 
     use super::is_valid_resource_name;
     use pretty_assertions::assert_eq;

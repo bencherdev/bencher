@@ -85,7 +85,7 @@ pub fn is_valid_git_hash(git_hash: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::is_valid_git_hash;
     use pretty_assertions::assert_eq;
 

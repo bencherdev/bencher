@@ -94,13 +94,13 @@ pub fn is_valid_email(email: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::str::FromStr as _;
 
     use super::{Email, is_valid_email};
     use pretty_assertions::assert_eq;
 
-    use crate::test::{LEN_64_STR, LEN_65_STR};
+    use crate::tests::{LEN_64_STR, LEN_65_STR};
 
     #[test]
     fn test_email() {

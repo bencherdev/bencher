@@ -38,7 +38,7 @@ pub fn init_rbac() -> Result<Oso, Box<oso::OsoError>> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::collections::HashMap;
     use std::sync::LazyLock;
 
@@ -55,8 +55,8 @@ mod test {
     static OSO: LazyLock<Oso> = LazyLock::new(|| init_rbac().expect(OSO_ERROR));
 
     #[test]
-    #[expect(clippy::too_many_lines)]
-    fn test_rbac() {
+    #[expect(clippy::cognitive_complexity, clippy::too_many_lines)]
+    fn rbac() {
         let oso = &*OSO;
 
         let server = Server {};

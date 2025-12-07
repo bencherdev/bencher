@@ -18,7 +18,7 @@ impl Ln {
 
 #[cfg(test)]
 #[expect(clippy::unreadable_literal)]
-mod test {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use super::Ln;

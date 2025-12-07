@@ -57,7 +57,7 @@ impl TryFrom<TaskSeedTest> for SeedTest {
 }
 
 impl SeedTest {
-    #[expect(clippy::too_many_lines)]
+    #[expect(clippy::cognitive_complexity, clippy::too_many_lines)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
         let admin_token = self.admin_token.as_ref();

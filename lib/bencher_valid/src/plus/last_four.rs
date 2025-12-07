@@ -83,7 +83,7 @@ pub fn is_valid_last_four(last_four: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::is_valid_last_four;
     use pretty_assertions::assert_eq;
 

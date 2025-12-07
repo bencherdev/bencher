@@ -88,7 +88,7 @@ impl From<Boundary> for MetricsLimit {
 
 #[cfg(test)]
 #[expect(clippy::float_cmp)]
-mod test {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{limits::MetricsLimit, quartiles::Quartiles};

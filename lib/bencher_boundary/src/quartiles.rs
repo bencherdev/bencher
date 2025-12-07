@@ -111,7 +111,7 @@ impl Quartiles {
 
 #[cfg(test)]
 #[expect(clippy::float_cmp, clippy::unreadable_literal)]
-mod test {
+mod tests {
     use std::sync::LazyLock;
 
     use bencher_json::IqrBoundary;

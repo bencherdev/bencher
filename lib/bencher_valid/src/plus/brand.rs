@@ -115,7 +115,7 @@ pub fn is_valid_card_brand(card_brand: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::is_valid_card_brand;
     use pretty_assertions::assert_eq;
 

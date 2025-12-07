@@ -49,7 +49,7 @@ fn variance(location: f64, data: &[f64]) -> Option<f64> {
 
 #[cfg(test)]
 #[expect(clippy::float_cmp, clippy::unreadable_literal)]
-mod test {
+mod tests {
     use std::sync::LazyLock;
 
     use pretty_assertions::assert_eq;

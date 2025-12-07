@@ -186,8 +186,8 @@ impl Slug {
 }
 
 #[cfg(test)]
-mod test {
-    use crate::test::{LEN_64_STR, LEN_65_STR};
+mod tests {
+    use crate::tests::{LEN_64_STR, LEN_65_STR};
 
     use super::{Slug, is_valid_slug};
     use pretty_assertions::assert_eq;

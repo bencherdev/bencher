@@ -87,7 +87,7 @@ pub fn is_valid_index(index: u8) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{Index, is_valid_index};

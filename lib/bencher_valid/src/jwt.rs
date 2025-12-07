@@ -1,3 +1,4 @@
+#[cfg(debug_assertions)]
 use std::sync::LazyLock;
 
 use base64::{
@@ -18,20 +19,25 @@ use serde::{
 
 use crate::ValidError;
 
+#[cfg(debug_assertions)]
 // Valid until 2159-12-06T18:53:44Z
 const TEST_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQzNjA5LCJpYXQiOjE2OTg2NzYzMTQsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJldXN0YWNlLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.xumYID-R4waqhyjhcbSlwartbiRJ2AwngVkevLUBVCA";
+
+#[cfg(debug_assertions)]
 // Valid until 2159-12-06T18:53:44Z
 const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
 
+#[cfg(debug_assertions)]
 #[expect(clippy::expect_used)]
-pub static TEST_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
+static TEST_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
     TEST_ADMIN_BENCHER_API_TOKEN_STR
         .parse()
         .expect("Invalid test JWT")
 });
 
+#[cfg(debug_assertions)]
 #[expect(clippy::expect_used)]
-pub static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
+static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
     TEST_BENCHER_API_TOKEN_STR
         .parse()
         .expect("Invalid test JWT")
@@ -144,7 +150,7 @@ pub fn is_valid_jwt(jwt: &str) -> bool {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::Jwt;
 
     use super::is_valid_jwt;
