@@ -56,6 +56,7 @@ impl TryFrom<TaskSeedTest> for SeedTest {
     }
 }
 
+#[expect(deprecated)]
 impl SeedTest {
     #[expect(clippy::cognitive_complexity, clippy::too_many_lines)]
     pub fn exec(&self) -> anyhow::Result<()> {
