@@ -2468,7 +2468,7 @@
           "sso"
         ],
         "summary": "Add an SSO domain to an organization",
-        "description": "➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization. The user must be an admin on the server to use this route.",
+        "description": "➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization. The user must be an admin on the server to use this route. When a user authenticates with the server, the domain portion of their email will be compared against all SSO domains. If an SSO domain matches, they will be added as a Member to that Organization. SSO domains must be globally unique on the server. That is, two Organizations cannot have the same SSO domain.",
         "operationId": "org_sso_post",
         "parameters": [
           {
@@ -10409,7 +10409,12 @@
         "type": "object",
         "properties": {
           "domain": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "description": "The SSO domain. For example: example.com",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
           }
         },
         "required": [

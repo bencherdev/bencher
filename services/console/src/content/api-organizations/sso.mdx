@@ -1,0 +1,23 @@
+---
+title: "Single Sign-On (SSO)"
+description: "The Bencher Organization Single Sign-On REST API"
+heading: "Single Sign-On (SSO) REST API"
+sortOrder: 5
+paths:
+  - path: /v0/organizations/{organization}/sso
+    method: get
+    headers: auth
+    cli: sso list ORGANIZATION
+  - path: /v0/organizations/{organization}/sso
+    method: post
+    headers: auth
+    cli: sso create ORGANIZATION
+  - path: /v0/organizations/{organization}/sso/{sso}
+    method: get
+    headers: auth
+    cli: sso view ORGANIZATION SSO
+  - path: /v0/organizations/{organization}/sso/{sso}
+    method: delete
+    headers: auth
+    cli: sso delete ORGANIZATION SSO
+---

@@ -11,6 +11,8 @@ crate::typed_uuid::typed_uuid!(SsoUuid);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewSso {
+    /// The SSO domain.
+    /// For example: example.com
     pub domain: NonEmpty,
 }
 

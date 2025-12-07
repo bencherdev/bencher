@@ -465,6 +465,10 @@ export interface JsonNewProject {
 }
 
 export interface JsonNewSso {
+	/**
+	 * The SSO domain.
+	 * For example: example.com
+	 */
 	domain: NonEmpty;
 }
 

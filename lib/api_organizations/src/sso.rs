@@ -140,6 +140,11 @@ fn get_ls_query<'q>(
 ///
 /// ➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization.
 /// The user must be an admin on the server to use this route.
+/// When a user authenticates with the server,
+/// the domain portion of their email will be compared against all SSO domains.
+/// If an SSO domain matches, they will be added as a Member to that Organization.
+/// SSO domains must be globally unique on the server.
+/// That is, two Organizations cannot have the same SSO domain.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/sso",

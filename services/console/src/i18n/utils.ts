@@ -82,4 +82,4 @@ const filterDraft = (page: { data: { draft?: boolean } }): boolean => {
 };
 
 export const API_DOCS_PUBLISHED = "2024-02-12T07:26:00Z";
-export const API_DOCS_MODIFIED = "2024-06-21T17:47:00Z";
+export const API_DOCS_MODIFIED = "2025-12-07T17:47:00Z";
