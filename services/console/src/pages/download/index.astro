@@ -4,6 +4,8 @@ export const prerender = true;
 import LegalLayout from "../../layouts/legal/LegalLayout.astro";
 import LinkFragment from "../../components/site/LinkFragment.astro";
 
+import { BENCHER_VERSION } from "../../util/ext";
+
 import * as CliPreBuiltBins from "../../chunks/general/cli-pre-built-bins.mdx";
 import * as CliPackages from "../../chunks/general/cli-packages.mdx";
 import * as ConsoleImages from "../../chunks/general/console-images.mdx";
@@ -18,7 +20,7 @@ const ApiImgs = ApiImages.Content;
 <LegalLayout
   title="Download"
   description="Download Bencher software"
-  heading="Bencher Download"
+  heading={`Bencher Download (v${BENCHER_VERSION})`}
 >
     <h2 id="cli" class="title is-2">CLI <LinkFragment fragment="cli"/></h2>
     <h3 id="cli-bins" class="title is-3">Pre-Built Binaries <LinkFragment fragment="cli-bins"/></h3>

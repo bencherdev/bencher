@@ -40,7 +40,6 @@ impl TestNetlify {
         } else {
             PROD_BENCHER_URL_STR.to_owned()
         };
-        test_ui_version(&console_url).await?;
 
         // TODO replace this with some actual e2e tests
         let project_slug = if self.dev { "the-computer" } else { "bencher" };
@@ -57,6 +56,7 @@ impl TestNetlify {
                 break;
             }
         }
+        test_ui_version(&console_url).await?;
 
         let notify = Notify::new(&self.ref_name, &console_url);
         notify.send().await?;
@@ -85,31 +85,6 @@ fn netlify_deploy_id(path: &str) -> anyhow::Result<String> {
     Ok(deploy_id_str.to_owned())
 }
 
-async fn test_ui_version(console_url: &str) -> anyhow::Result<()> {
-    println!("Testing UI deploy is version {API_VERSION} at {console_url}");
-    let html = reqwest::get(console_url).await?.text().await?;
-
-    // Looking for a line like:
-    // BETA v<!--#-->0.3.13<!--/-->
-    for line in html.lines() {
-        let Some((_, v)) = line.split_once("BETA v<!--#-->") else {
-            continue;
-        };
-        let Some((console_version, _)) = v.split_once("<!--/-->") else {
-            return Err(anyhow::anyhow!(
-                "Console version {v} does not match expected format"
-            ));
-        };
-        if console_version != API_VERSION {
-            return Err(anyhow::anyhow!(
-                "Console version {console_version} does not match current version {API_VERSION}"
-            ));
-        }
-    }
-
-    Ok(())
-}
-
 async fn test_ui_project(
     console_url: &str,
     project_slug: &str,
@@ -117,11 +92,24 @@ async fn test_ui_project(
 ) -> anyhow::Result<()> {
     let url = format!("{console_url}/perf/{project_slug}");
     println!("Testing UI project {project_slug} at {url}");
-    let html = reqwest::get(url).await?.text().await?;
 
+    fetch_and_check(&url, find_str).await
+}
+
+async fn test_ui_version(console_url: &str) -> anyhow::Result<()> {
+    let url = format!("{console_url}/download");
+    println!("Testing UI deploy is version {API_VERSION} at {url}");
+
+    let heading = format!("Bencher Download (v{API_VERSION})");
+
+    fetch_and_check(&url, &heading).await
+}
+
+async fn fetch_and_check(url: &str, find_str: &str) -> anyhow::Result<()> {
+    let html = reqwest::get(url).await?.text().await?;
     if !html.contains(find_str) {
         return Err(anyhow::anyhow!(
-            "Console project ({project_slug}) page does not contain `{find_str}`: {html}"
+            "Failed to find `{find_str}` in HTML from {url}"
         ));
     }
 
