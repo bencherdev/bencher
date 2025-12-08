@@ -125,14 +125,18 @@ async fn handle_oauth_user(
     #[cfg(feature = "otel")]
     let auth_method = bencher_otel::AuthMethod::OAuth(provider.into());
 
+    // Only use SSO data for Google OAuth2
+    // GitHub OAuth2 won't check that an email is still active for every authentication
     #[cfg(feature = "plus")]
-    QuerySso::join_all(
-        context,
-        &query_user,
-        #[cfg(feature = "otel")]
-        auth_method,
-    )
-    .await?;
+    if let OAuthProvider::Google = provider {
+        QuerySso::join_all(
+            context,
+            &query_user,
+            #[cfg(feature = "otel")]
+            auth_method,
+        )
+        .await?;
+    }
 
     let token = context
         .token_key
