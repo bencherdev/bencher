@@ -1,18 +1,41 @@
 import { RECAPTCHA_SITE_KEY } from "astro:env/client";
+import { theme } from "../components/navbar/theme/util";
+
+let recaptchaWidgetId: number | null = null;
 
 export const loadRecaptcha = async () => {
 	if (!RECAPTCHA_SITE_KEY) return false;
 	if (typeof window === "undefined") return false;
 	// @ts-ignore
-	if (window.grecaptcha?.execute) return true;
+	if (window.grecaptcha?.render) return true;
 	try {
 		await new Promise<void>((resolve, reject) => {
 			const script = document.createElement("script");
-			script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+			script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
 			script.async = true;
 			script.onload = () => resolve();
 			script.onerror = () => reject(new Error("Failed to load reCAPTCHA"));
 			document.head.appendChild(script);
+		});
+
+		// @ts-ignore
+		await new Promise<void>((r) => window.grecaptcha?.ready(r));
+
+		// Create container element
+		let container = document.getElementById("recaptcha-container");
+		if (!container) {
+			container = document.createElement("div");
+			container.id = "recaptcha-container";
+			document.body.appendChild(container);
+		}
+
+		// https://developers.google.com/recaptcha/docs/faq#can-i-customize-the-recaptcha-widget-or-badge
+		// https://developers.google.com/recaptcha/docs/invisible#js_api
+		// @ts-ignore
+		recaptchaWidgetId = window.grecaptcha.render(container, {
+			sitekey: RECAPTCHA_SITE_KEY,
+			size: "invisible",
+			theme: theme(),
 		});
 	} catch (e) {
 		console.error("Error loading reCAPTCHA:", e);
@@ -33,7 +56,7 @@ export const getRecaptchaToken = async (
 		// @ts-ignore
 		await new Promise<void>((r) => window.grecaptcha.ready(r));
 		// @ts-ignore
-		return window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action });
+		return window.grecaptcha.execute(recaptchaWidgetId, { action });
 	} catch (e) {
 		console.error("Error getting reCAPTCHA token:", e);
 		return null;
