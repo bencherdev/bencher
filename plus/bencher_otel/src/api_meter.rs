@@ -69,6 +69,9 @@ pub enum ApiCounter {
     Create(IntervalKind, AuthorizationKind),
     CreateMax(IntervalKind, AuthorizationKind),
 
+    // Email
+    EmailSend,
+
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
 }

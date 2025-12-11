@@ -3,7 +3,7 @@ use std::{fmt, sync::Arc};
 use bencher_json::Secret;
 use bencher_json::system::config::JsonSmtp;
 use mail_send::{SmtpClientBuilder, mail_builder::MessageBuilder};
-use slog::{Logger, error, trace};
+use slog::Logger;
 use tokio::sync::Mutex;
 
 use super::Message;
@@ -76,15 +76,19 @@ impl Email {
                 .html_body(body.html(log));
         }
 
-        slog::debug!(log, "Spawning email send task");
+        slog::info!(log, "Spawning email task: from {from_email} to {to_email}");
         let send_log = log.clone();
         let send_client = self.client.clone();
         tokio::spawn(async move {
             let mut client = send_client.lock().await;
             match client.send(&send_log, message_builder).await {
-                Ok(()) => trace!(send_log, "Email sent email from {from_email} to {to_email}"),
+                Ok(()) => {
+                    slog::info!(send_log, "Email sent: from {from_email} to {to_email}");
+                    #[cfg(feature = "otel")]
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::EmailSend);
+                },
                 Err(err) => {
-                    error!(
+                    slog::error!(
                         send_log,
                         "Failed to send email from {from_email} to {to_email}: {err}"
                     );
