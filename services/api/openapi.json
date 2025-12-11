@@ -10242,7 +10242,7 @@
             ]
           },
           "results": {
-            "description": "An array of benchmarks results.",
+            "description": "An array of benchmarks results in Bencher Metric Format (BMF).",
             "type": "array",
             "items": {
               "type": "string"
@@ -10348,7 +10348,7 @@
             ]
           },
           "results": {
-            "description": "An array of benchmarks results.",
+            "description": "An array of benchmarks results in Bencher Metric Format (BMF).",
             "type": "array",
             "items": {
               "type": "string"

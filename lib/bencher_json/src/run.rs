@@ -53,7 +53,7 @@ pub struct JsonNewRun {
     pub start_time: DateTime,
     /// End time for the report. Must be an ISO 8601 formatted string.
     pub end_time: DateTime,
-    /// An array of benchmarks results.
+    /// An array of benchmarks results in Bencher Metric Format (BMF).
     pub results: Vec<String>,
     /// Settings for how to handle the results.
     pub settings: Option<JsonReportSettings>,
