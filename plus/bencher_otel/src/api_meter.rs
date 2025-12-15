@@ -120,6 +120,8 @@ impl ApiCounter {
             Self::Create(_, _) => "create",
             Self::CreateMax(_, _) => "create.max",
 
+            Self::EmailSend => "email.send",
+
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
         }
@@ -172,6 +174,8 @@ impl ApiCounter {
             Self::Create(_, _) => "Counts the number of creations",
             Self::CreateMax(_, _) => "Counts the number of creation maximums reached",
 
+            Self::EmailSend => "Counts the number of sent emails",
+
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
         }
@@ -193,7 +197,8 @@ impl ApiCounter {
             | Self::UserIpNotFound
             | Self::UserRecaptchaFailure
             | Self::UserInvite
-            | Self::UserClaim => Vec::new(),
+            | Self::UserClaim
+            | Self::EmailSend => Vec::new(),
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),
