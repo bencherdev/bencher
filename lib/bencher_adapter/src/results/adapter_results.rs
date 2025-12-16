@@ -1,16 +1,16 @@
 use std::{collections::HashMap, str::FromStr as _};
 
 use bencher_json::{
-    BenchmarkName, JsonNewMetric,
     project::{
         measure::built_in::{self, BuiltInMeasure as _},
         metric::Mean,
     },
+    BenchmarkName, JsonNewMetric,
 };
 use literally::hmap;
 use serde::{Deserialize, Serialize};
 
-use super::{CombinedKind, adapter_metrics::AdapterMetrics};
+use super::{adapter_metrics::AdapterMetrics, CombinedKind};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdapterResults {
@@ -42,6 +42,7 @@ pub enum IaiMeasure {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum GungraunMeasure {
     /*
      * Callgrind tool:
@@ -88,6 +89,8 @@ pub enum GungraunMeasure {
     /*
      * DHAT tool:
      */
+    TotalUnits(JsonNewMetric),
+    TotalEvents(JsonNewMetric),
     TotalBytes(JsonNewMetric),
     TotalBlocks(JsonNewMetric),
     AtTGmaxBytes(JsonNewMetric),
@@ -96,6 +99,9 @@ pub enum GungraunMeasure {
     AtTEndBlocks(JsonNewMetric),
     ReadsBytes(JsonNewMetric),
     WritesBytes(JsonNewMetric),
+    TotalLifetimes(JsonNewMetric),
+    MaximumBytes(JsonNewMetric),
+    MaximumBlocks(JsonNewMetric),
 
     /*
      * Memcheck tool:
@@ -343,6 +349,12 @@ impl AdapterResults {
                         (built_in::gungraun::SpLoss2::name_id(), json_metric)
                     },
                     // DHAT
+                    GungraunMeasure::TotalUnits(json_metric) => {
+                        (built_in::gungraun::TotalUnits::name_id(), json_metric)
+                    },
+                    GungraunMeasure::TotalEvents(json_metric) => {
+                        (built_in::gungraun::TotalEvents::name_id(), json_metric)
+                    },
                     GungraunMeasure::TotalBytes(json_metric) => {
                         (built_in::gungraun::TotalBytes::name_id(), json_metric)
                     },
@@ -366,6 +378,15 @@ impl AdapterResults {
                     },
                     GungraunMeasure::WritesBytes(json_metric) => {
                         (built_in::gungraun::WritesBytes::name_id(), json_metric)
+                    },
+                    GungraunMeasure::TotalLifetimes(json_metric) => {
+                        (built_in::gungraun::TotalLifetimes::name_id(), json_metric)
+                    },
+                    GungraunMeasure::MaximumBytes(json_metric) => {
+                        (built_in::gungraun::MaximumBytes::name_id(), json_metric)
+                    },
+                    GungraunMeasure::MaximumBlocks(json_metric) => {
+                        (built_in::gungraun::MaximumBlocks::name_id(), json_metric)
                     },
                     // Memcheck
                     GungraunMeasure::MemcheckErrors(json_metric) => {
