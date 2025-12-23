@@ -10,7 +10,7 @@ jobs:
     name: Run Fork PR Benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Mock Benchmarking
         run: |
           /bin/echo '{ "bencher::mock_0": { "latency": { "value": 1.0 } } }' > benchmark_results.json

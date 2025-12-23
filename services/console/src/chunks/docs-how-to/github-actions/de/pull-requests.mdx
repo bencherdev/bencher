@@ -34,7 +34,7 @@ Um Performance-Regressionen in Pull Requests zu erfassen, müssen Sie Ihre Bench
    Siehe die [GitHub Actions `runs-on` Dokumentation][github actions runs-on] für einen vollständigen Überblick.
    (z.B.: `runs-on: ubuntu-latest`)
 7. Checken Sie den Quellcode des PR-Branches aus.
-   (z.B.: `uses: actions/checkout@v4`)
+   (z.B.: `uses: actions/checkout@v6`)
 8. Installieren Sie die Bencher CLI mithilfe [der GitHub Action][bencher cli github action].
    (z.B.: `uses: bencherdev/bencher@main`)
 9. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl, um Ihre Pull Request-Branch-Benchmarks auszuführen.
