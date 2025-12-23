@@ -161,7 +161,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
@@ -215,7 +215,7 @@ jobs:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -263,7 +263,7 @@ jobs:
         with:
           large-packages: false
       - uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
@@ -364,7 +364,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -400,7 +400,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -434,7 +434,7 @@ jobs:
     continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
@@ -501,7 +501,7 @@ jobs:
       WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features wasm,plus"
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
@@ -534,7 +534,7 @@ jobs:
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
@@ -824,7 +824,7 @@ jobs:
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.dev.toml --wait-timeout 300
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
