@@ -559,7 +559,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -712,7 +712,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: Download CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
       - uses: rui314/setup-mold@v1
@@ -784,7 +784,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -813,7 +813,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download Local Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Local Image
@@ -851,7 +851,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download Litestream Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Litestream Image
@@ -900,7 +900,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download Litestream Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Litestream Image
@@ -932,7 +932,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -971,7 +971,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -1045,45 +1045,45 @@ jobs:
       - uses: actions/checkout@v6
       # Download Docker
       - name: Download API Docker Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Download Console Docker Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
       # Download CLI
       - name: Download CLI Linux x86_64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}
       - name: Download CLI Linux ARM64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}
       - name: Download CLI macOS x86_64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_X86_64 }}
       - name: Download CLI macOS ARM64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_ARM_64 }}
       - name: Download CLI Windows x86_64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
       - name: Download CLI Windows ARM64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
       # Download CLI Packages
       - name: Download CLI Linux x86_64 .deb Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}.deb
       - name: Download CLI Linux ARM64 .deb Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
       # Load
