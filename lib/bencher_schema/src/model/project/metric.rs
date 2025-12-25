@@ -54,6 +54,7 @@ impl QueryMetric {
                     .inner_join(schema::benchmark::table.inner_join(schema::project::table))
                     .inner_join(schema::report::table),
             )
+            .filter(schema::report::project_id.eq(schema::project::id))
             .filter(schema::project::organization_id.eq(organization_id))
             .filter(schema::report::end_time.ge(start_time))
             .filter(schema::report::end_time.le(end_time))
