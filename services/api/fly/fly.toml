@@ -6,10 +6,10 @@ kill_timeout = "6s"
 [build]
 image = "registry.fly.io/bencher-api"
 
-# [[mounts]]
-# source = "bencher_data_machines"
-# destination = "/var/lib/bencher/data"
-# processes = ["app"]
+[[mounts]]
+source = "bencher_api_data"
+destination = "/var/lib/bencher/data"
+processes = ["app"]
 
 [[services]]
 protocol = "tcp"
@@ -33,13 +33,13 @@ soft_limit = 1024
 hard_limit = 1024
 
 [[services.tcp_checks]]
-grace_period = "600s"
+grace_period = "24s"
 interval = "12s"
 timeout = "2s"
 restart_limit = 0
 
 [[services.http_checks]]
-grace_period = "600s"
+grace_period = "24s"
 interval = "12s"
 timeout = "2s"
 method = "get"
