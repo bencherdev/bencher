@@ -33,13 +33,13 @@ soft_limit = 1024
 hard_limit = 1024
 
 [[services.tcp_checks]]
-grace_period = "24s"
+grace_period = "600s"
 interval = "12s"
 timeout = "2s"
 restart_limit = 0
 
 [[services.http_checks]]
-grace_period = "24s"
+grace_period = "600s"
 interval = "12s"
 timeout = "2s"
 method = "get"
