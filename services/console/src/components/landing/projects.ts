@@ -32,12 +32,22 @@ export const PROJECTS: Project[][] = [
 		},
 		{
 			name: "Google Sedpack",
-			about: "Scalable and efficient data packing",
+			about: "Scalable and efficient data packing for ML models",
 			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/google.svg",
 			slug: "sedpack",
 			query:
 				"branches=e27f4617-5c19-4a91-a3f5-ca006bde2dd8&heads=e0f3701a-7886-4317-bf5c-ff04e2d0ccd1&testbeds=c83cc96a-a3b8-4c8e-88d3-d86c49caa12e&benchmarks=2fed029b-b64d-40ac-9d37-e4582ac6ad6b%2C7c8dfdfe-cc70-4928-8d09-841d7864984b&measures=37d645e6-8e9a-4731-8f16-28f12c22bd1c&upper_boundary=true&end_time=1754265600000&key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=3&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&start_time=1741996800000&lower_boundary=false&upper_value=false&lower_value=false&tab=branches&clear=true&branches_search=main",
 		},
+		{
+			name: "GitLab Git",
+			about: "Git is a fast, scalable, distributed revision control system",
+			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/gitlab.svg",
+			slug: "git",
+			query:
+				"lower_value=false&upper_value=false&lower_boundary=false&upper_boundary=true&x_axis=date_time&branches=595859eb-071c-48e9-97cf-195e0a3d6ed1&testbeds=02dcb8ad-6873-494c-aabc-9a6237601308&benchmarks=5e5c6ae1-ec8e-4c25-b27d-dcf773d33a51%2C0eb509fd-c4a8-45f3-baca-2e7e4a89b0e8&measures=63dafffb-98c4-4c27-ba43-7112cae627fc&tab=plots&plots_search=0d7f6186-f80a-4fbe-9022-75b6caf5164e&key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&end_time=1745971200000&start_time=1740787200000&utm_medium=share&utm_source=bencher&utm_content=img&utm_campaign=perf%2Bimg&utm_term=git",
+		},
+	],
+	[
 		{
 			name: "Servo",
 			about:
@@ -46,17 +56,6 @@ export const PROJECTS: Project[][] = [
 			slug: "servo",
 			query:
 				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=52e1e9bb-959c-4171-a53d-e06bd694a6c1&heads=3dbe3681-11b1-4e30-b482-4ee72dc0960c&testbeds=d742c702-3842-4108-9d0c-2db74e57599a&measures=678e4118-c8a5-494d-8799-08abc3021cd5&start_time=1734048000000&end_time=1735236203000&lower_boundary=false&upper_boundary=false&clear=true&tab=benchmarks&benchmarks=c4da10d8-9539-4943-95ca-5e08df0cd6f9&benchmarks_search=servo",
-		},
-	],
-	[
-		{
-			name: "Wire",
-			about:
-				"The most secure platform for messaging, audio, and video calls, based on edge computing and zero knowledge architecture",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/wire.svg",
-			slug: "core-crypto-mmbtki3h",
-			query:
-				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=cd6b82fc-bbfb-4680-afa6-ab88ca62a1ef&testbeds=7f837718-cf29-423f-bd13-2b516ec88cda&measures=c1f87d1c-d949-4bf4-8b76-eb782e882d0e&start_time=1719668529000&end_time=1722261285000&clear=true&tab=benchmarks&benchmarks_search=6010&benchmarks=a4cefec8-6548-4e20-a7c1-75456b7ea925%2C0c73af64-460b-4082-a73b-77e3a980606d",
 		},
 		{
 			name: "Mozilla Neqo",
