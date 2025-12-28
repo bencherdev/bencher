@@ -9,6 +9,11 @@ use dropshot::HttpError;
 
 use crate::{context::RateLimitingError, error::too_many_requests};
 
+// Set the default capacity to `1` to minimize the overhead of traffic from disparate sources by default.
+// If an IP is being abusive, we will have to reallocate quite a few times before they hit their limit.
+// However, this is a tradeoff to reduce the memory usage on the happy path.
+const DEFAULT_CAPACITY: usize = 1;
+
 pub(super) struct RateLimiterInner<K> {
     window: Duration,
     limit: usize,
@@ -54,7 +59,7 @@ where
         let mut entry = self
             .event_map
             .entry(key)
-            .or_insert_with(|| VecDeque::with_capacity(self.limit));
+            .or_insert_with(|| VecDeque::with_capacity(DEFAULT_CAPACITY));
 
         // Check if the limit has been exceeded
         if entry.len() < self.limit {
