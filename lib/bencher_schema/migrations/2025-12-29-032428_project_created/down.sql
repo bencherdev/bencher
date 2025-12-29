@@ -1,0 +1,10 @@
+DROP INDEX IF EXISTS index_project_organization_created;
+DROP INDEX IF EXISTS index_report_project_created;
+DROP INDEX IF EXISTS index_plot_project_created;
+DROP INDEX IF EXISTS index_branch_project_created;
+DROP INDEX IF EXISTS index_head_branch_created;
+DROP INDEX IF EXISTS index_testbed_project_created;
+DROP INDEX IF EXISTS index_benchmark_project_created;
+DROP INDEX IF EXISTS index_measure_project_created;
+DROP INDEX IF EXISTS index_threshold_project_created;
+DROP INDEX IF EXISTS index_model_threshold_created;
