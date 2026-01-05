@@ -18,7 +18,7 @@ use bencher_schema::{
                 QueryThreshold, alert::QueryAlert, boundary::QueryBoundary, model::QueryModel,
             },
         },
-        user::auth::{AuthUser, PubBearerToken},
+        user::public::{PubBearerToken, PublicUser},
     },
     schema, view,
 };
@@ -67,7 +67,7 @@ pub async fn proj_metric_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjMetricParams>,
 ) -> Result<ResponseOk<JsonOneMetric>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -76,25 +76,20 @@ pub async fn proj_metric_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(
-        rqctx.context(),
-        path_params.into_inner(),
-        auth_user.as_ref(),
-    )
-    .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
+    Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjMetricParams,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<JsonOneMetric, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let perf_query = view::metric_boundary::table

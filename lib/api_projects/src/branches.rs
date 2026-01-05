@@ -18,7 +18,10 @@ use bencher_schema::{
             QueryProject,
             branch::{QueryBranch, UpdateBranch, head::QueryHead},
         },
-        user::auth::{AuthUser, BearerToken, PubBearerToken},
+        user::{
+            auth::{AuthUser, BearerToken},
+            public::{PubBearerToken, PublicUser},
+        },
     },
     schema,
 };
@@ -90,10 +93,10 @@ pub async fn proj_branches_get(
     pagination_params: Query<ProjBranchesPagination>,
     query_params: Query<ProjBranchesQuery>,
 ) -> Result<ResponseOk<JsonBranches>, HttpError> {
-    let auth_user = AuthUser::new_pub(&rqctx).await?;
+    let public_user = PublicUser::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
-        auth_user.as_ref(),
+        &public_user,
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
@@ -101,14 +104,14 @@ pub async fn proj_branches_get(
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        auth_user.is_some(),
+        public_user.is_auth(),
         total_count,
     ))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
     path_params: ProjBranchesParams,
     pagination_params: ProjBranchesPagination,
     query_params: ProjBranchesQuery,
@@ -117,7 +120,7 @@ async fn get_ls_inner(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let branches = get_ls_query(&query_project, &pagination_params, &query_params)
@@ -281,7 +284,7 @@ pub async fn proj_branch_get(
     path_params: Path<ProjBranchParams>,
     query_params: Query<ProjBranchQuery>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -294,23 +297,23 @@ pub async fn proj_branch_get(
         rqctx.context(),
         path_params.into_inner(),
         query_params.into_inner(),
-        auth_user.as_ref(),
+        &public_user,
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjBranchParams,
     query_params: ProjBranchQuery,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<JsonBranch, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let query_branch = QueryBranch::belonging_to(&query_project)

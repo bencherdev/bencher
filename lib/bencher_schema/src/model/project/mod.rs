@@ -27,7 +27,10 @@ use crate::{
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
-    model::{organization::QueryOrganization, user::auth::AuthUser},
+    model::{
+        organization::QueryOrganization,
+        user::{auth::AuthUser, public::PublicUser},
+    },
     schema::{self, project as project_table},
 };
 
@@ -92,7 +95,7 @@ impl QueryProject {
     pub async fn get_or_create<NameFn>(
         log: &Logger,
         context: &ApiContext,
-        auth_user: Option<&AuthUser>,
+        public_user: &PublicUser,
         project: &ProjectResourceId,
         project_name_fn: NameFn,
     ) -> Result<Self, HttpError>
@@ -111,13 +114,13 @@ impl QueryProject {
             ProjectResourceId::Slug(slug) => slug,
         };
 
-        Self::get_or_create_inner(log, context, auth_user, project_name_fn, project_slug).await
+        Self::get_or_create_inner(log, context, public_user, project_name_fn, project_slug).await
     }
 
     pub async fn get_or_create_from_context<NameFn, SlugFn>(
         log: &Logger,
         context: &ApiContext,
-        auth_user: Option<&AuthUser>,
+        public_user: &PublicUser,
         project_name_fn: NameFn,
         project_slug_fn: SlugFn,
     ) -> Result<Self, HttpError>
@@ -130,13 +133,13 @@ impl QueryProject {
             return Ok(query_project);
         }
 
-        Self::get_or_create_inner(log, context, auth_user, project_name_fn, project_slug).await
+        Self::get_or_create_inner(log, context, public_user, project_name_fn, project_slug).await
     }
 
     async fn get_or_create_inner<NameFn>(
         log: &Logger,
         context: &ApiContext,
-        auth_user: Option<&AuthUser>,
+        public_user: &PublicUser,
         project_name_fn: NameFn,
         project_slug: ProjectSlug,
     ) -> Result<Self, HttpError>
@@ -144,46 +147,53 @@ impl QueryProject {
         NameFn: FnOnce() -> Result<ResourceName, HttpError>,
     {
         let project_name = project_name_fn()?;
-        if let Some(auth_user) = auth_user {
-            let query_organization =
-                QueryOrganization::get_or_create_from_user(context, auth_user).await?;
-            #[cfg(feature = "plus")]
-            InsertProject::rate_limit(context, &query_organization).await?;
-            // The choice was either to relax the schema constraint to allow duplicate project names
-            // or to append a number to the project name to ensure uniqueness.
-            let name = Self::unique_name(log, context, &query_organization, project_name).await?;
-            let insert_project =
-                InsertProject::new(query_organization.id, name, project_slug, None, None);
-            // If the user is authenticated, then we may have created a new personal organization for them.
-            // If so then we need to reload the permissions.
-            // This is unlikely to be the case going forward, but it is needed for backwards compatibility.
-            let auth_user = auth_user.reload(conn_lock!(context))?;
-            Self::create(
-                log,
-                context,
-                &auth_user,
-                &query_organization,
-                insert_project,
-            )
-            .await
-        } else {
-            let query_organization = QueryOrganization::get_or_create_from_project(
-                context,
-                &project_name,
-                &project_slug,
-            )
-            .await?;
-            // In most cases, there should only ever be one on-the-fly project here,
-            // but check the rate limit just in case.
-            #[cfg(feature = "plus")]
-            InsertProject::rate_limit(context, &query_organization).await?;
-            // Currently, there is no semantic importance to having the organization and project have the same UUID.
-            // However, it seems like a good idea to keep them in sync for now.
-            // It makes identifying on-the-fly unclaimed projects easier, even after they have been claimed.
-            // This is okay since there should never be more than one project in an unclaimed "from project" organization.
-            let insert_project =
-                InsertProject::from_organization(&query_organization, project_name, project_slug);
-            Self::create_inner(log, context, &query_organization, insert_project).await
+        match public_user {
+            PublicUser::Auth(auth_user) => {
+                let query_organization =
+                    QueryOrganization::get_or_create_from_user(context, auth_user).await?;
+                #[cfg(feature = "plus")]
+                InsertProject::rate_limit(context, &query_organization).await?;
+                // The choice was either to relax the schema constraint to allow duplicate project names
+                // or to append a number to the project name to ensure uniqueness.
+                let name =
+                    Self::unique_name(log, context, &query_organization, project_name).await?;
+                let insert_project =
+                    InsertProject::new(query_organization.id, name, project_slug, None, None);
+                // If the user is authenticated, then we may have created a new personal organization for them.
+                // If so then we need to reload the permissions.
+                // This is unlikely to be the case going forward, but it is needed for backwards compatibility.
+                let auth_user = auth_user.reload(conn_lock!(context))?;
+                Self::create(
+                    log,
+                    context,
+                    &auth_user,
+                    &query_organization,
+                    insert_project,
+                )
+                .await
+            },
+            PublicUser::Public(_) => {
+                let query_organization = QueryOrganization::get_or_create_from_project(
+                    context,
+                    &project_name,
+                    &project_slug,
+                )
+                .await?;
+                // In most cases, there should only ever be one on-the-fly project here,
+                // but check the rate limit just in case.
+                #[cfg(feature = "plus")]
+                InsertProject::rate_limit(context, &query_organization).await?;
+                // Currently, there is no semantic importance to having the organization and project have the same UUID.
+                // However, it seems like a good idea to keep them in sync for now.
+                // It makes identifying on-the-fly unclaimed projects easier, even after they have been claimed.
+                // This is okay since there should never be more than one project in an unclaimed "from project" organization.
+                let insert_project = InsertProject::from_organization(
+                    &query_organization,
+                    project_name,
+                    project_slug,
+                );
+                Self::create_inner(log, context, &query_organization, insert_project).await
+            },
         }
     }
 
@@ -386,11 +396,11 @@ impl QueryProject {
         conn: &mut DbConnection,
         rbac: &Rbac,
         project: &ProjectResourceId,
-        auth_user: Option<&AuthUser>,
+        public_user: &PublicUser,
     ) -> Result<Self, HttpError> {
         // Do not leak information about private projects.
         // Always return the same error.
-        Self::is_allowed_public_inner(conn, rbac, project, auth_user).map_err(|_e| {
+        Self::is_allowed_public_inner(conn, rbac, project, public_user).map_err(|_e| {
             resource_not_found_error(BencherResource::Project, project, Permission::View)
         })
     }
@@ -399,14 +409,14 @@ impl QueryProject {
         conn: &mut DbConnection,
         rbac: &Rbac,
         project: &ProjectResourceId,
-        auth_user: Option<&AuthUser>,
+        public_user: &PublicUser,
     ) -> Result<Self, HttpError> {
         let query_project = Self::from_resource_id(conn, project)?;
         // Check to see if the project is public
         // If so, anyone can access it
         if query_project.is_public() {
             Ok(query_project)
-        } else if let Some(auth_user) = auth_user {
+        } else if let PublicUser::Auth(auth_user) = public_user {
             // If there is an `AuthUser` then validate access
             // Verify that the user is allowed
             query_project.try_allowed(rbac, auth_user, Permission::View)?;

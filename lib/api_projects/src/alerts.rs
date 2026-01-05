@@ -13,7 +13,10 @@ use bencher_schema::{
             QueryProject,
             threshold::alert::{QueryAlert, UpdateAlert},
         },
-        user::auth::{AuthUser, BearerToken, PubBearerToken},
+        user::{
+            auth::{AuthUser, BearerToken},
+            public::{PubBearerToken, PublicUser},
+        },
     },
     schema,
 };
@@ -85,10 +88,10 @@ pub async fn proj_alerts_get(
     pagination_params: Query<ProjAlertsPagination>,
     query_params: Query<ProjAlertsQuery>,
 ) -> Result<ResponseOk<JsonAlerts>, HttpError> {
-    let auth_user = AuthUser::new_pub(&rqctx).await?;
+    let public_user = PublicUser::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
-        auth_user.as_ref(),
+        &public_user,
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
@@ -96,14 +99,14 @@ pub async fn proj_alerts_get(
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        auth_user.is_some(),
+        public_user.is_auth(),
         total_count,
     ))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
     path_params: ProjAlertsParams,
     pagination_params: ProjAlertsPagination,
     query_params: ProjAlertsQuery,
@@ -112,7 +115,7 @@ async fn get_ls_inner(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let alerts = get_ls_query(&query_project, &pagination_params, &query_params)
@@ -315,7 +318,7 @@ pub async fn proj_alert_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjAlertParams>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -324,25 +327,20 @@ pub async fn proj_alert_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(
-        rqctx.context(),
-        path_params.into_inner(),
-        auth_user.as_ref(),
-    )
-    .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
+    Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjAlertParams,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<JsonAlert, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let alert = QueryAlert::from_uuid(conn_lock!(context), query_project.id, path_params.alert)?;

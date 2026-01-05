@@ -9,7 +9,8 @@ use bencher_schema::{
     error::{bad_request_error, issue_error},
     model::user::{
         admin::AdminUser,
-        auth::{AuthUser, BearerToken, PubBearerToken},
+        auth::BearerToken,
+        public::{PubBearerToken, PublicUser},
     },
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
@@ -136,7 +137,7 @@ pub async fn server_config_console_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
 ) -> Result<ResponseOk<JsonConsole>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -149,6 +150,6 @@ pub async fn server_config_console_get(
         JsonConsole {
             url: rqctx.context().console_url.clone().into(),
         },
-        auth_user.is_some(),
+        public_user.is_auth(),
     ))
 }

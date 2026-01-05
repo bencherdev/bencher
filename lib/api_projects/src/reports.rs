@@ -26,7 +26,10 @@ use bencher_schema::{
             },
             report::{QueryReport, ReportId},
         },
-        user::auth::{AuthUser, BearerToken, PubBearerToken},
+        user::{
+            auth::{AuthUser, BearerToken},
+            public::{PubBearerToken, PublicUser},
+        },
     },
     schema,
 };
@@ -95,19 +98,19 @@ pub async fn proj_reports_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let auth_user = AuthUser::new_pub(&rqctx).await?;
+    let public_user = PublicUser::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         &rqctx.log,
         rqctx.context(),
-        auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         json_report_query,
+        &public_user,
     )
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        auth_user.is_some(),
+        public_user.is_auth(),
         total_count,
     ))
 }
@@ -115,16 +118,16 @@ pub async fn proj_reports_get(
 async fn get_ls_inner(
     log: &Logger,
     context: &ApiContext,
-    auth_user: Option<&AuthUser>,
     path_params: ProjReportsParams,
     pagination_params: ProjReportsPagination,
     query_params: JsonReportQuery,
+    public_user: &PublicUser,
 ) -> Result<(JsonReports, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let reports = get_ls_query(&query_project, &pagination_params, &query_params)
@@ -294,7 +297,14 @@ async fn post_inner(
         auth_user,
         Permission::Create,
     )?;
-    QueryReport::create(log, context, &query_project, json_report, Some(auth_user)).await
+    QueryReport::create(
+        log,
+        context,
+        &query_project,
+        json_report,
+        Some(auth_user.id),
+    )
+    .await
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -332,7 +342,7 @@ pub async fn proj_report_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -345,23 +355,23 @@ pub async fn proj_report_get(
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
-        auth_user.as_ref(),
+        &public_user,
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_one_inner(
     log: &Logger,
     context: &ApiContext,
     path_params: ProjReportParams,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<JsonReport, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let report = QueryReport::belonging_to(&query_project)

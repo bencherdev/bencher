@@ -15,7 +15,10 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{QueryProject, UpdateProject},
-        user::auth::{AuthUser, BearerToken, PubBearerToken},
+        user::{
+            auth::{AuthUser, BearerToken},
+            public::{PubBearerToken, PublicUser},
+        },
     },
     schema,
 };
@@ -79,7 +82,7 @@ pub async fn projects_get(
     pagination_params: Query<ProjectsPagination>,
     query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -90,31 +93,31 @@ pub async fn projects_get(
     .await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
-        auth_user.as_ref(),
         pagination_params.into_inner(),
         query_params.into_inner(),
+        &public_user,
     )
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        auth_user.is_some(),
+        public_user.is_auth(),
         total_count,
     ))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
-    auth_user: Option<&AuthUser>,
     pagination_params: ProjectsPagination,
     query_params: ProjectsQuery,
+    public_user: &PublicUser,
 ) -> Result<(JsonProjects, TotalCount), HttpError> {
-    let projects = get_ls_query(context, auth_user, &pagination_params, &query_params)
+    let projects = get_ls_query(context, &pagination_params, &query_params, public_user)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryProject>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Project,
-            (auth_user, &pagination_params, &query_params)
+            (&pagination_params, &query_params, public_user)
         ))?;
 
     // Separate out these queries to prevent a deadlock when getting the conn_lock
@@ -130,12 +133,12 @@ async fn get_ls_inner(
         }
     }
 
-    let total_count = get_ls_query(context, auth_user, &pagination_params, &query_params)
+    let total_count = get_ls_query(context, &pagination_params, &query_params, public_user)
         .count()
         .get_result::<i64>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Project,
-            (auth_user, &pagination_params, &query_params)
+            (&pagination_params, &query_params, public_user)
         ))?
         .try_into()?;
 
@@ -144,14 +147,14 @@ async fn get_ls_inner(
 
 fn get_ls_query<'q>(
     context: &ApiContext,
-    auth_user: Option<&AuthUser>,
     pagination_params: &ProjectsPagination,
     query_params: &'q ProjectsQuery,
+    public_user: &PublicUser,
 ) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::project::table.into_boxed();
 
     // All users should just see the public projects if the query is for public projects
-    if let Some(auth_user) = auth_user {
+    if let PublicUser::Auth(auth_user) = public_user {
         if !auth_user.is_admin(&context.rbac) {
             let projects = auth_user.projects(&context.rbac, Permission::View);
             query = query.filter(
@@ -218,7 +221,7 @@ pub async fn project_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -227,25 +230,20 @@ pub async fn project_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(
-        rqctx.context(),
-        path_params.into_inner(),
-        auth_user.as_ref(),
-    )
-    .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
+    Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjectParams,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<JsonProject, HttpError> {
     conn_lock!(context, |conn| QueryProject::is_allowed_public(
         conn,
         &context.rbac,
         &path_params.project,
-        auth_user
+        public_user
     )?
     .into_json(conn))
 }

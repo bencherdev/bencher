@@ -7,7 +7,7 @@ use bencher_plot::LinePlot;
 use bencher_schema::{
     context::ApiContext,
     error::{bad_request_error, issue_error},
-    model::user::auth::{AuthUser, PubBearerToken},
+    model::user::public::{PubBearerToken, PublicUser},
 };
 use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
 use http::Response;
@@ -54,7 +54,7 @@ pub async fn proj_perf_img_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -68,7 +68,7 @@ pub async fn proj_perf_img_get(
         path_params.into_inner(),
         title.as_deref(),
         json_perf_query,
-        auth_user.as_ref(),
+        &public_user,
     )
     .await?;
 
@@ -85,9 +85,9 @@ async fn get_inner(
     path_params: ProjPerfParams,
     title: Option<&str>,
     json_perf_query: JsonPerfQuery,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<Vec<u8>, HttpError> {
-    let json_perf = super::get_inner(context, path_params, json_perf_query, auth_user).await?;
+    let json_perf = super::get_inner(context, path_params, json_perf_query, public_user).await?;
     LinePlot::new().draw(title, &json_perf).map_err(|e| {
         issue_error(
             "Failed to draw perf plot",

@@ -1,4 +1,4 @@
-use std::{net::IpAddr, ops::Deref};
+use std::ops::Deref;
 
 use async_trait::async_trait;
 #[cfg(feature = "plus")]
@@ -15,7 +15,6 @@ use dropshot::{
     ServerContext, SharedExtractor,
 };
 use oso::{PolarValue, ToPolar};
-use slog::Logger;
 
 use crate::{
     conn_lock,
@@ -37,47 +36,9 @@ pub struct AuthUser {
 
 impl AuthUser {
     // This is required due to a limitation in `dropshot` where only four extractors are allowed.
-    pub async fn new_pub(rqctx: &RequestContext<ApiContext>) -> Result<Option<Self>, HttpError> {
-        let pub_bearer_token = PubBearerToken::from_request(rqctx).await?;
-        Self::from_pub_token(
-            &rqctx.log,
-            rqctx.context(),
-            &rqctx.request_id,
-            #[cfg(feature = "plus")]
-            rqctx.request.headers(),
-            pub_bearer_token,
-        )
-        .await
-    }
-
-    // This is required due to a limitation in `dropshot` where only four extractors are allowed.
     pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
         let bearer_token = BearerToken::from_request(rqctx).await?;
         Self::from_token(rqctx.context(), bearer_token).await
-    }
-
-    pub async fn from_pub_token(
-        log: &Logger,
-        context: &ApiContext,
-        request_id: &str,
-        #[cfg(feature = "plus")] headers: &crate::HeaderMap,
-        bearer_token: PubBearerToken,
-    ) -> Result<Option<Self>, HttpError> {
-        Ok(if let Some(bearer_token) = bearer_token.0 {
-            let user = Self::from_token(context, bearer_token).await?;
-            slog::info!(
-                log,
-                "Authenticated user"; "request_id" => request_id, "user_uuid" => %user.user.uuid
-            );
-            Some(user)
-        } else {
-            // todo(epompeii): Return the remote IP instead of a `None` here.
-            #[cfg(feature = "plus")]
-            crate::RateLimiting::remote_ip(log, request_id, headers)
-                .map(|remote_ip| context.rate_limiting.public_request(remote_ip))
-                .transpose()?;
-            None
-        })
     }
 
     pub async fn from_token(
@@ -327,24 +288,6 @@ impl SharedExtractor for BearerToken {
             .parse::<Jwt>()
             .map(Into::into)
             .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))
-    }
-
-    fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
-        ExtractorMetadata {
-            extension_mode: ExtensionMode::None,
-            parameters: Vec::new(),
-        }
-    }
-}
-
-pub struct PubBearerToken(Option<BearerToken>);
-
-#[async_trait]
-impl SharedExtractor for PubBearerToken {
-    async fn from_request<Context: ServerContext>(
-        rqctx: &RequestContext<Context>,
-    ) -> Result<Self, HttpError> {
-        Ok(Self(BearerToken::from_request(rqctx).await.ok()))
     }
 
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {

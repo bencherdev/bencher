@@ -29,7 +29,7 @@ use crate::{
             testbed::{QueryTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
         },
-        user::{QueryUser, UserId, auth::AuthUser},
+        user::{QueryUser, UserId},
     },
     schema::{self, report as report_table},
     view,
@@ -73,7 +73,7 @@ impl QueryReport {
         context: &ApiContext,
         query_project: &QueryProject,
         mut json_report: JsonNewReport,
-        auth_user: Option<&AuthUser>,
+        user_id: Option<UserId>,
     ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "plus")]
         InsertReport::rate_limit(context, query_project.id).await?;
@@ -128,7 +128,7 @@ impl QueryReport {
 
         // Create a new report and add it to the database
         let insert_report = InsertReport::from_json(
-            auth_user.map(|u| u.id),
+            user_id,
             project_id,
             head_id,
             version_id,

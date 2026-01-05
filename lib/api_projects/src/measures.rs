@@ -16,7 +16,10 @@ use bencher_schema::{
             QueryProject,
             measure::{QueryMeasure, UpdateMeasure},
         },
-        user::auth::{AuthUser, BearerToken, PubBearerToken},
+        user::{
+            auth::{AuthUser, BearerToken},
+            public::{PubBearerToken, PublicUser},
+        },
     },
     schema,
 };
@@ -87,10 +90,10 @@ pub async fn proj_measures_get(
     pagination_params: Query<ProjMeasuresPagination>,
     query_params: Query<ProjMeasuresQuery>,
 ) -> Result<ResponseOk<JsonMeasures>, HttpError> {
-    let auth_user = AuthUser::new_pub(&rqctx).await?;
+    let public_user = PublicUser::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
-        auth_user.as_ref(),
+        &public_user,
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
@@ -98,14 +101,14 @@ pub async fn proj_measures_get(
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        auth_user.is_some(),
+        public_user.is_auth(),
         total_count,
     ))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
     path_params: ProjMeasuresParams,
     pagination_params: ProjMeasuresPagination,
     query_params: ProjMeasuresQuery,
@@ -114,7 +117,7 @@ async fn get_ls_inner(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let measures = get_ls_query(&query_project, &pagination_params, &query_params)
@@ -258,7 +261,7 @@ pub async fn proj_measure_get(
     bearer_token: PubBearerToken,
     path_params: Path<ProjMeasureParams>,
 ) -> Result<ResponseOk<JsonMeasure>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -267,25 +270,20 @@ pub async fn proj_measure_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(
-        rqctx.context(),
-        path_params.into_inner(),
-        auth_user.as_ref(),
-    )
-    .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
+    Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjMeasureParams,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<JsonMeasure, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     QueryMeasure::belonging_to(&query_project)

@@ -26,7 +26,7 @@ use bencher_schema::{
                 QueryThreshold, alert::QueryAlert, boundary::QueryBoundary, model::QueryModel,
             },
         },
-        user::auth::{AuthUser, PubBearerToken},
+        user::public::{PubBearerToken, PublicUser},
     },
     schema, view,
 };
@@ -86,7 +86,7 @@ pub async fn proj_perf_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -95,29 +95,27 @@ pub async fn proj_perf_get(
         bearer_token,
     )
     .await?;
-
     let json = get_inner(
         rqctx.context(),
         path_params.into_inner(),
         json_perf_query,
-        auth_user.as_ref(),
+        &public_user,
     )
     .await?;
-
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_inner(
     context: &ApiContext,
     path_params: ProjPerfParams,
     json_perf_query: JsonPerfQuery,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<JsonPerf, HttpError> {
     let project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let JsonPerfQuery {

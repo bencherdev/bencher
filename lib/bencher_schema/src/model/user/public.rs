@@ -17,7 +17,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub enum PublicUser {
     Public(Option<IpAddr>),
-    Auth(AuthUser),
+    Auth(Box<AuthUser>),
 }
 
 impl PublicUser {
@@ -48,7 +48,7 @@ impl PublicUser {
                 log,
                 "Authenticated user"; "request_id" => request_id, "user_uuid" => %user.user.uuid
             );
-            Self::Auth(user)
+            Self::Auth(Box::new(user))
         } else {
             #[cfg(feature = "plus")]
             let remote_ip = {
@@ -63,6 +63,10 @@ impl PublicUser {
 
             Self::Public(remote_ip)
         })
+    }
+
+    pub fn is_auth(&self) -> bool {
+        matches!(self, Self::Auth(_))
     }
 }
 

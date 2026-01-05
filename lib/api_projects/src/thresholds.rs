@@ -25,7 +25,10 @@ use bencher_schema::{
             testbed::QueryTestbed,
             threshold::{InsertThreshold, QueryThreshold, model::QueryModel},
         },
-        user::auth::{AuthUser, BearerToken, PubBearerToken},
+        user::{
+            auth::{AuthUser, BearerToken},
+            public::{PubBearerToken, PublicUser},
+        },
     },
     schema,
 };
@@ -95,34 +98,34 @@ pub async fn proj_thresholds_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let auth_user = AuthUser::new_pub(&rqctx).await?;
+    let public_user = PublicUser::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
-        auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         json_threshold_query,
+        &public_user,
     )
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        auth_user.is_some(),
+        public_user.is_auth(),
         total_count,
     ))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
-    auth_user: Option<&AuthUser>,
     path_params: ProjThresholdsParams,
     pagination_params: ProjThresholdsPagination,
     query_params: JsonThresholdQuery,
+    public_user: &PublicUser,
 ) -> Result<(JsonThresholds, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let thresholds = get_ls_query(&query_project, &pagination_params, &query_params)
@@ -349,7 +352,7 @@ pub async fn proj_threshold_get(
     path_params: Path<ProjThresholdParams>,
     query_params: Query<ProjThresholdQuery>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(
+    let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
         &rqctx.request_id,
@@ -362,23 +365,23 @@ pub async fn proj_threshold_get(
         rqctx.context(),
         path_params.into_inner(),
         query_params.into_inner(),
-        auth_user.as_ref(),
+        &public_user,
     )
     .await?;
-    Ok(Get::response_ok(json, auth_user.is_some()))
+    Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
     query_params: ProjThresholdQuery,
-    auth_user: Option<&AuthUser>,
+    public_user: &PublicUser,
 ) -> Result<JsonThreshold, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        public_user,
     )?;
 
     let query_threshold =
