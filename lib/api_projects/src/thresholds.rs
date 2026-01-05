@@ -350,7 +350,9 @@ pub async fn proj_threshold_get(
     query_params: Query<ProjThresholdQuery>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        &rqctx.log,
         rqctx.context(),
+        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,

@@ -280,8 +280,8 @@ impl RateLimiting {
         self.user.check_run(user_uuid)
     }
 
-    pub fn remote_ip(headers: &HeaderMap) -> Option<IpAddr> {
-        remote_ip::remote_ip(headers)
+    pub fn remote_ip(log: &Logger, request_id: &str, headers: &HeaderMap) -> Option<IpAddr> {
+        remote_ip::remote_ip(log, request_id, headers)
     }
 }
 

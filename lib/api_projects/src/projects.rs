@@ -80,7 +80,9 @@ pub async fn projects_get(
     query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        &rqctx.log,
         rqctx.context(),
+        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,
@@ -217,7 +219,9 @@ pub async fn project_get(
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        &rqctx.log,
         rqctx.context(),
+        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,

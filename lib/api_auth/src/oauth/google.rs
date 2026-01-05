@@ -35,6 +35,7 @@ pub async fn auth_google_get(
     let json = get_inner(
         &rqctx.log,
         rqctx.context(),
+        &rqctx.request_id,
         rqctx.request.headers(),
         query_params.into_inner(),
     )
@@ -45,6 +46,7 @@ pub async fn auth_google_get(
 async fn get_inner(
     log: &Logger,
     context: &ApiContext,
+    request_id: &str,
     headers: &HeaderMap,
     oauth_state: OAuthState,
 ) -> Result<JsonOAuthUrl, HttpError> {
@@ -55,7 +57,7 @@ async fn get_inner(
     };
     is_allowed_oauth(context).await?;
 
-    if let Some(remote_ip) = bencher_schema::RateLimiting::remote_ip(headers) {
+    if let Some(remote_ip) = bencher_schema::RateLimiting::remote_ip(log, request_id, headers) {
         context.rate_limiting.public_auth_attempt(remote_ip)?;
     }
 

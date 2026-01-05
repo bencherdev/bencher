@@ -38,27 +38,34 @@ pub async fn run_post(
     body: TypedBody<JsonNewRun>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        &rqctx.log,
         rqctx.context(),
+        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,
     )
     .await?;
+
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
+        #[cfg(feature = "plus")]
+        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         auth_user,
         body.into_inner(),
     )
     .await?;
+
     Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
+    #[cfg(feature = "plus")] request_id: &str,
     #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     auth_user: Option<AuthUser>,
     json_run: JsonNewRun,
@@ -73,7 +80,7 @@ async fn post_inner(
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimed);
 
-        if let Some(remote_ip) = bencher_schema::RateLimiting::remote_ip(headers) {
+        if let Some(remote_ip) = bencher_schema::RateLimiting::remote_ip(log, request_id, headers) {
             slog::info!(log, "Unclaimed run request from remote IP address"; "remote_ip" => ?remote_ip);
             context.rate_limiting.unclaimed_run(remote_ip)?;
         }

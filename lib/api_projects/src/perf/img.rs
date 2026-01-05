@@ -55,7 +55,9 @@ pub async fn proj_perf_img_get(
         .map_err(bad_request_error)?;
 
     let auth_user = AuthUser::from_pub_token(
+        &rqctx.log,
         rqctx.context(),
+        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,

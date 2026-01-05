@@ -15,6 +15,7 @@ use dropshot::{
     ServerContext, SharedExtractor,
 };
 use oso::{PolarValue, ToPolar};
+use slog::Logger;
 
 use crate::{
     conn_lock,
@@ -39,7 +40,9 @@ impl AuthUser {
     pub async fn new_pub(rqctx: &RequestContext<ApiContext>) -> Result<Option<Self>, HttpError> {
         let pub_bearer_token = PubBearerToken::from_request(rqctx).await?;
         Self::from_pub_token(
+            &rqctx.log,
             rqctx.context(),
+            &rqctx.request_id,
             #[cfg(feature = "plus")]
             rqctx.request.headers(),
             pub_bearer_token,
@@ -54,15 +57,23 @@ impl AuthUser {
     }
 
     pub async fn from_pub_token(
+        log: &Logger,
         context: &ApiContext,
+        request_id: &str,
         #[cfg(feature = "plus")] headers: &crate::HeaderMap,
         bearer_token: PubBearerToken,
     ) -> Result<Option<Self>, HttpError> {
         Ok(if let Some(bearer_token) = bearer_token.0 {
-            Some(Self::from_token(context, bearer_token).await?)
+            let user = Self::from_token(context, bearer_token).await?;
+            slog::info!(
+                log,
+                "Authenticated user"; "request_id" => request_id, "user_uuid" => %user.user.uuid
+            );
+            Some(user)
         } else {
+            // todo(epompeii): Return the remote IP instead of a `None` here.
             #[cfg(feature = "plus")]
-            crate::RateLimiting::remote_ip(headers)
+            crate::RateLimiting::remote_ip(log, request_id, headers)
                 .map(|remote_ip| context.rate_limiting.public_request(remote_ip))
                 .transpose()?;
             None

@@ -87,12 +87,15 @@ pub async fn proj_perf_get(
         .map_err(bad_request_error)?;
 
     let auth_user = AuthUser::from_pub_token(
+        &rqctx.log,
         rqctx.context(),
+        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,
     )
     .await?;
+
     let json = get_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -100,6 +103,7 @@ pub async fn proj_perf_get(
         auth_user.as_ref(),
     )
     .await?;
+
     Ok(Get::response_ok(json, auth_user.is_some()))
 }
 

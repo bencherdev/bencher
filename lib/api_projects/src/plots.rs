@@ -266,7 +266,9 @@ pub async fn proj_plot_get(
     path_params: Path<ProjPlotParams>,
 ) -> Result<ResponseOk<JsonPlot>, HttpError> {
     let auth_user = AuthUser::from_pub_token(
+        &rqctx.log,
         rqctx.context(),
+        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,
