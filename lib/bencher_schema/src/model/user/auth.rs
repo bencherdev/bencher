@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{net::IpAddr, ops::Deref};
 
 use async_trait::async_trait;
 #[cfg(feature = "plus")]

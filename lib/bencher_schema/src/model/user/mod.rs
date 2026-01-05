@@ -23,6 +23,7 @@ use crate::{
 
 pub mod admin;
 pub mod auth;
+pub mod public;
 pub mod token;
 
 crate::macros::typed_id::typed_id!(UserId);
