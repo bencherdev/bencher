@@ -75,15 +75,15 @@ pub enum GitHubError {
     BadFullName(String),
     #[error("GitHub Action event repository full name is not of the form `owner/repo`: ({0})")]
     InvalidFullName(String),
-    #[error("Failed to parse GitHub API URL: {0}")]
+    #[error("Failed to parse GitHub API URL: {}", _0.to_string())]
     BaseUri(octocrab::Error),
-    #[error("Failed to authenticate as GitHub Action: {0}")]
+    #[error("Failed to authenticate as GitHub Action: {}", _0.to_string())]
     Auth(octocrab::Error),
-    #[error("Failed to list GitHub PR comments: {0}")]
+    #[error("Failed to list GitHub PR comments: {}", _0.to_string())]
     Comments(octocrab::Error),
-    #[error("Failed to create GitHub PR comment: {0}")]
+    #[error("Failed to create GitHub PR comment: {}", _0.to_string())]
     CreateComment(octocrab::Error),
-    #[error("Failed to update GitHub PR comment: {0}")]
+    #[error("Failed to update GitHub PR comment: {}", _0.to_string())]
     UpdateComment(octocrab::Error),
     #[error(
         "{}",
