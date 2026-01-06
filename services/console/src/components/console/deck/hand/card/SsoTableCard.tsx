@@ -1,4 +1,4 @@
-import { For, type Resource, Show } from "solid-js";
+import { For, Match, type Resource, Show, Switch } from "solid-js";
 import type { JsonOrganization } from "../../../../../types/bencher";
 
 export interface Props {
@@ -10,9 +10,44 @@ const SsoTableCard = (props: Props) => {
 	return (
 		<div class="box" style="margin-top: 2rem">
 			<h2 class="title is-4">Single Sign-On (SSO)</h2>
-			<Show
-				when={(props.value()?.sso?.length ?? 0) === 0}
-				fallback={
+			<Switch>
+				<Match when={props.value.loading || typeof props.value() !== "object"}>
+					<div class="box" style="margin-bottom: 1rem;">
+						<br />
+					</div>
+				</Match>
+				<Match when={(props.value()?.sso?.length ?? 0) === 0}>
+					<div class="box" style="margin-bottom: 1rem;">
+						<h3 class="title is-4">🐰 No SSO domains configured</h3>
+						<p>In order to add SSO, you must have a Bencher Enterprise plan.</p>
+						<a
+							type="button"
+							class="button is-primary is-half"
+							style="margin-top: 1rem; margin-bottom: 1rem;"
+							href={`/console/organizations/${props.value()?.slug}/billing?plan=enterprise`}
+						>
+							Upgrade to Bencher Enterprise
+						</a>
+						<Show
+							when={props.isBencherCloud}
+							fallback={
+								<p>
+									Then use{" "}
+									<a href="https://bencher.dev/docs/api/organizations/sso/">
+										the SSO REST API
+									</a>{" "}
+									to add your SSO domains.
+								</p>
+							}
+						>
+							<p>
+								Then contact us at{" "}
+								<a href="mailto:enterprise@bencher.dev">Enterprise Support</a>.
+							</p>
+						</Show>
+					</div>
+				</Match>
+				<Match when={(props.value()?.sso?.length ?? 0) > 0}>
 					<>
 						<For each={props.value()?.sso}>
 							{(sso) => (
@@ -50,38 +85,8 @@ const SsoTableCard = (props: Props) => {
 							</p>
 						</Show>
 					</>
-				}
-			>
-				<div class="box" style="margin-bottom: 1rem;">
-					<h3 class="title is-4">🐰 No SSO domains configured</h3>
-					<p>In order to add SSO, you must have a Bencher Enterprise plan.</p>
-					<a
-						type="button"
-						class="button is-primary is-half"
-						style="margin-top: 1rem; margin-bottom: 1rem;"
-						href={`/console/organizations/${props.value()?.slug}/billing?plan=enterprise`}
-					>
-						Upgrade to Bencher Enterprise
-					</a>
-					<Show
-						when={props.isBencherCloud}
-						fallback={
-							<p>
-								Then use{" "}
-								<a href="https://bencher.dev/docs/api/organizations/sso/">
-									the SSO REST API
-								</a>{" "}
-								to add your SSO domains.
-							</p>
-						}
-					>
-						<p>
-							Then contact us at{" "}
-							<a href="mailto:enterprise@bencher.dev">Enterprise Support</a>.
-						</p>
-					</Show>
-				</div>
-			</Show>
+				</Match>
+			</Switch>
 		</div>
 	);
 };
