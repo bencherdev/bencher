@@ -15,6 +15,8 @@ use serde::{
 
 use crate::ValidError;
 
+const BENCHER_START_YEAR: i32 = 2022;
+
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -102,7 +104,7 @@ impl Visitor<'_> for ExpirationYearVisitor {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_expiration_year(year: i32) -> bool {
     let year_now = Utc::now().year();
-    (year_now..=(year_now + 115)).contains(&year)
+    (BENCHER_START_YEAR..=(year_now + 115)).contains(&year)
 }
 
 #[cfg(test)]
@@ -112,6 +114,10 @@ mod tests {
 
     #[test]
     fn expiration_year() {
+        assert_eq!(true, is_valid_expiration_year(2022));
+        assert_eq!(true, is_valid_expiration_year(2023));
+        assert_eq!(true, is_valid_expiration_year(2024));
+        assert_eq!(true, is_valid_expiration_year(2025));
         assert_eq!(true, is_valid_expiration_year(2030));
         assert_eq!(true, is_valid_expiration_year(2040));
         assert_eq!(true, is_valid_expiration_year(2050));
@@ -119,6 +125,6 @@ mod tests {
 
         assert_eq!(false, is_valid_expiration_year(-2030));
         assert_eq!(false, is_valid_expiration_year(0));
-        assert_eq!(false, is_valid_expiration_year(2022));
+        assert_eq!(false, is_valid_expiration_year(2300));
     }
 }
