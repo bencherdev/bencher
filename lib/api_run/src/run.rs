@@ -40,7 +40,6 @@ pub async fn run_post(
     let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
-        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,

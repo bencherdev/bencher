@@ -140,7 +140,6 @@ pub async fn server_config_console_get(
     let public_user = PublicUser::from_token(
         &rqctx.log,
         rqctx.context(),
-        &rqctx.request_id,
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
         bearer_token,

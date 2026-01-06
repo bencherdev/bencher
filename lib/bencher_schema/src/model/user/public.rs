@@ -27,7 +27,6 @@ impl PublicUser {
         Self::from_token(
             &rqctx.log,
             rqctx.context(),
-            &rqctx.request_id,
             #[cfg(feature = "plus")]
             rqctx.request.headers(),
             pub_bearer_token,
@@ -38,7 +37,6 @@ impl PublicUser {
     pub async fn from_token(
         log: &Logger,
         context: &ApiContext,
-        request_id: &str,
         #[cfg(feature = "plus")] headers: &crate::HeaderMap,
         bearer_token: PubBearerToken,
     ) -> Result<Self, HttpError> {
@@ -46,13 +44,13 @@ impl PublicUser {
             let user = AuthUser::from_token(context, bearer_token).await?;
             slog::info!(
                 log,
-                "Authenticated user"; "request_id" => request_id, "user_uuid" => %user.user.uuid
+                "Authenticated user"; "user_uuid" => %user.user.uuid
             );
             Self::Auth(Box::new(user))
         } else {
             #[cfg(feature = "plus")]
             let remote_ip = {
-                let remote_ip = RateLimiting::remote_ip(log, request_id, headers);
+                let remote_ip = RateLimiting::remote_ip(log, headers);
                 remote_ip
                     .map(|ip| context.rate_limiting.public_request(ip))
                     .transpose()?;

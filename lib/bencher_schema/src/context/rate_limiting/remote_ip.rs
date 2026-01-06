@@ -3,17 +3,16 @@ use std::net::IpAddr;
 use http::HeaderMap;
 use slog::Logger;
 
-pub(super) fn remote_ip(log: &Logger, request_id: &str, headers: &HeaderMap) -> Option<IpAddr> {
+pub(super) fn remote_ip(log: &Logger, headers: &HeaderMap) -> Option<IpAddr> {
     remote_ip_inner(headers)
         .inspect(|ip| {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIp);
-            slog::info!(log, "Remote IP found"; "request_id" => request_id, "ip" => %ip);
+            slog::info!(log, "Remote IP"; "ip" => %ip);
         })
         .or_else(|| {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIpNotFound);
-            slog::info!(log, "Remote IP not found"; "request_id" => request_id);
             None
         })
 }
