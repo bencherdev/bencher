@@ -62,9 +62,9 @@ async fn post_inner(
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimed);
 
-            #[cfg(feature = "plus")]
             if let Some(remote_ip) = remote_ip {
                 slog::info!(log, "Unclaimed run request from remote IP address"; "remote_ip" => ?remote_ip);
+                #[cfg(feature = "plus")]
                 context.rate_limiting.unclaimed_run(*remote_ip)?;
             }
 
