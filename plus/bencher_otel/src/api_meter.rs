@@ -55,6 +55,7 @@ pub enum ApiCounter {
     UserConfirm,
     UserClaim,
     UserSsoJoin(AuthMethod),
+    UserCheckout,
 
     RequestMax(IntervalKind, AuthorizationKind),
 
@@ -106,6 +107,7 @@ impl ApiCounter {
             Self::UserConfirm => "user.confirm",
             Self::UserClaim => "user.claim",
             Self::UserSsoJoin(_) => "user.sso.join",
+            Self::UserCheckout => "user.checkout",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -156,6 +158,7 @@ impl ApiCounter {
             Self::UserConfirm => "Counts the number of user confirmations",
             Self::UserClaim => "Counts the number of user claims",
             Self::UserSsoJoin(_) => "Counts the number of user SSO joins",
+            Self::UserCheckout => "Counts the number of user checkouts",
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
@@ -198,6 +201,7 @@ impl ApiCounter {
             | Self::UserRecaptchaFailure
             | Self::UserInvite
             | Self::UserClaim
+            | Self::UserCheckout
             | Self::EmailSend => Vec::new(),
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)

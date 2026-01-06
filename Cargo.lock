@@ -168,6 +168,7 @@ version = "0.5.9"
 dependencies = [
  "bencher_endpoint",
  "bencher_json",
+ "bencher_otel",
  "bencher_rbac",
  "bencher_schema",
  "dropshot",

@@ -38,8 +38,6 @@ pub async fn checkouts_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonNewCheckout>,
 ) -> Result<ResponseCreated<JsonCheckout>, HttpError> {
-    #[cfg(feature = "sentry")]
-    sentry::capture_message("Checkout endpoint activated", sentry::Level::Info);
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = checkouts_post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
@@ -64,6 +62,9 @@ async fn checkouts_post_inner(
         entitlements,
         self_hosted,
     } = json_checkout;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserCheckout);
 
     // Get the organization
     let query_organization =
