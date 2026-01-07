@@ -312,7 +312,11 @@ impl GitHubActions {
 
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
-        let body = report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref());
+        let body = report_comment.html_with_max_length(
+            self.ci_only_thresholds, 
+            self.ci_id.as_deref(),
+            CHECK_MAX_LENGTH,
+        );
         // Always update the comment if it exists
         let comment = if let Some(comment_id) = comment_id {
             issue_handler.update_comment(comment_id, body).await
