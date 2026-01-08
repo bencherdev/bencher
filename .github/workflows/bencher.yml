@@ -792,13 +792,14 @@ jobs:
         working-directory: ./services/console
         run: npm run netlify
       - name: Test Links
+        if: github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel'
         # If there are timeouts checking links,
         # this step can take a long time to fail.
         timeout-minutes: 3
         continue-on-error: true
         uses: lycheeverse/lychee-action@v2.3.0
         with:
-          args: --config ./services/console/lychee.toml ./services/console/dist
+          args: --config ./services/console/lychee.toml --github-token ${{ secrets.GITHUB_TOKEN }} --user-agent "${{ secrets.LYCHEE_USER_AGENT }}" ./services/console/dist
 
   # API Fly.io
   deploy_api_fly_dev:
