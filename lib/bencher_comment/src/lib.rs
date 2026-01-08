@@ -136,7 +136,7 @@ impl ReportComment {
     }
 
     pub fn html(&self, require_threshold: bool, id: Option<&str>) -> String {
-        self.html_inner(require_threshold, id, true)
+        self.html_inner(require_threshold, id, false)
     }
 
     pub fn html_with_max_length(
@@ -145,27 +145,20 @@ impl ReportComment {
         id: Option<&str>,
         max_length: usize,
     ) -> String {
-        let html = self.html_inner(require_threshold, id, true);
+        let html = self.html(require_threshold, id);
         if html.len() > max_length {
-            self.html_inner(require_threshold, id, false)
+            self.html_inner(require_threshold, id, true)
         } else {
             html
         }
     }
 
-    fn html_inner(
-        &self,
-        require_threshold: bool,
-        id: Option<&str>,
-        include_benchmarks: bool,
-    ) -> String {
+    fn html_inner(&self, require_threshold: bool, id: Option<&str>, truncated: bool) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         self.html_header(html_mut);
         self.html_report_table(html_mut);
-        if include_benchmarks {
-            self.html_benchmarks(html_mut, require_threshold);
-        }
+        self.html_benchmarks(html_mut, require_threshold, truncated);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         self.html_bencher_tag(html_mut, id);
@@ -200,20 +193,22 @@ impl ReportComment {
         html.push_str("</table>");
     }
 
-    fn html_benchmarks(&self, html: &mut String, require_threshold: bool) {
-        self.html_no_benchmarks(html);
-        self.html_no_threshold(html, require_threshold);
-        self.html_alerts(html);
-        self.html_benchmark_details(html, require_threshold);
+    fn html_benchmarks(&self, html: &mut String, require_threshold: bool, truncated: bool) {
+        self.html_no_benchmarks(html, truncated);
+        self.html_no_threshold(html, require_threshold, truncated);
+        self.html_alerts(html, truncated);
+        self.html_benchmark_details(html, require_threshold, truncated);
     }
 
-    fn html_no_benchmarks(&self, html: &mut String) {
+    fn html_no_benchmarks(&self, html: &mut String, truncated: bool) {
         if self.benchmark_count == 0 {
             html.push_str("<blockquote><h3>⚠️ WARNING: No benchmarks found!</h3></blockquote>");
+        } else if truncated {
+            html.push_str("<blockquote><h3>⚠️ WARNING: Truncated view!</h3><p>The full continuous benchmarking report exceeds the maximum length allowed on this platform.</p></blockquote>");
         }
     }
 
-    fn html_no_threshold(&self, html: &mut String, require_threshold: bool) {
+    fn html_no_threshold(&self, html: &mut String, require_threshold: bool, truncated: bool) {
         if self.benchmark_count == 0 || self.missing_threshold.is_empty() || require_threshold {
             return;
         }
@@ -222,20 +217,23 @@ impl ReportComment {
         html.push_str("<h3>⚠️ WARNING: No Threshold found!</h3>");
         html.push_str("<p>Without a Threshold, no Alerts will ever be generated.</p>");
 
-        html.push_str("<ul>");
-        for Measure { name, slug, units } in &self.missing_threshold {
-            let url = self.resource_url(Resource::Measure(slug.clone()));
-            html.push_str(&format!("<li><a href=\"{url}\">{name} ({units})</a></li>"));
-        }
-        html.push_str("</ul>");
+        if !truncated {
+            html.push_str("<ul>");
+            for Measure { name, slug, units } in &self.missing_threshold {
+                let url = self.resource_url(Resource::Measure(slug.clone()));
+                html.push_str(&format!("<li><a href=\"{url}\">{name} ({units})</a></li>"));
+            }
+            html.push_str("</ul>");
 
-        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
-        html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
-        html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> flag</a>.</p>", utm = self.utm_query()));
+            html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
+            html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
+            html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds{utm}\">the <code lang=\"rust\">--ci-only-thresholds</code> flag</a>.</p>", utm = self.utm_query()));
+        }
+
         html.push_str("</blockquote>");
     }
 
-    fn html_alerts(&self, html: &mut String) {
+    fn html_alerts(&self, html: &mut String, truncated: bool) {
         if self.json_report.alerts.is_empty() {
             return;
         }
@@ -244,7 +242,10 @@ impl ReportComment {
             "<h3>🚨 {alerts_len} {alert}</h3>",
             alert = if alerts_len == 1 { "Alert" } else { "Alerts" },
         ));
-        self.html_alerts_table(html);
+
+        if !truncated {
+            self.html_alerts_table(html);
+        }
     }
 
     fn html_alerts_table(&self, html: &mut String) {
@@ -362,8 +363,8 @@ impl ReportComment {
         html.push_str("</td>");
     }
 
-    fn html_benchmark_details(&self, html: &mut String, require_threshold: bool) {
-        if self.benchmark_count == 0 {
+    fn html_benchmark_details(&self, html: &mut String, require_threshold: bool, truncated: bool) {
+        if self.benchmark_count == 0 || truncated {
             return;
         }
 
