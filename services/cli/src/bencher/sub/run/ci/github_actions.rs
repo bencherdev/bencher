@@ -19,9 +19,18 @@ const PULL_REQUEST_TARGET: &str = "pull_request_target";
 
 const FULL_NAME: &str = "full_name";
 
-// https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run
-#[expect(clippy::decimal_literal_representation)]
-const CHECK_MAX_LENGTH: usize = 65_536;
+// There is an undocumented maximum length of 65536 characters for comments.
+// - Check Run (https://github.com/bencherdev/bencher/issues/534):
+//   - REST: https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run
+//   - GraphQL:
+//     - https://docs.github.com/en/graphql/reference/mutations#createcheckrun
+//     - https://docs.github.com/en/graphql/reference/objects#checkrun
+// - PR Comment (https://github.com/bencherdev/bencher/issues/644#issuecomment-3716253808):
+//   - REST: https://docs.github.com/en/rest/pulls/comments?apiVersion=2022-11-28#create-a-review-comment-for-a-pull-request
+//   - GraphQL:
+//     - https://docs.github.com/en/graphql/reference/mutations#addcomment
+//     - https://docs.github.com/en/graphql/reference/input-objects#addcommentinput
+const MAX_LENGTH: usize = 1 << 16;
 
 #[expect(clippy::struct_excessive_bools)]
 #[derive(Debug)]
@@ -242,7 +251,7 @@ impl GitHubActions {
         let summary = report_comment.html_with_max_length(
             self.ci_only_thresholds,
             self.ci_id.as_deref(),
-            CHECK_MAX_LENGTH,
+            MAX_LENGTH,
         );
         let report = CheckRunOutput {
             title: String::new(),
@@ -313,9 +322,9 @@ impl GitHubActions {
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
         let body = report_comment.html_with_max_length(
-            self.ci_only_thresholds, 
+            self.ci_only_thresholds,
             self.ci_id.as_deref(),
-            CHECK_MAX_LENGTH,
+            MAX_LENGTH,
         );
         // Always update the comment if it exists
         let comment = if let Some(comment_id) = comment_id {
