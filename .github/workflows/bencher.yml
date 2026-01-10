@@ -1002,7 +1002,7 @@ jobs:
       - name: Run Netlify Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-netlify prod ${{ github.ref_name }}
+        run: cargo test-netlify prod --user-agent "${{ secrets.LYCHEE_USER_AGENT }}" ${{ github.ref_name }}
 
   # Release
   release_bencher:

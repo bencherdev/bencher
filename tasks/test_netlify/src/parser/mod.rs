@@ -15,4 +15,7 @@ pub enum TaskSub {
 #[derive(Parser, Debug)]
 pub struct TaskTestNetlify {
     pub ref_name: String,
+
+    #[clap(long)]
+    pub user_agent: Option<String>,
 }

@@ -14,22 +14,31 @@ const NTFY_TOPIC: &str = "bencherdev";
 pub struct TestNetlify {
     pub dev: bool,
     pub ref_name: String,
+    pub user_agent: Option<String>,
 }
 
 impl TestNetlify {
     pub fn dev(test_netlify: TaskTestNetlify) -> Self {
-        let TaskTestNetlify { ref_name } = test_netlify;
+        let TaskTestNetlify {
+            ref_name,
+            user_agent,
+        } = test_netlify;
         Self {
             dev: true,
             ref_name,
+            user_agent,
         }
     }
 
     pub fn prod(test_netlify: TaskTestNetlify) -> Self {
-        let TaskTestNetlify { ref_name } = test_netlify;
+        let TaskTestNetlify {
+            ref_name,
+            user_agent,
+        } = test_netlify;
         Self {
             dev: false,
             ref_name,
+            user_agent,
         }
     }
 
@@ -49,14 +58,21 @@ impl TestNetlify {
             "<title>Bencher | Bencher - Continuous Benchmarking</title>"
         };
         for i in 0..5 {
-            if let Err(e) = test_ui_project(&console_url, project_slug, find_str).await {
+            if let Err(e) = test_ui_project(
+                &console_url,
+                project_slug,
+                self.user_agent.as_deref(),
+                find_str,
+            )
+            .await
+            {
                 println!("Netlify deploy not ready yet: {e}");
                 thread::sleep(Duration::from_secs(i));
             } else {
                 break;
             }
         }
-        test_ui_version(&console_url).await?;
+        test_ui_version(&console_url, self.user_agent.as_deref()).await?;
 
         let notify = Notify::new(&self.ref_name, &console_url);
         notify.send().await?;
@@ -88,25 +104,35 @@ fn netlify_deploy_id(path: &str) -> anyhow::Result<String> {
 async fn test_ui_project(
     console_url: &str,
     project_slug: &str,
+    user_agent: Option<&str>,
     find_str: &str,
 ) -> anyhow::Result<()> {
     let url = format!("{console_url}/perf/{project_slug}");
     println!("Testing UI project {project_slug} at {url}");
 
-    fetch_and_check(&url, find_str).await
+    fetch_and_check(&url, user_agent, find_str).await
 }
 
-async fn test_ui_version(console_url: &str) -> anyhow::Result<()> {
+async fn test_ui_version(console_url: &str, user_agent: Option<&str>) -> anyhow::Result<()> {
     let url = format!("{console_url}/download");
     println!("Testing UI deploy is version {API_VERSION} at {url}");
 
     let heading = format!("Bencher Download (v{API_VERSION})");
 
-    fetch_and_check(&url, &heading).await
+    fetch_and_check(&url, user_agent, &heading).await
 }
 
-async fn fetch_and_check(url: &str, find_str: &str) -> anyhow::Result<()> {
-    let html = reqwest::get(url).await?.text().await?;
+async fn fetch_and_check(
+    url: &str,
+    user_agent: Option<&str>,
+    find_str: &str,
+) -> anyhow::Result<()> {
+    let client = if let Some(user_agent) = user_agent {
+        reqwest::Client::builder().user_agent(user_agent).build()?
+    } else {
+        reqwest::Client::new()
+    };
+    let html = client.get(url).send().await?.text().await?;
     if !html.contains(find_str) {
         return Err(anyhow::anyhow!(
             "Failed to find `{find_str}` in HTML from {url}"
