@@ -148,6 +148,29 @@ impl QueryProject {
     {
         let project_name = project_name_fn()?;
         match public_user {
+            PublicUser::Public(remote_ip) => {
+                slog::info!(log, "Creating on-the-fly project for public user"; "project_slug" => %project_slug, "remote_ip" => ?remote_ip);
+                let query_organization = QueryOrganization::get_or_create_from_project(
+                    context,
+                    &project_name,
+                    &project_slug,
+                )
+                .await?;
+                // In most cases, there should only ever be one on-the-fly project here,
+                // but check the rate limit just in case.
+                #[cfg(feature = "plus")]
+                InsertProject::rate_limit(context, &query_organization).await?;
+                // Currently, there is no semantic importance to having the organization and project have the same UUID.
+                // However, it seems like a good idea to keep them in sync for now.
+                // It makes identifying on-the-fly unclaimed projects easier, even after they have been claimed.
+                // This is okay since there should never be more than one project in an unclaimed "from project" organization.
+                let insert_project = InsertProject::from_organization(
+                    &query_organization,
+                    project_name,
+                    project_slug,
+                );
+                Self::create_inner(log, context, &query_organization, insert_project).await
+            },
             PublicUser::Auth(auth_user) => {
                 let query_organization =
                     QueryOrganization::get_or_create_from_user(context, auth_user).await?;
@@ -171,28 +194,6 @@ impl QueryProject {
                     insert_project,
                 )
                 .await
-            },
-            PublicUser::Public(_) => {
-                let query_organization = QueryOrganization::get_or_create_from_project(
-                    context,
-                    &project_name,
-                    &project_slug,
-                )
-                .await?;
-                // In most cases, there should only ever be one on-the-fly project here,
-                // but check the rate limit just in case.
-                #[cfg(feature = "plus")]
-                InsertProject::rate_limit(context, &query_organization).await?;
-                // Currently, there is no semantic importance to having the organization and project have the same UUID.
-                // However, it seems like a good idea to keep them in sync for now.
-                // It makes identifying on-the-fly unclaimed projects easier, even after they have been claimed.
-                // This is okay since there should never be more than one project in an unclaimed "from project" organization.
-                let insert_project = InsertProject::from_organization(
-                    &query_organization,
-                    project_name,
-                    project_slug,
-                );
-                Self::create_inner(log, context, &query_organization, insert_project).await
             },
         }
     }

@@ -101,12 +101,12 @@ async fn post_inner(
     // If the organization is claimed, check permissions
     if is_claimed {
         match public_user {
-            PublicUser::Public(ip) => {
-                slog::info!(log, "Public user attempted to create a run for a claimed project"; "project" => ?query_project.uuid, "ip" => ?ip);
+            PublicUser::Public(remote_ip) => {
+                slog::info!(log, "Public user attempted to create a run for a claimed project"; "project" => ?query_project.uuid, "remote_ip" => ?remote_ip);
 
                 return Err(unauthorized_error(format!(
-                    "This project ({}) has already been claimed. Provide a valid API token (`--token`) to authenticate.",
-                    query_project.slug
+                    "This project ({slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate.",
+                    slug = query_project.slug
                 )));
             },
             PublicUser::Auth(auth_user) => {
