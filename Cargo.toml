@@ -72,7 +72,7 @@ chrono = { version = "0.4", default-features = false }
 clap = { version = "4.5", features = ["derive"] }
 clap_mangen = "0.2"
 console_error_panic_hook = "0.1"
-criterion = "0.5"
+criterion = "0.8"
 css-inline = "0.14"
 dashmap = "6.1"
 derive_more = { version = "2.1", features = ["display"] }
