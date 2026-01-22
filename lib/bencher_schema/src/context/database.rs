@@ -6,12 +6,14 @@ use std::{
 
 use bencher_json::{Secret, system::config::DataStore as DataStoreConfig};
 use camino::Utf8PathBuf;
+use diesel::r2d2::{ConnectionManager, Pool};
 
 pub type DbConnection = diesel::SqliteConnection;
 
 pub struct Database {
     pub path: PathBuf,
     pub connection: Arc<tokio::sync::Mutex<DbConnection>>,
+    pub pool: Pool<ConnectionManager<DbConnection>>,
     pub data_store: Option<DataStore>,
 }
 

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{num::NonZeroUsize, sync::Arc};
 
 use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
@@ -15,9 +15,12 @@ use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{conn_lock, context::RateLimiting, model::server::QueryServer};
 use bencher_token::TokenKey;
-use diesel::Connection as _;
 #[cfg(feature = "plus")]
 use diesel::connection::SimpleConnection as _;
+use diesel::{
+    Connection as _,
+    r2d2::{ConnectionManager, Pool},
+};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
@@ -50,6 +53,8 @@ pub enum ConfigTxError {
     Endpoint(bencher_json::ValidError),
     #[error("Failed to connect to database ({0}): {1}")]
     DatabaseConnection(String, diesel::ConnectionError),
+    #[error("Failed to create database connection pool ({0}): {1}")]
+    DatabaseConnectionPool(String, diesel::r2d2::PoolError),
     #[error("Failed to parse data store: {0}")]
     DataStore(bencher_schema::context::DataStoreError),
     #[error("Failed to register endpoint: {0}")]
@@ -171,18 +176,20 @@ async fn into_context(
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(log, &database_path);
 
-    info!(&log, "Connecting to database: {database_path}");
+    info!(log, "Connecting to database: {database_path}");
     let mut database_connection = DbConnection::establish(&database_path)
         .map_err(|e| ConfigTxError::DatabaseConnection(database_path.to_string(), e))?;
 
     #[cfg(feature = "plus")]
     if let Some(litestream) = plus.as_ref().and_then(|plus| plus.litestream.as_ref()) {
-        info!(&log, "Configuring Litestream");
+        info!(log, "Configuring Litestream");
         run_litestream(&mut database_connection, litestream)?;
     }
 
-    info!(&log, "Running database migrations");
+    info!(log, "Running database migrations");
     bencher_schema::run_migrations(&mut database_connection)?;
+
+    let pool = connection_pool(log, &database_path)?;
 
     let data_store = if let Some(data_store) = json_database.data_store {
         Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
@@ -193,10 +200,11 @@ async fn into_context(
     let database = Database {
         path: json_database.file,
         connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
+        pool,
         data_store,
     };
 
-    info!(&log, "Loading secret key");
+    info!(log, "Loading secret key");
     let token_key = TokenKey::new(
         security.issuer.unwrap_or_else(|| console_url.to_string()),
         &security.secret_key,
@@ -205,7 +213,7 @@ async fn into_context(
     #[cfg(feature = "plus")]
     let rate_limiting = plus.as_ref().and_then(|plus| plus.rate_limiting);
 
-    info!(&log, "Configuring Bencher Plus");
+    info!(log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
     let Plus {
         github_client,
@@ -232,7 +240,7 @@ async fn into_context(
     .map_err(Box::new)
     .map_err(ConfigTxError::RateLimiting)?;
 
-    debug!(&log, "Creating API context");
+    debug!(log, "Creating API context");
     Ok(ApiContext {
         console_url,
         token_key,
@@ -318,6 +326,31 @@ fn run_litestream(
         .map_err(ConfigTxError::Pragma)?;
 
     Ok(())
+}
+
+fn connection_pool(
+    log: &Logger,
+    database_path: &str,
+) -> Result<Pool<ConnectionManager<DbConnection>>, ConfigTxError> {
+    let cpu_count = std::thread::available_parallelism()
+        .map(NonZeroUsize::get)
+        .unwrap_or_default();
+    // todo(epompeii): Make this configurable
+    let max_size = u32::try_from((cpu_count * 2).clamp(2, 16)).unwrap_or(2);
+    // todo(epompeii): Make this configurable
+    let connection_timeout = std::time::Duration::from_secs(15);
+    info!(
+        log,
+        "Creating database connection pool (max size: {max_size} | connection timeout: {connection_timeout:?})"
+    );
+
+    let connection_manager = ConnectionManager::new(database_path);
+
+    Pool::builder()
+        .max_size(max_size)
+        .connection_timeout(connection_timeout)
+        .build(connection_manager)
+        .map_err(|e| ConfigTxError::DatabaseConnectionPool(database_path.to_owned(), e))
 }
 
 #[expect(clippy::needless_pass_by_value)]
