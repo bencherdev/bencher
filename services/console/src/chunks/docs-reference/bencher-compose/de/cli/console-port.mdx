@@ -1,7 +1,15 @@
 ### `--console-port <PORT>`
 
-Geben Sie eine Portnummer für den Console-Servercontainer an.
+Geben Sie eine Portnummer für den Console-Server-Container an.
 Standardmäßig wird Port `3000` verwendet.
-Ähnlich wie das Port-Only-Format der [Option `--expose`][docker run expose] für `docker run`.
+Ähnlich wie die port-only-Form der [Option `--expose`][docker run expose] für `docker run`.
+
+Wenn Sie die Option `--console-port` angeben,
+müssen Sie außerdem die API-Server-Konfiguration [die `console.url`][console url] anpassen, damit sie mit dem neuen Port übereinstimmt, und dazu entweder die Option [die `--api-env`][api env] oder die Option [die `--api-volume`][api volume] verwenden.
+
+[api env]: #--api-env-key_value
+[api volume]: #--api-volume-host_container
+
+[console url]: /de/docs/reference/server-config/#console
 
 [docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish

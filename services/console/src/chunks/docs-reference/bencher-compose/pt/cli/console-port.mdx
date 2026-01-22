@@ -1,7 +1,17 @@
 ### `--console-port <PORT>`
 
-Especifique um número de porta para o container do servidor do Console.
-Por padrão, a porta `3000` é utilizada.
-Semelhante à forma apenas de porta da [opção `--expose`][docker run expose] para o `docker run`.
+Especifica um número de porta para o contêiner do servidor Console.
+Por padrão, a porta `3000` é usada.
+Semelhante à forma que expõe apenas a porta da [opção `--expose`][docker run expose] do `docker run`.
+
+Se você especificar a opção `--console-port`,
+também deverá atualizar [a configuração do servidor de API `console.url`][console url]
+para corresponder à nova porta,
+usando [a opção `--api-env`][api env] ou [a opção `--api-volume`][api volume].
+
+[api env]: #--api-env-key_value
+[api volume]: #--api-volume-host_container
+
+[console url]: /pt/docs/reference/server-config/#console
 
 [docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish

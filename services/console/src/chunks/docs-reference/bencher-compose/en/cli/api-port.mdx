@@ -4,4 +4,13 @@ Specify a port number for the API server container.
 By default, port `61016` is used.
 Similar to the port only form of [the `--expose` option][docker run expose] for `docker run`.
 
+If you specify the `--api-port` option,
+you must also update [the Console Server `BENCHER_API_URL` environment variable][console server]
+to match the new port,
+using [the `--console-env` option][console env].
+
+[console env]: #--console-env-key_value
+
+[console server]: /docs/reference/console-config/
+
 [docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish

@@ -1,7 +1,13 @@
 ### `--api-port <PORT>`
 
-APIサーバーコンテナのポート番号を指定します。
-デフォルトでは、ポート`61016`が使用されます。
-`docker run`の[ `--expose`オプション][docker run expose]のポートのみの形式に似ています。
+API サーバーコンテナのポート番号を指定します。
+デフォルトではポート `61016` が使用されます。
+これは `docker run` における [`--expose` オプション][docker run expose] のポートのみの形式に類似しています。
+
+`--api-port` オプションを指定した場合は、[Console Server の `BENCHER_API_URL` 環境変数][console server] を [`--console-env` オプション][console env] を使って新しいポートに合わせて更新する必要があります。
+
+[console env]: #--console-env-key_value
+
+[console server]: /ja/docs/reference/console-config/
 
 [docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish

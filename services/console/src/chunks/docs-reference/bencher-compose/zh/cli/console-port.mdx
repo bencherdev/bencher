@@ -1,7 +1,16 @@
 ### `--console-port <PORT>`
 
-为控制台服务器容器指定一个端口号。
-默认情况下，使用端口 `3000`。
-类似于 `docker run` 的[`--expose` 选项][docker run expose]的仅端口形式。
+为 Console 服务器容器指定端口号。
+默认情况下使用端口 `3000`。
+类似于 `docker run` 的 [仅端口形式的 `--expose` 选项][docker run expose]。
+
+如果指定了 `--console-port` 选项，
+您还必须更新 [API 服务器配置中的 `console.url`][console url] 以匹配新的端口，
+可使用 [ `--api-env` 选项][api env] 或 [ `--api-volume` 选项][api volume]。
+
+[api env]: #--api-env-key_value
+[api volume]: #--api-volume-host_container
+
+[console url]: /zh/docs/reference/server-config/#console
 
 [docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish

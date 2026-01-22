@@ -1,5 +1,13 @@
 ### `--api-port <PORT>`
 
-API 서버 컨테이너에 대한 포트 번호를 지정합니다. 기본적으로 포트 `61016`이 사용됩니다. `docker run`의 [`--expose` 옵션][docker run expose]의 포트 전용 형식과 유사합니다.
+API 서버 컨테이너에 대한 포트 번호를 지정합니다.
+기본적으로 포트 `61016`이 사용됩니다.
+이는 `docker run`의 [`--expose` 옵션][docker run expose]의 포트 전용 형태와 유사합니다.
+
+`--api-port` 옵션을 지정하는 경우, [Console Server의 `BENCHER_API_URL` 환경 변수][console server]도 새 포트에 맞게 [`--console-env` 옵션][console env]으로 업데이트해야 합니다.
+
+[console env]: #--console-env-key_value
+
+[console server]: /ko/docs/reference/console-config/
 
 [docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish

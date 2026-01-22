@@ -1,5 +1,13 @@
 ### `--api-port <PORT>`
 
-Geben Sie eine Portnummer für den API-Server-Container an. Standardmäßig wird der Port `61016` verwendet. Ähnlich zur Port-only-Form der [`--expose`-Option][docker run expose] für `docker run`.
+Legt die Portnummer für den API-Server-Container fest.
+Standardmäßig wird Port `61016` verwendet.
+Ähnlich wie die reine Port-Form der Option [`--expose`][docker run expose] für `docker run`.
+
+Wenn Sie die Option `--api-port` angeben, müssen Sie außerdem die [Umgebungsvariable `BENCHER_API_URL` des Console-Servers][console server] aktualisieren, damit sie den neuen Port widerspiegelt, und zwar mithilfe der Option [`--console-env`][console env].
+
+[console env]: #--console-env-key_value
+
+[console server]: /de/docs/reference/console-config/
 
 [docker run expose]: https://docs.docker.com/reference/cli/docker/container/run/#publish

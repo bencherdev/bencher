@@ -19,9 +19,15 @@ plus = [
 ]
 
 [dependencies]
-bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
+bencher_json = { workspace = true, optional = true, features = [
+    "server",
+    "plus",
+] }
 chrono = { workspace = true, optional = true }
-jsonwebtoken = { workspace = true, optional = true, features = ["use_pem"] }
+jsonwebtoken = { workspace = true, optional = true, features = [
+    "use_pem",
+    "rust_crypto",
+] }
 thiserror = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 
