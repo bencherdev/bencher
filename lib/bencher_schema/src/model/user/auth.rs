@@ -17,11 +17,10 @@ use dropshot::{
 use oso::{PolarValue, ToPolar};
 
 use crate::{
-    conn_lock,
     context::{ApiContext, DbConnection, Rbac},
     error::{BEARER_TOKEN_FORMAT, bad_request_error},
     model::{organization::OrganizationId, project::ProjectId},
-    schema,
+    schema, try_conn,
 };
 
 use super::QueryUser;
@@ -52,7 +51,7 @@ impl AuthUser {
         let email = claims.email();
 
         // Hold the connection for all permissions related queries
-        let conn = conn_lock!(context);
+        let conn = try_conn!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;
         #[cfg(feature = "plus")]

@@ -89,6 +89,30 @@ macro_rules! connection_lock {
     }};
 }
 
+#[macro_export]
+macro_rules! try_conn {
+    ($context:expr) => {{
+        let pool = $context.database.pool.clone();
+        &mut tokio::task::spawn_blocking(move || {
+            pool.get().map_err(|e| {
+                $crate::error::issue_error(
+                    "Failed to get database connection from pool",
+                    "Failed to get a database connection from the pool:",
+                    e,
+                )
+            })
+        })
+        .await
+        .map_err(|e| {
+            $crate::error::issue_error(
+                "Failed to join database connection task",
+                "Failed to join the database connection task:",
+                e,
+            )
+        })??
+    }};
+}
+
 impl ApiContext {
     #[cfg(feature = "plus")]
     pub fn biller(&self) -> Result<&Biller, dropshot::HttpError> {
