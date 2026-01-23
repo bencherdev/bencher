@@ -1,31 +1,31 @@
 use std::ops::Neg as _;
 
 use bencher_json::{
-    BenchmarkName, JsonNewMetric,
     project::{
-        measure::built_in::{BuiltInMeasure as _, gungraun},
+        measure::built_in::{gungraun, BuiltInMeasure as _},
         report::JsonAverage,
     },
+    BenchmarkName, JsonNewMetric,
 };
 use nom::{
-    IResult,
     branch::alt,
     bytes::complete::{is_a, is_not, tag, take_until1},
     character::complete::{char, space0, space1},
     combinator::{map, opt, peek, recognize},
     multi::{many0, many1},
     sequence::{delimited, preceded, terminated, tuple},
+    IResult,
 };
 
 use crate::{
-    Adaptable, Settings,
     adapters::util::parse_f64,
     results::adapter_results::{AdapterResults, GungraunMeasure},
+    Adaptable, Settings,
 };
 
-pub struct AdapterRustGungraun;
+pub struct AdapterRustGungraunText;
 
-impl Adaptable for AdapterRustGungraun {
+impl Adaptable for AdapterRustGungraunText {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             None => {},
@@ -52,8 +52,8 @@ impl Adaptable for AdapterRustGungraun {
     }
 }
 
-fn multiple_benchmarks<'a>()
--> impl FnMut(&'a str) -> IResult<&'a str, Vec<(BenchmarkName, Vec<GungraunMeasure>)>> {
+fn multiple_benchmarks<'a>(
+) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<(BenchmarkName, Vec<GungraunMeasure>)>> {
     map(
         many0(alt((
             // Try to parse a single benchmark:
@@ -68,8 +68,8 @@ fn multiple_benchmarks<'a>()
     )
 }
 
-fn single_benchmark<'a>()
--> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<GungraunMeasure>)>> {
+fn single_benchmark<'a>(
+) -> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<GungraunMeasure>)>> {
     map(
         tuple((
             terminated(
@@ -365,7 +365,11 @@ fn factor(input: &str) -> IResult<&str, f64> {
     map(
         tuple((alt((char('+'), char('-'))), parse_f64, char('x'))),
         |(sign, num, _)| {
-            if sign == '+' { num } else { num.neg() }
+            if sign == '+' {
+                num
+            } else {
+                num.neg()
+            }
         },
     )(input)
 }
@@ -374,7 +378,11 @@ fn percent(input: &str) -> IResult<&str, f64> {
     map(
         tuple((alt((char('+'), char('-'))), parse_f64, char('%'))),
         |(sign, num, _)| {
-            if sign == '+' { num } else { num.neg() }
+            if sign == '+' {
+                num
+            } else {
+                num.neg()
+            }
         },
     )(input)
 }
@@ -407,18 +415,18 @@ fn not_benchmark_name_end<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a s
 }
 
 #[cfg(test)]
-pub(crate) mod test_rust_gungraun {
-    use crate::{AdapterResults, adapters::test_util::convert_file_path};
-    use bencher_json::project::measure::built_in::{BuiltInMeasure as _, gungraun};
+pub(crate) mod test_rust_gungraun_text {
+    use crate::{adapters::test_util::convert_file_path, AdapterResults};
+    use bencher_json::project::measure::built_in::{gungraun, BuiltInMeasure as _};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
-    use super::AdapterRustGungraun;
+    use super::AdapterRustGungraunText;
     use std::collections::HashMap;
 
     #[test]
     fn without_optional_metrics() {
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/without-optional-metrics.txt",
         );
 
@@ -427,8 +435,9 @@ pub(crate) mod test_rust_gungraun {
 
     #[test]
     fn with_dhat() {
-        let results =
-            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/with-dhat.txt");
+        let results = convert_file_path::<AdapterRustGungraunText>(
+            "./tool_output/rust/gungraun/with-dhat.txt",
+        );
 
         validate_adapter_rust_gungraun(
             &results,
@@ -441,7 +450,7 @@ pub(crate) mod test_rust_gungraun {
 
     #[test]
     fn with_dhat_first_then_callgrind() {
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/dhat-then-callgrind.txt",
         );
 
@@ -456,7 +465,7 @@ pub(crate) mod test_rust_gungraun {
 
     #[test]
     fn with_dhat_and_global_bus_events() {
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/with-dhat-and-global-bus-events.txt",
         );
 
@@ -472,14 +481,14 @@ pub(crate) mod test_rust_gungraun {
     #[test]
     fn delta() {
         let results =
-            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/delta.txt");
+            convert_file_path::<AdapterRustGungraunText>("./tool_output/rust/gungraun/delta.txt");
 
         validate_adapter_rust_gungraun(&results, &OptionalMetrics::default());
     }
 
     #[test]
     fn delta_with_infinity() {
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/delta_with_inf.txt",
         );
 
@@ -522,7 +531,7 @@ pub(crate) mod test_rust_gungraun {
 
     #[test]
     fn with_summary_and_regressions() {
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/with-summary-and-regressions.txt",
         );
 
@@ -531,7 +540,7 @@ pub(crate) mod test_rust_gungraun {
 
     #[test]
     fn with_gungraun_summary() {
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/with-gungraun-summary.txt",
         );
 
@@ -540,7 +549,7 @@ pub(crate) mod test_rust_gungraun {
 
     #[test]
     fn ansi_escapes_issue_345() {
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/ansi-escapes.txt",
         );
 
@@ -550,7 +559,7 @@ pub(crate) mod test_rust_gungraun {
     #[test]
     fn with_ge() {
         let results =
-            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/with-ge.txt");
+            convert_file_path::<AdapterRustGungraunText>("./tool_output/rust/gungraun/with-ge.txt");
 
         validate_adapter_rust_gungraun(
             &results,
@@ -565,7 +574,7 @@ pub(crate) mod test_rust_gungraun {
     fn without_cachesim() {
         use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/without-cachesim.txt",
         );
 
@@ -596,7 +605,7 @@ pub(crate) mod test_rust_gungraun {
     fn callgrind_mixed_order() {
         use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/callgrind-mixed-order.txt",
         );
 
@@ -625,7 +634,7 @@ pub(crate) mod test_rust_gungraun {
     fn callgrind_ll_hits() {
         use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/callgrind-ll-hits.txt",
         );
 
@@ -656,7 +665,7 @@ pub(crate) mod test_rust_gungraun {
     fn callgrind_all() {
         use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/callgrind-all.txt",
         );
 
@@ -756,8 +765,9 @@ pub(crate) mod test_rust_gungraun {
     fn cachegrind() {
         use gungraun::*;
 
-        let results =
-            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/cachegrind.txt");
+        let results = convert_file_path::<AdapterRustGungraunText>(
+            "./tool_output/rust/gungraun/cachegrind.txt",
+        );
 
         assert_eq!(results.inner.len(), 3);
 
@@ -824,8 +834,9 @@ pub(crate) mod test_rust_gungraun {
     fn memcheck() {
         use gungraun::*;
 
-        let results =
-            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/memcheck.txt");
+        let results = convert_file_path::<AdapterRustGungraunText>(
+            "./tool_output/rust/gungraun/memcheck.txt",
+        );
 
         assert_eq!(results.inner.len(), 3);
 
@@ -874,8 +885,9 @@ pub(crate) mod test_rust_gungraun {
     fn helgrind() {
         use gungraun::*;
 
-        let results =
-            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/helgrind.txt");
+        let results = convert_file_path::<AdapterRustGungraunText>(
+            "./tool_output/rust/gungraun/helgrind.txt",
+        );
 
         assert_eq!(results.inner.len(), 3);
 
@@ -925,7 +937,7 @@ pub(crate) mod test_rust_gungraun {
         use gungraun::*;
 
         let results =
-            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/drd.txt");
+            convert_file_path::<AdapterRustGungraunText>("./tool_output/rust/gungraun/drd.txt");
 
         assert_eq!(results.inner.len(), 3);
 
@@ -974,7 +986,7 @@ pub(crate) mod test_rust_gungraun {
     fn name_multiple_lines() {
         use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/name_on_multiple_lines.txt",
         );
 
@@ -1023,7 +1035,7 @@ pub(crate) mod test_rust_gungraun {
     fn name_multiple_lines_mixed() {
         use gungraun::*;
 
-        let results = convert_file_path::<AdapterRustGungraun>(
+        let results = convert_file_path::<AdapterRustGungraunText>(
             "./tool_output/rust/gungraun/name_on_multiple_lines_mixed.txt",
         );
 
