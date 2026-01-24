@@ -5,7 +5,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    auth_conn, conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
@@ -342,15 +342,18 @@ async fn get_one_inner(
     public_user: &PublicUser,
 ) -> Result<JsonAlert, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
     )?;
 
-    let alert = QueryAlert::from_uuid(conn_lock!(context), query_project.id, path_params.alert)?;
-
-    alert.into_json(conn_lock!(context))
+    public_conn!(context, public_user, |conn| QueryAlert::from_uuid(
+        conn,
+        query_project.id,
+        path_params.alert
+    )?
+    .into_json(conn))
 }
 
 /// Update an alert
@@ -388,7 +391,7 @@ async fn patch_inner(
 ) -> Result<JsonAlert, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -396,11 +399,11 @@ async fn patch_inner(
     )?;
 
     let query_alert =
-        QueryAlert::from_uuid(conn_lock!(context), query_project.id, path_params.alert)?;
+        QueryAlert::from_uuid(auth_conn!(context), query_project.id, path_params.alert)?;
     let update_alert = UpdateAlert::from(json_alert.clone());
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
         .set(&update_alert)
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
     auth_conn!(context, |conn| QueryAlert::get(conn, query_alert.id)?
