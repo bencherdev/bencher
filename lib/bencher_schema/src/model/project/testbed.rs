@@ -17,6 +17,7 @@ use crate::{
         slug::ok_slug,
     },
     schema::{self, testbed as testbed_table},
+    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(TestbedId);
@@ -60,7 +61,7 @@ impl QueryTestbed {
             let update_testbed = UpdateTestbed::unarchive();
             diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
                 .set(&update_testbed)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
         }
 
@@ -103,7 +104,7 @@ impl QueryTestbed {
             InsertTestbed::from_json(conn_lock!(context), project_id, json_testbed);
         diesel::insert_into(schema::testbed::table)
             .values(&insert_testbed)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
 
         Self::from_uuid(conn_lock!(context), project_id, insert_testbed.uuid)

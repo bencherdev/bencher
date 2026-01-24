@@ -4,7 +4,7 @@ use bencher_schema::{
     context::{ApiContext, Body, ButtonBody, Message},
     error::{forbidden_error, issue_error},
     model::user::InsertUser,
-    public_conn,
+    public_conn, write_conn,
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
@@ -68,7 +68,7 @@ async fn post_inner(
 
     let invited = json_signup.invite.is_some();
     let insert_user =
-        InsertUser::from_json(public_conn!(context), &context.token_key, &json_signup)?;
+        InsertUser::from_json(write_conn!(context), &context.token_key, &json_signup)?;
     #[cfg(feature = "plus")]
     insert_user.rate_limit_auth(context)?;
 

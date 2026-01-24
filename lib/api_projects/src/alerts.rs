@@ -18,7 +18,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -400,7 +400,7 @@ async fn patch_inner(
     let update_alert = UpdateAlert::from(json_alert.clone());
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
         .set(&update_alert)
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
     auth_conn!(context, |conn| QueryAlert::get(conn, query_alert.id)?

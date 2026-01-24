@@ -23,7 +23,7 @@ use bencher_schema::{
             auth::{AuthUser, BearerToken},
         },
     },
-    resource_not_found_err, schema,
+    resource_not_found_err, schema, write_conn,
 };
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
@@ -188,7 +188,7 @@ async fn post_inner(
     let insert_sso = InsertSso::from_json(query_organization.id, json_new_sso);
     diesel::insert_into(schema::sso::table)
         .values(&insert_sso)
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(
             Sso,
             (&query_organization, &insert_sso)
@@ -292,7 +292,7 @@ async fn delete_inner(context: &ApiContext, path_params: OrgSsoParams) -> Result
             .filter(schema::sso::organization_id.eq(query_organization.id))
             .filter(schema::sso::uuid.eq(path_params.sso)),
     )
-    .execute(auth_conn!(context))
+    .execute(write_conn!(context))
     .map_err(resource_conflict_err!(
         Sso,
         (&query_organization, path_params.sso)

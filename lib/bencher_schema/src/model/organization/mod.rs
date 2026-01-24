@@ -33,6 +33,7 @@ use crate::{
     model::user::auth::AuthUser,
     resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
+    write_conn,
 };
 
 use super::user::QueryUser;
@@ -143,7 +144,7 @@ impl QueryOrganization {
         };
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
         Ok(query_organization)
@@ -155,7 +156,7 @@ impl QueryOrganization {
     ) -> Result<Self, HttpError> {
         diesel::insert_into(schema::organization::table)
             .values(&insert_organization)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Organization, insert_organization))?;
 
         let query_organization = schema::organization::table
@@ -286,7 +287,7 @@ impl QueryOrganization {
             })?;
 
         // Accept the invite to join the organization
-        query_user.accept_invite(conn_lock!(context), &context.token_key, &invite)?;
+        query_user.accept_invite(write_conn!(context), &context.token_key, &invite)?;
 
         Ok(())
     }

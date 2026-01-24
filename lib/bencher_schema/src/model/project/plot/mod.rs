@@ -15,6 +15,7 @@ use crate::{
         resource_not_found_err,
     },
     schema::plot as plot_table,
+    write_conn,
 };
 
 mod benchmark;
@@ -246,7 +247,7 @@ impl InsertPlot {
             benchmarks,
             measures,
         } = plot;
-        let rank = QueryPlot::new_rank(conn_lock!(context), query_project, index)?;
+        let rank = QueryPlot::new_rank(write_conn!(context), query_project, index)?;
         let timestamp = DateTime::now();
         let insert_plot = Self {
             uuid: PlotUuid::new(),
@@ -264,7 +265,7 @@ impl InsertPlot {
         };
         diesel::insert_into(plot_table::table)
             .values(&insert_plot)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Plot, insert_plot))?;
 
         let query_plot = plot_table::table
@@ -316,7 +317,7 @@ impl UpdatePlot {
             },
         };
         let rank = if let Some(index) = index {
-            Some(query_plot.update_rank(conn_lock!(context), query_project, index)?)
+            Some(query_plot.update_rank(write_conn!(context), query_project, index)?)
         } else {
             None
         };

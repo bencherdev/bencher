@@ -20,6 +20,7 @@ use crate::{
     },
     model::project::QueryProject,
     schema::{self, measure as measure_table},
+    write_conn,
 };
 
 use super::ProjectId;
@@ -66,7 +67,7 @@ impl QueryMeasure {
             let update_measure = UpdateMeasure::unarchive();
             diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
                 .set(&update_measure)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Benchmark, &query_measure))?;
         }
 
@@ -195,7 +196,7 @@ impl QueryMeasure {
             InsertMeasure::from_json(conn_lock!(context), project_id, json_measure);
         diesel::insert_into(schema::measure::table)
             .values(&insert_measure)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
         Self::from_uuid(conn_lock!(context), project_id, insert_measure.uuid)

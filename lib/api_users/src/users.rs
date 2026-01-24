@@ -13,7 +13,7 @@ use bencher_schema::{
         auth::{AuthUser, BearerToken},
         same_user,
     },
-    schema,
+    schema, write_conn,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -236,7 +236,7 @@ async fn patch_inner(
     let update_user = UpdateUser::from(json_user.clone());
     diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
         .set(&update_user)
-        .execute(conn_lock!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
 
     Ok(QueryUser::get(conn_lock!(context), query_user.id)?.into_json())

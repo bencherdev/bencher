@@ -25,6 +25,7 @@ use crate::{
         metric::QueryMetric,
     },
     schema::{self, alert as alert_table},
+    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(AlertId);
@@ -80,7 +81,7 @@ impl QueryAlert {
         for alert_id in &alerts {
             diesel::update(schema::alert::table.filter(schema::alert::id.eq(alert_id)))
                 .set(&silenced_alert)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Alert, (alert_id, &silenced_alert)))?;
         }
 

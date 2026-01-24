@@ -19,7 +19,7 @@ use bencher_schema::{
             auth::{AuthUser, BearerToken},
         },
     },
-    schema,
+    schema, write_conn,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -435,7 +435,7 @@ async fn patch_inner(
                 .filter(schema::organization_role::organization_id.eq(query_organization.id)),
         )
         .set(schema::organization_role::role.eq(role.to_string()))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(
             OrganizationRole,
             (&query_user, &query_organization, role)
@@ -483,7 +483,7 @@ async fn delete_inner(
             .filter(schema::organization_role::user_id.eq(query_user.id))
             .filter(schema::organization_role::organization_id.eq(query_organization.id)),
     )
-    .execute(auth_conn!(context))
+    .execute(write_conn!(context))
     .map_err(resource_conflict_err!(
         OrganizationRole,
         (&query_user, query_organization)

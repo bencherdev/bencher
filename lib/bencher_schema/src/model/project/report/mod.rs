@@ -32,7 +32,7 @@ use crate::{
         user::{QueryUser, UserId},
     },
     schema::{self, report as report_table},
-    view,
+    view, write_conn,
 };
 
 use super::{
@@ -117,7 +117,7 @@ impl QueryReport {
         // this branch with that particular hash.
         // Otherwise, create a new code version for this branch with/without the hash.
         let version_id = QueryVersion::get_or_increment(
-            conn_lock!(context),
+            write_conn!(context),
             project_id,
             head_id,
             json_report.hash.as_ref(),
@@ -139,7 +139,7 @@ impl QueryReport {
 
         diesel::insert_into(schema::report::table)
             .values(&insert_report)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Report, insert_report))?;
 
         let query_report = schema::report::table

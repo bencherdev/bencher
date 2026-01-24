@@ -8,7 +8,7 @@ use crate::{
     context::{ApiContext, DbConnection},
     error::{resource_conflict_err, resource_not_found_err},
     model::project::measure::{MeasureId, QueryMeasure},
-    schema::plot_measure as plot_measure_table,
+    schema::plot_measure as plot_measure_table, write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -78,7 +78,7 @@ impl InsertPlotMeasure {
             };
             diesel::insert_into(plot_measure_table::table)
                 .values(&insert_plot_measure)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(PlotMeasure, insert_plot_measure))?;
         }
         Ok(())

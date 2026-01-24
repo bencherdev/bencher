@@ -21,7 +21,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _,
@@ -355,7 +355,7 @@ async fn patch_inner(
         UpdatePlot::from_json(context, &query_project, &query_plot, json_plot.clone()).await?;
     diesel::update(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
         .set(&update_plot)
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Plot, (&query_plot, &json_plot)))?;
 
     auth_conn!(context, |conn| QueryPlot::get_with_uuid(
@@ -403,7 +403,7 @@ async fn delete_inner(
         QueryPlot::get_with_uuid(auth_conn!(context), &query_project, path_params.plot)?;
 
     diesel::delete(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Plot, query_plot))?;
 
     Ok(())

@@ -9,6 +9,7 @@ use crate::{
     error::{resource_conflict_err, resource_not_found_err},
     model::project::testbed::{QueryTestbed, TestbedId},
     schema::plot_testbed as plot_testbed_table,
+    write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -78,7 +79,7 @@ impl InsertPlotTestbed {
             };
             diesel::insert_into(plot_testbed_table::table)
                 .values(&insert_plot_testbed)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(PlotTestbed, insert_plot_testbed))?;
         }
         Ok(())

@@ -126,6 +126,13 @@ macro_rules! auth_conn {
     }};
 }
 
+#[macro_export]
+macro_rules! write_conn {
+    ($context:expr) => {
+        $crate::connection_lock!($context.database.connection)
+    };
+}
+
 impl ApiContext {
     #[cfg(feature = "plus")]
     pub fn biller(&self) -> Result<&Biller, HttpError> {

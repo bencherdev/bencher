@@ -10,7 +10,7 @@ use bencher_schema::{
         organization::{QueryOrganization, plan::LicenseUsage, sso::QuerySso},
         user::{InsertUser, QueryUser},
     },
-    public_conn,
+    public_conn, write_conn,
 };
 use dropshot::HttpError;
 use slog::Logger;
@@ -80,7 +80,7 @@ async fn handle_oauth_user(
         query_user.rate_limit_auth(context)?;
 
         if let Some(invite) = oauth_state.invite() {
-            query_user.accept_invite(auth_conn!(context), &context.token_key, invite)?;
+            query_user.accept_invite(write_conn!(context), &context.token_key, invite)?;
 
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(
@@ -106,7 +106,7 @@ async fn handle_oauth_user(
 
         let invited = json_signup.invite.is_some();
         let insert_user =
-            InsertUser::from_json(public_conn!(context), &context.token_key, &json_signup)?;
+            InsertUser::from_json(write_conn!(context), &context.token_key, &json_signup)?;
         insert_user.rate_limit_auth(context)?;
 
         insert_user.notify(

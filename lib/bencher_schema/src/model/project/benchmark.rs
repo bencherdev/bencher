@@ -16,6 +16,7 @@ use crate::{
         slug::ok_slug,
     },
     schema::{self, benchmark as benchmark_table},
+    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(BenchmarkId);
@@ -76,7 +77,7 @@ impl QueryBenchmark {
                 schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)),
             )
             .set(&update_benchmark)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Benchmark, &query_benchmark))?;
         }
 
@@ -111,7 +112,7 @@ impl QueryBenchmark {
             InsertBenchmark::from_json(conn_lock!(context), project_id, json_benchmark);
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Benchmark, &insert_benchmark))?;
 
         Self::from_uuid(conn_lock!(context), project_id, insert_benchmark.uuid)

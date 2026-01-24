@@ -9,6 +9,7 @@ use crate::{
     error::{resource_conflict_err, resource_not_found_err},
     model::project::branch::{BranchId, QueryBranch},
     schema::plot_branch as plot_branch_table,
+    write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -79,7 +80,7 @@ impl InsertPlotBranch {
             };
             diesel::insert_into(plot_branch_table::table)
                 .values(&insert_plot_branch)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(PlotBranch, insert_plot_branch))?;
         }
         Ok(())

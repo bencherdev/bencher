@@ -15,7 +15,7 @@ use bencher_schema::{
         organization::{InsertOrganization, QueryOrganization, UpdateOrganization},
         user::auth::{AuthUser, BearerToken},
     },
-    schema,
+    schema, write_conn,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -316,7 +316,7 @@ async fn patch_inner(
     let update_organization = UpdateOrganization::from(json_organization);
     diesel::update(organization_query)
         .set(&update_organization)
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Organization, update_organization))?;
 
     auth_conn!(context, |conn| QueryOrganization::get(
@@ -362,7 +362,7 @@ async fn delete_inner(
     diesel::delete(
         schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
     )
-    .execute(auth_conn!(context))
+    .execute(write_conn!(context))
     .map_err(resource_conflict_err!(Organization, query_organization))?;
 
     #[cfg(feature = "otel")]

@@ -9,6 +9,7 @@ use crate::{
     error::{resource_conflict_err, resource_not_found_err},
     model::project::benchmark::{BenchmarkId, QueryBenchmark},
     schema::plot_benchmark as plot_benchmark_table,
+    write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -78,7 +79,7 @@ impl InsertPlotBenchmark {
             };
             diesel::insert_into(plot_benchmark_table::table)
                 .values(&insert_plot_benchmark)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(PlotBenchmark, insert_plot_benchmark))?;
         }
         Ok(())

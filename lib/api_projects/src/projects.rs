@@ -20,7 +20,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -312,7 +312,7 @@ async fn patch_inner(
     let update_project = UpdateProject::from(json_project.clone());
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .set(&update_project)
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(
             Project,
             (&query_project, &json_project)
@@ -374,7 +374,7 @@ async fn delete_inner(
     )?;
 
     diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Project, query_project))?;
 
     #[cfg(feature = "plus")]

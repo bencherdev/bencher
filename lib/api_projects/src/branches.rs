@@ -23,7 +23,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -416,7 +416,7 @@ async fn patch_inner(
     let update_branch = UpdateBranch::from(json_branch.clone());
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
         .set(&update_branch)
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(
             Branch,
             (&query_branch, &json_branch)
@@ -467,7 +467,7 @@ async fn delete_inner(
         QueryBranch::from_resource_id(auth_conn!(context), query_project.id, &path_params.branch)?;
 
     diesel::delete(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Branch, query_branch))?;
 
     Ok(())

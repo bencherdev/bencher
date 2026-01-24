@@ -31,7 +31,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
@@ -435,7 +435,7 @@ async fn delete_inner(
             (&query_project, path_params.report)
         ))?;
     diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Report, report_id))?;
 
     // If there are no more reports for this version, delete the version
@@ -494,7 +494,7 @@ async fn delete_inner(
         if let Err(e) =
             diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
                 .set(schema::version::number.eq(version_number.decrement()))
-                .execute(auth_conn!(context))
+                .execute(write_conn!(context))
         {
             debug_assert!(
                 false,
@@ -507,7 +507,7 @@ async fn delete_inner(
 
     // Finally delete the dangling version
     diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(
             Version,
             (&query_project, report_id, &query_version)

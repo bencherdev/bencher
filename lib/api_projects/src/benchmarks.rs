@@ -22,7 +22,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -345,7 +345,7 @@ async fn patch_inner(
     let update_benchmark = UpdateBenchmark::from(json_benchmark.clone());
     diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
         .set(&update_benchmark)
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(
             Benchmark,
             (&query_benchmark, &json_benchmark)
@@ -396,7 +396,7 @@ async fn delete_inner(
         &path_params.benchmark,
     )?;
     diesel::delete(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Benchmark, query_benchmark))?;
 
     Ok(())

@@ -16,7 +16,7 @@ use crate::{
         testbed::TestbedId,
         threshold::{alert::InsertAlert, boundary::InsertBoundary},
     },
-    schema,
+    schema, write_conn,
 };
 
 pub mod data;
@@ -95,7 +95,7 @@ impl Detector {
 
         diesel::insert_into(schema::boundary::table)
             .values(&insert_boundary)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Boundary, insert_boundary))?;
 
         #[cfg(feature = "otel")]
@@ -106,7 +106,7 @@ impl Detector {
         if ignore_benchmark {
             Ok(())
         } else if let Some(boundary_limit) = boundary.outlier {
-            InsertAlert::from_boundary(conn_lock!(context), boundary_uuid, boundary_limit)
+            InsertAlert::from_boundary(write_conn!(context), boundary_uuid, boundary_limit)
         } else {
             Ok(())
         }

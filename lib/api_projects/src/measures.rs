@@ -21,7 +21,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -344,7 +344,7 @@ async fn patch_inner(
     let update_measure = UpdateMeasure::from(json_measure.clone());
     diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
         .set(&update_measure)
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(
             Measure,
             (&query_measure, &json_measure)
@@ -396,7 +396,7 @@ async fn delete_inner(
     )?;
 
     diesel::delete(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Measure, query_measure))?;
 
     Ok(())

@@ -32,6 +32,7 @@ use crate::{
         user::{auth::AuthUser, public::PublicUser},
     },
     schema::{self, project as project_table},
+    write_conn,
 };
 
 use super::organization::OrganizationId;
@@ -317,7 +318,7 @@ impl QueryProject {
         };
         diesel::insert_into(schema::project_role::table)
             .values(&insert_proj_role)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
         slog::debug!(log, "Added project role: {insert_proj_role:?}");
 
@@ -335,7 +336,7 @@ impl QueryProject {
     ) -> Result<Self, HttpError> {
         diesel::insert_into(project_table::table)
             .values(&insert_project)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Project, &insert_project))?;
         let query_project = Self::from_uuid(
             conn_lock!(context),

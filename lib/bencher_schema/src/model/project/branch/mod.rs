@@ -24,6 +24,7 @@ use crate::{
         slug::ok_slug,
     },
     schema::{self, branch as branch_table},
+    write_conn,
 };
 
 pub mod head;
@@ -99,7 +100,7 @@ impl QueryBranch {
             let update_branch = UpdateBranch::unarchive();
             diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
                 .set(&update_branch)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Branch, &query_branch))?;
         }
 
@@ -371,7 +372,7 @@ impl InsertBranch {
         let insert_branch = Self::from_json_inner(conn_lock!(context), project_id, name, slug);
         diesel::insert_into(schema::branch::table)
             .values(&insert_branch)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Branch, insert_branch))?;
         slog::debug!(log, "Created branch {insert_branch:?}");
 

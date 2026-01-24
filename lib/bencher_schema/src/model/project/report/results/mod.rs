@@ -25,7 +25,7 @@ use crate::{
         report::report_benchmark::{InsertReportBenchmark, QueryReportBenchmark},
         testbed::TestbedId,
     },
-    schema,
+    schema, write_conn,
 };
 
 pub mod detector;
@@ -151,7 +151,7 @@ impl ReportResults {
             InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id);
         diesel::insert_into(schema::report_benchmark::table)
             .values(&insert_report_benchmark)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(
                 ReportBenchmark,
                 insert_report_benchmark
@@ -165,7 +165,7 @@ impl ReportResults {
             let insert_metric = InsertMetric::from_json(report_benchmark_id, measure_id, metric);
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Metric, insert_metric))?;
 
             #[cfg(feature = "plus")]

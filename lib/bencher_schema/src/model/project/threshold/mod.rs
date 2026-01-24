@@ -28,6 +28,7 @@ use crate::{
     },
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     schema::{self, threshold as threshold_table},
+    write_conn,
 };
 
 pub mod alert;
@@ -91,7 +92,7 @@ impl QueryThreshold {
             (None, Some(model)) => self.update_from_model(context, model).await,
             // Current model but no new model,
             // remove the current model.
-            (Some(_), None) => self.remove_current_model(conn_lock!(context)),
+            (Some(_), None) => self.remove_current_model(write_conn!(context)),
             // Current model and new model,
             // update the current if it has changed.
             (Some(model_id), Some(model)) => {
@@ -110,7 +111,7 @@ impl QueryThreshold {
     async fn update_from_model(&self, context: &ApiContext, model: Model) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
         InsertModel::rate_limit(context, self).await?;
-        self.update_from_model_inner(conn_lock!(context), model)
+        self.update_from_model_inner(write_conn!(context), model)
     }
 
     fn update_from_model_inner(
@@ -312,7 +313,7 @@ impl InsertThreshold {
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
         Self::from_model_inner(
-            conn_lock!(context),
+            write_conn!(context),
             project_id,
             branch_id,
             testbed_id,
@@ -493,7 +494,7 @@ impl InsertThreshold {
 
         slog::debug!(log, "Remaining current thresholds: {current_thresholds:?}");
         for (_, current_threshold) in current_thresholds {
-            current_threshold.remove_current_model(conn_lock!(context))?;
+            current_threshold.remove_current_model(write_conn!(context))?;
             slog::debug!(
                 log,
                 "Removed model from current threshold {current_threshold:?}",
@@ -568,7 +569,7 @@ impl InsertThreshold {
         // If the reset flag is set, remove any thresholds that were not in the report
         if reset_thresholds {
             for (_, current_threshold) in current_thresholds {
-                current_threshold.remove_current_model(conn_lock!(context))?;
+                current_threshold.remove_current_model(write_conn!(context))?;
                 slog::debug!(log, "Removed model from threshold {current_threshold:?}");
             }
         }

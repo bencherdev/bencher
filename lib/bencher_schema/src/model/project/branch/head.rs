@@ -26,6 +26,7 @@ use crate::{
         threshold::{InsertThreshold, alert::QueryAlert},
     },
     schema::{self, head as head_table},
+    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(HeadId);
@@ -175,7 +176,7 @@ impl QueryHead {
             };
             diesel::insert_into(schema::head_version::table)
                 .values(&insert_head_version)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(HeadVersion, insert_head_version))?;
             slog::debug!(log, "Inserted head version: {insert_head_version:?}");
         }
@@ -265,7 +266,7 @@ impl InsertHead {
         );
         diesel::insert_into(schema::head::table)
             .values(&insert_head)
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Head, insert_head))?;
         slog::debug!(log, "Created head: {insert_head:?}");
 
@@ -279,7 +280,7 @@ impl InsertHead {
         // Update the branch head
         diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
             .set(schema::branch::head_id.eq(query_head.id))
-            .execute(conn_lock!(context))
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Branch, (&query_branch, &query_head)))?;
         slog::debug!(log, "Updated branch: {query_branch:?}");
 
@@ -289,7 +290,7 @@ impl InsertHead {
             let update_head = UpdateHead::replace();
             diesel::update(schema::head::table.filter(schema::head::id.eq(old_head_id)))
                 .set(&update_head)
-                .execute(conn_lock!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Head, (&query_branch, &update_head)))?;
             slog::debug!(log, "Updated old head to replaced: {update_head:?}");
             // Silence all alerts for the old head

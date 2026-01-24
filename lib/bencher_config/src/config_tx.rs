@@ -13,7 +13,7 @@ use bencher_json::{
 use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
-use bencher_schema::{conn_lock, context::RateLimiting, model::server::QueryServer};
+use bencher_schema::{context::RateLimiting, model::server::QueryServer, write_conn};
 use bencher_token::TokenKey;
 #[cfg(feature = "plus")]
 use diesel::connection::SimpleConnection as _;
@@ -132,7 +132,7 @@ impl ConfigTx {
         #[cfg(feature = "plus")]
         if context.is_bencher_cloud {
             // This is only needed for testing. In production, Bencher Cloud should already have a server ID.
-            QueryServer::get_or_create(conn_lock!(context)).map_err(ConfigTxError::ServerId)?;
+            QueryServer::get_or_create(write_conn!(context)).map_err(ConfigTxError::ServerId)?;
         } else {
             // Bencher Cloud does not need to send stats, it uses OpenTelemetry.
             spawn_stats(log.clone(), &context).await?;
@@ -411,8 +411,8 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
 
 #[cfg(feature = "plus")]
 async fn spawn_stats(log: Logger, context: &ApiContext) -> Result<(), ConfigTxError> {
-    let query_server = QueryServer::get_or_create(bencher_schema::conn_lock!(context))
-        .map_err(ConfigTxError::ServerId)?;
+    let query_server =
+        QueryServer::get_or_create(write_conn!(context)).map_err(ConfigTxError::ServerId)?;
     info!(log, "Bencher API Server ID: {}", query_server.uuid);
 
     let server_stats_url = query_server

@@ -16,15 +16,14 @@ use bencher_schema::{
         BencherResource, forbidden_error, issue_error, resource_conflict_err,
         resource_conflict_error, resource_not_found_err,
     },
-    model::{organization::QueryOrganization, user::auth::BearerToken},
     model::{
         organization::{
-            UpdateOrganization,
+            QueryOrganization, UpdateOrganization,
             plan::{InsertPlan, QueryPlan},
         },
-        user::auth::AuthUser,
+        user::auth::{AuthUser, BearerToken},
     },
-    schema,
+    schema, write_conn,
 };
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
@@ -192,7 +191,7 @@ async fn post_inner(
             .parse()
             .map_err(resource_not_found_err!(Plan, subscription_id))?;
         InsertPlan::licensed_plan(
-            auth_conn!(context),
+            write_conn!(context),
             &context.licensor,
             licensed_plan_id,
             &query_organization,
@@ -216,7 +215,7 @@ async fn post_inner(
             .as_ref()
             .parse()
             .map_err(resource_not_found_err!(Plan, subscription_id))?;
-        InsertPlan::metered_plan(auth_conn!(context), metered_plan_id, &query_organization)?;
+        InsertPlan::metered_plan(write_conn!(context), metered_plan_id, &query_organization)?;
         QueryPlan::belonging_to(&query_organization)
             .first::<QueryPlan>(auth_conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))?
@@ -296,7 +295,7 @@ async fn delete_inner(
         });
 
     diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
-        .execute(auth_conn!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Plan, query_plan))?;
 
     delete_plan_result
@@ -335,7 +334,7 @@ async fn delete_plan(
             };
             diesel::update(organization_query)
                 .set(&update_organization)
-                .execute(auth_conn!(context))
+                .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Organization, update_organization))?;
         }
     } else {

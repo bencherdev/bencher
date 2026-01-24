@@ -15,7 +15,7 @@ use bencher_schema::{
         same_user,
         token::{InsertToken, QueryToken, UpdateToken},
     },
-    schema,
+    schema, write_conn,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -208,7 +208,7 @@ async fn post_inner(
 
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
-        .execute(conn_lock!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Token, insert_token))?;
 
     conn_lock!(context, |conn| schema::token::table
@@ -321,7 +321,7 @@ async fn patch_inner(
     let update_token = UpdateToken::from(json_token);
     diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
         .set(&update_token)
-        .execute(conn_lock!(context))
+        .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
 
     conn_lock!(context, |conn| QueryToken::get(conn, query_token.id)?
