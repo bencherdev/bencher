@@ -8,7 +8,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
@@ -21,7 +21,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    schema, write_conn,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -114,7 +114,7 @@ async fn get_ls_inner(
     query_params: ProjTestbedsQuery,
 ) -> Result<(JsonTestbeds, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
@@ -123,13 +123,12 @@ async fn get_ls_inner(
     let testbeds = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryTestbed>(conn_lock!(context))
+        .load::<QueryTestbed>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Testbed,
             (&query_project, &pagination_params, &query_params)
         ))?;
 
-    // Drop connection lock before iterating
     let json_testbeds = testbeds
         .into_iter()
         .map(|testbed| testbed.into_json_for_project(&query_project))
@@ -137,7 +136,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Testbed,
             (&query_project, &pagination_params, &query_params)
@@ -214,7 +213,7 @@ async fn post_inner(
 ) -> Result<JsonTestbed, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -279,7 +278,7 @@ async fn get_one_inner(
     public_user: &PublicUser,
 ) -> Result<JsonTestbed, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
@@ -287,7 +286,7 @@ async fn get_one_inner(
 
     QueryTestbed::belonging_to(&query_project)
         .filter(QueryTestbed::eq_resource_id(&path_params.testbed))
-        .first::<QueryTestbed>(conn_lock!(context))
+        .first::<QueryTestbed>(public_conn!(context, public_user))
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Testbed,
@@ -330,7 +329,7 @@ async fn patch_inner(
 ) -> Result<JsonTestbed, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -338,7 +337,7 @@ async fn patch_inner(
     )?;
 
     let query_testbed = QueryTestbed::from_resource_id(
-        conn_lock!(context),
+        auth_conn!(context),
         query_project.id,
         &path_params.testbed,
     )?;
@@ -351,7 +350,7 @@ async fn patch_inner(
             (&query_testbed, &json_testbed)
         ))?;
 
-    QueryTestbed::get(conn_lock!(context), query_testbed.id)
+    QueryTestbed::get(auth_conn!(context), query_testbed.id)
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Testbed, query_testbed))
 }
@@ -383,7 +382,7 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -391,7 +390,7 @@ async fn delete_inner(
     )?;
 
     let query_testbed = QueryTestbed::from_resource_id(
-        conn_lock!(context),
+        auth_conn!(context),
         query_project.id,
         &path_params.testbed,
     )?;

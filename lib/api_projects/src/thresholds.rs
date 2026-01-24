@@ -30,7 +30,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema, write_conn,
+    public_conn, schema,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
