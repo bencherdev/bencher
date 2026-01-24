@@ -17,7 +17,7 @@ use slog::Logger;
 use crate::model::organization::plan::PlanKind;
 use crate::{
     conn_lock,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
     macros::fn_get::{fn_get_id, fn_get_uuid},
     model::{
@@ -187,14 +187,17 @@ impl QueryReport {
         // Don't return the error from processing the report until after the metrics usage has been checked
         processed_report?;
         // If the report was processed successfully, then return the report with the results
-        query_report.into_json(log, context).await
+        query_report.into_json(
+            log,
+            &mut *if user_id.is_none() {
+                context.database.get_public_conn().await?
+            } else {
+                context.database.get_auth_conn().await?
+            },
+        )
     }
 
-    pub async fn into_json(
-        self,
-        log: &Logger,
-        context: &ApiContext,
-    ) -> Result<JsonReport, HttpError> {
+    pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, HttpError> {
         let Self {
             id,
             uuid,
@@ -209,20 +212,18 @@ impl QueryReport {
             created,
         } = self;
 
-        let query_project = QueryProject::get(conn_lock!(context), project_id)?;
+        let query_project = QueryProject::get(conn, project_id)?;
         let user = if let Some(user_id) = user_id {
-            Some(QueryUser::get(conn_lock!(context), user_id)?.into_pub_json())
+            Some(QueryUser::get(conn, user_id)?.into_pub_json())
         } else {
             None
         };
-        let branch =
-            QueryBranch::get_json_for_report(context, &query_project, head_id, version_id).await?;
-        let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
-            .into_json_for_project(&query_project);
-        let results = get_report_results(log, context, &query_project, id).await?;
-        let alerts = get_report_alerts(context, &query_project, id, head_id, version_id).await?;
+        let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
+        let testbed = QueryTestbed::get(conn, testbed_id)?.into_json_for_project(&query_project);
+        let results = get_report_results(log, conn, &query_project, id)?;
+        let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id)?;
 
-        let project = query_project.into_json(conn_lock!(context))?;
+        let project = query_project.into_json(conn)?;
         Ok(JsonReport {
             uuid,
             user,
@@ -247,9 +248,9 @@ type ResultsQuery = (
     Option<(QueryThreshold, QueryModel)>,
 );
 
-async fn get_report_results(
+fn get_report_results(
     log: &Logger,
-    context: &ApiContext,
+    conn: &mut DbConnection,
     project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportResults, HttpError> {
@@ -297,7 +298,7 @@ async fn get_report_results(
             )
         ).nullable(),
     ))
-    .load::<ResultsQuery>(conn_lock!(context))
+    .load::<ResultsQuery>(conn)
     .map(|results| into_report_results_json(log, project, results))
     .map_err(resource_not_found_err!(ReportBenchmark, project))
 }
@@ -380,8 +381,8 @@ fn into_report_results_json(
     report_results
 }
 
-async fn get_report_alerts(
-    context: &ApiContext,
+fn get_report_alerts(
+    conn: &mut DbConnection,
     project: &QueryProject,
     report_id: ReportId,
     head_id: HeadId,
@@ -416,7 +417,7 @@ async fn get_report_alerts(
             QueryBenchmark,
             QueryMetric,
             QueryBoundary,
-        )>(conn_lock!(context))
+        )>(conn)
         .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
@@ -430,20 +431,18 @@ async fn get_report_alerts(
         query_boundary,
     ) in alerts
     {
-        let json_alert = query_alert
-            .into_json_for_report(
-                context,
-                project,
-                report_uuid,
-                created,
-                head_id,
-                version_id,
-                iteration,
-                query_benchmark,
-                query_metric,
-                query_boundary,
-            )
-            .await?;
+        let json_alert = query_alert.into_json_for_report(
+            conn,
+            project,
+            report_uuid,
+            created,
+            head_id,
+            version_id,
+            iteration,
+            query_benchmark,
+            query_metric,
+            query_boundary,
+        )?;
         report_alerts.push(json_alert);
     }
 

@@ -283,16 +283,16 @@ impl QueryBranch {
         self.into_json_for_head(conn, project, &head, None)
     }
 
-    pub async fn get_json_for_report(
-        context: &ApiContext,
+    pub fn get_json_for_report(
+        conn: &mut DbConnection,
         project: &QueryProject,
         head_id: HeadId,
         version_id: VersionId,
     ) -> Result<JsonBranch, HttpError> {
-        let head = QueryHead::get(conn_lock!(context), head_id)?;
-        let version = QueryVersion::get(conn_lock!(context), version_id)?;
-        let branch = QueryBranch::get(conn_lock!(context), head.branch_id)?;
-        branch.into_json_for_head(conn_lock!(context), project, &head, Some(version))
+        let head = QueryHead::get(conn, head_id)?;
+        let version = QueryVersion::get(conn, version_id)?;
+        let branch = QueryBranch::get(conn, head.branch_id)?;
+        branch.into_json_for_head(conn, project, &head, Some(version))
     }
 
     pub fn into_json_for_head(

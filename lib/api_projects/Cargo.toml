@@ -21,6 +21,7 @@ bencher_rbac.workspace = true
 bencher_schema.workspace = true
 diesel.workspace = true
 dropshot.workspace = true
+futures.workspace = true
 http.workspace = true
 schemars.workspace = true
 sentry = { workspace = true, optional = true }

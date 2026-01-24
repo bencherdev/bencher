@@ -87,7 +87,7 @@ impl QueryAlert {
         Ok(alerts.len())
     }
 
-    pub async fn into_json(self, context: &ApiContext) -> Result<JsonAlert, HttpError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, HttpError> {
         let (
             report_uuid,
             created,
@@ -127,11 +127,11 @@ impl QueryAlert {
                 QueryBenchmark,
                 QueryMetric,
                 QueryBoundary,
-            )>(conn_lock!(context))
+            )>(conn)
             .map_err(resource_not_found_err!(Alert, self))?;
-        let project = QueryProject::get(conn_lock!(context), query_benchmark.project_id)?;
+        let project = QueryProject::get(conn, query_benchmark.project_id)?;
         self.into_json_for_report(
-            context,
+            conn,
             &project,
             report_uuid,
             created,
@@ -142,13 +142,12 @@ impl QueryAlert {
             query_metric,
             query_boundary,
         )
-        .await
     }
 
     #[expect(clippy::too_many_arguments)]
-    pub async fn into_json_for_report(
+    pub fn into_json_for_report(
         self,
-        context: &ApiContext,
+        conn: &mut DbConnection,
         project: &QueryProject,
         report_uuid: ReportUuid,
         created: DateTime,
@@ -167,13 +166,12 @@ impl QueryAlert {
             ..
         } = self;
         let threshold = QueryThreshold::get_alert_json(
-            context,
+            conn,
             query_boundary.threshold_id,
             query_boundary.model_id,
             head_id,
             version_id,
-        )
-        .await?;
+        )?;
         Ok(JsonAlert {
             uuid,
             report: report_uuid,

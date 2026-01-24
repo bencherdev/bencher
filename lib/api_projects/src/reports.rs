@@ -142,7 +142,7 @@ async fn get_ls_inner(
     // Separate out these queries to prevent a deadlock when getting the conn_lock
     let mut json_reports = Vec::with_capacity(reports.len());
     for report in reports {
-        match report.into_json(log, context).await {
+        match report.into_json(log, conn_lock!(context)) {
             Ok(report) => json_reports.push(report),
             Err(err) => {
                 debug_assert!(false, "{err}");
@@ -382,7 +382,7 @@ async fn get_one_inner(
         ))?;
 
     // Separate out this query to prevent a deadlock when getting the conn_lock
-    report.into_json(log, context).await
+    report.into_json(log, conn_lock!(context))
 }
 
 /// Delete a report

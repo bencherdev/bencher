@@ -173,28 +173,26 @@ impl QueryThreshold {
         Ok(())
     }
 
-    pub async fn get_alert_json(
-        context: &ApiContext,
+    pub fn get_alert_json(
+        conn: &mut DbConnection,
         threshold_id: ThresholdId,
         model_id: ModelId,
         head_id: HeadId,
         version_id: VersionId,
     ) -> Result<JsonThreshold, HttpError> {
-        let query_threshold = Self::get(conn_lock!(context), threshold_id)?;
-        let query_model = QueryModel::get(conn_lock!(context), model_id)?;
-        query_threshold
-            .into_json_for_model(context, Some(query_model), Some((head_id, version_id)))
-            .await
+        let query_threshold = Self::get(conn, threshold_id)?;
+        let query_model = QueryModel::get(conn, model_id)?;
+        query_threshold.into_json_for_model(conn, Some(query_model), Some((head_id, version_id)))
     }
 
-    pub async fn into_json(self, context: &ApiContext) -> Result<JsonThreshold, HttpError> {
-        let query_model = self.model(conn_lock!(context))?;
-        self.into_json_for_model(context, query_model, None).await
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, HttpError> {
+        let query_model = self.model(conn)?;
+        self.into_json_for_model(conn, query_model, None)
     }
 
-    pub async fn into_json_for_model(
+    pub fn into_json_for_model(
         self,
-        context: &ApiContext,
+        conn: &mut DbConnection,
         query_model: Option<QueryModel>,
         head_version: Option<(HeadId, VersionId)>,
     ) -> Result<JsonThreshold, HttpError> {
@@ -219,17 +217,15 @@ impl QueryThreshold {
             modified,
             ..
         } = self;
-        let query_project = QueryProject::get(conn_lock!(context), project_id)?;
+        let query_project = QueryProject::get(conn, project_id)?;
         let branch = if let Some((head_id, version_id)) = head_version {
-            QueryBranch::get_json_for_report(context, &query_project, head_id, version_id).await?
+            QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?
         } else {
-            let query_branch = QueryBranch::get(conn_lock!(context), branch_id)?;
-            query_branch.into_json_for_project(conn_lock!(context), &query_project)?
+            let query_branch = QueryBranch::get(conn, branch_id)?;
+            query_branch.into_json_for_project(conn, &query_project)?
         };
-        let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
-            .into_json_for_project(&query_project);
-        let measure = QueryMeasure::get(conn_lock!(context), measure_id)?
-            .into_json_for_project(&query_project);
+        let testbed = QueryTestbed::get(conn, testbed_id)?.into_json_for_project(&query_project);
+        let measure = QueryMeasure::get(conn, measure_id)?.into_json_for_project(&query_project);
         Ok(JsonThreshold {
             uuid,
             project: query_project.uuid,

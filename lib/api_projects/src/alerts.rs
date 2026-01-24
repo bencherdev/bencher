@@ -25,6 +25,7 @@ use diesel::{
     SelectableHelper as _,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
+use futures::stream::{FuturesOrdered, StreamExt as _};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -127,18 +128,23 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
-    // Separate out these queries to prevent a deadlock when getting the conn_lock
-    let mut json_alerts = Vec::with_capacity(alerts.len());
-    for alert in alerts {
-        match alert.into_json(context).await {
-            Ok(alert) => json_alerts.push(alert),
+    let json_alerts = alerts
+        .into_iter()
+        .map(|alert| async { alert.into_json(public_conn!(context, public_user)) })
+        .collect::<FuturesOrdered<_>>()
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .filter_map(|alert| match alert {
+            Ok(alert) => Some(alert),
             Err(err) => {
                 debug_assert!(false, "{err}");
                 #[cfg(feature = "sentry")]
                 sentry::capture_error(&err);
+                None
             },
-        }
-    }
+        })
+        .collect::<Vec<_>>();
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
@@ -344,7 +350,7 @@ async fn get_one_inner(
 
     let alert = QueryAlert::from_uuid(conn_lock!(context), query_project.id, path_params.alert)?;
 
-    alert.into_json(context).await
+    alert.into_json(conn_lock!(context))
 }
 
 /// Update an alert
@@ -400,5 +406,5 @@ async fn patch_inner(
     let alert = QueryAlert::get(conn_lock!(context), query_alert.id)?;
 
     // Separate out this query to prevent a deadlock when getting the conn_lock
-    alert.into_json(context).await
+    alert.into_json(conn_lock!(context))
 }

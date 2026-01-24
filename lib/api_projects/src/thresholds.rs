@@ -140,7 +140,7 @@ async fn get_ls_inner(
     // Separate out these queries to prevent a deadlock when getting the conn_lock
     let mut json_thresholds = Vec::with_capacity(thresholds.len());
     for threshold in thresholds {
-        match threshold.into_json(context).await {
+        match threshold.into_json(conn_lock!(context)) {
             Ok(threshold) => json_thresholds.push(threshold),
             Err(err) => {
                 debug_assert!(false, "{err}");
@@ -303,7 +303,7 @@ async fn post_inner(
         .map_err(resource_not_found_err!(Threshold, threshold_id))?;
 
     // Return the new threshold with the new model
-    query_threshold.into_json(context).await
+    query_threshold.into_json(conn_lock!(context))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -398,11 +398,9 @@ async fn get_one_inner(
                 ),
             ));
         }
-        query_threshold
-            .into_json_for_model(context, Some(query_model), None)
-            .await
+        query_threshold.into_json_for_model(conn_lock!(context), Some(query_model), None)
     } else {
-        query_threshold.into_json(context).await
+        query_threshold.into_json(conn_lock!(context))
     }
 }
 
@@ -471,7 +469,7 @@ async fn put_inner(
     let query_threshold = QueryThreshold::get(conn_lock!(context), query_threshold.id)?;
 
     // Return the updated threshold with the new model
-    query_threshold.into_json(context).await
+    query_threshold.into_json(conn_lock!(context))
 }
 
 /// Delete a threshold
