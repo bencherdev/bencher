@@ -8,7 +8,7 @@ use diesel::{
 use dropshot::HttpError;
 
 use crate::{
-    ApiContext, conn_lock,
+    ApiContext, auth_conn,
     context::DbConnection,
     error::issue_error,
     model::{
@@ -60,7 +60,7 @@ impl QuerySso {
             )
             .filter(schema::organization_role::id.is_null())
             .select(schema::organization::uuid)
-            .load::<OrganizationUuid>(conn_lock!(context))
+            .load::<OrganizationUuid>(auth_conn!(context))
             .map_err(resource_not_found_err!(Sso, &email_domain))?;
 
         if organization_uuids.len() > 1 {
