@@ -7,12 +7,10 @@ use bencher_google_client::GoogleClient;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
 use bencher_token::TokenKey;
-use diesel::r2d2::{ConnectionManager, PooledConnection};
 use dropshot::HttpError;
 use tokio::sync::mpsc::Sender;
 use url::Url;
 
-use crate::error::issue_error;
 #[cfg(feature = "plus")]
 use crate::model::project::QueryProject;
 
@@ -93,33 +91,17 @@ macro_rules! connection_lock {
 }
 
 #[macro_export]
-macro_rules! try_conn {
+macro_rules! public_conn {
     ($context:expr) => {
-        &mut *$crate::context::try_conn_blocking($context).await?
+        &mut *$context.database.get_public_conn().await?
     };
 }
 
-pub async fn try_conn_blocking(
-    context: &ApiContext,
-) -> Result<PooledConnection<ConnectionManager<DbConnection>>, HttpError> {
-    let pool = context.database.pool.clone();
-    tokio::task::spawn_blocking(move || {
-        pool.get().map_err(|e| {
-            issue_error(
-                "Failed to get database connection from pool",
-                "Failed to get a database connection from the pool:",
-                e,
-            )
-        })
-    })
-    .await
-    .map_err(|e| {
-        issue_error(
-            "Failed to join database connection task",
-            "Failed to join the database connection task:",
-            e,
-        )
-    })?
+#[macro_export]
+macro_rules! auth_conn {
+    ($context:expr) => {
+        &mut *$context.database.get_auth_conn().await?
+    };
 }
 
 impl ApiContext {

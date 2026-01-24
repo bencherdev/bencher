@@ -20,7 +20,7 @@ use crate::{
     context::{ApiContext, DbConnection, Rbac},
     error::{BEARER_TOKEN_FORMAT, bad_request_error},
     model::{organization::OrganizationId, project::ProjectId},
-    schema, try_conn,
+    public_conn, schema,
 };
 
 use super::QueryUser;
@@ -51,7 +51,7 @@ impl AuthUser {
         let email = claims.email();
 
         // Hold the connection for all permissions related queries
-        let conn = try_conn!(context);
+        let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;
         #[cfg(feature = "plus")]

@@ -189,7 +189,8 @@ async fn into_context(
     info!(log, "Running database migrations");
     bencher_schema::run_migrations(&mut database_connection)?;
 
-    let pool = connection_pool(log, &database_path)?;
+    let public_pool = connection_pool(log, &database_path)?;
+    let auth_pool = connection_pool(log, &database_path)?;
 
     let data_store = if let Some(data_store) = json_database.data_store {
         Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
@@ -200,7 +201,8 @@ async fn into_context(
     let database = Database {
         path: json_database.file,
         connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
-        pool,
+        public_pool,
+        auth_pool,
         data_store,
     };
 
@@ -336,7 +338,7 @@ fn connection_pool(
         .map(NonZeroUsize::get)
         .unwrap_or_default();
     // todo(epompeii): Make this configurable
-    let max_size = u32::try_from((cpu_count * 2).clamp(2, 16)).unwrap_or(2);
+    let max_size = u32::try_from((cpu_count).clamp(2, 8)).unwrap_or(2);
     // todo(epompeii): Make this configurable
     let connection_timeout = std::time::Duration::from_secs(15);
     info!(
