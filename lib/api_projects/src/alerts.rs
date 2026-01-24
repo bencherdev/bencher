@@ -18,7 +18,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    schema,
+    public_conn, schema,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -112,7 +112,7 @@ async fn get_ls_inner(
     query_params: ProjAlertsQuery,
 ) -> Result<(JsonAlerts, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
@@ -121,7 +121,7 @@ async fn get_ls_inner(
     let alerts = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load(conn_lock!(context))
+        .load(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Alert,
             (&query_project, &pagination_params, &query_params)
@@ -142,7 +142,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Alert,
             (&query_project, &pagination_params, &query_params)

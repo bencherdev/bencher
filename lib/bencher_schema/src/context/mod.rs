@@ -95,6 +95,16 @@ macro_rules! public_conn {
     ($context:expr) => {
         &mut *$context.database.get_public_conn().await?
     };
+    ($context:expr, $pub_user:expr) => {
+        &mut *match $pub_user {
+            bencher_schema::model::user::public::PublicUser::Public(_) => {
+                $context.database.get_public_conn().await?
+            },
+            bencher_schema::model::user::public::PublicUser::Auth(_) => {
+                $context.database.get_auth_conn().await?
+            },
+        }
+    };
     ($context:expr, |$conn:ident| $multi:expr) => {{
         let $conn = $crate::public_conn!($context);
         $multi
