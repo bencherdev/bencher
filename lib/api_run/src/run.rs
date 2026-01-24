@@ -2,13 +2,13 @@ use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{JsonNewRun, JsonReport, ProjectSlug, ResourceName, RunContext};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    conn_lock,
     context::ApiContext,
     error::{bad_request_error, unauthorized_error},
     model::{
         project::{QueryProject, report::QueryReport},
         user::public::{PubBearerToken, PublicUser},
     },
+    public_conn,
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
@@ -96,8 +96,8 @@ async fn post_inner(
         .await?
     };
 
-    let query_organization = query_project.organization(conn_lock!(context))?;
-    let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
+    let query_organization = query_project.organization(public_conn!(context, public_user))?;
+    let is_claimed = query_organization.is_claimed(public_conn!(context, public_user))?;
     // If the organization is claimed, check permissions
     if is_claimed {
         match public_user {
@@ -112,7 +112,7 @@ async fn post_inner(
             PublicUser::Auth(auth_user) => {
                 // If the user is authenticated, then we may have created a new role for them.
                 // If so then we need to reload the permissions.
-                let auth_user = auth_user.reload(conn_lock!(context))?;
+                let auth_user = auth_user.reload(public_conn!(context, public_user))?;
                 query_project.try_allowed(&context.rbac, &auth_user, Permission::Create)?;
             },
         }
