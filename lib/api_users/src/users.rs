@@ -4,7 +4,7 @@ use bencher_json::{
     UserResourceId, user::JsonUsers,
 };
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::user::{
@@ -88,7 +88,7 @@ async fn get_ls_inner(
     let users = get_ls_query(&pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryUser>(conn_lock!(context))
+        .load::<QueryUser>(auth_conn!(context))
         .map_err(resource_not_found_err!(User))?;
 
     // Drop connection lock before iterating
@@ -96,7 +96,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&pagination_params, &query_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(auth_conn!(context))
         .map_err(resource_not_found_err!(User))?
         .try_into()?;
 
@@ -176,7 +176,7 @@ async fn get_one_inner(
     path_params: UserParams,
     auth_user: &AuthUser,
 ) -> Result<JsonUser, HttpError> {
-    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
     Ok(query_user.into_json())
@@ -216,7 +216,7 @@ async fn patch_inner(
     json_user: JsonUpdateUser,
     auth_user: &AuthUser,
 ) -> Result<JsonUser, HttpError> {
-    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
     let admin_only_error = |field: &str| {
@@ -239,5 +239,5 @@ async fn patch_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
 
-    Ok(QueryUser::get(conn_lock!(context), query_user.id)?.into_json())
+    Ok(QueryUser::get(auth_conn!(context), query_user.id)?.into_json())
 }
