@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{JsonAllowed, ProjectResourceId, project::ProjectPermission};
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     model::{
         project::{QueryProject, project_role::Permission},
@@ -54,7 +54,7 @@ async fn get_inner(
 ) -> Result<JsonAllowed, HttpError> {
     Ok(JsonAllowed {
         allowed: QueryProject::is_allowed(
-            conn_lock!(context),
+            auth_conn!(context),
             &context.rbac,
             &path_params.project,
             auth_user,
