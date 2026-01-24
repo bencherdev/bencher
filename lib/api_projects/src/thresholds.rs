@@ -30,13 +30,14 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    schema,
+    public_conn, schema,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
     RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
+use futures::{StreamExt as _, stream::FuturesOrdered};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -137,18 +138,23 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
-    // Separate out these queries to prevent a deadlock when getting the conn_lock
-    let mut json_thresholds = Vec::with_capacity(thresholds.len());
-    for threshold in thresholds {
-        match threshold.into_json(conn_lock!(context)) {
-            Ok(threshold) => json_thresholds.push(threshold),
+    let json_thresholds = thresholds
+        .into_iter()
+        .map(|threshold| async { threshold.into_json(public_conn!(context, public_user)) })
+        .collect::<FuturesOrdered<_>>()
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .filter_map(|threshold| match threshold {
+            Ok(threshold) => Some(threshold),
             Err(err) => {
                 debug_assert!(false, "{err}");
                 #[cfg(feature = "sentry")]
                 sentry::capture_error(&err);
+                None
             },
-        }
-    }
+        })
+        .collect::<Vec<_>>();
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()

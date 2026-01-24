@@ -31,13 +31,14 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    schema,
+    public_conn, schema,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
     QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
+use futures::{StreamExt as _, stream::FuturesOrdered};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
@@ -139,18 +140,23 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
-    // Separate out these queries to prevent a deadlock when getting the conn_lock
-    let mut json_reports = Vec::with_capacity(reports.len());
-    for report in reports {
-        match report.into_json(log, conn_lock!(context)) {
-            Ok(report) => json_reports.push(report),
+    let json_reports = reports
+        .into_iter()
+        .map(|report| async { report.into_json(log, public_conn!(context, public_user)) })
+        .collect::<FuturesOrdered<_>>()
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .filter_map(|report| match report {
+            Ok(report) => Some(report),
             Err(err) => {
                 debug_assert!(false, "{err}");
                 #[cfg(feature = "sentry")]
                 sentry::capture_error(&err);
+                None
             },
-        }
-    }
+        })
+        .collect::<Vec<_>>();
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
@@ -373,16 +379,16 @@ async fn get_one_inner(
         public_user,
     )?;
 
-    let report = QueryReport::belonging_to(&query_project)
-        .filter(schema::report::uuid.eq(path_params.report.to_string()))
-        .first::<QueryReport>(conn_lock!(context))
-        .map_err(resource_not_found_err!(
-            Report,
-            (&query_project, path_params.report)
-        ))?;
-
-    // Separate out this query to prevent a deadlock when getting the conn_lock
-    report.into_json(log, conn_lock!(context))
+    public_conn!(context, public_user, |conn| QueryReport::belonging_to(
+        &query_project
+    )
+    .filter(schema::report::uuid.eq(path_params.report.to_string()))
+    .first::<QueryReport>(conn)
+    .map_err(resource_not_found_err!(
+        Report,
+        (&query_project, path_params.report)
+    ))?
+    .into_json(log, conn))
 }
 
 /// Delete a report

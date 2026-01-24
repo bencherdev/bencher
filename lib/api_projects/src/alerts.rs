@@ -5,7 +5,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn, conn_lock,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
@@ -403,8 +403,6 @@ async fn patch_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
-    let alert = QueryAlert::get(conn_lock!(context), query_alert.id)?;
-
-    // Separate out this query to prevent a deadlock when getting the conn_lock
-    alert.into_json(conn_lock!(context))
+    auth_conn!(context, |conn| QueryAlert::get(conn, query_alert.id)?
+        .into_json(conn))
 }

@@ -109,6 +109,10 @@ macro_rules! public_conn {
         let $conn = $crate::public_conn!($context);
         $multi
     }};
+    ($context:expr, $pub_user:expr, |$conn:ident| $multi:expr) => {{
+        let $conn = $crate::public_conn!($context, $pub_user);
+        $multi
+    }};
 }
 
 #[macro_export]
