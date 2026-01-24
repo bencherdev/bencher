@@ -7,9 +7,9 @@ macro_rules! fn_rate_limit {
             context: &ApiContext,
             project_id: ProjectId,
         ) -> Result<(), HttpError> {
-            let query_project = QueryProject::get(conn_lock!(context), project_id)?;
-            let query_organization = query_project.organization(conn_lock!(context))?;
-            let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
+            let query_project = QueryProject::get($crate::auth_conn!(context), project_id)?;
+            let query_organization = query_project.organization($crate::auth_conn!(context))?;
+            let is_claimed = query_organization.is_claimed($crate::auth_conn!(context))?;
 
             let (start_time, end_time) = context.rate_limiting.window();
             let window_usage: u32 = $crate::schema::$table::table
@@ -17,7 +17,7 @@ macro_rules! fn_rate_limit {
                 .filter($crate::schema::$table::created.ge(start_time))
                 .filter($crate::schema::$table::created.le(end_time))
                 .count()
-                .get_result::<i64>(conn_lock!(context))
+                .get_result::<i64>($crate::auth_conn!(context))
                 .map_err($crate::error::resource_not_found_err!($resource, (project_id, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {
