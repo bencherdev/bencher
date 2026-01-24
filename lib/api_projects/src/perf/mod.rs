@@ -11,7 +11,6 @@ use bencher_json::{
     },
 };
 use bencher_schema::{
-    conn_lock,
     context::{ApiContext, DbConnection},
     error::{bad_request_error, resource_not_found_err},
     model::{
@@ -28,7 +27,7 @@ use bencher_schema::{
         },
         user::public::{PubBearerToken, PublicUser},
     },
-    schema, view,
+    public_conn, schema, view,
 };
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
@@ -111,7 +110,7 @@ async fn get_inner(
     public_user: &PublicUser,
 ) -> Result<JsonPerf, HttpError> {
     let project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
@@ -134,6 +133,7 @@ async fn get_inner(
 
     let results = perf_results(
         context,
+        public_user,
         &project,
         &branches,
         &heads,
@@ -145,7 +145,7 @@ async fn get_inner(
     .await?;
 
     Ok(JsonPerf {
-        project: project.into_json(conn_lock!(context))?,
+        project: project.into_json(public_conn!(context, public_user))?,
         start_time,
         end_time,
         results,
@@ -161,6 +161,7 @@ struct Times {
 #[expect(clippy::too_many_arguments)]
 async fn perf_results(
     context: &ApiContext,
+    public_user: &PublicUser,
     project: &QueryProject,
     branches: &[BranchUuid],
     heads: &[Option<HeadUuid>],
@@ -189,6 +190,7 @@ async fn perf_results(
 
                     let pq = perf_query(
                         context,
+                        public_user,
                         project,
                         *branch_uuid,
                         *head_uuid,
@@ -207,7 +209,7 @@ async fn perf_results(
                             perf_metrics.metrics.push(perf_metric);
                         } else {
                             perf_metrics = new_perf_metrics(
-                                conn_lock!(context),
+                                public_conn!(context, public_user),
                                 project,
                                 query_dimensions,
                                 perf_metric,
@@ -228,6 +230,7 @@ async fn perf_results(
 #[expect(clippy::too_many_arguments, clippy::too_many_lines)]
 async fn perf_query(
     context: &ApiContext,
+    public_user: &PublicUser,
     project: &QueryProject,
     branch_uuid: BranchUuid,
     head_uuid: Option<HeadUuid>,
@@ -360,7 +363,7 @@ async fn perf_query(
         // Acquire the lock on the database connection for every query.
         // This helps to avoid resource contention when the database is under heavy load.
         // This will make the perf query itself slower, but it will make the overall system more stable.
-        .load::<PerfQuery>(conn_lock!(context))
+        .load::<PerfQuery>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(Metric, (project,  branch_uuid, testbed_uuid, benchmark_uuid, measure_uuid)))
 }
 
