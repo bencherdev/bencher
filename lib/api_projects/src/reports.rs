@@ -14,7 +14,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{bad_request_error, resource_conflict_err, resource_not_found_err},
     model::{
@@ -125,7 +125,7 @@ async fn get_ls_inner(
     public_user: &PublicUser,
 ) -> Result<(JsonReports, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
@@ -134,7 +134,7 @@ async fn get_ls_inner(
     let reports = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load(conn_lock!(context))
+        .load(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Report,
             (&query_project, &pagination_params, &query_params)
@@ -160,7 +160,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Report,
             (&query_project, &pagination_params, &query_params)
@@ -297,7 +297,7 @@ async fn post_inner(
 ) -> Result<JsonReport, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -373,7 +373,7 @@ async fn get_one_inner(
     public_user: &PublicUser,
 ) -> Result<JsonReport, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
@@ -419,7 +419,7 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -429,13 +429,13 @@ async fn delete_inner(
     let (report_id, version_id) = QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((schema::report::id, schema::report::version_id))
-        .first::<(ReportId, VersionId)>(conn_lock!(context))
+        .first::<(ReportId, VersionId)>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Report,
             (&query_project, path_params.report)
         ))?;
     diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(Report, report_id))?;
 
     // If there are no more reports for this version, delete the version
@@ -446,7 +446,7 @@ async fn delete_inner(
     if schema::report::table
         .filter(schema::report::version_id.eq(version_id))
         .count()
-        .first::<i64>(conn_lock!(context))
+        .first::<i64>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Version,
             (&query_project, report_id, version_id)
@@ -456,7 +456,7 @@ async fn delete_inner(
         return Ok(());
     }
 
-    let query_version = QueryVersion::get(conn_lock!(context), version_id)?;
+    let query_version = QueryVersion::get(auth_conn!(context), version_id)?;
     // Get all heads that use this version
     let heads = schema::head::table
         .inner_join(
@@ -464,7 +464,7 @@ async fn delete_inner(
         )
         .filter(schema::head_version::version_id.eq(version_id))
         .select(schema::head::id)
-        .load::<HeadId>(conn_lock!(context))
+        .load::<HeadId>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Head,
             (&query_project, report_id, version_id)
@@ -478,7 +478,7 @@ async fn delete_inner(
             .filter(schema::version::number.gt(query_version.number))
             .filter(schema::head_version::head_id.eq(head_id))
             .select((schema::version::id, schema::version::number))
-            .load::<(VersionId, VersionNumber)>(conn_lock!(context))
+            .load::<(VersionId, VersionNumber)>(auth_conn!(context))
             .map_err(resource_not_found_err!(
                 Version,
                 (&query_project, report_id, head_id, &query_version)
@@ -494,7 +494,7 @@ async fn delete_inner(
         if let Err(e) =
             diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
                 .set(schema::version::number.eq(version_number.decrement()))
-                .execute(conn_lock!(context))
+                .execute(auth_conn!(context))
         {
             debug_assert!(
                 false,
@@ -507,7 +507,7 @@ async fn delete_inner(
 
     // Finally delete the dangling version
     diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(
             Version,
             (&query_project, report_id, &query_version)
