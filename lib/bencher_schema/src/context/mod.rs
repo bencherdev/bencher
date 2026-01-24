@@ -95,6 +95,10 @@ macro_rules! public_conn {
     ($context:expr) => {
         &mut *$context.database.get_public_conn().await?
     };
+    ($context:expr, |$conn:ident| $multi:expr) => {{
+        let $conn = $crate::public_conn!($context);
+        $multi
+    }};
 }
 
 #[macro_export]
@@ -102,6 +106,10 @@ macro_rules! auth_conn {
     ($context:expr) => {
         &mut *$context.database.get_auth_conn().await?
     };
+    ($context:expr, |$conn:ident| $multi:expr) => {{
+        let $conn = $crate::auth_conn!($context);
+        $multi
+    }};
 }
 
 impl ApiContext {

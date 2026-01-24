@@ -9,7 +9,7 @@ use bencher_rbac::organization::Permission;
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::resource_not_found_err,
     model::{
@@ -103,7 +103,7 @@ async fn get_ls_inner(
     auth_user: &AuthUser,
 ) -> Result<(JsonProjects, TotalCount), HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -113,21 +113,21 @@ async fn get_ls_inner(
     let projects = get_ls_query(&query_organization, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryProject>(conn_lock!(context))
+        .load::<QueryProject>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Project,
             (&query_organization, &pagination_params, &query_params)
         ))?;
 
     // Drop connection lock before iterating
-    let json_projects = conn_lock!(context, |conn| projects
+    let json_projects = auth_conn!(context, |conn| projects
         .into_iter()
         .map(|project| project.into_json_for_organization(conn, &query_organization))
         .collect());
 
     let total_count = get_ls_query(&query_organization, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Project,
             (&query_organization, &pagination_params, &query_params)
@@ -201,7 +201,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProject, HttpError> {
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
     #[cfg(feature = "plus")]
     InsertProject::rate_limit(context, &query_organization).await?;
 
@@ -221,9 +221,9 @@ async fn post_inner(
     }
 
     let insert_project =
-        InsertProject::from_json(conn_lock!(context), &query_organization, json_project);
+        InsertProject::from_json(auth_conn!(context), &query_organization, json_project);
 
     QueryProject::create(log, context, auth_user, &query_organization, insert_project)
         .await?
-        .into_json(conn_lock!(context))
+        .into_json(auth_conn!(context))
 }

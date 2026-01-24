@@ -9,7 +9,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{payment_required_error, resource_conflict_err},
     model::{
@@ -91,7 +91,7 @@ async fn get_ls_inner(
     pagination_params: OrgSsoPagination,
 ) -> Result<(JsonSsos, TotalCount), HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -101,7 +101,7 @@ async fn get_ls_inner(
     let ssos = get_ls_query(&query_organization, &pagination_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QuerySso>(conn_lock!(context))
+        .load::<QuerySso>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Sso,
             (&query_organization, &pagination_params)
@@ -112,7 +112,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_organization, &pagination_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Sso,
             (&query_organization, &pagination_params)
@@ -168,7 +168,7 @@ async fn post_inner(
 ) -> Result<JsonSso, HttpError> {
     // Get the organization
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
 
     // Either the server is Bencher Cloud or the organization must have a valid Bencher Plus license
     let is_allowed = context.is_bencher_cloud
@@ -188,13 +188,13 @@ async fn post_inner(
     let insert_sso = InsertSso::from_json(query_organization.id, json_new_sso);
     diesel::insert_into(schema::sso::table)
         .values(&insert_sso)
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(
             Sso,
             (&query_organization, &insert_sso)
         ))?;
 
-    let query_sso = QuerySso::from_uuid(conn_lock!(context), insert_sso.uuid).map_err(
+    let query_sso = QuerySso::from_uuid(auth_conn!(context), insert_sso.uuid).map_err(
         resource_not_found_err!(Sso, (&query_organization, &insert_sso)),
     )?;
 
@@ -246,7 +246,7 @@ async fn get_one_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonSso, HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -255,7 +255,7 @@ async fn get_one_inner(
 
     QuerySso::belonging_to(&query_organization)
         .filter(schema::sso::uuid.eq(path_params.sso))
-        .first::<QuerySso>(conn_lock!(context))
+        .first::<QuerySso>(auth_conn!(context))
         .map(QuerySso::into_json)
         .map_err(resource_not_found_err!(
             Sso,
@@ -285,14 +285,14 @@ pub async fn org_sso_delete(
 async fn delete_inner(context: &ApiContext, path_params: OrgSsoParams) -> Result<(), HttpError> {
     // Get the organization
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
 
     diesel::delete(
         schema::sso::table
             .filter(schema::sso::organization_id.eq(query_organization.id))
             .filter(schema::sso::uuid.eq(path_params.sso)),
     )
-    .execute(conn_lock!(context))
+    .execute(auth_conn!(context))
     .map_err(resource_conflict_err!(
         Sso,
         (&query_organization, path_params.sso)

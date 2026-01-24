@@ -7,7 +7,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{forbidden_error, issue_error},
     model::{
@@ -68,7 +68,7 @@ async fn checkouts_post_inner(
 
     // Get the organization
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &organization)?;
     // Check to see if user has permission to manage the organization
     context
         .rbac

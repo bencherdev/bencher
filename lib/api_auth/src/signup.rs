@@ -1,10 +1,10 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonSignup, system::auth::JsonAuthAck};
 use bencher_schema::{
-    conn_lock,
     context::{ApiContext, Body, ButtonBody, Message},
     error::{forbidden_error, issue_error},
     model::user::InsertUser,
+    public_conn,
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
@@ -67,7 +67,8 @@ async fn post_inner(
     .await?;
 
     let invited = json_signup.invite.is_some();
-    let insert_user = InsertUser::from_json(conn_lock!(context), &context.token_key, &json_signup)?;
+    let insert_user =
+        InsertUser::from_json(public_conn!(context), &context.token_key, &json_signup)?;
     #[cfg(feature = "plus")]
     insert_user.rate_limit_auth(context)?;
 
@@ -130,7 +131,7 @@ async fn post_inner(
 
     insert_user.notify(
         log,
-        conn_lock!(context),
+        public_conn!(context),
         &context.messenger,
         &context.console_url,
         invited,

@@ -9,7 +9,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{forbidden_error, issue_error, payment_required_error, resource_not_found_err},
     model::{
@@ -75,7 +75,7 @@ async fn get_inner(
 
     // Get the organization
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
     // Check to see if user has permission to manage a project within the organization
     context
         .rbac
@@ -85,12 +85,12 @@ async fn get_inner(
     // Bencher Cloud
     if let Ok(biller) = context.biller() {
         let Ok(query_plan) = QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(conn_lock!(context))
+            .first::<QueryPlan>(auth_conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))
         // Cloud Free
         else {
             return free_plan_usage(
-                conn_lock!(context),
+                auth_conn!(context),
                 &query_organization,
                 UsageKind::CloudFree,
             );
@@ -101,7 +101,7 @@ async fn get_inner(
             let start_time = json_plan.current_period_start;
             let end_time = json_plan.current_period_end;
             let usage = QueryMetric::usage(
-                conn_lock!(context),
+                auth_conn!(context),
                 query_organization.id,
                 start_time,
                 end_time,
@@ -136,7 +136,7 @@ async fn get_inner(
                 (UsageKind::CloudSelfHostedLicensed, None)
             } else {
                 let usage = QueryMetric::usage(
-                    conn_lock!(context),
+                    auth_conn!(context),
                     query_organization.id,
                     start_time,
                     end_time,
@@ -169,7 +169,7 @@ async fn get_inner(
         let start_time = json_license.issued_at;
         let end_time = json_license.expiration;
         let usage = QueryMetric::usage(
-            conn_lock!(context),
+            auth_conn!(context),
             query_organization.id,
             start_time,
             end_time,
@@ -186,7 +186,7 @@ async fn get_inner(
     // Self-Hosted Free
     } else {
         free_plan_usage(
-            conn_lock!(context),
+            auth_conn!(context),
             &query_organization,
             UsageKind::SelfHostedFree,
         )

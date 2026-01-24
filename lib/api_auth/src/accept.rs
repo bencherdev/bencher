@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonAuthAck, system::auth::JsonAccept};
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     model::user::auth::{AuthUser, BearerToken},
 };
@@ -40,7 +40,7 @@ async fn post_inner(
 ) -> Result<JsonAuthAck, HttpError> {
     auth_user
         .user
-        .accept_invite(conn_lock!(context), &context.token_key, &json_accept.invite)?;
+        .accept_invite(auth_conn!(context), &context.token_key, &json_accept.invite)?;
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(None));

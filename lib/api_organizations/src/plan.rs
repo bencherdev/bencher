@@ -10,7 +10,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{
         BencherResource, forbidden_error, issue_error, resource_conflict_err,
@@ -73,7 +73,7 @@ async fn get_one_inner(
 
     // Get the organization
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
     // Check to see if user has permission to manage the organization
     context
         .rbac
@@ -81,7 +81,7 @@ async fn get_one_inner(
         .map_err(forbidden_error)?;
     // Get the plan for the organization
     let query_plan = QueryPlan::belonging_to(&query_organization)
-        .first::<QueryPlan>(conn_lock!(context))
+        .first::<QueryPlan>(auth_conn!(context))
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
     if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
@@ -140,7 +140,7 @@ async fn post_inner(
 
     // Get the organization
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
     // Check to see if user has permission to manage the organization
     context
         .rbac
@@ -148,7 +148,7 @@ async fn post_inner(
         .map_err(forbidden_error)?;
     // Check to make sure the organization doesn't already have a plan
     if let Ok(query_plan) =
-        QueryPlan::belonging_to(&query_organization).first::<QueryPlan>(conn_lock!(context))
+        QueryPlan::belonging_to(&query_organization).first::<QueryPlan>(auth_conn!(context))
     {
         return Err(resource_conflict_error(
             BencherResource::Plan,
@@ -192,7 +192,7 @@ async fn post_inner(
             .parse()
             .map_err(resource_not_found_err!(Plan, subscription_id))?;
         InsertPlan::licensed_plan(
-            conn_lock!(context),
+            auth_conn!(context),
             &context.licensor,
             licensed_plan_id,
             &query_organization,
@@ -201,7 +201,7 @@ async fn post_inner(
             self_hosted,
         )?;
         QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(conn_lock!(context))
+            .first::<QueryPlan>(auth_conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))?
             .to_licensed_plan(biller, &context.licensor, query_organization.uuid).await?
             .ok_or_else(|| {
@@ -216,9 +216,9 @@ async fn post_inner(
             .as_ref()
             .parse()
             .map_err(resource_not_found_err!(Plan, subscription_id))?;
-        InsertPlan::metered_plan(conn_lock!(context), metered_plan_id, &query_organization)?;
+        InsertPlan::metered_plan(auth_conn!(context), metered_plan_id, &query_organization)?;
         QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(conn_lock!(context))
+            .first::<QueryPlan>(auth_conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))?
             .to_metered_plan(biller).await?
             .ok_or_else(|| {
@@ -273,7 +273,7 @@ async fn delete_inner(
 
     // Get the organization
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
     // Check to see if user has permission to manage the organization
     context
         .rbac
@@ -281,7 +281,7 @@ async fn delete_inner(
         .map_err(forbidden_error)?;
     // Get the plan for the organization
     let query_plan = QueryPlan::belonging_to(&query_organization)
-        .first::<QueryPlan>(conn_lock!(context))
+        .first::<QueryPlan>(auth_conn!(context))
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
     let remote = query_params.remote.unwrap_or(true);
@@ -296,7 +296,7 @@ async fn delete_inner(
         });
 
     diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(Plan, query_plan))?;
 
     delete_plan_result
@@ -335,7 +335,7 @@ async fn delete_plan(
             };
             diesel::update(organization_query)
                 .set(&update_organization)
-                .execute(conn_lock!(context))
+                .execute(auth_conn!(context))
                 .map_err(resource_conflict_err!(Organization, update_organization))?;
         }
     } else {

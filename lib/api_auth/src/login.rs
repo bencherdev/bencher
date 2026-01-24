@@ -1,10 +1,11 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonAuthAck, JsonLogin};
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, Body, ButtonBody, Message},
     error::issue_error,
     model::user::QueryUser,
+    public_conn,
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
@@ -45,7 +46,6 @@ pub async fn auth_login_post(
 
 async fn post_inner(
     log: &Logger,
-
     context: &ApiContext,
     #[cfg(feature = "plus")] headers: &bencher_schema::HeaderMap,
     json_login: JsonLogin,
@@ -60,13 +60,13 @@ async fn post_inner(
     )
     .await?;
 
-    let query_user = QueryUser::get_with_email(conn_lock!(context), &json_login.email)?;
+    let query_user = QueryUser::get_with_email(public_conn!(context), &json_login.email)?;
     query_user.check_is_locked()?;
     #[cfg(feature = "plus")]
     query_user.rate_limit_auth(context)?;
 
     if let Some(invite) = &json_login.invite {
-        query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
+        query_user.accept_invite(auth_conn!(context), &context.token_key, invite)?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(

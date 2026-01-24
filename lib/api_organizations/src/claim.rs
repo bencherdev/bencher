@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{JsonNewClaim, JsonOrganization, OrganizationResourceId};
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     model::{
         organization::QueryOrganization,
@@ -63,8 +63,8 @@ async fn post_inner(
     auth_user: AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
     let query_organization =
-        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
     query_organization.claim(context, &auth_user.user).await?;
 
-    Ok(query_organization.into_json(conn_lock!(context)))
+    Ok(query_organization.into_json(auth_conn!(context)))
 }

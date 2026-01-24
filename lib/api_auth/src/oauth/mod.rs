@@ -4,12 +4,13 @@ use std::fmt;
 
 use bencher_json::{Email, JsonAuthUser, JsonOAuthUser, JsonSignup, PlanLevel, UserName};
 use bencher_schema::{
-    ApiContext, conn_lock,
+    ApiContext, auth_conn,
     error::{issue_error, payment_required_error},
     model::{
         organization::{QueryOrganization, plan::LicenseUsage, sso::QuerySso},
         user::{InsertUser, QueryUser},
     },
+    public_conn,
 };
 use dropshot::HttpError;
 use slog::Logger;
@@ -73,13 +74,13 @@ async fn handle_oauth_user(
 ) -> Result<JsonOAuthUser, HttpError> {
     // If the user already exists, then we just need to check if they are locked and possible accept an invite
     // Otherwise, we need to create a new user and notify the admins
-    let query_user = QueryUser::get_with_email(conn_lock!(context), &email);
+    let query_user = QueryUser::get_with_email(public_conn!(context), &email);
     let (query_user, auth_action) = if let Ok(query_user) = query_user {
         query_user.check_is_locked()?;
         query_user.rate_limit_auth(context)?;
 
         if let Some(invite) = oauth_state.invite() {
-            query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
+            query_user.accept_invite(auth_conn!(context), &context.token_key, invite)?;
 
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(
@@ -87,7 +88,7 @@ async fn handle_oauth_user(
             )));
         } else if let Some(organization_uuid) = oauth_state.claim() {
             let query_organization =
-                QueryOrganization::from_uuid(conn_lock!(context), organization_uuid)?;
+                QueryOrganization::from_uuid(auth_conn!(context), organization_uuid)?;
             query_organization.claim(context, &query_user).await?;
         }
         (query_user, AuthAction::Login)
@@ -105,19 +106,19 @@ async fn handle_oauth_user(
 
         let invited = json_signup.invite.is_some();
         let insert_user =
-            InsertUser::from_json(conn_lock!(context), &context.token_key, &json_signup)?;
+            InsertUser::from_json(public_conn!(context), &context.token_key, &json_signup)?;
         insert_user.rate_limit_auth(context)?;
 
         insert_user.notify(
             log,
-            conn_lock!(context),
+            public_conn!(context),
             &context.messenger,
             &context.console_url,
             invited,
             provider.as_ref(),
         )?;
 
-        let query_user = QueryUser::get_with_email(conn_lock!(context), &email)?;
+        let query_user = QueryUser::get_with_email(public_conn!(context), &email)?;
 
         (query_user, AuthAction::Signup)
     };

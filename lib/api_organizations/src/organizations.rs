@@ -8,7 +8,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
@@ -93,21 +93,21 @@ async fn get_ls_inner(
     let organizations = get_ls_query(context, auth_user, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryOrganization>(conn_lock!(context))
+        .load::<QueryOrganization>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Organization,
             (auth_user, &pagination_params, &query_params)
         ))?;
 
     // Drop connection lock before iterating
-    let json_organizations = conn_lock!(context, |conn| organizations
+    let json_organizations = auth_conn!(context, |conn| organizations
         .into_iter()
         .map(|org| org.into_json(conn))
         .collect());
 
     let total_count = get_ls_query(context, auth_user, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Organization,
             (auth_user, &pagination_params, &query_params)
@@ -180,10 +180,10 @@ async fn post_inner(
     json_organization: JsonNewOrganization,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
-    let insert_organization = InsertOrganization::from_json(conn_lock!(context), json_organization);
+    let insert_organization = InsertOrganization::from_json(auth_conn!(context), json_organization);
     let query_organization =
         QueryOrganization::create(context, auth_user, insert_organization).await?;
-    Ok(query_organization.into_json(conn_lock!(context)))
+    Ok(query_organization.into_json(auth_conn!(context)))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -228,7 +228,7 @@ async fn get_one_inner(
     path_params: OrganizationParams,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
-    conn_lock!(context, |conn| {
+    auth_conn!(context, |conn| {
         QueryOrganization::is_allowed_resource_id(
             conn,
             &context.rbac,
@@ -285,7 +285,7 @@ async fn patch_inner(
         Permission::Edit
     };
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -316,10 +316,10 @@ async fn patch_inner(
     let update_organization = UpdateOrganization::from(json_organization);
     diesel::update(organization_query)
         .set(&update_organization)
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(Organization, update_organization))?;
 
-    conn_lock!(context, |conn| QueryOrganization::get(
+    auth_conn!(context, |conn| QueryOrganization::get(
         conn,
         query_organization.id
     )?
@@ -352,7 +352,7 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -362,7 +362,7 @@ async fn delete_inner(
     diesel::delete(
         schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
     )
-    .execute(conn_lock!(context))
+    .execute(auth_conn!(context))
     .map_err(resource_conflict_err!(Organization, query_organization))?;
 
     #[cfg(feature = "otel")]

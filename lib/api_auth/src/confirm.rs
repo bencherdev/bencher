@@ -3,7 +3,7 @@ use bencher_json::{JsonConfirm, system::auth::JsonAuthUser};
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::sso::QuerySso;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{issue_error, unauthorized_error},
     model::user::QueryUser,
@@ -45,7 +45,7 @@ async fn post_inner(
         .validate_auth(&json_confirm.token)
         .map_err(unauthorized_error)?;
     let email = claims.email();
-    let query_user = QueryUser::get_with_email(conn_lock!(context), email)?;
+    let query_user = QueryUser::get_with_email(auth_conn!(context), email)?;
 
     #[cfg(feature = "plus")]
     QuerySso::join_all(
