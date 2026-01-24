@@ -17,7 +17,7 @@ use super::{
     version::{QueryVersion, VersionId},
 };
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
     macros::fn_get::fn_get,
@@ -148,7 +148,7 @@ impl QueryHead {
         branch_start_point: &StartPoint,
     ) -> Result<(), HttpError> {
         let start_point_version = QueryVersion::get(
-            conn_lock!(context),
+            auth_conn!(context),
             branch_start_point.head_version.version_id,
         )?;
         slog::debug!(log, "Got start point version: {start_point_version:?}");
@@ -161,7 +161,7 @@ impl QueryHead {
             .order(schema::version::number.desc())
             .limit(i64::from(branch_start_point.max_versions()))
             .select(schema::head_version::version_id)
-            .load::<VersionId>(conn_lock!(context))
+            .load::<VersionId>(auth_conn!(context))
             .map_err(resource_not_found_err!(
                 HeadVersion,
                 (branch_start_point, start_point_version)
@@ -216,7 +216,7 @@ impl InsertHead {
                 .filter(schema::head::created.ge(start_time))
                 .filter(schema::head::created.le(end_time))
                 .count()
-                .get_result::<i64>(conn_lock!(context))
+                .get_result::<i64>(auth_conn!(context))
                 .map_err(resource_not_found_err!(Head, (query_branch, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {
@@ -273,7 +273,7 @@ impl InsertHead {
         // Get the new head
         let query_head = schema::head::table
             .filter(schema::head::uuid.eq(&insert_head.uuid))
-            .first::<QueryHead>(conn_lock!(context))
+            .first::<QueryHead>(auth_conn!(context))
             .map_err(resource_not_found_err!(Head, insert_head))?;
         slog::debug!(log, "Got head: {query_head:?}");
 
@@ -300,7 +300,7 @@ impl InsertHead {
 
         // Get the updated branch
         // Make sure to do this after updating the old branch head to replaced
-        let query_branch = QueryBranch::get(conn_lock!(context), query_branch.id)?;
+        let query_branch = QueryBranch::get(auth_conn!(context), query_branch.id)?;
         slog::debug!(log, "Got updated branch: {query_branch:?}");
 
         // Clone data from the start point for the head

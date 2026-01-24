@@ -7,7 +7,7 @@ use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{BencherResource, assert_parentage, resource_conflict_err},
     macros::{
@@ -73,7 +73,7 @@ impl QueryTestbed {
         project_id: ProjectId,
         testbed: &TestbedNameId,
     ) -> Result<Self, HttpError> {
-        let query_testbed = Self::from_name_id(conn_lock!(context), project_id, testbed);
+        let query_testbed = Self::from_name_id(auth_conn!(context), project_id, testbed);
 
         let http_error = match query_testbed {
             Ok(testbed) => return Ok(testbed),
@@ -101,13 +101,13 @@ impl QueryTestbed {
         InsertTestbed::rate_limit(context, project_id).await?;
 
         let insert_testbed =
-            InsertTestbed::from_json(conn_lock!(context), project_id, json_testbed);
+            InsertTestbed::from_json(auth_conn!(context), project_id, json_testbed);
         diesel::insert_into(schema::testbed::table)
             .values(&insert_testbed)
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
 
-        Self::from_uuid(conn_lock!(context), project_id, insert_testbed.uuid)
+        Self::from_uuid(auth_conn!(context), project_id, insert_testbed.uuid)
     }
 
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonTestbed {

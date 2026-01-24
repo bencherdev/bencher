@@ -5,7 +5,7 @@ use diesel::{
 use dropshot::HttpError;
 
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::resource_not_found_err,
     macros::fn_get::fn_get,
@@ -55,7 +55,7 @@ impl QueryHeadVersion {
             // If the hash is not specified, get the most recent version.
             .order(schema::version::number.desc())
             .select(Self::as_select())
-            .first::<Self>(conn_lock!(context))
+            .first::<Self>(auth_conn!(context))
             .map_err(resource_not_found_err!(
                 HeadVersion,
                 (query_branch, hash)

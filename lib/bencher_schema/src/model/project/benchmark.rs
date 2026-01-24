@@ -7,7 +7,7 @@ use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{BencherResource, assert_parentage, resource_conflict_err, resource_not_found_err},
     macros::{
@@ -92,7 +92,7 @@ impl QueryBenchmark {
         // For historical reasons, we will only every be able to match on name and not name ID here.
         // The benchmark slugs were always created with a random suffix for a while.
         // Therefore, a name that happens to be a valid slug will fail to be found, when treated as a slug.
-        if let Ok(benchmark) = Self::get_from_name(conn_lock!(context), project_id, &name) {
+        if let Ok(benchmark) = Self::get_from_name(auth_conn!(context), project_id, &name) {
             return Ok(benchmark);
         }
 
@@ -109,13 +109,13 @@ impl QueryBenchmark {
         InsertBenchmark::rate_limit(context, project_id).await?;
 
         let insert_benchmark =
-            InsertBenchmark::from_json(conn_lock!(context), project_id, json_benchmark);
+            InsertBenchmark::from_json(auth_conn!(context), project_id, json_benchmark);
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Benchmark, &insert_benchmark))?;
 
-        Self::from_uuid(conn_lock!(context), project_id, insert_benchmark.uuid)
+        Self::from_uuid(auth_conn!(context), project_id, insert_benchmark.uuid)
     }
 
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonBenchmark {

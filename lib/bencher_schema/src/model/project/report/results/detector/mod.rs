@@ -5,7 +5,7 @@ use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{bad_request_error, resource_conflict_err},
     model::project::{
@@ -62,7 +62,7 @@ impl Detector {
         // Query the historical population/sample data for the benchmark
         let metrics_data = metrics_data(
             log,
-            conn_lock!(context),
+            auth_conn!(context),
             self.head_id,
             self.testbed_id,
             benchmark_id,

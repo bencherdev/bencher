@@ -4,7 +4,7 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{resource_conflict_err, resource_not_found_err},
     model::project::branch::{BranchId, QueryBranch},
@@ -72,7 +72,7 @@ impl InsertPlotBranch {
     ) -> Result<(), HttpError> {
         let ranker = RankGenerator::new(branches.len());
         for (uuid, rank) in branches.into_iter().zip(ranker) {
-            let branch_id = QueryBranch::get_id(conn_lock!(context), uuid)?;
+            let branch_id = QueryBranch::get_id(auth_conn!(context), uuid)?;
             let insert_plot_branch = Self {
                 plot_id,
                 branch_id,

@@ -13,7 +13,7 @@ use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{bad_request_error, issue_error, resource_conflict_err},
     model::project::{
@@ -157,7 +157,7 @@ impl ReportResults {
                 insert_report_benchmark
             ))?;
         let report_benchmark_id =
-            QueryReportBenchmark::get_id(conn_lock!(context), insert_report_benchmark.uuid)?;
+            QueryReportBenchmark::get_id(auth_conn!(context), insert_report_benchmark.uuid)?;
 
         for (measure_key, metric) in metrics.inner {
             let measure_id = self.measure_id(context, measure_key).await?;
@@ -174,10 +174,10 @@ impl ReportResults {
                 *usage += 1;
             }
 
-            let Some(detector) = self.detector(context, measure_id).await else {
+            let Some(detector) = self.detector(context, measure_id).await? else {
                 continue;
             };
-            let query_metric = QueryMetric::from_uuid(conn_lock!(context), insert_metric.uuid).map_err(|e| {
+            let query_metric = QueryMetric::from_uuid(auth_conn!(context), insert_metric.uuid).map_err(|e| {
                     issue_error(
                         "Failed to find metric",
                         &format!("Failed to find new metric ({insert_metric:?}) for report benchmark ({insert_report_benchmark:?}) even though it was just created."),
@@ -225,19 +225,25 @@ impl ReportResults {
         })
     }
 
-    async fn detector(&mut self, context: &ApiContext, measure_id: MeasureId) -> Option<Detector> {
-        if let Some(detector) = self.detector_cache.get(&measure_id) {
-            detector.clone()
-        } else {
-            let detector = Detector::new(
-                conn_lock!(context),
-                self.branch_id,
-                self.head_id,
-                self.testbed_id,
-                measure_id,
-            );
-            self.detector_cache.insert(measure_id, detector.clone());
-            detector
-        }
+    async fn detector(
+        &mut self,
+        context: &ApiContext,
+        measure_id: MeasureId,
+    ) -> Result<Option<Detector>, HttpError> {
+        Ok(
+            if let Some(detector) = self.detector_cache.get(&measure_id) {
+                detector.clone()
+            } else {
+                let detector = Detector::new(
+                    auth_conn!(context),
+                    self.branch_id,
+                    self.head_id,
+                    self.testbed_id,
+                    measure_id,
+                );
+                self.detector_cache.insert(measure_id, detector.clone());
+                detector
+            },
+        )
     }
 }

@@ -4,7 +4,7 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{resource_conflict_err, resource_not_found_err},
     model::project::testbed::{QueryTestbed, TestbedId},
@@ -71,7 +71,7 @@ impl InsertPlotTestbed {
     ) -> Result<(), HttpError> {
         let ranker = RankGenerator::new(testbeds.len());
         for (uuid, rank) in testbeds.into_iter().zip(ranker) {
-            let testbed_id = QueryTestbed::get_id(conn_lock!(context), uuid)?;
+            let testbed_id = QueryTestbed::get_id(auth_conn!(context), uuid)?;
             let insert_plot_testbed = Self {
                 plot_id,
                 testbed_id,

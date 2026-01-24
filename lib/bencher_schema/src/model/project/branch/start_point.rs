@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use dropshot::HttpError;
 
-use crate::{conn_lock, context::ApiContext, model::project::ProjectId};
+use crate::{auth_conn, context::ApiContext, model::project::ProjectId};
 
 use super::{
     QueryBranch,
@@ -29,7 +29,7 @@ impl StartPoint {
         max_versions: Option<u32>,
         clone_thresholds: Option<bool>,
     ) -> Result<Self, HttpError> {
-        let version = QueryVersion::get(conn_lock!(context), head_version.version_id)?;
+        let version = QueryVersion::get(auth_conn!(context), head_version.version_id)?;
         Ok(Self {
             branch: query_branch,
             head_version,
@@ -71,7 +71,7 @@ impl StartPoint {
             max_versions,
             clone_thresholds,
         } = json;
-        let query_branch = QueryBranch::from_name_id(conn_lock!(context), project_id, &branch)?;
+        let query_branch = QueryBranch::from_name_id(auth_conn!(context), project_id, &branch)?;
         Self::latest_for_branch(
             context,
             project_id,
@@ -101,7 +101,7 @@ impl StartPoint {
         };
         // If updating the start point, it is okay if it does not exist.
         // This avoids a race condition when creating both the branch and start point in CI.
-        let Ok(query_branch) = QueryBranch::from_name_id(conn_lock!(context), project_id, branch)
+        let Ok(query_branch) = QueryBranch::from_name_id(auth_conn!(context), project_id, branch)
         else {
             return Ok(None);
         };

@@ -9,7 +9,7 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{BencherResource, assert_parentage, resource_conflict_err},
     macros::{
@@ -79,7 +79,7 @@ impl QueryMeasure {
         project_id: ProjectId,
         measure: &MeasureNameId,
     ) -> Result<Self, HttpError> {
-        let query_measure = Self::from_name_id(conn_lock!(context), project_id, measure);
+        let query_measure = Self::from_name_id(auth_conn!(context), project_id, measure);
 
         let http_error = match query_measure {
             Ok(measure) => return Ok(measure),
@@ -193,13 +193,13 @@ impl QueryMeasure {
         InsertMeasure::rate_limit(context, project_id).await?;
 
         let insert_measure =
-            InsertMeasure::from_json(conn_lock!(context), project_id, json_measure);
+            InsertMeasure::from_json(auth_conn!(context), project_id, json_measure);
         diesel::insert_into(schema::measure::table)
             .values(&insert_measure)
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
-        Self::from_uuid(conn_lock!(context), project_id, insert_measure.uuid)
+        Self::from_uuid(auth_conn!(context), project_id, insert_measure.uuid)
     }
 
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonMeasure {

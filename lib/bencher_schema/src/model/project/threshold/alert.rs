@@ -14,7 +14,7 @@ use super::{
     boundary::{BoundaryId, QueryBoundary},
 };
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{resource_conflict_err, resource_not_found_err},
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -74,7 +74,7 @@ impl QueryAlert {
                 ))
                 .filter(schema::report::head_id.eq(head_id))
                 .select(schema::alert::id)
-                .load::<AlertId>(conn_lock!(context))
+                .load::<AlertId>(auth_conn!(context))
                 .map_err(resource_not_found_err!(Alert, head_id))?;
 
         let silenced_alert = UpdateAlert::silence();

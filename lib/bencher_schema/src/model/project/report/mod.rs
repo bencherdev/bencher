@@ -16,7 +16,6 @@ use slog::Logger;
 #[cfg(feature = "plus")]
 use crate::model::organization::plan::PlanKind;
 use crate::{
-    conn_lock,
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
     macros::fn_get::{fn_get_id, fn_get_uuid},
@@ -146,7 +145,7 @@ impl QueryReport {
 
         let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))
-        .first::<QueryReport>(conn_lock!(context))
+        .first::<QueryReport>(public_conn!(context, public_user))
         .map_err(|e| {
             issue_error(
                 "Failed to find new report that was just created",

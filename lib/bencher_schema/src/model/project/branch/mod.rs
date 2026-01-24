@@ -11,7 +11,7 @@ use version::{QueryVersion, VersionId};
 
 use super::{ProjectId, QueryProject};
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{
         BencherResource, assert_parentage, issue_error, resource_conflict_err,
@@ -114,7 +114,7 @@ impl QueryBranch {
         branch: &BranchNameId,
         start_point: Option<&JsonUpdateStartPoint>,
     ) -> Result<(Self, QueryHead), HttpError> {
-        let query_branch = Self::from_name_id(conn_lock!(context), project_id, branch);
+        let query_branch = Self::from_name_id(auth_conn!(context), project_id, branch);
 
         let http_error = match query_branch {
             Ok(branch) => {
@@ -238,19 +238,19 @@ impl QueryBranch {
 
     async fn get_start_point(&self, context: &ApiContext) -> Result<Option<StartPoint>, HttpError> {
         // Get the head for the branch.
-        let head = self.head(conn_lock!(context))?;
+        let head = self.head(auth_conn!(context))?;
         // Check to see if the head has a start point.
         let Some(start_point_id) = head.start_point_id else {
             return Ok(None);
         };
         // If the head has a start point, then get the head version for the start point.
-        let start_point_head_version = QueryHeadVersion::get(conn_lock!(context), start_point_id)?;
+        let start_point_head_version = QueryHeadVersion::get(auth_conn!(context), start_point_id)?;
         // Get the branch for the start point head version.
         let start_point_branch = schema::branch::table
             .inner_join(schema::head::table.on(schema::head::branch_id.eq(schema::branch::id)))
             .filter(schema::head::id.eq(start_point_head_version.head_id))
             .select(Self::as_select())
-            .first::<Self>(conn_lock!(context))
+            .first::<Self>(auth_conn!(context))
             .map_err(resource_not_found_err!(
                 HeadVersion,
                 &start_point_head_version
@@ -271,7 +271,7 @@ impl QueryBranch {
         self,
         context: &ApiContext,
     ) -> Result<(Self, QueryHead), HttpError> {
-        let head = self.head(conn_lock!(context))?;
+        let head = self.head(auth_conn!(context))?;
         Ok((self, head))
     }
 
@@ -369,7 +369,7 @@ impl InsertBranch {
         } = branch;
 
         // Create branch
-        let insert_branch = Self::from_json_inner(conn_lock!(context), project_id, name, slug);
+        let insert_branch = Self::from_json_inner(auth_conn!(context), project_id, name, slug);
         diesel::insert_into(schema::branch::table)
             .values(&insert_branch)
             .execute(write_conn!(context))
@@ -379,7 +379,7 @@ impl InsertBranch {
         // Get the new branch
         let query_branch = schema::branch::table
             .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-            .first::<QueryBranch>(conn_lock!(context))
+            .first::<QueryBranch>(auth_conn!(context))
             .map_err(resource_not_found_err!(Branch, insert_branch))?;
         slog::debug!(log, "Got branch {query_branch:?}");
 

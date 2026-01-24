@@ -8,7 +8,7 @@ use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{
         BencherResource, assert_parentage, resource_conflict_err, resource_conflict_error,
@@ -270,7 +270,7 @@ impl InsertPlot {
 
         let query_plot = plot_table::table
             .filter(plot_table::uuid.eq(&insert_plot.uuid))
-            .first::<QueryPlot>(conn_lock!(context))
+            .first::<QueryPlot>(auth_conn!(context))
             .map_err(resource_not_found_err!(Plot, insert_plot))?;
 
         InsertPlotBranch::from_json(context, query_plot.id, branches).await?;

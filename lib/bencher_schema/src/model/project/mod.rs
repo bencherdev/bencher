@@ -16,7 +16,7 @@ use regex::Regex;
 use slog::Logger;
 
 use crate::{
-    ApiContext, conn_lock,
+    ApiContext, auth_conn,
     context::{DbConnection, Rbac},
     error::{
         BencherResource, assert_parentage, forbidden_error, issue_error, resource_conflict_err,
@@ -103,7 +103,7 @@ impl QueryProject {
     where
         NameFn: FnOnce() -> Result<ResourceName, HttpError>,
     {
-        let query_project = Self::from_resource_id(conn_lock!(context), project);
+        let query_project = Self::from_resource_id(auth_conn!(context), project);
 
         let http_error = match query_project {
             Ok(project) => return Ok(project),
@@ -130,7 +130,7 @@ impl QueryProject {
         SlugFn: FnOnce() -> Result<ProjectSlug, HttpError>,
     {
         let project_slug = project_slug_fn()?;
-        if let Ok(query_project) = Self::from_slug(conn_lock!(context), &project_slug) {
+        if let Ok(query_project) = Self::from_slug(auth_conn!(context), &project_slug) {
             return Ok(query_project);
         }
 
@@ -186,7 +186,7 @@ impl QueryProject {
                 // If the user is authenticated, then we may have created a new personal organization for them.
                 // If so then we need to reload the permissions.
                 // This is unlikely to be the case going forward, but it is needed for backwards compatibility.
-                let auth_user = auth_user.reload(conn_lock!(context))?;
+                let auth_user = auth_user.reload(auth_conn!(context))?;
                 Self::create(
                     log,
                     context,
@@ -243,7 +243,7 @@ impl QueryProject {
             )
             .select(schema::project::name)
             .order(schema::project::name.desc())
-            .first::<ResourceName>(conn_lock!(context))
+            .first::<ResourceName>(auth_conn!(context))
         else {
             // The project name is already unique
             slog::debug!(log, "Project name is unique: {project_name}");
@@ -339,7 +339,7 @@ impl QueryProject {
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Project, &insert_project))?;
         let query_project = Self::from_uuid(
-            conn_lock!(context),
+            auth_conn!(context),
             query_organization.id,
             insert_project.uuid,
         )?;
@@ -519,7 +519,7 @@ impl InsertProject {
     ) -> Result<(), HttpError> {
         use crate::context::RateLimitingError;
 
-        let is_claimed = query_organization.is_claimed(conn_lock!(context))?;
+        let is_claimed = query_organization.is_claimed(auth_conn!(context))?;
 
         let resource = BencherResource::Project;
         let (start_time, end_time) = context.rate_limiting.window();
@@ -528,7 +528,7 @@ impl InsertProject {
                 .filter(schema::project::created.ge(start_time))
                 .filter(schema::project::created.le(end_time))
                 .count()
-                .get_result::<i64>(conn_lock!(context))
+                .get_result::<i64>(auth_conn!(context))
                 .map_err(resource_not_found_err!(Project, (query_organization, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {

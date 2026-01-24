@@ -20,7 +20,7 @@ use super::{
     testbed::{QueryTestbed, TestbedId},
 };
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{
         BencherResource, assert_parentage, assert_siblings, resource_conflict_err,
@@ -96,7 +96,7 @@ impl QueryThreshold {
             // Current model and new model,
             // update the current if it has changed.
             (Some(model_id), Some(model)) => {
-                let current_model = QueryModel::get(conn_lock!(context), model_id)?.into_model();
+                let current_model = QueryModel::get(auth_conn!(context), model_id)?.into_model();
                 // Skip updating the model if it has not changed.
                 // This keeps us from needlessly replacing old models with identical new ones.
                 if current_model == model {
@@ -420,7 +420,7 @@ impl InsertThreshold {
 
         let mut current_thresholds = schema::threshold::table
             .filter(schema::threshold::branch_id.eq(query_branch.id))
-            .load::<QueryThreshold>(conn_lock!(context))
+            .load::<QueryThreshold>(auth_conn!(context))
             .map_err(resource_not_found_err!(
                 Threshold,
                 &branch_start_point.branch
@@ -432,7 +432,7 @@ impl InsertThreshold {
 
         let start_point_thresholds = schema::threshold::table
             .filter(schema::threshold::branch_id.eq(branch_start_point.branch.id))
-            .load::<QueryThreshold>(conn_lock!(context))
+            .load::<QueryThreshold>(auth_conn!(context))
             .map_err(resource_not_found_err!(
                 Threshold,
                 &branch_start_point.branch
@@ -446,7 +446,7 @@ impl InsertThreshold {
             start_point_thresholds
         {
             let start_point_model = start_point_threshold
-                .model(conn_lock!(context))?
+                .model(auth_conn!(context))?
                 .map(QueryModel::into_model);
             slog::debug!(
                 log,
@@ -534,7 +534,7 @@ impl InsertThreshold {
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
             .filter(schema::threshold::testbed_id.eq(testbed_id))
-            .load::<QueryThreshold>(conn_lock!(context))
+            .load::<QueryThreshold>(auth_conn!(context))
             .map_err(resource_not_found_err!(Threshold, (branch_id, testbed_id)))?
             .into_iter()
             .map(|threshold| (threshold.measure_id, threshold))

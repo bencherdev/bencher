@@ -4,11 +4,12 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use crate::{
-    conn_lock,
+    auth_conn,
     context::{ApiContext, DbConnection},
     error::{resource_conflict_err, resource_not_found_err},
     model::project::measure::{MeasureId, QueryMeasure},
-    schema::plot_measure as plot_measure_table, write_conn,
+    schema::plot_measure as plot_measure_table,
+    write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -70,7 +71,7 @@ impl InsertPlotMeasure {
     ) -> Result<(), HttpError> {
         let ranker = RankGenerator::new(measures.len());
         for (uuid, rank) in measures.into_iter().zip(ranker) {
-            let measure_id = QueryMeasure::get_id(conn_lock!(context), uuid)?;
+            let measure_id = QueryMeasure::get_id(auth_conn!(context), uuid)?;
             let insert_plot_measure = Self {
                 plot_id,
                 measure_id,

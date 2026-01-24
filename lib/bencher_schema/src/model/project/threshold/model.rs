@@ -130,7 +130,7 @@ impl InsertModel {
         context: &crate::ApiContext,
         query_threshold: &QueryThreshold,
     ) -> Result<(), HttpError> {
-        use crate::{conn_lock, context::RateLimitingError, error::issue_error};
+        use crate::{auth_conn, context::RateLimitingError, error::issue_error};
 
         let resource = BencherResource::Model;
         let (start_time, end_time) = context.rate_limiting.window();
@@ -139,7 +139,7 @@ impl InsertModel {
                 .filter(schema::model::created.ge(start_time))
                 .filter(schema::model::created.le(end_time))
                 .count()
-                .get_result::<i64>(conn_lock!(context))
+                .get_result::<i64>(auth_conn!(context))
                 .map_err(resource_not_found_err!(Model, (query_threshold, start_time, end_time)))?
                 .try_into()
                 .map_err(|e| {
