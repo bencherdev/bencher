@@ -65,19 +65,6 @@ pub struct ApiContext {
 }
 
 #[macro_export]
-/// Warning: Do not call `conn_lock!` multiple times in the same line, as it will deadlock.
-/// Use the `|conn|` syntax to reuse the same connection multiple times in the same line.
-macro_rules! conn_lock {
-    ($context:expr) => {
-        $crate::connection_lock!($context.database.connection)
-    };
-    ($context:expr, |$conn:ident| $multi:expr) => {{
-        let $conn = $crate::conn_lock!($context);
-        $multi
-    }};
-}
-
-#[macro_export]
 /// Warning: Do not call `connection_lock!` multiple times in the same line, as it will deadlock.
 /// Use the `|conn|` syntax to reuse the same connection multiple times in the same line.
 macro_rules! connection_lock {
