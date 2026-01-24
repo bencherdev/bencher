@@ -3,7 +3,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
 use bencher_json::{BooleanParam, JsonServerStats, JsonUuid, SelfHostedStartup, ServerUuid};
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::issue_error,
     model::{
@@ -46,7 +46,7 @@ pub async fn server_stats_get(
 }
 
 async fn get_one_inner(log: &Logger, context: &ApiContext) -> Result<JsonServerStats, HttpError> {
-    let query_server = QueryServer::get_server(conn_lock!(context))?;
+    let query_server = QueryServer::get_server(auth_conn!(context))?;
     let db_path = context.database.path.clone();
     query_server.get_stats(log.clone(), db_path).await
 }
