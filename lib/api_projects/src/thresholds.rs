@@ -11,7 +11,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{
         BencherResource, bad_request_error, resource_conflict_err, resource_not_found_err,
@@ -30,7 +30,7 @@ use bencher_schema::{
             public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema,
+    public_conn, schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -123,7 +123,7 @@ async fn get_ls_inner(
     public_user: &PublicUser,
 ) -> Result<(JsonThresholds, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
@@ -132,7 +132,7 @@ async fn get_ls_inner(
     let thresholds = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryThreshold>(conn_lock!(context))
+        .load::<QueryThreshold>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Threshold,
             (&query_project, &pagination_params, &query_params)
@@ -158,7 +158,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Threshold,
             (&query_project, &pagination_params, &query_params)
@@ -275,7 +275,7 @@ async fn post_inner(
 
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -285,11 +285,11 @@ async fn post_inner(
     let project_id = query_project.id;
     // Verify that the branch, testbed, and measure are part of the same project
     let branch_id =
-        QueryBranch::from_name_id(conn_lock!(context), project_id, &json_threshold.branch)?.id;
+        QueryBranch::from_name_id(auth_conn!(context), project_id, &json_threshold.branch)?.id;
     let testbed_id =
-        QueryTestbed::from_name_id(conn_lock!(context), project_id, &json_threshold.testbed)?.id;
+        QueryTestbed::from_name_id(auth_conn!(context), project_id, &json_threshold.testbed)?.id;
     let measure_id =
-        QueryMeasure::from_name_id(conn_lock!(context), project_id, &json_threshold.measure)?.id;
+        QueryMeasure::from_name_id(auth_conn!(context), project_id, &json_threshold.measure)?.id;
 
     // Create the new threshold
     let threshold_id = InsertThreshold::from_model(
@@ -302,14 +302,14 @@ async fn post_inner(
     )
     .await?;
 
-    // Get the new threshold
-    let query_threshold = schema::threshold::table
-        .filter(schema::threshold::id.eq(threshold_id))
-        .first::<QueryThreshold>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Threshold, threshold_id))?;
-
-    // Return the new threshold with the new model
-    query_threshold.into_json(conn_lock!(context))
+    // Get the new threshold with the new model
+    auth_conn!(context, |conn| {
+        schema::threshold::table
+            .filter(schema::threshold::id.eq(threshold_id))
+            .first::<QueryThreshold>(conn)
+            .map_err(resource_not_found_err!(Threshold, threshold_id))
+            .map(|threshold| threshold.into_json(conn))?
+    })
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -383,17 +383,24 @@ async fn get_one_inner(
     public_user: &PublicUser,
 ) -> Result<JsonThreshold, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
     )?;
 
-    let query_threshold =
-        QueryThreshold::get_with_uuid(conn_lock!(context), &query_project, path_params.threshold)?;
+    let query_threshold = QueryThreshold::get_with_uuid(
+        public_conn!(context, public_user),
+        &query_project,
+        path_params.threshold,
+    )?;
 
     if let Some(model_uuid) = query_params.model {
-        let query_model = QueryModel::from_uuid(conn_lock!(context), query_project.id, model_uuid)?;
+        let query_model = QueryModel::from_uuid(
+            public_conn!(context, public_user),
+            query_project.id,
+            model_uuid,
+        )?;
         if query_model.threshold_id != query_threshold.id {
             return Err(resource_not_found_error(
                 BencherResource::Model,
@@ -404,9 +411,13 @@ async fn get_one_inner(
                 ),
             ));
         }
-        query_threshold.into_json_for_model(conn_lock!(context), Some(query_model), None)
+        query_threshold.into_json_for_model(
+            public_conn!(context, public_user),
+            Some(query_model),
+            None,
+        )
     } else {
-        query_threshold.into_json(conn_lock!(context))
+        query_threshold.into_json(public_conn!(context, public_user))
     }
 }
 
@@ -455,7 +466,7 @@ async fn put_inner(
 
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -464,7 +475,7 @@ async fn put_inner(
 
     // Get the current threshold
     let query_threshold =
-        QueryThreshold::get_with_uuid(conn_lock!(context), &query_project, path_params.threshold)?;
+        QueryThreshold::get_with_uuid(auth_conn!(context), &query_project, path_params.threshold)?;
 
     // Update the current threshold with the new model, if changed
     query_threshold
@@ -472,10 +483,9 @@ async fn put_inner(
         .await?;
 
     // Get the updated threshold with the new model
-    let query_threshold = QueryThreshold::get(conn_lock!(context), query_threshold.id)?;
-
-    // Return the updated threshold with the new model
-    query_threshold.into_json(conn_lock!(context))
+    auth_conn!(context, |conn| {
+        QueryThreshold::get(conn, query_threshold.id).map(|threshold| threshold.into_json(conn))?
+    })
 }
 
 /// Delete a threshold
@@ -505,7 +515,7 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -513,7 +523,7 @@ async fn delete_inner(
     )?;
 
     let query_threshold =
-        QueryThreshold::get_with_uuid(conn_lock!(context), &query_project, path_params.threshold)?;
+        QueryThreshold::get_with_uuid(auth_conn!(context), &query_project, path_params.threshold)?;
 
     diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
         .execute(write_conn!(context))
