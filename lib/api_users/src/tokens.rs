@@ -6,7 +6,7 @@ use bencher_json::{
     UserResourceId, user::token::JsonUpdateToken,
 };
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::user::{
@@ -100,13 +100,13 @@ async fn get_ls_inner(
     query_params: UserTokensQuery,
     auth_user: &AuthUser,
 ) -> Result<(JsonTokens, TotalCount), HttpError> {
-    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
     let tokens = get_ls_query(&pagination_params, &query_params, query_user.id)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryToken>(conn_lock!(context))
+        .load::<QueryToken>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Token,
             (&pagination_params, &query_params, auth_user)
@@ -120,7 +120,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&pagination_params, &query_params, query_user.id)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(auth_conn!(context))
         .map_err(resource_not_found_err!(
             Token,
             (&pagination_params, &query_params, auth_user)
@@ -198,7 +198,7 @@ async fn post_inner(
     context.rate_limiting.create_token(auth_user.user.uuid)?;
 
     let insert_token = InsertToken::from_json(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &context.token_key,
         &path_params.user,
@@ -211,11 +211,13 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Token, insert_token))?;
 
-    conn_lock!(context, |conn| schema::token::table
-        .filter(schema::token::uuid.eq(&insert_token.uuid))
-        .first::<QueryToken>(conn)
-        .map_err(resource_not_found_err!(Token, insert_token))?
-        .into_json(conn))
+    auth_conn!(context, |conn| {
+        schema::token::table
+            .filter(schema::token::uuid.eq(&insert_token.uuid))
+            .first::<QueryToken>(conn)
+            .map_err(resource_not_found_err!(Token, insert_token))?
+            .into_json(conn)
+    })
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -262,19 +264,17 @@ async fn get_one_inner(
     path_params: UserTokenParams,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, HttpError> {
-    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
-    conn_lock!(context, |conn| QueryToken::get_user_token(
-        conn,
-        query_user.id,
-        &path_params.token.to_string()
-    )?
-    .into_json(conn)
-    .map_err(resource_not_found_err!(
-        Token,
-        (&query_user, path_params.token)
-    )))
+    auth_conn!(context, |conn| {
+        QueryToken::get_user_token(conn, query_user.id, &path_params.token.to_string())?
+            .into_json(conn)
+            .map_err(resource_not_found_err!(
+                Token,
+                (&query_user, path_params.token)
+            ))
+    })
 }
 
 /// Update a token
@@ -309,11 +309,11 @@ async fn patch_inner(
     json_token: JsonUpdateToken,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, HttpError> {
-    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
     let query_token = QueryToken::get_user_token(
-        conn_lock!(context),
+        auth_conn!(context),
         query_user.id,
         &path_params.token.to_string(),
     )?;
@@ -324,6 +324,7 @@ async fn patch_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
 
-    conn_lock!(context, |conn| QueryToken::get(conn, query_token.id)?
-        .into_json(conn))
+    auth_conn!(context, |conn| {
+        QueryToken::get(conn, query_token.id)?.into_json(conn)
+    })
 }

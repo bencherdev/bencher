@@ -358,12 +358,10 @@ async fn patch_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Plot, (&query_plot, &json_plot)))?;
 
-    auth_conn!(context, |conn| QueryPlot::get_with_uuid(
-        conn,
-        &query_project,
-        path_params.plot
-    )
-    .and_then(|plot| plot.into_json_for_project(conn, &query_project)))
+    auth_conn!(context, |conn| {
+        QueryPlot::get_with_uuid(conn, &query_project, path_params.plot)
+            .and_then(|plot| plot.into_json_for_project(conn, &query_project))
+    })
 }
 
 /// Delete a plot

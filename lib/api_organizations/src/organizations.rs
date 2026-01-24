@@ -100,10 +100,12 @@ async fn get_ls_inner(
         ))?;
 
     // Drop connection lock before iterating
-    let json_organizations = auth_conn!(context, |conn| organizations
-        .into_iter()
-        .map(|org| org.into_json(conn))
-        .collect());
+    let json_organizations = auth_conn!(context, |conn| {
+        organizations
+            .into_iter()
+            .map(|org| org.into_json(conn))
+            .collect()
+    });
 
     let total_count = get_ls_query(context, auth_user, &pagination_params, &query_params)
         .count()
@@ -319,11 +321,9 @@ async fn patch_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Organization, update_organization))?;
 
-    auth_conn!(context, |conn| QueryOrganization::get(
-        conn,
-        query_organization.id
-    )?
-    .into_json_full(conn))
+    auth_conn!(context, |conn| {
+        QueryOrganization::get(conn, query_organization.id)?.into_json_full(conn)
+    })
 }
 
 /// Delete an organization

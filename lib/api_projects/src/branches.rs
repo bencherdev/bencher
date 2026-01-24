@@ -133,6 +133,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    // Drop connection lock before iterating
     let json_branches = branches
         .into_iter()
         .map(|branch| async {
@@ -422,11 +423,11 @@ async fn patch_inner(
             (&query_branch, &json_branch)
         ))?;
 
-    auth_conn!(context, |conn| QueryBranch::get(conn, query_branch.id)
-        .map_err(resource_not_found_err!(Branch, query_branch))
-        .and_then(
-            |branch| branch.into_json_for_project(conn, &query_project)
-        ))
+    auth_conn!(context, |conn| {
+        QueryBranch::get(conn, query_branch.id)
+            .map_err(resource_not_found_err!(Branch, query_branch))
+            .and_then(|branch| branch.into_json_for_project(conn, &query_project))
+    })
 }
 
 /// Delete a branch

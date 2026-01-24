@@ -129,6 +129,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    // Drop connection lock before iterating
     let json_testbeds = testbeds
         .into_iter()
         .map(|testbed| testbed.into_json_for_project(&query_project))

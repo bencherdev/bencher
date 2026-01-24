@@ -120,10 +120,12 @@ async fn get_ls_inner(
         ))?;
 
     // Drop connection lock before iterating
-    let json_projects = auth_conn!(context, |conn| projects
-        .into_iter()
-        .map(|project| project.into_json_for_organization(conn, &query_organization))
-        .collect());
+    let json_projects = auth_conn!(context, |conn| {
+        projects
+            .into_iter()
+            .map(|project| project.into_json_for_organization(conn, &query_organization))
+            .collect()
+    });
 
     let total_count = get_ls_query(&query_organization, &pagination_params, &query_params)
         .count()

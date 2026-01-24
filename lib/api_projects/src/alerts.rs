@@ -403,6 +403,7 @@ async fn patch_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
-    auth_conn!(context, |conn| QueryAlert::get(conn, query_alert.id)?
-        .into_json(conn))
+    auth_conn!(context, |conn| {
+        QueryAlert::get(conn, query_alert.id)?.into_json(conn)
+    })
 }
