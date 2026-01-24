@@ -11,7 +11,10 @@ use slog::Logger;
 use crate::RateLimiting;
 use crate::{
     ApiContext,
-    model::user::auth::{AuthUser, BearerToken},
+    model::user::{
+        UserId,
+        auth::{AuthUser, BearerToken},
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -65,6 +68,19 @@ impl PublicUser {
 
     pub fn is_auth(&self) -> bool {
         matches!(self, Self::Auth(_))
+    }
+
+    pub fn user_id(&self) -> Option<UserId> {
+        match self {
+            Self::Public(_) => None,
+            Self::Auth(auth_user) => Some(auth_user.id),
+        }
+    }
+}
+
+impl From<AuthUser> for PublicUser {
+    fn from(auth_user: AuthUser) -> Self {
+        Self::Auth(Box::new(auth_user))
     }
 }
 

@@ -29,8 +29,9 @@ use crate::{
             testbed::{QueryTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
         },
-        user::{QueryUser, UserId},
+        user::{QueryUser, UserId, public::PublicUser},
     },
+    public_conn,
     schema::{self, report as report_table},
     view, write_conn,
 };
@@ -73,7 +74,7 @@ impl QueryReport {
         context: &ApiContext,
         query_project: &QueryProject,
         mut json_report: JsonNewReport,
-        user_id: Option<UserId>,
+        public_user: &PublicUser,
     ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "plus")]
         InsertReport::rate_limit(context, query_project.id).await?;
@@ -86,6 +87,7 @@ impl QueryReport {
             context.biller.as_ref(),
             &context.licensor,
             query_project,
+            public_user,
         )
         .await?;
         let project_id = query_project.id;
@@ -128,7 +130,7 @@ impl QueryReport {
 
         // Create a new report and add it to the database
         let insert_report = InsertReport::from_json(
-            user_id,
+            public_user.user_id(),
             project_id,
             head_id,
             version_id,
@@ -187,14 +189,7 @@ impl QueryReport {
         // Don't return the error from processing the report until after the metrics usage has been checked
         processed_report?;
         // If the report was processed successfully, then return the report with the results
-        query_report.into_json(
-            log,
-            &mut *if user_id.is_none() {
-                context.database.get_public_conn().await?
-            } else {
-                context.database.get_auth_conn().await?
-            },
-        )
+        query_report.into_json(log, public_conn!(context, public_user))
     }
 
     pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, HttpError> {

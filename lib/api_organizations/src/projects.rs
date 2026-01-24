@@ -216,6 +216,7 @@ async fn post_inner(
             context,
             context.biller.as_ref(),
             &context.licensor,
+            auth_user,
             &query_organization,
             visibility,
         )

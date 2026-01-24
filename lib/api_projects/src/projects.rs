@@ -272,7 +272,7 @@ pub async fn project_patch(
         context,
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
+        auth_user,
     )
     .await?;
     Ok(Patch::auth_response_ok(json))
@@ -283,14 +283,14 @@ async fn patch_inner(
     context: &ApiContext,
     path_params: ProjectParams,
     json_project: JsonUpdateProject,
-    auth_user: &AuthUser,
+    auth_user: AuthUser,
 ) -> Result<JsonProject, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        &auth_user,
         Permission::Edit,
     )?;
 
@@ -303,6 +303,7 @@ async fn patch_inner(
             context,
             context.biller.as_ref(),
             &context.licensor,
+            auth_user,
             &query_project,
             visibility,
         )

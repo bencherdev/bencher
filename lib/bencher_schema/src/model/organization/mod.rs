@@ -19,8 +19,10 @@ use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 #[cfg(feature = "plus")]
 use sso::QuerySso;
 
+#[cfg(feature = "plus")]
+use crate::model::user::public::PublicUser;
 use crate::{
-    ApiContext, CLAIM_TOKEN_TTL, conn_lock,
+    ApiContext, CLAIM_TOKEN_TTL, auth_conn,
     context::{DbConnection, Rbac},
     error::{
         BencherResource, forbidden_error, issue_error, resource_not_found_error, unauthorized_error,
@@ -31,7 +33,7 @@ use crate::{
         slug::ok_slug,
     },
     model::user::auth::AuthUser,
-    resource_conflict_err, resource_not_found_err,
+    public_conn, resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
     write_conn,
 };
@@ -78,7 +80,7 @@ impl QueryOrganization {
     ) -> Result<Self, HttpError> {
         // The user's organization should be created with the user's UUID.
         let user_uuid = auth_user.user.uuid;
-        if let Ok(query_organization) = Self::from_uuid(conn_lock!(context), user_uuid.into()) {
+        if let Ok(query_organization) = Self::from_uuid(auth_conn!(context), user_uuid.into()) {
             query_organization
                 .try_allowed(&context.rbac, auth_user, Permission::View)
                 .map_err(|err| {
@@ -92,7 +94,7 @@ impl QueryOrganization {
         }
 
         let insert_organization =
-            InsertOrganization::from_user(conn_lock!(context), &auth_user.user);
+            InsertOrganization::from_user(auth_conn!(context), &auth_user.user);
         Self::create(context, auth_user, insert_organization).await
     }
 
@@ -103,12 +105,12 @@ impl QueryOrganization {
     ) -> Result<Self, HttpError> {
         // The project organization should be created with the project's slug.
         if let Ok(query_organization) = Self::from_resource_id(
-            conn_lock!(context),
+            public_conn!(context),
             &OrganizationSlug::from(project_slug.clone()).into_resource_id(),
         ) {
             // If the project is part of an organization that is claimed,
             // then the project can not have anonymous reports.
-            return if query_organization.is_claimed(conn_lock!(context))? {
+            return if query_organization.is_claimed(public_conn!(context))? {
                 Err(unauthorized_error(format!(
                     "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
                 )))
@@ -161,7 +163,7 @@ impl QueryOrganization {
 
         let query_organization = schema::organization::table
             .filter(schema::organization::uuid.eq(&insert_organization.uuid))
-            .first::<QueryOrganization>(conn_lock!(context))
+            .first::<QueryOrganization>(auth_conn!(context))
             .map_err(resource_not_found_err!(Organization, insert_organization))?;
 
         #[cfg(feature = "otel")]
@@ -249,7 +251,7 @@ impl QueryOrganization {
         context: &ApiContext,
         query_user: &QueryUser,
     ) -> Result<(), HttpError> {
-        if self.is_claimed(conn_lock!(context))? {
+        if self.is_claimed(auth_conn!(context))? {
             return Err(unauthorized_error(format!(
                 "This organization ({}) has already been claimed.",
                 self.uuid
@@ -293,11 +295,20 @@ impl QueryOrganization {
     }
 
     #[cfg(feature = "plus")]
-    pub async fn window_usage(&self, context: &ApiContext) -> Result<u32, HttpError> {
+    pub async fn window_usage(
+        &self,
+        context: &ApiContext,
+        public_user: &PublicUser,
+    ) -> Result<u32, HttpError> {
         use crate::model::project::metric::QueryMetric;
 
         let (start_time, end_time) = context.rate_limiting.window();
-        QueryMetric::usage(conn_lock!(context), self.id, start_time, end_time)
+        QueryMetric::usage(
+            public_conn!(context, public_user),
+            self.id,
+            start_time,
+            end_time,
+        )
     }
 
     #[cfg(feature = "plus")]

@@ -282,7 +282,7 @@ pub async fn proj_report_post(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
+        auth_user,
     )
     .await?;
     Ok(Post::auth_response_created(json))
@@ -293,24 +293,17 @@ async fn post_inner(
     context: &ApiContext,
     path_params: ProjReportsParams,
     json_report: JsonNewReport,
-    auth_user: &AuthUser,
+    auth_user: AuthUser,
 ) -> Result<JsonReport, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
         &path_params.project,
-        auth_user,
+        &auth_user,
         Permission::Create,
     )?;
-    QueryReport::create(
-        log,
-        context,
-        &query_project,
-        json_report,
-        Some(auth_user.id),
-    )
-    .await
+    QueryReport::create(log, context, &query_project, json_report, &auth_user.into()).await
 }
 
 #[derive(Deserialize, JsonSchema)]

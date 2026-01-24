@@ -57,7 +57,7 @@ async fn post_inner(
     public_user: &PublicUser,
     json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
-    let user_id = match public_user {
+    match public_user {
         PublicUser::Public(remote_ip) => {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimed);
@@ -67,8 +67,6 @@ async fn post_inner(
                 #[cfg(feature = "plus")]
                 context.rate_limiting.unclaimed_run(*remote_ip)?;
             }
-
-            None
         },
         PublicUser::Auth(auth_user) => {
             #[cfg(feature = "otel")]
@@ -77,9 +75,9 @@ async fn post_inner(
             #[cfg(feature = "plus")]
             context.rate_limiting.claimed_run(auth_user.user.uuid)?;
 
-            Some(auth_user.id)
+            slog::info!(log, "Authenticated run request"; "user_uuid" => %auth_user.user.uuid);
         },
-    };
+    }
 
     let project_name_fn = || project_name(&json_run);
     let project_slug_fn = || project_slug(&json_run);
@@ -122,7 +120,7 @@ async fn post_inner(
     }
 
     slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);
-    QueryReport::create(log, context, &query_project, json_run.into(), user_id).await
+    QueryReport::create(log, context, &query_project, json_run.into(), public_user).await
 }
 
 fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {
