@@ -3,8 +3,7 @@ use bencher_json::{
     DateTime, JsonOneMetric, MetricUuid, ProjectResourceId, ReportUuid, project::report::Iteration,
 };
 use bencher_schema::{
-    conn_lock,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::resource_not_found_err,
     model::{
         project::{
@@ -20,7 +19,7 @@ use bencher_schema::{
         },
         user::public::{PubBearerToken, PublicUser},
     },
-    schema, view,
+    public_conn, schema, view,
 };
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
@@ -85,13 +84,13 @@ async fn get_one_inner(
     public_user: &PublicUser,
 ) -> Result<JsonOneMetric, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
     )?;
 
-    let perf_query = view::metric_boundary::table
+    public_conn!(context, public_user, |conn| view::metric_boundary::table
         .inner_join(
             schema::report_benchmark::table.inner_join(
                 schema::report::table
@@ -165,10 +164,9 @@ async fn get_one_inner(
             ).nullable(),
             QueryMetricBoundary::as_select(),
         ))
-        .first::<MetricQuery>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Metric, (&query_project,  &path_params.metric)))?;
-
-    metric_query_json(context, &query_project, perf_query).await
+        .first::<MetricQuery>(conn)
+        .map_err(resource_not_found_err!(Metric, (&query_project,  &path_params.metric)))
+        .map(|perf_query| metric_query_json(conn, &query_project, perf_query))?)
 }
 
 pub(super) type MetricQuery = (
@@ -186,8 +184,8 @@ pub(super) type MetricQuery = (
     QueryMetricBoundary,
 );
 
-async fn metric_query_json(
-    context: &ApiContext,
+fn metric_query_json(
+    conn: &mut DbConnection,
     project: &QueryProject,
     (
         branch,
@@ -204,7 +202,7 @@ async fn metric_query_json(
         query_metric_boundary,
     ): MetricQuery,
 ) -> Result<JsonOneMetric, HttpError> {
-    let branch = branch.into_json_for_head(conn_lock!(context), project, &head, Some(version))?;
+    let branch = branch.into_json_for_head(conn, project, &head, Some(version))?;
     let testbed = testbed.into_json_for_project(project);
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);
