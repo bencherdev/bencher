@@ -90,7 +90,8 @@ async fn get_one_inner(
         public_user,
     )?;
 
-    public_conn!(context, public_user, |conn| view::metric_boundary::table
+    public_conn!(context, public_user, |conn| {
+        view::metric_boundary::table
         .inner_join(
             schema::report_benchmark::table.inner_join(
                 schema::report::table
@@ -166,7 +167,8 @@ async fn get_one_inner(
         ))
         .first::<MetricQuery>(conn)
         .map_err(resource_not_found_err!(Metric, (&query_project,  &path_params.metric)))
-        .map(|perf_query| metric_query_json(conn, &query_project, perf_query))?)
+        .map(|perf_query| metric_query_json(conn, &query_project, perf_query))?
+    })
 }
 
 pub(super) type MetricQuery = (

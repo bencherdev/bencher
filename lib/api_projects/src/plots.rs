@@ -300,12 +300,10 @@ async fn get_one_inner(
         public_user,
     )?;
 
-    public_conn!(context, public_user, |conn| QueryPlot::get_with_uuid(
-        conn,
-        &query_project,
-        path_params.plot
-    )
-    .and_then(|plot| plot.into_json_for_project(conn, &query_project)))
+    public_conn!(context, public_user, |conn| {
+        QueryPlot::get_with_uuid(conn, &query_project, path_params.plot)
+            .and_then(|plot| plot.into_json_for_project(conn, &query_project))
+    })
 }
 
 /// Update a plot

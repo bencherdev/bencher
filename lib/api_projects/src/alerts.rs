@@ -348,12 +348,9 @@ async fn get_one_inner(
         public_user,
     )?;
 
-    public_conn!(context, public_user, |conn| QueryAlert::from_uuid(
-        conn,
-        query_project.id,
-        path_params.alert
-    )?
-    .into_json(conn))
+    public_conn!(context, public_user, |conn| {
+        QueryAlert::from_uuid(conn, query_project.id, path_params.alert)?.into_json(conn)
+    })
 }
 
 /// Update an alert

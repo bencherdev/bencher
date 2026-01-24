@@ -10,7 +10,7 @@ use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
@@ -114,7 +114,7 @@ async fn get_ls_inner(
     let projects = get_ls_query(context, &pagination_params, &query_params, public_user)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryProject>(conn_lock!(context))
+        .load::<QueryProject>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Project,
             (&pagination_params, &query_params, public_user)
@@ -140,7 +140,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(context, &pagination_params, &query_params, public_user)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Project,
             (&pagination_params, &query_params, public_user)
@@ -243,13 +243,10 @@ async fn get_one_inner(
     path_params: ProjectParams,
     public_user: &PublicUser,
 ) -> Result<JsonProject, HttpError> {
-    conn_lock!(context, |conn| QueryProject::is_allowed_public(
-        conn,
-        &context.rbac,
-        &path_params.project,
-        public_user
-    )?
-    .into_json(conn))
+    public_conn!(context, public_user, |conn| {
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, public_user)?
+            .into_json(conn)
+    })
 }
 
 /// Update a project
@@ -290,7 +287,7 @@ async fn patch_inner(
 ) -> Result<JsonProject, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -315,13 +312,13 @@ async fn patch_inner(
     let update_project = UpdateProject::from(json_project.clone());
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .set(&update_project)
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(
             Project,
             (&query_project, &json_project)
         ))?;
 
-    let new_query_project = QueryProject::get(conn_lock!(context), query_project.id)
+    let new_query_project = QueryProject::get(auth_conn!(context), query_project.id)
         .map_err(resource_not_found_err!(Project, query_project))?;
 
     #[cfg(feature = "plus")]
@@ -332,7 +329,7 @@ async fn patch_inner(
         context.update_index(log, &new_query_project).await;
     }
 
-    new_query_project.into_json(conn_lock!(context))
+    new_query_project.into_json(auth_conn!(context))
 }
 
 /// Delete a project
@@ -369,7 +366,7 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -377,7 +374,7 @@ async fn delete_inner(
     )?;
 
     diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(Project, query_project))?;
 
     #[cfg(feature = "plus")]

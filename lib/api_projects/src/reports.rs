@@ -379,16 +379,16 @@ async fn get_one_inner(
         public_user,
     )?;
 
-    public_conn!(context, public_user, |conn| QueryReport::belonging_to(
-        &query_project
-    )
-    .filter(schema::report::uuid.eq(path_params.report.to_string()))
-    .first::<QueryReport>(conn)
-    .map_err(resource_not_found_err!(
-        Report,
-        (&query_project, path_params.report)
-    ))?
-    .into_json(log, conn))
+    public_conn!(context, public_user, |conn| {
+        QueryReport::belonging_to(&query_project)
+            .filter(schema::report::uuid.eq(path_params.report.to_string()))
+            .first::<QueryReport>(conn)
+            .map_err(resource_not_found_err!(
+                Report,
+                (&query_project, path_params.report)
+            ))?
+            .into_json(log, conn)
+    })
 }
 
 /// Delete a report
