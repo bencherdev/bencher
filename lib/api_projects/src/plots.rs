@@ -8,7 +8,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    conn_lock,
+    auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
@@ -114,7 +114,7 @@ async fn get_ls_inner(
     query_params: ProjPlotsQuery,
 ) -> Result<(JsonPlots, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
@@ -123,7 +123,7 @@ async fn get_ls_inner(
     let plots = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryPlot>(conn_lock!(context))
+        .load::<QueryPlot>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Plot,
             (&query_project, &pagination_params, &query_params)
@@ -151,7 +151,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(conn_lock!(context))
+        .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
             Plot,
             (&query_project, &pagination_params, &query_params)
@@ -227,7 +227,7 @@ async fn post_inner(
 ) -> Result<JsonPlot, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -238,7 +238,7 @@ async fn post_inner(
     InsertPlot::rate_limit(context, query_project.id).await?;
     let query_plot = InsertPlot::from_json(context, &query_project, json_plot).await?;
 
-    query_plot.into_json_for_project(conn_lock!(context), &query_project)
+    query_plot.into_json_for_project(auth_conn!(context), &query_project)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -294,13 +294,13 @@ async fn get_one_inner(
     public_user: &PublicUser,
 ) -> Result<JsonPlot, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn_lock!(context),
+        public_conn!(context, public_user),
         &context.rbac,
         &path_params.project,
         public_user,
     )?;
 
-    conn_lock!(context, |conn| QueryPlot::get_with_uuid(
+    public_conn!(context, public_user, |conn| QueryPlot::get_with_uuid(
         conn,
         &query_project,
         path_params.plot
@@ -343,7 +343,7 @@ async fn patch_inner(
 ) -> Result<JsonPlot, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -351,16 +351,16 @@ async fn patch_inner(
     )?;
 
     let query_plot =
-        QueryPlot::get_with_uuid(conn_lock!(context), &query_project, path_params.plot)?;
+        QueryPlot::get_with_uuid(auth_conn!(context), &query_project, path_params.plot)?;
 
     let update_plot =
         UpdatePlot::from_json(context, &query_project, &query_plot, json_plot.clone()).await?;
     diesel::update(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
         .set(&update_plot)
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(Plot, (&query_plot, &json_plot)))?;
 
-    conn_lock!(context, |conn| QueryPlot::get_with_uuid(
+    auth_conn!(context, |conn| QueryPlot::get_with_uuid(
         conn,
         &query_project,
         path_params.plot
@@ -394,7 +394,7 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn_lock!(context),
+        auth_conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -402,10 +402,10 @@ async fn delete_inner(
     )?;
 
     let query_plot =
-        QueryPlot::get_with_uuid(conn_lock!(context), &query_project, path_params.plot)?;
+        QueryPlot::get_with_uuid(auth_conn!(context), &query_project, path_params.plot)?;
 
     diesel::delete(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
-        .execute(conn_lock!(context))
+        .execute(auth_conn!(context))
         .map_err(resource_conflict_err!(Plot, query_plot))?;
 
     Ok(())
