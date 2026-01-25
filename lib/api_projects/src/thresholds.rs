@@ -138,6 +138,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    // Drop connection lock before iterating
     let json_thresholds = thresholds
         .into_iter()
         .map(|threshold| async { threshold.into_json(public_conn!(context, public_user)) })

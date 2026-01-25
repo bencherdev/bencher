@@ -129,6 +129,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    // Drop connection lock before iterating
     let json_plots = plots
         .into_iter()
         .map(|plot| async {

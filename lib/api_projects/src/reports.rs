@@ -140,6 +140,7 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    // Drop connection lock before iterating
     let json_reports = reports
         .into_iter()
         .map(|report| async { report.into_json(log, public_conn!(context, public_user)) })

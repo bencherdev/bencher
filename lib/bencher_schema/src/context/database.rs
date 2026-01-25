@@ -38,9 +38,10 @@ impl Database {
         &self,
     ) -> Result<PooledConnection<ConnectionManager<DbConnection>>, HttpError> {
         if let Some(conn) = self.public_pool.try_get() {
-            return Ok(conn);
+            Ok(conn)
+        } else {
+            Self::get_conn(self.auth_pool.clone()).await
         }
-        Self::get_conn(self.auth_pool.clone()).await
     }
 
     async fn get_conn(

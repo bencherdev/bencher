@@ -7,6 +7,7 @@ use bencher_google_client::GoogleClient;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
 use bencher_token::TokenKey;
+#[cfg(feature = "plus")]
 use dropshot::HttpError;
 use tokio::sync::mpsc::Sender;
 use url::Url;
@@ -92,10 +93,6 @@ macro_rules! public_conn {
             },
         }
     };
-    ($context:expr, |$conn:ident| $multi:expr) => {{
-        let $conn = $crate::public_conn!($context);
-        $multi
-    }};
     ($context:expr, $pub_user:expr, |$conn:ident| $multi:expr) => {{
         let $conn = $crate::public_conn!($context, $pub_user);
         $multi

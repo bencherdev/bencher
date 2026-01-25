@@ -120,6 +120,7 @@ async fn get_ls_inner(
             (&pagination_params, &query_params, public_user)
         ))?;
 
+    // Drop connection lock before iterating
     let json_projects = projects
         .into_iter()
         .map(|project| async { project.into_json(public_conn!(context, public_user)) })

@@ -10,10 +10,8 @@ use dropshot::HttpError;
 use slog::Logger;
 use url::Url;
 
-#[cfg(feature = "plus")]
-use crate::ApiContext;
 use crate::{
-    auth_conn,
+    ApiContext, auth_conn,
     context::{Body, DbConnection, Message, Messenger, NewUserBody},
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     macros::{

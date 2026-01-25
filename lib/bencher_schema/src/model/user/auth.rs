@@ -50,7 +50,6 @@ impl AuthUser {
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
         let email = claims.email();
 
-        // Hold the connection for all permissions related queries
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;
