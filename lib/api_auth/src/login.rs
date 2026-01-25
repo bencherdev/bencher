@@ -4,7 +4,7 @@ use bencher_schema::{
     context::{ApiContext, Body, ButtonBody, Message},
     error::issue_error,
     model::user::QueryUser,
-    public_conn, write_conn,
+    public_conn,
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
@@ -65,7 +65,9 @@ async fn post_inner(
     query_user.rate_limit_auth(context)?;
 
     if let Some(invite) = &json_login.invite {
-        query_user.accept_invite(write_conn!(context), &context.token_key, invite)?;
+        query_user
+            .accept_invite(context, &context.token_key, invite)
+            .await?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(

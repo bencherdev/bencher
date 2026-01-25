@@ -10,7 +10,10 @@ use dropshot::HttpError;
 use slog::Logger;
 use url::Url;
 
+#[cfg(feature = "plus")]
+use crate::ApiContext;
 use crate::{
+    auth_conn,
     context::{Body, DbConnection, Message, Messenger, NewUserBody},
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     macros::{
@@ -19,6 +22,7 @@ use crate::{
         slug::ok_slug,
     },
     schema::{self, user as user_table},
+    write_conn,
 };
 
 pub mod admin;
@@ -124,21 +128,22 @@ impl QueryUser {
 
     /// Rate limit authentication attempts for this user
     #[cfg(feature = "plus")]
-    pub fn rate_limit_auth(&self, context: &crate::ApiContext) -> Result<(), HttpError> {
+    pub fn rate_limit_auth(&self, context: &ApiContext) -> Result<(), HttpError> {
         context.rate_limiting.auth_attempt(self.uuid)
     }
 
-    pub fn accept_invite(
+    pub async fn accept_invite(
         &self,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         token_key: &TokenKey,
         invite: &Jwt,
     ) -> Result<(), HttpError> {
-        let insert_org_role = InsertOrganizationRole::from_jwt(conn, token_key, invite, self.id)?;
+        let insert_org_role =
+            InsertOrganizationRole::from_jwt(auth_conn!(context), token_key, invite, self.id)?;
 
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
-            .execute(conn)
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
         Ok(())
@@ -275,7 +280,7 @@ impl InsertUser {
 
     /// Rate limit authentication attempts for this user
     #[cfg(feature = "plus")]
-    pub fn rate_limit_auth(&self, context: &crate::ApiContext) -> Result<(), HttpError> {
+    pub fn rate_limit_auth(&self, context: &ApiContext) -> Result<(), HttpError> {
         context.rate_limiting.auth_attempt(self.uuid)
     }
 

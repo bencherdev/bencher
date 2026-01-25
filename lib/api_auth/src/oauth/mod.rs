@@ -80,7 +80,9 @@ async fn handle_oauth_user(
         query_user.rate_limit_auth(context)?;
 
         if let Some(invite) = oauth_state.invite() {
-            query_user.accept_invite(write_conn!(context), &context.token_key, invite)?;
+            query_user
+                .accept_invite(context, &context.token_key, invite)
+                .await?;
 
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(

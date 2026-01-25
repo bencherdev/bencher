@@ -289,7 +289,9 @@ impl QueryOrganization {
             })?;
 
         // Accept the invite to join the organization
-        query_user.accept_invite(write_conn!(context), &context.token_key, &invite)?;
+        query_user
+            .accept_invite(context, &context.token_key, &invite)
+            .await?;
 
         Ok(())
     }
