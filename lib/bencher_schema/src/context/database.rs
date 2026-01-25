@@ -15,9 +15,15 @@ pub type DbConnection = diesel::SqliteConnection;
 
 pub struct Database {
     pub path: PathBuf,
-    pub connection: Arc<tokio::sync::Mutex<DbConnection>>,
+    /// The public database connection pool.
+    /// Unauthenticated requests should only use this pool.
     pub public_pool: Pool<ConnectionManager<DbConnection>>,
+    /// The authenticated database connection pool.
+    /// Authenticated requests may use this pool.
     pub auth_pool: Pool<ConnectionManager<DbConnection>>,
+    /// The database connection for write operations.
+    // todo(epompeii): Rename to `write_connection`
+    pub connection: Arc<tokio::sync::Mutex<DbConnection>>,
     pub data_store: Option<DataStore>,
 }
 
