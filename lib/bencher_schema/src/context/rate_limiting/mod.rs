@@ -145,30 +145,50 @@ impl RateLimiting {
         is_bencher_cloud: bool,
         rate_limiting: Option<JsonRateLimiting>,
     ) -> Self {
-        let Some(rate_limiting) = rate_limiting else {
-            return Self::default();
-        };
-
-        if !is_bencher_cloud {
-            match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)) {
-                Ok(license_usages) if license_usages.is_empty() => {
-                    slog::warn!(
-                        log,
-                        "Custom rate limits are set, but there is no valid Bencher Plus license key! This is a violation of the Bencher License: https://bencher.dev/legal/license"
-                    );
-                    slog::warn!(
-                        log,
-                        "Please purchase a license key: https://bencher.dev/pricing"
-                    );
-                },
-                Ok(_) => {},
-                Err(e) => {
-                    slog::error!(log, "Failed to check license for custom rate limits: {e}");
-                },
-            }
+        match (is_bencher_cloud, rate_limiting) {
+            (true, Some(json_rate_limiting)) => {
+                slog::info!(log, "Applying custom rate limits for Bencher Cloud");
+                json_rate_limiting.into()
+            },
+            (true, None) => {
+                slog::info!(log, "Applying default rate limits for Bencher Cloud");
+                Self::default()
+            },
+            (false, Some(json_rate_limiting)) => {
+                match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)) {
+                    Ok(license_usages) if license_usages.is_empty() => {
+                        slog::warn!(
+                            log,
+                            "Custom rate limits provided, but there is no valid Bencher Plus license key! Please purchase a license key: https://bencher.dev/pricing"
+                        );
+                        Self::max()
+                    },
+                    Ok(_) => {
+                        slog::info!(log, "Applying custom rate limits for Bencher Self-Hosted");
+                        json_rate_limiting.into()
+                    },
+                    Err(e) => {
+                        slog::error!(log, "Failed to check license for custom rate limits: {e}");
+                        Self::max()
+                    },
+                }
+            },
+            (false, None) => {
+                // todo(epompeii): Add the ability to completely disable rate limiting for Bencher Self-Hosted
+                slog::info!(log, "No rate limits applied for Bencher Self-Hosted");
+                Self::max()
+            },
         }
+    }
 
-        rate_limiting.into()
+    pub fn max() -> Self {
+        Self {
+            window: DAY,
+            unclaimed_limit: u32::MAX,
+            claimed_limit: u32::MAX,
+            public: PublicRateLimiter::max(),
+            user: UserRateLimiter::max(),
+        }
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {

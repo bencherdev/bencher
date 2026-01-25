@@ -131,6 +131,28 @@ impl PublicRateLimiter {
         }
     }
 
+    pub fn max() -> Self {
+        let requests = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        let attempts = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        let runs = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        Self::new(requests, attempts, runs)
+    }
+
     pub fn check_request(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
         self.requests.check(ip)
     }

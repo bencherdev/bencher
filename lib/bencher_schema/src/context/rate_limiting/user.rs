@@ -226,6 +226,46 @@ impl UserRateLimiter {
         }
     }
 
+    pub fn max() -> Self {
+        let requests = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        let attempts = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        let tokens = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        let organizations = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        let invites = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        let runs = RateLimits {
+            minute: usize::MAX,
+            hour: usize::MAX,
+            day: usize::MAX,
+        };
+
+        Self::new(requests, attempts, tokens, organizations, invites, runs)
+    }
+
     pub fn check_request(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
         self.requests.check(user_uuid)
     }
