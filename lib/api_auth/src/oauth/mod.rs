@@ -48,11 +48,10 @@ async fn is_allowed_oauth(context: &ApiContext) -> Result<(), HttpError> {
     // Either the server is Bencher Cloud, or at least one organization must have a valid Bencher Plus license
     let is_allowed = context.is_bencher_cloud
         || !LicenseUsage::get_for_server(
-            &context.database.connection,
+            public_conn!(context),
             &context.licensor,
             Some(PlanLevel::Enterprise),
-        )
-        .await?
+        )?
         .is_empty();
 
     if is_allowed {

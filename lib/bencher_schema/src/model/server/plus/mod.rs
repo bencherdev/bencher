@@ -16,8 +16,8 @@ use slog::Logger;
 use tokio::sync::Mutex;
 use url::Url;
 
+use crate::connection_lock;
 use crate::{
-    connection_lock,
     context::StatsSettings,
     context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
     error::{request_timeout_error, resource_conflict_err},
@@ -107,12 +107,10 @@ impl QueryServer {
                     slog::info!(log, "Sending stats at {}", Utc::now());
                 } else {
                     match LicenseUsage::get_for_server(
-                        &db_connection,
+                        connection_lock!(db_connection),
                         &licensor,
                         Some(PlanLevel::Team),
-                    )
-                    .await
-                    {
+                    ) {
                         Ok(license_usages) if license_usages.is_empty() => {
                             violations += 1;
                             // Be kind. Allow for a seven day grace period.
@@ -192,15 +190,15 @@ impl QueryServer {
             .ok()
     }
 
-    pub async fn send_stats_to_backend(
+    pub fn send_stats_to_backend(
         log: &Logger,
-        db_connection: &Mutex<DbConnection>,
+        conn: &mut DbConnection,
         messenger: &Messenger,
         server_stats: &str,
         self_hosted_server: Option<ServerUuid>,
     ) -> Result<(), HttpError> {
         // TODO find a better home for these than my inbox
-        let admins = QueryUser::get_admins(connection_lock!(db_connection))?;
+        let admins = QueryUser::get_admins(conn)?;
 
         for admin in admins {
             let message = Message {

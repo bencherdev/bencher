@@ -8,10 +8,9 @@ use bencher_json::{
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
-use tokio::sync::Mutex;
 
 use crate::{
-    ApiContext, auth_conn, connection_lock,
+    ApiContext, auth_conn,
     context::{DbConnection, RateLimitingError},
     error::{
         issue_error, not_found_error, payment_required_error, resource_conflict_err,
@@ -260,9 +259,11 @@ impl PlanKind {
                 .await?
         {
             Ok(Self::Metered(metered_plan_id))
-        } else if let Some(license_usage) =
-            LicenseUsage::get(&context.database.connection, licensor, query_organization).await?
-        {
+        } else if let Some(license_usage) = LicenseUsage::get(
+            public_conn!(context, public_user),
+            licensor,
+            query_organization,
+        )? {
             if license_usage.usage < license_usage.entitlements.into() {
                 Ok(Self::Licensed(license_usage))
             } else {
@@ -422,8 +423,8 @@ pub struct LicenseUsage {
 }
 
 impl LicenseUsage {
-    pub async fn get(
-        db_connection: &Mutex<DbConnection>,
+    pub fn get(
+        conn: &mut DbConnection,
         licensor: &Licensor,
         query_organization: &QueryOrganization,
     ) -> Result<Option<LicenseUsage>, HttpError> {
@@ -441,12 +442,7 @@ impl LicenseUsage {
         let start_time = token_data.claims.issued_at();
         let end_time = token_data.claims.expiration();
 
-        let usage = QueryMetric::usage(
-            connection_lock!(db_connection),
-            query_organization.id,
-            start_time,
-            end_time,
-        )?;
+        let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
         let entitlements = licensor
             .validate_usage(&token_data.claims, usage)
             .map_err(payment_required_error)?;
@@ -458,24 +454,26 @@ impl LicenseUsage {
         }))
     }
 
-    pub async fn get_for_server(
-        db_connection: &Mutex<DbConnection>,
+    pub fn get_for_server(
+        conn: &mut DbConnection,
         licensor: &Licensor,
         min_level: Option<PlanLevel>,
     ) -> Result<Vec<Self>, HttpError> {
         let min_level = min_level.unwrap_or_default();
-        let organizations = schema::organization::table
-            .load::<QueryOrganization>(connection_lock!(db_connection))
-            .map_err(resource_not_found_err!(Organization))?;
-        let mut license_usages = Vec::new();
-        for query_organization in organizations {
-            if let Ok(Some(license_usage)) =
-                Self::get(db_connection, licensor, &query_organization).await
-                && license_usage.level >= min_level
-            {
-                license_usages.push(license_usage);
-            }
-        }
-        Ok(license_usages)
+
+        Ok(schema::organization::table
+            .load::<QueryOrganization>(conn)
+            .map_err(resource_not_found_err!(Organization))?
+            .iter()
+            .filter_map(|query_organization| {
+                if let Ok(Some(license_usage)) = Self::get(conn, licensor, query_organization)
+                    && license_usage.level >= min_level
+                {
+                    Some(license_usage)
+                } else {
+                    None
+                }
+            })
+            .collect())
     }
 }

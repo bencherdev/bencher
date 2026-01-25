@@ -71,9 +71,6 @@ pub enum ConfigTxError {
     #[cfg(feature = "plus")]
     #[error("Failed to parse server stats endpoint: {0}")]
     ServerStatsUrl(url::ParseError),
-    #[cfg(feature = "plus")]
-    #[error("Failed to configure rate limits: {0}")]
-    RateLimiting(Box<bencher_schema::context::RateLimitingError>),
 }
 
 impl ConfigTx {
@@ -233,14 +230,11 @@ async fn into_context(
     #[cfg(feature = "plus")]
     let rate_limiting = RateLimiting::new(
         log,
-        &database.connection,
+        &mut *database.connection.lock().await,
         &licensor,
         is_bencher_cloud,
         rate_limiting,
-    )
-    .await
-    .map_err(Box::new)
-    .map_err(ConfigTxError::RateLimiting)?;
+    );
 
     debug!(log, "Creating API context");
     Ok(ApiContext {

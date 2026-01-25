@@ -138,19 +138,19 @@ impl From<JsonRateLimiting> for RateLimiting {
 }
 
 impl RateLimiting {
-    pub async fn new(
+    pub fn new(
         log: &Logger,
-        conn: &tokio::sync::Mutex<DbConnection>,
+        conn: &mut DbConnection,
         licensor: &Licensor,
         is_bencher_cloud: bool,
         rate_limiting: Option<JsonRateLimiting>,
-    ) -> Result<Self, RateLimitingError> {
+    ) -> Self {
         let Some(rate_limiting) = rate_limiting else {
-            return Ok(Self::default());
+            return Self::default();
         };
 
         if !is_bencher_cloud {
-            match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)).await {
+            match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)) {
                 Ok(license_usages) if license_usages.is_empty() => {
                     slog::warn!(
                         log,
@@ -168,7 +168,7 @@ impl RateLimiting {
             }
         }
 
-        Ok(rate_limiting.into())
+        rate_limiting.into()
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {

@@ -5,11 +5,12 @@ use bencher_json::{BooleanParam, JsonServerStats, JsonUuid, SelfHostedStartup, S
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::issue_error,
+    error::{forbidden_error, issue_error},
     model::{
         server::QueryServer,
         user::{admin::AdminUser, auth::BearerToken},
     },
+    public_conn,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
@@ -86,7 +87,11 @@ async fn post_inner(
     context: &ApiContext,
     json_server_stats: JsonServerStats,
 ) -> Result<(), HttpError> {
-    let _biller = context.biller()?;
+    if !context.is_bencher_cloud {
+        return Err(forbidden_error(
+            "Self-Hosted server stats can only be sent to Bencher Cloud",
+        ));
+    }
 
     let server_stats = serde_json::to_string_pretty(&json_server_stats).map_err(|e| {
         slog::error!(log, "Failed to serialize stats: {e}");
@@ -99,12 +104,11 @@ async fn post_inner(
     slog::info!(log, "Self-Hosted Stats: {server_stats:?}");
     QueryServer::send_stats_to_backend(
         log,
-        &context.database.connection,
+        public_conn!(context),
         &context.messenger,
         &server_stats,
         Some(json_server_stats.server.uuid),
-    )
-    .await?;
+    )?;
 
     Ok(())
 }
