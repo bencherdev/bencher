@@ -230,7 +230,7 @@ jobs:
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
       - name: Upload Perf JPEG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: perf.jpeg
           path: ./lib/bencher_plot/perf.jpeg
@@ -248,7 +248,7 @@ jobs:
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
       - name: Upload Perf JPEG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: perf.jpeg
           path: ./lib/bencher_plot/perf.jpeg
@@ -522,7 +522,7 @@ jobs:
           $WASM_PACK_BUILD || \
           $WASM_PACK_BUILD
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -606,7 +606,7 @@ jobs:
           docker save ${{ env.API_DOCKER_IMAGE }} \
           | gzip > ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Upload API Docker Image Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -676,14 +676,14 @@ jobs:
       # Upload
       - name: Upload Unix CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
           path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
           if-no-files-found: error
       - name: Upload Windows CLI Artifact
         if: startsWith(matrix.build, 'windows')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
           path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
@@ -734,7 +734,7 @@ jobs:
           man bencher
       - name: Upload .deb Artifact
         if: startsWith(matrix.build, 'linux')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
           path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
@@ -770,7 +770,7 @@ jobs:
           docker save ${{ env.CONSOLE_DOCKER_IMAGE }} \
           | gzip > ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
       - name: Upload Console Docker Image Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
