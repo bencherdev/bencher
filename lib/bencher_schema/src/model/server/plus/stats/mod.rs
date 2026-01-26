@@ -1,11 +1,11 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use bencher_json::{DateTime, JsonServerStats};
 use diesel::Connection as _;
 use dropshot::HttpError;
 use slog::Logger;
 
-use crate::{context::DbConnection, error::bad_request_error, model::server::ServerBackup};
+use crate::{context::DbConnection, error::bad_request_error};
 
 use super::QueryServer;
 
@@ -34,29 +34,12 @@ enum ProjectState {
 
 pub(super) fn get_stats(
     log: &Logger,
-    db_path: &PathBuf,
+    db_path: &Path,
     query_server: QueryServer,
 ) -> Result<JsonServerStats, HttpError> {
-    let ServerBackup {
-        file_path: backup_path,
-        ..
-    } = ServerBackup::backup_database(db_path).map_err(bad_request_error)?;
-
-    let server_stats = connect_and_get_stats(&backup_path, query_server);
-
-    if let Err(error) = std::fs::remove_file(&backup_path) {
-        slog::error!(log, "Failed to remove database backup file: {error}");
-    }
-
-    server_stats
-}
-
-fn connect_and_get_stats(
-    backup_path: &Path,
-    query_server: QueryServer,
-) -> Result<JsonServerStats, HttpError> {
-    let mut database_connection = DbConnection::establish(backup_path.to_string_lossy().as_ref())
-        .map_err(bad_request_error)?;
+    let mut database_connection =
+        DbConnection::establish(db_path.to_string_lossy().as_ref()).map_err(bad_request_error)?;
+    slog::info!(log, "Collecting server stats"; "db_path" => %db_path.display());
 
     get_stats_inner(&mut database_connection, query_server)
 }
