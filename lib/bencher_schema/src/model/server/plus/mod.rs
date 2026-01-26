@@ -161,7 +161,12 @@ impl QueryServer {
     }
 
     pub fn server_stats_url(&self) -> Result<Url, url::ParseError> {
-        BENCHER_STATS_API_URL.clone().join(&self.uuid.to_string())
+        format!(
+            "{url}/{uuid}",
+            url = BENCHER_STATS_API_URL.clone(),
+            uuid = self.uuid
+        )
+        .parse()
     }
 
     pub async fn get_stats(
