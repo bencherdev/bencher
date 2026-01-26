@@ -189,6 +189,13 @@ impl ParamKey for SelfHostedStartup {
     const KEY: &'static str = "startup";
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SelfHostedStats;
+
+impl ParamKey for SelfHostedStats {
+    const KEY: &'static str = "stats";
+}
+
 #[cfg(test)]
 mod tests {
     use super::{BooleanParam, SelfHostedStartup};

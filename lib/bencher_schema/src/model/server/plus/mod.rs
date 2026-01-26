@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::{cmp, sync::Arc};
 
+use bencher_json::system::server::SelfHostedStats;
 use bencher_json::{
     BENCHER_API_URL, BENCHER_API_VERSION, BooleanParam, DateTime, JsonServer, JsonServerStats,
     PlanLevel, SelfHostedStartup, ServerUuid,
@@ -83,7 +84,7 @@ impl QueryServer {
 
             let client = reqwest::Client::new();
             if let Err(e) = client
-                .get(server_stats_url)
+                .get(server_stats_url.clone())
                 .query(&BooleanParam::True(SelfHostedStartup))
                 .send()
                 .await
@@ -140,6 +141,16 @@ impl QueryServer {
                             continue;
                         },
                     }
+                }
+
+                let client = reqwest::Client::new();
+                if let Err(e) = client
+                    .get(server_stats_url.clone())
+                    .query(&BooleanParam::True(SelfHostedStats))
+                    .send()
+                    .await
+                {
+                    slog::warn!(log, "Failed to register stats: {e}");
                 }
 
                 let Some(json_stats_str) = self.get_stats_str(&log, db_path.clone()).await else {

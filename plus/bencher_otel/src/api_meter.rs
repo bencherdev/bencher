@@ -26,7 +26,6 @@ impl ApiMeter {
     }
 }
 
-#[expect(variant_size_differences, reason = "UUID is only 16 bytes")]
 #[derive(Debug, Clone, Copy)]
 pub enum ApiCounter {
     ServerStartup,
@@ -75,6 +74,7 @@ pub enum ApiCounter {
 
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
+    SelfHostedServerStats(Uuid),
 }
 
 impl ApiCounter {
@@ -126,6 +126,7 @@ impl ApiCounter {
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
+            Self::SelfHostedServerStats(_) => "self_hosted.server.stats",
         }
     }
 
@@ -181,6 +182,7 @@ impl ApiCounter {
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
+            Self::SelfHostedServerStats(_) => "Counts the number of self-hosted server stats sent",
         }
     }
 
@@ -222,7 +224,8 @@ impl ApiCounter {
                 vec![interval_kind.into()]
             },
             // Self-hosted specific metrics
-            Self::SelfHostedServerStartup(server_uuid) => self_hosted_attributes(server_uuid),
+            Self::SelfHostedServerStartup(server_uuid)
+            | Self::SelfHostedServerStats(server_uuid) => self_hosted_attributes(server_uuid),
         }
     }
 }
