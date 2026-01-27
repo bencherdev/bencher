@@ -191,9 +191,9 @@ async fn into_context(
 
     let database = Database {
         path: json_database.file,
-        connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
         public_pool,
         auth_pool,
+        connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
         data_store,
     };
 

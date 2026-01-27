@@ -22,7 +22,6 @@ pub struct Database {
     /// Authenticated requests may use this pool.
     pub auth_pool: Pool<ConnectionManager<DbConnection>>,
     /// The database connection for write operations.
-    // todo(epompeii): Rename to `write_connection`
     pub connection: Arc<tokio::sync::Mutex<DbConnection>>,
     pub data_store: Option<DataStore>,
 }
@@ -31,13 +30,19 @@ impl Database {
     pub async fn get_public_conn(
         &self,
     ) -> Result<PooledConnection<ConnectionManager<DbConnection>>, HttpError> {
-        Self::get_conn(self.public_pool.clone()).await
+        if let Some(conn) = self.public_pool.try_get() {
+            Ok(conn)
+        } else {
+            Self::get_conn(self.public_pool.clone()).await
+        }
     }
 
     pub async fn get_auth_conn(
         &self,
     ) -> Result<PooledConnection<ConnectionManager<DbConnection>>, HttpError> {
         if let Some(conn) = self.public_pool.try_get() {
+            Ok(conn)
+        } else if let Some(conn) = self.auth_pool.try_get() {
             Ok(conn)
         } else {
             Self::get_conn(self.auth_pool.clone()).await
