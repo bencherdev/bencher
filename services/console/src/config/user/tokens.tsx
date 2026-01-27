@@ -1,15 +1,18 @@
 import FieldKind from "../../components/field/kind";
+import IconTitle from "../../components/site/IconTitle";
 import { getUserRaw } from "../../util/auth";
 import type { Params } from "../../util/url";
 import { validResourceName, validU32 } from "../../util/valid";
 import { Button, Card, Display, Operation } from "../types";
 import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
 
+export const TOKEN_ICON = "fas fa-stroopwafel";
+
 const TOKEN_FIELDS = {
 	name: {
 		type: "text",
 		placeholder: "Token Name",
-		icon: "fas fa-stroopwafel",
+		icon: TOKEN_ICON,
 		help: "Must be a non-empty string",
 		validate: validResourceName,
 	},
@@ -26,7 +29,8 @@ const tokensConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "API Tokens",
+			title: <IconTitle icon={TOKEN_ICON} title="API Tokens" />,
+			name: "API Tokens",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{

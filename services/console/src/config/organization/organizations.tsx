@@ -52,7 +52,7 @@ const organizationsConfig = {
 				{ kind: Button.SEARCH },
 				{
 					kind: Button.ADD,
-					title: "Testbed",
+					title: "Organization",
 					path: addPath,
 					is_allowed: async (_apiUrl: string, _params: Params) => true,
 				},
