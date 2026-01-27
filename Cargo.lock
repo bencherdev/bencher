@@ -235,6 +235,7 @@ dependencies = [
  "bencher_json",
  "bencher_otel",
  "bencher_schema",
+ "diesel",
  "dropshot",
  "schemars 0.8.22",
  "serde",

@@ -1,11 +1,8 @@
-use std::path::Path;
-
 use bencher_json::{DateTime, JsonServerStats};
-use diesel::Connection as _;
 use dropshot::HttpError;
 use slog::Logger;
 
-use crate::{context::DbConnection, error::bad_request_error};
+use crate::context::DbConnection;
 
 use super::QueryServer;
 
@@ -34,64 +31,42 @@ enum ProjectState {
 
 pub(super) fn get_stats(
     log: &Logger,
-    db_path: &Path,
+    conn: &mut DbConnection,
     query_server: QueryServer,
 ) -> Result<JsonServerStats, HttpError> {
-    let mut database_connection =
-        DbConnection::establish(db_path.to_string_lossy().as_ref()).map_err(bad_request_error)?;
-    slog::info!(log, "Collecting server stats"; "db_path" => %db_path.display());
+    slog::info!(log, "Collecting server stats");
 
-    get_stats_inner(&mut database_connection, query_server)
-}
-
-fn get_stats_inner(
-    db_connection: &mut DbConnection,
-    query_server: QueryServer,
-) -> Result<JsonServerStats, HttpError> {
     let now = DateTime::now();
     let timestamp = now.timestamp();
     let this_week = timestamp - THIS_WEEK;
     let this_month = timestamp - THIS_MONTH;
 
-    let organizations_stats = OrganizationStats::new(db_connection)?;
+    let organizations_stats = OrganizationStats::new(conn)?;
 
     // users
-    let users_stats = UsersStats::new(db_connection, this_week, this_month)?;
+    let users_stats = UsersStats::new(conn, this_week, this_month)?;
 
     // projects
-    let projects_stats =
-        ProjectsStats::new(db_connection, this_week, this_month, ProjectState::All)?;
+    let projects_stats = ProjectsStats::new(conn, this_week, this_month, ProjectState::All)?;
 
-    let unclaimed_projects_stats = ProjectsStats::new(
-        db_connection,
-        this_week,
-        this_month,
-        ProjectState::Unclaimed,
-    )?;
+    let unclaimed_projects_stats =
+        ProjectsStats::new(conn, this_week, this_month, ProjectState::Unclaimed)?;
     let claimed_projects_stats =
-        ProjectsStats::new(db_connection, this_week, this_month, ProjectState::Claimed)?;
+        ProjectsStats::new(conn, this_week, this_month, ProjectState::Claimed)?;
 
     // reports and median reports per project
-    let reports_stats = ReportsStats::new(db_connection, this_week, this_month, ProjectState::All)?;
-    let unclaimed_reports_stats = ReportsStats::new(
-        db_connection,
-        this_week,
-        this_month,
-        ProjectState::Unclaimed,
-    )?;
+    let reports_stats = ReportsStats::new(conn, this_week, this_month, ProjectState::All)?;
+    let unclaimed_reports_stats =
+        ReportsStats::new(conn, this_week, this_month, ProjectState::Unclaimed)?;
     let claimed_reports_stats =
-        ReportsStats::new(db_connection, this_week, this_month, ProjectState::Claimed)?;
+        ReportsStats::new(conn, this_week, this_month, ProjectState::Claimed)?;
 
     // metrics and median metrics per report
-    let metrics_stats = MetricsStats::new(db_connection, this_week, this_month, ProjectState::All)?;
-    let unclaimed_metrics_stats = MetricsStats::new(
-        db_connection,
-        this_week,
-        this_month,
-        ProjectState::Unclaimed,
-    )?;
+    let metrics_stats = MetricsStats::new(conn, this_week, this_month, ProjectState::All)?;
+    let unclaimed_metrics_stats =
+        MetricsStats::new(conn, this_week, this_month, ProjectState::Unclaimed)?;
     let claimed_metrics_stats =
-        MetricsStats::new(db_connection, this_week, this_month, ProjectState::Claimed)?;
+        MetricsStats::new(conn, this_week, this_month, ProjectState::Claimed)?;
 
     Ok(JsonServerStats {
         server: query_server.into_json(),

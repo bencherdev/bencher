@@ -69,8 +69,8 @@ pub enum ConfigTxError {
     #[error("Failed to get server ID: {0}")]
     ServerId(dropshot::HttpError),
     #[cfg(feature = "plus")]
-    #[error("Failed to parse server stats endpoint: {0}")]
-    ServerStatsUrl(url::ParseError),
+    #[error("Failed to spawn stats: {0}")]
+    SpawnStats(dropshot::HttpError),
 }
 
 impl ConfigTx {
@@ -409,19 +409,12 @@ async fn spawn_stats(log: Logger, context: &ApiContext) -> Result<(), ConfigTxEr
         QueryServer::get_or_create(write_conn!(context)).map_err(ConfigTxError::ServerId)?;
     info!(log, "Bencher API Server ID: {}", query_server.uuid);
 
-    let server_stats_url = query_server
-        .server_stats_url()
-        .map_err(ConfigTxError::ServerStatsUrl)?;
-    info!(log, "Server stats endpoint: {server_stats_url}");
-
-    query_server.spawn_stats(
-        log.clone(),
-        server_stats_url,
-        context.database.path.clone(),
-        context.database.connection.clone(),
-        context.stats,
-        context.licensor.clone(),
-    );
-
-    Ok(())
+    query_server
+        .spawn_stats(
+            log.clone(),
+            context.database.path.clone(),
+            context.stats,
+            context.licensor.clone(),
+        )
+        .map_err(ConfigTxError::SpawnStats)
 }

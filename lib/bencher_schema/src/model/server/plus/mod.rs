@@ -1,8 +1,8 @@
 #![cfg(feature = "plus")]
 
+use std::cmp;
 use std::path::PathBuf;
 use std::sync::LazyLock;
-use std::{cmp, sync::Arc};
 
 use bencher_json::system::server::SelfHostedStats;
 use bencher_json::{
@@ -11,13 +11,12 @@ use bencher_json::{
 };
 use bencher_license::Licensor;
 use chrono::{Duration, Utc};
-use diesel::RunQueryDsl as _;
+use diesel::{Connection as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use slog::Logger;
-use tokio::sync::Mutex;
 use url::Url;
 
-use crate::connection_lock;
+use crate::resource_not_found_err;
 use crate::{
     context::StatsSettings,
     context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
@@ -73,12 +72,15 @@ impl QueryServer {
     pub fn spawn_stats(
         self,
         log: Logger,
-        server_stats_url: Url,
         db_path: PathBuf,
-        db_connection: Arc<Mutex<DbConnection>>,
         stats: StatsSettings,
         licensor: Licensor,
-    ) {
+    ) -> Result<(), HttpError> {
+        let server_stats_url = self
+            .server_stats_url()
+            .map_err(resource_not_found_err!(Server, &db_path))?;
+        slog::info!(log, "Server stats endpoint: {server_stats_url}");
+
         tokio::spawn(async move {
             let StatsSettings { offset, enabled } = stats;
 
@@ -104,14 +106,17 @@ impl QueryServer {
                 .unwrap_or(std::time::Duration::from_secs(24 * 60 * 60));
                 tokio::time::sleep(sleep_time).await;
 
+                let Ok(mut conn) = DbConnection::establish(db_path.to_string_lossy().as_ref())
+                else {
+                    slog::error!(log, "Failed to establish database connection");
+                    continue;
+                };
+
                 if enabled {
                     slog::info!(log, "Sending stats at {}", Utc::now());
                 } else {
-                    match LicenseUsage::get_for_server(
-                        connection_lock!(db_connection),
-                        &licensor,
-                        Some(PlanLevel::Team),
-                    ) {
+                    match LicenseUsage::get_for_server(&mut conn, &licensor, Some(PlanLevel::Team))
+                    {
                         Ok(license_usages) if license_usages.is_empty() => {
                             violations += 1;
                             // Be kind. Allow for a seven day grace period.
@@ -153,7 +158,7 @@ impl QueryServer {
                     slog::warn!(log, "Failed to register stats: {e}");
                 }
 
-                let Some(json_stats_str) = self.get_stats_str(&log, db_path.clone()).await else {
+                let Some(json_stats_str) = self.get_stats_str(&log, conn).await else {
                     slog::error!(log, "Failed to get stats string");
                     continue;
                 };
@@ -169,6 +174,8 @@ impl QueryServer {
                 }
             }
         });
+
+        Ok(())
     }
 
     pub fn server_stats_url(&self) -> Result<Url, url::ParseError> {
@@ -183,16 +190,16 @@ impl QueryServer {
     pub async fn get_stats(
         self,
         log: Logger,
-        db_path: PathBuf,
+        mut conn: DbConnection,
     ) -> Result<JsonServerStats, HttpError> {
-        tokio::task::spawn_blocking(move || stats::get_stats(&log, &db_path, self))
+        tokio::task::spawn_blocking(move || stats::get_stats(&log, &mut conn, self))
             .await
             .map_err(request_timeout_error)?
     }
 
-    async fn get_stats_str(self, log: &Logger, db_path: PathBuf) -> Option<String> {
+    async fn get_stats_str(self, log: &Logger, conn: DbConnection) -> Option<String> {
         let json_stats = self
-            .get_stats(log.clone(), db_path)
+            .get_stats(log.clone(), conn)
             .await
             .inspect_err(|e| {
                 slog::error!(log, "Failed to get stats: {e}");
