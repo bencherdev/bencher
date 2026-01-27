@@ -17,22 +17,22 @@ pub(super) struct ReportsStats {
 impl ReportsStats {
     #[expect(clippy::cast_sign_loss, reason = "count is always positive")]
     pub fn new(
-        db_connection: &mut DbConnection,
+        conn: &mut DbConnection,
         this_week: i64,
         this_month: i64,
         state: ProjectState,
     ) -> Result<Self, HttpError> {
-        let mut weekly_reports = get_reports_by_project(db_connection, Some(this_week), state)?;
+        let mut weekly_reports = get_reports_by_project(conn, Some(this_week), state)?;
         let weekly_active_projects = weekly_reports.len();
         let weekly_reports_total: i64 = weekly_reports.iter().sum();
         let weekly_reports_per_project = median(&mut weekly_reports);
 
-        let mut monthly_reports = get_reports_by_project(db_connection, Some(this_month), state)?;
+        let mut monthly_reports = get_reports_by_project(conn, Some(this_month), state)?;
         let monthly_active_projects = monthly_reports.len();
         let monthly_reports_total: i64 = monthly_reports.iter().sum();
         let monthly_reports_per_project = median(&mut monthly_reports);
 
-        let mut total_reports = get_reports_by_project(db_connection, None, state)?;
+        let mut total_reports = get_reports_by_project(conn, None, state)?;
         let total_active_projects = total_reports.len();
         let total_reports_total: i64 = total_reports.iter().sum();
         let total_reports_per_project = median(&mut total_reports);
@@ -64,7 +64,7 @@ impl ReportsStats {
 }
 
 fn get_reports_by_project(
-    db_connection: &mut DbConnection,
+    conn: &mut DbConnection,
     since: Option<i64>,
     state: ProjectState,
 ) -> Result<Vec<i64>, HttpError> {
@@ -80,7 +80,7 @@ fn get_reports_by_project(
             }
 
             query
-                .load::<i64>(db_connection)
+                .load::<i64>(conn)
                 .map_err(resource_not_found_err!(Report))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
@@ -107,7 +107,7 @@ fn get_reports_by_project(
             }
 
             query
-                .load::<i64>(db_connection)
+                .load::<i64>(conn)
                 .map_err(resource_not_found_err!(Report))
         },
     }

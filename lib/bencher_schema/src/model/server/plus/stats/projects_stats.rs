@@ -14,12 +14,12 @@ pub(super) struct ProjectsStats {
 
 impl ProjectsStats {
     pub fn new(
-        db_connection: &mut DbConnection,
+        conn: &mut DbConnection,
         this_week: i64,
         this_month: i64,
         state: ProjectState,
     ) -> Result<Self, HttpError> {
-        let projects = get_projects_cohort(db_connection, this_week, this_month, state)?;
+        let projects = get_projects_cohort(conn, this_week, this_month, state)?;
 
         Ok(Self { projects })
     }
@@ -27,14 +27,14 @@ impl ProjectsStats {
 
 #[expect(clippy::cast_sign_loss, reason = "count is always positive")]
 fn get_projects_cohort(
-    db_connection: &mut DbConnection,
+    conn: &mut DbConnection,
     this_week: i64,
     this_month: i64,
     state: ProjectState,
 ) -> Result<JsonCohort, HttpError> {
-    let weekly_projects = get_project_count(db_connection, Some(this_week), state)?;
-    let monthly_projects = get_project_count(db_connection, Some(this_month), state)?;
-    let total_projects = get_project_count(db_connection, None, state)?;
+    let weekly_projects = get_project_count(conn, Some(this_week), state)?;
+    let monthly_projects = get_project_count(conn, Some(this_month), state)?;
+    let total_projects = get_project_count(conn, None, state)?;
 
     Ok(JsonCohort {
         week: weekly_projects as u64,
@@ -44,7 +44,7 @@ fn get_projects_cohort(
 }
 
 fn get_project_count(
-    db_connection: &mut DbConnection,
+    conn: &mut DbConnection,
     since: Option<i64>,
     state: ProjectState,
 ) -> Result<i64, HttpError> {
@@ -59,7 +59,7 @@ fn get_project_count(
             }
 
             query
-                .get_result::<i64>(db_connection)
+                .get_result::<i64>(conn)
                 .map_err(resource_not_found_err!(Project))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
@@ -83,7 +83,7 @@ fn get_project_count(
             }
 
             query
-                .first::<i64>(db_connection)
+                .first::<i64>(conn)
                 .map_err(resource_not_found_err!(Project))
         },
     }

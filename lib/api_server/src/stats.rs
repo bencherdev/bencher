@@ -53,7 +53,9 @@ async fn get_one_inner(log: &Logger, context: &ApiContext) -> Result<JsonServerS
     let query_server = QueryServer::get_server(auth_conn!(context))?;
     let conn = DbConnection::establish(context.database.path.to_string_lossy().as_ref())
         .map_err(not_found_error)?;
-    query_server.get_stats(log.clone(), conn).await
+    query_server
+        .get_stats(log.clone(), conn, context.is_bencher_cloud)
+        .await
 }
 
 // TODO remove in due time

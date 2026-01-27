@@ -33,6 +33,7 @@ pub(super) fn get_stats(
     log: &Logger,
     conn: &mut DbConnection,
     query_server: QueryServer,
+    is_bencher_cloud: bool,
 ) -> Result<JsonServerStats, HttpError> {
     slog::info!(log, "Collecting server stats");
 
@@ -41,10 +42,10 @@ pub(super) fn get_stats(
     let this_week = timestamp - THIS_WEEK;
     let this_month = timestamp - THIS_MONTH;
 
-    let organizations_stats = OrganizationStats::new(conn)?;
+    let organizations_stats = OrganizationStats::new(conn, is_bencher_cloud)?;
 
     // users
-    let users_stats = UsersStats::new(conn, this_week, this_month)?;
+    let users_stats = UsersStats::new(conn, this_week, this_month, is_bencher_cloud)?;
 
     // projects
     let projects_stats = ProjectsStats::new(conn, this_week, this_month, ProjectState::All)?;

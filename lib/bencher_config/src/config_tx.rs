@@ -127,13 +127,7 @@ impl ConfigTx {
         let config_dropshot = into_config_dropshot(server);
 
         #[cfg(feature = "plus")]
-        if context.is_bencher_cloud {
-            // This is only needed for testing. In production, Bencher Cloud should already have a server ID.
-            QueryServer::get_or_create(write_conn!(context)).map_err(ConfigTxError::ServerId)?;
-        } else {
-            // Bencher Cloud does not need to send stats, it uses OpenTelemetry.
-            spawn_stats(log.clone(), &context).await?;
-        }
+        spawn_stats(log.clone(), &context).await?;
 
         let mut api_description = ApiDescription::new();
         debug!(log, "Registering server APIs");
@@ -414,7 +408,11 @@ async fn spawn_stats(log: Logger, context: &ApiContext) -> Result<(), ConfigTxEr
             log.clone(),
             context.database.path.clone(),
             context.stats,
+            context
+                .is_bencher_cloud
+                .then_some(context.messenger.clone()),
             context.licensor.clone(),
+            context.is_bencher_cloud,
         )
         .map_err(ConfigTxError::SpawnStats)
 }

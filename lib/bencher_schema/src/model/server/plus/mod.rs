@@ -69,12 +69,15 @@ impl QueryServer {
         }
     }
 
+    #[expect(clippy::too_many_lines, reason = "refactor stats handling")]
     pub fn spawn_stats(
         self,
         log: Logger,
         db_path: PathBuf,
         stats: StatsSettings,
+        messenger: Option<Messenger>,
         licensor: Licensor,
+        is_bencher_cloud: bool,
     ) -> Result<(), HttpError> {
         let server_stats_url = self
             .server_stats_url()
@@ -84,14 +87,16 @@ impl QueryServer {
         tokio::spawn(async move {
             let StatsSettings { offset, enabled } = stats;
 
-            let client = reqwest::Client::new();
-            if let Err(e) = client
-                .get(server_stats_url.clone())
-                .query(&BooleanParam::True(SelfHostedStartup))
-                .send()
-                .await
-            {
-                slog::warn!(log, "Failed to register startup: {e}");
+            if !is_bencher_cloud {
+                let client = reqwest::Client::new();
+                if let Err(e) = client
+                    .get(server_stats_url.clone())
+                    .query(&BooleanParam::True(SelfHostedStartup))
+                    .send()
+                    .await
+                {
+                    slog::warn!(log, "Failed to register startup: {e}");
+                }
             }
 
             let mut violations = 0;
@@ -114,6 +119,11 @@ impl QueryServer {
 
                 if enabled {
                     slog::info!(log, "Sending stats at {}", Utc::now());
+                } else if is_bencher_cloud {
+                    slog::info!(
+                        log,
+                        "Sending stats is disabled, but running on Bencher Cloud"
+                    );
                 } else {
                     match LicenseUsage::get_for_server(&mut conn, &licensor, Some(PlanLevel::Team))
                     {
@@ -148,29 +158,55 @@ impl QueryServer {
                     }
                 }
 
-                let client = reqwest::Client::new();
-                if let Err(e) = client
-                    .get(server_stats_url.clone())
-                    .query(&BooleanParam::True(SelfHostedStats))
-                    .send()
-                    .await
-                {
-                    slog::warn!(log, "Failed to register stats: {e}");
+                if !is_bencher_cloud {
+                    let client = reqwest::Client::new();
+                    if let Err(e) = client
+                        .get(server_stats_url.clone())
+                        .query(&BooleanParam::True(SelfHostedStats))
+                        .send()
+                        .await
+                    {
+                        slog::warn!(log, "Failed to register stats: {e}");
+                    }
                 }
 
-                let Some(json_stats_str) = self.get_stats_str(&log, conn).await else {
+                let Some(json_stats_str) = self.get_stats_str(&log, conn, is_bencher_cloud).await
+                else {
                     slog::error!(log, "Failed to get stats string");
                     continue;
                 };
 
-                let client = reqwest::Client::new();
-                if let Err(e) = client
-                    .post(BENCHER_STATS_API_URL.clone())
-                    .body(json_stats_str)
-                    .send()
-                    .await
-                {
-                    slog::error!(log, "Failed to send stats: {e}");
+                if let Some(messenger) = messenger.as_ref() {
+                    slog::info!(log, "Bencher Cloud Stats: {json_stats_str:?}");
+
+                    let Ok(mut conn) = DbConnection::establish(db_path.to_string_lossy().as_ref())
+                    else {
+                        slog::error!(
+                            log,
+                            "Failed to establish database connection for sending stats"
+                        );
+                        continue;
+                    };
+
+                    if let Err(e) = Self::send_stats_to_backend(
+                        &log,
+                        &mut conn,
+                        messenger,
+                        &json_stats_str,
+                        None,
+                    ) {
+                        slog::error!(log, "Failed to send stats: {e}");
+                    }
+                } else {
+                    let client = reqwest::Client::new();
+                    if let Err(e) = client
+                        .post(BENCHER_STATS_API_URL.clone())
+                        .body(json_stats_str)
+                        .send()
+                        .await
+                    {
+                        slog::error!(log, "Failed to send stats: {e}");
+                    }
                 }
             }
         });
@@ -191,15 +227,23 @@ impl QueryServer {
         self,
         log: Logger,
         mut conn: DbConnection,
+        is_bencher_cloud: bool,
     ) -> Result<JsonServerStats, HttpError> {
-        tokio::task::spawn_blocking(move || stats::get_stats(&log, &mut conn, self))
-            .await
-            .map_err(request_timeout_error)?
+        tokio::task::spawn_blocking(move || {
+            stats::get_stats(&log, &mut conn, self, is_bencher_cloud)
+        })
+        .await
+        .map_err(request_timeout_error)?
     }
 
-    async fn get_stats_str(self, log: &Logger, conn: DbConnection) -> Option<String> {
+    async fn get_stats_str(
+        self,
+        log: &Logger,
+        conn: DbConnection,
+        is_bencher_cloud: bool,
+    ) -> Option<String> {
         let json_stats = self
-            .get_stats(log.clone(), conn)
+            .get_stats(log.clone(), conn, is_bencher_cloud)
             .await
             .inspect_err(|e| {
                 slog::error!(log, "Failed to get stats: {e}");

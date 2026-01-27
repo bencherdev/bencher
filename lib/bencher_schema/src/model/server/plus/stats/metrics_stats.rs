@@ -22,25 +22,25 @@ pub(super) struct MetricsStats {
 impl MetricsStats {
     #[expect(clippy::cast_sign_loss, reason = "count is always positive")]
     pub fn new(
-        db_connection: &mut DbConnection,
+        conn: &mut DbConnection,
         this_week: i64,
         this_month: i64,
         state: ProjectState,
     ) -> Result<Self, HttpError> {
-        let mut weekly_metrics = get_metrics_by_report(db_connection, Some(this_week), state)?;
+        let mut weekly_metrics = get_metrics_by_report(conn, Some(this_week), state)?;
         let weekly_metrics_total: i64 = weekly_metrics.iter().sum();
         let weekly_metrics_per_project = median(&mut weekly_metrics);
-        let weekly_top_projects = get_top_projects(db_connection, Some(this_week), state)?;
+        let weekly_top_projects = get_top_projects(conn, Some(this_week), state)?;
 
-        let mut monthly_metrics = get_metrics_by_report(db_connection, Some(this_month), state)?;
+        let mut monthly_metrics = get_metrics_by_report(conn, Some(this_month), state)?;
         let monthly_metrics_total: i64 = monthly_metrics.iter().sum();
         let monthly_metrics_per_project = median(&mut monthly_metrics);
-        let monthly_top_projects = get_top_projects(db_connection, Some(this_month), state)?;
+        let monthly_top_projects = get_top_projects(conn, Some(this_month), state)?;
 
-        let mut total_metrics = get_metrics_by_report(db_connection, None, state)?;
+        let mut total_metrics = get_metrics_by_report(conn, None, state)?;
         let total_metrics_total: i64 = total_metrics.iter().sum();
         let total_metrics_per_project = median(&mut total_metrics);
-        let total_top_projects = get_top_projects(db_connection, None, state)?;
+        let total_top_projects = get_top_projects(conn, None, state)?;
 
         let metrics = JsonCohort {
             week: weekly_metrics_total as u64,
@@ -69,7 +69,7 @@ impl MetricsStats {
 }
 
 fn get_metrics_by_report(
-    db_connection: &mut DbConnection,
+    conn: &mut DbConnection,
     since: Option<i64>,
     state: ProjectState,
 ) -> Result<Vec<i64>, HttpError> {
@@ -86,7 +86,7 @@ fn get_metrics_by_report(
             }
 
             query
-                .load::<i64>(db_connection)
+                .load::<i64>(conn)
                 .map_err(resource_not_found_err!(Metric))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
@@ -115,14 +115,14 @@ fn get_metrics_by_report(
             }
 
             query
-                .load::<i64>(db_connection)
+                .load::<i64>(conn)
                 .map_err(resource_not_found_err!(Metric))
         },
     }
 }
 
 fn get_top_projects(
-    db_connection: &mut DbConnection,
+    conn: &mut DbConnection,
     since: Option<i64>,
     state: ProjectState,
 ) -> Result<Vec<(QueryProject, i64)>, HttpError> {
@@ -152,7 +152,7 @@ fn get_top_projects(
             }
 
             query
-                .load::<(QueryProject, i64)>(db_connection)
+                .load::<(QueryProject, i64)>(conn)
                 .map_err(resource_not_found_err!(Project))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
@@ -191,7 +191,7 @@ fn get_top_projects(
             }
 
             query
-                .load::<(QueryProject, i64)>(db_connection)
+                .load::<(QueryProject, i64)>(conn)
                 .map_err(resource_not_found_err!(Project))
         },
     }

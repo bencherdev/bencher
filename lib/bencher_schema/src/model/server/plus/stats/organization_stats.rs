@@ -12,18 +12,21 @@ pub(super) struct OrganizationStats {
 }
 
 impl OrganizationStats {
-    pub fn new(db_connection: &mut DbConnection) -> Result<Self, HttpError> {
-        let organizations = Some(get_organizations(db_connection)?);
-
+    pub fn new(conn: &mut DbConnection, is_bencher_cloud: bool) -> Result<Self, HttpError> {
+        let organizations = if is_bencher_cloud {
+            None
+        } else {
+            Some(get_organizations(conn)?)
+        };
         Ok(Self { organizations })
     }
 }
 
-fn get_organizations(db_connection: &mut DbConnection) -> Result<JsonOrganizations, HttpError> {
+fn get_organizations(conn: &mut DbConnection) -> Result<JsonOrganizations, HttpError> {
     Ok(schema::organization::table
-        .load::<QueryOrganization>(db_connection)
+        .load::<QueryOrganization>(conn)
         .map_err(resource_not_found_err!(Organization))?
         .into_iter()
-        .map(|org| org.into_json(db_connection))
+        .map(|org| org.into_json(conn))
         .collect())
 }
