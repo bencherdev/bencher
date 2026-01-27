@@ -7839,6 +7839,15 @@
             "schema": {
               "$ref": "#/components/schemas/BooleanParam"
             }
+          },
+          {
+            "in": "query",
+            "name": "stats",
+            "description": "Server stats.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BooleanParam"
+            }
           }
         ],
         "responses": {
