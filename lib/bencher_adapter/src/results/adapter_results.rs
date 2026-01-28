@@ -1,7 +1,7 @@
-use std::{collections::HashMap, str::FromStr as _};
+use std::collections::HashMap;
 
 use bencher_json::{
-    BenchmarkName, JsonNewMetric,
+    BenchmarkName, BenchmarkNameId, JsonNewMetric,
     project::{
         measure::built_in::{self, BuiltInMeasure as _},
         metric::Mean,
@@ -18,7 +18,7 @@ pub struct AdapterResults {
     pub inner: ResultsMap,
 }
 
-pub type ResultsMap = HashMap<BenchmarkName, AdapterMetrics>;
+pub type ResultsMap = HashMap<BenchmarkNameId, AdapterMetrics>;
 
 impl From<ResultsMap> for AdapterResults {
     fn from(inner: ResultsMap) -> Self {
@@ -149,7 +149,7 @@ impl AdapterResults {
                     },
                 },
             };
-            results_map.insert(benchmark_name, adapter_metrics);
+            results_map.insert(BenchmarkNameId::new_name(benchmark_name), adapter_metrics);
         }
 
         Some(results_map.into())
@@ -185,7 +185,7 @@ impl AdapterResults {
         let mut results_map = HashMap::new();
         for (benchmark_name, metrics) in benchmark_metrics {
             let metrics_value = results_map
-                .entry(benchmark_name)
+                .entry(BenchmarkNameId::new_name(benchmark_name))
                 .or_insert_with(AdapterMetrics::default);
             for metric in metrics {
                 let (resource_id, metric) = match metric {
@@ -223,7 +223,7 @@ impl AdapterResults {
         let mut results_map = HashMap::new();
         for (benchmark_name, metrics) in benchmark_metrics {
             let metrics_value = results_map
-                .entry(benchmark_name)
+                .entry(BenchmarkNameId::new_name(benchmark_name))
                 .or_insert_with(AdapterMetrics::default);
             for metric in metrics {
                 let (resource_id, metric) = match metric {
@@ -439,8 +439,13 @@ impl AdapterResults {
         results_map.into()
     }
 
+    #[cfg(test)]
     pub fn get(&self, key: &str) -> Option<&AdapterMetrics> {
-        self.inner.get(&BenchmarkName::from_str(key).ok()?)
+        use std::str::FromStr as _;
+
+        self.inner.get(&BenchmarkNameId::new_name(
+            BenchmarkName::from_str(key).ok()?,
+        ))
     }
 
     pub fn is_empty(&self) -> bool {

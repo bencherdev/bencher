@@ -17,7 +17,7 @@ const MAX_BENCHMARK_NAME_LEN: usize = 1024;
 
 const BENCHER_IGNORE_SNAKE_CASE: &str = "_bencher_ignore";
 const BENCHER_IGNORE_PASCAL_CASE: &str = "BencherIgnore";
-const BENCHER_IGNORE_KEBAB_CASE: &str = "-bencher-ignore";
+pub const BENCHER_IGNORE_KEBAB_CASE: &str = "-bencher-ignore";
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
@@ -51,13 +51,15 @@ impl BenchmarkName {
 
     /// Strip special ignore suffix from benchmark name
     /// Returns the stripped name and whether it is ignored
-    pub fn to_strip_ignore(&self) -> (Self, bool) {
+    pub fn strip_ignore(self) -> (Self, bool) {
         let name = self
             .0
             .strip_suffix(BENCHER_IGNORE_SNAKE_CASE)
             .or_else(|| self.0.strip_suffix(BENCHER_IGNORE_PASCAL_CASE))
-            .or_else(|| self.0.strip_suffix(BENCHER_IGNORE_KEBAB_CASE));
-        (Self(name.unwrap_or(&self.0).to_owned()), name.is_some())
+            .or_else(|| self.0.strip_suffix(BENCHER_IGNORE_KEBAB_CASE))
+            .map(ToOwned::to_owned);
+        let is_ignored = name.is_some();
+        (Self(name.unwrap_or(self.0)), is_ignored)
     }
 }
 
@@ -199,38 +201,56 @@ mod tests {
         let name = "a";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
+        assert_eq!(
+            benchmark_name.clone().strip_ignore(),
+            (benchmark_name, false)
+        );
 
         let name = "ab";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
+        assert_eq!(
+            benchmark_name.clone().strip_ignore(),
+            (benchmark_name, false)
+        );
 
         let name = "abc";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
+        assert_eq!(
+            benchmark_name.clone().strip_ignore(),
+            (benchmark_name, false)
+        );
 
         let name = "ABC";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
+        assert_eq!(
+            benchmark_name.clone().strip_ignore(),
+            (benchmark_name, false)
+        );
 
         let name = "Abc";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
+        assert_eq!(
+            benchmark_name.clone().strip_ignore(),
+            (benchmark_name, false)
+        );
 
         let name = "0123456789";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
+        assert_eq!(
+            benchmark_name.clone().strip_ignore(),
+            (benchmark_name, false)
+        );
 
         let benchmark_name = BenchmarkName::from_str("snake_bencher_ignore").unwrap();
         let stripped_benchmark_name = BenchmarkName::from_str("snake").unwrap();
         assert_eq!(benchmark_name.as_ref(), "snake_bencher_ignore");
         assert_eq!(
-            benchmark_name.to_strip_ignore(),
+            benchmark_name.strip_ignore(),
             (stripped_benchmark_name, true)
         );
 
@@ -238,7 +258,7 @@ mod tests {
         let stripped_benchmark_name = BenchmarkName::from_str("camel").unwrap();
         assert_eq!(benchmark_name.as_ref(), "camelBencherIgnore");
         assert_eq!(
-            benchmark_name.to_strip_ignore(),
+            benchmark_name.strip_ignore(),
             (stripped_benchmark_name, true)
         );
 
@@ -246,7 +266,7 @@ mod tests {
         let stripped_benchmark_name = BenchmarkName::from_str("Pascal").unwrap();
         assert_eq!(benchmark_name.as_ref(), "PascalBencherIgnore");
         assert_eq!(
-            benchmark_name.to_strip_ignore(),
+            benchmark_name.strip_ignore(),
             (stripped_benchmark_name, true)
         );
 
@@ -254,7 +274,7 @@ mod tests {
         let stripped_benchmark_name = BenchmarkName::from_str("kebab").unwrap();
         assert_eq!(benchmark_name.as_ref(), "kebab-bencher-ignore");
         assert_eq!(
-            benchmark_name.to_strip_ignore(),
+            benchmark_name.strip_ignore(),
             (stripped_benchmark_name, true)
         );
     }

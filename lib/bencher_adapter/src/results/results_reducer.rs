@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{BenchmarkName, JsonNewMetric, MeasureNameId, project::metric::Median as _};
+use bencher_json::{BenchmarkNameId, JsonNewMetric, MeasureNameId, project::metric::Median as _};
 
 use super::{
     AdapterResultsArray, adapter_metrics::AdapterMetrics, adapter_results::AdapterResults,
@@ -8,7 +8,7 @@ use super::{
 
 #[derive(Debug, Clone, Default)]
 pub struct ResultsReducer {
-    pub inner: HashMap<BenchmarkName, MeasuresMap>,
+    pub inner: HashMap<BenchmarkNameId, MeasuresMap>,
 }
 
 impl From<AdapterResultsArray> for ResultsReducer {
@@ -23,8 +23,8 @@ impl From<AdapterResultsArray> for ResultsReducer {
 
 impl ResultsReducer {
     fn reduce(&mut self, results: AdapterResults) {
-        for (benchmark_name, metrics) in results.inner {
-            if let Some(measures_map) = self.inner.get_mut(&benchmark_name) {
+        for (benchmark, metrics) in results.inner {
+            if let Some(measures_map) = self.inner.get_mut(&benchmark) {
                 for (measure, metric) in metrics.inner {
                     if let Some(list) = measures_map.inner.get_mut(&measure) {
                         list.push(metric);
@@ -38,7 +38,7 @@ impl ResultsReducer {
                     measures_map.insert(measure, vec![metric]);
                 }
                 self.inner.insert(
-                    benchmark_name,
+                    benchmark,
                     MeasuresMap {
                         inner: measures_map,
                     },

@@ -5,7 +5,7 @@ use bencher_adapter::{
     results::adapter_metrics::AdapterMetrics,
 };
 use bencher_json::{
-    BenchmarkName, MeasureNameId,
+    BenchmarkName, BenchmarkNameId, MeasureNameId, Slug,
     project::report::{Adapter, Iteration, JsonReportSettings},
 };
 use diesel::RunQueryDsl as _;
@@ -41,7 +41,7 @@ pub struct ReportResults {
     pub head_id: HeadId,
     pub testbed_id: TestbedId,
     pub report_id: ReportId,
-    pub benchmark_cache: HashMap<BenchmarkName, BenchmarkId>,
+    pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
     pub detector_cache: HashMap<MeasureId, Option<Detector>>,
 }
@@ -119,12 +119,12 @@ impl ReportResults {
         results: AdapterResults,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
-        for (benchmark_name, metrics) in results.inner {
+        for (benchmark, metrics) in results.inner {
             self.metrics(
                 log,
                 context,
                 iteration,
-                &benchmark_name,
+                benchmark,
                 metrics,
                 #[cfg(feature = "plus")]
                 usage,
@@ -139,13 +139,13 @@ impl ReportResults {
         log: &Logger,
         context: &ApiContext,
         iteration: Iteration,
-        benchmark_name: &BenchmarkName,
+        benchmark: BenchmarkNameId,
         metrics: AdapterMetrics,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         // If benchmark name is ignored then strip the special suffix before querying
-        let (benchmark_name, ignore_benchmark) = benchmark_name.to_strip_ignore();
-        let benchmark_id = self.benchmark_id(context, benchmark_name).await?;
+        let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
+        let benchmark_id = self.benchmark_id(context, benchmark).await?;
 
         let insert_report_benchmark =
             InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id);
@@ -195,19 +195,16 @@ impl ReportResults {
     async fn benchmark_id(
         &mut self,
         context: &ApiContext,
-        benchmark_name: BenchmarkName,
+        benchmark: BenchmarkNameId,
     ) -> Result<BenchmarkId, HttpError> {
-        Ok(
-            if let Some(id) = self.benchmark_cache.get(&benchmark_name) {
-                *id
-            } else {
-                let benchmark_id =
-                    QueryBenchmark::get_or_create(context, self.project_id, benchmark_name.clone())
-                        .await?;
-                self.benchmark_cache.insert(benchmark_name, benchmark_id);
-                benchmark_id
-            },
-        )
+        Ok(if let Some(id) = self.benchmark_cache.get(&benchmark) {
+            *id
+        } else {
+            let benchmark_id =
+                QueryBenchmark::get_or_create(context, self.project_id, &benchmark).await?;
+            self.benchmark_cache.insert(benchmark, benchmark_id);
+            benchmark_id
+        })
     }
 
     async fn measure_id(
@@ -245,5 +242,26 @@ impl ReportResults {
                 detector
             },
         )
+    }
+}
+
+fn strip_ignore_suffix(benchmark: BenchmarkNameId) -> (BenchmarkNameId, bool) {
+    match benchmark {
+        BenchmarkNameId::Uuid(uuid) => (BenchmarkNameId::Uuid(uuid), false),
+        BenchmarkNameId::Slug(slug) => {
+            // If the benchmark name ends with `-bencher-ignore`, strip the suffix and mark as ignored.
+            // This value will be considered a name and not a slug for backwards compatibility.
+            let slug_name = BenchmarkName::from(Slug::from(slug.clone()));
+            let (name, is_ignored) = slug_name.strip_ignore();
+            if is_ignored {
+                (BenchmarkNameId::Name(name), is_ignored)
+            } else {
+                (BenchmarkNameId::Slug(slug), false)
+            }
+        },
+        BenchmarkNameId::Name(name) => {
+            let (name, is_ignored) = name.strip_ignore();
+            (BenchmarkNameId::Name(name), is_ignored)
+        },
     }
 }

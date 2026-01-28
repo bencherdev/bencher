@@ -18,6 +18,20 @@ pub enum NameId<U, S, N> {
     Name(N),
 }
 
+impl<U, S, N> NameId<U, S, N> {
+    pub fn new_uuid(uuid: U) -> Self {
+        Self::Uuid(uuid)
+    }
+
+    pub fn new_slug(slug: S) -> Self {
+        Self::Slug(slug)
+    }
+
+    pub fn new_name(name: N) -> Self {
+        Self::Name(name)
+    }
+}
+
 #[cfg(feature = "schema")]
 impl<U, S, N> JsonSchema for NameId<U, S, N>
 where

@@ -1,0 +1,23 @@
+{
+    "31aba8a9-977a-47d1-9fb6-e6b94b428471": {
+        "latency": {
+            "value": 3247.0,
+            "lower_value": 1044.0,
+            "upper_value": 1044.0
+        }
+    },
+    "benchmark-b": {
+        "latency": {
+            "value": 3443.0,
+            "lower_value": 2275.0,
+            "upper_value": 2275.0
+        }
+    },
+    "tests::benchmark_c": {
+        "latency": {
+            "value": 3361.0,
+            "lower_value": 1093.0,
+            "upper_value": 1093.0
+        }
+    }
+}

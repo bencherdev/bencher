@@ -68,7 +68,7 @@ impl QueryMeasure {
             diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
                 .set(&update_measure)
                 .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(Benchmark, &query_measure))?;
+                .map_err(resource_conflict_err!(Measure, &query_measure))?;
         }
 
         Ok(query_measure.id)

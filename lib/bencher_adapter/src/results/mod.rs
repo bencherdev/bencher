@@ -68,7 +68,7 @@ impl AdapterResultsArray {
         ResultsReducer::from(self)
             .inner
             .into_iter()
-            .map(|(benchmark_name, results)| (benchmark_name, results.median()))
+            .map(|(benchmark, results)| (benchmark, results.median()))
             .collect::<ResultsMap>()
             .into()
     }

@@ -10,6 +10,7 @@ impl Adaptable for AdapterJson {
 
 #[cfg(test)]
 pub(crate) mod test_json {
+    use bencher_json::BenchmarkNameId;
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -66,5 +67,25 @@ pub(crate) mod test_json {
             assert_eq!(metric.lower_value, None);
             assert_eq!(metric.upper_value, None);
         }
+    }
+
+    #[test]
+    #[expect(clippy::indexing_slicing)]
+    fn adapter_json_bmf_mixed() {
+        let results = convert_json("bmf_mixed");
+        assert_eq!(results.inner.len(), 3);
+
+        let uuid =
+            BenchmarkNameId::new_uuid("31aba8a9-977a-47d1-9fb6-e6b94b428471".parse().unwrap());
+        let uuid_metrics = &results.inner[&uuid];
+        validate_latency(uuid_metrics, 3247.0, Some(1044.0), Some(1044.0));
+
+        let slug = BenchmarkNameId::new_slug("benchmark-b".parse().unwrap());
+        let slug_metrics = &results.inner[&slug];
+        validate_latency(slug_metrics, 3443.0, Some(2275.0), Some(2275.0));
+
+        let name = BenchmarkNameId::new_name("tests::benchmark_c".parse().unwrap());
+        let name_metrics = &results.inner[&name];
+        validate_latency(name_metrics, 3361.0, Some(1093.0), Some(1093.0));
     }
 }
