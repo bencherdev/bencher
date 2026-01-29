@@ -20,9 +20,10 @@ use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{context::RateLimiting, model::server::QueryServer, write_conn};
 use bencher_token::TokenKey;
+#[cfg(feature = "plus")]
+use diesel::connection::SimpleConnection as _;
 use diesel::{
     Connection as _,
-    connection::SimpleConnection as _,
     r2d2::{ConnectionManager, Pool},
 };
 use dropshot::{
@@ -37,6 +38,7 @@ use super::Config;
 use super::{DEFAULT_BUSY_TIMEOUT, plus::Plus};
 
 const DATABASE_URL: &str = "DATABASE_URL";
+const SQLITE_TMPDIR: &str = "SQLITE_TMPDIR";
 
 pub struct ConfigTx {
     pub config: Config,
@@ -173,12 +175,11 @@ async fn into_context(
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(log, &database_path);
 
+    sqlite_tmpdir(log, &json_database.file)?;
+
     info!(log, "Connecting to database: {database_path}");
     let mut database_connection = DbConnection::establish(&database_path)
         .map_err(|e| ConfigTxError::DatabaseConnection(database_path.to_string(), e))?;
-
-    info!(log, "Configuring temp directory for SQLite");
-    configure_temp_dir(log, &mut database_connection, &json_database.file)?;
 
     #[cfg(feature = "plus")]
     if let Some(litestream) = plus.as_ref().and_then(|plus| plus.litestream.as_ref()) {
@@ -269,6 +270,7 @@ async fn into_context(
 }
 
 // Set the diesel `DATABASE_URL` env var to the database path
+// https://diesel.rs/guides/getting-started.html#setup-diesel-for-your-project
 fn diesel_database_url(log: &Logger, database_path: &str) {
     if let Ok(database_url) = std::env::var(DATABASE_URL) {
         if database_url == database_path {
@@ -281,7 +283,7 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
     } else {
         debug!(log, "Failed to find \"{DATABASE_URL}\"");
     }
-    debug!(log, "Setting \"{DATABASE_URL}\" to {database_path}");
+    debug!(log, "Setting \"{DATABASE_URL}\" to \"{database_path}\"");
     // SAFETY: This is safe because we are the only process running in production
     // and nothing else is setting the `DATABASE_URL` environment variable
     #[expect(unsafe_code, reason = "DATABASE_URL")]
@@ -290,14 +292,11 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
     }
 }
 
-// Configure SQLite temp directory to be next to the database file
-// This prevents temp files from filling up the root filesystem on containerized deployments
-// https://www.sqlite.org/pragma.html#pragma_temp_store_directory
-fn configure_temp_dir(
-    log: &Logger,
-    database: &mut DbConnection,
-    database_path: &Path,
-) -> Result<(), ConfigTxError> {
+// Set the SQLite `SQLITE_TMPDIR` env var to the temp directory next to the database file.
+// This prevents temp files from filling up the root filesystem on containerized deployments.
+// Must be called BEFORE establishing any SQLite connections.
+// https://www.sqlite.org/tempfiles.html
+fn sqlite_tmpdir(log: &Logger, database_path: &Path) -> Result<(), ConfigTxError> {
     // Get the parent directory of the database file and create a tmp subdirectory
     let temp_dir = database_path
         .parent()
@@ -309,15 +308,16 @@ fn configure_temp_dir(
         fs::create_dir_all(&temp_dir).map_err(|e| ConfigTxError::TempDir(temp_dir.clone(), e))?;
     }
 
-    // Set the temp_store_directory pragma
-    // Note: This pragma is deprecated but still functional and is the only way to set
-    // the temp directory at runtime for all connection pool connections
-    let temp_dir_str = temp_dir.to_string_lossy();
-    info!(log, "Setting SQLite temp directory: {temp_dir_str}");
-    let pragma = format!("PRAGMA temp_store_directory = '{temp_dir_str}'");
-    database
-        .batch_execute(&pragma)
-        .map_err(ConfigTxError::Pragma)?;
+    info!(log, "Setting \"{SQLITE_TMPDIR}\" to {temp_dir:?}");
+    // Set the SQLITE_TMPDIR environment variable
+    // SQLite checks this env var when determining where to store temporary files
+    // SAFETY: This is safe because we are the only process running in production
+    // and nothing else is setting the `SQLITE_TMPDIR` environment variable.
+    // This must be set before any SQLite connections are established.
+    #[expect(unsafe_code, reason = "SQLITE_TMPDIR")]
+    unsafe {
+        std::env::set_var(SQLITE_TMPDIR, temp_dir.as_os_str());
+    }
 
     Ok(())
 }
