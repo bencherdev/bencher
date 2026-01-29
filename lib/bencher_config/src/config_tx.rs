@@ -1,4 +1,9 @@
-use std::{num::NonZeroUsize, sync::Arc};
+use std::{
+    fs,
+    num::NonZeroUsize,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
@@ -15,10 +20,9 @@ use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{context::RateLimiting, model::server::QueryServer, write_conn};
 use bencher_token::TokenKey;
-#[cfg(feature = "plus")]
-use diesel::connection::SimpleConnection as _;
 use diesel::{
     Connection as _,
+    connection::SimpleConnection as _,
     r2d2::{ConnectionManager, Pool},
 };
 use dropshot::{
@@ -47,6 +51,8 @@ pub enum ConfigTxError {
     Migrations(#[from] bencher_schema::MigrationError),
     #[error("Failed to run database pragma: {0}")]
     Pragma(diesel::result::Error),
+    #[error("Failed to create temp directory ({0}): {1}")]
+    TempDir(PathBuf, std::io::Error),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
     Polar(Box<oso::OsoError>),
     #[error("Invalid endpoint URL: {0}")]
@@ -171,6 +177,9 @@ async fn into_context(
     let mut database_connection = DbConnection::establish(&database_path)
         .map_err(|e| ConfigTxError::DatabaseConnection(database_path.to_string(), e))?;
 
+    info!(log, "Configuring temp directory for SQLite");
+    configure_temp_dir(log, &mut database_connection, &json_database.file)?;
+
     #[cfg(feature = "plus")]
     if let Some(litestream) = plus.as_ref().and_then(|plus| plus.litestream.as_ref()) {
         info!(log, "Configuring Litestream");
@@ -279,6 +288,38 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
     unsafe {
         std::env::set_var(DATABASE_URL, database_path);
     }
+}
+
+// Configure SQLite temp directory to be next to the database file
+// This prevents temp files from filling up the root filesystem on containerized deployments
+// https://www.sqlite.org/pragma.html#pragma_temp_store_directory
+fn configure_temp_dir(
+    log: &Logger,
+    database: &mut DbConnection,
+    database_path: &Path,
+) -> Result<(), ConfigTxError> {
+    // Get the parent directory of the database file and create a tmp subdirectory
+    let temp_dir = database_path
+        .parent()
+        .map_or_else(|| PathBuf::from("tmp"), |p| p.join("tmp"));
+
+    // Create the temp directory if it doesn't exist
+    if !temp_dir.exists() {
+        info!(log, "Creating SQLite temp directory: {temp_dir:?}");
+        fs::create_dir_all(&temp_dir).map_err(|e| ConfigTxError::TempDir(temp_dir.clone(), e))?;
+    }
+
+    // Set the temp_store_directory pragma
+    // Note: This pragma is deprecated but still functional and is the only way to set
+    // the temp directory at runtime for all connection pool connections
+    let temp_dir_str = temp_dir.to_string_lossy();
+    info!(log, "Setting SQLite temp directory: {temp_dir_str}");
+    let pragma = format!("PRAGMA temp_store_directory = '{temp_dir_str}'");
+    database
+        .batch_execute(&pragma)
+        .map_err(ConfigTxError::Pragma)?;
+
+    Ok(())
 }
 
 #[cfg(feature = "plus")]
