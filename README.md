@@ -118,7 +118,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [libtest bench](https://bencher.dev/docs/explanation/adapters/#-rust-bench)
   - [Criterion](https://bencher.dev/docs/explanation/adapters/#-rust-criterion)
   - [Iai](https://bencher.dev/docs/explanation/adapters/#-rust-iai)
-  - [Gungraun](https://bencher.dev/docs/explanation/adapters/#-rust-iai-callgrind) (formerly [Iai-Callgrind](https://bencher.dev/docs/explanation/adapters/#-rust-iai-callgrind))
+  - [Gungraun](https://bencher.dev/docs/explanation/adapters/#-rust-gungraun) (formerly [Iai-Callgrind](https://bencher.dev/docs/explanation/adapters/#-rust-iai-callgrind))
 - ❯_ Shell
   - [Hyperfine](https://bencher.dev/docs/explanation/adapters/#_%EF%B8%8F-shell-hyperfine)
 
