@@ -17,7 +17,7 @@ const MAX_BENCHMARK_NAME_LEN: usize = 1024;
 
 const BENCHER_IGNORE_SNAKE_CASE: &str = "_bencher_ignore";
 const BENCHER_IGNORE_PASCAL_CASE: &str = "BencherIgnore";
-pub const BENCHER_IGNORE_KEBAB_CASE: &str = "-bencher-ignore";
+const BENCHER_IGNORE_KEBAB_CASE: &str = "-bencher-ignore";
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]

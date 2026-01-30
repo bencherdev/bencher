@@ -253,11 +253,14 @@ fn strip_ignore_suffix(benchmark: BenchmarkNameId) -> (BenchmarkNameId, bool) {
             // This value will be considered a name and not a slug for backwards compatibility.
             let slug_name = BenchmarkName::from(Slug::from(slug.clone()));
             let (name, is_ignored) = slug_name.strip_ignore();
-            if is_ignored {
-                (BenchmarkNameId::Name(name), is_ignored)
-            } else {
-                (BenchmarkNameId::Slug(slug), false)
-            }
+            (
+                if is_ignored {
+                    BenchmarkNameId::Name(name)
+                } else {
+                    BenchmarkNameId::Slug(slug)
+                },
+                is_ignored,
+            )
         },
         BenchmarkNameId::Name(name) => {
             let (name, is_ignored) = name.strip_ignore();
