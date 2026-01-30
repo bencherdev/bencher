@@ -1,26 +1,25 @@
 import BmfExample from "../bmf-example.mdx";
 
-这是一个BMF JSON的案例：
+这是一个 BMF JSON 的示例：
 
 <BmfExample />
 
-在这个例子中，键 `benchmark_name` 将是一个[基准测试][benchmark]的名称。
-基准测试名称可以是任何非空字符串，最多1024个字符。
-`benchmark_name` 对象可以包含多个[度量][measure]名称、缩写或UUID作为键。
-如果指定的值是名称或缩写，并且度量不存在，则将为您创建它。
-然而，如果指定的值是UUID，则度量必须已经存在。
-在这个例子中，`latency` 是内置延迟度量的缩写。
-每个项目默认有延迟（即 `latency`）和吞吐量（即 `throughput`）度量，
-分别以 `纳秒 (ns)` 和 `操作数/秒 (ops/s)` 测量。
-度量对象包含一个带有最多三个值的[指标][metric]：
-`value`、`lower_value`和`upper_value`。
-`lower_value` 和 `upper_value` 值是可选的。
+在此示例中，键 `benchmark_name` 表示 [Benchmark][benchmark] 的名称。
+Benchmark 可以通过名称、slug 或 UUID 来标识。
+`benchmark_name` 对象可以包含多个 [Measure][measure] 的名称、slug 或 UUID 作为键。
+如果指定的值是名称或 slug 且该 Measure 尚不存在，则会为你创建它。
+但是，如果指定的值是 UUID，那么该 Measure 必须已存在。
+在此示例中，`latency` 是内置 Latency Measure 的 slug。
+每个 Project 默认都有一个 Latency（即 `latency`）和一个 Throughput（即 `throughput`）Measure，
+分别以 `nanosecond (ns)` 和 `operations / second (ops/s)` 为单位进行度量。
+Measure 对象包含一个 [Metric][metric]，最多可包含三个值：`value`、`lower_value` 和 `upper_value`。
+`lower_value` 和 `upper_value` 是可选的。
 
-在这个例子中，`latency` 度量对象包含以下值：
+在此示例中，`latency` Measure 对象包含以下值：
 
-- 一个 `value` 为 `88.0`
-- 一个 `lower_value` 为 `87.42`
-- 一个 `upper_value` 为 `88.88`
+- `value` 值为 `88.0`
+- `lower_value` 值为 `87.42`
+- `upper_value` 值为 `88.88`
 
 [benchmark]: /zh/docs/explanation/benchmarking/#benchmark
 [measure]: /zh/docs/explanation/benchmarking/#measure

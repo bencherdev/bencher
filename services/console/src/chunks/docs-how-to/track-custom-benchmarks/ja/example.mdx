@@ -1,25 +1,24 @@
 import BmfExample from "../bmf-example.mdx";
 
-この例では、BMF JSONの使用例を示しています。
+これは BMF JSON の例です:
 
 <BmfExample />
 
-この例で、`benchmark_name`のキーは[ベンチマーク][benchmark]の名前になります。
-ベンチマーク名は、1024文字までの任意の非空文字列にできます。
-`benchmark_name`オブジェクトは、複数の[測定][measure]名、スラッグ、またはUUIDをキーとして含むことができます。
-指定された値が名前またはスラッグで、測定がまだ存在しない場合、それはあなたのために作成されます。
-しかし、指定された値がUUIDの場合、測定は既に存在している必要があります。
-この例では、`latency`は組み込みのレイテンシ測定のためのスラッグです。
-各プロジェクトはデフォルトでレイテンシ（つまり`latency`）とスループット（つまり`throughput`）の測定を持っており、それぞれ`ナノ秒 (ns)`と`操作 / 秒 (ops/s)`で測定されます。
-測定オブジェクトには、最大三つの値を持つ[指標][metric]が含まれます：
-`value`、`lower_value`、及び`upper_value`。
-`lower_value`と`upper_value`の値はオプションです。
+この例では、キー `benchmark_name` は [Benchmark][benchmark] の名前になります。
+A Benchmark can be identified by its name, slug, or UUID.
+`benchmark_name` オブジェクトは複数の [Measure][measure] の名前、スラッグ、または UUID をキーとして含めることができます。
+指定された値が名前またはスラッグで、対応する Measure がまだ存在しない場合は、自動的に作成されます。
+ただし、指定された値が UUID の場合は、Measure が既に存在している必要があります。
+この例では、`latency` は組み込みの Latency Measure のスラッグです。
+各 Project にはデフォルトで Latency（`latency`）と Throughput（`throughput`）の Measure があり、それぞれ `nanosecond (ns)` と `operations / second (ops/s)` で測定されます。
+Measure オブジェクトは [Metric][metric] を含み、最大で 3 つの値（`value`、`lower_value`、`upper_value`）を持ちます。
+`lower_value` と `upper_value` は省略可能です。
 
-この例では、`latency`測定オブジェクトは以下の値を含んでいます：
+この例では、`latency` Measure オブジェクトは次の値を含みます:
 
-- `value`は`88.0`
-- `lower_value`は`87.42`
-- `upper_value`は`88.88`
+- `value` は `88.0`
+- `lower_value` は `87.42`
+- `upper_value` は `88.88`
 
 [benchmark]: /ja/docs/explanation/benchmarking/#benchmark
 [measure]: /ja/docs/explanation/benchmarking/#measure

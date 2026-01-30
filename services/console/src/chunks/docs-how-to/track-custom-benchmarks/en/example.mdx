@@ -5,7 +5,7 @@ This is an example of BMF JSON:
 <BmfExample />
 
 In this example, the key `benchmark_name` would be the name of a [Benchmark][benchmark].
-Benchmark names can be any non-empty string up to 1024 characters.
+A Benchmark can be identified by its name, slug, or UUID.
 The `benchmark_name` object can contain multiple [Measure][measure] names, slugs, or UUIDs as keys.
 If the value specified is a name or slug and the Measure does not already exist, it will be created for you.
 However, if the value specified is a UUID then the Measure must already exist.
