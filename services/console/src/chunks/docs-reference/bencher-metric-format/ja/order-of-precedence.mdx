@@ -1,0 +1,20 @@
+## 優先順位
+
+ベンチマークを識別する際の優先順位は次のとおりです:
+
+1. `UUID`
+2. ケバブケース形式の `name` に `-bencher-ignore` サフィックスが付いている場合、そのサフィックスは除去され、[アラートの抑制][suppressing alerts]に用いられます（最大長 `1024` 文字）
+3. `slug`（最大長 `64` 文字）
+4. `name`（最大長 `1024` 文字）
+
+<br />
+
+測定項目を識別する際の優先順位は次のとおりです:
+
+1. `UUID`
+2. `slug`（最大長 `64` 文字）
+3. `name`（最大長 `64` 文字）
+
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+[suppressing alerts]: /ja/docs/explanation/thresholds/#suppressing-alerts
+[measure]: /ja/docs/explanation/benchmarking/#measure

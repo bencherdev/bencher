@@ -1,0 +1,20 @@
+## Ordem de Precedência
+
+A ordem de precedência para identificar um [Benchmark][benchmark] é a seguinte:
+
+1. `UUID`
+2. `name` em kebab case com um sufixo `-bencher-ignore` que é removido para [suprimir alertas][suppressing alerts] (comprimento máximo `1024` caracteres)
+3. `slug` (comprimento máximo `64` caracteres)
+4. `name` (comprimento máximo `1024` caracteres)
+
+<br />
+
+A ordem de precedência para identificar uma [Medida][measure] é a seguinte:
+
+1. `UUID`
+2. `slug` (comprimento máximo `64` caracteres)
+3. `name` (comprimento máximo `64` caracteres)
+
+[benchmark]: /pt/docs/explanation/benchmarking/#benchmark
+[suppressing alerts]: /pt/docs/explanation/thresholds/#suppressing-alerts
+[measure]: /pt/docs/explanation/benchmarking/#measure

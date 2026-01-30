@@ -1,0 +1,20 @@
+## 优先顺序
+
+用于识别 [基准][benchmark] 的优先顺序如下：
+
+1. `UUID`
+2. kebab 风格的 `name`，带有会被剥离以用于[抑制告警][suppressing alerts]的 `-bencher-ignore` 后缀（最大长度 `1024` 字符）
+3. `slug`（最大长度 `64` 字符）
+4. `name`（最大长度 `1024` 字符）
+
+<br />
+
+用于识别 [度量][measure] 的优先顺序如下：
+
+1. `UUID`
+2. `slug`（最大长度 `64` 字符）
+3. `name`（最大长度 `64` 字符）
+
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+[suppressing alerts]: /zh/docs/explanation/thresholds/#suppressing-alerts
+[measure]: /zh/docs/explanation/benchmarking/#measure

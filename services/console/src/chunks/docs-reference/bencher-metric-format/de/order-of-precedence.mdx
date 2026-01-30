@@ -1,0 +1,20 @@
+## Reihenfolge der Priorität
+
+Die Reihenfolge der Priorität zur Identifizierung eines [Benchmark][benchmark] ist wie folgt:
+
+1. `UUID`
+2. Kebab-Case-`name` mit dem Suffix `-bencher-ignore`, das entfernt wird, um [Alarme zu unterdrücken][suppressing alerts] (maximale Länge `1024` Zeichen)
+3. `slug` (maximale Länge `64` Zeichen)
+4. `name` (maximale Länge `1024` Zeichen)
+
+<br />
+
+Die Reihenfolge der Priorität zur Identifizierung einer [Messgröße][measure] ist wie folgt:
+
+1. `UUID`
+2. `slug` (maximale Länge `64` Zeichen)
+3. `name` (maximale Länge `64` Zeichen)
+
+[benchmark]: /de/docs/explanation/benchmarking/#benchmark
+[suppressing alerts]: /de/docs/explanation/thresholds/#suppressing-alerts
+[measure]: /de/docs/explanation/benchmarking/#measure

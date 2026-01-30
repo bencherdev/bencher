@@ -1,0 +1,20 @@
+## Порядок приоритетов
+
+Порядок приоритета для идентификации [бенчмарка][benchmark] следующий:
+
+1. `UUID`
+2. kebab-case `name` с суффиксом `-bencher-ignore`, который удаляется для [подавления оповещений][suppressing alerts] (максимальная длина `1024` символов)
+3. `slug` (максимальная длина `64` символа)
+4. `name` (максимальная длина `1024` символов)
+
+<br />
+
+Порядок приоритета для идентификации [измерения][measure] следующий:
+
+1. `UUID`
+2. `slug` (максимальная длина `64` символа)
+3. `name` (максимальная длина `64` символа)
+
+[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
+[suppressing alerts]: /ru/docs/explanation/thresholds/#suppressing-alerts
+[measure]: /ru/docs/explanation/benchmarking/#measure

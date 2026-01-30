@@ -1,0 +1,20 @@
+## 우선순위
+
+다음은 [벤치마크][benchmark]를 식별할 때의 우선순위입니다:
+
+1. `UUID`
+2. 케밥 케이스 `name`에 `-bencher-ignore` 접미사가 있으면 접미사는 제거되어 [경고 억제][suppressing alerts]에 사용됩니다(최대 길이 `1024`자)
+3. `slug` (최대 길이 `64`자)
+4. `name` (최대 길이 `1024`자)
+
+<br />
+
+다음은 [측정값][measure]를 식별할 때의 우선순위입니다:
+
+1. `UUID`
+2. `slug` (최대 길이 `64`자)
+3. `name` (최대 길이 `64`자)
+
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+[suppressing alerts]: /ko/docs/explanation/thresholds/#suppressing-alerts
+[measure]: /ko/docs/explanation/benchmarking/#measure
