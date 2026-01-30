@@ -1,5 +1,9 @@
 ### Medida
 Uma Medida é a unidade de medição para uma Métrica.
-Por padrão, todos os Projetos começam com uma Medida de `Latência` e `Vazão`
-com unidades de `nanosegundos (ns)` e `operações/segundo (ops/s)`, respectivamente.
-A Medida é determinada pelo [adaptador do quadro de referência de benchmark](/pt/docs/explanation/adapters/).
+Por padrão, todos os Projetos começam com as Medidas `Latency` e `Throughput`, com unidades de `nanoseconds (ns)` e `operations / second (ops/s)`, respectivamente.
+A Medida é determinada pelo [adaptador do harness de benchmark][adapters].
+
+Se você estiver usando o [Bencher Metric Format (BMF)][bmf], o nome, o slug ou o UUID podem ser usados para identificar uma Medida.
+
+[adapters]: /pt/docs/explanation/adapters/
+[bmf]: /pt/docs/reference/bencher-metric-format/

@@ -1,2 +1,10 @@
 ### Mesure
-Une Mesure est l'unité de mesure pour une Métrique. Par défaut, tous les Projets commencent avec une Mesure de `Latence` et de `Débit` avec des unités de `nanosecondes (ns)` et `opérations / seconde (ops/s)` respectivement. La Mesure est déterminée par l'[adaptateur de l'environnement de test](/fr/docs/explanation/adapters/).
+Une Mesure est l'unité de mesure d'une Métrique.
+Par défaut, tous les projets démarrent avec des Mesures `Latency` et `Throughput`
+avec des unités de `nanoseconds (ns)` et `operations / second (ops/s)` respectivement.
+La Mesure est déterminée par l'[adaptateur du moteur de benchmark][adapters].
+
+Si vous utilisez le [Bencher Metric Format (BMF)][bmf], le nom, le slug ou l'UUID peuvent être utilisés pour identifier une Mesure.
+
+[adapters]: /fr/docs/explanation/adapters/
+[bmf]: /fr/docs/reference/bencher-metric-format/

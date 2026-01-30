@@ -1,4 +1,9 @@
-### Measure
-Measureは、Metricの測定単位です。
-デフォルトでは、すべてのプロジェクトは`Latency`と`Throughput`のMeasureで始まり、それぞれの単位は`nanoseconds (ns)`と`operations / second (ops/s)`です。
-Measureは[ベンチマークハーネスアダプター](/ja/docs/explanation/adapters/)によって決定されます。
+### Measure（測定単位）
+Measure はメトリック（Metric）の測定単位です。
+デフォルトではすべてのプロジェクトは `Latency` と `Throughput` の Measure を持ち、それぞれの単位は `nanoseconds (ns)` と `operations / second (ops/s)` です。
+Measure は [ベンチマークハーネスアダプタ][adapters] によって決まります。
+
+もし [Bencher Metric Format (BMF)][bmf] を使用している場合、name、slug、または UUID で Measure を識別できます。
+
+[adapters]: /ja/docs/explanation/adapters/
+[bmf]: /ja/docs/reference/bencher-metric-format/

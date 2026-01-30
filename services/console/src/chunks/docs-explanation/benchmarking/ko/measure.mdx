@@ -1,2 +1,9 @@
-### Measure
-Measure는 Metric의 측정 단위입니다. 기본적으로 모든 프로젝트는 `nanoseconds (ns)` 및 `operations / second (ops/s)` 단위를 사용하는 `Latency` 및 `Throughput` Measure로 시작합니다. Measure는 [벤치마크 하네스 어댑터](/ko/docs/explanation/adapters/)에 의해 결정됩니다.
+### 측정 단위 (Measure)
+Measure는 Metric의 측정 단위입니다.
+기본적으로 모든 프로젝트는 각각 단위가 `nanoseconds (ns)`와 `operations / second (ops/s)`인 `Latency` 및 `Throughput` Measure로 시작합니다.
+Measure는 [벤치마크 하니스 어댑터][adapters]에 의해 결정됩니다.
+
+Bencher Metric Format (BMF)를 사용하는 경우 이름, 슬러그(slug) 또는 UUID로 Measure를 식별할 수 있습니다.
+
+[adapters]: /ko/docs/explanation/adapters/
+[bmf]: /ko/docs/reference/bencher-metric-format/

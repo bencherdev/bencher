@@ -1,5 +1,10 @@
-### Messung
-Eine Messung ist die Maßeinheit für eine Metrik.
-Standardmäßig beginnen alle Projekte mit einer `Latenz`- und `Durchsatz`-Messung
-mit den Einheiten `Nanosekunden (ns)` und `Operationen / Sekunde (ops/s)` bzw.
-Die Messung wird durch den [Benchmark-Harness-Adapter](/de/docs/explanation/adapters/) bestimmt.
+### Measure
+Eine Measure ist die Maßeinheit für eine Metric.
+Standardmäßig beginnen alle Projects mit einer `Latency`- und einer `Throughput`-Measure
+mit den Einheiten `nanoseconds (ns)` bzw. `operations / second (ops/s)`.
+Die Measure wird durch den [Benchmark-Harness-Adapter][adapters] bestimmt.
+
+Wenn Sie das [Bencher Metric Format (BMF)][bmf] verwenden, können Name, Slug oder UUID verwendet werden, um eine Measure zu identifizieren.
+
+[adapters]: /de/docs/explanation/adapters/
+[bmf]: /de/docs/reference/bencher-metric-format/
