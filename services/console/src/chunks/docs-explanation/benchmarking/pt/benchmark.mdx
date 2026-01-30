@@ -1,7 +1,18 @@
 ## Benchmark
+Um Benchmark é um teste de regressão de desempenho identificado por nome.
+Se o teste de regressão de desempenho for novo no Bencher, um Benchmark será criado automaticamente.
+Caso contrário, o nome do teste de regressão de desempenho é usado como identificador único do Benchmark.
 
-Um Benchmark é um teste de regressão de desempenho nomeado. Se o teste de regressão de desempenho for novo no Bencher, então um Benchmark é criado automaticamente. Caso contrário, o nome do teste de regressão de desempenho é usado como o identificador único para o Benchmark.
+Tenha cuidado ao alterar o nome dos seus testes de regressão de desempenho.
+Você precisará renomear manualmente o Benchmark no Bencher para corresponder a esse novo nome.
+Caso contrário, o teste renomeado será considerado um novo Benchmark.
+Esse mesmo aviso também vale para _mover_ alguns testes de regressão de desempenho.
+Dependendo do harness de benchmark, o caminho para o teste de regressão de desempenho pode fazer parte do seu nome.
 
-Tenha cuidado ao mudar o nome de seus testes de regressão de desempenho. Você precisará renomear manualmente o Benchmark no Bencher para coincidir com este novo nome. Caso contrário, o teste de regressão de desempenho renomeado será considerado um novo Benchmark. Essa mesma precaução também se aplica ao _mover_ alguns testes de regressão de desempenho. Dependendo do harness de benchmark, o caminho para o teste de regressão de desempenho pode ser parte de seu nome.
+A única exceção à ressalva acima é ignorar um Benchmark.
+Consulte [supressão de alertas][suppressing alerts] para uma visão geral completa.
 
-A única exceção à ressalva acima é ignorar um Benchmark. Veja [suprimindo alertas](/pt/docs/explanation/thresholds/) para uma visão completa.
+Se você estiver usando [Bencher Metric Format (BMF)][bmf], o nome, slug ou UUID podem ser usados para identificar um Benchmark.
+
+[suppressing alerts]: /pt/docs/explanation/thresholds/#suppressing-alerts
+[bmf]: /pt/docs/reference/bencher-metric-format/
