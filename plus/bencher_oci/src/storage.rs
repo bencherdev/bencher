@@ -41,6 +41,21 @@ pub enum OciStorageError {
     Config(String),
 }
 
+impl OciStorageError {
+    /// Returns the appropriate HTTP status code for this storage error
+    pub fn status_code(&self) -> http::StatusCode {
+        match self {
+            Self::UploadNotFound(_) | Self::BlobNotFound(_) | Self::ManifestNotFound(_) => {
+                http::StatusCode::NOT_FOUND
+            }
+            Self::DigestMismatch { .. } | Self::InvalidContent(_) => http::StatusCode::BAD_REQUEST,
+            Self::S3(_) | Self::InvalidArn(_) | Self::Config(_) => {
+                http::StatusCode::INTERNAL_SERVER_ERROR
+            }
+        }
+    }
+}
+
 /// Configuration for OCI S3 storage
 #[derive(Debug, Clone)]
 pub struct OciStorageConfig {
@@ -154,6 +169,26 @@ impl OciStorage {
     /// Returns the S3 key for a manifest tag link
     fn tag_link_key(&self, repository: &RepositoryName, tag: &str) -> String {
         format!("{}/tags/{}", self.key_prefix(repository), tag)
+    }
+
+    /// Returns the S3 key prefix for referrers to a given digest
+    fn referrers_prefix(&self, repository: &RepositoryName, subject_digest: &Digest) -> String {
+        format!(
+            "{}/referrers/{}/{}",
+            self.key_prefix(repository),
+            subject_digest.algorithm(),
+            subject_digest.hex_hash()
+        )
+    }
+
+    /// Returns the S3 key for a referrer link
+    fn referrer_key(&self, repository: &RepositoryName, subject_digest: &Digest, referrer_digest: &Digest) -> String {
+        format!(
+            "{}/{}-{}",
+            self.referrers_prefix(repository, subject_digest),
+            referrer_digest.algorithm(),
+            referrer_digest.hex_hash()
+        )
     }
 
     /// Starts a new upload session
@@ -409,6 +444,59 @@ impl OciStorage {
                 .map_err(|e| OciStorageError::S3(e.to_string()))?;
         }
 
+        // Check if manifest has a subject field (for referrers API)
+        if let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&content)
+            && let Some(subject) = manifest.get("subject")
+            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
+            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+        {
+            // Extract descriptor info for the referrer
+            let media_type = manifest
+                .get("mediaType")
+                .and_then(|m| m.as_str())
+                .unwrap_or("application/vnd.oci.image.manifest.v1+json");
+            let artifact_type = manifest
+                .get("artifactType")
+                .and_then(|a| a.as_str())
+                .or_else(|| {
+                    manifest
+                        .get("config")
+                        .and_then(|c| c.get("mediaType"))
+                        .and_then(|m| m.as_str())
+                });
+
+            // Create referrer descriptor
+            let mut descriptor = serde_json::json!({
+                "mediaType": media_type,
+                "digest": digest.to_string(),
+                "size": content.len()
+            });
+            if let Some(at) = artifact_type
+                && let Some(obj) = descriptor.as_object_mut()
+            {
+                obj.insert(
+                    "artifactType".to_owned(),
+                    serde_json::Value::String(at.to_owned()),
+                );
+            }
+            if let Some(annotations) = manifest.get("annotations")
+                && let Some(obj) = descriptor.as_object_mut()
+            {
+                obj.insert("annotations".to_owned(), annotations.clone());
+            }
+
+            // Store referrer link
+            let referrer_key = self.referrer_key(repository, &subject_digest, &digest);
+            self.client
+                .put_object()
+                .bucket(&self.config.bucket_arn)
+                .key(&referrer_key)
+                .body(serde_json::to_vec(&descriptor).unwrap_or_default().into())
+                .send()
+                .await
+                .map_err(|e| OciStorageError::S3(e.to_string()))?;
+        }
+
         Ok(digest)
     }
 
@@ -578,6 +666,100 @@ impl OciStorage {
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
 
         Ok(true)
+    }
+
+    /// Lists all manifests that reference a given digest via their subject field
+    pub async fn list_referrers(
+        &self,
+        repository: &RepositoryName,
+        subject_digest: &Digest,
+        artifact_type_filter: Option<&str>,
+    ) -> Result<Vec<serde_json::Value>, OciStorageError> {
+        let prefix = self.referrers_prefix(repository, subject_digest);
+
+        let mut referrers = Vec::new();
+        let mut continuation_token: Option<String> = None;
+
+        loop {
+            let mut request = self
+                .client
+                .list_objects_v2()
+                .bucket(&self.config.bucket_arn)
+                .prefix(&prefix);
+
+            if let Some(token) = continuation_token.take() {
+                request = request.continuation_token(token);
+            }
+
+            let response = request
+                .send()
+                .await
+                .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+            if let Some(contents) = response.contents {
+                for object in contents {
+                    let Some(key) = object.key else {
+                        continue;
+                    };
+                    // Get the referrer descriptor
+                    let Ok(resp) = self
+                        .client
+                        .get_object()
+                        .bucket(&self.config.bucket_arn)
+                        .key(&key)
+                        .send()
+                        .await
+                    else {
+                        continue;
+                    };
+                    let Ok(data) = resp.body.collect().await else {
+                        continue;
+                    };
+                    let Ok(descriptor) =
+                        serde_json::from_slice::<serde_json::Value>(&data.into_bytes())
+                    else {
+                        continue;
+                    };
+                    // Apply artifact type filter if specified
+                    if let Some(filter) = artifact_type_filter {
+                        let matches = descriptor
+                            .get("artifactType")
+                            .and_then(|a| a.as_str())
+                            .is_some_and(|at| at == filter);
+                        if !matches {
+                            continue;
+                        }
+                    }
+                    referrers.push(descriptor);
+                }
+            }
+
+            if response.is_truncated == Some(true) {
+                continuation_token = response.next_continuation_token;
+            } else {
+                break;
+            }
+        }
+
+        Ok(referrers)
+    }
+
+    /// Deletes a tag (removes the tag link, not the manifest itself)
+    pub async fn delete_tag(
+        &self,
+        repository: &RepositoryName,
+        tag: &str,
+    ) -> Result<(), OciStorageError> {
+        let key = self.tag_link_key(repository, tag);
+        self.client
+            .delete_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        Ok(())
     }
 }
 

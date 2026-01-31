@@ -8,7 +8,7 @@
 //! This unified structure avoids Dropshot router conflicts between literal
 //! and variable path segments while maintaining OCI spec compliance.
 
-use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Post, Put, ResponseDeleted};
+use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Post, Put};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
 use http::Response;
@@ -181,7 +181,7 @@ pub async fn oci_blob_get(
 pub async fn oci_blob_delete(
     _rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
-) -> Result<ResponseDeleted, HttpError> {
+) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
 
     // "uploads" is not a valid digest - return appropriate error
@@ -212,7 +212,14 @@ pub async fn oci_blob_delete(
         .await
         .map_err(|e| HttpError::from(OciError::from(e)))?;
 
-    Ok(Delete::auth_response_deleted())
+    // OCI spec requires 202 Accepted for DELETE
+    let response = Response::builder()
+        .status(http::StatusCode::ACCEPTED)
+        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .body(Body::empty())
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+
+    Ok(response)
 }
 
 /// Start a new blob upload (POST to /v2/{name}/blobs/uploads)

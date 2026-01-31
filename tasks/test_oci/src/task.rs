@@ -1,6 +1,7 @@
+use std::env;
 use std::fs;
 use std::net::TcpStream;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
@@ -17,14 +18,27 @@ pub struct Task {
     pull_only: bool,
     skip_build: bool,
     debug: bool,
-    output_dir: String,
-    spec_dir: String,
+    output_dir: PathBuf,
+    spec_dir: PathBuf,
 }
 
 impl TryFrom<TaskOci> for Task {
     type Error = anyhow::Error;
 
     fn try_from(task: TaskOci) -> Result<Self, Self::Error> {
+        // Convert relative paths to absolute paths
+        let cwd = env::current_dir()?;
+        let output_dir = if Path::new(&task.output_dir).is_absolute() {
+            PathBuf::from(&task.output_dir)
+        } else {
+            cwd.join(&task.output_dir)
+        };
+        let spec_dir = if Path::new(&task.spec_dir).is_absolute() {
+            PathBuf::from(&task.spec_dir)
+        } else {
+            cwd.join(&task.spec_dir)
+        };
+
         Ok(Self {
             api_url: task.api_url,
             namespace: task.namespace,
@@ -32,8 +46,8 @@ impl TryFrom<TaskOci> for Task {
             pull_only: task.pull_only,
             skip_build: task.skip_build,
             debug: task.debug,
-            output_dir: task.output_dir,
-            spec_dir: task.spec_dir,
+            output_dir,
+            spec_dir,
         })
     }
 }
@@ -70,9 +84,9 @@ impl Task {
 
         println!();
         println!("=== Test Complete ===");
-        println!("Results saved to: {}", self.output_dir);
+        println!("Results saved to: {}", self.output_dir.display());
 
-        let report_path = Path::new(&self.output_dir).join("report.html");
+        let report_path = self.output_dir.join("report.html");
         if report_path.exists() {
             println!("Open {} to view the detailed report", report_path.display());
         }
@@ -112,9 +126,14 @@ impl Task {
     }
 
     fn ensure_spec_cloned(&self) -> anyhow::Result<()> {
-        if Path::new(&self.spec_dir).exists() {
-            println!("distribution-spec already cloned at {}", self.spec_dir);
+        if self.spec_dir.join("conformance/go.mod").exists() {
+            println!("distribution-spec already cloned at {}", self.spec_dir.display());
             return Ok(());
+        }
+
+        // Remove if exists but incomplete
+        if self.spec_dir.exists() {
+            fs::remove_dir_all(&self.spec_dir)?;
         }
 
         println!();
@@ -126,8 +145,8 @@ impl Task {
                 "--depth",
                 "1",
                 "https://github.com/opencontainers/distribution-spec.git",
-                &self.spec_dir,
             ])
+            .arg(&self.spec_dir)
             .status()?;
 
         if !status.success() {
@@ -138,7 +157,7 @@ impl Task {
     }
 
     fn build_conformance_tests(&self) -> anyhow::Result<()> {
-        let conformance_dir = Path::new(&self.spec_dir).join("conformance");
+        let conformance_dir = self.spec_dir.join("conformance");
         let conformance_binary = conformance_dir.join("conformance.test");
 
         if conformance_binary.exists() && self.skip_build {
@@ -170,7 +189,7 @@ impl Task {
     }
 
     fn run_conformance_tests(&self) -> anyhow::Result<()> {
-        let conformance_dir = Path::new(&self.spec_dir).join("conformance");
+        let conformance_dir = self.spec_dir.join("conformance");
         let conformance_binary = conformance_dir.join("conformance.test");
 
         if !conformance_binary.exists() {
@@ -197,7 +216,7 @@ impl Task {
         }
         println!();
 
-        let output_file = Path::new(&self.output_dir).join("test-output.log");
+        let output_file = self.output_dir.join("test-output.log");
 
         let mut cmd = Command::new(&conformance_binary);
         cmd.args(["-test.v"])
@@ -243,19 +262,19 @@ impl Task {
     }
 
     fn copy_results(&self) -> anyhow::Result<()> {
-        let conformance_dir = Path::new(&self.spec_dir).join("conformance");
+        let conformance_dir = self.spec_dir.join("conformance");
 
         // Copy report.html if it exists
         let report_src = conformance_dir.join("report.html");
         if report_src.exists() {
-            let report_dst = Path::new(&self.output_dir).join("report.html");
+            let report_dst = self.output_dir.join("report.html");
             fs::copy(&report_src, &report_dst)?;
         }
 
         // Copy junit.xml if it exists
         let junit_src = conformance_dir.join("junit.xml");
         if junit_src.exists() {
-            let junit_dst = Path::new(&self.output_dir).join("junit.xml");
+            let junit_dst = self.output_dir.join("junit.xml");
             fs::copy(&junit_src, &junit_dst)?;
         }
 

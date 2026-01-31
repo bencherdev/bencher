@@ -1,18 +1,21 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[clap(name = "test-oci", about = "Run OCI Distribution Spec conformance tests")]
+#[clap(
+    name = "test-oci",
+    about = "Run OCI Distribution Spec conformance tests"
+)]
 pub struct TaskOci {
     /// API URL to test against
     #[clap(long, default_value = "http://localhost:61016")]
     pub api_url: String,
 
     /// Repository namespace for tests
-    #[clap(long, default_value = "test/repo")]
+    #[clap(long, default_value = "namespace")]
     pub namespace: String,
 
     /// Cross-mount namespace for tests
-    #[clap(long, default_value = "test/other")]
+    #[clap(long, default_value = "crossmount-namespace")]
     pub crossmount_namespace: String,
 
     /// Run only pull tests

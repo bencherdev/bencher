@@ -19,6 +19,7 @@
 mod base;
 mod blobs;
 mod manifests;
+mod referrers;
 mod tags;
 mod uploads;
 
@@ -64,6 +65,10 @@ impl Registrar for Api {
         // Tags endpoint
         api_description.register(tags::oci_tags_options)?;
         api_description.register(tags::oci_tags_list)?;
+
+        // Referrers endpoint
+        api_description.register(referrers::oci_referrers_options)?;
+        api_description.register(referrers::oci_referrers_list)?;
 
         Ok(())
     }

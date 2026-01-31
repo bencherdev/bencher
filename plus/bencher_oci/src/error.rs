@@ -48,6 +48,9 @@ pub enum OciError {
     #[error("Too many requests")]
     TooManyRequests,
 
+    #[error("Range not satisfiable: {0}")]
+    RangeNotSatisfiable(String),
+
     #[error("Storage error: {0}")]
     Storage(#[from] crate::storage::OciStorageError),
 }
@@ -57,7 +60,7 @@ impl OciError {
     pub fn code(&self) -> &'static str {
         match self {
             Self::BlobUnknown { .. } | Self::Storage(_) => "BLOB_UNKNOWN",
-            Self::BlobUploadInvalid { .. } => "BLOB_UPLOAD_INVALID",
+            Self::BlobUploadInvalid { .. } | Self::RangeNotSatisfiable(_) => "BLOB_UPLOAD_INVALID",
             Self::BlobUploadUnknown { .. } => "BLOB_UPLOAD_UNKNOWN",
             Self::DigestInvalid { .. } => "DIGEST_INVALID",
             Self::ManifestBlobUnknown { .. } => "MANIFEST_BLOB_UNKNOWN",
@@ -96,7 +99,9 @@ impl OciError {
 
             Self::TooManyRequests => http::StatusCode::TOO_MANY_REQUESTS,
 
-            Self::Storage(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
+            Self::RangeNotSatisfiable(_) => http::StatusCode::RANGE_NOT_SATISFIABLE,
+
+            Self::Storage(storage_error) => storage_error.status_code(),
         }
     }
 }
@@ -128,6 +133,11 @@ impl From<OciError> for HttpError {
             http::StatusCode::TOO_MANY_REQUESTS => HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::TOO_MANY_REQUESTS,
+                message,
+            ),
+            http::StatusCode::RANGE_NOT_SATISFIABLE => HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::RANGE_NOT_SATISFIABLE,
                 message,
             ),
             http::StatusCode::NOT_IMPLEMENTED => HttpError {
