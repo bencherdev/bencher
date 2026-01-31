@@ -161,3 +161,21 @@ jobs:
       - name: Build Console
         working-directory: ./services/console
         run: npm run node
+
+  # Docker smoke test
+  docker_smoke_test:
+    name: Docker API Smoke Test
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: jlumbroso/free-disk-space@main
+        with:
+          large-packages: false
+      - uses: actions/checkout@v6
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ inputs.mold-version }}
+      - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke docker

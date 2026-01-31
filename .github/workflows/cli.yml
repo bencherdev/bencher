@@ -1,0 +1,133 @@
+name: CLI
+
+on:
+  workflow_call:
+    inputs:
+      bencher-version:
+        type: string
+      cli-changed:
+        type: string
+        default: "true"
+    secrets:
+      BENCHER_API_TOKEN:
+        required: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  action_main:
+    name: Action `main`
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: bencherdev/bencher@main
+      - name: Run Bencher CLI
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+
+  action_devel:
+    name: Action `devel`
+    if: github.ref == 'refs/heads/devel'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    # This is expected to fail when tagging a new release
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - uses: bencherdev/bencher@devel
+      - name: Run Bencher CLI
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+
+  script_cloud:
+    name: Script Cloud
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Unix CLI Download Install Script
+        if: matrix.os != 'windows-2022'
+        run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+      - name: Windows CLI Download Install Script
+        if: matrix.os == 'windows-2022'
+        run: powershell -c "irm https://bencher.dev/download/install-cli.ps1 | iex"
+      - name: Run Bencher CLI
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+
+  script_gen:
+    name: Script Gen
+    if: inputs.cli-changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Unix CLI Install Script
+        if: matrix.os != 'windows-2022'
+        run: cat services/cli/templates/output/install-cli.sh | sh
+      - name: Windows CLI Install Script
+        if: matrix.os == 'windows-2022'
+        run: powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
+      - name: Run Bencher CLI
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+
+  script_gen_version:
+    name: Script Gen Version
+    if: inputs.cli-changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    # This is expected to fail when tagging a new release
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Unix CLI Install Script Version
+        if: matrix.os != 'windows-2022'
+        run: export BENCHER_VERSION=${{ inputs.bencher-version }}; cat services/cli/templates/output/install-cli.sh | sh
+      - name: Windows CLI Install Script Version
+        if: matrix.os == 'windows-2022'
+        run: $env:BENCHER_VERSION="${{ inputs.bencher-version }}"; powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
+      - name: Run Bencher CLI
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+
+  cargo_main:
+    name: Cargo `main`
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    # This is expected to fail when tagging a new release
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - name: Cargo CLI Install main
+        run: cargo install --git https://github.com/bencherdev/bencher --branch main --locked bencher_cli
+      - name: Run Bencher CLI
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+
+  cargo_devel:
+    name: Cargo `devel`
+    if: github.ref == 'refs/heads/devel'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    # This is expected to fail when tagging a new release
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - name: Cargo CLI Install devel
+        run: cargo install --git https://github.com/bencherdev/bencher --branch devel --locked bencher_cli
+      - name: Run Bencher CLI
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
