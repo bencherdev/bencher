@@ -16,6 +16,8 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access};
+
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct BlobPath {
@@ -56,6 +58,10 @@ pub async fn oci_blob_options(
 }
 
 /// Check if a blob exists (HEAD) or start upload check
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = HEAD,
     path = "/v2/{name}/blobs/{ref}",
@@ -65,6 +71,7 @@ pub async fn oci_blob_exists(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
 
     // "uploads" is not a valid digest - return appropriate error
@@ -75,6 +82,13 @@ pub async fn oci_blob_exists(
             "HEAD not supported for uploads endpoint".to_owned(),
         ));
     }
+
+    // Authenticate
+    let scope = format!("repository:{}:pull", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "pull")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
     // Parse and validate inputs
     let repository: RepositoryName = path
@@ -87,7 +101,7 @@ pub async fn oci_blob_exists(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Check if blob exists and get size
     let size = storage
@@ -111,6 +125,10 @@ pub async fn oci_blob_exists(
 }
 
 /// Download a blob (GET)
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = GET,
     path = "/v2/{name}/blobs/{ref}",
@@ -120,6 +138,7 @@ pub async fn oci_blob_get(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
 
     // "uploads" is not a valid digest - return appropriate error
@@ -130,6 +149,13 @@ pub async fn oci_blob_get(
             "GET not supported for uploads endpoint without session ID".to_owned(),
         ));
     }
+
+    // Authenticate
+    let scope = format!("repository:{}:pull", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "pull")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
     // Parse and validate inputs
     let repository: RepositoryName = path
@@ -142,7 +168,7 @@ pub async fn oci_blob_get(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Get blob content
     let (data, size) = storage
@@ -170,6 +196,10 @@ pub async fn oci_blob_get(
 }
 
 /// Delete a blob (DELETE)
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = DELETE,
     path = "/v2/{name}/blobs/{ref}",
@@ -179,6 +209,7 @@ pub async fn oci_blob_delete(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
 
     // "uploads" is not a valid digest - return appropriate error
@@ -189,6 +220,13 @@ pub async fn oci_blob_delete(
             "DELETE not supported for uploads endpoint without session ID".to_owned(),
         ));
     }
+
+    // Authenticate (delete requires push permission)
+    let scope = format!("repository:{}:push", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "push")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
     // Parse and validate inputs
     let repository: RepositoryName = path
@@ -201,7 +239,7 @@ pub async fn oci_blob_delete(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Delete the blob
     storage
@@ -220,6 +258,10 @@ pub async fn oci_blob_delete(
 }
 
 /// Start a new blob upload (POST to /v2/{name}/blobs/uploads)
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = POST,
     path = "/v2/{name}/blobs/{ref}",
@@ -230,6 +272,7 @@ pub async fn oci_upload_start(
     path: Path<BlobPath>,
     query: Query<UploadStartQuery>,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
     let query = query.into_inner();
 
@@ -242,6 +285,13 @@ pub async fn oci_upload_start(
         ));
     }
 
+    // Authenticate
+    let scope = format!("repository:{}:push", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "push")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+
     // Parse repository name
     let repository: RepositoryName = path
         .name
@@ -249,7 +299,7 @@ pub async fn oci_upload_start(
         .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Handle cross-repository mount if requested
     if let (Some(digest_str), Some(from_name)) = (&query.digest, &query.from) {
@@ -301,6 +351,10 @@ pub async fn oci_upload_start(
 }
 
 /// Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = PUT,
     path = "/v2/{name}/blobs/{ref}",
@@ -312,6 +366,7 @@ pub async fn oci_upload_monolithic(
     query: Query<MonolithicUploadQuery>,
     body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
     let query = query.into_inner();
     let data = body.as_bytes();
@@ -325,6 +380,13 @@ pub async fn oci_upload_monolithic(
         ));
     }
 
+    // Authenticate
+    let scope = format!("repository:{}:push", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "push")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+
     // Parse inputs
     let repository: RepositoryName = path
         .name
@@ -336,7 +398,7 @@ pub async fn oci_upload_monolithic(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: query.digest.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Start upload, append data, and complete in one operation
     let upload_id = storage

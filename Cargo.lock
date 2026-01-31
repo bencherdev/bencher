@@ -183,11 +183,15 @@ dependencies = [
 name = "api_oci"
 version = "0.5.10"
 dependencies = [
+ "base64 0.22.1",
  "bencher_endpoint",
+ "bencher_json",
  "bencher_oci_storage",
  "bencher_otel",
  "bencher_schema",
+ "bencher_token",
  "bytes",
+ "chrono",
  "dropshot",
  "http 1.4.0",
  "schemars 0.8.22",

@@ -13,6 +13,8 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access};
+
 /// Path parameters for manifest endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ManifestPath {
@@ -36,6 +38,10 @@ pub async fn oci_manifest_options(
 }
 
 /// Check if a manifest exists
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = HEAD,
     path = "/v2/{name}/manifests/{reference}",
@@ -45,7 +51,15 @@ pub async fn oci_manifest_exists(
     rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
+
+    // Authenticate
+    let scope = format!("repository:{}:pull", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "pull")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
     // Parse and validate inputs
     let repository: RepositoryName = path
@@ -58,7 +72,7 @@ pub async fn oci_manifest_exists(
         .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Resolve the reference to a digest
     let digest = match &reference {
@@ -95,6 +109,10 @@ pub async fn oci_manifest_exists(
 }
 
 /// Download a manifest
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = GET,
     path = "/v2/{name}/manifests/{reference}",
@@ -104,7 +122,15 @@ pub async fn oci_manifest_get(
     rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
+
+    // Authenticate
+    let scope = format!("repository:{}:pull", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "pull")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
     // Parse and validate inputs
     let repository: RepositoryName = path
@@ -117,7 +143,7 @@ pub async fn oci_manifest_get(
         .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Resolve the reference to a digest
     let digest = match &reference {
@@ -159,6 +185,10 @@ pub async fn oci_manifest_get(
 }
 
 /// Upload a manifest
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = PUT,
     path = "/v2/{name}/manifests/{reference}",
@@ -169,8 +199,16 @@ pub async fn oci_manifest_put(
     path: Path<ManifestPath>,
     body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
-    let content = body.as_bytes();
+    let body_bytes = body.as_bytes();
+
+    // Authenticate
+    let scope = format!("repository:{}:push", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "push")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
     // Parse and validate inputs
     let repository: RepositoryName = path
@@ -183,7 +221,7 @@ pub async fn oci_manifest_put(
         .map_err(|_err| crate::error::into_http_error(OciError::ManifestInvalid(path.reference.clone())))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Determine tag from reference (if it's a tag)
     let tag = match &reference {
@@ -192,7 +230,7 @@ pub async fn oci_manifest_put(
     };
 
     // Extract subject digest from manifest if present (for OCI-Subject header)
-    let subject_digest = serde_json::from_slice::<serde_json::Value>(content)
+    let subject_digest = serde_json::from_slice::<serde_json::Value>(body_bytes)
         .ok()
         .and_then(|manifest| {
             manifest
@@ -204,7 +242,7 @@ pub async fn oci_manifest_put(
 
     // Store the manifest
     let digest = storage
-        .put_manifest(&repository, bytes::Bytes::copy_from_slice(content), tag)
+        .put_manifest(&repository, bytes::Bytes::copy_from_slice(body_bytes), tag)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -236,6 +274,10 @@ pub async fn oci_manifest_put(
 }
 
 /// Delete a manifest
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = DELETE,
     path = "/v2/{name}/manifests/{reference}",
@@ -245,7 +287,15 @@ pub async fn oci_manifest_delete(
     rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
+
+    // Authenticate (delete requires push permission)
+    let scope = format!("repository:{}:push", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "push")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
     // Parse and validate inputs
     let repository: RepositoryName = path
@@ -254,7 +304,7 @@ pub async fn oci_manifest_delete(
         .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Parse reference - can be either a digest or a tag
     let reference: Reference = path

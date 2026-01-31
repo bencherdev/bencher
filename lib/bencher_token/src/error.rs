@@ -26,4 +26,6 @@ pub enum TokenError {
     Invite { error: jsonwebtoken::errors::Error },
     #[error("Failed to extract OAuth state: {error}")]
     OAuthState { error: jsonwebtoken::errors::Error },
+    #[error("Invalid OCI token: {error}")]
+    Oci { error: jsonwebtoken::errors::Error },
 }

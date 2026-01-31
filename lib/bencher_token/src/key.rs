@@ -8,10 +8,16 @@ use jsonwebtoken::{
     errors::ErrorKind as JsonWebTokenErrorKind,
 };
 
-use crate::{Audience, Claims, InviteClaims, OAuthClaims, OrgClaims, StateClaims, TokenError};
+use crate::{
+    Audience, Claims, InviteClaims, OAuthClaims, OciClaims, OciScopeClaims, OrgClaims, StateClaims,
+    TokenError,
+};
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
 static ALGORITHM: LazyLock<Algorithm> = LazyLock::new(Algorithm::default);
+
+/// OCI token TTL: 5 minutes (300 seconds)
+pub const OCI_TOKEN_TTL: u32 = 300;
 
 pub struct TokenKey {
     pub issuer: String,
@@ -35,8 +41,9 @@ impl TokenKey {
         ttl: u32,
         org: Option<OrgClaims>,
         state: Option<StateClaims>,
+        oci: Option<OciScopeClaims>,
     ) -> Result<Jwt, TokenError> {
-        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, state);
+        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, state, oci);
         Jwt::from_str(&encode(&HEADER, &claims, &self.encoding).map_err(|e| {
             TokenError::Encode {
                 claims: Box::new(claims),
@@ -47,15 +54,15 @@ impl TokenKey {
     }
 
     pub fn new_auth(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Auth, email, ttl, None, None)
+        self.new_jwt(Audience::Auth, email, ttl, None, None, None)
     }
 
     pub fn new_client(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Client, email, ttl, None, None)
+        self.new_jwt(Audience::Client, email, ttl, None, None, None)
     }
 
     pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::ApiKey, email, ttl, None, None)
+        self.new_jwt(Audience::ApiKey, email, ttl, None, None, None)
     }
 
     pub fn new_invite(
@@ -69,11 +76,28 @@ impl TokenKey {
             uuid: org_uuid,
             role,
         };
-        self.new_jwt(Audience::Invite, email, ttl, Some(org_claims), None)
+        self.new_jwt(Audience::Invite, email, ttl, Some(org_claims), None, None)
     }
 
     pub fn new_oauth(&self, email: Email, ttl: u32, state: StateClaims) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::OAuth, email, ttl, None, Some(state))
+        self.new_jwt(Audience::OAuth, email, ttl, None, Some(state), None)
+    }
+
+    /// Create a new OCI registry access token
+    ///
+    /// These tokens are short-lived (5 minutes) and contain the authorized
+    /// repository and actions in the claims.
+    pub fn new_oci(
+        &self,
+        email: Email,
+        repository: Option<String>,
+        actions: Vec<String>,
+    ) -> Result<Jwt, TokenError> {
+        let oci_claims = OciScopeClaims {
+            repository,
+            actions,
+        };
+        self.new_jwt(Audience::Oci, email, OCI_TOKEN_TTL, None, None, Some(oci_claims))
     }
 
     fn validate(
@@ -124,6 +148,10 @@ impl TokenKey {
 
     pub fn validate_oauth(&self, token: &Jwt) -> Result<OAuthClaims, TokenError> {
         self.validate(token, &[Audience::OAuth])?.claims.try_into()
+    }
+
+    pub fn validate_oci(&self, token: &Jwt) -> Result<OciClaims, TokenError> {
+        self.validate(token, &[Audience::Oci])?.claims.try_into()
     }
 }
 

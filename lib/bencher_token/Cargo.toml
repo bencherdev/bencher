@@ -13,7 +13,7 @@ plus = ["bencher_json/plus"]
 [dependencies]
 bencher_json.workspace = true
 chrono.workspace = true
-jsonwebtoken.workspace = true
+jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 serde.workspace = true
 thiserror.workspace = true
 uuid = { workspace = true, features = ["v4"] }
