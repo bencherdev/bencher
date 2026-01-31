@@ -12,7 +12,7 @@
 //!
 //! 2. Run the conformance tests:
 //!    ```sh
-//!    ./plus/bencher_oci/scripts/run_conformance.sh
+//!    cargo test-oci
 //!    ```
 //!
 //! # Test Categories
@@ -99,21 +99,10 @@ fn print_conformance_instructions() {
     println!("=== OCI Distribution Conformance Testing ===\n");
     println!("To run the full OCI conformance tests:\n");
     println!("1. Install Go 1.17+ if not already installed\n");
-    println!("2. Clone and build the conformance tests:");
-    println!("   git clone https://github.com/opencontainers/distribution-spec.git");
-    println!("   cd distribution-spec/conformance");
-    println!("   go test -c\n");
-    println!("3. Start the Bencher API server:");
+    println!("2. Start the Bencher API server:");
     println!("   cargo run -p bencher_api --features plus\n");
-    println!("4. Run the conformance tests:");
-    println!("   export OCI_ROOT_URL=http://localhost:61016");
-    println!("   export OCI_NAMESPACE=test/repo");
-    println!("   export OCI_CROSSMOUNT_NAMESPACE=test/other");
-    println!("   export OCI_TEST_PULL=1");
-    println!("   export OCI_TEST_PUSH=1");
-    println!("   export OCI_TEST_CONTENT_DISCOVERY=1");
-    println!("   export OCI_TEST_CONTENT_MANAGEMENT=1");
-    println!("   ./conformance.test\n");
-    println!("5. Check results in junit.xml and report.html\n");
+    println!("3. Run the conformance tests:");
+    println!("   cargo test-oci\n");
+    println!("4. Check results in ./oci-conformance-results/\n");
     println!("=============================================\n");
 }

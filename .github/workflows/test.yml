@@ -211,32 +211,17 @@ jobs:
           done
         env:
           RUST_BACKTRACE: full
-      - name: Clone OCI Distribution Spec
-        run: git clone --depth 1 https://github.com/opencontainers/distribution-spec.git
-      - name: Build Conformance Tests
-        working-directory: ./distribution-spec/conformance
-        run: go test -c
       - name: Run OCI Conformance Tests
-        working-directory: ./distribution-spec/conformance
-        run: ./conformance.test -test.v 2>&1 | tee conformance-output.log || true
+        run: cargo test-oci --debug || true
         env:
-          OCI_ROOT_URL: http://localhost:61016
-          OCI_NAMESPACE: test/repo
-          OCI_CROSSMOUNT_NAMESPACE: test/other
-          OCI_TEST_PULL: 1
-          OCI_TEST_PUSH: 1
-          OCI_TEST_CONTENT_DISCOVERY: 1
-          OCI_TEST_CONTENT_MANAGEMENT: 1
-          OCI_DEBUG: 1
+          RUST_BACKTRACE: full
       - name: Upload Conformance Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: oci-conformance-results
           path: |
-            ./distribution-spec/conformance/conformance-output.log
-            ./distribution-spec/conformance/report.html
-            ./distribution-spec/conformance/junit.xml
+            ./oci-conformance-results/
           if-no-files-found: warn
 
   docker_smoke_test:
