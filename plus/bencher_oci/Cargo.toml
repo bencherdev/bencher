@@ -26,7 +26,6 @@ plus = [
     "dep:serde_json",
     "dep:sha2",
     "dep:thiserror",
-    "dep:tokio",
     "dep:uuid",
     "bencher_endpoint/plus",
     "bencher_schema/plus",
@@ -56,7 +55,6 @@ serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true, features = ["sync"] }
 uuid = { workspace = true, optional = true, features = ["v4"] }
 
 [dev-dependencies]
