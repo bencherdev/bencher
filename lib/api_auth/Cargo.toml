@@ -9,23 +9,32 @@ publish = false
 [features]
 default = []
 plus = [
+    "dep:base64",
+    "dep:bencher_token",
+    "dep:chrono",
+    "dep:http",
+    "dep:serde_json",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_schema/plus",
-    "bencher_token/plus",
+    "bencher_token?/plus",
 ]
 sentry = ["bencher_schema/sentry"]
 otel = ["dep:bencher_otel", "bencher_schema/otel"]
 
 [dependencies]
+base64 = { workspace = true, optional = true }
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_otel = { workspace = true, optional = true }
 bencher_schema.workspace = true
 bencher_token = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 dropshot.workspace = true
+http = { workspace = true, optional = true }
 schemars.workspace = true
 serde.workspace = true
+serde_json = { workspace = true, optional = true }
 slog.workspace = true
 
 [dev-dependencies]

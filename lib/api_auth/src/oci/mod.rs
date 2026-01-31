@@ -1,6 +1,8 @@
+#![cfg(feature = "plus")]
+
 //! OCI Token Endpoint
 //!
-//! - GET /v2/token - Exchange credentials for an OCI bearer token
+//! - GET /v0/auth/oci/token - Exchange credentials for an OCI bearer token
 //!
 //! This endpoint implements the Docker Registry Auth specification.
 //! Clients authenticate using Basic auth with their Bencher API token
@@ -17,14 +19,11 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::auth::unauthorized_with_www_authenticate;
-
 /// Query parameters for token endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TokenQuery {
     /// Service identifier (e.g., "registry.bencher.dev")
-    /// Currently unused but included for OCI spec compliance
-    #[expect(dead_code)]
+    /// Not currently used but accepted for OCI spec compliance
     pub service: Option<String>,
     /// Scope in format "repository:name:action,action"
     /// e.g., "repository:org/project:pull,push"
@@ -46,9 +45,9 @@ pub struct TokenResponse {
 #[endpoint {
     method = OPTIONS,
     path = "/v0/auth/oci/token",
-    tags = ["oci"],
+    tags = ["auth", "oci"],
 }]
-pub async fn oci_token_options(
+pub async fn auth_oci_token_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into()]))
@@ -65,9 +64,9 @@ pub async fn oci_token_options(
 #[endpoint {
     method = GET,
     path = "/v0/auth/oci/token",
-    tags = ["oci"],
+    tags = ["auth", "oci"],
 }]
-pub async fn oci_token(
+pub async fn auth_oci_token_get(
     rqctx: RequestContext<ApiContext>,
     query: Query<TokenQuery>,
 ) -> Result<Response<Body>, HttpError> {
@@ -126,6 +125,57 @@ pub async fn oci_token(
         .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
 }
 
+/// Create a 401 Unauthorized error with WWW-Authenticate header
+///
+/// Per the OCI Distribution Spec, when authentication is required,
+/// the registry returns 401 with a WWW-Authenticate header indicating
+/// how to obtain a token.
+pub fn unauthorized_with_www_authenticate(
+    rqctx: &RequestContext<ApiContext>,
+    scope: Option<&str>,
+) -> HttpError {
+    use std::fmt::Write as _;
+
+    let context = rqctx.context();
+
+    // Build the realm URL from the request's scheme and host
+    // The token endpoint is at /v0/auth/oci/token
+    let scheme = if rqctx.request.uri().scheme_str() == Some("https") {
+        "https"
+    } else {
+        "http"
+    };
+    let host = rqctx
+        .request
+        .headers()
+        .get(http::header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("localhost");
+    let realm = format!("{scheme}://{host}/v0/auth/oci/token");
+
+    let service = context
+        .console_url
+        .host_str()
+        .unwrap_or("registry.bencher.dev");
+
+    let mut www_auth = format!("Bearer realm=\"{realm}\",service=\"{service}\"");
+    if let Some(scope) = scope {
+        // Using write! to avoid extra allocation per clippy::format_push_string
+        let _ = write!(www_auth, ",scope=\"{scope}\"");
+    }
+
+    let mut error = HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::UNAUTHORIZED,
+        "Authentication required".to_owned(),
+    );
+
+    // Add WWW-Authenticate header - ignore error if it fails
+    let _ = error.add_header(http::header::WWW_AUTHENTICATE, &www_auth);
+
+    error
+}
+
 /// Extract email and API token from Basic auth header
 #[expect(
     clippy::map_err_ignore,
@@ -134,9 +184,9 @@ pub async fn oci_token(
 fn extract_basic_auth(rqctx: &RequestContext<ApiContext>) -> Result<(Email, Jwt), HttpError> {
     let headers = rqctx.request.headers();
 
-    let auth_header = headers.get(http::header::AUTHORIZATION).ok_or_else(|| {
-        unauthorized_with_www_authenticate(rqctx, None)
-    })?;
+    let auth_header = headers
+        .get(http::header::AUTHORIZATION)
+        .ok_or_else(|| unauthorized_with_www_authenticate(rqctx, None))?;
 
     let auth_str = auth_header.to_str().map_err(|_| {
         HttpError::for_client_error(
@@ -146,24 +196,22 @@ fn extract_basic_auth(rqctx: &RequestContext<ApiContext>) -> Result<(Email, Jwt)
         )
     })?;
 
-    let (scheme, credentials) = auth_str.split_once(' ').ok_or_else(|| {
-        unauthorized_with_www_authenticate(rqctx, None)
-    })?;
+    let (scheme, credentials) = auth_str
+        .split_once(' ')
+        .ok_or_else(|| unauthorized_with_www_authenticate(rqctx, None))?;
 
     if scheme != "Basic" {
         return Err(unauthorized_with_www_authenticate(rqctx, None));
     }
 
     // Decode base64 credentials
-    let decoded = STANDARD
-        .decode(credentials)
-        .map_err(|_| {
-            HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::BAD_REQUEST,
-                "Invalid base64 encoding in Authorization header".to_owned(),
-            )
-        })?;
+    let decoded = STANDARD.decode(credentials).map_err(|_| {
+        HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::BAD_REQUEST,
+            "Invalid base64 encoding in Authorization header".to_owned(),
+        )
+    })?;
 
     let decoded_str = String::from_utf8(decoded).map_err(|_| {
         HttpError::for_client_error(

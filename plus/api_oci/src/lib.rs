@@ -6,7 +6,6 @@
 //! path structure that avoids Dropshot router conflicts.
 //!
 //! Path structure:
-//! - GET `/v0/auth/oci/token` - Token endpoint (outside /v2/ to avoid router conflicts)
 //! - GET `/v2/` - API version check
 //! - `/v2/{name}/blobs/{ref}` - Blob and upload-start operations (4 segments)
 //!   - GET/HEAD/DELETE when ref is a digest - blob operations
@@ -15,6 +14,8 @@
 //!   - GET/PATCH/PUT/DELETE when ref is "uploads" - upload session operations
 //! - HEAD/GET/PUT/DELETE `/v2/{name}/manifests/{reference}` - Manifest operations
 //! - GET `/v2/{name}/tags/list` - List tags
+//!
+//! Note: The OCI token endpoint (`GET /v0/auth/oci/token`) is registered by `api_auth`.
 //!
 //! This structure maintains OCI spec compliance while avoiding the Dropshot
 //! router limitation of mixing literal and variable segments at the same position.
@@ -26,7 +27,6 @@ mod error;
 mod manifests;
 mod referrers;
 mod tags;
-mod token;
 mod uploads;
 
 use bencher_endpoint::Registrar;
@@ -42,10 +42,6 @@ impl Registrar for Api {
         _http_options: bool,
         #[cfg(feature = "plus")] _is_bencher_cloud: bool,
     ) -> Result<(), ApiDescriptionRegisterError> {
-        // Token endpoint (must be registered before base to handle /v2/token)
-        api_description.register(token::oci_token_options)?;
-        api_description.register(token::oci_token)?;
-
         // Base endpoint
         api_description.register(base::oci_base_options)?;
         api_description.register(base::oci_base)?;

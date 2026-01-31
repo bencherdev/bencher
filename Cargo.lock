@@ -151,12 +151,14 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 name = "api_auth"
 version = "0.5.10"
 dependencies = [
+ "base64 0.22.1",
  "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
  "bencher_otel",
  "bencher_schema",
  "bencher_token",
+ "chrono",
  "dropshot",
  "http 1.4.0",
  "schemars 0.8.22",
@@ -183,7 +185,7 @@ dependencies = [
 name = "api_oci"
 version = "0.5.10"
 dependencies = [
- "base64 0.22.1",
+ "api_auth",
  "bencher_endpoint",
  "bencher_json",
  "bencher_oci_storage",
@@ -191,7 +193,6 @@ dependencies = [
  "bencher_schema",
  "bencher_token",
  "bytes",
- "chrono",
  "dropshot",
  "http 1.4.0",
  "schemars 0.8.22",

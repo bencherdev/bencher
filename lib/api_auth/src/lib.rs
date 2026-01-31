@@ -19,6 +19,7 @@ mod accept;
 mod confirm;
 mod login;
 mod oauth;
+pub mod oci;
 mod signup;
 
 // TODO Custom max TTL
@@ -67,6 +68,12 @@ impl bencher_endpoint::Registrar for Api {
             }
             api_description.register(oauth::google::auth_google_get)?;
             api_description.register(oauth::google::auth_google_post)?;
+
+            // OCI token endpoint
+            if http_options {
+                api_description.register(oci::auth_oci_token_options)?;
+            }
+            api_description.register(oci::auth_oci_token_get)?;
         }
 
         Ok(())
