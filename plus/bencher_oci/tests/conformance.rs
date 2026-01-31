@@ -27,6 +27,8 @@
 #![cfg(feature = "plus")]
 // Test files link main crate dependencies even when not directly used
 #![allow(unused_crate_dependencies)]
+// Tests use print statements for user-facing output
+#![expect(clippy::print_stdout, clippy::print_stderr)]
 
 use std::net::TcpStream;
 
@@ -41,7 +43,7 @@ fn is_api_running() -> bool {
 /// Basic connectivity test to verify the OCI registry is responding
 #[test]
 #[ignore = "requires API server to be running"]
-fn test_oci_base_endpoint() {
+fn oci_base_endpoint() {
     if !is_api_running() {
         eprintln!("API server not running, skipping test");
         return;
@@ -63,7 +65,7 @@ fn test_oci_base_endpoint() {
 /// Smoke test for blob upload flow
 #[test]
 #[ignore = "requires API server to be running"]
-fn test_oci_blob_upload_smoke() {
+fn oci_blob_upload_smoke() {
     if !is_api_running() {
         eprintln!("API server not running, skipping test");
         return;
