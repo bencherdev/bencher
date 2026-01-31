@@ -1,4 +1,6 @@
-//! OCI Registry Endpoints
+#![cfg(feature = "plus")]
+
+//! Bencher OCI Registry API - A Bencher Plus Feature
 //!
 //! Implements the OCI Distribution Specification endpoints using a unified
 //! path structure that avoids Dropshot router conflicts.
@@ -18,6 +20,7 @@
 
 mod base;
 mod blobs;
+mod error;
 mod manifests;
 mod referrers;
 mod tags;

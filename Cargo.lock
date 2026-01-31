@@ -180,6 +180,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "api_oci"
+version = "0.5.10"
+dependencies = [
+ "bencher_endpoint",
+ "bencher_oci",
+ "bencher_otel",
+ "bencher_schema",
+ "bytes",
+ "dropshot",
+ "http 1.4.0",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "api_organizations"
 version = "0.5.10"
 dependencies = [
@@ -1041,6 +1057,7 @@ version = "0.5.10"
 dependencies = [
  "api_auth",
  "api_checkout",
+ "api_oci",
  "api_organizations",
  "api_projects",
  "api_run",
@@ -1050,7 +1067,6 @@ dependencies = [
  "bencher_endpoint",
  "bencher_json",
  "bencher_logger",
- "bencher_oci",
  "bencher_otel",
  "bencher_otel_provider",
  "bencher_schema",
@@ -1315,17 +1331,12 @@ version = "0.5.10"
 dependencies = [
  "aws-credential-types",
  "aws-sdk-s3",
- "bencher_endpoint",
  "bencher_json",
- "bencher_otel",
- "bencher_schema",
  "bytes",
- "dropshot",
  "hex",
  "http 1.4.0",
  "regex",
  "reqwest",
- "schemars 0.8.22",
  "serde",
  "serde_json",
  "sha2",
@@ -1416,6 +1427,7 @@ dependencies = [
  "bencher_google_index",
  "bencher_json",
  "bencher_license",
+ "bencher_oci",
  "bencher_otel",
  "bencher_rank",
  "bencher_rbac",

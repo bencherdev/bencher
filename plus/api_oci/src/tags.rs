@@ -3,13 +3,11 @@
 //! - GET /v2/<name>/tags/list - List tags for a repository
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+use bencher_oci::{OciError, RepositoryName};
 use bencher_schema::context::ApiContext;
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::error::OciError;
-use crate::types::RepositoryName;
 
 /// Path parameters for tags list
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -67,16 +65,16 @@ pub async fn oci_tags_list(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // List tags
     let mut tags = storage
         .list_tags(&repository)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Record metric
     #[cfg(feature = "otel")]

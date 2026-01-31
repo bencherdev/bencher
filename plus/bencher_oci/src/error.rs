@@ -1,7 +1,8 @@
 //! OCI Registry Error Types
 
-use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
 use thiserror::Error;
+
+use crate::storage::OciStorageError;
 
 /// OCI-specific errors
 #[derive(Debug, Error)]
@@ -52,7 +53,7 @@ pub enum OciError {
     RangeNotSatisfiable(String),
 
     #[error("Storage error: {0}")]
-    Storage(#[from] crate::storage::OciStorageError),
+    Storage(#[from] OciStorageError),
 }
 
 impl OciError {
@@ -102,58 +103,6 @@ impl OciError {
             Self::RangeNotSatisfiable(_) => http::StatusCode::RANGE_NOT_SATISFIABLE,
 
             Self::Storage(storage_error) => storage_error.status_code(),
-        }
-    }
-}
-
-impl From<OciError> for HttpError {
-    fn from(error: OciError) -> Self {
-        let message = error.to_string();
-        match error.status_code() {
-            http::StatusCode::NOT_FOUND => HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::NOT_FOUND,
-                message,
-            ),
-            http::StatusCode::BAD_REQUEST => HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::BAD_REQUEST,
-                message,
-            ),
-            http::StatusCode::UNAUTHORIZED => HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::UNAUTHORIZED,
-                message,
-            ),
-            http::StatusCode::FORBIDDEN => HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::FORBIDDEN,
-                message,
-            ),
-            http::StatusCode::TOO_MANY_REQUESTS => HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::TOO_MANY_REQUESTS,
-                message,
-            ),
-            http::StatusCode::RANGE_NOT_SATISFIABLE => HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::RANGE_NOT_SATISFIABLE,
-                message,
-            ),
-            http::StatusCode::NOT_IMPLEMENTED => HttpError {
-                status_code: ErrorStatusCode::NOT_IMPLEMENTED,
-                error_code: None,
-                external_message: message.clone(),
-                internal_message: message,
-                headers: None,
-            },
-            _ => HttpError {
-                status_code: ErrorStatusCode::INTERNAL_SERVER_ERROR,
-                error_code: None,
-                external_message: message.clone(),
-                internal_message: message,
-                headers: None,
-            },
         }
     }
 }

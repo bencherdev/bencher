@@ -9,14 +9,12 @@
 //! and variable path segments while maintaining OCI spec compliance.
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Post, Put};
+use bencher_oci::{Digest, OciError, RepositoryName};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::error::OciError;
-use crate::types::{Digest, RepositoryName};
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -82,20 +80,20 @@ pub async fn oci_blob_exists(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
     let digest: Digest = path
         .reference
         .parse()
-        .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: path.reference.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Check if blob exists and get size
     let size = storage
         .get_blob_size(&repository, &digest)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build response with OCI-compliant headers (no body for HEAD)
     let response = Response::builder()
@@ -137,20 +135,20 @@ pub async fn oci_blob_get(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
     let digest: Digest = path
         .reference
         .parse()
-        .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: path.reference.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Get blob content
     let (data, size) = storage
         .get_blob(&repository, &digest)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -196,20 +194,20 @@ pub async fn oci_blob_delete(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
     let digest: Digest = path
         .reference
         .parse()
-        .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: path.reference.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Delete the blob
     storage
         .delete_blob(&repository, &digest)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // OCI spec requires 202 Accepted for DELETE
     let response = Response::builder()
@@ -248,25 +246,25 @@ pub async fn oci_upload_start(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Handle cross-repository mount if requested
     if let (Some(digest_str), Some(from_name)) = (&query.digest, &query.from) {
         let digest: Digest = digest_str
             .parse()
-            .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: digest_str.clone() }))?;
+            .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: digest_str.clone() }))?;
         let from_repo: RepositoryName = from_name
             .parse()
-            .map_err(|_err| HttpError::from(OciError::NameInvalid { name: from_name.clone() }))?;
+            .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: from_name.clone() }))?;
 
         // Try to mount the blob
         let mounted = storage
             .mount_blob(&from_repo, &repository, &digest)
             .await
-            .map_err(|e| HttpError::from(OciError::from(e)))?;
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
         if mounted {
             // Mount successful - return 201 Created
@@ -286,7 +284,7 @@ pub async fn oci_upload_start(
     let upload_id = storage
         .start_upload(&repository)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build 202 Accepted response
     let location = format!("/v2/{repository}/blobs/uploads/{upload_id}");
@@ -331,30 +329,30 @@ pub async fn oci_upload_monolithic(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
     let expected_digest: Digest = query
         .digest
         .parse()
-        .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: query.digest.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: query.digest.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Start upload, append data, and complete in one operation
     let upload_id = storage
         .start_upload(&repository)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     storage
         .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     let actual_digest = storage
         .complete_upload(&upload_id, &expected_digest)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Record metric
     #[cfg(feature = "otel")]

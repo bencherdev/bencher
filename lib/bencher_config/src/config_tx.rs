@@ -268,7 +268,7 @@ async fn into_context(
         #[cfg(feature = "plus")]
         is_bencher_cloud,
         #[cfg(feature = "plus")]
-        oci_storage: oci_storage.map(|s| -> Arc<dyn std::any::Any + Send + Sync> { Arc::new(s) }),
+        oci_storage,
     })
 }
 
