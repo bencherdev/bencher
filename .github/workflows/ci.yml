@@ -50,6 +50,7 @@ jobs:
               - 'lib/bencher_valid/**'
             action:
               - 'services/action/**'
+              - 'services/api/openapi.json'
             api:
               - 'services/api/**'
               - 'lib/**'
@@ -120,7 +121,7 @@ jobs:
   # Cross-platform smoke tests (only for releases)
   release_smoke_tests:
     name: Release API Smoke Test
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ github.action == 'push' }}
     strategy:
       fail-fast: false
       matrix:
@@ -129,6 +130,7 @@ jobs:
           - os: macos-14
           - os: windows-2022
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@v6
       - uses: rui314/setup-mold@v1
