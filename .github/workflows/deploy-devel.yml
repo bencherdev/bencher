@@ -5,6 +5,7 @@ on:
     workflows: ["CI"]
     branches: [devel]
     types: [completed]
+  workflow_call:
 
 concurrency:
   group: deploy-devel
@@ -23,7 +24,7 @@ jobs:
   deploy_api_fly_dev:
     name: Deploy API to Fly.io Dev
     runs-on: ubuntu-22.04
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_call' }}
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -33,7 +34,7 @@ jobs:
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
       - name: Load & Tag Local Image
         run: |
           docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -54,7 +55,7 @@ jobs:
   deploy_api_fly_test:
     name: Deploy API to Fly.io Test
     runs-on: ubuntu-22.04
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_call' }}
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -64,7 +65,7 @@ jobs:
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
       - name: Load & Tag Litestream Image
         run: |
           docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -92,7 +93,7 @@ jobs:
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console

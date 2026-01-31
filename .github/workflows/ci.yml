@@ -270,3 +270,11 @@ jobs:
             exit 1
           fi
           echo "All required jobs passed!"
+
+  # Trigger Deploy Devel for PRs with the deploy label
+  deploy_devel:
+    name: Deploy Devel
+    needs: [ci-success]
+    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy') }}
+    uses: ./.github/workflows/deploy-devel.yml
+    secrets: inherit

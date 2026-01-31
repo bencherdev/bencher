@@ -1,73 +1,73 @@
 name: Track Fork PR Benchmarks
 
 on:
-    workflow_run:
-        workflows: [CI]
-        types: [completed]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
 
 jobs:
-    track_fork_pr_benchmarks:
-        name: Track Fork PR Benchmarks with Bencher
-        if: github.event.workflow_run.conclusion == 'success'
-        permissions:
-            pull-requests: write
-        runs-on: ubuntu-22.04
-        env:
-            BENCHMARK_RESULTS: benchmark_results.txt
-            PR_EVENT: event.json
-        steps:
-            - name: Download Benchmark Results
-              id: download_results
-              uses: dawidd6/action-download-artifact@v6
-              continue-on-error: true
-              with:
-                  name: ${{ env.BENCHMARK_RESULTS }}
-                  run_id: ${{ github.event.workflow_run.id }}
-            - name: Download PR Event
-              id: download_event
-              uses: dawidd6/action-download-artifact@v6
-              continue-on-error: true
-              with:
-                  name: ${{ env.PR_EVENT }}
-                  run_id: ${{ github.event.workflow_run.id }}
-            - name: Check if Fork PR Benchmarks
-              id: check_fork
-              run: |
-                  if [[ "${{ steps.download_results.outcome }}" == "success" && "${{ steps.download_event.outcome }}" == "success" ]]; then
-                    echo "is_fork_pr=true" >> "$GITHUB_OUTPUT"
-                  else
-                    echo "is_fork_pr=false" >> "$GITHUB_OUTPUT"
-                  fi
-            - name: Export PR Event Data
-              if: steps.check_fork.outputs.is_fork_pr == 'true'
-              uses: actions/github-script@v6
-              with:
-                  script: |
-                      let fs = require('fs');
-                      let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
-                      core.exportVariable("PR_HEAD", prEvent.pull_request.head.ref);
-                      core.exportVariable("PR_HEAD_SHA", prEvent.pull_request.head.sha);
-                      core.exportVariable("PR_BASE", prEvent.pull_request.base.ref);
-                      core.exportVariable("PR_BASE_SHA", prEvent.pull_request.base.sha);
-                      core.exportVariable("PR_NUMBER", prEvent.number);
-            - uses: bencherdev/bencher@main
-              if: steps.check_fork.outputs.is_fork_pr == 'true'
-            - name: Track Benchmarks with Bencher
-              if: steps.check_fork.outputs.is_fork_pr == 'true'
-              run: |
-                  bencher run \
-                  --host https://api.bencher.dev \
-                  --project bencher \
-                  --token '${{ secrets.BENCHER_API_TOKEN }}' \
-                  --branch "$PR_HEAD" \
-                  --hash "$PR_HEAD_SHA" \
-                  --start-point "$PR_BASE" \
-                  --start-point-hash "$PR_BASE_SHA" \
-                  --start-point-clone-thresholds \
-                  --start-point-reset \
-                  --testbed ubuntu-22.04 \
-                  --adapter rust_criterion \
-                  --err \
-                  --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-                  --ci-number "$PR_NUMBER" \
-                  --file ./benchmark_results.txt
+  track_fork_pr_benchmarks:
+    name: Track Fork PR Benchmarks with Bencher
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch != 'main' }}
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-22.04
+    env:
+      BENCHMARK_RESULTS: benchmark_results.txt
+      PR_EVENT: event.json
+    steps:
+      - name: Download Benchmark Results
+        id: download_results
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          name: ${{ env.BENCHMARK_RESULTS }}
+          run_id: ${{ github.event.workflow_run.id }}
+      - name: Download PR Event
+        id: download_event
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          name: ${{ env.PR_EVENT }}
+          run_id: ${{ github.event.workflow_run.id }}
+      - name: Check if Fork PR Benchmarks
+        id: check_fork
+        run: |
+          if [[ "${{ steps.download_results.outcome }}" == "success" && "${{ steps.download_event.outcome }}" == "success" ]]; then
+            echo "is_fork_pr=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_fork_pr=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Export PR Event Data
+        if: steps.check_fork.outputs.is_fork_pr == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let fs = require('fs');
+            let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
+            core.exportVariable("PR_HEAD", prEvent.pull_request.head.ref);
+            core.exportVariable("PR_HEAD_SHA", prEvent.pull_request.head.sha);
+            core.exportVariable("PR_BASE", prEvent.pull_request.base.ref);
+            core.exportVariable("PR_BASE_SHA", prEvent.pull_request.base.sha);
+            core.exportVariable("PR_NUMBER", prEvent.number);
+      - uses: bencherdev/bencher@main
+        if: steps.check_fork.outputs.is_fork_pr == 'true'
+      - name: Track Benchmarks with Bencher
+        if: steps.check_fork.outputs.is_fork_pr == 'true'
+        run: |
+          bencher run \
+          --host https://api.bencher.dev \
+          --project bencher \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch "$PR_HEAD" \
+          --hash "$PR_HEAD_SHA" \
+          --start-point "$PR_BASE" \
+          --start-point-hash "$PR_BASE_SHA" \
+          --start-point-clone-thresholds \
+          --start-point-reset \
+          --testbed ubuntu-22.04 \
+          --adapter rust_criterion \
+          --err \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --ci-number "$PR_NUMBER" \
+          --file ./benchmark_results.txt
