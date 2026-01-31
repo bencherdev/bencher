@@ -1,17 +1,25 @@
-//! OCI Storage Layer - S3 Backend
+//! OCI Storage Layer - S3 Backend with Multipart Upload Support
+//!
+//! This implementation uses S3 multipart uploads for scalability:
+//! - Upload state is stored in S3 for cross-instance consistency
+//! - Chunks are buffered in S3 until they reach the 5MB minimum part size
+//! - No in-memory state means horizontal scaling and restart resilience
 
-use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use aws_sdk_s3::Client;
+use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{system::config::OciDataStore, Secret};
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
-use tokio::sync::Mutex;
 
 use crate::types::{Digest, RepositoryName, UploadId};
+
+/// Minimum part size for S3 multipart upload (5MB)
+/// S3 requires all parts except the last to be at least 5MB
+const MIN_PART_SIZE: usize = 5 * 1024 * 1024;
 
 /// Storage errors
 #[derive(Debug, Error)]
@@ -39,6 +47,9 @@ pub enum OciStorageError {
 
     #[error("Configuration error: {0}")]
     Config(String),
+
+    #[error("JSON serialization error: {0}")]
+    Json(String),
 }
 
 impl OciStorageError {
@@ -49,7 +60,7 @@ impl OciStorageError {
                 http::StatusCode::NOT_FOUND
             }
             Self::DigestMismatch { .. } | Self::InvalidContent(_) => http::StatusCode::BAD_REQUEST,
-            Self::S3(_) | Self::InvalidArn(_) | Self::Config(_) => {
+            Self::S3(_) | Self::InvalidArn(_) | Self::Config(_) | Self::Json(_) => {
                 http::StatusCode::INTERNAL_SERVER_ERROR
             }
         }
@@ -63,19 +74,43 @@ pub struct OciStorageConfig {
     pub prefix: Option<String>,
 }
 
-/// In-progress upload state
+/// Upload state stored in S3 for cross-instance consistency
+#[derive(Debug, Serialize, Deserialize)]
 struct UploadState {
-    repository: RepositoryName,
-    chunks: Vec<Bytes>,
-    total_size: u64,
+    /// S3 multipart upload ID
+    s3_upload_id: String,
+    /// Repository name
+    repository: String,
+    /// Completed parts with their `ETag`s
+    parts: Vec<CompletedPartInfo>,
 }
 
-/// OCI Storage implementation using S3
+/// Information about a completed S3 multipart upload part
+#[derive(Debug, Serialize, Deserialize)]
+struct CompletedPartInfo {
+    part_number: i32,
+    etag: String,
+    size: u64,
+}
+
+impl UploadState {
+    /// Total bytes in completed parts
+    fn completed_size(&self) -> u64 {
+        self.parts.iter().map(|p| p.size).sum()
+    }
+
+    /// Next part number to use
+    fn next_part_number(&self) -> i32 {
+        // S3 part numbers are 1-indexed and max 10,000 parts
+        // Safe to cast since we won't exceed 10,000 parts
+        i32::try_from(self.parts.len()).unwrap_or(i32::MAX - 1) + 1
+    }
+}
+
+/// OCI Storage implementation using S3 with multipart uploads
 pub struct OciStorage {
     client: Client,
     config: OciStorageConfig,
-    // In-progress uploads (in memory for now, could be moved to S3 multipart)
-    uploads: Arc<Mutex<HashMap<String, UploadState>>>,
 }
 
 impl OciStorage {
@@ -123,21 +158,15 @@ impl OciStorage {
             prefix: arn.bucket_path.clone(),
         };
 
-        Ok(Self {
-            client,
-            config,
-            uploads: Arc::new(Mutex::new(HashMap::new())),
-        })
+        Ok(Self { client, config })
     }
 
     /// Creates a new OCI storage instance (for testing or direct use)
     pub fn new(client: Client, config: OciStorageConfig) -> Self {
-        Self {
-            client,
-            config,
-            uploads: Arc::new(Mutex::new(HashMap::new())),
-        }
+        Self { client, config }
     }
+
+    // ==================== Key Generation ====================
 
     /// Returns the S3 key prefix for the given repository
     fn key_prefix(&self, repository: &RepositoryName) -> String {
@@ -145,6 +174,29 @@ impl OciStorage {
             Some(prefix) => format!("{prefix}/{repository}"),
             None => repository.to_string(),
         }
+    }
+
+    /// Returns the global prefix (for upload staging area)
+    fn global_prefix(&self) -> String {
+        match &self.config.prefix {
+            Some(prefix) => format!("{prefix}/_uploads"),
+            None => "_uploads".to_owned(),
+        }
+    }
+
+    /// Returns the S3 key for upload state metadata
+    fn upload_state_key(&self, upload_id: &UploadId) -> String {
+        format!("{}/{}/state.json", self.global_prefix(), upload_id)
+    }
+
+    /// Returns the S3 key for upload buffer (chunks < 5MB)
+    fn upload_buffer_key(&self, upload_id: &UploadId) -> String {
+        format!("{}/{}/buffer", self.global_prefix(), upload_id)
+    }
+
+    /// Returns the S3 key for the temporary upload data (multipart destination)
+    fn upload_data_key(&self, upload_id: &UploadId) -> String {
+        format!("{}/{}/data", self.global_prefix(), upload_id)
     }
 
     /// Returns the S3 key for a blob
@@ -182,7 +234,12 @@ impl OciStorage {
     }
 
     /// Returns the S3 key for a referrer link
-    fn referrer_key(&self, repository: &RepositoryName, subject_digest: &Digest, referrer_digest: &Digest) -> String {
+    fn referrer_key(
+        &self,
+        repository: &RepositoryName,
+        subject_digest: &Digest,
+        referrer_digest: &Digest,
+    ) -> String {
         format!(
             "{}/{}-{}",
             self.referrers_prefix(repository, subject_digest),
@@ -191,73 +248,338 @@ impl OciStorage {
         )
     }
 
-    /// Starts a new upload session
+    // ==================== Upload State Management ====================
+
+    /// Loads upload state from S3
+    async fn load_upload_state(&self, upload_id: &UploadId) -> Result<UploadState, OciStorageError> {
+        let key = self.upload_state_key(upload_id);
+        let response = self
+            .client
+            .get_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                    OciStorageError::UploadNotFound(upload_id.to_string())
+                } else {
+                    OciStorageError::S3(e.to_string())
+                }
+            })?;
+
+        let data = response
+            .body
+            .collect()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?
+            .into_bytes();
+
+        serde_json::from_slice(&data).map_err(|e| OciStorageError::Json(e.to_string()))
+    }
+
+    /// Saves upload state to S3
+    async fn save_upload_state(
+        &self,
+        upload_id: &UploadId,
+        state: &UploadState,
+    ) -> Result<(), OciStorageError> {
+        let key = self.upload_state_key(upload_id);
+        let data = serde_json::to_vec(state).map_err(|e| OciStorageError::Json(e.to_string()))?;
+
+        self.client
+            .put_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .body(data.into())
+            .content_type("application/json")
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Loads upload buffer from S3 (returns empty vec if not found)
+    async fn load_upload_buffer(&self, upload_id: &UploadId) -> Result<Vec<u8>, OciStorageError> {
+        let key = self.upload_buffer_key(upload_id);
+        match self
+            .client
+            .get_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .send()
+            .await
+        {
+            Ok(response) => {
+                let data = response
+                    .body
+                    .collect()
+                    .await
+                    .map_err(|e| OciStorageError::S3(e.to_string()))?
+                    .into_bytes();
+                Ok(data.to_vec())
+            }
+            Err(e) => {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                    Ok(Vec::new())
+                } else {
+                    Err(OciStorageError::S3(e.to_string()))
+                }
+            }
+        }
+    }
+
+    /// Saves upload buffer to S3 (deletes if empty)
+    async fn save_upload_buffer(
+        &self,
+        upload_id: &UploadId,
+        buffer: &[u8],
+    ) -> Result<(), OciStorageError> {
+        let key = self.upload_buffer_key(upload_id);
+
+        if buffer.is_empty() {
+            // Delete the buffer object if empty
+            let _unused = self
+                .client
+                .delete_object()
+                .bucket(&self.config.bucket_arn)
+                .key(&key)
+                .send()
+                .await;
+            Ok(())
+        } else {
+            self.client
+                .put_object()
+                .bucket(&self.config.bucket_arn)
+                .key(&key)
+                .body(buffer.to_vec().into())
+                .send()
+                .await
+                .map_err(|e| OciStorageError::S3(e.to_string()))?;
+            Ok(())
+        }
+    }
+
+    /// Deletes all upload-related objects from S3
+    async fn cleanup_upload(&self, upload_id: &UploadId) {
+        // Best effort cleanup - ignore errors
+        let state_key = self.upload_state_key(upload_id);
+        let buffer_key = self.upload_buffer_key(upload_id);
+        let data_key = self.upload_data_key(upload_id);
+
+        let _unused = self
+            .client
+            .delete_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&state_key)
+            .send()
+            .await;
+        let _unused = self
+            .client
+            .delete_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&buffer_key)
+            .send()
+            .await;
+        let _unused = self
+            .client
+            .delete_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&data_key)
+            .send()
+            .await;
+    }
+
+    // ==================== Upload Operations ====================
+
+    /// Starts a new upload session using S3 multipart upload
     pub async fn start_upload(
         &self,
         repository: &RepositoryName,
     ) -> Result<UploadId, OciStorageError> {
         let upload_id = UploadId::new();
-        let state = UploadState {
-            repository: repository.clone(),
-            chunks: Vec::new(),
-            total_size: 0,
-        };
+        let data_key = self.upload_data_key(&upload_id);
 
-        let mut uploads = self.uploads.lock().await;
-        uploads.insert(upload_id.to_string(), state);
+        // Create S3 multipart upload
+        let multipart = self
+            .client
+            .create_multipart_upload()
+            .bucket(&self.config.bucket_arn)
+            .key(&data_key)
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        let s3_upload_id = multipart
+            .upload_id()
+            .ok_or_else(|| OciStorageError::S3("No upload ID returned".to_owned()))?
+            .to_owned();
+
+        // Save initial state
+        let state = UploadState {
+            s3_upload_id,
+            repository: repository.to_string(),
+            parts: Vec::new(),
+        };
+        self.save_upload_state(&upload_id, &state).await?;
 
         Ok(upload_id)
     }
 
     /// Appends data to an in-progress upload
+    ///
+    /// Data is buffered in S3 until we accumulate enough for a 5MB part,
+    /// then uploaded as an S3 multipart part.
     pub async fn append_upload(
         &self,
         upload_id: &UploadId,
         data: Bytes,
     ) -> Result<u64, OciStorageError> {
-        let mut uploads = self.uploads.lock().await;
-        let state = uploads
-            .get_mut(upload_id.as_str())
-            .ok_or_else(|| OciStorageError::UploadNotFound(upload_id.to_string()))?;
+        // Load current state and buffer
+        let mut state = self.load_upload_state(upload_id).await?;
+        let mut buffer = self.load_upload_buffer(upload_id).await?;
 
-        state.total_size += data.len() as u64;
-        state.chunks.push(data);
+        // Append new data to buffer
+        buffer.extend_from_slice(&data);
 
-        Ok(state.total_size)
+        // Upload complete parts (5MB each)
+        while buffer.len() >= MIN_PART_SIZE {
+            let part_data: Vec<u8> = buffer.drain(..MIN_PART_SIZE).collect();
+            self.upload_part(upload_id, &mut state, part_data).await?;
+        }
+
+        // Calculate total size
+        let total_size = state.completed_size() + buffer.len() as u64;
+
+        // Save updated state and buffer
+        self.save_upload_state(upload_id, &state).await?;
+        self.save_upload_buffer(upload_id, &buffer).await?;
+
+        Ok(total_size)
+    }
+
+    /// Uploads a single part to S3 multipart upload
+    async fn upload_part(
+        &self,
+        upload_id: &UploadId,
+        state: &mut UploadState,
+        data: Vec<u8>,
+    ) -> Result<(), OciStorageError> {
+        let data_key = self.upload_data_key(upload_id);
+        let part_number = state.next_part_number();
+        let part_size = data.len() as u64;
+
+        let response = self
+            .client
+            .upload_part()
+            .bucket(&self.config.bucket_arn)
+            .key(&data_key)
+            .upload_id(&state.s3_upload_id)
+            .part_number(part_number)
+            .body(data.into())
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        let etag = response
+            .e_tag()
+            .ok_or_else(|| OciStorageError::S3("No ETag returned for part".to_owned()))?
+            .to_owned();
+
+        state.parts.push(CompletedPartInfo {
+            part_number,
+            etag,
+            size: part_size,
+        });
+
+        Ok(())
     }
 
     /// Gets the current size of an in-progress upload
     pub async fn get_upload_size(&self, upload_id: &UploadId) -> Result<u64, OciStorageError> {
-        let uploads = self.uploads.lock().await;
-        let state = uploads
-            .get(upload_id.as_str())
-            .ok_or_else(|| OciStorageError::UploadNotFound(upload_id.to_string()))?;
-
-        Ok(state.total_size)
+        let state = self.load_upload_state(upload_id).await?;
+        let buffer = self.load_upload_buffer(upload_id).await?;
+        Ok(state.completed_size() + buffer.len() as u64)
     }
 
     /// Completes an upload and stores the blob
+    ///
+    /// This:
+    /// 1. Uploads any remaining buffer as the final part
+    /// 2. Completes the S3 multipart upload
+    /// 3. Downloads and verifies the digest
+    /// 4. Copies to the final blob location
+    /// 5. Cleans up temporary objects
     pub async fn complete_upload(
         &self,
         upload_id: &UploadId,
         expected_digest: &Digest,
     ) -> Result<Digest, OciStorageError> {
-        // Remove the upload state
-        let state = {
-            let mut uploads = self.uploads.lock().await;
-            uploads
-                .remove(upload_id.as_str())
-                .ok_or_else(|| OciStorageError::UploadNotFound(upload_id.to_string()))?
-        };
+        // Load state and buffer
+        let mut state = self.load_upload_state(upload_id).await?;
+        let buffer = self.load_upload_buffer(upload_id).await?;
 
-        // Concatenate all chunks
-        let capacity = usize::try_from(state.total_size).unwrap_or(usize::MAX);
-        let mut data = Vec::with_capacity(capacity);
-        for chunk in state.chunks {
-            data.extend_from_slice(&chunk);
+        // Upload any remaining buffer as the final part
+        if !buffer.is_empty() {
+            self.upload_part(upload_id, &mut state, buffer).await?;
         }
 
-        // Compute the actual digest
+        // Must have at least one part
+        if state.parts.is_empty() {
+            self.cleanup_upload(upload_id).await;
+            return Err(OciStorageError::InvalidContent(
+                "Cannot complete upload with no data".to_owned(),
+            ));
+        }
+
+        // Build completed parts list for S3
+        let completed_parts: Vec<_> = state
+            .parts
+            .iter()
+            .map(|p| {
+                aws_sdk_s3::types::CompletedPart::builder()
+                    .part_number(p.part_number)
+                    .e_tag(&p.etag)
+                    .build()
+            })
+            .collect();
+
+        let data_key = self.upload_data_key(upload_id);
+
+        // Complete the multipart upload
+        self.client
+            .complete_multipart_upload()
+            .bucket(&self.config.bucket_arn)
+            .key(&data_key)
+            .upload_id(&state.s3_upload_id)
+            .multipart_upload(
+                CompletedMultipartUpload::builder()
+                    .set_parts(Some(completed_parts))
+                    .build(),
+            )
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        // Download and verify digest
+        let response = self
+            .client
+            .get_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&data_key)
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        let data = response
+            .body
+            .collect()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?
+            .into_bytes();
+
+        // Compute actual digest
         let mut hasher = Sha256::new();
         hasher.update(&data);
         let hash = hasher.finalize();
@@ -265,34 +587,61 @@ impl OciStorage {
 
         // Verify digest matches
         if actual_digest.as_str() != expected_digest.as_str() {
+            self.cleanup_upload(upload_id).await;
             return Err(OciStorageError::DigestMismatch {
                 expected: expected_digest.to_string(),
                 actual: actual_digest.to_string(),
             });
         }
 
-        // Store the blob in S3
-        let key = self.blob_key(&state.repository, &actual_digest);
+        // Parse repository name
+        let repository: RepositoryName = state
+            .repository
+            .parse()
+            .map_err(|e: crate::types::RepositoryNameError| {
+                OciStorageError::InvalidContent(e.to_string())
+            })?;
+
+        // Copy to final blob location
+        let blob_key = self.blob_key(&repository, &actual_digest);
         self.client
-            .put_object()
+            .copy_object()
             .bucket(&self.config.bucket_arn)
-            .key(&key)
-            .body(data.into())
+            .copy_source(format!("{}/{}", self.config.bucket_arn, data_key))
+            .key(&blob_key)
             .send()
             .await
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        // Clean up temporary objects
+        self.cleanup_upload(upload_id).await;
 
         Ok(actual_digest)
     }
 
     /// Cancels an in-progress upload
     pub async fn cancel_upload(&self, upload_id: &UploadId) -> Result<(), OciStorageError> {
-        let mut uploads = self.uploads.lock().await;
-        uploads
-            .remove(upload_id.as_str())
-            .ok_or_else(|| OciStorageError::UploadNotFound(upload_id.to_string()))?;
+        // Load state to get S3 upload ID
+        let state = self.load_upload_state(upload_id).await?;
+        let data_key = self.upload_data_key(upload_id);
+
+        // Abort the S3 multipart upload
+        let _unused = self
+            .client
+            .abort_multipart_upload()
+            .bucket(&self.config.bucket_arn)
+            .key(&data_key)
+            .upload_id(&state.s3_upload_id)
+            .send()
+            .await;
+
+        // Clean up
+        self.cleanup_upload(upload_id).await;
+
         Ok(())
     }
+
+    // ==================== Blob Operations ====================
 
     /// Checks if a blob exists
     pub async fn blob_exists(
@@ -311,11 +660,7 @@ impl OciStorage {
         {
             Ok(_) => Ok(true),
             Err(e) => {
-                // Check if error is NotFound (404)
-                if e.raw_response()
-                    .is_some_and(|r| r.status().as_u16() == 404)
-                    
-                {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
                     Ok(false)
                 } else {
                     Err(OciStorageError::S3(e.to_string()))
@@ -339,17 +684,16 @@ impl OciStorage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response()
-                    .is_some_and(|r| r.status().as_u16() == 404)
-                    
-                {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
                     OciStorageError::BlobNotFound(digest.to_string())
                 } else {
                     OciStorageError::S3(e.to_string())
                 }
             })?;
 
-        let size = response.content_length().map_or(0, |len| u64::try_from(len).unwrap_or(0));
+        let size = response
+            .content_length()
+            .map_or(0, |len| u64::try_from(len).unwrap_or(0));
         let data = response
             .body
             .collect()
@@ -375,17 +719,16 @@ impl OciStorage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response()
-                    .is_some_and(|r| r.status().as_u16() == 404)
-                    
-                {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
                     OciStorageError::BlobNotFound(digest.to_string())
                 } else {
                     OciStorageError::S3(e.to_string())
                 }
             })?;
 
-        Ok(response.content_length().map_or(0, |len| u64::try_from(len).unwrap_or(0)))
+        Ok(response
+            .content_length()
+            .map_or(0, |len| u64::try_from(len).unwrap_or(0)))
     }
 
     /// Deletes a blob
@@ -405,6 +748,36 @@ impl OciStorage {
 
         Ok(())
     }
+
+    /// Mounts a blob from another repository (cross-repo blob mount)
+    pub async fn mount_blob(
+        &self,
+        from_repository: &RepositoryName,
+        to_repository: &RepositoryName,
+        digest: &Digest,
+    ) -> Result<bool, OciStorageError> {
+        // Check if blob exists in source
+        if !self.blob_exists(from_repository, digest).await? {
+            return Ok(false);
+        }
+
+        // Copy the blob to the new repository
+        let source_key = self.blob_key(from_repository, digest);
+        let dest_key = self.blob_key(to_repository, digest);
+
+        self.client
+            .copy_object()
+            .bucket(&self.config.bucket_arn)
+            .copy_source(format!("{}/{}", self.config.bucket_arn, source_key))
+            .key(&dest_key)
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        Ok(true)
+    }
+
+    // ==================== Manifest Operations ====================
 
     /// Stores a manifest
     pub async fn put_manifest(
@@ -433,7 +806,6 @@ impl OciStorage {
         // If a tag was provided, create a tag link
         if let Some(tag) = tag {
             let tag_key = self.tag_link_key(repository, tag);
-            // Store the digest as the tag content
             self.client
                 .put_object()
                 .bucket(&self.config.bucket_arn)
@@ -515,10 +887,7 @@ impl OciStorage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response()
-                    .is_some_and(|r| r.status().as_u16() == 404)
-                    
-                {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
                     OciStorageError::ManifestNotFound(digest.to_string())
                 } else {
                     OciStorageError::S3(e.to_string())
@@ -550,10 +919,7 @@ impl OciStorage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response()
-                    .is_some_and(|r| r.status().as_u16() == 404)
-                    
-                {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
                     OciStorageError::ManifestNotFound(tag.to_owned())
                 } else {
                     OciStorageError::S3(e.to_string())
@@ -567,8 +933,8 @@ impl OciStorage {
             .map_err(|e| OciStorageError::S3(e.to_string()))?
             .into_bytes();
 
-        let digest_str =
-            String::from_utf8(data.to_vec()).map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
+        let digest_str = String::from_utf8(data.to_vec())
+            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
 
         digest_str
             .trim()
@@ -640,32 +1006,22 @@ impl OciStorage {
         Ok(())
     }
 
-    /// Mounts a blob from another repository (cross-repo blob mount)
-    pub async fn mount_blob(
+    /// Deletes a tag (removes the tag link, not the manifest itself)
+    pub async fn delete_tag(
         &self,
-        from_repository: &RepositoryName,
-        to_repository: &RepositoryName,
-        digest: &Digest,
-    ) -> Result<bool, OciStorageError> {
-        // Check if blob exists in source
-        if !self.blob_exists(from_repository, digest).await? {
-            return Ok(false);
-        }
-
-        // Copy the blob to the new repository
-        let source_key = self.blob_key(from_repository, digest);
-        let dest_key = self.blob_key(to_repository, digest);
-
+        repository: &RepositoryName,
+        tag: &str,
+    ) -> Result<(), OciStorageError> {
+        let key = self.tag_link_key(repository, tag);
         self.client
-            .copy_object()
+            .delete_object()
             .bucket(&self.config.bucket_arn)
-            .copy_source(format!("{}/{}", self.config.bucket_arn, source_key))
-            .key(&dest_key)
+            .key(&key)
             .send()
             .await
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
 
-        Ok(true)
+        Ok(())
     }
 
     /// Lists all manifests that reference a given digest via their subject field
@@ -743,27 +1099,9 @@ impl OciStorage {
 
         Ok(referrers)
     }
-
-    /// Deletes a tag (removes the tag link, not the manifest itself)
-    pub async fn delete_tag(
-        &self,
-        repository: &RepositoryName,
-        tag: &str,
-    ) -> Result<(), OciStorageError> {
-        let key = self.tag_link_key(repository, tag);
-        self.client
-            .delete_object()
-            .bucket(&self.config.bucket_arn)
-            .key(&key)
-            .send()
-            .await
-            .map_err(|e| OciStorageError::S3(e.to_string()))?;
-
-        Ok(())
-    }
 }
 
-// S3 ARN parsing (similar to lib/bencher_schema/src/context/database.rs)
+// ==================== S3 ARN Parsing ====================
 
 const ARN_PREFIX: &str = "arn";
 const S3_SERVICE: &str = "s3";
