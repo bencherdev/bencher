@@ -69,29 +69,24 @@ jobs:
   cargo_bench:
     name: Cargo Bench
     runs-on: ubuntu-22.04
-    if: ${{ !inputs.is-fork }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-rust
+      - uses: rui314/setup-mold@v1
         with:
-          cache-key: cli
           mold-version: ${{ inputs.mold-version }}
-      - name: Install `bencher` CLI
-        run: cargo install --debug --path services/cli --locked --force
-      - name: Dogfooding Benchmarks with Bencher
-        run: |
-          bencher run \
-          --host https://api.bencher.dev \
-          --project bencher \
-          --token '${{ secrets.BENCHER_API_TOKEN }}' \
-          --branch "$GITHUB_REF_NAME" \
-          --start-point "$GITHUB_BASE_REF" \
-          --testbed ubuntu-22.04 \
-          --adapter rust_criterion \
-          --err \
-          --github-actions ${{ secrets.GITHUB_TOKEN }} \
-          cargo bench --package bencher_adapter
+      - name: Run Benchmarks
+        run: cargo bench --package bencher_adapter | tee benchmark_results.txt
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark_results.txt
+          path: ./benchmark_results.txt
+      - name: Upload GitHub Pull Request Event
+        uses: actions/upload-artifact@v4
+        with:
+          name: event.json
+          path: ${{ github.event_path }}
 
   cargo_audit:
     name: Cargo Audit
