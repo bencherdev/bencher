@@ -149,7 +149,7 @@ jobs:
             echo "Lint failed"
             exit 1
           fi
-          if [[ "${{ needs.cli.result }}" != "success" ]]; then
+          if [[ "${{ needs.cli.result }}" != "success" && "${{ needs.test.result }}" != "skipped" ]]; then
             echo "CLI failed"
             exit 1
           fi
@@ -163,6 +163,10 @@ jobs:
           fi
           if [[ "${{ needs.deploy.result }}" != "success" && "${{ needs.deploy.result }}" != "skipped" ]]; then
             echo "Deploy failed"
+            exit 1
+          fi
+          if [[ "${{ needs.release.result }}" != "success" && "${{ needs.release.result }}" != "skipped" ]]; then
+            echo "Release failed"
             exit 1
           fi
           echo "All required jobs passed!"
