@@ -9,6 +9,7 @@ publish = false
 [features]
 default = []
 plus = [
+    "api_auth/plus",
     "bencher_endpoint/plus",
     "bencher_oci_storage/plus",
     "bencher_schema/plus",
@@ -17,6 +18,7 @@ sentry = []
 otel = ["dep:bencher_otel"]
 
 [dependencies]
+api_auth = { workspace = true }
 bencher_endpoint = { workspace = true }
 bencher_json = { workspace = true }
 bencher_oci_storage = { workspace = true }
@@ -24,9 +26,7 @@ bencher_otel = { workspace = true, optional = true }
 bencher_schema = { workspace = true }
 bencher_token = { workspace = true }
 
-base64 = { workspace = true }
 bytes = { workspace = true }
-chrono = { workspace = true }
 dropshot = { workspace = true }
 http = { workspace = true }
 schemars = { workspace = true }
