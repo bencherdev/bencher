@@ -8,7 +8,6 @@ use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::context::storage;
 use crate::error::OciError;
 use crate::types::RepositoryName;
 
@@ -57,7 +56,7 @@ pub async fn oci_tags_options(
     tags = ["oci"],
 }]
 pub async fn oci_tags_list(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<TagsPath>,
     query: Query<TagsQuery>,
 ) -> Result<ResponseOk<TagsListResponse>, HttpError> {
@@ -71,7 +70,7 @@ pub async fn oci_tags_list(
         .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // List tags
     let mut tags = storage

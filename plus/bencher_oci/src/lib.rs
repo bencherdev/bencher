@@ -9,13 +9,11 @@
 #[cfg(test)]
 use reqwest as _;
 
-mod context;
 mod endpoints;
 mod error;
 mod storage;
 mod types;
 
-pub use context::{get_storage, init_storage};
 pub use endpoints::{Api, register};
 pub use error::OciError;
 pub use storage::{OciStorage, OciStorageConfig, OciStorageError};

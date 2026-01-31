@@ -12,7 +12,6 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::context::storage;
 use crate::error::OciError;
 use crate::types::{Reference, RepositoryName};
 
@@ -45,7 +44,7 @@ pub async fn oci_manifest_options(
     tags = ["oci"],
 }]
 pub async fn oci_manifest_exists(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
@@ -61,7 +60,7 @@ pub async fn oci_manifest_exists(
         .map_err(|_err| HttpError::from(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Resolve the reference to a digest
     let digest = match &reference {
@@ -104,7 +103,7 @@ pub async fn oci_manifest_exists(
     tags = ["oci"],
 }]
 pub async fn oci_manifest_get(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
@@ -120,7 +119,7 @@ pub async fn oci_manifest_get(
         .map_err(|_err| HttpError::from(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Resolve the reference to a digest
     let digest = match &reference {
@@ -168,7 +167,7 @@ pub async fn oci_manifest_get(
     tags = ["oci"],
 }]
 pub async fn oci_manifest_put(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
     body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
@@ -186,7 +185,7 @@ pub async fn oci_manifest_put(
         .map_err(|_err| HttpError::from(OciError::ManifestInvalid(path.reference.clone())))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Determine tag from reference (if it's a tag)
     let tag = match &reference {
@@ -245,7 +244,7 @@ pub async fn oci_manifest_put(
     tags = ["oci"],
 }]
 pub async fn oci_manifest_delete(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<ManifestPath>,
 ) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
@@ -257,7 +256,7 @@ pub async fn oci_manifest_delete(
         .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Parse reference - can be either a digest or a tag
     let reference: Reference = path

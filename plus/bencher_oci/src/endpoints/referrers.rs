@@ -12,7 +12,6 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::context::storage;
 use crate::error::OciError;
 use crate::types::{Digest, RepositoryName};
 
@@ -56,7 +55,7 @@ pub async fn oci_referrers_options(
     tags = ["oci"],
 }]
 pub async fn oci_referrers_list(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<ReferrersPath>,
     query: Query<ReferrersQuery>,
 ) -> Result<Response<Body>, HttpError> {
@@ -74,7 +73,7 @@ pub async fn oci_referrers_list(
         .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: path.digest.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Get referrers from storage
     let referrers = storage

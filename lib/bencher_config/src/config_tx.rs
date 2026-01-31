@@ -226,6 +226,7 @@ async fn into_context(
         licensor,
         indexer,
         recaptcha_client,
+        oci_storage,
     } = Plus::new(&console_url, plus).map_err(ConfigTxError::Plus)?;
 
     #[cfg(feature = "plus")]
@@ -266,6 +267,8 @@ async fn into_context(
         recaptcha_client,
         #[cfg(feature = "plus")]
         is_bencher_cloud,
+        #[cfg(feature = "plus")]
+        oci_storage: oci_storage.map(|s| -> Arc<dyn std::any::Any + Send + Sync> { Arc::new(s) }),
     })
 }
 
