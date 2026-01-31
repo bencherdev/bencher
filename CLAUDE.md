@@ -160,6 +160,9 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Maximum cognitive complexity: 25
 - Use absolute paths sparingly (max 3 segments, diesel crate exempt)
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
+- Do **NOT** use shared, global mutable state
+- Always prefer to use `thiserror` for error types
+- Do **NOT** use `dyn std::any::Any` without explicit justification and approval
 
 ### Frontend (TypeScript)
 
