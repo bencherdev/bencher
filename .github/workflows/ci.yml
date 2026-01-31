@@ -108,6 +108,8 @@ jobs:
       litestream-version: "0.3.13"
       build-action: ${{ needs.changes.outputs.action == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
       build-docker: ${{ needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+    secrets:
+      LYCHEE_USER_AGENT: ${{ secrets.LYCHEE_USER_AGENT }}
 
   deploy:
     name: Deploy
@@ -125,6 +127,7 @@ jobs:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      LYCHEE_USER_AGENT: ${{ secrets.LYCHEE_USER_AGENT }}
 
   release:
     name: Release

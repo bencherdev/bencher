@@ -27,6 +27,8 @@ on:
         required: true
       NETLIFY_AUTH_TOKEN:
         required: true
+      LYCHEE_USER_AGENT:
+        required: true
 
 concurrency:
   group: deploy

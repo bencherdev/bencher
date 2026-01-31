@@ -18,6 +18,9 @@ on:
       build-docker:
         type: boolean
         required: true
+    secrets:
+      LYCHEE_USER_AGENT:
+        required: true
     outputs:
       wasm-artifact-name:
         description: "WASM artifact name"
