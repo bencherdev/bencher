@@ -9,14 +9,12 @@
 //! - DELETE - Cancel upload
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
+use bencher_oci::{Digest, OciError, UploadId};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::error::OciError;
-use crate::types::{Digest, UploadId};
 
 /// Path parameters for upload session operations
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -81,16 +79,16 @@ pub async fn oci_upload_status(
     let upload_id: UploadId = path
         .session_id
         .parse()
-        .map_err(|_err| HttpError::from(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Get current upload size
     let size = storage
         .get_upload_size(&upload_id)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build 204 No Content response with Range header (OCI spec)
     let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
@@ -133,16 +131,16 @@ pub async fn oci_upload_chunk(
     let upload_id: UploadId = path
         .session_id
         .parse()
-        .map_err(|_err| HttpError::from(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Get current upload size for Content-Range validation
     let current_size = storage
         .get_upload_size(&upload_id)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Validate Content-Range header if present
     // Content-Range format can be:
@@ -187,7 +185,7 @@ pub async fn oci_upload_chunk(
     let new_size = storage
         .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build 202 Accepted response
     let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
@@ -232,28 +230,28 @@ pub async fn oci_upload_complete(
     let upload_id: UploadId = path
         .session_id
         .parse()
-        .map_err(|_err| HttpError::from(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
     let expected_digest: Digest = query
         .digest
         .parse()
-        .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: query.digest.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: query.digest.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // If there's data in the body, append it first
     if !data.is_empty() {
         storage
             .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
             .await
-            .map_err(|e| HttpError::from(OciError::from(e)))?;
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
     }
 
     // Complete the upload with digest verification
     let actual_digest = storage
         .complete_upload(&upload_id, &expected_digest)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -290,16 +288,16 @@ pub async fn oci_upload_cancel(
     let upload_id: UploadId = path
         .session_id
         .parse()
-        .map_err(|_err| HttpError::from(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Cancel the upload
     storage
         .cancel_upload(&upload_id)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // OCI spec requires 202 Accepted for DELETE (or 204 No Content)
     let response = Response::builder()

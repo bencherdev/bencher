@@ -6,14 +6,12 @@
 //! the specified digest via their `subject` field.
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
+use bencher_oci::{Digest, OciError, RepositoryName};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::error::OciError;
-use crate::types::{Digest, RepositoryName};
 
 /// Path parameters for referrers endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -66,20 +64,20 @@ pub async fn oci_referrers_list(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
     let digest: Digest = path
         .digest
         .parse()
-        .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: path.digest.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.digest.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Get referrers from storage
     let referrers = storage
         .list_referrers(&repository, &digest, query.artifact_type.as_deref())
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build an OCI image index response
     // Per spec: returns application/vnd.oci.image.index.v1+json

@@ -6,14 +6,12 @@
 //! - DELETE /v2/<name>/manifests/<reference> - Delete manifest
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Put};
+use bencher_oci::{OciError, Reference, RepositoryName};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, RequestContext, UntypedBody, endpoint};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::error::OciError;
-use crate::types::{Reference, RepositoryName};
 
 /// Path parameters for manifest endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -53,14 +51,14 @@ pub async fn oci_manifest_exists(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
     let reference: Reference = path
         .reference
         .parse()
-        .map_err(|_err| HttpError::from(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Resolve the reference to a digest
     let digest = match &reference {
@@ -68,14 +66,14 @@ pub async fn oci_manifest_exists(
         Reference::Tag(t) => storage
             .resolve_tag(&repository, t.as_str())
             .await
-            .map_err(|e| HttpError::from(OciError::from(e)))?,
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
     };
 
     // Get manifest to check existence and get size
     let manifest = storage
         .get_manifest_by_digest(&repository, &digest)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Determine content type (default to OCI manifest)
     let content_type = "application/vnd.oci.image.manifest.v1+json";
@@ -112,14 +110,14 @@ pub async fn oci_manifest_get(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
     let reference: Reference = path
         .reference
         .parse()
-        .map_err(|_err| HttpError::from(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Resolve the reference to a digest
     let digest = match &reference {
@@ -127,14 +125,14 @@ pub async fn oci_manifest_get(
         Reference::Tag(t) => storage
             .resolve_tag(&repository, t.as_str())
             .await
-            .map_err(|e| HttpError::from(OciError::from(e)))?,
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
     };
 
     // Get manifest content
     let manifest = storage
         .get_manifest_by_digest(&repository, &digest)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -178,14 +176,14 @@ pub async fn oci_manifest_put(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
     let reference: Reference = path
         .reference
         .parse()
-        .map_err(|_err| HttpError::from(OciError::ManifestInvalid(path.reference.clone())))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::ManifestInvalid(path.reference.clone())))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Determine tag from reference (if it's a tag)
     let tag = match &reference {
@@ -208,7 +206,7 @@ pub async fn oci_manifest_put(
     let digest = storage
         .put_manifest(&repository, bytes::Bytes::copy_from_slice(content), tag)
         .await
-        .map_err(|e| HttpError::from(OciError::from(e)))?;
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -253,16 +251,16 @@ pub async fn oci_manifest_delete(
     let repository: RepositoryName = path
         .name
         .parse()
-        .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
+    let storage = rqctx.context().oci_storage()?;
 
     // Parse reference - can be either a digest or a tag
     let reference: Reference = path
         .reference
         .parse()
-        .map_err(|_err| HttpError::from(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
+        .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     match reference {
         Reference::Digest(digest) => {
@@ -270,14 +268,14 @@ pub async fn oci_manifest_delete(
             storage
                 .delete_manifest(&repository, &digest)
                 .await
-                .map_err(|e| HttpError::from(OciError::from(e)))?;
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         }
         Reference::Tag(tag) => {
             // Delete by tag - delete the tag link only (manifest may still exist)
             storage
                 .delete_tag(&repository, tag.as_str())
                 .await
-                .map_err(|e| HttpError::from(OciError::from(e)))?;
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         }
     }
 

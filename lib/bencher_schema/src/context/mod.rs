@@ -1,7 +1,4 @@
 #[cfg(feature = "plus")]
-use std::sync::Arc;
-
-#[cfg(feature = "plus")]
 use bencher_billing::Biller;
 #[cfg(feature = "plus")]
 use bencher_github_client::GitHubClient;
@@ -9,6 +6,8 @@ use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
+#[cfg(feature = "plus")]
+use bencher_oci::OciStorage;
 use bencher_token::TokenKey;
 #[cfg(feature = "plus")]
 use dropshot::HttpError;
@@ -67,7 +66,7 @@ pub struct ApiContext {
     #[cfg(feature = "plus")]
     pub is_bencher_cloud: bool,
     #[cfg(feature = "plus")]
-    pub oci_storage: Option<Arc<dyn std::any::Any + Send + Sync>>,
+    pub oci_storage: Option<OciStorage>,
 }
 
 #[macro_export]
@@ -118,12 +117,10 @@ impl ApiContext {
     }
 
     #[cfg(feature = "plus")]
-    pub fn oci_storage<T: 'static>(&self) -> Result<&T, HttpError> {
+    pub fn oci_storage(&self) -> Result<&OciStorage, HttpError> {
         self.oci_storage
             .as_ref()
-            .ok_or_else(|| crate::error::locked_error("OCI storage not configured"))?
-            .downcast_ref()
-            .ok_or_else(|| HttpError::for_internal_error("Failed to downcast OCI storage".to_owned()))
+            .ok_or_else(|| crate::error::locked_error("OCI storage not configured"))
     }
 
     #[cfg(feature = "plus")]

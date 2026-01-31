@@ -13,6 +13,7 @@ plus = [
     "dep:bencher_github_client",
     "dep:bencher_google_client",
     "dep:bencher_google_index",
+    "dep:bencher_oci",
     "dep:dashmap",
     "dep:http",
     "dep:reqwest",
@@ -21,6 +22,7 @@ plus = [
     "bencher_billing/plus",
     "bencher_json/plus",
     "bencher_license/plus",
+    "bencher_oci/plus",
     "bencher_recaptcha/plus",
 ]
 sentry = ["dep:sentry"]
@@ -40,6 +42,7 @@ bencher_google_client = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }
+bencher_oci = { workspace = true, optional = true }
 bencher_otel = { workspace = true, optional = true }
 bencher_rank.workspace = true
 bencher_rbac.workspace = true

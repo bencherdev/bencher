@@ -13,32 +13,23 @@ default = []
 plus = [
     "dep:aws-credential-types",
     "dep:aws-sdk-s3",
-    "dep:bencher_endpoint",
     "dep:bencher_json",
-    "dep:bencher_schema",
     "dep:bytes",
-    "dep:dropshot",
     "dep:hex",
     "dep:http",
     "dep:regex",
-    "dep:schemars",
     "dep:serde",
     "dep:serde_json",
     "dep:sha2",
     "dep:thiserror",
     "dep:uuid",
-    "bencher_endpoint/plus",
-    "bencher_schema/plus",
 ]
 sentry = []
-otel = ["dep:bencher_otel"]
+otel = []
 
 [dependencies]
 # Bencher internal crates
-bencher_endpoint = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
-bencher_otel = { workspace = true, optional = true }
-bencher_schema = { workspace = true, optional = true }
 
 # AWS S3 (same as database backup)
 aws-credential-types = { workspace = true, optional = true }
@@ -46,11 +37,9 @@ aws-sdk-s3 = { workspace = true, optional = true }
 
 # External dependencies
 bytes = { workspace = true, optional = true }
-dropshot = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
-schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }

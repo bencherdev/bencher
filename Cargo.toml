@@ -47,6 +47,8 @@ api_projects = { path = "lib/api_projects" }
 api_run = { path = "lib/api_run" }
 api_server = { path = "lib/api_server" }
 api_users = { path = "lib/api_users" }
+# plus API endpoints
+api_oci = { path = "plus/api_oci" }
 # plus
 bencher_billing = { path = "plus/bencher_billing" }
 bencher_bing_index = { path = "plus/bencher_bing_index" }
