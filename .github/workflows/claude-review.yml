@@ -2,7 +2,6 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
     branches: [main, cloud, devel]
 
 concurrency:
@@ -44,7 +43,18 @@ jobs:
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          claude /review --max-turns "${{ env.CLAUDE_MAX_TURNS }}" --model "${{ env.CLAUDE_MODEL }}" > /tmp/review_output.md 2>&1 || {
+          claude -p "Review the changes in this pull request. Use git diff ${{ github.event.pull_request.base.ref }}...HEAD to see the changes. Focus on:
+          - Code quality and best practices
+          - Potential bugs or issues
+          - Security concerns
+          - Performance implications
+          - Compliance with the project standards outlined in CLAUDE.md
+
+          Provide a concise review in markdown format." \
+            --max-turns "${{ env.CLAUDE_MAX_TURNS }}" \
+            --model "${{ env.CLAUDE_MODEL }}" \
+            --allowedTools "Bash(git diff *),Bash(git log *),Bash(git show *),Read,Grep,Glob" \
+            > /tmp/review_output.md 2>&1 || {
             echo "Claude Code review encountered an error" > /tmp/review_output.md
             echo "" >> /tmp/review_output.md
             echo "⚠️ The automated review encountered an error. Please review manually." >> /tmp/review_output.md
@@ -65,12 +75,17 @@ jobs:
               review = '⚠️ Unable to read review output. The review may have failed.';
             }
 
+            // Marker to identify our comment
+            const COMMENT_MARKER = '<!-- claude-code-review -->';
+
             // Add header and metadata
-            const comment = `## 🤖 Claude Code Review
+            const body = `${COMMENT_MARKER}
+            ## 🤖 Claude Code Review
 
             **PR**: #${{ github.event.pull_request.number }}
             **Base**: \`${{ github.event.pull_request.base.ref }}\`
             **Head**: \`${{ github.event.pull_request.head.ref }}\`
+            **Commit**: \`${{ github.event.pull_request.head.sha }}\`
 
             ---
 
@@ -80,9 +95,27 @@ jobs:
 
             <sub>Model: ${{ env.CLAUDE_MODEL }}</sub>`;
 
-            await github.rest.issues.createComment({
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: comment
+              issue_number: context.issue.number
             });
+
+            const existingComment = comments.find(c => c.body.includes(COMMENT_MARKER));
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
