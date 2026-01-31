@@ -8,6 +8,10 @@ on:
   pull_request:
     branches: [main, cloud, devel]
 
+env:
+  GITHUB_REGISTRY: ghcr.io
+  DEV_CONTAINER_DOCKER_IMAGE: bencher-dev-container
+
 # Cancel in-progress runs for the same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -96,17 +100,36 @@ jobs:
       build-docker: ${{ needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
       build-cli: ${{ needs.changes.outputs.cli == 'true' || startsWith(github.ref, 'refs/tags/') }}
 
+  deploy:
+    name: Deploy
+    needs: [lint, cli, test, build]
+    if: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
+    uses: ./.github/workflows/deploy.yml
+    with:
+      deploy-dev: ${{ github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))  }}
+      deploy-test: ${{ github.ref == 'refs/heads/devel'  ||  github.ref == 'refs/heads/cloud' }}
+      deploy-prod: ${{ github.ref == 'refs/heads/cloud' }}
+    secrets:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
   # Summary job for required status checks
   ci-success:
     name: CI Success
     runs-on: ubuntu-22.04
-    needs: [lint, cli, test, build]
+    needs: [lint, cli, test, build, deploy]
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
           if [[ "${{ needs.lint.result }}" != "success" ]]; then
             echo "Lint failed"
+            exit 1
+          fi
+          if [[ "${{ needs.cli.result }}" != "success" ]]; then
+            echo "CLI failed"
             exit 1
           fi
           if [[ "${{ needs.test.result }}" != "success" && "${{ needs.test.result }}" != "skipped" ]]; then
@@ -117,12 +140,31 @@ jobs:
             echo "Build failed"
             exit 1
           fi
+          if [[ "${{ needs.deploy.result }}" != "success" && "${{ needs.deploy.result }}" != "skipped" ]]; then
+            echo "Deploy failed"
+            exit 1
+          fi
           echo "All required jobs passed!"
 
-  # Trigger Deploy Devel for PRs with the deploy label
-  deploy_devel:
-    name: Deploy Devel
-    needs: [ci-success]
-    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy') }}
-    uses: ./.github/workflows/deploy-devel.yml
-    secrets: inherit
+  build_dev_container:
+    name: Build dev container
+    if: ${{ github.ref == 'refs/heads/devel' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pre-build dev container image
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.DEV_CONTAINER_DOCKER_IMAGE }}
+          cacheFrom: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.DEV_CONTAINER_DOCKER_IMAGE }}
+          push: always

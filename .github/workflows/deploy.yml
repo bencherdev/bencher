@@ -1,14 +1,30 @@
-name: Deploy Cloud
+name: Deploy Devel
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    branches: [cloud]
-    types: [completed]
+  workflow_call:
+    inputs:
+      deploy-dev:
+        type: boolean
+        default: false
+      deploy-test:
+        type: boolean
+        default: false
+      deploy-prod:
+        type: boolean
+        default: false
+    secrets:
+      FLY_API_TOKEN:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+      NETLIFY_AUTH_TOKEN:
+        required: false
+      NETLIFY_SITE_ID:
+        required: false
 
 concurrency:
-  group: deploy-cloud
-  cancel-in-progress: false # Don't cancel prod deployments
+  group: deploy
+  cancel-in-progress: true
 
 env:
   MOLD_VERSION: "2.34.1"
@@ -18,10 +34,10 @@ env:
   NETLIFY_CLI_VERSION: "18.0.4"
 
 jobs:
-  deploy_api_fly_test:
-    name: Deploy API to Fly.io Test
+  deploy_api_fly_dev:
+    name: Deploy API to Fly.io Dev
     runs-on: ubuntu-22.04
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ inputs.deploy-dev }}
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -31,7 +47,80 @@ jobs:
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
+      - name: Load & Tag Local Image
+        run: |
+          docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-dev
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Local API to Fly.io
+        working-directory: ./services/api
+        run: flyctl deploy --local-only --config fly/fly.dev.toml --wait-timeout 300
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: cli
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke dev
+
+  deploy_console_netlify_dev:
+    name: Deploy Console UI to Netlify Dev
+    if: ${{ inputs.deploy-dev }}
+    runs-on: ubuntu-22.04
+    needs: deploy_api_fly_dev
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download `bencher_valid` Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.WASM_BENCHER_VALID }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
+          path: ./lib/bencher_valid/pkg
+      - name: Build Console UI
+        working-directory: ./services/console
+        env:
+          SENTRY_UPLOAD: true
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: npm run netlify
+      - name: Install Netlify CLI
+        run: npm install --save-dev netlify-cli@${{ env.NETLIFY_CLI_VERSION }}
+      - name: Deploy Console UI to Netlify Dev
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          DEPLOY_MESSAGE: "Deploy from devel"
+        run: |
+          npx netlify-cli \
+          deploy \
+          --alias devel \
+          --message "$DEPLOY_MESSAGE" \
+          --json \
+          | tee netlify.json
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Netlify Dev Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-netlify dev devel
+
+  deploy_api_fly_test:
+    name: Deploy API to Fly.io Test
+    if: ${{ inputs.deploy-test }}
+    runs-on: ubuntu-22.04
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download API Docker Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
       - name: Load & Tag Litestream Image
         run: |
           docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -50,6 +139,7 @@ jobs:
 
   deploy_api_fly_prod:
     name: Deploy API to Fly.io Prod
+    if: ${{ inputs.deploy-prod }}
     runs-on: ubuntu-22.04
     needs: deploy_api_fly_test
     env:
@@ -87,6 +177,7 @@ jobs:
 
   deploy_console_netlify_prod:
     name: Deploy Console UI to Netlify Prod
+    if: ${{ inputs.deploy-prod }}
     runs-on: ubuntu-22.04
     needs: deploy_api_fly_prod
     steps:
