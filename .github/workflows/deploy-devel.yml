@@ -1,0 +1,146 @@
+name: Deploy Devel
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [devel]
+    types: [completed]
+
+concurrency:
+  group: deploy-devel
+  cancel-in-progress: true
+
+env:
+  MOLD_VERSION: "2.34.1"
+  API_DOCKER_IMAGE: bencher-api
+  FLY_REGISTRY: registry.fly.io
+  WASM_BENCHER_VALID: bencher-valid-pkg
+  NETLIFY_CLI_VERSION: "18.0.4"
+  GITHUB_REGISTRY: ghcr.io
+  DEV_CONTAINER_DOCKER_IMAGE: bencher-dev-container
+
+jobs:
+  deploy_api_fly_dev:
+    name: Deploy API to Fly.io Dev
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download API Docker Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Load & Tag Local Image
+        run: |
+          docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-dev
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Local API to Fly.io
+        working-directory: ./services/api
+        run: flyctl deploy --local-only --config fly/fly.dev.toml --wait-timeout 300
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: cli
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke dev
+
+  deploy_api_fly_test:
+    name: Deploy API to Fly.io Test
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download API Docker Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Load & Tag Litestream Image
+        run: |
+          docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-test
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Litestream API to Fly.io Test
+        working-directory: ./services/api
+        run: flyctl deploy --local-only --config fly/fly.test.toml --wait-timeout 300
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke test
+
+  deploy_console_netlify_dev:
+    name: Deploy Console UI to Netlify Dev
+    runs-on: ubuntu-22.04
+    needs: deploy_api_fly_dev
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download `bencher_valid` Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.WASM_BENCHER_VALID }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ./lib/bencher_valid/pkg
+      - name: Build Console UI
+        working-directory: ./services/console
+        env:
+          SENTRY_UPLOAD: true
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: npm run netlify
+      - name: Install Netlify CLI
+        run: npm install --save-dev netlify-cli@${{ env.NETLIFY_CLI_VERSION }}
+      - name: Deploy Console UI to Netlify Dev
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          DEPLOY_MESSAGE: "Deploy from devel"
+        run: |
+          npx netlify-cli \
+          deploy \
+          --alias devel \
+          --message "$DEPLOY_MESSAGE" \
+          --json \
+          | tee netlify.json
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Netlify Dev Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-netlify dev devel
+
+  build_dev_container:
+    name: Build dev container
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pre-build dev container image
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.DEV_CONTAINER_DOCKER_IMAGE }}
+          cacheFrom: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.DEV_CONTAINER_DOCKER_IMAGE }}
+          push: always

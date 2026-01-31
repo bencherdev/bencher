@@ -1,0 +1,127 @@
+name: Deploy Cloud
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [cloud]
+    types: [completed]
+
+concurrency:
+  group: deploy-cloud
+  cancel-in-progress: false # Don't cancel prod deployments
+
+env:
+  MOLD_VERSION: "2.34.1"
+  API_DOCKER_IMAGE: bencher-api
+  FLY_REGISTRY: registry.fly.io
+  WASM_BENCHER_VALID: bencher-valid-pkg
+  NETLIFY_CLI_VERSION: "18.0.4"
+
+jobs:
+  deploy_api_fly_test:
+    name: Deploy API to Fly.io Test
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download API Docker Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Load & Tag Litestream Image
+        run: |
+          docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-test
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Litestream API to Fly.io Test
+        working-directory: ./services/api
+        run: flyctl deploy --local-only --config fly/fly.test.toml --wait-timeout 300
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke test
+
+  deploy_api_fly_prod:
+    name: Deploy API to Fly.io Prod
+    runs-on: ubuntu-22.04
+    needs: deploy_api_fly_test
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Download API Docker Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Load & Tag Litestream Image
+        run: |
+          docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy API to Fly.io Prod
+        working-directory: ./services/api
+        run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
+      - name: Rebase main on cloud
+        run: |
+          git config --global user.name "Bencher"
+          git config --global user.email "git@bencher.dev"
+          git fetch origin cloud
+          git checkout cloud
+          git pull
+          git fetch origin main
+          git checkout main
+          git pull
+          git rebase origin/cloud
+          git push
+
+  deploy_console_netlify_prod:
+    name: Deploy Console UI to Netlify Prod
+    runs-on: ubuntu-22.04
+    needs: deploy_api_fly_prod
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download `bencher_valid` Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.WASM_BENCHER_VALID }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ./lib/bencher_valid/pkg
+      - name: Build Console UI
+        working-directory: ./services/console
+        env:
+          SENTRY_UPLOAD: true
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: npm run netlify
+      - name: Install Netlify CLI
+        run: npm install --save-dev netlify-cli@${{ env.NETLIFY_CLI_VERSION }}
+      - name: Deploy Console UI to Netlify
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          DEPLOY_MESSAGE: "Deploy from cloud"
+        run: |
+          npx netlify-cli \
+          deploy \
+          --prod \
+          --message "$DEPLOY_MESSAGE" \
+          --json \
+          | tee netlify.json
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Netlify Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-netlify prod --user-agent "${{ secrets.LYCHEE_USER_AGENT }}" cloud

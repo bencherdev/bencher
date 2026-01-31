@@ -1,0 +1,37 @@
+name: "Setup Rust Environment"
+description: "Set up Rust with mold linker and caching"
+
+inputs:
+  mold-version:
+    description: "Mold linker version"
+    required: false
+    default: "2.34.1"
+  cache-key:
+    description: "Cache key suffix"
+    required: true
+  working-directory:
+    description: "Working directory for cargo commands"
+    required: false
+    default: "."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Rust cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ inputs.cache-key }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-${{ inputs.cache-key }}-
+          ${{ runner.os }}-cargo-
+
+    - name: Setup mold linker
+      uses: rui314/setup-mold@v1
+      with:
+        mold-version: ${{ inputs.mold-version }}

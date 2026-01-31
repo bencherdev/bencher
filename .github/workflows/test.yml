@@ -1,0 +1,162 @@
+name: Test
+
+on:
+  workflow_call:
+    inputs:
+      mold-version:
+        type: string
+        default: "2.34.1"
+      is-fork:
+        type: boolean
+        default: false
+    secrets:
+      TEST_BILLING_KEY:
+        required: false
+      BENCHER_API_TOKEN:
+        required: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cargo_test:
+    name: Cargo Test
+    runs-on: ubuntu-22.04
+    env:
+      TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-rust
+        if: ${{ !inputs.is-fork }}
+        with:
+          cache-key: all-features
+          mold-version: ${{ inputs.mold-version }}
+      - uses: rui314/setup-mold@v1
+        if: ${{ inputs.is-fork }}
+        with:
+          mold-version: ${{ inputs.mold-version }}
+      - name: cargo test
+        run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
+      - name: Upload Perf JPEG
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf.jpeg
+          path: ./lib/bencher_plot/perf.jpeg
+          if-no-files-found: error
+
+  api_smoke_test:
+    name: API Smoke Test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: jlumbroso/free-disk-space@main
+        with:
+          large-packages: false
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-rust
+        if: ${{ !inputs.is-fork }}
+        with:
+          cache-key: api
+          mold-version: ${{ inputs.mold-version }}
+      - uses: rui314/setup-mold@v1
+        if: ${{ inputs.is-fork }}
+        with:
+          mold-version: ${{ inputs.mold-version }}
+      - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke ci
+
+  cargo_bench:
+    name: Cargo Bench
+    runs-on: ubuntu-22.04
+    if: ${{ !inputs.is-fork }}
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: cli
+          mold-version: ${{ inputs.mold-version }}
+      - name: Install `bencher` CLI
+        run: cargo install --debug --path services/cli --locked --force
+      - name: Dogfooding Benchmarks with Bencher
+        run: |
+          bencher run \
+          --host https://api.bencher.dev \
+          --project bencher \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch "$GITHUB_REF_NAME" \
+          --start-point "$GITHUB_BASE_REF" \
+          --testbed ubuntu-22.04 \
+          --adapter rust_criterion \
+          --err \
+          --github-actions ${{ secrets.GITHUB_TOKEN }} \
+          cargo bench --package bencher_adapter
+
+  cargo_audit:
+    name: Cargo Audit
+    runs-on: ubuntu-22.04
+    if: ${{ !inputs.is-fork }}
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: audit
+          mold-version: ${{ inputs.mold-version }}
+      - run: cargo audit
+
+  cargo_udeps:
+    name: Cargo Unused Deps
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-rust
+        if: ${{ !inputs.is-fork }}
+        with:
+          cache-key: nightly
+          mold-version: ${{ inputs.mold-version }}
+      - uses: rui314/setup-mold@v1
+        if: ${{ inputs.is-fork }}
+        with:
+          mold-version: ${{ inputs.mold-version }}
+      - name: Install nightly toolchain
+        run: rustup toolchain install nightly
+      - name: Install udeps
+        run: cargo install --version 0.1.50 --locked --force cargo-udeps
+      - name: Run API udeps
+        continue-on-error: true
+        working-directory: ./services/api
+        run: cargo +nightly udeps --all-targets
+      - name: Run CLI udeps
+        continue-on-error: true
+        working-directory: ./services/cli
+        run: cargo +nightly udeps --all-targets
+
+  foss_cargo_check:
+    name: Cargo Check Workspace (not(plus))
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ inputs.mold-version }}
+      - name: cargo check
+        run: cargo check --no-default-features
+
+  foss_console:
+    name: Bencher Console (not(plus))
+    runs-on: ubuntu-22.04
+    env:
+      WASM_PACK_VERSION: "0.12.1"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install `wasm-pack`
+        run: cargo install wasm-pack --version ${{ env.WASM_PACK_VERSION }} --locked --force
+      - name: Build WASM
+        working-directory: ./services/console
+        run: npm run wasm:not-plus
+      - name: Build Console
+        working-directory: ./services/console
+        run: npm run node

@@ -1,0 +1,22 @@
+name: "Setup Node Environment"
+description: "Set up Node.js with npm caching"
+
+inputs:
+  working-directory:
+    description: "Working directory for npm install"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: "npm"
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npm install --include=dev

@@ -1,0 +1,110 @@
+name: Lint
+
+on:
+  workflow_call:
+    inputs:
+      mold-version:
+        type: string
+        default: "2.34.1"
+      typeshare-version:
+        type: string
+        default: "1.13.2"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cargo_fmt:
+    name: Cargo Format
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Add fmt
+        run: rustup component add rustfmt
+      - name: Run fmt
+        run: cargo fmt -- --check
+
+  cargo_clippy:
+    name: Cargo Clippy
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: all-features
+          mold-version: ${{ inputs.mold-version }}
+      - name: Add clippy
+        run: rustup component add clippy
+      - name: Run clippy
+        run: ./scripts/clippy.sh
+
+  check_generated:
+    name: Check Generated
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ inputs.mold-version }}
+      - name: Generate OpenAPI Spec
+        run: cargo gen-spec
+      - name: Check OpenAPI Spec for changes
+        run: git diff --exit-code
+      - name: Install Typeshare CLI
+        run: cargo install typeshare-cli --version ${{ inputs.typeshare-version }} --locked
+      - name: Generate Typescript Types
+        run: cargo gen-ts
+      - name: Check Typescript Types for changes
+        run: git diff --exit-code
+      - name: Generate Unix CLI install scripts
+        run: cargo gen-installer sh
+      - name: Check Unix CLI install script for changes
+        run: git diff --exit-code
+      - name: Generate Windows CLI install scripts
+        run: cargo gen-installer ps1
+      - name: Check Windows CLI install script for changes
+        run: git diff --exit-code
+
+  cargo_deny:
+    name: Cargo Deny
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          log-level: warn
+          command: check
+          arguments: --locked
+
+  biome_format:
+    name: Biome Format
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Biome format Action
+        working-directory: ./services/action
+        run: |
+          npm install --include=dev
+          npx biome ci --linter-enabled false --organize-imports-enabled false .
+      - name: Biome format Console UI
+        working-directory: ./services/console
+        run: |
+          npm install --include=dev
+          npx biome ci --linter-enabled false --organize-imports-enabled false .
+
+  biome_lint:
+    name: Biome Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Biome check Action
+        working-directory: ./services/action
+        run: |
+          npm install --include=dev
+          npx biome ci --formatter-enabled false --organize-imports-enabled false .
+      - name: Biome check Console UI
+        working-directory: ./services/console
+        run: |
+          npm install --include=dev
+          npx biome ci --formatter-enabled false --organize-imports-enabled false .

@@ -1,0 +1,183 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+env:
+  GITHUB_REGISTRY: ghcr.io
+  DOCKER_HUB_ORGANIZATION: bencherdev
+  API_DOCKER_IMAGE: bencher-api
+  CONSOLE_DOCKER_IMAGE: bencher-console
+  CLI_BIN_NAME: bencher
+  MOLD_VERSION: "2.34.1"
+
+jobs:
+  release:
+    name: Release Bencher
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v') }}
+    env:
+      BUILD_LINUX_X86_64: linux-x86-64
+      BUILD_LINUX_ARM_64: linux-arm-64
+      BUILD_MACOS_X86_64: macos-x86-64
+      BUILD_MACOS_ARM_64: macos-arm-64
+      BUILD_WINDOWS_X86_64: windows-x86-64
+      BUILD_WINDOWS_ARM_64: windows-arm-64
+    steps:
+      - uses: actions/checkout@v6
+
+      # Download all artifacts from the CI workflow
+      - name: Download API Docker Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Console Docker Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI Linux x86_64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI Linux ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI macOS x86_64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI macOS ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI Windows x86_64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI Windows ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI Linux x86_64 .deb Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI Linux ARM64 .deb Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Load Docker images
+      - name: Load API Image
+        run: docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+      - name: Load Console Image
+        run: docker load < ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
+
+      # Push to GHCR
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag & Push API Image
+        run: |
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}
+          export TAG=${{ github.event.workflow_run.head_branch }}
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${TAG}
+          docker push ${GITHUB_IMAGE}:latest
+          docker push ${GITHUB_IMAGE}:${TAG}
+
+      - name: Tag & Push Console Image
+        run: |
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
+          export TAG=${{ github.event.workflow_run.head_branch }}
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${TAG}
+          docker push ${GITHUB_IMAGE}:latest
+          docker push ${GITHUB_IMAGE}:${TAG}
+
+      # Push to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Tag & Push API Image to Docker Hub
+        run: |
+          export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.API_DOCKER_IMAGE }}
+          export TAG=${{ github.event.workflow_run.head_branch }}
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${DOCKER_HUB_IMAGE}:latest
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${DOCKER_HUB_IMAGE}:${TAG}
+          docker push ${DOCKER_HUB_IMAGE}:latest
+          docker push ${DOCKER_HUB_IMAGE}:${TAG}
+
+      - name: Tag & Push Console Image to Docker Hub
+        run: |
+          export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.CONSOLE_DOCKER_IMAGE }}
+          export TAG=${{ github.event.workflow_run.head_branch }}
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${DOCKER_HUB_IMAGE}:latest
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${DOCKER_HUB_IMAGE}:${TAG}
+          docker push ${DOCKER_HUB_IMAGE}:latest
+          docker push ${DOCKER_HUB_IMAGE}:${TAG}
+
+      # Generate release notes and publish
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+
+      - name: Generate Release Notes
+        run: cargo gen-notes
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.workflow_run.head_branch }}
+          prerelease: ${{ contains(github.event.workflow_run.head_branch, '-rc') }}
+          body_path: release-notes.md
+          files: |
+            ${{ env.API_DOCKER_IMAGE }}.tar.gz
+            ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb

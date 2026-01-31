@@ -1,0 +1,270 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [devel, cloud]
+    tags: [v**]
+  pull_request:
+    branches: [main, cloud, devel]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MOLD_VERSION: "2.34.1"
+  BENCHER_VERSION: "0.5.10"
+  WASM_BENCHER_VALID: bencher-valid-pkg
+
+jobs:
+  # Determine what changed
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-22.04
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      console: ${{ steps.filter.outputs.console }}
+      action: ${{ steps.filter.outputs.action }}
+      api: ${{ steps.filter.outputs.api }}
+      cli: ${{ steps.filter.outputs.cli }}
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'lib/**'
+              - 'plus/**'
+              - 'services/api/**'
+              - 'services/cli/**'
+              - 'tasks/**'
+              - 'xtask/**'
+            console:
+              - 'services/console/**'
+              - 'lib/bencher_valid/**'
+            action:
+              - 'services/action/**'
+            api:
+              - 'services/api/**'
+              - 'lib/**'
+              - 'plus/**'
+            cli:
+              - 'services/cli/**'
+              - 'lib/**'
+            docker:
+              - 'services/api/Dockerfile'
+              - 'services/console/Dockerfile'
+              - 'docker/**'
+
+  # Lint jobs - always run
+  lint:
+    name: Lint
+    uses: ./.github/workflows/lint.yml
+    with:
+      mold-version: "2.34.1"
+      typeshare-version: "1.13.2"
+
+  # Test jobs - run based on changes
+  test:
+    name: Test
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/')
+    uses: ./.github/workflows/test.yml
+    with:
+      mold-version: "2.34.1"
+      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+    secrets:
+      TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+
+  # Build jobs - run based on changes or for releases
+  build:
+    name: Build
+    needs: changes
+    uses: ./.github/workflows/build.yml
+    with:
+      mold-version: "2.34.1"
+      build-docker: ${{ needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+      build-cli: ${{ needs.changes.outputs.cli == 'true' || startsWith(github.ref, 'refs/tags/') }}
+
+  # Console build (for PRs and devel/cloud)
+  build_console:
+    name: Build Console UI
+    runs-on: ubuntu-22.04
+    needs: build
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download `bencher_valid` Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.WASM_BENCHER_VALID }}
+          path: ./lib/bencher_valid/pkg
+      - name: Build Console UI
+        working-directory: ./services/console
+        run: npm run netlify
+      - name: Test Links
+        if: github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel'
+        timeout-minutes: 3
+        continue-on-error: true
+        uses: lycheeverse/lychee-action@v2.3.0
+        with:
+          args: --config ./services/console/lychee.toml --github-token ${{ secrets.GITHUB_TOKEN }} --user-agent "${{ secrets.LYCHEE_USER_AGENT }}" ./services/console/dist
+
+  # Cross-platform smoke tests (only for releases)
+  release_smoke_tests:
+    name: Release API Smoke Test
+    if: startsWith(github.ref, 'refs/tags/')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+          - os: macos-14
+          - os: windows-2022
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: rui314/setup-mold@v1
+        if: matrix.os == 'ubuntu-22.04'
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke localhost
+
+  # Docker smoke test
+  docker_smoke_test:
+    name: Docker API Smoke Test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: jlumbroso/free-disk-space@main
+        with:
+          large-packages: false
+      - uses: actions/checkout@v6
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Smoke Test
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke docker
+
+  # Test CLI Install
+  test_cli_install:
+    name: Test CLI Install
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - os: ubuntu-22.04
+            source: action-main
+          - os: ubuntu-22.04
+            source: action-devel
+          - os: ubuntu-22.04
+            source: script-cloud
+          - os: ubuntu-22.04
+            source: script-gen
+          - os: ubuntu-22.04
+            source: script-gen-version
+          - os: ubuntu-22.04
+            source: cargo-main
+          - os: ubuntu-22.04
+            source: cargo-devel
+          # macOS
+          - os: macos-14
+            source: action-main
+          - os: macos-14
+            source: action-devel
+          - os: macos-14
+            source: script-cloud
+          - os: macos-14
+            source: script-gen
+          - os: macos-14
+            source: script-gen-version
+          - os: macos-14
+            source: cargo-main
+          - os: macos-14
+            source: cargo-devel
+          # Windows
+          - os: windows-2022
+            source: action-main
+          - os: windows-2022
+            source: action-devel
+          - os: windows-2022
+            source: script-cloud
+          - os: windows-2022
+            source: script-gen
+          - os: windows-2022
+            source: script-gen-version
+          - os: windows-2022
+            source: cargo-main
+          - os: windows-2022
+            source: cargo-devel
+    runs-on: ${{ matrix.os }}
+    # This is expected to fail when tagging a new release
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && ( matrix.source == 'action-devel' || matrix.source == 'script-gen-version' || matrix.source == 'cargo-main' || matrix.source == 'cargo-devel' ) }}
+    steps:
+      - uses: bencherdev/bencher@main
+        if: matrix.source == 'action-main'
+      - uses: bencherdev/bencher@devel
+        if: matrix.source == 'action-devel'
+      - name: Unix CLI Download Install Script
+        if: matrix.source == 'script-cloud' && matrix.os != 'windows-2022'
+        run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+      - name: Windows CLI Download Install Script
+        if: matrix.source == 'script-cloud' && matrix.os == 'windows-2022'
+        run: powershell -c "irm https://bencher.dev/download/install-cli.ps1 | iex"
+      - uses: actions/checkout@v6
+        if: matrix.source == 'script-gen' || matrix.source == 'script-gen-version'
+      - name: Unix CLI Install Script
+        if: matrix.source == 'script-gen' && matrix.os != 'windows-2022'
+        run: cat services/cli/templates/output/install-cli.sh | sh
+      - name: Unix CLI Install Script Version
+        if: matrix.source == 'script-gen-version' && matrix.os != 'windows-2022'
+        run: export BENCHER_VERSION=${{ env.BENCHER_VERSION }}; cat services/cli/templates/output/install-cli.sh | sh
+      - name: Windows CLI Install Script
+        if: matrix.source == 'script-gen' && matrix.os == 'windows-2022'
+        run: powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
+      - name: Windows CLI Install Script Version
+        if: matrix.source == 'script-gen-version' && matrix.os == 'windows-2022'
+        run: $env:BENCHER_VERSION="${{ env.BENCHER_VERSION }}"; powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
+      - name: Cargo CLI Install main
+        if: matrix.source == 'cargo-main'
+        run: cargo install --git https://github.com/bencherdev/bencher --branch main --locked bencher_cli
+      - name: Cargo CLI Install devel
+        if: matrix.source == 'cargo-devel'
+        run: cargo install --git https://github.com/bencherdev/bencher --branch devel --locked bencher_cli
+      - name: Run current Bencher CLI GitHub Action
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+
+  # Summary job for required status checks
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-22.04
+    needs: [lint, test, build, build_console]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]]; then
+            echo "Lint failed"
+            exit 1
+          fi
+          if [[ "${{ needs.test.result }}" != "success" && "${{ needs.test.result }}" != "skipped" ]]; then
+            echo "Test failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "Build failed"
+            exit 1
+          fi
+          echo "All required jobs passed!"
