@@ -1,14 +1,14 @@
 //! OCI Base Endpoint - GET /v2/
+//!
+//! Returns 200 OK if authenticated, 401 with WWW-Authenticate if not.
+//! This is the first endpoint clients call to verify registry compatibility.
 
-use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_schema::context::ApiContext;
-use dropshot::{HttpError, RequestContext, endpoint};
-use schemars::JsonSchema;
-use serde::Serialize;
+use dropshot::{Body, HttpError, RequestContext, endpoint};
+use http::Response;
 
-/// Response for the OCI base endpoint
-#[derive(Debug, Serialize, JsonSchema)]
-pub struct OciBaseResponse {}
+use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate};
 
 /// CORS preflight for OCI base endpoint
 #[endpoint {
@@ -24,15 +24,37 @@ pub async fn oci_base_options(
 
 /// OCI API version check endpoint
 ///
-/// Returns 200 OK if the registry implements the OCI Distribution Spec.
-/// This is the first endpoint clients call to verify registry compatibility.
+/// Returns 200 OK if authenticated and the registry implements the OCI Distribution Spec.
+/// Returns 401 Unauthorized with WWW-Authenticate header if not authenticated.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = GET,
     path = "/v2/",
     tags = ["oci"],
 }]
 pub async fn oci_base(
-    _rqctx: RequestContext<ApiContext>,
-) -> Result<ResponseOk<OciBaseResponse>, HttpError> {
-    Ok(Get::pub_response_ok(OciBaseResponse {}))
+    rqctx: RequestContext<ApiContext>,
+) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
+
+    // Try to extract and validate bearer token
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, None))?;
+
+    // Validate the OCI token
+    context
+        .token_key
+        .validate_oci(&token)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, None))?;
+
+    // Return 200 OK with empty JSON body
+    Response::builder()
+        .status(http::StatusCode::OK)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .body(Body::from("{}"))
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
 }

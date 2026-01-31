@@ -13,6 +13,8 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access};
+
 /// Path parameters for referrers endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReferrersPath {
@@ -47,6 +49,10 @@ pub async fn oci_referrers_options(
 ///
 /// Returns an image index containing descriptors of all manifests that
 /// reference the specified digest via their `subject` field.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 #[endpoint {
     method = GET,
     path = "/v2/{name}/referrers/{digest}",
@@ -57,8 +63,16 @@ pub async fn oci_referrers_list(
     path: Path<ReferrersPath>,
     query: Query<ReferrersQuery>,
 ) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
     let path = path.into_inner();
     let query = query.into_inner();
+
+    // Authenticate
+    let scope = format!("repository:{}:pull", path.name);
+    let token = extract_oci_bearer_token(&rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    validate_oci_access(context, &token, &path.name, "pull")
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
     // Parse and validate inputs
     let repository: RepositoryName = path
@@ -71,7 +85,7 @@ pub async fn oci_referrers_list(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.digest.clone() }))?;
 
     // Get storage
-    let storage = rqctx.context().oci_storage()?;
+    let storage = context.oci_storage()?;
 
     // Get referrers from storage
     let referrers = storage

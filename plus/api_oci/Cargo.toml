@@ -18,11 +18,15 @@ otel = ["dep:bencher_otel"]
 
 [dependencies]
 bencher_endpoint = { workspace = true }
+bencher_json = { workspace = true }
 bencher_oci_storage = { workspace = true }
 bencher_otel = { workspace = true, optional = true }
 bencher_schema = { workspace = true }
+bencher_token = { workspace = true }
 
+base64 = { workspace = true }
 bytes = { workspace = true }
+chrono = { workspace = true }
 dropshot = { workspace = true }
 http = { workspace = true }
 schemars = { workspace = true }
