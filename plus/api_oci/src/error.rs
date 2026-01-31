@@ -1,6 +1,6 @@
 //! HTTP error conversion for OCI errors
 
-use bencher_oci::OciError;
+use bencher_oci_storage::OciError;
 use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
 
 /// Converts an `OciError` into an `HttpError`

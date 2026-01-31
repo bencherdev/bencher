@@ -9,7 +9,7 @@
 //! and variable path segments while maintaining OCI spec compliance.
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Post, Put};
-use bencher_oci::{Digest, OciError, RepositoryName};
+use bencher_oci_storage::{Digest, OciError, RepositoryName};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
 use http::Response;

@@ -8,7 +8,7 @@ use bencher_json::{
     system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha},
 };
 use bencher_license::Licensor;
-use bencher_oci::OciStorage;
+use bencher_oci_storage::OciStorage;
 use bencher_recaptcha::RecaptchaClient;
 use bencher_schema::context::{Indexer, StatsSettings};
 use tokio::runtime::Handle;
@@ -40,7 +40,7 @@ pub enum PlusError {
     #[error("{0}")]
     Index(#[from] bencher_schema::context::IndexError),
     #[error("Failed to initialize OCI storage: {0}")]
-    OciStorage(bencher_oci::OciStorageError),
+    OciStorage(bencher_oci_storage::OciStorageError),
 }
 
 impl Plus {

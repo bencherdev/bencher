@@ -6,7 +6,7 @@
 //! - DELETE /v2/<name>/manifests/<reference> - Delete manifest
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Put};
-use bencher_oci::{OciError, Reference, RepositoryName};
+use bencher_oci_storage::{OciError, Reference, RepositoryName};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, RequestContext, UntypedBody, endpoint};
 use http::Response;

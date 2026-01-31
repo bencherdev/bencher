@@ -3,7 +3,7 @@
 //! - GET /v2/<name>/tags/list - List tags for a repository
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
-use bencher_oci::{OciError, RepositoryName};
+use bencher_oci_storage::{OciError, RepositoryName};
 use bencher_schema::context::ApiContext;
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
