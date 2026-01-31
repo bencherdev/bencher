@@ -3,35 +3,39 @@ name: Deploy Devel
 on:
   workflow_call:
     inputs:
+      mold-version:
+        type: string
+        required: true
+      netlify-cli-version:
+        type: string
+        required: true
       deploy-dev:
         type: boolean
-        default: false
+        required: true
       deploy-test:
         type: boolean
-        default: false
+        required: true
       deploy-prod:
         type: boolean
-        default: false
+        required: true
     secrets:
       FLY_API_TOKEN:
-        required: false
+        required: true
       SENTRY_AUTH_TOKEN:
-        required: false
-      NETLIFY_AUTH_TOKEN:
-        required: false
+        required: true
       NETLIFY_SITE_ID:
-        required: false
+        required: true
+      NETLIFY_AUTH_TOKEN:
+        required: true
 
 concurrency:
   group: deploy
   cancel-in-progress: true
 
 env:
-  MOLD_VERSION: "2.34.1"
   API_DOCKER_IMAGE: bencher-api
   FLY_REGISTRY: registry.fly.io
   WASM_BENCHER_VALID: bencher-valid-pkg
-  NETLIFY_CLI_VERSION: "18.0.4"
 
 jobs:
   deploy_api_fly_dev:
@@ -59,7 +63,7 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: cli
-          mold-version: ${{ env.MOLD_VERSION }}
+          mold-version: ${{ inputs.mold-version }}
       - name: Run Smoke Test
         env:
           RUST_BACKTRACE: full
@@ -86,7 +90,7 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run netlify
       - name: Install Netlify CLI
-        run: npm install --save-dev netlify-cli@${{ env.NETLIFY_CLI_VERSION }}
+        run: npm install --save-dev netlify-cli@${{ inputs.netlify-cli-version }}
       - name: Deploy Console UI to Netlify Dev
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
@@ -101,7 +105,7 @@ jobs:
           | tee netlify.json
       - uses: rui314/setup-mold@v1
         with:
-          mold-version: ${{ env.MOLD_VERSION }}
+          mold-version: ${{ inputs.mold-version }}
       - name: Run Netlify Dev Test
         env:
           RUST_BACKTRACE: full
@@ -131,7 +135,7 @@ jobs:
         run: flyctl deploy --local-only --config fly/fly.test.toml --wait-timeout 300
       - uses: rui314/setup-mold@v1
         with:
-          mold-version: ${{ env.MOLD_VERSION }}
+          mold-version: ${{ inputs.mold-version }}
       - name: Run Smoke Test
         env:
           RUST_BACKTRACE: full
@@ -196,7 +200,7 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run netlify
       - name: Install Netlify CLI
-        run: npm install --save-dev netlify-cli@${{ env.NETLIFY_CLI_VERSION }}
+        run: npm install --save-dev netlify-cli@${{ inputs.netlify-cli-version }}
       - name: Deploy Console UI to Netlify
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
@@ -211,7 +215,7 @@ jobs:
           | tee netlify.json
       - uses: rui314/setup-mold@v1
         with:
-          mold-version: ${{ env.MOLD_VERSION }}
+          mold-version: ${{ inputs.mold-version }}
       - name: Run Netlify Test
         env:
           RUST_BACKTRACE: full

@@ -8,7 +8,7 @@ on:
         required: true
       is-fork:
         type: boolean
-        default: false
+        required: true
     secrets:
       TEST_BILLING_KEY:
         required: true

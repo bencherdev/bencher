@@ -75,7 +75,14 @@ jobs:
     uses: ./.github/workflows/cli.yml
     with:
       bencher-version: "0.5.10"
-      cli-changed: ${{ needs.changes.outputs.cli }}
+      mold-version: "2.34.1"
+      zig-build-version: "0.19.3"
+      zig-version: "0.13.0"
+      # Use minimum supported glibc version for Rust Tier 1
+      # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
+      glibc-version: "2.17"
+      check-cli: ${{ needs.changes.outputs.cli == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' }}
+      build-cli: ${{ needs.changes.outputs.cli == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
 
@@ -97,8 +104,10 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       mold-version: "2.34.1"
+      wasm-pack-version: "0.12.1"
+      litestream-version: "0.3.13"
+      build-action: ${{ needs.changes.outputs.action == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
       build-docker: ${{ needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
-      build-cli: ${{ needs.changes.outputs.cli == 'true' || startsWith(github.ref, 'refs/tags/') }}
 
   deploy:
     name: Deploy
@@ -106,14 +115,16 @@ jobs:
     if: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
     uses: ./.github/workflows/deploy.yml
     with:
+      mold-version: "2.34.1"
+      netlify-cli-version: "18.0.4"
       deploy-dev: ${{ github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))  }}
       deploy-test: ${{ github.ref == 'refs/heads/devel'  ||  github.ref == 'refs/heads/cloud' }}
       deploy-prod: ${{ github.ref == 'refs/heads/cloud' }}
     secrets:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
   release:
     name: Release

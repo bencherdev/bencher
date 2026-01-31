@@ -5,15 +5,32 @@ on:
     inputs:
       bencher-version:
         type: string
-      cli-changed:
+        required: true
+      mold-version:
         type: string
-        default: "true"
+        required: true
+      zig-version:
+        type: string
+        required: true
+      zig-build-version:
+        type: string
+        required: true
+      glibc-version:
+        type: string
+        required: true
+      check-cli:
+        type: boolean
+        required: true
+      build-cli:
+        type: boolean
+        required: true
     secrets:
       BENCHER_API_TOKEN:
-        required: false
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
+  CLI_BIN_NAME: bencher
 
 jobs:
   action_main:
@@ -64,7 +81,7 @@ jobs:
 
   script_gen:
     name: Script Gen
-    if: inputs.cli-changed == 'true'
+    if: ${{ inputs.check-cli }}
     strategy:
       fail-fast: false
       matrix:
@@ -83,7 +100,7 @@ jobs:
 
   script_gen_version:
     name: Script Gen Version
-    if: inputs.cli-changed == 'true'
+    if: ${{ inputs.check-cli }}
     strategy:
       fail-fast: false
       matrix:
@@ -104,7 +121,7 @@ jobs:
 
   cargo_main:
     name: Cargo `main`
-    if: github.ref == 'refs/heads/main' && inputs.cli-changed == 'true'
+    if: ${{ github.ref == 'refs/heads/main' && inputs.check-cli }}
     strategy:
       fail-fast: false
       matrix:
@@ -120,7 +137,7 @@ jobs:
 
   cargo_devel:
     name: Cargo `devel`
-    if: github.ref == 'refs/heads/devel' && inputs.cli-changed == 'true'
+    if: ${{ github.ref == 'refs/heads/devel' && inputs.check-cli }}
     strategy:
       fail-fast: false
       matrix:
@@ -133,3 +150,117 @@ jobs:
         run: cargo install --git https://github.com/bencherdev/bencher --branch devel --locked bencher_cli
       - name: Run Bencher CLI
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+
+  build_cli:
+    name: Build CLI
+    if: ${{ inputs.build-cli }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build: linux-x86-64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - build: linux-arm-64
+            os: ubuntu-22.04
+            target: aarch64-unknown-linux-gnu
+          - build: macos-x86-64
+            os: macos-14
+            target: x86_64-apple-darwin
+          - build: macos-arm-64
+            os: macos-14
+            target: aarch64-apple-darwin
+          - build: windows-x86-64
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
+          - build: windows-arm-64
+            os: windows-2022
+            target: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+      - uses: mlugg/setup-zig@v1
+        if: startsWith(matrix.build, 'linux')
+        with:
+          version: ${{ inputs.zig-version }}
+      - name: Install zigbuild
+        if: startsWith(matrix.build, 'linux')
+        run: cargo install --version ${{ inputs.zig-build-version }} --locked --force cargo-zigbuild
+      - name: cargo zigbuild Linux CLI
+        if: startsWith(matrix.build, 'linux')
+        working-directory: ./services/cli
+        run: cargo zigbuild --profile release-small --target ${{ matrix.target }}.${{ inputs.glibc-version }}
+      - name: cargo build macOS CLI
+        if: startsWith(matrix.build, 'macos')
+        working-directory: ./services/cli
+        run: cargo build --profile release-small --target ${{ matrix.target }}
+      - name: cargo build Windows CLI
+        if: startsWith(matrix.build, 'windows')
+        working-directory: ./services/cli
+        run: cargo build --profile release-small --target ${{ matrix.target }}
+      - name: Rename Unix CLI bin
+        if: (!startsWith(matrix.build, 'windows'))
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+      - name: Rename Windows CLI bin
+        if: startsWith(matrix.build, 'windows')
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
+      - name: Upload Unix CLI Artifact
+        if: (!startsWith(matrix.build, 'windows'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+          path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+          if-no-files-found: error
+      - name: Upload Windows CLI Artifact
+        if: startsWith(matrix.build, 'windows')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
+          path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
+          if-no-files-found: error
+
+  package_cli:
+    name: Package CLI
+    if: ${{ inputs.build-cli }}
+    needs: build_cli
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build: linux-x86-64
+            os: ubuntu-22.04
+            arch: amd64
+          - build: linux-arm-64
+            os: ubuntu-22.04
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    env:
+      CLI_DEB_DIR: deb
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ inputs.mold-version }}
+      - name: Build .deb package
+        run: cargo gen-pkg deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+      - name: Test install .deb package
+        if: matrix.build == 'linux-x86-64'
+        run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
+      - name: Sanity test .deb package installation
+        if: matrix.build == 'linux-x86-64'
+        run: |
+          bencher --version
+          bencher mock
+          man bencher
+      - name: Upload .deb Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
+          path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
+          if-no-files-found: error

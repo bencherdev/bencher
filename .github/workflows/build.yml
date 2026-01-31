@@ -5,20 +5,19 @@ on:
     inputs:
       mold-version:
         type: string
+        required: true
       wasm-pack-version:
         type: string
-      zig-version:
+        required: true
+      litestream-version:
         type: string
-      zig-build-version:
-        type: string
-      glibc-version:
-        type: string
+        required: true
+      build-action:
+        type: boolean
+        required: true
       build-docker:
         type: boolean
-        default: true
-      build-cli:
-        type: boolean
-        default: true
+        required: true
     outputs:
       wasm-artifact-name:
         description: "WASM artifact name"
@@ -29,15 +28,14 @@ env:
   GITHUB_REGISTRY: ghcr.io
   API_DOCKER_IMAGE: bencher-api
   CONSOLE_DOCKER_IMAGE: bencher-console
-  CLI_BIN_NAME: bencher
-  WASM_BENCHER_VALID: bencher-valid-pkg
-  LITESTREAM_VERSION: "0.3.13"
-  LITESTREAM_ARCH: amd64
   CACHE_NAME: ${{ github.ref_name }}
+  WASM_BENCHER_VALID: bencher-valid-pkg
+  LITESTREAM_ARCH: amd64
 
 jobs:
   build_github_action:
     name: Build GitHub Action
+    if: ${{ inputs.build-action }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
@@ -110,7 +108,6 @@ jobs:
           npm install --include=dev
           npx vitest run
 
-  # Console build (for PRs and devel/cloud)
   build_console:
     name: Build Console UI
     runs-on: ubuntu-22.04
@@ -158,7 +155,7 @@ jobs:
           tags: ${{ env.API_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
-            LITESTREAM_VERSION=${{ env.LITESTREAM_VERSION }}
+            LITESTREAM_VERSION=${{ inputs.litestream-version }}
             LITESTREAM_ARCH=${{ env.LITESTREAM_ARCH }}
           cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
           cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
@@ -210,118 +207,4 @@ jobs:
         with:
           name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
-          if-no-files-found: error
-
-  build_cli:
-    name: Build CLI
-    if: ${{ inputs.build-cli }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - build: linux-x86-64
-            os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-          - build: linux-arm-64
-            os: ubuntu-22.04
-            target: aarch64-unknown-linux-gnu
-          - build: macos-x86-64
-            os: macos-14
-            target: x86_64-apple-darwin
-          - build: macos-arm-64
-            os: macos-14
-            target: aarch64-apple-darwin
-          - build: windows-x86-64
-            os: windows-2022
-            target: x86_64-pc-windows-msvc
-          - build: windows-arm-64
-            os: windows-2022
-            target: aarch64-pc-windows-msvc
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install Rust target
-        run: rustup target add ${{ matrix.target }}
-      - uses: mlugg/setup-zig@v1
-        if: startsWith(matrix.build, 'linux')
-        with:
-          version: ${{ inputs.zig-version }}
-      - name: Install zigbuild
-        if: startsWith(matrix.build, 'linux')
-        run: cargo install --version ${{ inputs.zig-build-version }} --locked --force cargo-zigbuild
-      - name: cargo zigbuild Linux CLI
-        if: startsWith(matrix.build, 'linux')
-        working-directory: ./services/cli
-        run: cargo zigbuild --profile release-small --target ${{ matrix.target }}.${{ inputs.glibc-version }}
-      - name: cargo build macOS CLI
-        if: startsWith(matrix.build, 'macos')
-        working-directory: ./services/cli
-        run: cargo build --profile release-small --target ${{ matrix.target }}
-      - name: cargo build Windows CLI
-        if: startsWith(matrix.build, 'windows')
-        working-directory: ./services/cli
-        run: cargo build --profile release-small --target ${{ matrix.target }}
-      - name: Rename Unix CLI bin
-        if: (!startsWith(matrix.build, 'windows'))
-        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
-      - name: Rename Windows CLI bin
-        if: startsWith(matrix.build, 'windows')
-        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
-      - name: Upload Unix CLI Artifact
-        if: (!startsWith(matrix.build, 'windows'))
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
-          path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
-          if-no-files-found: error
-      - name: Upload Windows CLI Artifact
-        if: startsWith(matrix.build, 'windows')
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
-          path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
-          if-no-files-found: error
-
-  package_cli:
-    name: Package CLI
-    if: ${{ inputs.build-cli }}
-    needs: build_cli
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - build: linux-x86-64
-            os: ubuntu-22.04
-            arch: amd64
-          - build: linux-arm-64
-            os: ubuntu-22.04
-            arch: arm64
-    runs-on: ${{ matrix.os }}
-    env:
-      CLI_DEB_DIR: deb
-    steps:
-      - uses: actions/checkout@v6
-      - name: Download CLI Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
-      - uses: rui314/setup-mold@v1
-        with:
-          mold-version: ${{ inputs.mold-version }}
-      - name: Build .deb package
-        run: cargo gen-pkg deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
-      - name: Test install .deb package
-        if: matrix.build == 'linux-x86-64'
-        run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
-      - name: Sanity test .deb package installation
-        if: matrix.build == 'linux-x86-64'
-        run: |
-          bencher --version
-          bencher mock
-          man bencher
-      - name: Upload .deb Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
-          path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
           if-no-files-found: error
