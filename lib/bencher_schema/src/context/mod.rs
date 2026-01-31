@@ -1,4 +1,7 @@
 #[cfg(feature = "plus")]
+use std::sync::Arc;
+
+#[cfg(feature = "plus")]
 use bencher_billing::Biller;
 #[cfg(feature = "plus")]
 use bencher_github_client::GitHubClient;
@@ -63,6 +66,8 @@ pub struct ApiContext {
     pub recaptcha_client: Option<RecaptchaClient>,
     #[cfg(feature = "plus")]
     pub is_bencher_cloud: bool,
+    #[cfg(feature = "plus")]
+    pub oci_storage: Option<Arc<dyn std::any::Any + Send + Sync>>,
 }
 
 #[macro_export]
@@ -110,6 +115,15 @@ impl ApiContext {
         self.biller.as_ref().ok_or_else(|| {
             crate::error::locked_error("Tried to use a Bencher Cloud route when Self-Hosted")
         })
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn oci_storage<T: 'static>(&self) -> Result<&T, HttpError> {
+        self.oci_storage
+            .as_ref()
+            .ok_or_else(|| crate::error::locked_error("OCI storage not configured"))?
+            .downcast_ref()
+            .ok_or_else(|| HttpError::for_internal_error("Failed to downcast OCI storage".to_owned()))
     }
 
     #[cfg(feature = "plus")]

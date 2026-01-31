@@ -15,7 +15,6 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::context::storage;
 use crate::error::OciError;
 use crate::types::{Digest, RepositoryName};
 
@@ -65,7 +64,7 @@ pub async fn oci_blob_options(
     tags = ["oci"],
 }]
 pub async fn oci_blob_exists(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
@@ -90,7 +89,7 @@ pub async fn oci_blob_exists(
         .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Check if blob exists and get size
     let size = storage
@@ -120,7 +119,7 @@ pub async fn oci_blob_exists(
     tags = ["oci"],
 }]
 pub async fn oci_blob_get(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
@@ -145,7 +144,7 @@ pub async fn oci_blob_get(
         .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Get blob content
     let (data, size) = storage
@@ -179,7 +178,7 @@ pub async fn oci_blob_get(
     tags = ["oci"],
 }]
 pub async fn oci_blob_delete(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
@@ -204,7 +203,7 @@ pub async fn oci_blob_delete(
         .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Delete the blob
     storage
@@ -229,7 +228,7 @@ pub async fn oci_blob_delete(
     tags = ["oci"],
 }]
 pub async fn oci_upload_start(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
     query: Query<UploadStartQuery>,
 ) -> Result<Response<Body>, HttpError> {
@@ -252,7 +251,7 @@ pub async fn oci_upload_start(
         .map_err(|_err| HttpError::from(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Handle cross-repository mount if requested
     if let (Some(digest_str), Some(from_name)) = (&query.digest, &query.from) {
@@ -310,7 +309,7 @@ pub async fn oci_upload_start(
     tags = ["oci"],
 }]
 pub async fn oci_upload_monolithic(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
     query: Query<MonolithicUploadQuery>,
     body: UntypedBody,
@@ -339,7 +338,7 @@ pub async fn oci_upload_monolithic(
         .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: query.digest.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Start upload, append data, and complete in one operation
     let upload_id = storage

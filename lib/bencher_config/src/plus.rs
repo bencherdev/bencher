@@ -8,7 +8,7 @@ use bencher_json::{
     system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha},
 };
 use bencher_license::Licensor;
-use bencher_oci::{OciStorage, OciStorageError};
+use bencher_oci::OciStorage;
 use bencher_recaptcha::RecaptchaClient;
 use bencher_schema::context::{Indexer, StatsSettings};
 use tokio::runtime::Handle;
@@ -22,6 +22,7 @@ pub struct Plus {
     pub biller: Option<Biller>,
     pub licensor: Licensor,
     pub recaptcha_client: Option<RecaptchaClient>,
+    pub oci_storage: Option<OciStorage>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -39,9 +40,7 @@ pub enum PlusError {
     #[error("{0}")]
     Index(#[from] bencher_schema::context::IndexError),
     #[error("Failed to initialize OCI storage: {0}")]
-    OciStorage(OciStorageError),
-    #[error("OCI storage already initialized")]
-    OciStorageAlreadyInitialized,
+    OciStorage(bencher_oci::OciStorageError),
 }
 
 impl Plus {
@@ -55,15 +54,16 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
+                oci_storage: None,
             });
         };
 
         // Initialize OCI storage if configured
-        if let Some(oci) = plus.oci {
-            let storage =
-                OciStorage::try_from_config(oci.data_store).map_err(PlusError::OciStorage)?;
-            bencher_oci::init_storage(storage).map_err(|_| PlusError::OciStorageAlreadyInitialized)?;
-        }
+        let oci_storage = plus
+            .oci
+            .map(|oci| OciStorage::try_from_config(oci.data_store))
+            .transpose()
+            .map_err(PlusError::OciStorage)?;
 
         let github_client = plus.github.map(
             |JsonGitHub {
@@ -107,6 +107,7 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
+                oci_storage,
             });
         };
 
@@ -136,6 +137,7 @@ impl Plus {
             biller,
             licensor,
             recaptcha_client,
+            oci_storage,
         })
     }
 }

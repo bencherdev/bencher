@@ -15,7 +15,6 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::context::storage;
 use crate::error::OciError;
 use crate::types::{Digest, UploadId};
 
@@ -70,7 +69,7 @@ pub async fn oci_upload_session_options(
     tags = ["oci"],
 }]
 pub async fn oci_upload_status(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
 ) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
@@ -85,7 +84,7 @@ pub async fn oci_upload_status(
         .map_err(|_err| HttpError::from(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Get current upload size
     let size = storage
@@ -137,7 +136,7 @@ pub async fn oci_upload_chunk(
         .map_err(|_err| HttpError::from(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Get current upload size for Content-Range validation
     let current_size = storage
@@ -217,7 +216,7 @@ pub async fn oci_upload_chunk(
     tags = ["oci"],
 }]
 pub async fn oci_upload_complete(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
     query: Query<UploadCompleteQuery>,
     body: UntypedBody,
@@ -240,7 +239,7 @@ pub async fn oci_upload_complete(
         .map_err(|_err| HttpError::from(OciError::DigestInvalid { digest: query.digest.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // If there's data in the body, append it first
     if !data.is_empty() {
@@ -281,7 +280,7 @@ pub async fn oci_upload_complete(
     tags = ["oci"],
 }]
 pub async fn oci_upload_cancel(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
 ) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
@@ -294,7 +293,7 @@ pub async fn oci_upload_cancel(
         .map_err(|_err| HttpError::from(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+    let storage = rqctx.context().oci_storage::<crate::OciStorage>()?;
 
     // Cancel the upload
     storage
