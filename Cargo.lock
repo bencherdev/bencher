@@ -184,7 +184,7 @@ name = "api_oci"
 version = "0.5.10"
 dependencies = [
  "bencher_endpoint",
- "bencher_oci",
+ "bencher_oci_storage",
  "bencher_otel",
  "bencher_schema",
  "bytes",
@@ -1204,7 +1204,7 @@ dependencies = [
  "bencher_google_client",
  "bencher_json",
  "bencher_license",
- "bencher_oci",
+ "bencher_oci_storage",
  "bencher_rbac",
  "bencher_recaptcha",
  "bencher_schema",
@@ -1326,7 +1326,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bencher_oci"
+name = "bencher_oci_storage"
 version = "0.5.10"
 dependencies = [
  "aws-credential-types",
@@ -1427,7 +1427,7 @@ dependencies = [
  "bencher_google_index",
  "bencher_json",
  "bencher_license",
- "bencher_oci",
+ "bencher_oci_storage",
  "bencher_otel",
  "bencher_rank",
  "bencher_rbac",

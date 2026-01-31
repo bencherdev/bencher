@@ -1,5 +1,5 @@
 [package]
-name = "bencher_oci"
+name = "bencher_oci_storage"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

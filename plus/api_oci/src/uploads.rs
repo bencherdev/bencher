@@ -9,7 +9,7 @@
 //! - DELETE - Cancel upload
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
-use bencher_oci::{Digest, OciError, UploadId};
+use bencher_oci_storage::{Digest, OciError, UploadId};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
 use http::Response;

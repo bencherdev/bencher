@@ -6,7 +6,7 @@
 //! the specified digest via their `subject` field.
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
-use bencher_oci::{Digest, OciError, RepositoryName};
+use bencher_oci_storage::{Digest, OciError, RepositoryName};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
 use http::Response;

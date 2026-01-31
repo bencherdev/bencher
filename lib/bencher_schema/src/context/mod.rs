@@ -7,7 +7,7 @@ use bencher_google_client::GoogleClient;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
 #[cfg(feature = "plus")]
-use bencher_oci::OciStorage;
+use bencher_oci_storage::OciStorage;
 use bencher_token::TokenKey;
 #[cfg(feature = "plus")]
 use dropshot::HttpError;
