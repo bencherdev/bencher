@@ -36,8 +36,8 @@ env:
 jobs:
   deploy_api_fly_dev:
     name: Deploy API to Fly.io Dev
-    runs-on: ubuntu-22.04
     if: ${{ inputs.deploy-dev }}
+    runs-on: ubuntu-22.04
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -68,8 +68,8 @@ jobs:
   deploy_console_netlify_dev:
     name: Deploy Console UI to Netlify Dev
     if: ${{ inputs.deploy-dev }}
-    runs-on: ubuntu-22.04
     needs: deploy_api_fly_dev
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
@@ -140,8 +140,8 @@ jobs:
   deploy_api_fly_prod:
     name: Deploy API to Fly.io Prod
     if: ${{ inputs.deploy-prod }}
-    runs-on: ubuntu-22.04
     needs: deploy_api_fly_test
+    runs-on: ubuntu-22.04
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -178,8 +178,8 @@ jobs:
   deploy_console_netlify_prod:
     name: Deploy Console UI to Netlify Prod
     if: ${{ inputs.deploy-prod }}
-    runs-on: ubuntu-22.04
     needs: deploy_api_fly_prod
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact

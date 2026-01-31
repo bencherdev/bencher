@@ -5,19 +5,14 @@ on:
     inputs:
       mold-version:
         type: string
-        default: "2.34.1"
       wasm-pack-version:
         type: string
-        default: "0.12.1"
       zig-version:
         type: string
-        default: "0.13.0"
       zig-build-version:
         type: string
-        default: "0.19.3"
       glibc-version:
         type: string
-        default: "2.17"
       build-docker:
         type: boolean
         default: true

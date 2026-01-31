@@ -18,6 +18,7 @@ env:
 jobs:
   action_main:
     name: Action `main`
+    if: github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud'
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +46,7 @@ jobs:
 
   script_cloud:
     name: Script Cloud
+    if: github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud'
     strategy:
       fail-fast: false
       matrix:
@@ -102,7 +104,7 @@ jobs:
 
   cargo_main:
     name: Cargo `main`
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.cli-changed == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -118,7 +120,7 @@ jobs:
 
   cargo_devel:
     name: Cargo `devel`
-    if: github.ref == 'refs/heads/devel'
+    if: github.ref == 'refs/heads/devel' && inputs.cli-changed == 'true'
     strategy:
       fail-fast: false
       matrix:

@@ -5,10 +5,10 @@ on:
     inputs:
       mold-version:
         type: string
-        default: "2.34.1"
+        required: true
       typeshare-version:
         type: string
-        default: "1.13.2"
+        required: true
 
 env:
   CARGO_TERM_COLOR: always

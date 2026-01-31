@@ -2,11 +2,13 @@ name: Benchmarks
 
 on:
   workflow_call:
+    secrets:
+      BENCHER_API_TOKEN:
+        required: true
 
 jobs:
   track_benchmarks:
-    name: Track Fork PR Benchmarks with Bencher
-    if: ${{ github.event_name == 'workflow_call' }}
+    name: Track Benchmarks with Bencher
     permissions:
       pull-requests: write
     runs-on: ubuntu-22.04
@@ -54,7 +56,6 @@ jobs:
         if: steps.check_fork.outputs.is_fork_pr == 'true'
         run: |
           bencher run \
-          --host https://api.bencher.dev \
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch "$PR_HEAD" \

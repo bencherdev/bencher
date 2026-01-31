@@ -82,7 +82,7 @@ jobs:
   test:
     name: Test
     needs: changes
-    if: needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/')
+    if: ${{ needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
     uses: ./.github/workflows/test.yml
     with:
       mold-version: "2.34.1"
@@ -115,12 +115,20 @@ jobs:
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
 
+  release:
+    name: Release
+    if: ${{ needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+    needs: [changes, lint, cli, test, build]
+    uses: ./.github/workflows/release.yml
+    with:
+      mold-version: "2.34.1"
+
   # Summary job for required status checks
   ci-success:
     name: CI Success
-    runs-on: ubuntu-22.04
-    needs: [lint, cli, test, build, deploy]
     if: always()
+    needs: [lint, cli, test, build, deploy, release]
+    runs-on: ubuntu-22.04
     steps:
       - name: Check all jobs passed
         run: |

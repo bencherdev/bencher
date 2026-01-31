@@ -4,8 +4,7 @@ description: "Set up Rust with mold linker and caching"
 inputs:
   mold-version:
     description: "Mold linker version"
-    required: false
-    default: "2.34.1"
+    required: true
   cache-key:
     description: "Cache key suffix"
     required: true

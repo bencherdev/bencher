@@ -27,8 +27,8 @@ git add ./dist/index.js
 cd -
 
 # Update CI workflow version
-sed -i '' "s/BENCHER_VERSION: [0-9]*\.[0-9]*\.[0-9]*/BENCHER_VERSION: $VERSION/" ./.github/workflows/bencher.yml
-git add ./.github/workflows/bencher.yml
+sed -i '' "s/bencher-version: \"[0-9]*\.[0-9]*\.[0-9]*\"/bencher-version: \"$VERSION\"/" ./.github/workflows/ci.yml
+git add ./.github/workflows/ci.yml
 # Update UI version and types
 cd ./services/console
 npm version $VERSION

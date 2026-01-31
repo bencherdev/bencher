@@ -5,15 +5,15 @@ on:
     inputs:
       mold-version:
         type: string
-        default: "2.34.1"
+        required: true
       is-fork:
         type: boolean
         default: false
     secrets:
       TEST_BILLING_KEY:
-        required: false
+        required: true
       BENCHER_API_TOKEN:
-        required: false
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -21,18 +21,32 @@ env:
 jobs:
   cargo_test:
     name: Cargo Test
+    if: ${{ !inputs.is-fork }}
     runs-on: ubuntu-22.04
     env:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-rust
-        if: ${{ !inputs.is-fork }}
         with:
           cache-key: all-features
           mold-version: ${{ inputs.mold-version }}
+      - name: cargo test
+        run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
+      - name: Upload Perf JPEG
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf.jpeg
+          path: ./lib/bencher_plot/perf.jpeg
+          if-no-files-found: error
+
+  cargo_test_fork:
+    name: Cargo Test
+    if: ${{ inputs.is-fork }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
       - uses: rui314/setup-mold@v1
-        if: ${{ inputs.is-fork }}
         with:
           mold-version: ${{ inputs.mold-version }}
       - name: cargo test
@@ -92,7 +106,8 @@ jobs:
     name: Benchmarks
     needs: cargo_bench
     uses: ./.github/workflows/benchmarks.yml
-    secrets: inherit
+    secrets:
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
 
   cargo_audit:
     name: Cargo Audit
@@ -162,7 +177,6 @@ jobs:
         working-directory: ./services/console
         run: npm run node
 
-  # Docker smoke test
   docker_smoke_test:
     name: Docker API Smoke Test
     runs-on: ubuntu-22.04
