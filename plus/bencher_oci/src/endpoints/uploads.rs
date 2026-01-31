@@ -8,7 +8,7 @@
 //! - PUT - Complete upload
 //! - DELETE - Cancel upload
 
-use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put, ResponseDeleted};
+use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
 use http::Response;
@@ -120,7 +120,7 @@ pub async fn oci_upload_status(
     tags = ["oci"],
 }]
 pub async fn oci_upload_chunk(
-    _rqctx: RequestContext<ApiContext>,
+    rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
     body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
@@ -138,6 +138,51 @@ pub async fn oci_upload_chunk(
 
     // Get storage
     let storage = storage().map_err(|e| HttpError::from(OciError::from(e)))?;
+
+    // Get current upload size for Content-Range validation
+    let current_size = storage
+        .get_upload_size(&upload_id)
+        .await
+        .map_err(|e| HttpError::from(OciError::from(e)))?;
+
+    // Validate Content-Range header if present
+    // Content-Range format can be:
+    // - Standard HTTP: "bytes start-end/total" or "bytes start-end/*"
+    // - OCI variant: "start-end" (just the range numbers)
+    if let Some(content_range) = rqctx.request.headers().get(http::header::CONTENT_RANGE)
+        && let Ok(range_str) = content_range.to_str()
+    {
+        // Parse the range, handling both formats
+        let range_part = range_str
+            .strip_prefix("bytes ")
+            .unwrap_or(range_str);
+        // Remove trailing /total if present
+        let range_nums = range_part
+            .split_once('/')
+            .map_or(range_part, |(r, _)| r);
+
+        if let Some((start_str, _end_str)) = range_nums.split_once('-')
+            && let Ok(start) = start_str.parse::<u64>()
+            && start != current_size
+        {
+            // Return 416 with Location and Range headers per OCI spec
+            let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
+            let range = if current_size > 0 {
+                format!("0-{}", current_size - 1)
+            } else {
+                "0-0".to_owned()
+            };
+            let response = Response::builder()
+                .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
+                .header(http::header::LOCATION, location)
+                .header("Range", range)
+                .header("Docker-Upload-UUID", upload_id.to_string())
+                .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                .body(Body::empty())
+                .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+            return Ok(response);
+        }
+    }
 
     // Append data to upload
     let new_size = storage
@@ -238,7 +283,7 @@ pub async fn oci_upload_complete(
 pub async fn oci_upload_cancel(
     _rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
-) -> Result<ResponseDeleted, HttpError> {
+) -> Result<Response<Body>, HttpError> {
     let path = path.into_inner();
     validate_uploads_ref(&path.reference)?;
 
@@ -257,5 +302,12 @@ pub async fn oci_upload_cancel(
         .await
         .map_err(|e| HttpError::from(OciError::from(e)))?;
 
-    Ok(Delete::auth_response_deleted())
+    // OCI spec requires 202 Accepted for DELETE (or 204 No Content)
+    let response = Response::builder()
+        .status(http::StatusCode::ACCEPTED)
+        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .body(Body::empty())
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+
+    Ok(response)
 }

@@ -8,6 +8,7 @@ use bencher_json::{
     system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha},
 };
 use bencher_license::Licensor;
+use bencher_oci::{OciStorage, OciStorageError};
 use bencher_recaptcha::RecaptchaClient;
 use bencher_schema::context::{Indexer, StatsSettings};
 use tokio::runtime::Handle;
@@ -37,6 +38,10 @@ pub enum PlusError {
     Billing(bencher_billing::BillingError),
     #[error("{0}")]
     Index(#[from] bencher_schema::context::IndexError),
+    #[error("Failed to initialize OCI storage: {0}")]
+    OciStorage(OciStorageError),
+    #[error("OCI storage already initialized")]
+    OciStorageAlreadyInitialized,
 }
 
 impl Plus {
@@ -52,6 +57,13 @@ impl Plus {
                 recaptcha_client: None,
             });
         };
+
+        // Initialize OCI storage if configured
+        if let Some(oci) = plus.oci {
+            let storage =
+                OciStorage::try_from_config(oci.data_store).map_err(PlusError::OciStorage)?;
+            bencher_oci::init_storage(storage).map_err(|_| PlusError::OciStorageAlreadyInitialized)?;
+        }
 
         let github_client = plus.github.map(
             |JsonGitHub {
