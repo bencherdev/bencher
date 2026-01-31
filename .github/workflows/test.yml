@@ -178,6 +178,67 @@ jobs:
         working-directory: ./services/console
         run: npm run node
 
+  oci_conformance_test:
+    name: OCI Conformance Test
+    if: ${{ !inputs.is-fork }}
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: jlumbroso/free-disk-space@main
+        with:
+          large-packages: false
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: api
+          mold-version: ${{ inputs.mold-version }}
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Start API Server
+        run: |
+          cargo build -p bencher_api --features plus
+          cargo run -p bencher_api --features plus &
+          # Wait for server to start
+          for i in {1..60}; do
+            if curl -s -f http://localhost:61016/v2/ > /dev/null 2>&1; then
+              echo "API server is ready"
+              break
+            fi
+            echo "Waiting for API server... ($i/60)"
+            sleep 1
+          done
+        env:
+          RUST_BACKTRACE: full
+      - name: Clone OCI Distribution Spec
+        run: git clone --depth 1 https://github.com/opencontainers/distribution-spec.git
+      - name: Build Conformance Tests
+        working-directory: ./distribution-spec/conformance
+        run: go test -c
+      - name: Run OCI Conformance Tests
+        working-directory: ./distribution-spec/conformance
+        run: ./conformance.test -test.v 2>&1 | tee conformance-output.log || true
+        env:
+          OCI_ROOT_URL: http://localhost:61016
+          OCI_NAMESPACE: test/repo
+          OCI_CROSSMOUNT_NAMESPACE: test/other
+          OCI_TEST_PULL: 1
+          OCI_TEST_PUSH: 1
+          OCI_TEST_CONTENT_DISCOVERY: 1
+          OCI_TEST_CONTENT_MANAGEMENT: 1
+          OCI_DEBUG: 1
+      - name: Upload Conformance Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oci-conformance-results
+          path: |
+            ./distribution-spec/conformance/conformance-output.log
+            ./distribution-spec/conformance/report.html
+            ./distribution-spec/conformance/junit.xml
+          if-no-files-found: warn
+
   docker_smoke_test:
     name: Docker API Smoke Test
     runs-on: ubuntu-22.04
