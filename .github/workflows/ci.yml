@@ -134,7 +134,6 @@ jobs:
     with:
       mold-version: "2.34.1"
 
-  # Summary job for required status checks
   ci-success:
     name: CI Success
     if: always()

@@ -1,0 +1,38 @@
+name: Track Benchmarks
+
+on:
+  workflow_call:
+    secrets:
+      BENCHER_API_TOKEN:
+        required: true
+
+jobs:
+  track_benchmarks:
+    name: Track Benchmarks with Bencher
+    permissions:
+      checks: write
+    runs-on: ubuntu-22.04
+    env:
+      BENCHMARK_RESULTS: benchmark_results.txt
+    steps:
+      - name: Download Benchmark Results
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          name: ${{ env.BENCHMARK_RESULTS }}
+      - uses: bencherdev/bencher@main
+      - name: Track benchmarks with Bencher
+        run: |
+          bencher run \
+          --project bencher \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch ${{ github.ref_name }} \
+          --testbed ubuntu-22.04 \
+          --threshold-measure latency \
+          --threshold-test t_test \
+          --threshold-max-sample-size 64 \
+          --threshold-upper-boundary 0.9999 \
+          --thresholds-reset \
+          --err \
+          --adapter rust_criterion \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --file ./benchmark_results.txt

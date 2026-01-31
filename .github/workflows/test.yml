@@ -102,10 +102,11 @@ jobs:
           name: event.json
           path: ${{ github.event_path }}
 
-  benchmarks:
-    name: Benchmarks
+  track_benchmarks:
+    name: Track Benchmarks
+    if: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/main' }}
     needs: cargo_bench
-    uses: ./.github/workflows/benchmarks.yml
+    uses: ./.github/workflows/track_benchmarks.yml
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
 
