@@ -9025,6 +9025,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "test_runner"
+version = "0.5.10"
+dependencies = [
+ "anyhow",
+ "bencher_oci",
+ "bencher_rootfs",
+ "bencher_runner",
+ "camino",
+ "clap",
+ "flate2",
+ "reqwest",
+ "serde_json",
+ "sha2",
+ "tar",
+ "tokio",
+]
+
+[[package]]
 name = "testing_table"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
