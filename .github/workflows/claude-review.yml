@@ -1,0 +1,126 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, cloud, devel]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  CLAUDE_MODEL: claude-opus-4-5-20251101
+  CLAUDE_MAX_TURNS: 10
+
+jobs:
+  claude-review:
+    name: Claude Code Review
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fetch base branch
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}:${{ github.event.pull_request.base.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure Claude Code authentication
+        run: |
+          mkdir -p ~/.claude
+          # Store the OAuth token in the expected location
+          echo '${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}' > ~/.claude/oauth_token
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Create review script
+        run: |
+          cat > /tmp/review.sh << 'SCRIPT_EOF'
+          #!/bin/bash
+          set -e
+
+          # Create a temporary file for the prompt
+          PROMPT_FILE=$(mktemp)
+
+          cat > "$PROMPT_FILE" << 'PROMPT_EOF'
+          Please perform a comprehensive code review of this pull request.
+
+          Use the /review skill to analyze all the changes in this PR.
+
+          After your review, provide a summary that includes:
+          - Overall assessment
+          - Key findings (bugs, security issues, performance concerns)
+          - Suggestions for improvement
+          - Any questions or areas needing clarification
+
+          Format your response in markdown suitable for a GitHub PR comment.
+          PROMPT_EOF
+
+          # Run Claude Code with the review skill
+          claude /review --max-turns "${{ env.CLAUDE_MAX_TURNS }}" --model "${{ env.CLAUDE_MODEL }}" 2>&1 || {
+            echo "Claude Code review encountered an error"
+            echo "## Claude Code Review"
+            echo ""
+            echo "⚠️ The automated review encountered an error. Please review manually."
+            exit 0
+          }
+          SCRIPT_EOF
+
+          chmod +x /tmp/review.sh
+
+      - name: Run Claude Code Review
+        id: review
+        run: |
+          /tmp/review.sh > /tmp/review_output.md 2>&1
+          echo "Review completed"
+        continue-on-error: true
+
+      - name: Post review as PR comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let review = '';
+
+            try {
+              review = fs.readFileSync('/tmp/review_output.md', 'utf8');
+            } catch (error) {
+              review = '⚠️ Unable to read review output. The review may have failed.';
+            }
+
+            // Add header and metadata
+            const comment = `## 🤖 Claude Code Review
+
+            **PR**: #${{ github.event.pull_request.number }}
+            **Base**: \`${{ github.event.pull_request.base.ref }}\`
+            **Head**: \`${{ github.event.pull_request.head.ref }}\`
+
+            ---
+
+            ${review}
+
+            ---
+
+            <sub>Model: ${{ env.CLAUDE_MODEL }}</sub>`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
