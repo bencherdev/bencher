@@ -50,8 +50,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
       - name: Load & Tag Local Image
         run: |
           docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -80,8 +78,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console
@@ -123,8 +119,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.event.workflow_run.id && secrets.GITHUB_TOKEN || '' }}
       - name: Load & Tag Litestream Image
         run: |
           docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -156,8 +150,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Load & Tag Litestream Image
         run: |
           docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -190,8 +182,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console

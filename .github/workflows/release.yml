@@ -57,71 +57,51 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Console Docker Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download CLI Linux x86_64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download CLI Linux ARM64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download CLI macOS x86_64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download CLI macOS ARM64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download CLI Windows x86_64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download CLI Windows ARM64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download CLI Linux x86_64 .deb Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download CLI Linux ARM64 .deb Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Load Docker images
       - name: Load API Image
