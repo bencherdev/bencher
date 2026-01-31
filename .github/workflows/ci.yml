@@ -94,30 +94,6 @@ jobs:
       build-docker: ${{ needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
       build-cli: ${{ needs.changes.outputs.cli == 'true' || startsWith(github.ref, 'refs/tags/') }}
 
-  # Console build (for PRs and devel/cloud)
-  build_console:
-    name: Build Console UI
-    runs-on: ubuntu-22.04
-    needs: build
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-    steps:
-      - uses: actions/checkout@v6
-      - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.WASM_BENCHER_VALID }}
-          path: ./lib/bencher_valid/pkg
-      - name: Build Console UI
-        working-directory: ./services/console
-        run: npm run netlify
-      - name: Test Links
-        if: github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel'
-        timeout-minutes: 3
-        continue-on-error: true
-        uses: lycheeverse/lychee-action@v2.3.0
-        with:
-          args: --config ./services/console/lychee.toml --github-token ${{ secrets.GITHUB_TOKEN }} --user-agent "${{ secrets.LYCHEE_USER_AGENT }}" ./services/console/dist
-
   # Cross-platform smoke tests (only for releases)
   release_smoke_tests:
     name: Release API Smoke Test
@@ -252,7 +228,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-22.04
-    needs: [lint, test, build, build_console]
+    needs: [lint, test, build]
     if: always()
     steps:
       - name: Check all jobs passed

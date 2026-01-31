@@ -88,6 +88,12 @@ jobs:
           name: event.json
           path: ${{ github.event_path }}
 
+  benchmarks:
+    name: Benchmarks
+    needs: cargo_bench
+    uses: ./.github/workflows/benchmarks.yml
+    secrets: inherit
+
   cargo_audit:
     name: Cargo Audit
     runs-on: ubuntu-22.04

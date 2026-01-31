@@ -1,14 +1,12 @@
-name: Track Fork PR Benchmarks
+name: Benchmarks
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  workflow_call:
 
 jobs:
-  track_fork_pr_benchmarks:
+  track_benchmarks:
     name: Track Fork PR Benchmarks with Bencher
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch != 'main' }}
+    if: ${{ github.event_name == 'workflow_call' }}
     permissions:
       pull-requests: write
     runs-on: ubuntu-22.04

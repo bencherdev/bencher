@@ -115,6 +115,30 @@ jobs:
           npm install --include=dev
           npx vitest run
 
+  # Console build (for PRs and devel/cloud)
+  build_console:
+    name: Build Console UI
+    runs-on: ubuntu-22.04
+    needs: build_wasm
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download `bencher_valid` Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.WASM_BENCHER_VALID }}
+          path: ./lib/bencher_valid/pkg
+      - name: Build Console UI
+        working-directory: ./services/console
+        run: npm run netlify
+      - name: Test Links
+        if: github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel'
+        timeout-minutes: 3
+        continue-on-error: true
+        uses: lycheeverse/lychee-action@v2.3.0
+        with:
+          args: --config ./services/console/lychee.toml --github-token ${{ secrets.GITHUB_TOKEN }} --user-agent "${{ secrets.LYCHEE_USER_AGENT }}" ./services/console/dist
+
   build_api_docker:
     name: Build API Docker
     runs-on: ubuntu-22.04
