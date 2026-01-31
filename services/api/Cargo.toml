@@ -9,6 +9,7 @@ publish = false
 [features]
 default = ["plus", "sentry", "otel"]
 plus = [
+    "dep:bencher_oci",
     "api_auth/plus",
     "api_checkout/plus",
     "api_organizations/plus",
@@ -19,6 +20,7 @@ plus = [
     "bencher_endpoint/plus",
     "bencher_config/plus",
     "bencher_json/plus",
+    "bencher_oci/plus",
     "bencher_otel_provider/plus",
     "bencher_schema/plus",
 ]
@@ -32,6 +34,7 @@ sentry = [
     "api_server/sentry",
     "api_users/sentry",
     "bencher_config/sentry",
+    "bencher_oci/sentry",
     "bencher_schema/sentry",
 ]
 otel = [
@@ -46,6 +49,7 @@ otel = [
     "api_users/otel",
     "bencher_config/otel",
     "bencher_endpoint/otel",
+    "bencher_oci/otel",
     "bencher_schema/otel",
 ]
 
@@ -61,6 +65,7 @@ bencher_config.workspace = true
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_logger.workspace = true
+bencher_oci = { workspace = true, optional = true }
 bencher_schema.workspace = true
 bencher_otel = { workspace = true, optional = true }
 bencher_otel_provider = { workspace = true, optional = true }
