@@ -1,0 +1,35 @@
+[package]
+name = "bencher_oci"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+plus = [
+    "dep:camino",
+    "dep:flate2",
+    "dep:oci-spec",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:sha2",
+    "dep:tar",
+    "dep:thiserror",
+    "dep:zstd",
+]
+
+[dependencies]
+camino = { workspace = true, optional = true }
+flate2 = { workspace = true, optional = true }
+oci-spec = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+tar = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+zstd = { workspace = true, optional = true }
+
+[lints]
+workspace = true

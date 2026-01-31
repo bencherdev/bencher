@@ -1,0 +1,34 @@
+[package]
+name = "bencher_runner"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+plus = [
+    "dep:bencher_vmm",
+    "dep:bencher_oci",
+    "dep:bencher_rootfs",
+    "dep:camino",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:thiserror",
+    "bencher_vmm/plus",
+    "bencher_oci/plus",
+    "bencher_rootfs/plus",
+]
+
+[dependencies]
+bencher_vmm = { workspace = true, optional = true }
+bencher_oci = { workspace = true, optional = true }
+bencher_rootfs = { workspace = true, optional = true }
+camino = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+
+[lints]
+workspace = true
