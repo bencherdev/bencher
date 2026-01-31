@@ -16,7 +16,7 @@ mod storage;
 mod types;
 
 pub use context::{get_storage, init_storage};
-pub use endpoints::{register, Api};
+pub use endpoints::{Api, register};
 pub use error::OciError;
 pub use storage::{OciStorage, OciStorageConfig, OciStorageError};
 pub use types::{Digest, Reference, RepositoryName, Tag, UploadId};

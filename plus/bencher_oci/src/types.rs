@@ -273,7 +273,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_digest_parsing() {
+    fn digest_parsing() {
         let digest = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
         let parsed: Digest = digest.parse().unwrap();
         assert_eq!(parsed.algorithm(), "sha256");
@@ -284,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn test_repository_name_parsing() {
+    fn repository_name_parsing() {
         assert!("library/ubuntu".parse::<RepositoryName>().is_ok());
         assert!("myorg/myrepo".parse::<RepositoryName>().is_ok());
         assert!("simple".parse::<RepositoryName>().is_ok());
@@ -296,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tag_parsing() {
+    fn tag_parsing() {
         assert!("latest".parse::<Tag>().is_ok());
         assert!("v1.0.0".parse::<Tag>().is_ok());
         assert!("1.0".parse::<Tag>().is_ok());
@@ -307,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn test_reference_parsing() {
+    fn reference_parsing() {
         let tag_ref: Reference = "latest".parse().unwrap();
         assert!(tag_ref.is_tag());
 
@@ -319,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn test_upload_id() {
+    fn upload_id() {
         let id = UploadId::new();
         let parsed: UploadId = id.as_str().parse().unwrap();
         assert_eq!(id, parsed);
