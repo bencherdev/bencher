@@ -1,0 +1,26 @@
+[package]
+name = "bencher_guest"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+# This crate is designed to be compiled for and run inside the guest VM.
+# It should have minimal dependencies to keep the guest image small.
+
+[features]
+default = []
+plus = [
+    "dep:serde",
+    "dep:serde_json",
+    "dep:thiserror",
+]
+
+[dependencies]
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+
+[lints]
+workspace = true

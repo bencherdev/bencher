@@ -1,0 +1,26 @@
+[package]
+name = "bencher_rootfs"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+plus = [
+    "dep:backhand",
+    "dep:bencher_oci",
+    "dep:camino",
+    "dep:thiserror",
+    "bencher_oci/plus",
+]
+
+[dependencies]
+backhand = { workspace = true, optional = true }
+bencher_oci = { workspace = true, optional = true }
+camino = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+
+[lints]
+workspace = true

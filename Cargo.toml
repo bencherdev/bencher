@@ -2,6 +2,7 @@
 members = [
     "services/api",
     "services/cli",
+    "services/runner",
     "lib/*",
     "plus/*",
     "tasks/*",
@@ -62,8 +63,15 @@ bencher_otel = { path = "plus/bencher_otel" }
 bencher_otel_provider = { path = "plus/bencher_otel_provider" }
 bencher_oci_storage = { path = "plus/bencher_oci_storage" }
 bencher_recaptcha = { path = "plus/bencher_recaptcha" }
+# plus - runner
+bencher_runner = { path = "plus/bencher_runner" }
+bencher_vmm = { path = "plus/bencher_vmm" }
+bencher_oci = { path = "plus/bencher_oci" }
+bencher_rootfs = { path = "plus/bencher_rootfs" }
+bencher_guest = { path = "plus/bencher_guest" }
 # crates.io
 anyhow = "1.0"
+backhand = "0.18"
 assert_cmd = "2.0"
 async-compression = "0.4"
 async-openai = "0.27"
@@ -87,6 +95,8 @@ diesel = { version = "2.3", default-features = false, features = ["r2d2", "with-
 diesel_migrations = "2.3"
 dotenvy = "0.15"
 email_address = "0.2"
+event-manager = "0.4"
+flate2 = "1.0"
 fs-err = "3.2"
 futures = "0.3"
 futures-concurrency = "7"
@@ -100,10 +110,13 @@ http-body-util = "0.1"
 hyper = "1.8"
 image = "0.25"
 jsonwebtoken = { version = "10.2", features = ["rust_crypto"] }
+kvm-bindings = "0.10"
+kvm-ioctls = "0.18"
 # https://github.com/diesel-rs/diesel/blob/2e85ba060d3d70ea605ea58a79b8a435749a7adc/diesel/Cargo.toml#L53
 # https://github.com/tauri-apps/tauri/discussions/6183
 # Always needed for Windows and all other targets when building a distroless image
 libsqlite3-sys = { version = ">=0.17.2, <0.36.0", features = ["bundled"] }
+linux-loader = "0.12"
 literally = "0.1"
 mail-send = "0.5"
 minijinja = "2.3"
@@ -111,6 +124,7 @@ newline-converter = "0.3"
 nom = "7.1"
 notify-rust = "4.11"
 oauth2 = "5.0"
+oci-spec = "0.7"
 octocrab = "0.48"
 opentelemetry = "0.31"
 opentelemetry-otlp = "0.31"
@@ -147,6 +161,7 @@ strip-ansi-escapes = "0.2"
 syn = "2.0"
 tabled = "0.20"
 tame-oauth = "0.10"
+tar = "0.4"
 tempfile = "3"
 thiserror = "2.0"
 tokio = "1.48"
@@ -160,6 +175,12 @@ uuid = "1.19"
 wasm-bindgen = "0.2"
 wasm-bindgen-test = "0.3"
 windows = "0.62"
+zstd = "0.13"
+# rust-vmm
+virtio-queue = "0.14"
+vm-memory = { version = "0.16", features = ["backend-mmap"] }
+vm-superio = "0.8"
+vmm-sys-util = "0.12"
 # oxide
 dropshot = { version = "0.16", default-features = false }
 progenitor = { version = "0.11", default-features = false }

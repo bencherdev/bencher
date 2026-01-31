@@ -1,0 +1,32 @@
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum VmmError {
+    #[cfg(target_os = "linux")]
+    #[error("KVM error: {0}")]
+    Kvm(#[from] kvm_ioctls::Error),
+
+    #[error("Memory error: {0}")]
+    Memory(String),
+
+    #[error("Boot error: {0}")]
+    Boot(String),
+
+    #[error("Device error: {0}")]
+    Device(String),
+
+    #[error("vCPU error: {0}")]
+    Vcpu(String),
+
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Kernel loading error: {0}")]
+    KernelLoad(String),
+
+    #[error("Unsupported architecture")]
+    UnsupportedArch,
+
+    #[error("VMM requires Linux with KVM support")]
+    UnsupportedPlatform,
+}

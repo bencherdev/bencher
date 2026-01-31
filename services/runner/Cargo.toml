@@ -1,0 +1,22 @@
+[package]
+name = "bencher_runner_bin"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = ["plus"]
+plus = ["dep:bencher_runner", "dep:tokio"]
+
+[target.'cfg(target_os = "linux")'.dependencies]
+bencher_runner = { workspace = true, optional = true, features = ["plus"] }
+tokio = { workspace = true, optional = true, features = ["rt-multi-thread", "macros"] }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "runner"
+path = "src/main.rs"

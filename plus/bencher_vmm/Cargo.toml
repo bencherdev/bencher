@@ -1,0 +1,32 @@
+[package]
+name = "bencher_vmm"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+plus = [
+    "dep:camino",
+    "dep:thiserror",
+]
+
+[dependencies]
+camino = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+
+# Linux-only dependencies (KVM, epoll, etc.)
+[target.'cfg(target_os = "linux")'.dependencies]
+kvm-bindings = { workspace = true }
+kvm-ioctls = { workspace = true }
+linux-loader = { workspace = true }
+event-manager = { workspace = true }
+virtio-queue = { workspace = true }
+vm-memory = { workspace = true }
+vm-superio = { workspace = true }
+vmm-sys-util = { workspace = true }
+
+[lints]
+workspace = true
