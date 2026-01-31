@@ -1,0 +1,79 @@
+use clap::Parser as _;
+
+use crate::parser::{TaskSub, TaskTask, TaskTest};
+
+mod clean;
+mod kernel;
+mod oci;
+mod test;
+
+use clean::Clean;
+use kernel::Kernel;
+use oci::Oci;
+use test::Test;
+
+#[derive(Debug)]
+pub struct Task {
+    sub: Sub,
+}
+
+#[derive(Debug)]
+pub enum Sub {
+    Test(Test),
+    Kernel(Kernel),
+    Oci(Oci),
+    Clean(Clean),
+}
+
+impl TryFrom<TaskTask> for Task {
+    type Error = anyhow::Error;
+
+    fn try_from(task: TaskTask) -> Result<Self, Self::Error> {
+        Ok(Self {
+            sub: task.sub.unwrap_or(TaskSub::Test(TaskTest {})).try_into()?,
+        })
+    }
+}
+
+impl TryFrom<TaskSub> for Sub {
+    type Error = anyhow::Error;
+
+    fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
+        Ok(match sub {
+            TaskSub::Test(test) => Self::Test(test.try_into()?),
+            TaskSub::Kernel(kernel) => Self::Kernel(kernel.try_into()?),
+            TaskSub::Oci(oci) => Self::Oci(oci.try_into()?),
+            TaskSub::Clean(clean) => Self::Clean(clean.try_into()?),
+        })
+    }
+}
+
+impl Task {
+    pub fn new() -> anyhow::Result<Self> {
+        TaskTask::parse().try_into()
+    }
+
+    pub fn exec(&self) -> anyhow::Result<()> {
+        self.sub.exec()
+    }
+}
+
+impl Sub {
+    pub fn exec(&self) -> anyhow::Result<()> {
+        match self {
+            Self::Test(test) => test.exec(),
+            Self::Kernel(kernel) => kernel.exec(),
+            Self::Oci(oci) => oci.exec(),
+            Self::Clean(clean) => clean.exec(),
+        }
+    }
+}
+
+/// Get the work directory for test artifacts.
+pub fn work_dir() -> camino::Utf8PathBuf {
+    let dir = camino::Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("test-runner");
+    std::fs::create_dir_all(&dir).expect("Failed to create work directory");
+    dir
+}
