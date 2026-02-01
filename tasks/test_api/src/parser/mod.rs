@@ -1,7 +1,9 @@
 use clap::{Parser, Subcommand};
 
+mod oci;
 mod test;
 
+pub use oci::TaskOci;
 pub use test::{TaskExample, TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment};
 
 #[derive(Parser, Debug)]
@@ -18,4 +20,6 @@ pub enum TaskSub {
     Examples(TaskExamples),
     /// Run smoke test
     Smoke(TaskSmokeTest),
+    /// Run OCI Distribution Spec conformance tests
+    Oci(TaskOci),
 }
