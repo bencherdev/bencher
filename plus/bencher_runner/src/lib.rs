@@ -16,4 +16,4 @@ mod run;
 
 pub use config::Config;
 pub use error::RunnerError;
-pub use run::{execute, run};
+pub use run::{execute, resolve_oci_image, run};

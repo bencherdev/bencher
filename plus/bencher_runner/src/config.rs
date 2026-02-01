@@ -4,11 +4,29 @@ use serde::{Deserialize, Serialize};
 /// Configuration for a benchmark run.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    /// Path to the OCI image directory or archive.
-    pub oci_image: Utf8PathBuf,
+    /// OCI image source - either a local path or registry reference.
+    ///
+    /// Examples:
+    /// - `/path/to/oci-image` (local directory)
+    /// - `ghcr.io/owner/benchmark:v1` (registry reference)
+    /// - `docker.io/library/alpine:latest` (Docker Hub)
+    pub oci_image: String,
 
     /// Path to the Linux kernel to boot.
     pub kernel: Utf8PathBuf,
+
+    /// JWT token for registry authentication.
+    ///
+    /// Required when pulling from authenticated registries.
+    /// This token is exchanged for a short-lived bearer token.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+
+    /// Cache directory for pulled OCI images.
+    ///
+    /// Defaults to `/var/cache/bencher/oci` if not specified.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache_dir: Option<Utf8PathBuf>,
 
     /// Number of vCPUs to allocate to the VM.
     #[serde(default = "default_vcpus")]
@@ -37,15 +55,36 @@ fn default_kernel_cmdline() -> String {
 
 impl Config {
     /// Create a new configuration with required fields.
+    ///
+    /// # Arguments
+    ///
+    /// * `oci_image` - Local path or registry reference (e.g., `ghcr.io/owner/bench:v1`)
+    /// * `kernel` - Path to the Linux kernel
     #[must_use]
-    pub fn new(oci_image: Utf8PathBuf, kernel: Utf8PathBuf) -> Self {
+    pub fn new<S: Into<String>>(oci_image: S, kernel: Utf8PathBuf) -> Self {
         Self {
-            oci_image,
+            oci_image: oci_image.into(),
             kernel,
+            token: None,
+            cache_dir: None,
             vcpus: default_vcpus(),
             memory_mib: default_memory_mib(),
             kernel_cmdline: default_kernel_cmdline(),
         }
+    }
+
+    /// Set the JWT token for registry authentication.
+    #[must_use]
+    pub fn with_token<S: Into<String>>(mut self, token: S) -> Self {
+        self.token = Some(token.into());
+        self
+    }
+
+    /// Set the cache directory for pulled images.
+    #[must_use]
+    pub fn with_cache_dir(mut self, cache_dir: Utf8PathBuf) -> Self {
+        self.cache_dir = Some(cache_dir);
+        self
     }
 
     /// Set the number of vCPUs.
@@ -67,5 +106,13 @@ impl Config {
     pub fn with_kernel_cmdline<S: Into<String>>(mut self, cmdline: S) -> Self {
         self.kernel_cmdline = cmdline.into();
         self
+    }
+
+    /// Get the cache directory, using the default if not set.
+    #[must_use]
+    pub fn cache_dir(&self) -> Utf8PathBuf {
+        self.cache_dir
+            .clone()
+            .unwrap_or_else(|| Utf8PathBuf::from("/var/cache/bencher/oci"))
     }
 }
