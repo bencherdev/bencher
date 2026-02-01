@@ -1379,6 +1379,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_jailer"
+version = "0.5.10"
+dependencies = [
+ "camino",
+ "caps",
+ "libc",
+ "nix",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "bencher_json"
 version = "0.5.10"
 dependencies = [
@@ -1550,16 +1563,24 @@ dependencies = [
  "bencher_rootfs",
  "bencher_vmm",
  "camino",
+ "caps",
+ "libc",
+ "nix",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.17",
+ "uuid 1.19.0",
 ]
 
 [[package]]
 name = "bencher_runner_bin"
 version = "0.5.10"
 dependencies = [
+ "anyhow",
  "bencher_runner",
+ "camino",
+ "clap",
  "tokio",
 ]
 

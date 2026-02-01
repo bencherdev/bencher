@@ -11,6 +11,9 @@ pub enum RunnerError {
     #[error("VMM error: {0}")]
     Vmm(#[from] bencher_vmm::VmmError),
 
+    #[error("Jail error: {0}")]
+    Jail(String),
+
     #[error("Config error: {0}")]
     Config(String),
 
