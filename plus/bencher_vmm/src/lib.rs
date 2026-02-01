@@ -37,6 +37,8 @@ mod memory;
 mod vcpu;
 #[cfg(target_os = "linux")]
 mod vm;
+#[cfg(target_os = "linux")]
+mod vsock_client;
 
 mod error;
 
@@ -45,6 +47,8 @@ pub use error::VmmError;
 // Linux exports
 #[cfg(target_os = "linux")]
 pub use vm::{Vm, VmConfig, run_vm};
+#[cfg(target_os = "linux")]
+pub use vsock_client::{VsockClient, VsockClientBuilder, BenchmarkClient};
 
 // Non-Linux stubs
 #[cfg(not(target_os = "linux"))]

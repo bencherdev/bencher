@@ -1661,6 +1661,7 @@ dependencies = [
  "kvm-bindings 0.10.0",
  "kvm-ioctls",
  "linux-loader",
+ "serde_json",
  "thiserror 2.0.17",
  "virtio-queue",
  "vm-fdt",

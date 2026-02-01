@@ -16,8 +16,11 @@ pub use serial::SerialDevice;
 pub use virtio_blk::VirtioBlkDevice;
 pub use virtio_vsock::VirtioVsockDevice;
 
+use std::sync::Arc;
+
 use camino::Utf8Path;
 use kvm_ioctls::VmFd;
+use vm_memory::GuestMemoryMmap;
 
 use crate::error::VmmError;
 
@@ -81,6 +84,35 @@ impl DeviceManager {
         let device = VirtioVsockDevice::new(guest_cid, socket_path)?;
         self.virtio_vsock = Some(device);
         Ok(())
+    }
+
+    /// Set guest memory for all virtio devices.
+    ///
+    /// This must be called before virtio queue processing can work.
+    pub fn set_guest_memory(&mut self, mem: Arc<GuestMemoryMmap>) {
+        if let Some(ref mut blk) = self.virtio_blk {
+            blk.set_guest_memory(Arc::clone(&mem));
+        }
+        if let Some(ref mut vsock) = self.virtio_vsock {
+            vsock.set_guest_memory(mem);
+        }
+    }
+
+    /// Poll for vsock activity (accept connections, read data).
+    ///
+    /// This should be called periodically in the event loop.
+    pub fn poll_vsock(&mut self) {
+        if let Some(ref mut vsock) = self.virtio_vsock {
+            vsock.poll();
+        }
+    }
+
+    /// Check if any virtio device has a pending interrupt.
+    #[must_use]
+    pub fn has_pending_virtio_interrupt(&self) -> bool {
+        let blk_pending = self.virtio_blk.as_ref().is_some_and(|d| d.has_pending_interrupt());
+        let vsock_pending = self.virtio_vsock.as_ref().is_some_and(|d| d.has_pending_interrupt());
+        blk_pending || vsock_pending
     }
 
     /// Handle an I/O port read.

@@ -5,9 +5,14 @@
 //!
 //! This implements the virtio-mmio transport for vsock devices.
 
-use std::os::unix::net::UnixListener;
+use std::collections::VecDeque;
+use std::io::{Read as _, Write as _};
+use std::os::unix::net::{UnixListener, UnixStream};
+use std::sync::Arc;
 
 use camino::Utf8Path;
+use virtio_queue::{Queue, QueueOwnedT, QueueT};
+use vm_memory::{Bytes, GuestAddress, GuestMemoryMmap};
 
 use crate::error::VmmError;
 
@@ -26,7 +31,22 @@ const VIRTIO_VENDOR_ID: u32 = 0x554d_4551;
 /// The host's CID (Context ID).
 pub const HOST_CID: u64 = 2;
 
-/// MMIO register offsets (same as virtio-blk).
+/// Maximum queue size.
+const QUEUE_SIZE: u16 = 256;
+
+/// RX queue index.
+const RX_QUEUE: usize = 0;
+
+/// TX queue index.
+const TX_QUEUE: usize = 1;
+
+/// Event queue index.
+const EVENT_QUEUE: usize = 2;
+
+/// Number of queues.
+const NUM_QUEUES: usize = 3;
+
+/// MMIO register offsets.
 mod regs {
     pub const MAGIC_VALUE: u64 = 0x00;
     pub const VERSION: u64 = 0x04;
@@ -44,7 +64,67 @@ mod regs {
     pub const INTERRUPT_STATUS: u64 = 0x60;
     pub const INTERRUPT_ACK: u64 = 0x64;
     pub const STATUS: u64 = 0x70;
+    pub const QUEUE_DESC_LOW: u64 = 0x80;
+    pub const QUEUE_DESC_HIGH: u64 = 0x84;
+    pub const QUEUE_DRIVER_LOW: u64 = 0x90;
+    pub const QUEUE_DRIVER_HIGH: u64 = 0x94;
+    pub const QUEUE_DEVICE_LOW: u64 = 0xa0;
+    pub const QUEUE_DEVICE_HIGH: u64 = 0xa4;
     pub const CONFIG: u64 = 0x100;
+}
+
+/// vsock packet operations.
+pub mod vsock_op {
+    pub const INVALID: u16 = 0;
+    pub const REQUEST: u16 = 1;
+    pub const RESPONSE: u16 = 2;
+    pub const RST: u16 = 3;
+    pub const SHUTDOWN: u16 = 4;
+    pub const RW: u16 = 5;
+    pub const CREDIT_UPDATE: u16 = 6;
+    pub const CREDIT_REQUEST: u16 = 7;
+}
+
+/// vsock packet header.
+#[repr(C, packed)]
+#[derive(Debug, Default, Clone, Copy)]
+pub struct VsockPacketHeader {
+    pub src_cid: u64,
+    pub dst_cid: u64,
+    pub src_port: u32,
+    pub dst_port: u32,
+    pub len: u32,
+    pub type_: u16,
+    pub op: u16,
+    pub flags: u32,
+    pub buf_alloc: u32,
+    pub fwd_cnt: u32,
+}
+
+impl VsockPacketHeader {
+    const SIZE: usize = std::mem::size_of::<Self>();
+}
+
+/// A vsock connection.
+struct VsockConnection {
+    /// The Unix stream for this connection.
+    stream: UnixStream,
+    /// Local port.
+    local_port: u32,
+    /// Remote port (guest port).
+    remote_port: u32,
+    /// Remote CID (guest CID).
+    remote_cid: u64,
+    /// Pending data to send to guest.
+    rx_buffer: VecDeque<u8>,
+    /// Buffer allocation advertised by peer.
+    peer_buf_alloc: u32,
+    /// Forward count from peer.
+    peer_fwd_cnt: u32,
+    /// Our buffer allocation.
+    buf_alloc: u32,
+    /// Bytes we've forwarded.
+    fwd_cnt: u32,
 }
 
 /// A virtio-vsock device.
@@ -58,28 +138,46 @@ pub struct VirtioVsockDevice {
     /// Path to the Unix socket.
     socket_path: String,
 
+    /// Guest memory reference.
+    guest_memory: Option<Arc<GuestMemoryMmap>>,
+
+    /// The virtqueues (RX, TX, Event).
+    queues: [Queue; NUM_QUEUES],
+
+    /// Queue configuration.
+    queue_configs: [QueueConfig; NUM_QUEUES],
+
+    /// Active connections.
+    connections: Vec<VsockConnection>,
+
+    /// Pending response packets to send to guest.
+    pending_rx: VecDeque<(VsockPacketHeader, Vec<u8>)>,
+
     /// Device status register.
     status: u32,
 
     /// Selected feature page.
     features_sel: u32,
 
+    /// Selected queue.
+    queue_sel: u32,
+
     /// Interrupt status.
     interrupt_status: u32,
+}
 
-    /// Queue configuration.
-    queue_sel: u32,
-    queue_num: u32,
-    queue_ready: u32,
+/// Per-queue configuration.
+#[derive(Default)]
+struct QueueConfig {
+    num: u16,
+    ready: bool,
+    desc: u64,
+    avail: u64,
+    used: u64,
 }
 
 impl VirtioVsockDevice {
     /// Create a new virtio-vsock device.
-    ///
-    /// # Arguments
-    ///
-    /// * `guest_cid` - The guest's Context ID
-    /// * `socket_path` - Path to the Unix socket for host-side connections
     pub fn new(guest_cid: u64, socket_path: &Utf8Path) -> Result<Self, VmmError> {
         // Remove existing socket if present
         let _ = std::fs::remove_file(socket_path);
@@ -91,16 +189,29 @@ impl VirtioVsockDevice {
             guest_cid,
             listener,
             socket_path: socket_path.to_string(),
+            guest_memory: None,
+            queues: [
+                Queue::new(QUEUE_SIZE).map_err(|e| VmmError::Device(e.to_string()))?,
+                Queue::new(QUEUE_SIZE).map_err(|e| VmmError::Device(e.to_string()))?,
+                Queue::new(QUEUE_SIZE).map_err(|e| VmmError::Device(e.to_string()))?,
+            ],
+            queue_configs: Default::default(),
+            connections: Vec::new(),
+            pending_rx: VecDeque::new(),
             status: 0,
             features_sel: 0,
-            interrupt_status: 0,
             queue_sel: 0,
-            queue_num: 0,
-            queue_ready: 0,
+            interrupt_status: 0,
         })
     }
 
+    /// Set the guest memory reference.
+    pub fn set_guest_memory(&mut self, mem: Arc<GuestMemoryMmap>) {
+        self.guest_memory = Some(mem);
+    }
+
     /// Get the guest's CID.
+    #[must_use]
     pub fn guest_cid(&self) -> u64 {
         self.guest_cid
     }
@@ -115,6 +226,12 @@ impl VirtioVsockDevice {
     #[must_use]
     pub fn socket_path(&self) -> &str {
         &self.socket_path
+    }
+
+    /// Check if an interrupt is pending.
+    #[must_use]
+    pub fn has_pending_interrupt(&self) -> bool {
+        self.interrupt_status != 0
     }
 
     /// Get device features.
@@ -138,8 +255,15 @@ impl VirtioVsockDevice {
                     (features >> 32) as u32
                 }
             }
-            regs::QUEUE_NUM_MAX => 256,
-            regs::QUEUE_READY => self.queue_ready,
+            regs::QUEUE_NUM_MAX => u32::from(QUEUE_SIZE),
+            regs::QUEUE_READY => {
+                let idx = self.queue_sel as usize;
+                if idx < NUM_QUEUES {
+                    u32::from(self.queue_configs[idx].ready)
+                } else {
+                    0
+                }
+            }
             regs::INTERRUPT_STATUS => self.interrupt_status,
             regs::STATUS => self.status,
             // Config space: guest_cid (8 bytes at offset 0x100)
@@ -159,6 +283,7 @@ impl VirtioVsockDevice {
         }
 
         let value = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
+        let idx = self.queue_sel as usize;
 
         match offset {
             regs::DEVICE_FEATURES_SEL => {
@@ -171,13 +296,18 @@ impl VirtioVsockDevice {
                 self.queue_sel = value;
             }
             regs::QUEUE_NUM => {
-                self.queue_num = value;
+                if idx < NUM_QUEUES {
+                    self.queue_configs[idx].num = value as u16;
+                }
             }
             regs::QUEUE_READY => {
-                self.queue_ready = value;
+                if idx < NUM_QUEUES && value == 1 {
+                    self.activate_queue(idx);
+                    self.queue_configs[idx].ready = true;
+                }
             }
             regs::QUEUE_NOTIFY => {
-                self.handle_queue_notify();
+                self.handle_queue_notify(value as usize);
             }
             regs::INTERRUPT_ACK => {
                 self.interrupt_status &= !value;
@@ -188,14 +318,357 @@ impl VirtioVsockDevice {
                     self.reset();
                 }
             }
+            regs::QUEUE_DESC_LOW => {
+                if idx < NUM_QUEUES {
+                    self.queue_configs[idx].desc =
+                        (self.queue_configs[idx].desc & 0xFFFF_FFFF_0000_0000) | u64::from(value);
+                }
+            }
+            regs::QUEUE_DESC_HIGH => {
+                if idx < NUM_QUEUES {
+                    self.queue_configs[idx].desc =
+                        (self.queue_configs[idx].desc & 0x0000_0000_FFFF_FFFF) | (u64::from(value) << 32);
+                }
+            }
+            regs::QUEUE_DRIVER_LOW => {
+                if idx < NUM_QUEUES {
+                    self.queue_configs[idx].avail =
+                        (self.queue_configs[idx].avail & 0xFFFF_FFFF_0000_0000) | u64::from(value);
+                }
+            }
+            regs::QUEUE_DRIVER_HIGH => {
+                if idx < NUM_QUEUES {
+                    self.queue_configs[idx].avail =
+                        (self.queue_configs[idx].avail & 0x0000_0000_FFFF_FFFF) | (u64::from(value) << 32);
+                }
+            }
+            regs::QUEUE_DEVICE_LOW => {
+                if idx < NUM_QUEUES {
+                    self.queue_configs[idx].used =
+                        (self.queue_configs[idx].used & 0xFFFF_FFFF_0000_0000) | u64::from(value);
+                }
+            }
+            regs::QUEUE_DEVICE_HIGH => {
+                if idx < NUM_QUEUES {
+                    self.queue_configs[idx].used =
+                        (self.queue_configs[idx].used & 0x0000_0000_FFFF_FFFF) | (u64::from(value) << 32);
+                }
+            }
             _ => {}
         }
     }
 
+    /// Activate a queue.
+    fn activate_queue(&mut self, idx: usize) {
+        if idx >= NUM_QUEUES {
+            return;
+        }
+
+        let config = &self.queue_configs[idx];
+        self.queues[idx].set_size(config.num);
+        self.queues[idx].set_desc_table_address(Some(GuestAddress(config.desc)), None);
+        self.queues[idx].set_avail_ring_address(Some(GuestAddress(config.avail)), None);
+        self.queues[idx].set_used_ring_address(Some(GuestAddress(config.used)), None);
+        self.queues[idx].set_ready(true);
+    }
+
     /// Handle a queue notification.
-    fn handle_queue_notify(&mut self) {
-        // In a full implementation, this would process vsock packets
+    fn handle_queue_notify(&mut self, queue_idx: usize) {
+        match queue_idx {
+            RX_QUEUE => self.process_rx_queue(),
+            TX_QUEUE => self.process_tx_queue(),
+            EVENT_QUEUE => {
+                // Event queue is for device events, not much to do here
+            }
+            _ => {}
+        }
+    }
+
+    /// Process the RX queue (host -> guest).
+    fn process_rx_queue(&mut self) {
+        let Some(mem) = self.guest_memory.as_ref() else {
+            return;
+        };
+        let mem = mem.as_ref();
+
+        // First, check for new incoming connections
+        self.accept_connections();
+
+        // Read data from all connections into pending_rx
+        self.read_from_connections();
+
+        // Write pending packets to guest
+        while let Some((header, data)) = self.pending_rx.pop_front() {
+            if let Some(mut chain) = self.queues[RX_QUEUE].pop_descriptor_chain(mem) {
+                let head_index = chain.head_index();
+                let mut total_written = 0u32;
+
+                // Write header to first descriptor
+                if let Some(desc) = chain.next() {
+                    if desc.is_write_only() {
+                        let header_bytes = unsafe {
+                            std::slice::from_raw_parts(
+                                (&header as *const VsockPacketHeader).cast::<u8>(),
+                                VsockPacketHeader::SIZE,
+                            )
+                        };
+                        if mem.write_slice(header_bytes, desc.addr()).is_ok() {
+                            total_written += VsockPacketHeader::SIZE as u32;
+                        }
+                    }
+                }
+
+                // Write data to subsequent descriptors
+                let mut data_offset = 0;
+                for desc in chain {
+                    if !desc.is_write_only() || data_offset >= data.len() {
+                        continue;
+                    }
+                    let to_write = (data.len() - data_offset).min(desc.len() as usize);
+                    if mem.write_slice(&data[data_offset..data_offset + to_write], desc.addr()).is_ok() {
+                        total_written += to_write as u32;
+                        data_offset += to_write;
+                    }
+                }
+
+                self.queues[RX_QUEUE]
+                    .add_used(mem, head_index, total_written)
+                    .ok();
+                self.interrupt_status |= 1;
+            } else {
+                // No available descriptors, put it back
+                self.pending_rx.push_front((header, data));
+                break;
+            }
+        }
+    }
+
+    /// Process the TX queue (guest -> host).
+    fn process_tx_queue(&mut self) {
+        let Some(mem) = self.guest_memory.as_ref() else {
+            return;
+        };
+        let mem = mem.as_ref();
+
+        while let Some(mut chain) = self.queues[TX_QUEUE].pop_descriptor_chain(mem) {
+            let head_index = chain.head_index();
+
+            // Read header from first descriptor
+            let header = if let Some(desc) = chain.next() {
+                let mut header = VsockPacketHeader::default();
+                let header_bytes = unsafe {
+                    std::slice::from_raw_parts_mut(
+                        (&mut header as *mut VsockPacketHeader).cast::<u8>(),
+                        VsockPacketHeader::SIZE,
+                    )
+                };
+                if mem.read_slice(header_bytes, desc.addr()).is_err() {
+                    self.queues[TX_QUEUE].add_used(mem, head_index, 0).ok();
+                    continue;
+                }
+                header
+            } else {
+                self.queues[TX_QUEUE].add_used(mem, head_index, 0).ok();
+                continue;
+            };
+
+            // Read data from subsequent descriptors
+            let mut data = Vec::new();
+            for desc in chain {
+                if desc.is_write_only() {
+                    continue;
+                }
+                let mut buf = vec![0u8; desc.len() as usize];
+                if mem.read_slice(&mut buf, desc.addr()).is_ok() {
+                    data.extend_from_slice(&buf);
+                }
+            }
+
+            // Process the packet
+            self.handle_tx_packet(header, data);
+
+            self.queues[TX_QUEUE].add_used(mem, head_index, 0).ok();
+        }
+
         self.interrupt_status |= 1;
+    }
+
+    /// Handle a packet from the guest.
+    fn handle_tx_packet(&mut self, header: VsockPacketHeader, data: Vec<u8>) {
+        match header.op {
+            vsock_op::REQUEST => {
+                // Connection request from guest
+                self.handle_connect_request(header);
+            }
+            vsock_op::RESPONSE => {
+                // Response to our connection request (we don't initiate connections)
+            }
+            vsock_op::RST => {
+                // Connection reset
+                self.handle_reset(header);
+            }
+            vsock_op::SHUTDOWN => {
+                // Shutdown connection
+                self.handle_shutdown(header);
+            }
+            vsock_op::RW => {
+                // Data packet
+                self.handle_data(header, data);
+            }
+            vsock_op::CREDIT_UPDATE => {
+                // Credit update from guest
+                self.handle_credit_update(header);
+            }
+            vsock_op::CREDIT_REQUEST => {
+                // Guest is asking for our credit
+                self.send_credit_update(header.src_port, header.dst_port);
+            }
+            _ => {}
+        }
+    }
+
+    /// Handle a connection request from guest.
+    fn handle_connect_request(&mut self, header: VsockPacketHeader) {
+        // For now, we just accept all connections
+        // In a real implementation, we'd check if there's a listener on dst_port
+        let response = VsockPacketHeader {
+            src_cid: HOST_CID,
+            dst_cid: self.guest_cid,
+            src_port: header.dst_port,
+            dst_port: header.src_port,
+            len: 0,
+            type_: 1, // STREAM
+            op: vsock_op::RESPONSE,
+            flags: 0,
+            buf_alloc: 64 * 1024, // 64 KiB buffer
+            fwd_cnt: 0,
+        };
+        self.pending_rx.push_back((response, Vec::new()));
+    }
+
+    /// Handle connection reset.
+    fn handle_reset(&mut self, header: VsockPacketHeader) {
+        // Remove the connection
+        self.connections.retain(|c| {
+            !(c.remote_cid == header.src_cid && c.remote_port == header.src_port)
+        });
+    }
+
+    /// Handle connection shutdown.
+    fn handle_shutdown(&mut self, header: VsockPacketHeader) {
+        // Close the connection gracefully
+        self.connections.retain(|c| {
+            !(c.remote_cid == header.src_cid && c.remote_port == header.src_port)
+        });
+    }
+
+    /// Handle data from guest.
+    fn handle_data(&mut self, header: VsockPacketHeader, data: Vec<u8>) {
+        // Find the connection and write data to the Unix socket
+        for conn in &mut self.connections {
+            if conn.remote_cid == header.src_cid && conn.remote_port == header.src_port {
+                let _ = conn.stream.write_all(&data);
+                conn.fwd_cnt += data.len() as u32;
+                break;
+            }
+        }
+    }
+
+    /// Handle credit update from guest.
+    fn handle_credit_update(&mut self, header: VsockPacketHeader) {
+        for conn in &mut self.connections {
+            if conn.remote_cid == header.src_cid && conn.remote_port == header.src_port {
+                conn.peer_buf_alloc = header.buf_alloc;
+                conn.peer_fwd_cnt = header.fwd_cnt;
+                break;
+            }
+        }
+    }
+
+    /// Send credit update to guest.
+    fn send_credit_update(&mut self, src_port: u32, dst_port: u32) {
+        if let Some(conn) = self.connections.iter().find(|c| c.local_port == dst_port) {
+            let header = VsockPacketHeader {
+                src_cid: HOST_CID,
+                dst_cid: self.guest_cid,
+                src_port: dst_port,
+                dst_port: src_port,
+                len: 0,
+                type_: 1,
+                op: vsock_op::CREDIT_UPDATE,
+                flags: 0,
+                buf_alloc: conn.buf_alloc,
+                fwd_cnt: conn.fwd_cnt,
+            };
+            self.pending_rx.push_back((header, Vec::new()));
+        }
+    }
+
+    /// Accept new connections on the Unix socket.
+    fn accept_connections(&mut self) {
+        while let Ok((stream, _)) = self.listener.accept() {
+            stream.set_nonblocking(true).ok();
+            let local_port = self.connections.len() as u32 + 1024;
+            self.connections.push(VsockConnection {
+                stream,
+                local_port,
+                remote_port: 0, // Will be set when guest connects
+                remote_cid: self.guest_cid,
+                rx_buffer: VecDeque::new(),
+                peer_buf_alloc: 0,
+                peer_fwd_cnt: 0,
+                buf_alloc: 64 * 1024,
+                fwd_cnt: 0,
+            });
+        }
+    }
+
+    /// Read data from all connections.
+    fn read_from_connections(&mut self) {
+        for conn in &mut self.connections {
+            let mut buf = [0u8; 4096];
+            while let Ok(n) = conn.stream.read(&mut buf) {
+                if n == 0 {
+                    break;
+                }
+                conn.rx_buffer.extend(&buf[..n]);
+            }
+
+            // Send buffered data to guest
+            while !conn.rx_buffer.is_empty() {
+                let data: Vec<u8> = conn.rx_buffer.drain(..).collect();
+                let header = VsockPacketHeader {
+                    src_cid: HOST_CID,
+                    dst_cid: conn.remote_cid,
+                    src_port: conn.local_port,
+                    dst_port: conn.remote_port,
+                    len: data.len() as u32,
+                    type_: 1,
+                    op: vsock_op::RW,
+                    flags: 0,
+                    buf_alloc: conn.buf_alloc,
+                    fwd_cnt: conn.fwd_cnt,
+                };
+                self.pending_rx.push_back((header, data));
+            }
+        }
+    }
+
+    /// Poll for activity (accept connections, read data).
+    ///
+    /// This should be called periodically to check for incoming connections
+    /// and data on existing connections.
+    pub fn poll(&mut self) {
+        // Accept new connections
+        self.accept_connections();
+
+        // Read data from connections
+        self.read_from_connections();
+
+        // If we have pending data and guest memory is set, try to process RX queue
+        if !self.pending_rx.is_empty() && self.guest_memory.is_some() {
+            self.process_rx_queue();
+        }
     }
 
     /// Reset the device.
@@ -204,8 +677,12 @@ impl VirtioVsockDevice {
         self.features_sel = 0;
         self.interrupt_status = 0;
         self.queue_sel = 0;
-        self.queue_num = 0;
-        self.queue_ready = 0;
+        self.connections.clear();
+        self.pending_rx.clear();
+        for i in 0..NUM_QUEUES {
+            self.queue_configs[i] = QueueConfig::default();
+            self.queues[i].set_ready(false);
+        }
     }
 }
 
@@ -214,74 +691,4 @@ impl Drop for VirtioVsockDevice {
         // Clean up the socket file
         let _ = std::fs::remove_file(&self.socket_path);
     }
-}
-
-/// virtio-vsock configuration space.
-#[repr(C)]
-#[derive(Debug, Default, Clone, Copy)]
-pub struct VirtioVsockConfig {
-    /// Guest CID.
-    pub guest_cid: u64,
-}
-
-/// vsock packet header.
-#[repr(C)]
-#[derive(Debug, Default, Clone, Copy)]
-pub struct VsockPacketHeader {
-    /// Source CID.
-    pub src_cid: u64,
-
-    /// Destination CID.
-    pub dst_cid: u64,
-
-    /// Source port.
-    pub src_port: u32,
-
-    /// Destination port.
-    pub dst_port: u32,
-
-    /// Packet length.
-    pub len: u32,
-
-    /// Packet type.
-    pub type_: u16,
-
-    /// Operation.
-    pub op: u16,
-
-    /// Flags.
-    pub flags: u32,
-
-    /// Buffer allocation.
-    pub buf_alloc: u32,
-
-    /// Forward count.
-    pub fwd_cnt: u32,
-}
-
-/// vsock packet operations.
-pub mod vsock_op {
-    /// Invalid operation.
-    pub const INVALID: u16 = 0;
-
-    /// Request connection.
-    pub const REQUEST: u16 = 1;
-
-    /// Response to connection request.
-    pub const RESPONSE: u16 = 2;
-
-    /// Reset connection.
-    pub const RST: u16 = 3;
-
-    /// Shutdown connection.
-    pub const SHUTDOWN: u16 = 4;
-
-    /// Data packet.
-    pub const RW: u16 = 5;
-
-    /// Credit update.
-    pub const CREDIT_UPDATE: u16 = 6;
-
-    /// Credit request.
-    pub const CREDIT_REQUEST: u16 = 7;
 }
