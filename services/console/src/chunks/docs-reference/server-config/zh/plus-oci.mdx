@@ -1,0 +1,26 @@
+### `plus.oci`
+
+此部分指定 OCI（Open Container Initiative）注册表存储配置。
+Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
+
+如果未配置此部分，Bencher 将使用本地文件系统存储，
+存储在数据库文件旁边的 `oci` 目录中。
+这适用于开发和单实例部署。
+
+对于多实例的生产部署或需要持久性时，
+请配置基于 S3 的存储。
+
+有一种存储 `service`：
+- `aws_s3`：将 OCI 工件存储在 AWS S3 中
+    - `access_key_id`：AWS 访问密钥 ID
+    - `secret_access_key`：AWS 秘密访问密钥
+    - `access_point`：带有可选路径前缀的 S3 访问点 ARN。
+      格式：`arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
+
+|             名称             |                                示例                                 | 默认值 | 必需  |                   描述                    |
+| :--------------------------: | :-----------------------------------------------------------------: | :----: | :---: | :---------------------------------------: |
+|          data_store          |                              \{ ... \}                              |  ---   |  否   |  指定 OCI 存储后端。省略时使用本地存储。  |
+|      data_store.service      |                              "aws_s3"                               |  ---   |  是   |            指定存储服务类型。             |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |  ---   |  是   |             AWS 访问密钥 ID。             |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   |  是   |            AWS 秘密访问密钥。             |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |  ---   |  是   | S3 访问点 ARN。访问点名称后可选路径前缀。 |
