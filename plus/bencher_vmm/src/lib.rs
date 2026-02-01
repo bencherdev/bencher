@@ -55,6 +55,18 @@ pub use vm::{Vm, VmConfig, run_vm};
 #[cfg(target_os = "linux")]
 pub use vsock_client::{VsockClient, VsockClientBuilder, BenchmarkClient};
 
+/// Vsock port constants for guest-host communication.
+pub mod ports {
+    /// Port for stdout (default results).
+    pub const STDOUT: u32 = 5000;
+    /// Port for stderr.
+    pub const STDERR: u32 = 5001;
+    /// Port for exit code.
+    pub const EXIT_CODE: u32 = 5002;
+    /// Port for output file (optional).
+    pub const OUTPUT_FILE: u32 = 5005;
+}
+
 // Non-Linux stubs
 #[cfg(not(target_os = "linux"))]
 mod stubs {

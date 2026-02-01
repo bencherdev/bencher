@@ -49,6 +49,13 @@ pub struct Config {
     /// Defaults to 300 seconds (5 minutes).
     #[serde(default = "default_timeout_secs")]
     pub timeout_secs: u64,
+
+    /// Path to an output file the benchmark will produce.
+    ///
+    /// If specified, the init script will set `BENCHER_OUTPUT_FILE` environment
+    /// variable, and the file will be sent to the host via vsock port 5005.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_file: Option<String>,
 }
 
 const fn default_vcpus() -> u8 {
@@ -84,6 +91,7 @@ impl Config {
             memory_mib: default_memory_mib(),
             kernel_cmdline: default_kernel_cmdline(),
             timeout_secs: default_timeout_secs(),
+            output_file: None,
         }
     }
 
@@ -104,6 +112,7 @@ impl Config {
             memory_mib: default_memory_mib(),
             kernel_cmdline: default_kernel_cmdline(),
             timeout_secs: default_timeout_secs(),
+            output_file: None,
         }
     }
 
@@ -146,6 +155,17 @@ impl Config {
     #[must_use]
     pub fn with_timeout_secs(mut self, timeout_secs: u64) -> Self {
         self.timeout_secs = timeout_secs;
+        self
+    }
+
+    /// Set the output file path (inside the guest VM).
+    ///
+    /// When set, `BENCHER_OUTPUT_FILE` environment variable will be available
+    /// to the benchmark, and the file's contents will be sent to the host
+    /// via vsock port 5005 after the benchmark completes.
+    #[must_use]
+    pub fn with_output_file<S: Into<String>>(mut self, output_file: S) -> Self {
+        self.output_file = Some(output_file.into());
         self
     }
 

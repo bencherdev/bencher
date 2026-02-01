@@ -217,21 +217,51 @@ impl DeviceManager {
         self.virtio_vsock.as_ref().is_some_and(|v| v.has_results())
     }
 
-    /// Check if vsock results collection is complete.
+    /// Check if vsock results collection is complete (stdout port closed).
     #[must_use]
     pub fn vsock_results_complete(&self) -> bool {
         self.virtio_vsock.as_ref().is_some_and(|v| v.results_complete())
     }
 
-    /// Get the vsock results as a string.
+    /// Check if all required vsock ports are complete (stdout, stderr, exit_code).
+    #[must_use]
+    pub fn vsock_all_required_complete(&self) -> bool {
+        self.virtio_vsock.as_ref().is_some_and(|v| v.all_required_complete())
+    }
+
+    /// Get the vsock results as a string (stdout port).
     #[must_use]
     pub fn get_vsock_results(&self) -> Option<String> {
         self.virtio_vsock.as_ref().map(|v| v.results_as_string())
     }
 
-    /// Take the vsock results, leaving an empty buffer.
+    /// Take the vsock results, leaving an empty buffer (stdout port).
     pub fn take_vsock_results(&mut self) -> Option<Vec<u8>> {
         self.virtio_vsock.as_mut().map(|v| v.take_results())
+    }
+
+    /// Get stdout from the guest.
+    #[must_use]
+    pub fn get_vsock_stdout(&self) -> Option<String> {
+        self.virtio_vsock.as_ref().map(|v| v.stdout())
+    }
+
+    /// Get stderr from the guest.
+    #[must_use]
+    pub fn get_vsock_stderr(&self) -> Option<String> {
+        self.virtio_vsock.as_ref().map(|v| v.stderr())
+    }
+
+    /// Get the exit code from the guest.
+    #[must_use]
+    pub fn get_vsock_exit_code(&self) -> Option<i32> {
+        self.virtio_vsock.as_ref().and_then(|v| v.exit_code())
+    }
+
+    /// Get the output file data from the guest (if provided).
+    #[must_use]
+    pub fn get_vsock_output_file(&self) -> Option<Vec<u8>> {
+        self.virtio_vsock.as_ref().and_then(|v| v.output_file())
     }
 }
 
