@@ -6,7 +6,7 @@ use kvm_bindings::{
     kvm_one_reg, kvm_vcpu_init, KVM_ARM_VCPU_PSCI_0_2, KVM_REG_ARM64, KVM_REG_ARM_CORE,
     KVM_REG_SIZE_U64,
 };
-use kvm_ioctls::{Kvm, VcpuFd};
+use kvm_ioctls::{VcpuFd, VmFd};
 use vm_memory::GuestMemoryMmap;
 
 use crate::error::VmmError;
@@ -37,14 +37,15 @@ const PSTATE_FAULT_BITS_64: u64 = 0x3c5; // EL1h, all interrupts masked
 
 /// Configure an aarch64 vCPU.
 pub fn configure_vcpu(
-    kvm: &Kvm,
+    vm_fd: &VmFd,
     vcpu_fd: &VcpuFd,
     _guest_memory: &GuestMemoryMmap,
     _index: u8,
 ) -> Result<(), VmmError> {
     // Get the preferred target CPU type
     let mut kvi = kvm_vcpu_init::default();
-    kvm.get_preferred_target(&mut kvi)
+    vm_fd
+        .get_preferred_target(&mut kvi)
         .map_err(|e| VmmError::Vcpu(format!("Failed to get preferred target: {e}")))?;
 
     // Enable PSCI v0.2 for CPU power management
@@ -85,7 +86,7 @@ fn setup_regs(vcpu_fd: &VcpuFd) -> Result<(), VmmError> {
 /// Core registers use the struct user_pt_regs layout.
 const fn arm64_core_reg_id(index: u64) -> u64 {
     // Each register is 8 bytes, so multiply index by 2 (in 4-byte units)
-    KVM_REG_ARM64 | KVM_REG_SIZE_U64 | KVM_REG_ARM_CORE | (index * 2)
+    KVM_REG_ARM64 | KVM_REG_SIZE_U64 | (KVM_REG_ARM_CORE as u64) | (index * 2)
 }
 
 /// Set a core register value.

@@ -10,10 +10,13 @@ use camino::Utf8Path;
 use linux_loader::loader::bootparam::boot_params;
 use linux_loader::loader::elf::Elf as ElfLoader;
 use linux_loader::loader::KernelLoader;
-use vm_memory::{ByteValued, GuestAddress, GuestMemoryMmap, GuestMemory};
+use vm_memory::{Bytes, ByteValued, GuestAddress, GuestMemory, GuestMemoryMmap};
 
 use crate::error::VmmError;
 use crate::vcpu::x86_64::{BOOT_PARAMS_ADDR, KERNEL_LOAD_ADDR};
+
+/// E820 memory type: RAM.
+const E820_RAM: u32 = 1;
 
 use super::KernelEntry;
 
@@ -142,7 +145,7 @@ fn setup_boot_params(guest_memory: &GuestMemoryMmap, cmdline_size: usize) -> Res
 
 /// Setup the e820 memory map.
 fn setup_e820(params: &mut boot_params, guest_memory: &GuestMemoryMmap) -> Result<(), VmmError> {
-    use linux_loader::loader::bootparam::{boot_e820_entry, E820_RAM};
+    use linux_loader::loader::bootparam::boot_e820_entry;
     use vm_memory::GuestMemoryRegion;
 
     let mut entry_count = 0u8;

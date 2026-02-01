@@ -20,6 +20,7 @@ thiserror = { workspace = true, optional = true }
 # Linux-only dependencies (KVM, epoll, etc.)
 [target.'cfg(target_os = "linux")'.dependencies]
 caps = { workspace = true }
+libc = { workspace = true }
 kvm-bindings = { workspace = true }
 kvm-ioctls = { workspace = true }
 linux-loader = { workspace = true }

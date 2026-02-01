@@ -28,7 +28,7 @@ use crate::vcpu::Vcpu;
 ///
 /// The benchmark results collected from the guest serial output or vsock.
 pub fn run(
-    vcpus: &mut [Vcpu],
+    mut vcpus: Vec<Vcpu>,
     devices: Arc<Mutex<DeviceManager>>,
     timeout_secs: u64,
 ) -> Result<String, VmmError> {
@@ -60,22 +60,14 @@ pub fn run(
         // Note: This is a simplified implementation. A production VMM would use
         // proper thread synchronization and handle vCPU affinity.
         let handles: Vec<_> = vcpus
-            .iter_mut()
-            .map(|vcpu| {
+            .into_iter()
+            .map(|mut vcpu| {
                 let devices = Arc::clone(&devices);
                 let shutdown = Arc::clone(&shutdown);
-                let vcpu_fd = vcpu.fd.try_clone().map_err(VmmError::Kvm)?;
-                let vcpu_index = vcpu.index;
 
-                Ok(thread::spawn(move || {
-                    let mut vcpu = Vcpu {
-                        fd: vcpu_fd,
-                        index: vcpu_index,
-                    };
-                    run_vcpu_loop(&mut vcpu, devices, shutdown)
-                }))
+                thread::spawn(move || run_vcpu_loop(&mut vcpu, devices, shutdown))
             })
-            .collect::<Result<Vec<_>, VmmError>>()?;
+            .collect();
 
         // Wait for all vCPU threads to complete
         let mut result = Ok(String::new());

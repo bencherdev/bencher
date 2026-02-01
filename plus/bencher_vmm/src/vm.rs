@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use camino::Utf8PathBuf;
 use kvm_ioctls::{Kvm, VmFd};
-use vm_memory::GuestMemoryMmap;
+use vm_memory::{GuestMemory, GuestMemoryMmap};
 
 use crate::devices::DeviceManager;
 use crate::error::VmmError;
@@ -180,7 +180,8 @@ impl Vm {
         crate::sandbox::drop_capabilities()?;
         crate::sandbox::apply_seccomp()?;
 
-        crate::event_loop::run(&mut self.vcpus, Arc::clone(&self.devices), self.timeout_secs)
+        let vcpus = std::mem::take(&mut self.vcpus);
+        crate::event_loop::run(vcpus, Arc::clone(&self.devices), self.timeout_secs)
     }
 }
 
