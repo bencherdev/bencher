@@ -63,6 +63,9 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
     println!("  Memory: {} MiB", config.memory_mib);
     println!("  Timeout: {} seconds", config.timeout_secs);
 
+    // Clean up any stale jail directories from previous runs
+    cleanup_stale_jails();
+
     // Create a persistent work directory for the jail
     // We use a directory under /tmp that won't be cleaned up when we exec
     let run_id = uuid::Uuid::new_v4();
@@ -461,6 +464,51 @@ fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
     Err(RunnerError::Config(
         "bencher-init binary not found. Build with: cargo build -p bencher_init".to_owned(),
     ))
+}
+
+/// Base directory for jail roots.
+#[cfg(target_os = "linux")]
+const JAIL_BASE_DIR: &str = "/tmp/bencher-runner";
+
+/// Clean up stale jail directories from previous runs.
+///
+/// This removes any leftover directories in `/tmp/bencher-runner/` that were
+/// not cleaned up due to the pivot_root architecture (we can't clean up after
+/// ourselves once we've pivoted into the jail).
+#[cfg(target_os = "linux")]
+fn cleanup_stale_jails() {
+    let base_dir = std::path::Path::new(JAIL_BASE_DIR);
+
+    if !base_dir.exists() {
+        return;
+    }
+
+    let entries = match std::fs::read_dir(base_dir) {
+        Ok(entries) => entries,
+        Err(e) => {
+            eprintln!("Warning: failed to read {JAIL_BASE_DIR}: {e}");
+            return;
+        }
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+
+        // Only clean up directories (each run creates a UUID-named directory)
+        if !path.is_dir() {
+            continue;
+        }
+
+        // Try to remove the directory and its contents
+        if let Err(e) = std::fs::remove_dir_all(&path) {
+            eprintln!(
+                "Warning: failed to clean up stale jail {}: {e}",
+                path.display()
+            );
+        } else {
+            println!("Cleaned up stale jail: {}", path.display());
+        }
+    }
 }
 
 /// Execute a single benchmark run (non-Linux stub).
