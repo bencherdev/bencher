@@ -19,14 +19,21 @@ use std::fs::{self, File};
 use std::io::Write as _;
 use std::path::PathBuf;
 
-/// Firecracker CI version for kernel downloads.
+/// Firecracker CI build identifier for kernel downloads.
 ///
-/// See: <https://github.com/firecracker-microvm/firecracker/releases>
-const FIRECRACKER_VERSION: &str = "v1.10";
+/// This is the date-based build ID from Firecracker's CI system.
+/// Format: YYYYMMDD-<git-commit-hash>-<build-number>
+///
+/// To find the latest build ID:
+/// ```sh
+/// curl -s "http://spec.ccfc.min.s3.amazonaws.com/?prefix=firecracker-ci/&list-type=2" | \
+///     tr '<' '\n' | grep 'Key>firecracker-ci/202' | grep 'vmlinux-5.10' | \
+///     grep -v config | grep -v debug | sort -r | head -1
+/// ```
+const FIRECRACKER_CI_BUILD: &str = "20260130-7073e31a0ed7-0";
 
-/// Kernel version to use.
-/// Firecracker supports 5.10 and 6.1 kernels.
-const KERNEL_VERSION: &str = "5.10";
+/// Kernel version to use (5.10 or 6.1).
+const KERNEL_VERSION: &str = "5.10.245";
 
 /// Base URL for Firecracker CI artifacts.
 const BASE_URL: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci";
@@ -40,28 +47,26 @@ struct KernelConfig {
     expected_sha256: &'static str,
 }
 
-/// SHA256 hashes for Firecracker v1.10 kernel 5.10 images.
+/// SHA256 hashes for Firecracker CI kernels.
 ///
 /// These hashes were computed from the official Firecracker CI artifacts.
 /// To verify manually:
 /// ```sh
-/// curl -sL https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.10/x86_64/vmlinux-5.10 | sha256sum
-/// curl -sL https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.10/aarch64/vmlinux-5.10 | sha256sum
+/// curl -sL https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/x86_64/vmlinux-5.10.245 | sha256sum
+/// curl -sL https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/aarch64/vmlinux-5.10.245 | sha256sum
 /// ```
 const KERNELS: &[KernelConfig] = &[
     KernelConfig {
         arch: "x86_64",
         target_arch: "x86_64",
         filename: "vmlinux-x86_64.bin",
-        // SHA256 of vmlinux-5.10 for x86_64 from Firecracker v1.10
-        expected_sha256: "8a1f985676c0b064050014483488356620fb07fe5e6d608f358fbb5385c7e92c",
+        expected_sha256: "02cd0f40652b023614b87638de2e5cc53655b88ba82e57eab642adc5a9384c30",
     },
     KernelConfig {
         arch: "aarch64",
         target_arch: "aarch64",
         filename: "vmlinux-aarch64.bin",
-        // SHA256 of vmlinux-5.10 for aarch64 from Firecracker v1.10
-        expected_sha256: "c93f989562a33a5ec0e1007a36a923b9a576d77d1cb624a11df6b91a1388319e",
+        expected_sha256: "cd752664f99ffa2e460d0fd55846b2394f06a6fce28c7d1d497c8815844a57ff",
     },
 ];
 
@@ -99,7 +104,7 @@ fn main() {
 
 fn download_kernel(kernel: &KernelConfig, dest: &std::path::Path) {
     let url = format!(
-        "{BASE_URL}/{FIRECRACKER_VERSION}/{}/vmlinux-{KERNEL_VERSION}",
+        "{BASE_URL}/{FIRECRACKER_CI_BUILD}/{}/vmlinux-{KERNEL_VERSION}",
         kernel.arch
     );
 
