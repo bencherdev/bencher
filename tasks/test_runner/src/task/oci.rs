@@ -1,6 +1,6 @@
 use std::fs::{self, File};
 use std::io::Write as _;
-use std::os::unix::fs::{symlink, PermissionsExt as _};
+use std::os::unix::fs::{PermissionsExt as _, symlink};
 use std::process::Command;
 
 use anyhow::Context as _;
@@ -116,9 +116,9 @@ fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
     // Create symlinks for common utilities
     let utils = [
         "sh", "ash", "cat", "echo", "ls", "mkdir", "mount", "umount", "sleep", "ps", "kill", "pwd",
-        "rm", "cp", "mv", "ln", "grep", "sed", "awk", "head", "tail", "wc", "tr", "env", "printenv",
-        "hostname", "uname", "id", "whoami", "chmod", "chown", "date", "true", "false", "test",
-        "poweroff", "reboot", "halt", "init",
+        "rm", "cp", "mv", "ln", "grep", "sed", "awk", "head", "tail", "wc", "tr", "env",
+        "printenv", "hostname", "uname", "id", "whoami", "chmod", "chown", "date", "true", "false",
+        "test", "poweroff", "reboot", "halt", "init",
     ];
 
     for util in utils {
@@ -181,12 +181,20 @@ fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
 
 /// Create a mock bencher script for testing.
 fn create_mock_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
+    // Matches the format of `bencher mock` with 5 results
     let script = r#"#!/bin/sh
 # Mock bencher script for testing
 case "$1" in
     mock)
-        echo '{"bencher::mock_0":{"latency":{"value":12.34}}}'
-        echo '{"bencher::mock_1":{"latency":{"value":56.78}}}'
+        cat << 'EOF'
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 0.0
+    }
+  }
+}
+EOF
         ;;
     *)
         echo "Usage: bencher mock"
@@ -365,13 +373,19 @@ fn package_as_oci(rootfs: &Utf8Path, oci_path: &Utf8Path) -> anyhow::Result<()> 
 
     // Create index.json
     let index = create_index(&manifest_digest, manifest_bytes.len());
-    fs::write(oci_path.join("index.json"), serde_json::to_vec_pretty(&index)?)?;
+    fs::write(
+        oci_path.join("index.json"),
+        serde_json::to_vec_pretty(&index)?,
+    )?;
 
     // Create oci-layout
     let layout = serde_json::json!({
         "imageLayoutVersion": "1.0.0"
     });
-    fs::write(oci_path.join("oci-layout"), serde_json::to_vec_pretty(&layout)?)?;
+    fs::write(
+        oci_path.join("oci-layout"),
+        serde_json::to_vec_pretty(&layout)?,
+    )?;
 
     // Clean up temp files
     drop(fs::remove_file(super::work_dir().join("layer.tar")));
@@ -382,8 +396,8 @@ fn package_as_oci(rootfs: &Utf8Path, oci_path: &Utf8Path) -> anyhow::Result<()> 
 
 /// Create a gzipped tarball of the rootfs.
 fn create_layer_tarball(rootfs: &Utf8Path, output: &Utf8Path) -> anyhow::Result<()> {
-    use flate2::write::GzEncoder;
     use flate2::Compression;
+    use flate2::write::GzEncoder;
 
     let tar_file = File::create(output)?;
     let encoder = GzEncoder::new(tar_file, Compression::default());
