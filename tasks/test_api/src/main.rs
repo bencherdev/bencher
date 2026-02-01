@@ -3,6 +3,7 @@
     clippy::print_stderr,
     clippy::print_stdout,
     clippy::unwrap_used,
+    clippy::unwrap_in_result,
     clippy::use_debug
 )]
 

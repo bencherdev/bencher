@@ -9,8 +9,10 @@ publish = false
 [features]
 default = ["plus", "sentry", "otel"]
 plus = [
+    "dep:api_oci",
     "api_auth/plus",
     "api_checkout/plus",
+    "api_oci/plus",
     "api_organizations/plus",
     "api_projects/plus",
     "api_run/plus",
@@ -26,6 +28,7 @@ sentry = [
     "dep:sentry",
     "api_auth/sentry",
     "api_checkout/sentry",
+    "api_oci/sentry",
     "api_organizations/sentry",
     "api_projects/sentry",
     "api_run/sentry",
@@ -39,6 +42,7 @@ otel = [
     "dep:bencher_otel_provider",
     "api_auth/otel",
     "api_checkout/otel",
+    "api_oci/otel",
     "api_organizations/otel",
     "api_projects/otel",
     "api_run/otel",
@@ -52,6 +56,7 @@ otel = [
 [dependencies]
 api_auth.workspace = true
 api_checkout = { workspace = true, optional = true }
+api_oci = { workspace = true, optional = true }
 api_organizations.workspace = true
 api_projects.workspace = true
 api_run.workspace = true

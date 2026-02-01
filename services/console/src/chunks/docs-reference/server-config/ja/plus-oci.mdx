@@ -1,0 +1,26 @@
+### `plus.oci`
+
+このセクションでは、OCI（Open Container Initiative）レジストリストレージの設定を指定します。
+BencherはOCI準拠のコンテナ/アーティファクトレジストリとして機能できます。
+
+このセクションが設定されていない場合、Bencherはデータベースファイルと同じ階層の
+`oci`ディレクトリにローカルファイルシステムストレージを使用します。
+これは開発や単一インスタンスのデプロイメントに適しています。
+
+複数インスタンスの本番デプロイメントや耐久性のためには、
+S3ベースのストレージを設定してください。
+
+1つのストレージ`service`があります：
+- `aws_s3`：AWS S3にOCIアーティファクトを保存
+    - `access_key_id`：AWSアクセスキーID
+    - `secret_access_key`：AWSシークレットアクセスキー
+    - `access_point`：オプションのパスプレフィックス付きS3アクセスポイントARN。
+      形式：`arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
+
+|             名前             |                                 例                                  | デフォルト |  必須  |                                      説明                                       |
+| :--------------------------: | :-----------------------------------------------------------------: | :--------: | :----: | :-----------------------------------------------------------------------------: |
+|          data_store          |                              \{ ... \}                              |    ---     | いいえ |            OCIストレージバックエンドを指定します。省略時はローカル。            |
+|      data_store.service      |                              "aws_s3"                               |    ---     |  はい  |                     ストレージサービスタイプを指定します。                      |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |    ---     |  はい  |                               AWSアクセスキーID。                               |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |    ---     |  はい  |                          AWSシークレットアクセスキー。                          |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |    ---     |  はい  | S3アクセスポイントARN。アクセスポイント名の後にオプションのパスプレフィックス。 |

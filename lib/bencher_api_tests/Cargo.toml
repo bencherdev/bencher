@@ -11,8 +11,10 @@ default = ["plus"]
 plus = [
     "bencher_api/plus",
     "bencher_config/plus",
+    "bencher_oci_storage/plus",
     "bencher_schema/plus",
-    "bencher_license",
+    "dep:bencher_license",
+    "dep:bencher_oci_storage",
 ]
 
 [dependencies]
@@ -21,6 +23,7 @@ bencher_config.workspace = true
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }
+bencher_oci_storage = { workspace = true, optional = true }
 bencher_rbac.workspace = true
 bencher_schema.workspace = true
 bencher_token.workspace = true
