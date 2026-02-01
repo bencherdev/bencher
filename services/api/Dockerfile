@@ -49,6 +49,7 @@ COPY lib/bencher_rbac bencher_rbac
 COPY lib/bencher_schema bencher_schema
 COPY lib/bencher_token bencher_token
 COPY lib/bencher_valid bencher_valid
+RUN cargo init --lib bencher_api_tests
 
 WORKDIR /usr/src/bencher/plus
 COPY plus/bencher_billing bencher_billing

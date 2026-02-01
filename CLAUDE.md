@@ -140,6 +140,10 @@ docker/run.sh                  # Build and run with Docker
 ARCH=arm64 docker compose --file docker/docker-compose.yml up --build
 ```
 
+Whenever a new crate is added, update both `Dockerfile`s:
+- `services/api/Dockerfile`
+- `services/console/Dockerfile`
+
 ## Key Libraries
 
 - `bencher_adapter` - Benchmark harness adapters (parsing benchmark output)
