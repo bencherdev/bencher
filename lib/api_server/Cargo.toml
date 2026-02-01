@@ -39,5 +39,11 @@ serde_json.workspace = true
 slog.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 
+[dev-dependencies]
+bencher_api_tests.workspace = true
+bencher_json = { workspace = true, features = ["server", "schema"] }
+http.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
 [lints]
 workspace = true

@@ -1,3 +1,9 @@
+// Dev dependencies used by integration tests
+#[cfg(test)]
+use bencher_api_tests as _;
+#[cfg(test)]
+use http as _;
+
 mod backup;
 mod config;
 mod restart;

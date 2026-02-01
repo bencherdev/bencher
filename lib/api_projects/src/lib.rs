@@ -1,3 +1,11 @@
+// Dev dependencies used by integration tests
+#[cfg(test)]
+use bencher_api_tests as _;
+#[cfg(test)]
+use serde_json as _;
+#[cfg(test)]
+use tokio as _;
+
 mod alerts;
 mod allowed;
 mod benchmarks;
