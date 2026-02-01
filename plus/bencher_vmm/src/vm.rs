@@ -30,6 +30,11 @@ pub struct VmConfig {
 
     /// Kernel command line arguments.
     pub kernel_cmdline: String,
+
+    /// Path to the vsock Unix socket for host-guest communication.
+    ///
+    /// If set, results will be collected via vsock instead of serial output.
+    pub vsock_path: Option<Utf8PathBuf>,
 }
 
 impl VmConfig {
@@ -41,7 +46,15 @@ impl VmConfig {
             vcpus: 1,
             memory_mib: 512,
             kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
+            vsock_path: None,
         }
+    }
+
+    /// Enable vsock communication with the given socket path.
+    #[must_use]
+    pub fn with_vsock(mut self, socket_path: Utf8PathBuf) -> Self {
+        self.vsock_path = Some(socket_path);
+        self
     }
 }
 
@@ -115,7 +128,11 @@ impl Vm {
         let vcpus = crate::vcpu::create_vcpus(&kvm, &vm_fd, guest_memory.as_ref(), config.vcpus)?;
 
         // Step 7: Setup devices and pass guest memory for virtio queue processing
-        let mut devices = crate::devices::setup_devices(&vm_fd, &config.rootfs_path)?;
+        let mut devices = crate::devices::setup_devices(
+            &vm_fd,
+            &config.rootfs_path,
+            config.vsock_path.as_deref(),
+        )?;
         devices.set_guest_memory(Arc::clone(&guest_memory));
 
         Ok(Self {

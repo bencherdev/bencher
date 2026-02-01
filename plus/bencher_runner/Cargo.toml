@@ -17,6 +17,7 @@ plus = [
     "dep:thiserror",
     "bencher_vmm/plus",
     "bencher_oci/plus",
+    "bencher_oci/registry",
     "bencher_rootfs/plus",
 ]
 

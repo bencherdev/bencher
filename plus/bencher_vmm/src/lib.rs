@@ -64,6 +64,28 @@ mod stubs {
         pub vcpus: u8,
         pub memory_mib: u32,
         pub kernel_cmdline: String,
+        pub vsock_path: Option<Utf8PathBuf>,
+    }
+
+    impl VmConfig {
+        /// Create a new VM configuration.
+        pub fn new(kernel_path: Utf8PathBuf, rootfs_path: Utf8PathBuf) -> Self {
+            Self {
+                kernel_path,
+                rootfs_path,
+                vcpus: 1,
+                memory_mib: 512,
+                kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
+                vsock_path: None,
+            }
+        }
+
+        /// Enable vsock communication with the given socket path.
+        #[must_use]
+        pub fn with_vsock(mut self, socket_path: Utf8PathBuf) -> Self {
+            self.vsock_path = Some(socket_path);
+            self
+        }
     }
 
     /// A running virtual machine (stub for non-Linux).

@@ -36,12 +36,24 @@ pub const I8042_COMMAND_PORT: u16 = 0x64;
 pub const VIRTIO_MMIO_BASE: u64 = 0xd000_0000;
 pub const VIRTIO_MMIO_SIZE: u64 = 0x1000; // 4 KiB per device
 
+/// Guest CID for vsock connections.
+pub const GUEST_CID: u64 = 3;
+
 /// Setup all required virtual devices.
-pub fn setup_devices(_vm_fd: &VmFd, rootfs_path: &Utf8Path) -> Result<DeviceManager, VmmError> {
+pub fn setup_devices(
+    _vm_fd: &VmFd,
+    rootfs_path: &Utf8Path,
+    vsock_path: Option<&Utf8Path>,
+) -> Result<DeviceManager, VmmError> {
     let mut manager = DeviceManager::new()?;
 
     // Setup virtio-blk with the rootfs
     manager.setup_virtio_blk(rootfs_path)?;
+
+    // Setup virtio-vsock if requested
+    if let Some(path) = vsock_path {
+        manager.setup_virtio_vsock(GUEST_CID, path)?;
+    }
 
     Ok(manager)
 }
