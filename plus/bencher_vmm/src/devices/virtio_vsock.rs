@@ -106,13 +106,13 @@ impl VirtioVsockDevice {
     }
 
     /// Get the Unix socket listener.
-    #[expect(dead_code)]
+    #[must_use]
     pub fn listener(&self) -> &UnixListener {
         &self.listener
     }
 
     /// Get the socket path.
-    #[expect(dead_code)]
+    #[must_use]
     pub fn socket_path(&self) -> &str {
         &self.socket_path
     }
