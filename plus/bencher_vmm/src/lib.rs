@@ -13,7 +13,7 @@
 //! # Architecture Support (Linux only)
 //!
 //! - **`x86_64`**: Full support for Linux guests with `bzImage` kernels
-//! - **`aarch64`**: Partial support (device tree generation TODO)
+//! - **`aarch64`**: Full support with GICv3/GICv2 and device tree generation
 //!
 //! # Features
 //!
@@ -29,6 +29,8 @@ mod boot;
 mod devices;
 #[cfg(target_os = "linux")]
 mod event_loop;
+#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+mod gic;
 #[cfg(target_os = "linux")]
 mod memory;
 #[cfg(target_os = "linux")]

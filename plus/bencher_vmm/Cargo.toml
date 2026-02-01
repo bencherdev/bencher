@@ -28,5 +28,9 @@ vm-memory = { workspace = true }
 vm-superio = { workspace = true }
 vmm-sys-util = { workspace = true }
 
+# ARM64-specific dependencies
+[target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
+vm-fdt = { workspace = true }
+
 [lints]
 workspace = true

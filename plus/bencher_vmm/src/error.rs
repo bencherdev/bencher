@@ -18,6 +18,9 @@ pub enum VmmError {
     #[error("vCPU error: {0}")]
     Vcpu(String),
 
+    #[error("GIC error: {0}")]
+    Gic(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 

@@ -79,26 +79,43 @@ impl Vm {
         let vm_fd = kvm.create_vm().map_err(VmmError::Kvm)?;
 
         // Step 3: Create guest memory
+        let memory_size = u64::from(config.memory_mib) * 1024 * 1024;
         let guest_memory = create_guest_memory(config.memory_mib)?;
 
         // Step 4: Register memory regions with KVM
         register_memory_regions(&vm_fd, &guest_memory)?;
 
-        // Step 5: Create interrupt controller (architecture-specific)
+        // Step 5: Create interrupt controller and load kernel (architecture-specific)
         #[cfg(target_arch = "x86_64")]
-        create_irq_chip_x86_64(&vm_fd)?;
+        {
+            create_irq_chip_x86_64(&vm_fd)?;
+            let _kernel_entry = crate::boot::load_kernel(
+                &guest_memory,
+                &config.kernel_path,
+                &config.kernel_cmdline,
+            )?;
+        }
 
         #[cfg(target_arch = "aarch64")]
-        create_irq_chip_aarch64(&vm_fd)?;
+        {
+            // Create GIC (tries GICv3, falls back to GICv2)
+            let gic = crate::gic::Gic::new(&vm_fd, u64::from(config.vcpus))?;
 
-        // Step 6: Load kernel
-        let _kernel_entry =
-            crate::boot::load_kernel(&guest_memory, &config.kernel_path, &config.kernel_cmdline)?;
+            // Load kernel with device tree
+            let _kernel_entry = crate::boot::load_kernel_aarch64(
+                &guest_memory,
+                &config.kernel_path,
+                &config.kernel_cmdline,
+                u32::from(config.vcpus),
+                memory_size,
+                &gic,
+            )?;
+        }
 
-        // Step 7: Create vCPUs
+        // Step 6: Create vCPUs
         let vcpus = crate::vcpu::create_vcpus(&kvm, &vm_fd, &guest_memory, config.vcpus)?;
 
-        // Step 8: Setup devices
+        // Step 7: Setup devices
         let devices = crate::devices::setup_devices(&vm_fd, &config.rootfs_path)?;
 
         Ok(Self {
@@ -190,14 +207,6 @@ fn create_irq_chip_x86_64(vm_fd: &VmFd) -> Result<(), VmmError> {
     vm_fd.create_pit2(pit_config).map_err(VmmError::Kvm)?;
 
     Ok(())
-}
-
-#[cfg(target_arch = "aarch64")]
-fn create_irq_chip_aarch64(_vm_fd: &VmFd) -> Result<(), VmmError> {
-    // ARM uses GICv2 or GICv3
-    // This requires more complex setup with device tree
-    // TODO: Implement GIC setup for ARM64
-    Err(VmmError::UnsupportedArch)
 }
 
 #[cfg(test)]
