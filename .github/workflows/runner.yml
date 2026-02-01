@@ -1,0 +1,34 @@
+name: Runner
+
+on:
+  workflow_call:
+    inputs:
+      mold-version:
+        type: string
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test_runner:
+    name: Test VMM Integration Test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          mold-version: ${{ inputs.mold-version }}
+          cache-key: test-runner
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify KVM
+        run: |
+          ls -la /dev/kvm
+          grep -E 'vmx|svm' /proc/cpuinfo | head -1
+      - name: Run test-runner
+        run: cargo test-runner test
