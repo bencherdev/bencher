@@ -554,12 +554,31 @@ impl OciLocalStorage {
     }
 
     /// Deletes a manifest by digest
+    ///
+    /// Also cleans up any referrer link if this manifest references another manifest
+    /// via the `subject` field.
     pub async fn delete_manifest(
         &self,
         repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         let path = self.manifest_path(repository, digest);
+
+        // Try to read the manifest first to check for subject field
+        // If we can read it and it has a subject, clean up the referrer link
+        if let Ok(data) = fs::read(&path).await
+            && let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&data)
+            && let Some(subject) = manifest.get("subject")
+            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
+            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+        {
+            // Delete the referrer link
+            let referrer_path = self.referrer_path(repository, &subject_digest, digest);
+            // Ignore errors - the referrer link may not exist or may have already been deleted
+            drop(fs::remove_file(&referrer_path).await);
+        }
+
+        // Delete the manifest itself
         match fs::remove_file(&path).await {
             Ok(()) => Ok(()),
             // File already deleted or never existed - that's fine

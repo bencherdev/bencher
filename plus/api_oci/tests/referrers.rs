@@ -349,3 +349,104 @@ async fn test_referrers_options() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert!(resp.headers().contains_key("access-control-allow-origin"));
 }
+
+// DELETE /v2/{name}/manifests/{digest} - Verify referrer link cleanup
+#[tokio::test]
+async fn test_referrers_cleanup_on_manifest_delete() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("ReferrersCleanup User", "referrerscleanup@example.com")
+        .await;
+    let org = server.create_org(&user, "ReferrersCleanup Org").await;
+    let project = server
+        .create_project(&user, &org, "ReferrersCleanup Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload a base manifest (the subject)
+    let base_manifest = create_base_manifest();
+    let base_digest = compute_digest(base_manifest.as_bytes());
+
+    server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/cleanup-subject", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(base_manifest)
+        .send()
+        .await
+        .expect("Upload base failed");
+
+    // Upload a referrer manifest
+    let referrer = create_referrer_manifest(&base_digest, "application/vnd.example.attestation");
+    let referrer_digest = compute_digest(referrer.as_bytes());
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/manifests/{}",
+            project_slug, referrer_digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(referrer)
+        .send()
+        .await
+        .expect("Upload referrer failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Verify the referrer appears in the list
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, base_digest)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("List referrers failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    let manifests = body["manifests"]
+        .as_array()
+        .expect("manifests should be array");
+    assert_eq!(manifests.len(), 1);
+    assert_eq!(
+        manifests[0]["artifactType"],
+        "application/vnd.example.attestation"
+    );
+
+    // Delete the referrer manifest by digest
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v2/{}/manifests/{}",
+            project_slug, referrer_digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .send()
+        .await
+        .expect("Delete referrer failed");
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+    // Verify the referrer is cleaned up from the list
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, base_digest)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("List referrers failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    let manifests = body["manifests"]
+        .as_array()
+        .expect("manifests should be array");
+    assert!(
+        manifests.is_empty(),
+        "Referrer link should be cleaned up after manifest deletion"
+    );
+}
