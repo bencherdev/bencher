@@ -96,7 +96,9 @@ http = "1.4"
 image = "0.25"
 jsonwebtoken = { version = "10.2", features = ["rust_crypto"] }
 # https://github.com/diesel-rs/diesel/blob/2e85ba060d3d70ea605ea58a79b8a435749a7adc/diesel/Cargo.toml#L53
-libsqlite3-sys = ">=0.17.2, <0.36.0"
+# https://github.com/tauri-apps/tauri/discussions/6183
+# Always needed for Windows and all other targets when building a distroless image
+libsqlite3-sys = { version = ">=0.17.2, <0.36.0", features = ["bundled"] }
 literally = "0.1"
 mail-send = "0.5"
 minijinja = "2.3"
@@ -140,6 +142,7 @@ strip-ansi-escapes = "0.2"
 syn = "2.0"
 tabled = "0.20"
 tame-oauth = "0.10"
+tempfile = "3"
 thiserror = "2.0"
 tokio = "1.48"
 tokio-rustls = {version =  "0.26", default-features = false, features = ["logging", "tls12", "ring"]}

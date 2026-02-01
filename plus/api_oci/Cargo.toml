@@ -18,22 +18,22 @@ sentry = []
 otel = ["dep:bencher_otel"]
 
 [dependencies]
-api_auth = { workspace = true }
-bencher_endpoint = { workspace = true }
-bencher_json = { workspace = true }
-bencher_oci_storage = { workspace = true }
+api_auth.workspace = true
+bencher_endpoint.workspace = true
+bencher_json.workspace = true
+bencher_oci_storage.workspace = true
 bencher_otel = { workspace = true, optional = true }
-bencher_rbac = { workspace = true }
-bencher_schema = { workspace = true }
-bencher_token = { workspace = true }
+bencher_rbac.workspace = true
+bencher_schema.workspace = true
+bencher_token.workspace = true
 
-bytes = { workspace = true }
-dropshot = { workspace = true }
-http = { workspace = true }
-schemars = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-slog = { workspace = true }
+bytes.workspace = true
+dropshot.workspace = true
+http.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+slog.workspace = true
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
