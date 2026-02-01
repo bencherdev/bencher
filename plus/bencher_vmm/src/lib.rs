@@ -21,6 +21,7 @@
 //! - i8042 keyboard controller for clean shutdown
 //! - virtio-blk for mounting squashfs rootfs
 //! - virtio-vsock for host-guest communication
+//! - Bundled Linux kernel (embedded in release builds)
 
 // Linux implementation
 #[cfg(target_os = "linux")]
@@ -41,8 +42,10 @@ mod vm;
 mod vsock_client;
 
 mod error;
+mod kernel;
 
 pub use error::VmmError;
+pub use kernel::{kernel_bytes, write_kernel_to_file};
 
 // Linux exports
 #[cfg(target_os = "linux")]

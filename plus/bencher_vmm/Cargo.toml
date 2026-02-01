@@ -36,5 +36,8 @@ vm-fdt = { workspace = true }
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 tempfile = { workspace = true }
 
+[build-dependencies]
+ureq = { workspace = true }
+
 [lints]
 workspace = true

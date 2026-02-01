@@ -104,7 +104,13 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
 
     println!("Executing benchmark run:");
     println!("  OCI image: {}", config.oci_image);
-    println!("  Kernel: {}", config.kernel);
+    println!(
+        "  Kernel: {}",
+        config
+            .kernel
+            .as_ref()
+            .map_or("(bundled)", |p| p.as_str())
+    );
     println!("  vCPUs: {}", config.vcpus);
     println!("  Memory: {} MiB", config.memory_mib);
     println!("  Timeout: {} seconds", config.timeout_secs);
@@ -119,6 +125,16 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     let unpack_dir = work_dir.join("rootfs");
     let rootfs_path = work_dir.join("rootfs.squashfs");
     let vsock_path = work_dir.join("vsock.sock");
+
+    // Get kernel path - use provided path or write bundled kernel to temp dir
+    let kernel_path = if let Some(ref kernel) = config.kernel {
+        kernel.clone()
+    } else {
+        let bundled_kernel_path = work_dir.join("vmlinux");
+        println!("Writing bundled kernel to {bundled_kernel_path}...");
+        bencher_vmm::write_kernel_to_file(bundled_kernel_path.as_std_path())?;
+        bundled_kernel_path
+    };
 
     // Step 1: Resolve OCI image (local path or pull from registry)
     let cache_dir = config.cache_dir();
@@ -164,7 +180,7 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     // Step 6: Boot VM and run benchmark
     println!("Booting VM with vsock at {vsock_path}...");
     let vm_config = bencher_vmm::VmConfig {
-        kernel_path: config.kernel.clone(),
+        kernel_path,
         rootfs_path,
         vcpus: config.vcpus,
         memory_mib: config.memory_mib,

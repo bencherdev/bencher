@@ -173,7 +173,6 @@ async fn run_benchmark() -> anyhow::Result<()> {
     println!("Starting benchmark VM...");
     println!();
 
-    let kernel = kernel::kernel_path();
     let oci_image = oci::oci_image_path();
 
     // Unpack OCI image
@@ -192,14 +191,20 @@ async fn run_benchmark() -> anyhow::Result<()> {
     bencher_rootfs::create_squashfs(&unpack_dir, &rootfs_squashfs)
         .context("Failed to create squashfs")?;
 
-    // Create runner config
-    let config = bencher_runner::Config::new(oci_image.clone(), kernel.clone())
+    // Create runner config using the bundled kernel
+    let config = bencher_runner::Config::new(oci_image.clone())
         .with_vcpus(1)
         .with_memory_mib(256)
         .with_kernel_cmdline("console=ttyS0 reboot=k panic=1 root=/dev/vda ro init=/init");
 
     println!("VM Configuration:");
-    println!("  Kernel: {}", config.kernel);
+    println!(
+        "  Kernel: {}",
+        config
+            .kernel
+            .as_ref()
+            .map_or("(bundled)", |p| p.as_str())
+    );
     println!("  OCI Image: {}", config.oci_image);
     println!("  vCPUs: {}", config.vcpus);
     println!("  Memory: {} MiB", config.memory_mib);
