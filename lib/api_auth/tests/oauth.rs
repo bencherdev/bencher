@@ -1,7 +1,7 @@
+#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
 //! Integration tests for OAuth endpoints (GitHub, Google).
 
 use bencher_api_tests::TestServer;
-use http::StatusCode;
 
 // GET /v0/auth/github - OAuth redirect (requires plus feature)
 #[tokio::test]

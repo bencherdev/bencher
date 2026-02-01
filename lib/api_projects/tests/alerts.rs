@@ -1,3 +1,4 @@
+#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
 //! Integration tests for project alert endpoints.
 
 use bencher_api_tests::TestServer;

@@ -1,7 +1,7 @@
+#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
 //! Integration tests for server root endpoint.
 
 use bencher_api_tests::TestServer;
-use http::StatusCode;
 
 // GET / - root path is accessible
 #[tokio::test]

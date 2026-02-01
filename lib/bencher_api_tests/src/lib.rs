@@ -1,8 +1,9 @@
+#![expect(clippy::multiple_inherent_impl)]
 //! Test utilities for Bencher API tests.
 //!
 //! This crate provides helpers for testing Bencher API endpoints:
-//! - `TestServer`: Spins up a full Dropshot server with in-memory SQLite
-//! - `TestUser`, `TestOrg`, `TestProject`: Test data types
+//! - [`TestServer`]: Spins up a full Dropshot server with in-memory `SQLite`
+//! - [`TestUser`], [`TestOrg`], [`TestProject`]: Test data types
 //! - Seed helpers for creating test data
 //!
 //! # Example

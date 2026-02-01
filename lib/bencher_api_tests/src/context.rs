@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use bencher_endpoint::Registrar;
+use bencher_endpoint::Registrar as _;
 use bencher_rbac::init_rbac;
 use bencher_schema::{
     context::{Database, DbConnection, Messenger},
@@ -17,16 +17,24 @@ use tokio::sync::{Mutex, mpsc};
 
 const ISSUER: &str = "http://localhost:3000";
 
+/// A test server for running API integration tests.
+#[expect(clippy::partial_pub_fields)]
 pub struct TestServer {
+    /// The Dropshot HTTP server (private - use `close()` to shut down)
     server: HttpServer<ApiContext>,
+    /// HTTP client for making requests
     pub client: reqwest::Client,
+    /// Base URL of the server
     pub url: String,
+    /// Token key for generating test tokens (private - use `token_key()` accessor)
     token_key: TokenKey,
-    // Keep the temp file alive for the duration of the test
+    /// Keep the temp file alive for the duration of the test
     _db_file: NamedTempFile,
 }
 
 impl TestServer {
+    /// Create a new test server with an in-memory database.
+    #[expect(clippy::expect_used, clippy::unused_async)]
     pub async fn new() -> Self {
         // Create a temporary database file
         let db_file = NamedTempFile::new().expect("Failed to create temp db file");
@@ -60,6 +68,7 @@ impl TestServer {
             data_store: None,
         };
 
+        #[cfg(feature = "plus")]
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
@@ -67,34 +76,40 @@ impl TestServer {
             messenger: Messenger::default(),
             database,
             restart_tx,
-            #[cfg(feature = "plus")]
             rate_limiting: bencher_schema::context::RateLimiting::max(),
-            #[cfg(feature = "plus")]
             github_client: None,
-            #[cfg(feature = "plus")]
             google_client: None,
-            #[cfg(feature = "plus")]
             indexer: None,
-            #[cfg(feature = "plus")]
             stats: bencher_schema::context::StatsSettings::default(),
-            #[cfg(feature = "plus")]
             biller: None,
-            #[cfg(feature = "plus")]
             licensor: bencher_license::Licensor::self_hosted()
                 .expect("Failed to create licensor"),
-            #[cfg(feature = "plus")]
             recaptcha_client: None,
-            #[cfg(feature = "plus")]
             is_bencher_cloud: false,
+        };
+        #[cfg(not(feature = "plus"))]
+        let context = ApiContext {
+            console_url: ISSUER.parse().expect("Invalid console URL"),
+            token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
+            rbac,
+            messenger: Messenger::default(),
+            database,
+            restart_tx,
         };
 
         // Create API description and register endpoints
         let mut api_description = ApiDescription::new();
+        #[cfg(feature = "plus")]
         bencher_api::api::Api::register(
             &mut api_description,
             false, // http_options
-            #[cfg(feature = "plus")]
             false, // is_bencher_cloud
+        )
+        .expect("Failed to register endpoints");
+        #[cfg(not(feature = "plus"))]
+        bencher_api::api::Api::register(
+            &mut api_description,
+            false, // http_options
         )
         .expect("Failed to register endpoints");
 

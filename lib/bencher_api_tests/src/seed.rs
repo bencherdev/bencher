@@ -32,21 +32,30 @@ pub struct TestProject {
 impl TestServer {
     /// Sign up a new user and return their info with a valid token.
     /// This creates the user via the signup endpoint and confirms them.
+    #[expect(clippy::expect_used)]
     pub async fn signup(&self, name: &str, email: &str) -> TestUser {
         let email: Email = email.parse().expect("Invalid email");
         let name: UserName = name.parse().expect("Invalid name");
 
+        #[cfg(feature = "plus")]
         let body = JsonSignup {
             name: name.clone(),
             slug: None,
             email: email.clone(),
-            #[cfg(feature = "plus")]
             plan: None,
             invite: None,
             claim: None,
             i_agree: true,
-            #[cfg(feature = "plus")]
             recaptcha_token: None,
+        };
+        #[cfg(not(feature = "plus"))]
+        let body = JsonSignup {
+            name: name.clone(),
+            slug: None,
+            email: email.clone(),
+            invite: None,
+            claim: None,
+            i_agree: true,
         };
 
         let resp = self
@@ -103,6 +112,7 @@ impl TestServer {
     }
 
     /// Create a new organization for the given user
+    #[expect(clippy::expect_used)]
     pub async fn create_org(&self, user: &TestUser, name: &str) -> TestOrg {
         let name: ResourceName = name.parse().expect("Invalid org name");
         let slug_str = name.as_ref().to_lowercase().replace(' ', "-");
@@ -138,6 +148,7 @@ impl TestServer {
     }
 
     /// Create a new project in the given organization
+    #[expect(clippy::expect_used)]
     pub async fn create_project(&self, user: &TestUser, org: &TestOrg, name: &str) -> TestProject {
         let name: ResourceName = name.parse().expect("Invalid project name");
         let slug_str = name.as_ref().to_lowercase().replace(' ', "-");
@@ -153,10 +164,7 @@ impl TestServer {
         let org_slug: &str = org.slug.as_ref();
         let resp = self
             .client
-            .post(self.api_url(&format!(
-                "/v0/organizations/{}/projects",
-                org_slug
-            )))
+            .post(self.api_url(&format!("/v0/organizations/{org_slug}/projects")))
             .header("Authorization", self.bearer(&user.token))
             .json(&body)
             .send()

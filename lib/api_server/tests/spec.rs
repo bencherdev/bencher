@@ -1,4 +1,5 @@
-//! Integration tests for server OpenAPI spec endpoint.
+#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+//! Integration tests for server `OpenAPI` spec endpoint.
 
 use bencher_api_tests::TestServer;
 use bencher_json::JsonSpec;
