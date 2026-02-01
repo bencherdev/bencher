@@ -23,6 +23,7 @@ bencher_endpoint = { workspace = true }
 bencher_json = { workspace = true }
 bencher_oci_storage = { workspace = true }
 bencher_otel = { workspace = true, optional = true }
+bencher_rbac = { workspace = true }
 bencher_schema = { workspace = true }
 bencher_token = { workspace = true }
 
@@ -32,6 +33,7 @@ http = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+slog = { workspace = true }
 
 [lints]
 workspace = true

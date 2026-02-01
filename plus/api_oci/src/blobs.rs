@@ -17,7 +17,7 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access};
+use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access, validate_push_access};
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -250,10 +250,10 @@ pub async fn oci_blob_delete(
 }
 
 /// Start a new blob upload (POST to /v2/{name}/blobs/uploads)
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
+///
+/// Authentication is optional for unclaimed projects.
+/// If the project's organization is claimed, valid authentication with Create permission is required.
+/// If the project doesn't exist and a slug is used, the project will be created automatically.
 #[endpoint {
     method = POST,
     path = "/v2/{name}/blobs/{ref}",
@@ -277,13 +277,9 @@ pub async fn oci_upload_start(
         ));
     }
 
-    // Authenticate
-    let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:push");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &name_str, "push")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    // Validate push access and get or create the project
+    let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
+    let project_slug = &push_access.project.slug;
 
     // Get storage
     let storage = context.oci_storage()?;
@@ -305,7 +301,7 @@ pub async fn oci_upload_start(
 
         if mounted {
             // Mount successful - return 201 Created
-            let location = format!("/v2/{}/blobs/{digest}", path.name);
+            let location = format!("/v2/{project_slug}/blobs/{digest}");
             let response = Response::builder()
                 .status(http::StatusCode::CREATED)
                 .header(http::header::LOCATION, location)
@@ -324,7 +320,7 @@ pub async fn oci_upload_start(
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build 202 Accepted response
-    let location = format!("/v2/{}/blobs/uploads/{upload_id}", path.name);
+    let location = format!("/v2/{project_slug}/blobs/uploads/{upload_id}");
     let response = Response::builder()
         .status(http::StatusCode::ACCEPTED)
         .header(http::header::LOCATION, location)
@@ -338,10 +334,10 @@ pub async fn oci_upload_start(
 }
 
 /// Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
+///
+/// Authentication is optional for unclaimed projects.
+/// If the project's organization is claimed, valid authentication with Create permission is required.
+/// If the project doesn't exist and a slug is used, the project will be created automatically.
 #[endpoint {
     method = PUT,
     path = "/v2/{name}/blobs/{ref}",
@@ -367,13 +363,9 @@ pub async fn oci_upload_monolithic(
         ));
     }
 
-    // Authenticate
-    let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:push");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &name_str, "push")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    // Validate push access and get or create the project
+    let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
+    let project_slug = &push_access.project.slug;
 
     // Parse digest
     let expected_digest: Digest = query
@@ -405,7 +397,7 @@ pub async fn oci_upload_monolithic(
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciBlobPush);
 
     // Build 201 Created response
-    let location = format!("/v2/{}/blobs/{actual_digest}", path.name);
+    let location = format!("/v2/{project_slug}/blobs/{actual_digest}");
     let response = Response::builder()
         .status(http::StatusCode::CREATED)
         .header(http::header::LOCATION, location)

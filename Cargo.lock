@@ -191,6 +191,7 @@ dependencies = [
  "bencher_json",
  "bencher_oci_storage",
  "bencher_otel",
+ "bencher_rbac",
  "bencher_schema",
  "bencher_token",
  "bytes",
@@ -199,6 +200,7 @@ dependencies = [
  "schemars 0.8.22",
  "serde",
  "serde_json",
+ "slog",
 ]
 
 [[package]]
