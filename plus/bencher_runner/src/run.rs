@@ -31,6 +31,7 @@ pub async fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         oci_image: args.image.clone(),
         token: args.token.clone(),
         kernel: None,
+        cache_dir: None,
         vcpus: args.vcpus,
         memory_mib: args.memory_mib,
         kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
