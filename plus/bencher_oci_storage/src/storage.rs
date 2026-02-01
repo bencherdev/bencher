@@ -733,6 +733,11 @@ impl OciS3Storage {
     /// 3. Verifies digest matches expected
     /// 4. Copies completed multipart to final blob location
     /// 5. Cleans up temporary objects
+    ///
+    /// If the server reboots mid-completion, the next attempt will abort the
+    /// stale multipart upload and start fresh. The hash is always recomputed
+    /// from all stored chunks, ensuring correctness.
+    #[expect(clippy::too_many_lines, reason = "Complex upload completion logic benefits from being in one place")]
     pub async fn complete_upload(
         &self,
         upload_id: &UploadId,
@@ -741,6 +746,36 @@ impl OciS3Storage {
         // Load state
         let mut state = self.load_upload_state(upload_id).await?;
         let chunk_count = state.buffer_chunk_count;
+        let data_key = self.upload_data_key(upload_id);
+
+        // If there are stale parts from an interrupted completion attempt,
+        // abort the old multipart upload and start fresh to ensure consistency
+        if !state.parts.is_empty() {
+            let _unused = self
+                .client
+                .abort_multipart_upload()
+                .bucket(&self.config.bucket_arn)
+                .key(&data_key)
+                .upload_id(&state.s3_upload_id)
+                .send()
+                .await;
+
+            // Create new multipart upload
+            let multipart = self
+                .client
+                .create_multipart_upload()
+                .bucket(&self.config.bucket_arn)
+                .key(&data_key)
+                .send()
+                .await
+                .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+            multipart
+                .upload_id()
+                .ok_or_else(|| OciStorageError::S3("No upload ID returned".to_owned()))?
+                .clone_into(&mut state.s3_upload_id);
+            state.parts.clear();
+        }
 
         // Must have some data
         if chunk_count == 0 && state.parts.is_empty() {
@@ -753,7 +788,6 @@ impl OciS3Storage {
         // Stream through chunks with incremental hashing
         let mut hasher = Sha256::new();
         let mut part_buffer = Vec::new();
-        let data_key = self.upload_data_key(upload_id);
 
         for chunk_num in 0..chunk_count {
             // Load chunk
