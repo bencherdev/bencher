@@ -75,6 +75,10 @@ jobs:
         if: ${{ inputs.is-fork }}
         with:
           mold-version: ${{ inputs.mold-version }}
+      - name: Setup Go (for OCI conformance tests)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
       - name: Run Smoke Test
         env:
           RUST_BACKTRACE: full
@@ -177,52 +181,6 @@ jobs:
       - name: Build Console
         working-directory: ./services/console
         run: npm run node
-
-  oci_conformance_test:
-    name: OCI Conformance Test
-    if: ${{ !inputs.is-fork }}
-    runs-on: ubuntu-22.04
-    continue-on-error: true
-    steps:
-      - uses: jlumbroso/free-disk-space@main
-        with:
-          large-packages: false
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-rust
-        with:
-          cache-key: api
-          mold-version: ${{ inputs.mold-version }}
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-      - name: Start API Server
-        run: |
-          cargo build -p bencher_api --features plus
-          cargo run -p bencher_api --features plus &
-          # Wait for server to start
-          for i in {1..60}; do
-            if curl -s -f http://localhost:61016/v2/ > /dev/null 2>&1; then
-              echo "API server is ready"
-              break
-            fi
-            echo "Waiting for API server... ($i/60)"
-            sleep 1
-          done
-        env:
-          RUST_BACKTRACE: full
-      - name: Run OCI Conformance Tests
-        run: cargo test-oci --debug || true
-        env:
-          RUST_BACKTRACE: full
-      - name: Upload Conformance Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: oci-conformance-results
-          path: |
-            ./oci-conformance-results/
-          if-no-files-found: warn
 
   docker_smoke_test:
     name: Docker API Smoke Test
