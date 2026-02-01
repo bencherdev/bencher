@@ -14,7 +14,7 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access};
+use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access, validate_push_access};
 
 /// Path parameters for manifest endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -185,10 +185,10 @@ pub async fn oci_manifest_get(
 }
 
 /// Upload a manifest
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
+///
+/// Authentication is optional for unclaimed projects.
+/// If the project's organization is claimed, valid authentication with Create permission is required.
+/// If the project doesn't exist and a slug is used, the project will be created automatically.
 #[endpoint {
     method = PUT,
     path = "/v2/{name}/manifests/{reference}",
@@ -203,13 +203,9 @@ pub async fn oci_manifest_put(
     let path = path.into_inner();
     let body_bytes = body.as_bytes();
 
-    // Authenticate
-    let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:push");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &name_str, "push")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+    // Validate push access and get or create the project
+    let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
+    let project_slug = &push_access.project.slug;
 
     // Parse reference
     let reference: Reference = path
@@ -248,7 +244,7 @@ pub async fn oci_manifest_put(
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciManifestPush);
 
     // Build 201 Created response with Location and Docker-Content-Digest headers
-    let location = format!("/v2/{}/manifests/{digest}", path.name);
+    let location = format!("/v2/{project_slug}/manifests/{digest}");
 
     let mut builder = Response::builder()
         .status(http::StatusCode::CREATED)
