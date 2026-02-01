@@ -15,9 +15,7 @@
 
 use std::collections::BTreeMap;
 
-use seccompiler::{
-    BpfMap, SeccompAction, SeccompFilter, SeccompRule, TargetArch,
-};
+use seccompiler::{BpfProgram, SeccompAction, SeccompFilter, SeccompRule, TargetArch};
 
 use crate::error::VmmError;
 
@@ -70,24 +68,13 @@ pub fn drop_capabilities() -> Result<(), VmmError> {
 pub fn apply_seccomp() -> Result<(), VmmError> {
     let filter = build_seccomp_filter()?;
 
-    // Compile the filter for the current architecture
-    #[cfg(target_arch = "x86_64")]
-    let arch = TargetArch::x86_64;
-    #[cfg(target_arch = "aarch64")]
-    let arch = TargetArch::aarch64;
-
-    let mut filters: BTreeMap<String, SeccompFilter> = BTreeMap::new();
-    filters.insert("vmm".to_string(), filter);
-
-    let bpf_map: BpfMap = seccompiler::compile_from_filters(&filters, arch)
+    // Convert the filter to BPF program
+    let bpf_prog: BpfProgram = filter
+        .try_into()
         .map_err(|e| VmmError::Sandbox(format!("Failed to compile seccomp filter: {e}")))?;
 
-    let bpf_prog = bpf_map
-        .get("vmm")
-        .ok_or_else(|| VmmError::Sandbox("Missing vmm filter".to_string()))?;
-
     // Apply the filter - this is irreversible
-    seccompiler::apply_filter(bpf_prog)
+    seccompiler::apply_filter(&bpf_prog)
         .map_err(|e| VmmError::Sandbox(format!("Failed to apply seccomp filter: {e}")))?;
 
     Ok(())
@@ -101,8 +88,8 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     // These are the minimal syscalls needed for KVM vCPU execution
     let mut rules: Vec<(i64, Vec<SeccompRule>)> = Vec::new();
 
-    // Helper to add a simple allow rule
-    let allow = |syscall: i64| (syscall, vec![SeccompRule::new(vec![]).unwrap()]);
+    // Helper to add a simple allow rule (empty Vec means unconditional allow)
+    let allow = |syscall: i64| (syscall, vec![]);
 
     // === KVM operations ===
     rules.push(allow(SYS_ioctl)); // KVM ioctls
@@ -126,8 +113,8 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
 
     // === I/O operations ===
     rules.push(allow(SYS_ppoll)); // Polling (for event handling)
-    rules.push(allow(SYS_epoll_wait)); // epoll waiting
     #[cfg(target_arch = "x86_64")]
+    rules.push(allow(SYS_epoll_wait)); // epoll waiting (x86_64 only)
     rules.push(allow(SYS_epoll_pwait)); // epoll with signal mask
     rules.push(allow(SYS_epoll_pwait2)); // epoll with timespec
     rules.push(allow(SYS_eventfd2)); // Event file descriptors
@@ -164,12 +151,18 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     // Build the filter map
     let rules_map: BTreeMap<i64, Vec<SeccompRule>> = rules.into_iter().collect();
 
+    // Get target architecture
+    #[cfg(target_arch = "x86_64")]
+    let arch = TargetArch::x86_64;
+    #[cfg(target_arch = "aarch64")]
+    let arch = TargetArch::aarch64;
+
     // Default action: kill the process if a disallowed syscall is attempted
     SeccompFilter::new(
         rules_map,
         SeccompAction::KillProcess,  // Kill on violation
         SeccompAction::Allow,        // Allow matched rules
-        TargetArch::x86_64,          // Will be overridden when compiling
+        arch,
     )
     .map_err(|e| VmmError::Sandbox(format!("Failed to create seccomp filter: {e}")))
 }

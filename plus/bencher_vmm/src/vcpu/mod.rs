@@ -3,10 +3,10 @@
 //! This module handles the architecture-specific setup of virtual CPUs.
 
 #[cfg(target_arch = "x86_64")]
-mod x86_64;
+pub(crate) mod x86_64;
 
 #[cfg(target_arch = "aarch64")]
-mod aarch64;
+pub(crate) mod aarch64;
 
 use kvm_ioctls::{Kvm, VcpuFd, VmFd};
 use vm_memory::GuestMemoryMmap;
@@ -48,7 +48,7 @@ pub fn create_vcpus(
             .map_err(VmmError::Kvm)?;
 
         // Configure the vCPU (architecture-specific)
-        configure_vcpu(kvm, &vcpu_fd, guest_memory, index)?;
+        configure_vcpu(kvm, vm_fd, &vcpu_fd, guest_memory, index)?;
 
         vcpus.push(Vcpu {
             fd: vcpu_fd,
@@ -63,6 +63,7 @@ pub fn create_vcpus(
 #[cfg(target_arch = "x86_64")]
 fn configure_vcpu(
     kvm: &Kvm,
+    _vm_fd: &VmFd,
     vcpu_fd: &VcpuFd,
     guest_memory: &GuestMemoryMmap,
     index: u8,
@@ -72,17 +73,19 @@ fn configure_vcpu(
 
 #[cfg(target_arch = "aarch64")]
 fn configure_vcpu(
-    kvm: &Kvm,
+    _kvm: &Kvm,
+    vm_fd: &VmFd,
     vcpu_fd: &VcpuFd,
     guest_memory: &GuestMemoryMmap,
     index: u8,
 ) -> Result<(), VmmError> {
-    aarch64::configure_vcpu(kvm, vcpu_fd, guest_memory, index)
+    aarch64::configure_vcpu(vm_fd, vcpu_fd, guest_memory, index)
 }
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 fn configure_vcpu(
     _kvm: &Kvm,
+    _vm_fd: &VmFd,
     _vcpu_fd: &VcpuFd,
     _guest_memory: &GuestMemoryMmap,
     _index: u8,

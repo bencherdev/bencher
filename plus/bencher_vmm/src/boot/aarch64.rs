@@ -10,7 +10,7 @@ use camino::Utf8Path;
 use linux_loader::loader::pe::PE as PeLoader;
 use linux_loader::loader::KernelLoader;
 use vm_fdt::{FdtWriter, FdtWriterResult};
-use vm_memory::{GuestAddress, GuestMemory, GuestMemoryMmap};
+use vm_memory::{Bytes, GuestAddress, GuestMemory, GuestMemoryMmap};
 
 use crate::error::VmmError;
 use crate::gic::{Gic, GicVersion, GIC_NR_IRQS};

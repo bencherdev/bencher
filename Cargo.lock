@@ -1679,8 +1679,9 @@ dependencies = [
  "camino",
  "caps",
  "event-manager",
- "kvm-bindings 0.10.0",
+ "kvm-bindings",
  "kvm-ioctls",
+ "libc",
  "linux-loader",
  "seccompiler",
  "serde_json",
@@ -1690,7 +1691,7 @@ dependencies = [
  "ureq",
  "virtio-queue",
  "vm-fdt",
- "vm-memory 0.16.2",
+ "vm-memory",
  "vm-superio",
  "vmm-sys-util 0.12.1",
 ]
@@ -5392,27 +5393,21 @@ dependencies = [
 
 [[package]]
 name = "kvm-bindings"
-version = "0.9.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2efe3f1a4437bffe000e6297a593b98184213cd27486776c335f95ab53d48e3a"
+checksum = "fa4933174d0cc4b77b958578cd45784071cc5ae212c2d78fbd755aaaa6dfa71a"
 dependencies = [
  "vmm-sys-util 0.12.1",
 ]
 
 [[package]]
-name = "kvm-bindings"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa4933174d0cc4b77b958578cd45784071cc5ae212c2d78fbd755aaaa6dfa71a"
-
-[[package]]
 name = "kvm-ioctls"
-version = "0.18.0"
+version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92c2176b91f68903b54ac8c6185bada7d607ca6110998976ff15c032f88a7d39"
+checksum = "e013ae7fcd2c6a8f384104d16afe7ea02969301ea2bb2a56e44b011ebc907cab"
 dependencies = [
  "bitflags 2.10.0",
- "kvm-bindings 0.9.1",
+ "kvm-bindings",
  "libc",
  "vmm-sys-util 0.12.1",
 ]
@@ -5531,11 +5526,11 @@ dependencies = [
 
 [[package]]
 name = "linux-loader"
-version = "0.12.0"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d379d0089d0fbf4161c35a4fdfd76125923f1a93632c49195f5372b4c0b1472"
+checksum = "de72cb02c55ecffcf75fe78295926f872eb6eb0a58d629c58a8c324dc26380f6"
 dependencies = [
- "vm-memory 0.15.0",
+ "vm-memory",
 ]
 
 [[package]]
@@ -9809,7 +9804,7 @@ checksum = "872e2f3fbd70a7e6f01689720cce3d5c2c5efe52b484dd07b674246ada0e9a8d"
 dependencies = [
  "log",
  "virtio-bindings",
- "vm-memory 0.16.2",
+ "vm-memory",
  "vmm-sys-util 0.12.1",
 ]
 
@@ -9818,17 +9813,6 @@ name = "vm-fdt"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e21282841a059bb62627ce8441c491f09603622cd5a21c43bfedc85a2952f23"
-
-[[package]]
-name = "vm-memory"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a320fc11792e063174402ff444aa3c80363cbf1e31c47b5ef74124406c334ce6"
-dependencies = [
- "libc",
- "thiserror 1.0.69",
- "winapi",
-]
 
 [[package]]
 name = "vm-memory"

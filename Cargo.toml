@@ -112,13 +112,13 @@ hyper = "1.8"
 image = "0.25"
 jsonwebtoken = { version = "10.2", features = ["rust_crypto"] }
 libc = "0.2"
-kvm-bindings = "0.10"
-kvm-ioctls = "0.18"
+kvm-bindings = { version = "0.10", features = ["fam-wrappers"] }
+kvm-ioctls = "0.19"
 # https://github.com/diesel-rs/diesel/blob/2e85ba060d3d70ea605ea58a79b8a435749a7adc/diesel/Cargo.toml#L53
 # https://github.com/tauri-apps/tauri/discussions/6183
 # Always needed for Windows and all other targets when building a distroless image
 libsqlite3-sys = { version = ">=0.17.2, <0.36.0", features = ["bundled"] }
-linux-loader = "0.12"
+linux-loader = "0.13"
 literally = "0.1"
 mail-send = "0.5"
 minijinja = "2.3"

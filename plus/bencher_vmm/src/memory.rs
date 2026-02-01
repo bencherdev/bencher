@@ -3,7 +3,7 @@
 //! This module handles the allocation and configuration of guest memory
 //! using the vm-memory crate's GuestMemoryMmap abstraction.
 
-use vm_memory::{GuestAddress, GuestMemoryMmap, GuestMemoryRegion};
+use vm_memory::{GuestAddress, GuestMemory, GuestMemoryMmap, GuestMemoryRegion};
 
 use crate::error::VmmError;
 

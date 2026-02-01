@@ -544,9 +544,18 @@ impl VirtioVsockDevice {
 
         let config = &self.queue_configs[idx];
         self.queues[idx].set_size(config.num);
-        self.queues[idx].set_desc_table_address(Some(GuestAddress(config.desc)), None);
-        self.queues[idx].set_avail_ring_address(Some(GuestAddress(config.avail)), None);
-        self.queues[idx].set_used_ring_address(Some(GuestAddress(config.used)), None);
+        self.queues[idx].set_desc_table_address(
+            Some(config.desc as u32),
+            Some((config.desc >> 32) as u32),
+        );
+        self.queues[idx].set_avail_ring_address(
+            Some(config.avail as u32),
+            Some((config.avail >> 32) as u32),
+        );
+        self.queues[idx].set_used_ring_address(
+            Some(config.used as u32),
+            Some((config.used >> 32) as u32),
+        );
         self.queues[idx].set_ready(true);
     }
 
@@ -564,10 +573,11 @@ impl VirtioVsockDevice {
 
     /// Process the RX queue (host -> guest).
     fn process_rx_queue(&mut self) {
-        let Some(mem) = self.guest_memory.as_ref() else {
+        // Clone the Arc to avoid borrowing self while processing
+        let Some(mem_arc) = self.guest_memory.clone() else {
             return;
         };
-        let mem = mem.as_ref();
+        let mem = mem_arc.as_ref();
 
         // First, check for new incoming connections
         self.accept_connections();
@@ -619,10 +629,11 @@ impl VirtioVsockDevice {
 
     /// Process the TX queue (guest -> host).
     fn process_tx_queue(&mut self) {
-        let Some(mem) = self.guest_memory.as_ref() else {
+        // Clone the Arc to avoid borrowing self while processing
+        let Some(mem_arc) = self.guest_memory.clone() else {
             return;
         };
-        let mem = mem.as_ref();
+        let mem = mem_arc.as_ref();
 
         while let Some(mut chain) = self.queues[TX_QUEUE].pop_descriptor_chain(mem) {
             let head_index = chain.head_index();

@@ -327,27 +327,28 @@ impl VirtioBlkDevice {
     fn activate_queue(&mut self) {
         self.queue.set_size(self.queue_num);
         self.queue.set_desc_table_address(
-            Some(GuestAddress(self.queue_desc)),
-            None,
+            Some(self.queue_desc as u32),
+            Some((self.queue_desc >> 32) as u32),
         );
         self.queue.set_avail_ring_address(
-            Some(GuestAddress(self.queue_avail)),
-            None,
+            Some(self.queue_avail as u32),
+            Some((self.queue_avail >> 32) as u32),
         );
         self.queue.set_used_ring_address(
-            Some(GuestAddress(self.queue_used)),
-            None,
+            Some(self.queue_used as u32),
+            Some((self.queue_used >> 32) as u32),
         );
         self.queue.set_ready(true);
     }
 
     /// Process all available requests in the queue.
     fn process_queue(&mut self) {
-        let Some(mem) = self.guest_memory.as_ref() else {
+        // Clone the Arc to avoid borrowing self while processing
+        let Some(mem_arc) = self.guest_memory.clone() else {
             return;
         };
 
-        let mem = mem.as_ref();
+        let mem = mem_arc.as_ref();
 
         // Process all available descriptor chains
         while let Some(mut chain) = self.queue.pop_descriptor_chain(mem) {
