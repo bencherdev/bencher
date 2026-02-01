@@ -23,6 +23,7 @@ kvm-bindings = { workspace = true }
 kvm-ioctls = { workspace = true }
 linux-loader = { workspace = true }
 event-manager = { workspace = true }
+serde_json = { workspace = true }
 virtio-queue = { workspace = true }
 vm-memory = { workspace = true }
 vm-superio = { workspace = true }

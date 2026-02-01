@@ -55,9 +55,8 @@ pub struct Vm {
     /// Kept alive for the VM's lifetime (dropping closes VM handle).
     _vm_fd: VmFd,
 
-    /// Guest memory.
-    /// Kept alive for the VM's lifetime (dropping unmaps memory).
-    _guest_memory: GuestMemoryMmap,
+    /// Guest memory (shared with devices for virtio queue processing).
+    guest_memory: Arc<GuestMemoryMmap>,
 
     /// Virtual CPUs.
     vcpus: Vec<Vcpu>,
@@ -78,19 +77,19 @@ impl Vm {
         // Step 2: Create VM
         let vm_fd = kvm.create_vm().map_err(VmmError::Kvm)?;
 
-        // Step 3: Create guest memory
+        // Step 3: Create guest memory (wrapped in Arc for sharing with devices)
         let memory_size = u64::from(config.memory_mib) * 1024 * 1024;
-        let guest_memory = create_guest_memory(config.memory_mib)?;
+        let guest_memory = Arc::new(create_guest_memory(config.memory_mib)?);
 
         // Step 4: Register memory regions with KVM
-        register_memory_regions(&vm_fd, &guest_memory)?;
+        register_memory_regions(&vm_fd, guest_memory.as_ref())?;
 
         // Step 5: Create interrupt controller and load kernel (architecture-specific)
         #[cfg(target_arch = "x86_64")]
         {
             create_irq_chip_x86_64(&vm_fd)?;
             let _kernel_entry = crate::boot::load_kernel(
-                &guest_memory,
+                guest_memory.as_ref(),
                 &config.kernel_path,
                 &config.kernel_cmdline,
             )?;
@@ -103,7 +102,7 @@ impl Vm {
 
             // Load kernel with device tree
             let _kernel_entry = crate::boot::load_kernel_aarch64(
-                &guest_memory,
+                guest_memory.as_ref(),
                 &config.kernel_path,
                 &config.kernel_cmdline,
                 u32::from(config.vcpus),
@@ -113,15 +112,16 @@ impl Vm {
         }
 
         // Step 6: Create vCPUs
-        let vcpus = crate::vcpu::create_vcpus(&kvm, &vm_fd, &guest_memory, config.vcpus)?;
+        let vcpus = crate::vcpu::create_vcpus(&kvm, &vm_fd, guest_memory.as_ref(), config.vcpus)?;
 
-        // Step 7: Setup devices
-        let devices = crate::devices::setup_devices(&vm_fd, &config.rootfs_path)?;
+        // Step 7: Setup devices and pass guest memory for virtio queue processing
+        let mut devices = crate::devices::setup_devices(&vm_fd, &config.rootfs_path)?;
+        devices.set_guest_memory(Arc::clone(&guest_memory));
 
         Ok(Self {
             _kvm: kvm,
             _vm_fd: vm_fd,
-            _guest_memory: guest_memory,
+            guest_memory,
             vcpus,
             devices: Arc::new(Mutex::new(devices)),
         })

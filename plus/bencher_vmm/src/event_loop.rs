@@ -172,6 +172,10 @@ fn handle_vcpu_exit(
                 VmmError::Device("Failed to lock device manager".to_owned())
             })?;
             dm.handle_mmio_write(addr, data);
+
+            // After MMIO write, poll vsock for any pending activity
+            dm.poll_vsock();
+
             Ok(VmExitAction::Continue)
         }
 
