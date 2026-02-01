@@ -60,11 +60,17 @@ COPY plus/bencher_bing_index bencher_bing_index
 COPY plus/bencher_github_client bencher_github_client
 COPY plus/bencher_google_client bencher_google_client
 COPY plus/bencher_google_index bencher_google_index
+COPY plus/bencher_guest bencher_guest
 COPY plus/bencher_license bencher_license
+COPY plus/bencher_oci bencher_oci
 COPY plus/bencher_oci_storage bencher_oci_storage
 COPY plus/bencher_otel bencher_otel
 COPY plus/bencher_otel_provider bencher_otel_provider
 COPY plus/bencher_recaptcha bencher_recaptcha
+COPY plus/bencher_rootfs bencher_rootfs
+COPY plus/bencher_runner bencher_runner
+COPY plus/bencher_vmm bencher_vmm
+COPY plus/bencher_vsock_send bencher_vsock_send
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version
@@ -74,6 +80,7 @@ RUN cargo init --bin gen_notes
 RUN cargo init --bin gen_types
 RUN cargo init --bin test_api
 RUN cargo init --bin test_netlify
+RUN cargo init --bin test_runner
 
 WORKDIR /usr/src/bencher
 COPY Cargo.toml Cargo.toml
@@ -82,6 +89,7 @@ RUN cargo init xtask
 
 WORKDIR /usr/src/bencher/services
 RUN cargo init cli
+RUN cargo init runner
 
 WORKDIR /usr/src/bencher/services/api
 COPY services/api/src src
