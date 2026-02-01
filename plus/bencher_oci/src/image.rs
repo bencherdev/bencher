@@ -184,7 +184,7 @@ pub fn parse_config(image_dir: &Utf8Path, config_digest: &str) -> Result<ImageCo
     })?;
 
     let config = ImageConfiguration::from_reader(BufReader::new(file))
-        .map_err(|e| OciError::InvalidLayout(format!("Invalid config: {e}")))?;
+        .map_err(|e| OciError::InvalidLayout(format!("Invalid config: {e:?}")))?;
 
     Ok(ImageConfig { config })
 }

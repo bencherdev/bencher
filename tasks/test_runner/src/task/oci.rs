@@ -371,7 +371,7 @@ fn package_as_oci(rootfs: &Utf8Path, oci_path: &Utf8Path) -> anyhow::Result<()> 
 
     // Create the layer tarball
     let layer_tar = super::work_dir().join("layer.tar.gz");
-    create_layer_tarball(rootfs, &layer_tar)?;
+    let diff_id = create_layer_tarball(rootfs, &layer_tar)?;
 
     // Calculate layer digest
     let layer_bytes = fs::read(&layer_tar)?;
@@ -383,7 +383,7 @@ fn package_as_oci(rootfs: &Utf8Path, oci_path: &Utf8Path) -> anyhow::Result<()> 
     fs::rename(&layer_tar, &layer_blob_path)?;
 
     // Create config
-    let config = create_image_config();
+    let config = create_image_config(&diff_id);
     let config_bytes = serde_json::to_vec(&config)?;
     let config_digest = sha256_hex(&config_bytes);
     let config_size = config_bytes.len();
@@ -425,19 +425,37 @@ fn package_as_oci(rootfs: &Utf8Path, oci_path: &Utf8Path) -> anyhow::Result<()> 
 }
 
 /// Create a gzipped tarball of the rootfs.
-fn create_layer_tarball(rootfs: &Utf8Path, output: &Utf8Path) -> anyhow::Result<()> {
+/// Returns the SHA256 digest of the uncompressed tar (for diff_ids).
+fn create_layer_tarball(rootfs: &Utf8Path, output: &Utf8Path) -> anyhow::Result<String> {
     use flate2::Compression;
     use flate2::write::GzEncoder;
+    use sha2::{Digest as _, Sha256};
 
+    // First create uncompressed tar to get diff_id
+    let uncompressed_tar_path = output.with_extension("tar");
+    {
+        let tar_file = File::create(&uncompressed_tar_path)?;
+        let mut tar = tar::Builder::new(tar_file);
+        tar.append_dir_all(".", rootfs.as_std_path())?;
+        tar.finish()?;
+    }
+
+    // Calculate diff_id (SHA256 of uncompressed tar)
+    let uncompressed_bytes = std::fs::read(&uncompressed_tar_path)?;
+    let mut hasher = Sha256::new();
+    hasher.update(&uncompressed_bytes);
+    let diff_id = format!("sha256:{:x}", hasher.finalize());
+
+    // Now compress it
     let tar_file = File::create(output)?;
-    let encoder = GzEncoder::new(tar_file, Compression::default());
-    let mut tar = tar::Builder::new(encoder);
+    let mut encoder = GzEncoder::new(tar_file, Compression::default());
+    std::io::copy(&mut std::io::Cursor::new(uncompressed_bytes), &mut encoder)?;
+    encoder.finish()?;
 
-    // Add all files from rootfs
-    tar.append_dir_all(".", rootfs.as_std_path())?;
-    tar.finish()?;
+    // Clean up uncompressed tar
+    drop(std::fs::remove_file(&uncompressed_tar_path));
 
-    Ok(())
+    Ok(diff_id)
 }
 
 /// Calculate SHA256 hex digest.
@@ -449,7 +467,7 @@ fn sha256_hex(data: &[u8]) -> String {
 }
 
 /// Create OCI image config.
-fn create_image_config() -> serde_json::Value {
+fn create_image_config(diff_id: &str) -> serde_json::Value {
     serde_json::json!({
         "architecture": "amd64",
         "os": "linux",
@@ -460,8 +478,9 @@ fn create_image_config() -> serde_json::Value {
         },
         "rootfs": {
             "type": "layers",
-            "diff_ids": []
-        }
+            "diff_ids": [diff_id]
+        },
+        "history": []
     })
 }
 

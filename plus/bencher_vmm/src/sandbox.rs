@@ -106,10 +106,34 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     rules.push(allow(SYS_write)); // Write to vsock, serial
     rules.push(allow(SYS_close)); // Close file descriptors
     rules.push(allow(SYS_fstat)); // File status (used by some operations)
+    rules.push(allow(SYS_unlink)); // Remove files (cleanup)
+    rules.push(allow(SYS_unlinkat)); // Remove files (at directory fd)
+    rules.push(allow(SYS_openat)); // Open files
+    rules.push(allow(SYS_lseek)); // Seek in files
+    rules.push(allow(SYS_readv)); // Scatter read
+    rules.push(allow(SYS_writev)); // Gather write
+    rules.push(allow(SYS_pread64)); // Positional read
+    rules.push(allow(SYS_pwrite64)); // Positional write
     #[cfg(target_arch = "x86_64")]
     rules.push(allow(SYS_newfstatat)); // File status (newer variant)
     #[cfg(target_arch = "aarch64")]
     rules.push(allow(SYS_newfstatat));
+    rules.push(allow(SYS_statx)); // Extended file status
+    rules.push(allow(SYS_getdents64)); // Read directory entries
+
+    // === Socket operations (for vsock) ===
+    rules.push(allow(SYS_socket)); // Create socket
+    rules.push(allow(SYS_bind)); // Bind socket
+    rules.push(allow(SYS_listen)); // Listen on socket
+    rules.push(allow(SYS_accept4)); // Accept connection
+    rules.push(allow(SYS_connect)); // Connect socket
+    rules.push(allow(SYS_sendto)); // Send data
+    rules.push(allow(SYS_recvfrom)); // Receive data
+    rules.push(allow(SYS_sendmsg)); // Send message
+    rules.push(allow(SYS_recvmsg)); // Receive message
+    rules.push(allow(SYS_shutdown)); // Shutdown socket
+    rules.push(allow(SYS_getsockopt)); // Get socket options
+    rules.push(allow(SYS_setsockopt)); // Set socket options
 
     // === I/O operations ===
     rules.push(allow(SYS_ppoll)); // Polling (for event handling)
@@ -132,6 +156,7 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     rules.push(allow(SYS_sched_yield)); // Yield CPU
     rules.push(allow(SYS_sched_getaffinity)); // Get CPU affinity
     rules.push(allow(SYS_gettid)); // Get thread ID
+    rules.push(allow(SYS_clone3)); // Thread creation (modern)
 
     // === Signal handling ===
     rules.push(allow(SYS_rt_sigaction)); // Signal handlers
