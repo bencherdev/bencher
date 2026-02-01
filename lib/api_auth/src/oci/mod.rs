@@ -131,10 +131,14 @@ pub async fn auth_oci_token_get(
             // Only require RBAC permissions if the organization is claimed
             if is_claimed {
                 // Load the user to check permissions
-                let query_user = QueryUser::get_with_email(public_conn!(context), &email)
-                    .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-                let auth_user = AuthUser::load(public_conn!(context), query_user)
-                    .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+                let query_user =
+                    QueryUser::get_with_email(public_conn!(context), &email).map_err(|_| {
+                        unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref())
+                    })?;
+                let auth_user =
+                    AuthUser::load(public_conn!(context), query_user).map_err(|_| {
+                        unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref())
+                    })?;
 
                 // Determine required permission based on actions
                 let required_permission = if actions.contains(&"push".to_owned()) {

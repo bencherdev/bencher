@@ -44,7 +44,9 @@ fn create_test_manifest(config_digest: &str, layer_digest: &str) -> String {
 #[tokio::test]
 async fn test_manifest_put_with_tag() {
     let server = TestServer::new().await;
-    let user = server.signup("Manifest User", "manifestput@example.com").await;
+    let user = server
+        .signup("Manifest User", "manifestput@example.com")
+        .await;
     let org = server.create_org(&user, "Manifest Org").await;
     let project = server.create_project(&user, &org, "Manifest Project").await;
 
@@ -115,8 +117,7 @@ async fn test_manifest_put_by_digest() {
     let oci_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    let config_digest =
-        "sha256:1111111111111111111111111111111111111111111111111111111111111111";
+    let config_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
     let layer_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
     let manifest = create_test_manifest(config_digest, layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
@@ -153,8 +154,7 @@ async fn test_manifest_exists() {
     let project_slug: &str = project.slug.as_ref();
 
     // Upload a manifest
-    let config_digest =
-        "sha256:3333333333333333333333333333333333333333333333333333333333333333";
+    let config_digest = "sha256:3333333333333333333333333333333333333333333333333333333333333333";
     let layer_digest = "sha256:4444444444444444444444444444444444444444444444444444444444444444";
     let manifest = create_test_manifest(config_digest, layer_digest);
 
@@ -201,10 +201,7 @@ async fn test_manifest_not_found() {
 
     let resp = server
         .client
-        .head(server.api_url(&format!(
-            "/v2/{}/manifests/nonexistent",
-            project_slug
-        )))
+        .head(server.api_url(&format!("/v2/{}/manifests/nonexistent", project_slug)))
         .header("Authorization", format!("Bearer {}", oci_token))
         .send()
         .await
@@ -221,14 +218,15 @@ async fn test_manifest_get_by_tag() {
         .signup("GetManifest User", "manifestget@example.com")
         .await;
     let org = server.create_org(&user, "GetManifest Org").await;
-    let project = server.create_project(&user, &org, "GetManifest Project").await;
+    let project = server
+        .create_project(&user, &org, "GetManifest Project")
+        .await;
 
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
     // Upload a manifest
-    let config_digest =
-        "sha256:5555555555555555555555555555555555555555555555555555555555555555";
+    let config_digest = "sha256:5555555555555555555555555555555555555555555555555555555555555555";
     let layer_digest = "sha256:6666666666666666666666666666666666666666666666666666666666666666";
     let manifest = create_test_manifest(config_digest, layer_digest);
 
@@ -276,8 +274,7 @@ async fn test_manifest_get_by_digest() {
     let project_slug: &str = project.slug.as_ref();
 
     // Upload a manifest
-    let config_digest =
-        "sha256:7777777777777777777777777777777777777777777777777777777777777777";
+    let config_digest = "sha256:7777777777777777777777777777777777777777777777777777777777777777";
     let layer_digest = "sha256:8888888888888888888888888888888888888888888888888888888888888888";
     let manifest = create_test_manifest(config_digest, layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
@@ -324,17 +321,13 @@ async fn test_manifest_delete_by_tag() {
     let project_slug: &str = project.slug.as_ref();
 
     // Upload a manifest
-    let config_digest =
-        "sha256:9999999999999999999999999999999999999999999999999999999999999999";
+    let config_digest = "sha256:9999999999999999999999999999999999999999999999999999999999999999";
     let layer_digest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     let manifest = create_test_manifest(config_digest, layer_digest);
 
     server
         .client
-        .put(server.api_url(&format!(
-            "/v2/{}/manifests/to-delete",
-            project_slug
-        )))
+        .put(server.api_url(&format!("/v2/{}/manifests/to-delete", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
@@ -345,10 +338,7 @@ async fn test_manifest_delete_by_tag() {
     // Delete by tag
     let resp = server
         .client
-        .delete(server.api_url(&format!(
-            "/v2/{}/manifests/to-delete",
-            project_slug
-        )))
+        .delete(server.api_url(&format!("/v2/{}/manifests/to-delete", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
         .send()
         .await
@@ -360,10 +350,7 @@ async fn test_manifest_delete_by_tag() {
     let pull_token = server.oci_pull_token(&user, &project);
     let check_resp = server
         .client
-        .head(server.api_url(&format!(
-            "/v2/{}/manifests/to-delete",
-            project_slug
-        )))
+        .head(server.api_url(&format!("/v2/{}/manifests/to-delete", project_slug)))
         .header("Authorization", format!("Bearer {}", pull_token))
         .send()
         .await
@@ -388,18 +375,14 @@ async fn test_manifest_delete_by_digest() {
     let project_slug: &str = project.slug.as_ref();
 
     // Upload a manifest
-    let config_digest =
-        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    let config_digest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     let layer_digest = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
     let manifest = create_test_manifest(config_digest, layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     server
         .client
-        .put(server.api_url(&format!(
-            "/v2/{}/manifests/digest-delete",
-            project_slug
-        )))
+        .put(server.api_url(&format!("/v2/{}/manifests/digest-delete", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)

@@ -49,7 +49,12 @@ async fn test_tags_list_empty() {
 
     let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
     assert_eq!(body["name"], project_slug);
-    assert!(body["tags"].as_array().expect("tags should be array").is_empty());
+    assert!(
+        body["tags"]
+            .as_array()
+            .expect("tags should be array")
+            .is_empty()
+    );
 }
 
 // GET /v2/{name}/tags/list - List tags with manifests
@@ -120,10 +125,7 @@ async fn test_tags_list_pagination_n() {
         let manifest = create_test_manifest(&format!("page{}", i));
         server
             .client
-            .put(server.api_url(&format!(
-                "/v2/{}/manifests/tag{}",
-                project_slug, i
-            )))
+            .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
             .header("Authorization", format!("Bearer {}", push_token))
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
@@ -179,10 +181,7 @@ async fn test_tags_list_pagination_last() {
     let pull_token = server.oci_pull_token(&user, &project);
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v2/{}/tags/list?last=bbb",
-            project_slug
-        )))
+        .get(server.api_url(&format!("/v2/{}/tags/list?last=bbb", project_slug)))
         .header("Authorization", format!("Bearer {}", pull_token))
         .send()
         .await
@@ -206,7 +205,9 @@ async fn test_tags_list_pagination_last() {
 #[tokio::test]
 async fn test_tags_list_unauthenticated() {
     let server = TestServer::new().await;
-    let user = server.signup("TagsUnauth User", "tagsunauth@example.com").await;
+    let user = server
+        .signup("TagsUnauth User", "tagsunauth@example.com")
+        .await;
     let org = server.create_org(&user, "TagsUnauth Org").await;
     let project = server
         .create_project(&user, &org, "TagsUnauth Project")

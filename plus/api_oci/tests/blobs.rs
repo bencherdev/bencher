@@ -140,7 +140,9 @@ async fn test_blob_exists() {
 #[tokio::test]
 async fn test_blob_not_found() {
     let server = TestServer::new().await;
-    let user = server.signup("NotFound User", "blobnotfound@example.com").await;
+    let user = server
+        .signup("NotFound User", "blobnotfound@example.com")
+        .await;
     let org = server.create_org(&user, "NotFound Org").await;
     let project = server.create_project(&user, &org, "NotFound Project").await;
 

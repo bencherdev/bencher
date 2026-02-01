@@ -89,10 +89,7 @@ async fn test_referrers_list_empty() {
     let pull_token = server.oci_pull_token(&user, &project);
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v2/{}/referrers/{}",
-            project_slug, base_digest
-        )))
+        .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, base_digest)))
         .header("Authorization", format!("Bearer {}", pull_token))
         .send()
         .await
@@ -103,10 +100,12 @@ async fn test_referrers_list_empty() {
     let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
     assert_eq!(body["schemaVersion"], 2);
     assert_eq!(body["mediaType"], "application/vnd.oci.image.index.v1+json");
-    assert!(body["manifests"]
-        .as_array()
-        .expect("manifests should be array")
-        .is_empty());
+    assert!(
+        body["manifests"]
+            .as_array()
+            .expect("manifests should be array")
+            .is_empty()
+    );
 }
 
 // GET /v2/{name}/referrers/{digest} - List referrers with results
@@ -139,7 +138,10 @@ async fn test_referrers_list_with_results() {
         .expect("Upload base failed");
 
     // Upload referrer manifests
-    let artifact_types = ["application/vnd.example.sbom", "application/vnd.example.sig"];
+    let artifact_types = [
+        "application/vnd.example.sbom",
+        "application/vnd.example.sig",
+    ];
     for artifact_type in &artifact_types {
         let referrer = create_referrer_manifest(&base_digest, artifact_type);
         let resp = server
@@ -162,10 +164,7 @@ async fn test_referrers_list_with_results() {
     let pull_token = server.oci_pull_token(&user, &project);
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v2/{}/referrers/{}",
-            project_slug, base_digest
-        )))
+        .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, base_digest)))
         .header("Authorization", format!("Bearer {}", pull_token))
         .send()
         .await
@@ -209,10 +208,7 @@ async fn test_referrers_filter_by_artifact_type() {
 
     server
         .client
-        .put(server.api_url(&format!(
-            "/v2/{}/manifests/filter-subject",
-            project_slug
-        )))
+        .put(server.api_url(&format!("/v2/{}/manifests/filter-subject", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(base_manifest)
@@ -280,10 +276,7 @@ async fn test_referrers_filter_by_artifact_type() {
         .as_array()
         .expect("manifests should be array");
     assert_eq!(manifests.len(), 1);
-    assert_eq!(
-        manifests[0]["artifactType"],
-        "application/vnd.example.sbom"
-    );
+    assert_eq!(manifests[0]["artifactType"], "application/vnd.example.sbom");
 }
 
 // GET /v2/{name}/referrers/{digest} - Unauthenticated (should fail)
@@ -303,10 +296,7 @@ async fn test_referrers_unauthenticated() {
 
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v2/{}/referrers/{}",
-            project_slug, fake_digest
-        )))
+        .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, fake_digest)))
         .send()
         .await
         .expect("Request failed");
@@ -332,10 +322,7 @@ async fn test_referrers_invalid_digest() {
 
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v2/{}/referrers/invalid-digest",
-            project_slug
-        )))
+        .get(server.api_url(&format!("/v2/{}/referrers/invalid-digest", project_slug)))
         .header("Authorization", format!("Bearer {}", oci_token))
         .send()
         .await

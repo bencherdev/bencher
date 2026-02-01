@@ -458,7 +458,12 @@ impl OciS3Storage {
     /// Buffer chunks are stored separately to avoid O(n²) read-modify-write
     /// operations. Each append creates a new chunk object.
     fn upload_buffer_chunk_key(&self, upload_id: &UploadId, chunk_num: u32) -> String {
-        format!("{}/{}/chunks/{:08}", self.global_prefix(), upload_id, chunk_num)
+        format!(
+            "{}/{}/chunks/{:08}",
+            self.global_prefix(),
+            upload_id,
+            chunk_num
+        )
     }
 
     /// Returns the S3 key for the temporary upload data (multipart destination)
@@ -737,7 +742,10 @@ impl OciS3Storage {
     /// If the server reboots mid-completion, the next attempt will abort the
     /// stale multipart upload and start fresh. The hash is always recomputed
     /// from all stored chunks, ensuring correctness.
-    #[expect(clippy::too_many_lines, reason = "Complex upload completion logic benefits from being in one place")]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "Complex upload completion logic benefits from being in one place"
+    )]
     pub async fn complete_upload(
         &self,
         upload_id: &UploadId,
@@ -951,7 +959,8 @@ impl OciS3Storage {
             .await;
 
         // Clean up (including all buffer chunks)
-        self.cleanup_upload(upload_id, state.buffer_chunk_count).await;
+        self.cleanup_upload(upload_id, state.buffer_chunk_count)
+            .await;
 
         Ok(())
     }
@@ -1396,13 +1405,7 @@ impl OciS3Storage {
                 let filter = filter.clone();
                 async move {
                     // Get the referrer descriptor
-                    let Ok(resp) = client
-                        .get_object()
-                        .bucket(bucket)
-                        .key(&key)
-                        .send()
-                        .await
-                    else {
+                    let Ok(resp) = client.get_object().bucket(bucket).key(&key).send().await else {
                         return None;
                     };
                     let Ok(data) = resp.body.collect().await else {

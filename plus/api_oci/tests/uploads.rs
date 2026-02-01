@@ -29,7 +29,9 @@ fn extract_session_id(location: &str) -> Option<String> {
 #[tokio::test]
 async fn test_upload_status() {
     let server = TestServer::new().await;
-    let user = server.signup("Status User", "uploadstatus@example.com").await;
+    let user = server
+        .signup("Status User", "uploadstatus@example.com")
+        .await;
     let org = server.create_org(&user, "Status Org").await;
     let project = server.create_project(&user, &org, "Status Project").await;
 
@@ -434,7 +436,9 @@ async fn test_upload_complete_wrong_digest() {
 #[tokio::test]
 async fn test_upload_cancel() {
     let server = TestServer::new().await;
-    let user = server.signup("Cancel User", "uploadcancel@example.com").await;
+    let user = server
+        .signup("Cancel User", "uploadcancel@example.com")
+        .await;
     let org = server.create_org(&user, "Cancel Org").await;
     let project = server.create_project(&user, &org, "Cancel Project").await;
 
