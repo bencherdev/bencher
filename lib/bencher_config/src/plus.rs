@@ -1,5 +1,7 @@
 #![cfg(feature = "plus")]
 
+use std::path::Path;
+
 use bencher_billing::Biller;
 use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
@@ -44,8 +46,13 @@ pub enum PlusError {
 }
 
 impl Plus {
-    pub fn new(console_url: &Url, plus: Option<JsonPlus>) -> Result<Self, PlusError> {
+    pub fn new(
+        console_url: &Url,
+        plus: Option<JsonPlus>,
+        database_path: &Path,
+    ) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
+            // No Plus config, but still provide local OCI storage
             return Ok(Self {
                 github_client: None,
                 google_client: None,
@@ -54,16 +61,19 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
-                oci_storage: None,
+                oci_storage: Some(
+                    OciStorage::try_from_config(None, database_path)
+                        .map_err(PlusError::OciStorage)?,
+                ),
             });
         };
 
-        // Initialize OCI storage if configured
-        let oci_storage = plus
-            .oci
-            .map(|oci| OciStorage::try_from_config(oci.data_store))
-            .transpose()
-            .map_err(PlusError::OciStorage)?;
+        // Initialize OCI storage - uses S3 if configured, otherwise local filesystem
+        let oci_data_store = plus.oci.map(|oci| oci.data_store);
+        let oci_storage = Some(
+            OciStorage::try_from_config(oci_data_store, database_path)
+                .map_err(PlusError::OciStorage)?,
+        );
 
         let github_client = plus.github.map(
             |JsonGitHub {
