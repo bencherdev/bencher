@@ -1426,9 +1426,11 @@ dependencies = [
 name = "bencher_oci"
 version = "0.5.10"
 dependencies = [
+ "base64 0.22.1",
  "camino",
  "flate2",
  "oci-spec",
+ "reqwest",
  "serde",
  "serde_json",
  "sha2",
