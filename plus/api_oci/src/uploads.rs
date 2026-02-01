@@ -14,6 +14,8 @@
 //! are unguessable UUIDs. This matches OCI spec behavior and is required
 //! for conformance test compatibility.
 
+#[cfg(feature = "plus")]
+use crate::auth::apply_public_rate_limit;
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
 use bencher_oci_storage::{Digest, OciError, UploadId};
@@ -84,6 +86,10 @@ pub async fn oci_upload_status(
     // No Bearer auth required - session ID serves as authentication
     // (obtained only via authenticated POST to start upload)
 
+    // Apply public rate limiting based on IP
+    #[cfg(feature = "plus")]
+    apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
+
     let repository_name = path.name.to_string();
 
     // Parse upload ID
@@ -138,6 +144,10 @@ pub async fn oci_upload_chunk(
 
     // No Bearer auth required - session ID serves as authentication
     // (obtained only via authenticated POST to start upload)
+
+    // Apply public rate limiting based on IP
+    #[cfg(feature = "plus")]
+    apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
     let repository_name = path.name.to_string();
     let data = body.as_bytes();
@@ -241,6 +251,10 @@ pub async fn oci_upload_complete(
     // No Bearer auth required - session ID serves as authentication
     // (obtained only via authenticated POST to start upload)
 
+    // Apply public rate limiting based on IP
+    #[cfg(feature = "plus")]
+    apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
+
     let query = query.into_inner();
     let repository_name = path.name.to_string();
     let data = body.as_bytes();
@@ -306,6 +320,10 @@ pub async fn oci_upload_cancel(
 
     // No Bearer auth required - session ID serves as authentication
     // (obtained only via authenticated POST to start upload)
+
+    // Apply public rate limiting based on IP
+    #[cfg(feature = "plus")]
+    apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
     // Parse upload ID
     let upload_id: UploadId = path

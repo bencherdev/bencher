@@ -17,6 +17,8 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+#[cfg(feature = "plus")]
+use crate::auth::apply_auth_rate_limit;
 use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access, validate_push_access};
 
 /// Path parameters for blob/upload-start endpoints
@@ -89,8 +91,12 @@ pub async fn oci_blob_exists(
     let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &name_str, "pull")
+    let claims = validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+
+    // Apply rate limiting
+    #[cfg(feature = "plus")]
+    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse digest
     let digest: Digest = path
@@ -153,8 +159,12 @@ pub async fn oci_blob_get(
     let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &name_str, "pull")
+    let claims = validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+
+    // Apply rate limiting
+    #[cfg(feature = "plus")]
+    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse digest
     let digest: Digest = path
@@ -221,8 +231,12 @@ pub async fn oci_blob_delete(
     let scope = format!("repository:{name_str}:push");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &name_str, "push")
+    let claims = validate_oci_access(context, &token, &name_str, "push")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+
+    // Apply rate limiting
+    #[cfg(feature = "plus")]
+    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse digest
     let digest: Digest = path

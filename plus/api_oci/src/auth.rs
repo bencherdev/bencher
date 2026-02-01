@@ -5,18 +5,15 @@
 //! - Bearer token extraction from Authorization headers
 //! - OCI token validation
 //! - Push access validation with claimed/unclaimed project support and auto-creation
+//! - Rate limiting for OCI requests
 
 use bencher_json::{Jwt, ProjectResourceId, ResourceName};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    context::ApiContext,
+    context::{ApiContext, RateLimiting},
     model::{
         project::QueryProject,
-        user::{
-            QueryUser,
-            auth::AuthUser,
-            public::PublicUser,
-        },
+        user::{QueryUser, auth::AuthUser, public::PublicUser},
     },
     public_conn,
 };
@@ -30,20 +27,16 @@ pub use api_auth::oci::unauthorized_with_www_authenticate;
 /// Extract OCI bearer token from Authorization header
 ///
 /// Expects format: `Authorization: Bearer <token>`
-pub fn extract_oci_bearer_token(
-    rqctx: &RequestContext<ApiContext>,
-) -> Result<Jwt, HttpError> {
+pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jwt, HttpError> {
     let headers = rqctx.request.headers();
 
-    let auth_header = headers
-        .get(http::header::AUTHORIZATION)
-        .ok_or_else(|| {
-            HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::UNAUTHORIZED,
-                "Missing Authorization header".to_owned(),
-            )
-        })?;
+    let auth_header = headers.get(http::header::AUTHORIZATION).ok_or_else(|| {
+        HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::UNAUTHORIZED,
+            "Missing Authorization header".to_owned(),
+        )
+    })?;
 
     let auth_str = auth_header.to_str().map_err(|_err| {
         HttpError::for_client_error(
@@ -144,7 +137,10 @@ pub struct PushAccess {
     clippy::map_err_ignore,
     reason = "Intentionally discarding auth/validation errors for security"
 )]
-#[expect(clippy::too_many_lines, reason = "Auth logic needs to handle multiple cases")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "Auth logic needs to handle multiple cases"
+)]
 pub async fn validate_push_access(
     log: &Logger,
     rqctx: &RequestContext<ApiContext>,
@@ -158,23 +154,44 @@ pub async fn validate_push_access(
     let token_result = extract_oci_bearer_token(rqctx);
 
     // Build a PublicUser based on authentication status
-    let (public_user, claims) = build_public_user(log, context, &token_result, &repository_str).await?;
+    let (public_user, claims) =
+        build_public_user(log, context, rqctx, &token_result, &repository_str).await?;
+
+    // Apply rate limiting based on authentication status
+    #[cfg(feature = "plus")]
+    match &public_user {
+        PublicUser::Public(remote_ip) => {
+            if let Some(remote_ip) = remote_ip {
+                slog::debug!(log, "Applying unclaimed OCI push rate limit"; "remote_ip" => ?remote_ip);
+                context.rate_limiting.unclaimed_run(*remote_ip)?;
+            }
+        },
+        PublicUser::Auth(auth_user) => {
+            slog::debug!(log, "Applying claimed OCI push rate limit"; "user_uuid" => %auth_user.user.uuid);
+            context.rate_limiting.claimed_run(auth_user.user.uuid)?;
+        },
+    }
 
     // Check if the project exists
     if let Ok(query_project) = QueryProject::from_resource_id(public_conn!(context), repository) {
         // Project exists - check if its organization is claimed
-        let query_organization = query_project
-            .organization(public_conn!(context))
-            .map_err(|e| HttpError::for_internal_error(format!("Failed to get organization: {e}")))?;
+        let query_organization =
+            query_project
+                .organization(public_conn!(context))
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to get organization: {e}"))
+                })?;
 
         let is_claimed = query_organization
             .is_claimed(public_conn!(context))
-            .map_err(|e| HttpError::for_internal_error(format!("Failed to check claimed status: {e}")))?;
+            .map_err(|e| {
+                HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
+            })?;
 
         if is_claimed {
             // Organization is claimed - authentication is required
-            let claims = claims
-                .ok_or_else(|| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+            let claims =
+                claims.ok_or_else(|| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
 
             slog::debug!(
                 log,
@@ -248,7 +265,7 @@ pub async fn validate_push_access(
                 ClientErrorStatusCode::NOT_FOUND,
                 format!("Project not found: {uuid}"),
             ))
-        }
+        },
         ProjectResourceId::Slug(slug) => {
             // Slugs trigger auto-creation
             slog::info!(
@@ -264,29 +281,62 @@ pub async fn validate_push_access(
                 .parse()
                 .map_err(|e| HttpError::for_internal_error(format!("Invalid project name: {e}")))?;
 
-            let query_project = QueryProject::get_or_create(
-                log,
-                context,
-                &public_user,
-                repository,
-                || Ok(project_name),
-            )
-            .await?;
+            let query_project =
+                QueryProject::get_or_create(log, context, &public_user, repository, || {
+                    Ok(project_name)
+                })
+                .await?;
 
             Ok(PushAccess {
                 project: query_project,
                 claims,
             })
-        }
+        },
     }
+}
+
+/// Apply rate limiting for authenticated OCI requests
+///
+/// Uses `user_request` rate limiting for authenticated users based on their UUID.
+/// This is used for pull operations (GET/HEAD) where the user has a valid OCI token.
+#[cfg(feature = "plus")]
+pub async fn apply_auth_rate_limit(
+    log: &Logger,
+    context: &ApiContext,
+    claims: &OciClaims,
+) -> Result<(), HttpError> {
+    if let Ok(query_user) = QueryUser::get_with_email(public_conn!(context), claims.email()) {
+        slog::debug!(log, "Applying OCI request rate limit"; "user_uuid" => %query_user.uuid);
+        context.rate_limiting.user_request(query_user.uuid)?;
+    }
+    Ok(())
+}
+
+/// Apply rate limiting for unauthenticated OCI requests (upload sessions)
+///
+/// Uses `public_request` rate limiting based on the client's IP address.
+/// This is used for upload session operations where the session ID serves as authentication.
+#[cfg(feature = "plus")]
+pub fn apply_public_rate_limit(
+    log: &Logger,
+    context: &ApiContext,
+    rqctx: &RequestContext<ApiContext>,
+) -> Result<(), HttpError> {
+    if let Some(remote_ip) = RateLimiting::remote_ip(log, rqctx.request.headers()) {
+        slog::debug!(log, "Applying OCI public request rate limit"; "remote_ip" => ?remote_ip);
+        context.rate_limiting.public_request(remote_ip)?;
+    }
+    Ok(())
 }
 
 /// Build a `PublicUser` from OCI authentication
 ///
 /// Returns (`PublicUser`, `Option<OciClaims>`) where claims is Some if authenticated.
+/// For unauthenticated users, extracts the remote IP from headers for rate limiting.
 async fn build_public_user(
     log: &Logger,
     context: &ApiContext,
+    rqctx: &RequestContext<ApiContext>,
     token_result: &Result<Jwt, HttpError>,
     repository_str: &str,
 ) -> Result<(PublicUser, Option<OciClaims>), HttpError> {
@@ -308,6 +358,8 @@ async fn build_public_user(
     }
 
     // No valid token or user not found - treat as public user
-    slog::debug!(log, "OCI push without authentication (public user)");
-    Ok((PublicUser::Public(None), None))
+    // Extract remote IP for rate limiting
+    let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
+    slog::debug!(log, "OCI push without authentication (public user)"; "remote_ip" => ?remote_ip);
+    Ok((PublicUser::Public(remote_ip), None))
 }
