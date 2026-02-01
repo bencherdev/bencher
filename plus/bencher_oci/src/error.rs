@@ -25,4 +25,10 @@ pub enum OciError {
 
     #[error("Layer extraction error: {0}")]
     LayerExtraction(String),
+
+    #[error("Registry error: {0}")]
+    Registry(String),
+
+    #[error("Invalid image reference: {0}")]
+    InvalidReference(String),
 }
