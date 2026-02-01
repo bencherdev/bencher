@@ -12,6 +12,7 @@ impl TryFrom<TaskClean> for Clean {
 }
 
 impl Clean {
+    #[expect(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let work_dir = super::work_dir();
         if work_dir.exists() {

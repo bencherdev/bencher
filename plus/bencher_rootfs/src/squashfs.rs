@@ -9,7 +9,7 @@
 
 use std::fs::{self, File};
 use std::io::Cursor;
-use std::os::unix::fs::{MetadataExt, PermissionsExt};
+use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
 
 use backhand::compression::Compressor;
 use backhand::{FilesystemCompressor, FilesystemWriter, NodeHeader};
@@ -18,7 +18,7 @@ use camino::Utf8Path;
 use crate::error::RootfsError;
 
 /// Default block size for squashfs (128 KiB).
-const DEFAULT_BLOCK_SIZE: u32 = 131_072;
+const DEFAULT_BLOCK_SIZE: u32 = 0x2_0000;
 
 /// Create a squashfs image from a directory.
 ///
@@ -56,6 +56,7 @@ pub fn create_squashfs(source_dir: &Utf8Path, output_path: &Utf8Path) -> Result<
 }
 
 /// Recursively add a directory and its contents to the filesystem writer.
+#[expect(clippy::filetype_is_file)]
 fn add_directory_recursive(
     writer: &mut FilesystemWriter,
     source_dir: &Utf8Path,
@@ -87,19 +88,19 @@ fn add_directory_recursive(
 
             // Recurse into directory
             add_directory_recursive(writer, source_dir, &entry_relative)?;
-        } else if file_type.is_file() {
-            // Add file
-            let content = fs::read(entry.path())?;
-            let reader = Cursor::new(content);
-            writer
-                .push_file(reader, entry_relative.as_str(), header)
-                .map_err(|e| RootfsError::Squashfs(e.to_string()))?;
         } else if file_type.is_symlink() {
-            // Add symlink
+            // Add symlink (check before is_file since symlinks can also return true for is_file)
             let target = fs::read_link(entry.path())?;
             let target_str = target.to_string_lossy();
             writer
                 .push_symlink(target_str.as_ref(), entry_relative.as_str(), header)
+                .map_err(|e| RootfsError::Squashfs(e.to_string()))?;
+        } else if file_type.is_file() {
+            // Add regular file
+            let content = fs::read(entry.path())?;
+            let reader = Cursor::new(content);
+            writer
+                .push_file(reader, entry_relative.as_str(), header)
                 .map_err(|e| RootfsError::Squashfs(e.to_string()))?;
         }
         // Skip other file types (devices, sockets, etc.)
@@ -114,7 +115,7 @@ fn create_node_header(metadata: &fs::Metadata) -> NodeHeader {
         permissions: (metadata.permissions().mode() & 0o7777) as u16,
         uid: metadata.uid(),
         gid: metadata.gid(),
-        mtime: metadata.mtime() as u32,
+        mtime: u32::try_from(metadata.mtime()).unwrap_or(0),
     }
 }
 
@@ -159,7 +160,8 @@ pub enum Compression {
 
 impl Compression {
     /// Convert to a backhand Compressor.
-    fn to_compressor(self) -> Compressor {
+    #[must_use]
+    pub fn to_compressor(self) -> Compressor {
         match self {
             Self::Gzip => Compressor::Gzip,
             Self::Lz4 => Compressor::Lz4,

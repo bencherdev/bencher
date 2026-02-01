@@ -35,4 +35,7 @@ mod protocol;
 mod vsock;
 
 pub use protocol::{BenchmarkParams, BenchmarkResults, Metric};
-pub use vsock::{connect_to_host, VsockConnection};
+pub use vsock::{
+    connect_to_host, connect_to_host_port, send_results, VsockConnection, VsockError,
+    DEFAULT_PORT, HOST_CID,
+};

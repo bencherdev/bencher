@@ -16,11 +16,37 @@ pub fn is_linux() -> bool {
 
 /// Check if Docker is available.
 pub fn docker_available() -> bool {
-    Command::new("docker")
+    use std::time::Duration;
+
+    // Use a short timeout to avoid hanging if Docker daemon is unresponsive
+    let child = Command::new("docker")
         .arg("version")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+
+    match child {
+        Ok(mut child) => {
+            // Wait up to 5 seconds for Docker to respond
+            match child.try_wait() {
+                Ok(Some(status)) => status.success(),
+                Ok(None) => {
+                    // Still running, wait a bit more with timeout
+                    std::thread::sleep(Duration::from_secs(2));
+                    match child.try_wait() {
+                        Ok(Some(status)) => status.success(),
+                        _ => {
+                            // Kill if still running
+                            drop(child.kill());
+                            false
+                        }
+                    }
+                }
+                Err(_) => false,
+            }
+        }
+        Err(_) => false,
+    }
 }
 
 /// Check if we can run KVM inside Docker.

@@ -3,7 +3,7 @@
 //! This module provides helpers for connecting to the host via vsock
 //! and sending/receiving benchmark data.
 
-use std::io::{self, BufRead, BufReader, Read, Write};
+use std::io::{self, BufRead as _, BufReader, Read as _, Write as _};
 use std::os::unix::net::UnixStream;
 
 use thiserror::Error;

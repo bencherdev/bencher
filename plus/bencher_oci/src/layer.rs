@@ -68,11 +68,11 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
         let path = entry.path()?.to_path_buf();
 
         // Handle whiteout files (deletions)
-        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-            if name.starts_with(".wh.") {
-                handle_whiteout(target_dir, &path)?;
-                continue;
-            }
+        if let Some(name) = path.file_name().and_then(|n| n.to_str())
+            && name.starts_with(".wh.")
+        {
+            handle_whiteout(target_dir, &path)?;
+            continue;
         }
 
         // Extract the entry

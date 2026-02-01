@@ -1,3 +1,5 @@
+#![expect(clippy::print_stderr)]
+
 fn main() {
     #[cfg(all(feature = "plus", target_os = "linux"))]
     {
