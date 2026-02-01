@@ -1,0 +1,92 @@
+# Lima VM configuration for Bencher VMM development
+# Usage:
+#   limactl create --name=bencher lima/bencher.yaml
+#   limactl start bencher
+#   limactl shell bencher
+
+# Use Virtualization.framework for Apple Silicon
+vmType: vz
+
+# Enable nested virtualization (required for KVM inside the VM)
+nestedVirtualization: true
+
+# Enable Rosetta for x86_64 emulation (useful for cross-compilation)
+rosetta:
+  enabled: true
+  binfmt: true
+
+# VM resources
+cpus: 4
+memory: 8GiB
+disk: 50GiB
+
+# Use Ubuntu 24.04 LTS
+images:
+  - location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+  - location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+
+# Mount the code directory with virtiofs (fast)
+mounts:
+  - location: "~/Code"
+    writable: true
+    mountPoint: /home/epompeii.linux/Code
+
+# Provisioning script - install dependencies
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # Update and install build dependencies
+      apt-get update
+      apt-get install -y \
+        build-essential \
+        pkg-config \
+        libssl-dev \
+        libsqlite3-dev \
+        libfreetype6-dev \
+        libfontconfig1-dev \
+        squashfs-tools \
+        curl \
+        git
+
+      # Ensure KVM is accessible
+      if [ -e /dev/kvm ]; then
+        chmod 666 /dev/kvm
+        echo "KVM is available!"
+      else
+        echo "WARNING: /dev/kvm not found - nested virtualization may not be working"
+      fi
+
+  - mode: user
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # Install Rust if not present
+      if ! command -v rustup &> /dev/null; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source "$HOME/.cargo/env"
+      fi
+
+      # Add musl target for static builds (vsock-send)
+      rustup target add x86_64-unknown-linux-musl || true
+      rustup target add aarch64-unknown-linux-musl || true
+
+      echo ""
+      echo "=== Setup complete ==="
+      echo "Code directory: ~/Code"
+      echo "To test KVM: ls -la /dev/kvm"
+      echo "To run tests: cd ~/Code/scratch/claude-ci && cargo test-runner test"
+
+# Forward SSH agent
+ssh:
+  forwardAgent: true
+
+# Containerd is not needed (we're not running containers)
+containerd:
+  system: false
+  user: false
