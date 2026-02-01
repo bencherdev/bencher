@@ -2,12 +2,18 @@
 //!
 //! Downloads Firecracker-compatible kernels for supported architectures
 //! and generates code to access them at runtime.
+//!
+//! # Security
+//!
+//! Downloaded kernels are verified against known SHA256 hashes to ensure
+//! integrity. If a hash doesn't match, the build will fail.
 
 // Build scripts commonly use expect/panic for error handling and eprintln for output
 #![expect(clippy::expect_used)]
 #![expect(clippy::panic)]
 #![expect(clippy::print_stderr)]
 
+use sha2::{Digest, Sha256};
 use std::env;
 use std::fs::{self, File};
 use std::io::Write as _;
@@ -30,18 +36,32 @@ struct KernelConfig {
     arch: &'static str,
     target_arch: &'static str,
     filename: &'static str,
+    /// Expected SHA256 hash of the kernel binary (hex-encoded).
+    expected_sha256: &'static str,
 }
 
+/// SHA256 hashes for Firecracker v1.10 kernel 5.10 images.
+///
+/// These hashes were computed from the official Firecracker CI artifacts.
+/// To verify manually:
+/// ```sh
+/// curl -sL https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.10/x86_64/vmlinux-5.10 | sha256sum
+/// curl -sL https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.10/aarch64/vmlinux-5.10 | sha256sum
+/// ```
 const KERNELS: &[KernelConfig] = &[
     KernelConfig {
         arch: "x86_64",
         target_arch: "x86_64",
         filename: "vmlinux-x86_64.bin",
+        // SHA256 of vmlinux-5.10 for x86_64 from Firecracker v1.10
+        expected_sha256: "8a1f985676c0b064050014483488356620fb07fe5e6d608f358fbb5385c7e92c",
     },
     KernelConfig {
         arch: "aarch64",
         target_arch: "aarch64",
         filename: "vmlinux-aarch64.bin",
+        // SHA256 of vmlinux-5.10 for aarch64 from Firecracker v1.10
+        expected_sha256: "c93f989562a33a5ec0e1007a36a923b9a576d77d1cb624a11df6b91a1388319e",
     },
 ];
 
@@ -103,16 +123,49 @@ fn download_kernel(kernel: &KernelConfig, dest: &std::path::Path) {
         .read_to_vec()
         .expect("Failed to read kernel bytes");
 
+    // Verify SHA256 hash before writing to disk
+    verify_sha256(&bytes, kernel.expected_sha256, &url);
+
     // Write to destination
     let mut file = File::create(dest).expect("Failed to create kernel file");
     file.write_all(&bytes).expect("Failed to write kernel");
 
     eprintln!(
-        "Downloaded {} ({} bytes) to {}",
+        "Downloaded and verified {} ({} bytes) to {}",
         kernel.filename,
         bytes.len(),
         dest.display()
     );
+}
+
+/// Verify that the downloaded bytes match the expected SHA256 hash.
+fn verify_sha256(bytes: &[u8], expected_hex: &str, source: &str) {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    let computed = hasher.finalize();
+    let computed_hex = hex_encode(&computed);
+
+    if computed_hex != expected_hex {
+        panic!(
+            "SHA256 hash mismatch for {source}!\n\
+             Expected: {expected_hex}\n\
+             Computed: {computed_hex}\n\
+             \n\
+             This could indicate:\n\
+             - The file was corrupted during download\n\
+             - The upstream file has changed (update the expected hash)\n\
+             - A potential supply chain attack\n\
+             \n\
+             Please verify the hash manually and update the expected value if legitimate."
+        );
+    }
+
+    eprintln!("SHA256 verified: {computed_hex}");
+}
+
+/// Encode bytes as lowercase hex string.
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 fn generate_kernel_module(kernel_path: &std::path::Path, is_release: bool) {

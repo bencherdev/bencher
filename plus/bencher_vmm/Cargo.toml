@@ -39,6 +39,7 @@ vm-fdt = { workspace = true }
 tempfile = { workspace = true }
 
 [build-dependencies]
+sha2 = { workspace = true }
 ureq = { workspace = true }
 
 [lints]
