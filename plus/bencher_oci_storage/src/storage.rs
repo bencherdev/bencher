@@ -1,10 +1,19 @@
-//! OCI Storage Layer - S3 Backend with Multipart Upload Support
+//! OCI Storage Layer - S3 and Local Filesystem Backends
 //!
-//! This implementation uses S3 multipart uploads for scalability:
+//! This module provides two storage backends:
+//!
+//! ## S3 Backend (default when configured)
+//! - Uses S3 multipart uploads for scalability
 //! - Upload state is stored in S3 for cross-instance consistency
 //! - Chunks are buffered in S3 until they reach the 5MB minimum part size
 //! - No in-memory state means horizontal scaling and restart resilience
+//!
+//! ## Local Filesystem Backend (fallback)
+//! - Stores OCI artifacts on local disk
+//! - Data is stored in an `oci` directory sibling to the database file
+//! - Suitable for development and single-instance deployments
 
+use std::path::Path;
 use std::str::FromStr;
 
 use aws_sdk_s3::Client;
@@ -15,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
+use crate::local::OciLocalStorage;
 use crate::types::{Digest, RepositoryName, UploadId};
 
 /// Minimum part size for S3 multipart upload (5MB)
@@ -108,25 +118,247 @@ impl UploadState {
 }
 
 /// OCI Storage implementation using S3 with multipart uploads
-pub struct OciStorage {
+pub(crate) struct OciS3Storage {
     client: Client,
     config: OciStorageConfig,
 }
 
+/// OCI Storage backend - supports S3 or local filesystem
+#[expect(private_interfaces, reason = "Users interact via methods, not variants")]
+pub enum OciStorage {
+    /// S3-based storage (recommended for production)
+    S3(OciS3Storage),
+    /// Local filesystem storage (for development/testing)
+    Local(OciLocalStorage),
+}
+
 impl OciStorage {
     /// Creates a new OCI storage instance from configuration
-    pub fn try_from_config(data_store: OciDataStore) -> Result<Self, OciStorageError> {
+    ///
+    /// If S3 configuration is provided, uses S3 backend.
+    /// Otherwise, falls back to local filesystem storage.
+    pub fn try_from_config(
+        data_store: Option<OciDataStore>,
+        database_path: &Path,
+    ) -> Result<Self, OciStorageError> {
         match data_store {
-            OciDataStore::AwsS3 {
+            Some(OciDataStore::AwsS3 {
                 access_key_id,
                 secret_access_key,
                 access_point,
-            } => Self::new_s3(access_key_id, secret_access_key, &access_point),
+            }) => OciS3Storage::new(access_key_id, secret_access_key, &access_point)
+                .map(OciStorage::S3),
+            None => Ok(OciStorage::Local(OciLocalStorage::new(database_path))),
         }
     }
 
-    /// Creates a new OCI storage instance with S3 backend
-    fn new_s3(
+    // ==================== Upload Operations ====================
+
+    /// Starts a new upload session
+    pub async fn start_upload(
+        &self,
+        repository: &RepositoryName,
+    ) -> Result<UploadId, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.start_upload(repository).await,
+            Self::Local(local) => local.start_upload(repository).await,
+        }
+    }
+
+    /// Appends data to an in-progress upload
+    pub async fn append_upload(
+        &self,
+        upload_id: &UploadId,
+        data: Bytes,
+    ) -> Result<u64, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.append_upload(upload_id, data).await,
+            Self::Local(local) => local.append_upload(upload_id, data).await,
+        }
+    }
+
+    /// Gets the current size of an in-progress upload
+    pub async fn get_upload_size(&self, upload_id: &UploadId) -> Result<u64, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.get_upload_size(upload_id).await,
+            Self::Local(local) => local.get_upload_size(upload_id).await,
+        }
+    }
+
+    /// Completes an upload and stores the blob
+    pub async fn complete_upload(
+        &self,
+        upload_id: &UploadId,
+        expected_digest: &Digest,
+    ) -> Result<Digest, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.complete_upload(upload_id, expected_digest).await,
+            Self::Local(local) => local.complete_upload(upload_id, expected_digest).await,
+        }
+    }
+
+    /// Cancels an in-progress upload
+    pub async fn cancel_upload(&self, upload_id: &UploadId) -> Result<(), OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.cancel_upload(upload_id).await,
+            Self::Local(local) => local.cancel_upload(upload_id).await,
+        }
+    }
+
+    // ==================== Blob Operations ====================
+
+    /// Checks if a blob exists
+    pub async fn blob_exists(
+        &self,
+        repository: &RepositoryName,
+        digest: &Digest,
+    ) -> Result<bool, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.blob_exists(repository, digest).await,
+            Self::Local(local) => local.blob_exists(repository, digest).await,
+        }
+    }
+
+    /// Gets a blob's content and size
+    pub async fn get_blob(
+        &self,
+        repository: &RepositoryName,
+        digest: &Digest,
+    ) -> Result<(Bytes, u64), OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.get_blob(repository, digest).await,
+            Self::Local(local) => local.get_blob(repository, digest).await,
+        }
+    }
+
+    /// Gets blob metadata (size) without downloading content
+    pub async fn get_blob_size(
+        &self,
+        repository: &RepositoryName,
+        digest: &Digest,
+    ) -> Result<u64, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.get_blob_size(repository, digest).await,
+            Self::Local(local) => local.get_blob_size(repository, digest).await,
+        }
+    }
+
+    /// Deletes a blob
+    pub async fn delete_blob(
+        &self,
+        repository: &RepositoryName,
+        digest: &Digest,
+    ) -> Result<(), OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.delete_blob(repository, digest).await,
+            Self::Local(local) => local.delete_blob(repository, digest).await,
+        }
+    }
+
+    /// Mounts a blob from another repository (cross-repo blob mount)
+    pub async fn mount_blob(
+        &self,
+        from_repository: &RepositoryName,
+        to_repository: &RepositoryName,
+        digest: &Digest,
+    ) -> Result<bool, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.mount_blob(from_repository, to_repository, digest).await,
+            Self::Local(local) => local.mount_blob(from_repository, to_repository, digest).await,
+        }
+    }
+
+    // ==================== Manifest Operations ====================
+
+    /// Stores a manifest
+    pub async fn put_manifest(
+        &self,
+        repository: &RepositoryName,
+        content: Bytes,
+        tag: Option<&str>,
+    ) -> Result<Digest, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.put_manifest(repository, content, tag).await,
+            Self::Local(local) => local.put_manifest(repository, content, tag).await,
+        }
+    }
+
+    /// Gets a manifest by digest
+    pub async fn get_manifest_by_digest(
+        &self,
+        repository: &RepositoryName,
+        digest: &Digest,
+    ) -> Result<Bytes, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.get_manifest_by_digest(repository, digest).await,
+            Self::Local(local) => local.get_manifest_by_digest(repository, digest).await,
+        }
+    }
+
+    /// Resolves a tag to a digest
+    pub async fn resolve_tag(
+        &self,
+        repository: &RepositoryName,
+        tag: &str,
+    ) -> Result<Digest, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.resolve_tag(repository, tag).await,
+            Self::Local(local) => local.resolve_tag(repository, tag).await,
+        }
+    }
+
+    /// Lists all tags for a repository
+    pub async fn list_tags(
+        &self,
+        repository: &RepositoryName,
+    ) -> Result<Vec<String>, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.list_tags(repository).await,
+            Self::Local(local) => local.list_tags(repository).await,
+        }
+    }
+
+    /// Deletes a manifest by digest
+    pub async fn delete_manifest(
+        &self,
+        repository: &RepositoryName,
+        digest: &Digest,
+    ) -> Result<(), OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.delete_manifest(repository, digest).await,
+            Self::Local(local) => local.delete_manifest(repository, digest).await,
+        }
+    }
+
+    /// Deletes a tag
+    pub async fn delete_tag(
+        &self,
+        repository: &RepositoryName,
+        tag: &str,
+    ) -> Result<(), OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.delete_tag(repository, tag).await,
+            Self::Local(local) => local.delete_tag(repository, tag).await,
+        }
+    }
+
+    /// Lists all manifests that reference a given digest via their subject field
+    pub async fn list_referrers(
+        &self,
+        repository: &RepositoryName,
+        subject_digest: &Digest,
+        artifact_type_filter: Option<&str>,
+    ) -> Result<Vec<serde_json::Value>, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.list_referrers(repository, subject_digest, artifact_type_filter).await,
+            Self::Local(local) => local.list_referrers(repository, subject_digest, artifact_type_filter).await,
+        }
+    }
+}
+
+impl OciS3Storage {
+    /// Creates a new S3 storage instance
+    fn new(
         access_key_id: String,
         secret_access_key: Secret,
         access_point: &str,
@@ -159,11 +391,6 @@ impl OciStorage {
         };
 
         Ok(Self { client, config })
-    }
-
-    /// Creates a new OCI storage instance (for testing or direct use)
-    pub fn new(client: Client, config: OciStorageConfig) -> Self {
-        Self { client, config }
     }
 
     // ==================== Key Generation ====================
