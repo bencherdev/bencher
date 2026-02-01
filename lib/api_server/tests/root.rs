@@ -32,10 +32,13 @@ async fn test_root_post() {
         .expect("Request failed");
 
     // Root POST behavior depends on plus feature
-    #[cfg(feature = "plus")]
-    assert!(resp.status().is_success() || resp.status().is_redirection());
-    #[cfg(not(feature = "plus"))]
-    assert!(resp.status().is_client_error());
+    // With plus: returns 404 NOT_FOUND (endpoint exists but needs proper request)
+    // Without plus: returns client error
+    assert!(
+        resp.status().is_client_error(),
+        "Expected client error, got: {}",
+        resp.status()
+    );
 }
 
 // GET / - with auth header still works

@@ -40,6 +40,8 @@ async fn test_login_success() {
         #[cfg(feature = "plus")]
         plan: None,
         invite: None,
+        #[cfg(feature = "plus")]
+        recaptcha_token: None,
     };
 
     let resp = server
@@ -66,6 +68,8 @@ async fn test_login_unknown_user() {
         #[cfg(feature = "plus")]
         plan: None,
         invite: None,
+        #[cfg(feature = "plus")]
+        recaptcha_token: None,
     };
 
     let resp = server
