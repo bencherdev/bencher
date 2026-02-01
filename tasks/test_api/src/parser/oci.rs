@@ -46,3 +46,21 @@ pub struct TaskOci {
     #[clap(long, default_value = TEST_API_TOKEN)]
     pub password: String,
 }
+
+impl TaskOci {
+    /// Create a `TaskOci` configured for smoke tests with the given API URL
+    pub fn for_test(api_url: &str) -> Self {
+        Self {
+            api_url: api_url.to_owned(),
+            namespace: "namespace".to_owned(),
+            crossmount_namespace: "crossmount-namespace".to_owned(),
+            pull_only: false,
+            skip_build: false,
+            debug: false,
+            output_dir: "./oci-conformance-results".to_owned(),
+            spec_dir: "./distribution-spec".to_owned(),
+            username: TEST_USERNAME.to_owned(),
+            password: TEST_API_TOKEN.to_owned(),
+        }
+    }
+}
