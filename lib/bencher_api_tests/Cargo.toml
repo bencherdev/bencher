@@ -1,0 +1,42 @@
+[package]
+name = "bencher_api_tests"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+plus = [
+    "bencher_api/plus",
+    "bencher_config/plus",
+    "bencher_schema/plus",
+    "bencher_license",
+]
+
+[dependencies]
+bencher_api.workspace = true
+bencher_config.workspace = true
+bencher_endpoint.workspace = true
+bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_license = { workspace = true, optional = true }
+bencher_rbac.workspace = true
+bencher_schema.workspace = true
+bencher_token.workspace = true
+diesel = { workspace = true, features = ["sqlite"] }
+dropshot.workspace = true
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+tempfile = "3"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+uuid = { workspace = true, features = ["v4"] }
+
+# https://github.com/diesel-rs/diesel/blob/2e85ba060d3d70ea605ea58a79b8a435749a7adc/diesel/Cargo.toml#L53
+# https://github.com/tauri-apps/tauri/discussions/6183
+# Always needed for Windows and all other targets when building a distroless image
+[dependencies.libsqlite3-sys]
+workspace = true
+features = ["bundled"]
+
+[lints]
+workspace = true

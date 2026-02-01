@@ -151,15 +151,19 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 name = "api_auth"
 version = "0.5.10"
 dependencies = [
+ "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
  "bencher_otel",
  "bencher_schema",
  "bencher_token",
  "dropshot",
+ "http 1.4.0",
  "schemars 0.8.22",
  "serde",
+ "serde_json",
  "slog",
+ "tokio",
 ]
 
 [[package]]
@@ -179,6 +183,7 @@ dependencies = [
 name = "api_organizations"
 version = "0.5.10"
 dependencies = [
+ "bencher_api_tests",
  "bencher_billing",
  "bencher_endpoint",
  "bencher_json",
@@ -187,16 +192,20 @@ dependencies = [
  "bencher_schema",
  "diesel",
  "dropshot",
+ "http 1.4.0",
  "schemars 0.8.22",
  "sentry",
  "serde",
+ "serde_json",
  "slog",
+ "tokio",
 ]
 
 [[package]]
 name = "api_projects"
 version = "0.5.10"
 dependencies = [
+ "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
  "bencher_otel",
@@ -210,26 +219,33 @@ dependencies = [
  "schemars 0.8.22",
  "sentry",
  "serde",
+ "serde_json",
  "slog",
+ "tokio",
 ]
 
 [[package]]
 name = "api_run"
 version = "0.5.10"
 dependencies = [
+ "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
  "bencher_otel",
  "bencher_rbac",
  "bencher_schema",
  "dropshot",
+ "http 1.4.0",
+ "serde_json",
  "slog",
+ "tokio",
 ]
 
 [[package]]
 name = "api_server"
 version = "0.5.10"
 dependencies = [
+ "bencher_api_tests",
  "bencher_config",
  "bencher_endpoint",
  "bencher_json",
@@ -237,6 +253,7 @@ dependencies = [
  "bencher_schema",
  "diesel",
  "dropshot",
+ "http 1.4.0",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -248,13 +265,17 @@ dependencies = [
 name = "api_users"
 version = "0.5.10"
 dependencies = [
+ "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
  "bencher_schema",
  "diesel",
  "dropshot",
+ "http 1.4.0",
  "schemars 0.8.22",
  "serde",
+ "serde_json",
+ "tokio",
  "uuid 1.19.0",
 ]
 
@@ -1040,6 +1061,27 @@ dependencies = [
  "thiserror 2.0.17",
  "tokio",
  "tokio-rustls 0.26.4",
+]
+
+[[package]]
+name = "bencher_api_tests"
+version = "0.5.10"
+dependencies = [
+ "bencher_api",
+ "bencher_config",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_license",
+ "bencher_rbac",
+ "bencher_schema",
+ "bencher_token",
+ "diesel",
+ "dropshot",
+ "libsqlite3-sys",
+ "reqwest",
+ "tempfile",
+ "tokio",
+ "uuid 1.19.0",
 ]
 
 [[package]]
