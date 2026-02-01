@@ -66,11 +66,10 @@ bencher_recaptcha = { path = "plus/bencher_recaptcha" }
 # plus - runner
 bencher_runner = { path = "plus/bencher_runner" }
 bencher_vmm = { path = "plus/bencher_vmm" }
-bencher_jailer = { path = "plus/bencher_jailer" }
 bencher_oci = { path = "plus/bencher_oci" }
 bencher_rootfs = { path = "plus/bencher_rootfs" }
 bencher_guest = { path = "plus/bencher_guest" }
-bencher_vsock_send = { path = "plus/bencher_vsock_send" }
+bencher_init = { path = "plus/bencher_init" }
 # crates.io
 anyhow = "1.0"
 backhand = "0.18"

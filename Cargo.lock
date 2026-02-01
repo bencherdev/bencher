@@ -1379,16 +1379,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "bencher_jailer"
+name = "bencher_init"
 version = "0.5.10"
 dependencies = [
- "camino",
- "caps",
  "libc",
- "nix",
  "serde",
  "serde_json",
- "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1696,13 +1692,6 @@ dependencies = [
  "vm-memory 0.16.2",
  "vm-superio",
  "vmm-sys-util 0.12.1",
-]
-
-[[package]]
-name = "bencher_vsock_send"
-version = "0.5.10"
-dependencies = [
- "libc",
 ]
 
 [[package]]

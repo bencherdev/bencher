@@ -109,9 +109,9 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
     println!("Unpacking OCI image to {unpack_dir}...");
     bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
 
-    // Step 4: Write command config and init script for the VM
-    println!("Writing init script...");
-    write_init_script(
+    // Step 4: Write command config for the VM
+    println!("Writing init config...");
+    write_init_config(
         &unpack_dir,
         &command,
         workdir,
@@ -119,24 +119,28 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
         config.output_file.as_deref(),
     )?;
 
-    // Step 5: Create squashfs rootfs
+    // Step 5: Copy bencher-init binary to /init
+    println!("Installing init binary...");
+    install_init_binary(&unpack_dir)?;
+
+    // Step 6: Create squashfs rootfs
     println!("Creating squashfs at {host_rootfs_path}...");
     bencher_rootfs::create_squashfs(&unpack_dir, &host_rootfs_path)?;
 
     // Clean up the unpack directory - we only need the squashfs now
     let _ = fs::remove_dir_all(&unpack_dir);
 
-    // Step 6: Write bundled kernel to jail root
+    // Step 7: Write bundled kernel to jail root
     println!("Writing bundled kernel to {host_kernel_path}...");
     bencher_vmm::write_kernel_to_file(host_kernel_path.as_std_path())?;
 
-    // Step 7: Get the path to ourselves for exec
+    // Step 8: Get the path to ourselves for exec
     let exe_path = std::env::current_exe().map_err(|e| {
         let _ = fs::remove_dir_all(&jail_root);
         RunnerError::Io(e)
     })?;
 
-    // Step 8: Build arguments for vmm subcommand
+    // Step 9: Build arguments for vmm subcommand
     let vmm_args = vec![
         "vmm".to_owned(),
         "--jail-root".to_owned(),
@@ -342,7 +346,7 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
 
     // Step 4: Write command config and init script for the VM
     println!("Writing init script...");
-    write_init_script(&unpack_dir, &command, workdir, &env, config.output_file.as_deref())?;
+    write_init_config(&unpack_dir, &command, workdir, &env, config.output_file.as_deref())?;
 
     // Step 5: Create squashfs rootfs
     println!("Creating squashfs at {rootfs_path}...");
@@ -368,13 +372,11 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     Ok(results)
 }
 
-/// Write the init script and supporting files for the VM.
+/// Write the init config for the VM.
 ///
-/// This creates:
-/// - `/etc/bencher/init` - The main init script that runs the benchmark
-/// - The init script buffers stdout/stderr, captures exit code, and sends all via vsock
+/// This creates `/etc/bencher/config.json` which is read by `bencher-init`.
 #[cfg(target_os = "linux")]
-fn write_init_script(
+fn write_init_config(
     rootfs: &camino::Utf8Path,
     command: &[String],
     workdir: &str,
@@ -382,137 +384,81 @@ fn write_init_script(
     output_file: Option<&str>,
 ) -> Result<(), RunnerError> {
     use std::fs;
-    use std::os::unix::fs::PermissionsExt as _;
 
     let config_dir = rootfs.join("etc/bencher");
     fs::create_dir_all(&config_dir)?;
 
-    // Build the command as a shell-escaped string
-    let command_str = command
-        .iter()
-        .map(|arg| shell_escape(arg))
-        .collect::<Vec<_>>()
-        .join(" ");
+    // Build the config JSON
+    let config = serde_json::json!({
+        "command": command,
+        "workdir": workdir,
+        "env": env,
+        "output_file": output_file,
+    });
 
-    // Build environment exports
-    let mut env_exports = String::new();
-    for (k, v) in env {
-        use std::fmt::Write as _;
-        writeln!(env_exports, "export {k}={}", shell_escape(v))
-            .expect("writing to String cannot fail");
-    }
-
-    // Add BENCHER_OUTPUT_FILE if specified
-    if let Some(path) = output_file {
-        use std::fmt::Write as _;
-        writeln!(env_exports, "export BENCHER_OUTPUT_FILE={}", shell_escape(path))
-            .expect("writing to String cannot fail");
-    }
-
-    // Generate the init script
-    // This script:
-    // 1. Sets up /run/bencher for temporary files
-    // 2. Changes to the working directory
-    // 3. Exports environment variables
-    // 4. Runs the command, buffering stdout/stderr to files
-    // 5. Captures the exit code
-    // 6. Sends all results via vsock after the command completes
-    let init_script = generate_init_script(&command_str, workdir, &env_exports, output_file);
-
-    let init_path = config_dir.join("init");
-    fs::write(&init_path, init_script)?;
-
-    // Make the script executable
-    let mut perms = fs::metadata(&init_path)?.permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&init_path, perms)?;
+    let config_path = config_dir.join("config.json");
+    let config_str = serde_json::to_string_pretty(&config)
+        .map_err(|e| RunnerError::Config(format!("failed to serialize config: {e}")))?;
+    fs::write(&config_path, config_str)?;
 
     Ok(())
 }
 
-/// Generate the init script content.
+/// Install the bencher-init binary into the rootfs at /init.
+///
+/// The init binary is looked for in the following locations (in order):
+/// 1. Next to the current executable (same directory as bencher-runner)
+/// 2. In PATH
 #[cfg(target_os = "linux")]
-fn generate_init_script(
-    command: &str,
-    workdir: &str,
-    env_exports: &str,
-    output_file: Option<&str>,
-) -> String {
-    // Vsock ports (matching bencher_vmm::ports)
-    const PORT_STDOUT: u32 = 5000;
-    const PORT_STDERR: u32 = 5001;
-    const PORT_EXIT_CODE: u32 = 5002;
-    const PORT_OUTPUT_FILE: u32 = 5005;
+fn install_init_binary(rootfs: &camino::Utf8Path) -> Result<(), RunnerError> {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt as _;
 
-    let workdir_cmd = if workdir.is_empty() || workdir == "/" {
-        String::new()
-    } else {
-        format!("cd {}\n", shell_escape(workdir))
-    };
+    // Find the init binary
+    let init_binary = find_init_binary()?;
 
-    let output_file_send = if output_file.is_some() {
-        format!(
-            r#"
-# Send output file if it exists
-if [ -n "$BENCHER_OUTPUT_FILE" ] && [ -f "$BENCHER_OUTPUT_FILE" ]; then
-    /usr/bin/vsock-send --port {PORT_OUTPUT_FILE} "$BENCHER_OUTPUT_FILE"
-fi
-"#
-        )
-    } else {
-        String::new()
-    };
+    // Copy to /init in the rootfs
+    let dest_path = rootfs.join("init");
+    fs::copy(&init_binary, &dest_path).map_err(|e| {
+        RunnerError::Config(format!(
+            "failed to copy init binary from {} to {}: {e}",
+            init_binary.display(),
+            dest_path
+        ))
+    })?;
 
-    format!(
-        r#"#!/bin/sh
-# Bencher VM init script
-# This script runs the benchmark and sends results to the host via vsock
+    // Make it executable
+    let mut perms = fs::metadata(&dest_path)?.permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&dest_path, perms)?;
 
-set -e
-
-# Create temporary directory for buffering output
-mkdir -p /run/bencher
-
-# Set up environment
-{env_exports}
-# Change to working directory
-{workdir_cmd}
-# Run the benchmark, buffering stdout and stderr
-# Use a subshell to capture the exit code properly
-set +e
-({command}) >/run/bencher/stdout 2>/run/bencher/stderr
-EXIT_CODE=$?
-set -e
-
-# Write exit code to file
-echo "$EXIT_CODE" >/run/bencher/exit_code
-
-# Send results to host via vsock
-# stdout on port {PORT_STDOUT}
-/usr/bin/vsock-send --port {PORT_STDOUT} /run/bencher/stdout
-
-# stderr on port {PORT_STDERR}
-/usr/bin/vsock-send --port {PORT_STDERR} /run/bencher/stderr
-
-# exit code on port {PORT_EXIT_CODE}
-/usr/bin/vsock-send --port {PORT_EXIT_CODE} /run/bencher/exit_code
-{output_file_send}
-# Shutdown the VM
-poweroff -f
-"#
-    )
+    Ok(())
 }
 
-/// Simple shell escaping for arguments.
+/// Find the bencher-init binary.
 #[cfg(target_os = "linux")]
-fn shell_escape(s: &str) -> String {
-    if s.chars()
-        .all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '/' || c == '.')
-    {
-        s.to_owned()
-    } else {
-        format!("'{}'", s.replace('\'', "'\"'\"'"))
+fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
+    // Look in these locations in order
+    let candidates = [
+        // Next to the current executable
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("bencher-init"))),
+        // Common installation paths
+        Some(std::path::PathBuf::from("/usr/local/bin/bencher-init")),
+        Some(std::path::PathBuf::from("/usr/bin/bencher-init")),
+    ];
+
+    for candidate in candidates.into_iter().flatten() {
+        if candidate.exists() {
+            return Ok(candidate);
+        }
     }
+
+    Err(RunnerError::Config(
+        "bencher-init binary not found. Install it next to bencher-runner or in /usr/local/bin/."
+            .to_owned(),
+    ))
 }
 
 /// Execute a single benchmark run (non-Linux stub).
