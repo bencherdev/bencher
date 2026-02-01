@@ -112,39 +112,51 @@ pub async fn auth_oci_token_get(
         (None, vec![])
     };
 
-    // 4. Validate RBAC permissions if a repository is requested
+    // 4. Validate RBAC permissions if a repository is requested AND the organization is claimed
     // The repository name maps to a project slug
+    // For unclaimed organizations, we allow access without RBAC (similar to push behavior)
     if let Some(repo_name) = &repository {
-        // Load the user to check permissions
-        let query_user = QueryUser::get_with_email(public_conn!(context), &email)
-            .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-        let auth_user = AuthUser::load(public_conn!(context), query_user)
-            .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-
         // The repository name is a project UUID or slug
         if let Ok(project_id) = repo_name.parse::<ProjectResourceId>()
             && let Ok(query_project) =
                 QueryProject::from_resource_id(public_conn!(context), &project_id)
         {
-            // Determine required permission based on actions
-            let required_permission = if actions.contains(&"push".to_owned()) {
-                Permission::Create
+            // Check if the organization is claimed
+            let is_claimed = if let Ok(org) = query_project.organization(public_conn!(context)) {
+                org.is_claimed(public_conn!(context)).unwrap_or(false)
             } else {
-                Permission::View
+                false
             };
 
-            // Check if user has permission
-            query_project
-                .try_allowed(&context.rbac, &auth_user, required_permission)
-                .map_err(|_| {
-                    HttpError::for_client_error(
-                        None,
-                        ClientErrorStatusCode::FORBIDDEN,
-                        format!(
-                            "Access denied to repository: {repo_name}. You need {required_permission:?} permission.",
-                        ),
-                    )
-                })?;
+            // Only require RBAC permissions if the organization is claimed
+            if is_claimed {
+                // Load the user to check permissions
+                let query_user = QueryUser::get_with_email(public_conn!(context), &email)
+                    .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+                let auth_user = AuthUser::load(public_conn!(context), query_user)
+                    .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+
+                // Determine required permission based on actions
+                let required_permission = if actions.contains(&"push".to_owned()) {
+                    Permission::Create
+                } else {
+                    Permission::View
+                };
+
+                // Check if user has permission
+                query_project
+                    .try_allowed(&context.rbac, &auth_user, required_permission)
+                    .map_err(|_| {
+                        HttpError::for_client_error(
+                            None,
+                            ClientErrorStatusCode::FORBIDDEN,
+                            format!(
+                                "Access denied to repository: {repo_name}. You need {required_permission:?} permission.",
+                            ),
+                        )
+                    })?;
+            }
+            // If organization is unclaimed, skip RBAC check and issue token
         }
         // If project doesn't exist, we still issue the token.
         // The actual operation will fail with a proper error when they try to use it.
