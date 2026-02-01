@@ -121,7 +121,18 @@ fn run_vcpu_loop(
         }
     }
 
-    // Convert serial output to string
+    // Prefer vsock results if available, fall back to serial output
+    let dm = devices.lock().map_err(|_| {
+        VmmError::Device("Failed to lock device manager".to_owned())
+    })?;
+
+    if let Some(results) = dm.get_vsock_results() {
+        if !results.is_empty() {
+            return Ok(results);
+        }
+    }
+
+    // Fall back to serial output
     let output = String::from_utf8_lossy(&serial_output).to_string();
     Ok(output)
 }

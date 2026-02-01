@@ -31,6 +31,9 @@ const VIRTIO_VENDOR_ID: u32 = 0x554d_4551;
 /// The host's CID (Context ID).
 pub const HOST_CID: u64 = 2;
 
+/// Port for benchmark results (guest connects to HOST_CID:RESULTS_PORT).
+pub const RESULTS_PORT: u32 = 5000;
+
 /// Maximum queue size.
 const QUEUE_SIZE: u16 = 256;
 
@@ -105,7 +108,7 @@ impl VsockPacketHeader {
     const SIZE: usize = std::mem::size_of::<Self>();
 }
 
-/// A vsock connection.
+/// A vsock connection from the host (Unix socket) to the guest.
 struct VsockConnection {
     /// The Unix stream for this connection.
     stream: UnixStream,
@@ -120,6 +123,22 @@ struct VsockConnection {
     /// Buffer allocation advertised by peer.
     peer_buf_alloc: u32,
     /// Forward count from peer.
+    peer_fwd_cnt: u32,
+    /// Our buffer allocation.
+    buf_alloc: u32,
+    /// Bytes we've forwarded.
+    fwd_cnt: u32,
+}
+
+/// A guest-initiated connection (guest connects to host).
+struct GuestConnection {
+    /// Guest's source port.
+    guest_port: u32,
+    /// Host's destination port (what the guest connected to).
+    host_port: u32,
+    /// Buffer allocation advertised by guest.
+    peer_buf_alloc: u32,
+    /// Forward count from guest.
     peer_fwd_cnt: u32,
     /// Our buffer allocation.
     buf_alloc: u32,
@@ -147,8 +166,17 @@ pub struct VirtioVsockDevice {
     /// Queue configuration.
     queue_configs: [QueueConfig; NUM_QUEUES],
 
-    /// Active connections.
+    /// Active host-initiated connections (host -> guest).
     connections: Vec<VsockConnection>,
+
+    /// Active guest-initiated connections (guest -> host).
+    guest_connections: Vec<GuestConnection>,
+
+    /// Buffer for results received from guest on RESULTS_PORT.
+    results_buffer: Vec<u8>,
+
+    /// Flag indicating results are complete (guest closed connection).
+    results_complete: bool,
 
     /// Pending response packets to send to guest.
     pending_rx: VecDeque<(VsockPacketHeader, Vec<u8>)>,
@@ -197,6 +225,9 @@ impl VirtioVsockDevice {
             ],
             queue_configs: Default::default(),
             connections: Vec::new(),
+            guest_connections: Vec::new(),
+            results_buffer: Vec::new(),
+            results_complete: false,
             pending_rx: VecDeque::new(),
             status: 0,
             features_sel: 0,
@@ -232,6 +263,29 @@ impl VirtioVsockDevice {
     #[must_use]
     pub fn has_pending_interrupt(&self) -> bool {
         self.interrupt_status != 0
+    }
+
+    /// Check if results have been received from the guest.
+    #[must_use]
+    pub fn has_results(&self) -> bool {
+        self.results_complete || !self.results_buffer.is_empty()
+    }
+
+    /// Check if results collection is complete (guest closed connection).
+    #[must_use]
+    pub fn results_complete(&self) -> bool {
+        self.results_complete
+    }
+
+    /// Take the collected results, leaving an empty buffer.
+    pub fn take_results(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.results_buffer)
+    }
+
+    /// Get the collected results as a string.
+    #[must_use]
+    pub fn results_as_string(&self) -> String {
+        String::from_utf8_lossy(&self.results_buffer).to_string()
     }
 
     /// Get device features.
@@ -529,8 +583,18 @@ impl VirtioVsockDevice {
 
     /// Handle a connection request from guest.
     fn handle_connect_request(&mut self, header: VsockPacketHeader) {
-        // For now, we just accept all connections
-        // In a real implementation, we'd check if there's a listener on dst_port
+        // Track this guest-initiated connection
+        let guest_conn = GuestConnection {
+            guest_port: header.src_port,
+            host_port: header.dst_port,
+            peer_buf_alloc: header.buf_alloc,
+            peer_fwd_cnt: header.fwd_cnt,
+            buf_alloc: 64 * 1024,
+            fwd_cnt: 0,
+        };
+        self.guest_connections.push(guest_conn);
+
+        // Accept the connection
         let response = VsockPacketHeader {
             src_cid: HOST_CID,
             dst_cid: self.guest_cid,
@@ -548,7 +612,17 @@ impl VirtioVsockDevice {
 
     /// Handle connection reset.
     fn handle_reset(&mut self, header: VsockPacketHeader) {
-        // Remove the connection
+        // Check if this is a guest-initiated connection being reset
+        if header.dst_port == RESULTS_PORT {
+            self.guest_connections.retain(|c| {
+                !(c.guest_port == header.src_port && c.host_port == header.dst_port)
+            });
+            // Treat reset as results complete (even if unexpected)
+            self.results_complete = true;
+            return;
+        }
+
+        // Remove the host-initiated connection
         self.connections.retain(|c| {
             !(c.remote_cid == header.src_cid && c.remote_port == header.src_port)
         });
@@ -556,7 +630,17 @@ impl VirtioVsockDevice {
 
     /// Handle connection shutdown.
     fn handle_shutdown(&mut self, header: VsockPacketHeader) {
-        // Close the connection gracefully
+        // Check if this is the results connection being closed
+        if header.dst_port == RESULTS_PORT {
+            self.guest_connections.retain(|c| {
+                !(c.guest_port == header.src_port && c.host_port == header.dst_port)
+            });
+            // Mark results as complete
+            self.results_complete = true;
+            return;
+        }
+
+        // Close the host-initiated connection gracefully
         self.connections.retain(|c| {
             !(c.remote_cid == header.src_cid && c.remote_port == header.src_port)
         });
@@ -564,7 +648,21 @@ impl VirtioVsockDevice {
 
     /// Handle data from guest.
     fn handle_data(&mut self, header: VsockPacketHeader, data: Vec<u8>) {
-        // Find the connection and write data to the Unix socket
+        // Check if this is data for the results port (guest-initiated connection)
+        if header.dst_port == RESULTS_PORT {
+            // Find the matching guest connection and update fwd_cnt
+            for conn in &mut self.guest_connections {
+                if conn.guest_port == header.src_port && conn.host_port == header.dst_port {
+                    conn.fwd_cnt += data.len() as u32;
+                    break;
+                }
+            }
+            // Collect the results
+            self.results_buffer.extend_from_slice(&data);
+            return;
+        }
+
+        // Otherwise, find the host-initiated connection and write data to the Unix socket
         for conn in &mut self.connections {
             if conn.remote_cid == header.src_cid && conn.remote_port == header.src_port {
                 let _ = conn.stream.write_all(&data);
@@ -678,6 +776,9 @@ impl VirtioVsockDevice {
         self.interrupt_status = 0;
         self.queue_sel = 0;
         self.connections.clear();
+        self.guest_connections.clear();
+        self.results_buffer.clear();
+        self.results_complete = false;
         self.pending_rx.clear();
         for i in 0..NUM_QUEUES {
             self.queue_configs[i] = QueueConfig::default();
