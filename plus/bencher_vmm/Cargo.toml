@@ -33,5 +33,8 @@ vmm-sys-util = { workspace = true }
 [target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
 vm-fdt = { workspace = true }
 
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+tempfile = { workspace = true }
+
 [lints]
 workspace = true

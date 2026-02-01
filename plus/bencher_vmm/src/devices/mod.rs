@@ -199,3 +199,119 @@ impl DeviceManager {
         self.serial.take_output()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use vm_memory::{GuestAddress, GuestMemoryMmap};
+
+    /// Create test guest memory (1 MiB).
+    fn create_test_memory() -> Arc<GuestMemoryMmap> {
+        Arc::new(
+            GuestMemoryMmap::from_ranges(&[(GuestAddress(0), 1024 * 1024)])
+                .expect("Failed to create test memory"),
+        )
+    }
+
+    /// Create a temporary file for testing virtio-blk.
+    fn create_test_disk() -> (tempfile::NamedTempFile, camino::Utf8PathBuf) {
+        let mut file = tempfile::NamedTempFile::new().expect("Failed to create temp file");
+        // Write some test data (at least one sector)
+        let data = vec![0u8; 512];
+        file.write_all(&data).expect("Failed to write test data");
+        file.flush().expect("Failed to flush");
+        let path = camino::Utf8PathBuf::from(file.path().to_string_lossy().to_string());
+        (file, path)
+    }
+
+    #[test]
+    fn test_device_manager_new() {
+        let dm = DeviceManager::new().unwrap();
+        assert!(dm.virtio_blk.is_none());
+        assert!(dm.virtio_vsock.is_none());
+        assert!(!dm.has_pending_virtio_interrupt());
+    }
+
+    #[test]
+    fn test_device_manager_setup_virtio_blk() {
+        let (_file, path) = create_test_disk();
+        let mut dm = DeviceManager::new().unwrap();
+
+        dm.setup_virtio_blk(&path).unwrap();
+        assert!(dm.virtio_blk.is_some());
+    }
+
+    #[test]
+    fn test_device_manager_set_guest_memory() {
+        let (_file, path) = create_test_disk();
+        let mut dm = DeviceManager::new().unwrap();
+        dm.setup_virtio_blk(&path).unwrap();
+
+        let mem = create_test_memory();
+        dm.set_guest_memory(mem);
+
+        // After setting memory, the device should be ready for queue processing
+        // (though we can't fully test that without a running guest)
+    }
+
+    #[test]
+    fn test_device_manager_virtio_mmio_magic() {
+        let (_file, path) = create_test_disk();
+        let mut dm = DeviceManager::new().unwrap();
+        dm.setup_virtio_blk(&path).unwrap();
+
+        // Read the magic value from virtio-blk MMIO
+        let mut data = [0u8; 4];
+        dm.handle_mmio_read(VIRTIO_MMIO_BASE, &mut data);
+
+        let magic = u32::from_le_bytes(data);
+        assert_eq!(magic, 0x7472_6976, "Expected virtio magic value 'virt'");
+    }
+
+    #[test]
+    fn test_device_manager_virtio_device_id() {
+        let (_file, path) = create_test_disk();
+        let mut dm = DeviceManager::new().unwrap();
+        dm.setup_virtio_blk(&path).unwrap();
+
+        // Read the device ID (offset 0x08)
+        let mut data = [0u8; 4];
+        dm.handle_mmio_read(VIRTIO_MMIO_BASE + 0x08, &mut data);
+
+        let device_id = u32::from_le_bytes(data);
+        assert_eq!(device_id, 2, "Expected virtio-blk device ID (2)");
+    }
+
+    #[test]
+    fn test_device_manager_serial_output() {
+        let mut dm = DeviceManager::new().unwrap();
+
+        // Write to serial port (transmit register is at offset 0)
+        dm.handle_io_write(SERIAL_PORT_BASE, &[b'H']);
+        dm.handle_io_write(SERIAL_PORT_BASE, &[b'i']);
+
+        let output = dm.get_serial_output();
+        assert_eq!(&output, b"Hi");
+    }
+
+    #[test]
+    fn test_device_manager_unknown_mmio() {
+        let mut dm = DeviceManager::new().unwrap();
+
+        // Read from an unknown MMIO address
+        let mut data = [0xffu8; 4];
+        dm.handle_mmio_read(0x1234_5678, &mut data);
+
+        // Should return zeros for unknown addresses
+        assert_eq!(data, [0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_device_manager_poll_vsock_no_device() {
+        let mut dm = DeviceManager::new().unwrap();
+
+        // poll_vsock should not panic when no vsock device is configured
+        dm.poll_vsock();
+    }
+}
