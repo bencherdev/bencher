@@ -180,12 +180,15 @@ wasm-bindgen-test = "0.3"
 windows = "0.62"
 zstd = "0.13"
 # rust-vmm
+seccompiler = "0.4"
 virtio-queue = "0.14"
 vm-memory = { version = "0.16", features = ["backend-mmap"] }
 vm-fdt = "0.3"
 vm-superio = "0.8"
 vmm-sys-util = "0.12"
 vsock = "0.5"
+# security
+caps = "0.5"
 # oxide
 dropshot = { version = "0.16", default-features = false }
 progenitor = { version = "0.11", default-features = false }

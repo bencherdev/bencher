@@ -167,8 +167,19 @@ impl Vm {
 
     /// Run the VM until it shuts down or times out.
     ///
+    /// This applies security sandboxing (capability dropping and seccomp filters)
+    /// before entering the VM run loop to limit the attack surface.
+    ///
     /// Returns the benchmark results collected via serial output or vsock.
     pub fn run(&mut self) -> Result<String, VmmError> {
+        // Apply security sandboxing before running the VM
+        // This is done here (not in new()) because:
+        // 1. All setup requiring elevated syscalls is complete
+        // 2. All file descriptors are already opened
+        // 3. Memory regions are already mapped
+        crate::sandbox::drop_capabilities()?;
+        crate::sandbox::apply_seccomp()?;
+
         crate::event_loop::run(&mut self.vcpus, Arc::clone(&self.devices), self.timeout_secs)
     }
 }

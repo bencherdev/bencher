@@ -35,4 +35,7 @@ pub enum VmmError {
 
     #[error("VM execution timed out after {0} seconds")]
     Timeout(u64),
+
+    #[error("Sandbox error: {0}")]
+    Sandbox(String),
 }
