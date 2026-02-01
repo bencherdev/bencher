@@ -3,6 +3,7 @@ name: Claude Code Review
 on:
   pull_request:
     branches: [main, cloud, devel]
+    types: [opened, synchronize, reopened, labeled]
 
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
@@ -16,6 +17,7 @@ jobs:
   claude-review:
     name: Claude Code Review
     runs-on: ubuntu-22.04
+    if: contains(github.event.pull_request.labels.*.name, 'claude')
     permissions:
       contents: read
       pull-requests: write
