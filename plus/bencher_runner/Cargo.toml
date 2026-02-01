@@ -14,8 +14,10 @@ plus = [
     "dep:bencher_rootfs",
     "dep:camino",
     "dep:serde",
+    "dep:serde_json",
     "dep:tempfile",
     "dep:thiserror",
+    "dep:uuid",
     "bencher_vmm/plus",
     "bencher_oci/plus",
     "bencher_oci/registry",
@@ -28,8 +30,16 @@ bencher_oci = { workspace = true, optional = true }
 bencher_rootfs = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
+uuid = { workspace = true, features = ["v4"], optional = true }
+
+# Linux-only dependencies for jail isolation
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = { workspace = true }
+nix = { version = "0.30", features = ["user", "mount", "sched", "resource", "fs"] }
+caps = { workspace = true }
 
 [lints]
 workspace = true

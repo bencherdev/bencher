@@ -4,6 +4,177 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
 
+/// Arguments for the `run` subcommand.
+#[derive(Debug, Clone)]
+pub struct RunArgs {
+    /// OCI image (local path or registry reference).
+    pub image: String,
+    /// JWT token for registry authentication.
+    pub token: Option<String>,
+    /// Number of vCPUs.
+    pub vcpus: u8,
+    /// Memory in MiB.
+    pub memory_mib: u32,
+    /// Execution timeout in seconds.
+    pub timeout_secs: u64,
+    /// Output file path inside guest.
+    pub output_file: Option<String>,
+}
+
+/// Run the `run` subcommand with parsed arguments.
+///
+/// This prepares the jail environment and execs to the `vmm` subcommand.
+#[cfg(target_os = "linux")]
+pub async fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
+    // Build config from args
+    let config = crate::Config {
+        oci_image: args.image.clone(),
+        token: args.token.clone(),
+        kernel: None,
+        vcpus: args.vcpus,
+        memory_mib: args.memory_mib,
+        kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
+        timeout_secs: args.timeout_secs,
+        output_file: args.output_file.clone(),
+    };
+
+    // Prepare the environment (creates rootfs, writes init script, etc.)
+    // then exec to the vmm subcommand
+    exec_to_vmm(&config).await
+}
+
+/// Prepare the jail environment and exec to the vmm subcommand.
+///
+/// This function:
+/// 1. Creates a temporary work directory (jail root)
+/// 2. Resolves OCI image (local or registry)
+/// 3. Creates squashfs rootfs
+/// 4. Writes kernel to jail root
+/// 5. Execs to `bencher-runner vmm` with the jail root
+#[cfg(target_os = "linux")]
+async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
+    use std::fs;
+    use std::os::unix::process::CommandExt as _;
+    use std::process::Command;
+
+    println!("Preparing benchmark run:");
+    println!("  OCI image: {}", config.oci_image);
+    println!("  vCPUs: {}", config.vcpus);
+    println!("  Memory: {} MiB", config.memory_mib);
+    println!("  Timeout: {} seconds", config.timeout_secs);
+
+    // Create a persistent work directory for the jail
+    // We use a directory under /tmp that won't be cleaned up when we exec
+    let run_id = uuid::Uuid::new_v4();
+    let jail_root = Utf8PathBuf::from(format!("/tmp/bencher-runner/{run_id}"));
+    fs::create_dir_all(&jail_root)?;
+
+    let unpack_dir = jail_root.join("unpack");
+    let rootfs_path = Utf8PathBuf::from("/rootfs.squashfs"); // Path inside jail after pivot_root
+    let kernel_path = Utf8PathBuf::from("/vmlinux"); // Path inside jail after pivot_root
+    let vsock_path = Utf8PathBuf::from("/vsock.sock"); // Path inside jail after pivot_root
+
+    // Actual paths on host filesystem (in jail_root)
+    let host_rootfs_path = jail_root.join("rootfs.squashfs");
+    let host_kernel_path = jail_root.join("vmlinux");
+    let host_vsock_path = jail_root.join("vsock.sock");
+
+    // Step 1: Resolve OCI image (local path or pull from registry)
+    let cache_dir = config.cache_dir();
+    let oci_image_path =
+        resolve_oci_image(&config.oci_image, config.token.as_deref(), &cache_dir).await?;
+
+    // Step 2: Parse OCI image config to get the command
+    println!("Parsing OCI image config...");
+    let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
+    let command = oci_image.command();
+    let workdir = oci_image.working_dir().unwrap_or("/");
+    let env = oci_image.env();
+
+    if command.is_empty() {
+        // Clean up on error
+        let _ = fs::remove_dir_all(&jail_root);
+        return Err(RunnerError::Config(
+            "OCI image has no CMD or ENTRYPOINT set".to_owned(),
+        ));
+    }
+
+    println!("  Command: {}", command.join(" "));
+    println!("  WorkDir: {workdir}");
+    if !env.is_empty() {
+        println!("  Env: {} variables", env.len());
+    }
+
+    // Step 3: Unpack OCI image
+    println!("Unpacking OCI image to {unpack_dir}...");
+    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
+
+    // Step 4: Write command config and init script for the VM
+    println!("Writing init script...");
+    write_init_script(
+        &unpack_dir,
+        &command,
+        workdir,
+        &env,
+        config.output_file.as_deref(),
+    )?;
+
+    // Step 5: Create squashfs rootfs
+    println!("Creating squashfs at {host_rootfs_path}...");
+    bencher_rootfs::create_squashfs(&unpack_dir, &host_rootfs_path)?;
+
+    // Clean up the unpack directory - we only need the squashfs now
+    let _ = fs::remove_dir_all(&unpack_dir);
+
+    // Step 6: Write bundled kernel to jail root
+    println!("Writing bundled kernel to {host_kernel_path}...");
+    bencher_vmm::write_kernel_to_file(host_kernel_path.as_std_path())?;
+
+    // Step 7: Get the path to ourselves for exec
+    let exe_path = std::env::current_exe().map_err(|e| {
+        let _ = fs::remove_dir_all(&jail_root);
+        RunnerError::Io(e)
+    })?;
+
+    // Step 8: Build arguments for vmm subcommand
+    let vmm_args = vec![
+        "vmm".to_owned(),
+        "--jail-root".to_owned(),
+        jail_root.to_string(),
+        "--kernel".to_owned(),
+        kernel_path.to_string(),
+        "--rootfs".to_owned(),
+        rootfs_path.to_string(),
+        "--vsock".to_owned(),
+        vsock_path.to_string(),
+        "--vcpus".to_owned(),
+        config.vcpus.to_string(),
+        "--memory".to_owned(),
+        config.memory_mib.to_string(),
+        "--timeout".to_owned(),
+        config.timeout_secs.to_string(),
+    ];
+
+    println!("Exec'ing to vmm subcommand...");
+    println!("  Jail root: {jail_root}");
+
+    // Exec to ourselves with vmm subcommand
+    // This replaces our process, so we don't return
+    let err = Command::new(&exe_path).args(&vmm_args).exec();
+
+    // If we get here, exec failed
+    let _ = fs::remove_dir_all(&jail_root);
+    Err(RunnerError::Io(err))
+}
+
+/// Non-Linux stub for `run_with_args`.
+#[cfg(not(target_os = "linux"))]
+pub async fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
+    Err(RunnerError::Config(
+        "bencher-runner requires Linux".to_owned(),
+    ))
+}
+
 /// Run the benchmark runner.
 ///
 /// This is the main entry point for the runner binary.

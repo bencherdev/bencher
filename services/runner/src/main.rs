@@ -1,20 +1,19 @@
-#![expect(clippy::print_stderr)]
+//! Bencher Runner CLI.
+//!
+//! Usage:
+//!   bencher-runner run --image <IMAGE> [OPTIONS]
+//!   bencher-runner vmm --jail-root <PATH> --kernel <PATH> --rootfs <PATH> [OPTIONS]
 
-fn main() {
-    #[cfg(all(feature = "plus", target_os = "linux"))]
-    {
-        let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-        rt.block_on(async {
-            if let Err(e) = bencher_runner::run().await {
-                eprintln!("Runner error: {e}");
-                std::process::exit(1);
-            }
-        });
-    }
+mod parser;
+mod runner;
 
-    #[cfg(not(all(feature = "plus", target_os = "linux")))]
-    {
-        eprintln!("Bencher Runner requires the `plus` feature and Linux");
-        std::process::exit(1);
-    }
+use runner::Runner;
+
+fn main() -> anyhow::Result<()> {
+    exec()
+}
+
+fn exec() -> anyhow::Result<()> {
+    let runner = Runner::new()?;
+    runner.exec()
 }
