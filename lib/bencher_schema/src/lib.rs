@@ -1,3 +1,5 @@
+#[cfg(test)]
+use criterion as _;
 use diesel::connection::SimpleConnection as _;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness as _, embed_migrations};
 
@@ -6,6 +8,8 @@ pub mod error;
 pub mod macros;
 pub mod model;
 pub mod schema;
+#[cfg(test)]
+pub mod test_util;
 pub mod view;
 
 pub use context::ApiContext;

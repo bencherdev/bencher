@@ -90,7 +90,7 @@ jobs:
         with:
           mold-version: ${{ inputs.mold-version }}
       - name: Run Benchmarks
-        run: cargo bench --package bencher_adapter | tee benchmark_results.txt
+        run: cargo bench --package bencher_adapter --package bencher_schema | tee benchmark_results.txt
       - name: Upload Benchmark Results
         uses: actions/upload-artifact@v4
         with:
