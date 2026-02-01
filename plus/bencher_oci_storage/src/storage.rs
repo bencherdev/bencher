@@ -18,7 +18,7 @@ use std::str::FromStr;
 
 use aws_sdk_s3::Client;
 use aws_sdk_s3::types::CompletedMultipartUpload;
-use bencher_json::{system::config::OciDataStore, Secret};
+use bencher_json::{Secret, system::config::OciDataStore};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
@@ -37,8 +37,8 @@ pub enum OciStorageError {
     #[error("S3 error: {0}")]
     S3(String),
 
-    #[error("IO error: {0}")]
-    Io(String),
+    #[error("Local storage error: {0}")]
+    LocalStorage(String),
 
     #[error("Upload not found: {0}")]
     UploadNotFound(String),
@@ -71,11 +71,13 @@ impl OciStorageError {
         match self {
             Self::UploadNotFound(_) | Self::BlobNotFound(_) | Self::ManifestNotFound(_) => {
                 http::StatusCode::NOT_FOUND
-            }
+            },
             Self::DigestMismatch { .. } | Self::InvalidContent(_) => http::StatusCode::BAD_REQUEST,
-            Self::S3(_) | Self::Io(_) | Self::InvalidArn(_) | Self::Config(_) | Self::Json(_) => {
-                http::StatusCode::INTERNAL_SERVER_ERROR
-            }
+            Self::S3(_)
+            | Self::LocalStorage(_)
+            | Self::InvalidArn(_)
+            | Self::Config(_)
+            | Self::Json(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -127,7 +129,10 @@ pub(crate) struct OciS3Storage {
 }
 
 /// OCI Storage backend - supports S3 or local filesystem
-#[expect(private_interfaces, reason = "Users interact via methods, not variants")]
+#[expect(
+    private_interfaces,
+    reason = "Users interact via methods, not variants"
+)]
 pub enum OciStorage {
     /// S3-based storage (recommended for production)
     S3(OciS3Storage),
@@ -267,7 +272,11 @@ impl OciStorage {
     ) -> Result<bool, OciStorageError> {
         match self {
             Self::S3(s3) => s3.mount_blob(from_repository, to_repository, digest).await,
-            Self::Local(local) => local.mount_blob(from_repository, to_repository, digest).await,
+            Self::Local(local) => {
+                local
+                    .mount_blob(from_repository, to_repository, digest)
+                    .await
+            },
         }
     }
 
@@ -353,8 +362,15 @@ impl OciStorage {
         artifact_type_filter: Option<&str>,
     ) -> Result<Vec<serde_json::Value>, OciStorageError> {
         match self {
-            Self::S3(s3) => s3.list_referrers(repository, subject_digest, artifact_type_filter).await,
-            Self::Local(local) => local.list_referrers(repository, subject_digest, artifact_type_filter).await,
+            Self::S3(s3) => {
+                s3.list_referrers(repository, subject_digest, artifact_type_filter)
+                    .await
+            },
+            Self::Local(local) => {
+                local
+                    .list_referrers(repository, subject_digest, artifact_type_filter)
+                    .await
+            },
         }
     }
 }
@@ -481,7 +497,10 @@ impl OciS3Storage {
     // ==================== Upload State Management ====================
 
     /// Loads upload state from S3
-    async fn load_upload_state(&self, upload_id: &UploadId) -> Result<UploadState, OciStorageError> {
+    async fn load_upload_state(
+        &self,
+        upload_id: &UploadId,
+    ) -> Result<UploadState, OciStorageError> {
         let key = self.upload_state_key(upload_id);
         let response = self
             .client
@@ -549,14 +568,14 @@ impl OciS3Storage {
                     .map_err(|e| OciStorageError::S3(e.to_string()))?
                     .into_bytes();
                 Ok(data.to_vec())
-            }
+            },
             Err(e) => {
                 if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
                     Ok(Vec::new())
                 } else {
                     Err(OciStorageError::S3(e.to_string()))
                 }
-            }
+            },
         }
     }
 
@@ -825,12 +844,13 @@ impl OciS3Storage {
         }
 
         // Parse repository name
-        let repository: RepositoryName = state
-            .repository
-            .parse()
-            .map_err(|e: crate::types::RepositoryNameError| {
-                OciStorageError::InvalidContent(e.to_string())
-            })?;
+        let repository: RepositoryName =
+            state
+                .repository
+                .parse()
+                .map_err(|e: crate::types::RepositoryNameError| {
+                    OciStorageError::InvalidContent(e.to_string())
+                })?;
 
         // Copy to final blob location
         // For S3 Access Points, copy source must use the format:
@@ -897,7 +917,7 @@ impl OciS3Storage {
                 } else {
                     Err(OciStorageError::S3(e.to_string()))
                 }
-            }
+            },
         }
     }
 

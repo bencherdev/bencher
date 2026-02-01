@@ -24,12 +24,14 @@ use bencher_schema::{
     },
     public_conn,
 };
-use bencher_token::OCI_TOKEN_TTL;
 use chrono::Utc;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Query, RequestContext, endpoint};
 use http::Response;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+/// OCI token TTL: 5 minutes (300 seconds)
+pub const OCI_TOKEN_TTL: u32 = 300;
 
 /// Query parameters for token endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -116,19 +118,13 @@ pub async fn auth_oci_token_get(
         // Load the user to check permissions
         let query_user = QueryUser::get_with_email(public_conn!(context), &email)
             .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-        let auth_user = AuthUser::load(
-            public_conn!(context),
-            query_user,
-        )
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+        let auth_user = AuthUser::load(public_conn!(context), query_user)
+            .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
 
         // Try to find the project by slug
         // The repository name could be "project-slug" or "org/project"
         // We try to look it up as a project slug
-        let project_slug = repo_name
-            .split('/')
-            .next_back()
-            .unwrap_or(repo_name);
+        let project_slug = repo_name.split('/').next_back().unwrap_or(repo_name);
 
         if let Ok(project_id) = project_slug.parse::<ProjectResourceId>()
             && let Ok(query_project) =
@@ -161,7 +157,7 @@ pub async fn auth_oci_token_get(
     // 5. Create OCI token with the validated scope
     let jwt = context
         .token_key
-        .new_oci(email, repository, actions)
+        .new_oci(email, OCI_TOKEN_TTL, repository, actions)
         .map_err(|e| HttpError::for_internal_error(format!("Failed to create OCI token: {e}")))?;
 
     // 6. Build response
