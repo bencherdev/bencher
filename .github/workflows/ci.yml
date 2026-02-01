@@ -104,6 +104,8 @@ jobs:
     uses: ./.github/workflows/runner.yml
     with:
       mold-version: "2.34.1"
+      zig-version: "0.13.0"
+      zig-build-version: "0.19.3"
 
   test:
     name: Test

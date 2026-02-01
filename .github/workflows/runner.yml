@@ -6,13 +6,20 @@ on:
       mold-version:
         type: string
         required: true
+      zig-version:
+        type: string
+        required: true
+      zig-build-version:
+        type: string
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
+  RUNNER_BIN_NAME: bencher-runner
 
 jobs:
   test_runner:
-    name: Test VMM Integration Test
+    name: Test VMM Integration
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
@@ -32,3 +39,47 @@ jobs:
           grep -E 'vmx|svm' /proc/cpuinfo | head -1
       - name: Run test-runner
         run: cargo test-runner test
+
+  build_runner:
+    name: Build Runner (${{ matrix.build }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build: linux-x86-64
+            target: x86_64-unknown-linux-gnu
+            init-target: x86_64-unknown-linux-musl
+          - build: linux-arm-64
+            target: aarch64-unknown-linux-gnu
+            init-target: aarch64-unknown-linux-musl
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set Runner version
+        run: |
+          VERSION="${{ github.head_ref || github.ref_name }}"
+          echo "RUNNER_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          mold-version: ${{ inputs.mold-version }}
+          cache-key: build-runner-${{ matrix.build }}
+      - name: Install Rust targets
+        run: rustup target add ${{ matrix.target }} ${{ matrix.init-target }}
+      - uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ inputs.zig-version }}
+      - name: Install cargo-zigbuild
+        run: cargo install --version ${{ inputs.zig-build-version }} --locked --force cargo-zigbuild
+      - name: Build bencher-init (static musl)
+        run: cargo zigbuild --release --target ${{ matrix.init-target }} -p bencher_init
+      - name: Build bencher-runner (release)
+        run: cargo zigbuild --release --target ${{ matrix.target }} -p bencher_runner --features plus
+      - name: Rename Runner binary
+        run: mv ./target/${{ matrix.target }}/release/${{ env.RUNNER_BIN_NAME }} ${{ env.RUNNER_BIN_NAME }}-${{ env.RUNNER_VERSION }}-${{ matrix.build }}
+      - name: Upload Runner Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.RUNNER_BIN_NAME }}-${{ env.RUNNER_VERSION }}-${{ matrix.build }}
+          path: ${{ env.RUNNER_BIN_NAME }}-${{ env.RUNNER_VERSION }}-${{ matrix.build }}
+          if-no-files-found: error
