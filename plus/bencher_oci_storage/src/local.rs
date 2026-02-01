@@ -115,17 +115,18 @@ impl OciLocalStorage {
     // ==================== Upload State Management ====================
 
     /// Loads upload state from disk
-    async fn load_upload_state(&self, upload_id: &UploadId) -> Result<UploadState, OciStorageError> {
+    async fn load_upload_state(
+        &self,
+        upload_id: &UploadId,
+    ) -> Result<UploadState, OciStorageError> {
         let path = self.upload_state_path(upload_id);
-        let data = fs::read(&path)
-            .await
-            .map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    OciStorageError::UploadNotFound(upload_id.to_string())
-                } else {
-                    OciStorageError::Io(format!("Failed to read upload state: {e}"))
-                }
-            })?;
+        let data = fs::read(&path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                OciStorageError::UploadNotFound(upload_id.to_string())
+            } else {
+                OciStorageError::LocalStorage(format!("Failed to read upload state: {e}"))
+            }
+        })?;
 
         serde_json::from_slice(&data).map_err(|e| OciStorageError::Json(e.to_string()))
     }
@@ -138,9 +139,9 @@ impl OciLocalStorage {
     ) -> Result<(), OciStorageError> {
         let path = self.upload_state_path(upload_id);
         let data = serde_json::to_vec(state).map_err(|e| OciStorageError::Json(e.to_string()))?;
-        fs::write(&path, &data)
-            .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to write upload state: {e}")))?;
+        fs::write(&path, &data).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to write upload state: {e}"))
+        })?;
         Ok(())
     }
 
@@ -155,15 +156,15 @@ impl OciLocalStorage {
         let upload_dir = self.upload_dir(&upload_id);
 
         // Create upload directory
-        fs::create_dir_all(&upload_dir)
-            .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to create upload directory: {e}")))?;
+        fs::create_dir_all(&upload_dir).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to create upload directory: {e}"))
+        })?;
 
         // Create empty data file
         let data_path = self.upload_data_path(&upload_id);
-        fs::File::create(&data_path)
-            .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to create upload data file: {e}")))?;
+        fs::File::create(&data_path).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to create upload data file: {e}"))
+        })?;
 
         // Save initial state
         let state = UploadState {
@@ -190,11 +191,13 @@ impl OciLocalStorage {
             .append(true)
             .open(&data_path)
             .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to open upload data file: {e}")))?;
+            .map_err(|e| {
+                OciStorageError::LocalStorage(format!("Failed to open upload data file: {e}"))
+            })?;
 
-        file.write_all(&data)
-            .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to write upload data: {e}")))?;
+        file.write_all(&data).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to write upload data: {e}"))
+        })?;
 
         // Update state
         state.size += data.len() as u64;
@@ -220,9 +223,9 @@ impl OciLocalStorage {
 
         // Read the uploaded data
         let data_path = self.upload_data_path(upload_id);
-        let data = fs::read(&data_path)
-            .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to read upload data: {e}")))?;
+        let data = fs::read(&data_path).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to read upload data: {e}"))
+        })?;
 
         if data.is_empty() {
             self.cleanup_upload(upload_id).await;
@@ -247,23 +250,24 @@ impl OciLocalStorage {
         }
 
         // Parse repository name
-        let repository: RepositoryName = state
-            .repository
-            .parse()
-            .map_err(|e: crate::types::RepositoryNameError| {
-                OciStorageError::InvalidContent(e.to_string())
-            })?;
+        let repository: RepositoryName =
+            state
+                .repository
+                .parse()
+                .map_err(|e: crate::types::RepositoryNameError| {
+                    OciStorageError::InvalidContent(e.to_string())
+                })?;
 
         // Copy to final blob location
         let blob_path = self.blob_path(&repository, &actual_digest);
         if let Some(parent) = blob_path.parent() {
-            fs::create_dir_all(parent)
-                .await
-                .map_err(|e| OciStorageError::Io(format!("Failed to create blob directory: {e}")))?;
+            fs::create_dir_all(parent).await.map_err(|e| {
+                OciStorageError::LocalStorage(format!("Failed to create blob directory: {e}"))
+            })?;
         }
         fs::copy(&data_path, &blob_path)
             .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to copy blob: {e}")))?;
+            .map_err(|e| OciStorageError::LocalStorage(format!("Failed to copy blob: {e}")))?;
 
         // Clean up
         self.cleanup_upload(upload_id).await;
@@ -304,15 +308,13 @@ impl OciLocalStorage {
         digest: &Digest,
     ) -> Result<(Bytes, u64), OciStorageError> {
         let path = self.blob_path(repository, digest);
-        let data = fs::read(&path)
-            .await
-            .map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    OciStorageError::BlobNotFound(digest.to_string())
-                } else {
-                    OciStorageError::Io(format!("Failed to read blob: {e}"))
-                }
-            })?;
+        let data = fs::read(&path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                OciStorageError::BlobNotFound(digest.to_string())
+            } else {
+                OciStorageError::LocalStorage(format!("Failed to read blob: {e}"))
+            }
+        })?;
 
         let size = data.len() as u64;
         Ok((Bytes::from(data), size))
@@ -325,15 +327,13 @@ impl OciLocalStorage {
         digest: &Digest,
     ) -> Result<u64, OciStorageError> {
         let path = self.blob_path(repository, digest);
-        let metadata = fs::metadata(&path)
-            .await
-            .map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    OciStorageError::BlobNotFound(digest.to_string())
-                } else {
-                    OciStorageError::Io(format!("Failed to get blob metadata: {e}"))
-                }
-            })?;
+        let metadata = fs::metadata(&path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                OciStorageError::BlobNotFound(digest.to_string())
+            } else {
+                OciStorageError::LocalStorage(format!("Failed to get blob metadata: {e}"))
+            }
+        })?;
 
         Ok(metadata.len())
     }
@@ -349,7 +349,9 @@ impl OciLocalStorage {
             Ok(()) => Ok(()),
             // File already deleted or never existed - that's fine
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(OciStorageError::Io(format!("Failed to delete blob: {e}"))),
+            Err(e) => Err(OciStorageError::LocalStorage(format!(
+                "Failed to delete blob: {e}"
+            ))),
         }
     }
 
@@ -370,14 +372,14 @@ impl OciLocalStorage {
         let dest_path = self.blob_path(to_repository, digest);
 
         if let Some(parent) = dest_path.parent() {
-            fs::create_dir_all(parent)
-                .await
-                .map_err(|e| OciStorageError::Io(format!("Failed to create blob directory: {e}")))?;
+            fs::create_dir_all(parent).await.map_err(|e| {
+                OciStorageError::LocalStorage(format!("Failed to create blob directory: {e}"))
+            })?;
         }
 
         fs::copy(&source_path, &dest_path)
             .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to copy blob: {e}")))?;
+            .map_err(|e| OciStorageError::LocalStorage(format!("Failed to copy blob: {e}")))?;
 
         Ok(true)
     }
@@ -400,25 +402,25 @@ impl OciLocalStorage {
         // Store manifest by digest
         let manifest_path = self.manifest_path(repository, &digest);
         if let Some(parent) = manifest_path.parent() {
-            fs::create_dir_all(parent)
-                .await
-                .map_err(|e| OciStorageError::Io(format!("Failed to create manifest directory: {e}")))?;
+            fs::create_dir_all(parent).await.map_err(|e| {
+                OciStorageError::LocalStorage(format!("Failed to create manifest directory: {e}"))
+            })?;
         }
         fs::write(&manifest_path, &content)
             .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to write manifest: {e}")))?;
+            .map_err(|e| OciStorageError::LocalStorage(format!("Failed to write manifest: {e}")))?;
 
         // If a tag was provided, create a tag link
         if let Some(tag) = tag {
             let tag_path = self.tag_path(repository, tag);
             if let Some(parent) = tag_path.parent() {
-                fs::create_dir_all(parent)
-                    .await
-                    .map_err(|e| OciStorageError::Io(format!("Failed to create tag directory: {e}")))?;
+                fs::create_dir_all(parent).await.map_err(|e| {
+                    OciStorageError::LocalStorage(format!("Failed to create tag directory: {e}"))
+                })?;
             }
             fs::write(&tag_path, digest.to_string())
                 .await
-                .map_err(|e| OciStorageError::Io(format!("Failed to write tag: {e}")))?;
+                .map_err(|e| OciStorageError::LocalStorage(format!("Failed to write tag: {e}")))?;
         }
 
         // Check if manifest has a subject field (for referrers API)
@@ -465,13 +467,18 @@ impl OciLocalStorage {
             // Store referrer link
             let referrer_path = self.referrer_path(repository, &subject_digest, &digest);
             if let Some(parent) = referrer_path.parent() {
-                fs::create_dir_all(parent)
-                    .await
-                    .map_err(|e| OciStorageError::Io(format!("Failed to create referrer directory: {e}")))?;
+                fs::create_dir_all(parent).await.map_err(|e| {
+                    OciStorageError::LocalStorage(format!(
+                        "Failed to create referrer directory: {e}"
+                    ))
+                })?;
             }
-            fs::write(&referrer_path, serde_json::to_vec(&descriptor).unwrap_or_default())
-                .await
-                .map_err(|e| OciStorageError::Io(format!("Failed to write referrer: {e}")))?;
+            fs::write(
+                &referrer_path,
+                serde_json::to_vec(&descriptor).unwrap_or_default(),
+            )
+            .await
+            .map_err(|e| OciStorageError::LocalStorage(format!("Failed to write referrer: {e}")))?;
         }
 
         Ok(digest)
@@ -484,15 +491,13 @@ impl OciLocalStorage {
         digest: &Digest,
     ) -> Result<Bytes, OciStorageError> {
         let path = self.manifest_path(repository, digest);
-        let data = fs::read(&path)
-            .await
-            .map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    OciStorageError::ManifestNotFound(digest.to_string())
-                } else {
-                    OciStorageError::Io(format!("Failed to read manifest: {e}"))
-                }
-            })?;
+        let data = fs::read(&path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                OciStorageError::ManifestNotFound(digest.to_string())
+            } else {
+                OciStorageError::LocalStorage(format!("Failed to read manifest: {e}"))
+            }
+        })?;
 
         Ok(Bytes::from(data))
     }
@@ -504,15 +509,13 @@ impl OciLocalStorage {
         tag: &str,
     ) -> Result<Digest, OciStorageError> {
         let path = self.tag_path(repository, tag);
-        let data = fs::read_to_string(&path)
-            .await
-            .map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    OciStorageError::ManifestNotFound(tag.to_owned())
-                } else {
-                    OciStorageError::Io(format!("Failed to read tag: {e}"))
-                }
-            })?;
+        let data = fs::read_to_string(&path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                OciStorageError::ManifestNotFound(tag.to_owned())
+            } else {
+                OciStorageError::LocalStorage(format!("Failed to read tag: {e}"))
+            }
+        })?;
 
         data.trim()
             .parse()
@@ -531,14 +534,14 @@ impl OciLocalStorage {
         }
 
         let mut tags = Vec::new();
-        let mut entries = fs::read_dir(&tags_dir)
-            .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to read tags directory: {e}")))?;
+        let mut entries = fs::read_dir(&tags_dir).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to read tags directory: {e}"))
+        })?;
 
         while let Some(entry) = entries
             .next_entry()
             .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to read tag entry: {e}")))?
+            .map_err(|e| OciStorageError::LocalStorage(format!("Failed to read tag entry: {e}")))?
         {
             if let Some(name) = entry.file_name().to_str() {
                 tags.push(name.to_owned());
@@ -559,7 +562,9 @@ impl OciLocalStorage {
             Ok(()) => Ok(()),
             // File already deleted or never existed - that's fine
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(OciStorageError::Io(format!("Failed to delete manifest: {e}"))),
+            Err(e) => Err(OciStorageError::LocalStorage(format!(
+                "Failed to delete manifest: {e}"
+            ))),
         }
     }
 
@@ -574,7 +579,9 @@ impl OciLocalStorage {
             Ok(()) => Ok(()),
             // File already deleted or never existed - that's fine
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(OciStorageError::Io(format!("Failed to delete tag: {e}"))),
+            Err(e) => Err(OciStorageError::LocalStorage(format!(
+                "Failed to delete tag: {e}"
+            ))),
         }
     }
 
@@ -592,15 +599,13 @@ impl OciLocalStorage {
         }
 
         let mut referrers = Vec::new();
-        let mut entries = fs::read_dir(&referrers_dir)
-            .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to read referrers directory: {e}")))?;
+        let mut entries = fs::read_dir(&referrers_dir).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to read referrers directory: {e}"))
+        })?;
 
-        while let Some(entry) = entries
-            .next_entry()
-            .await
-            .map_err(|e| OciStorageError::Io(format!("Failed to read referrer entry: {e}")))?
-        {
+        while let Some(entry) = entries.next_entry().await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to read referrer entry: {e}"))
+        })? {
             let Ok(data) = fs::read(entry.path()).await else {
                 continue;
             };

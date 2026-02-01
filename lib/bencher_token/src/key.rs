@@ -16,9 +16,6 @@ use crate::{
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
 static ALGORITHM: LazyLock<Algorithm> = LazyLock::new(Algorithm::default);
 
-/// OCI token TTL: 5 minutes (300 seconds)
-pub const OCI_TOKEN_TTL: u32 = 300;
-
 pub struct TokenKey {
     pub issuer: String,
     pub encoding: EncodingKey,
@@ -90,6 +87,7 @@ impl TokenKey {
     pub fn new_oci(
         &self,
         email: Email,
+        ttl: u32,
         repository: Option<String>,
         actions: Vec<String>,
     ) -> Result<Jwt, TokenError> {
@@ -97,7 +95,7 @@ impl TokenKey {
             repository,
             actions,
         };
-        self.new_jwt(Audience::Oci, email, OCI_TOKEN_TTL, None, None, Some(oci_claims))
+        self.new_jwt(Audience::Oci, email, ttl, None, None, Some(oci_claims))
     }
 
     fn validate(
