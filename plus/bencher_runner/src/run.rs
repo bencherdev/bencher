@@ -69,7 +69,7 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
     // Create a persistent work directory for the jail
     // We use a directory under /tmp that won't be cleaned up when we exec
     let run_id = uuid::Uuid::new_v4();
-    let jail_root = Utf8PathBuf::from(format!("/tmp/bencher-runner/{run_id}"));
+    let jail_root = Utf8PathBuf::from(format!("/tmp/bencher/{run_id}"));
     fs::create_dir_all(&jail_root)?;
 
     let unpack_dir = jail_root.join("unpack");
@@ -468,11 +468,11 @@ fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
 
 /// Base directory for jail roots.
 #[cfg(target_os = "linux")]
-const JAIL_BASE_DIR: &str = "/tmp/bencher-runner";
+const JAIL_BASE_DIR: &str = "/tmp/bencher";
 
 /// Clean up stale jail directories from previous runs.
 ///
-/// This removes any leftover directories in `/tmp/bencher-runner/` that were
+/// This removes any leftover directories in `/tmp/bencher/` that were
 /// not cleaned up due to the pivot_root architecture (we can't clean up after
 /// ourselves once we've pivoted into the jail).
 #[cfg(target_os = "linux")]
