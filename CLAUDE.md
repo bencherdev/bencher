@@ -92,7 +92,9 @@ npm run setup                  # Run typeshare + wasm + copy files
 
 ### Rust
 
+- Make sure to always run `cargo clippy` and fix all warnings
 - Use `#[expect(...)]` instead of `#[allow(...)]` for lint suppression
+- Do **NOT** suppress a lint outside of a test module without explicit approval
 - Avoid `unwrap()` and `expect()` in production code (allowed in tests)
 - Avoid unbounded channels - use bounded `mpsc::channel` instead
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
