@@ -1674,6 +1674,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_vsock_send"
+version = "0.5.10"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "bin_version"
 version = "0.5.10"
 

@@ -210,6 +210,29 @@ impl DeviceManager {
     pub fn get_serial_output(&mut self) -> Vec<u8> {
         self.serial.take_output()
     }
+
+    /// Check if vsock results are available.
+    #[must_use]
+    pub fn has_vsock_results(&self) -> bool {
+        self.virtio_vsock.as_ref().is_some_and(|v| v.has_results())
+    }
+
+    /// Check if vsock results collection is complete.
+    #[must_use]
+    pub fn vsock_results_complete(&self) -> bool {
+        self.virtio_vsock.as_ref().is_some_and(|v| v.results_complete())
+    }
+
+    /// Get the vsock results as a string.
+    #[must_use]
+    pub fn get_vsock_results(&self) -> Option<String> {
+        self.virtio_vsock.as_ref().map(|v| v.results_as_string())
+    }
+
+    /// Take the vsock results, leaving an empty buffer.
+    pub fn take_vsock_results(&mut self) -> Option<Vec<u8>> {
+        self.virtio_vsock.as_mut().map(|v| v.take_results())
+    }
 }
 
 #[cfg(test)]
