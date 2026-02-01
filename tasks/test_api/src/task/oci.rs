@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use crate::parser::TaskOci;
+use crate::parser::{TEST_ADMIN_API_TOKEN, TEST_ADMIN_USERNAME, TaskOci};
 
 #[derive(Debug)]
 pub struct Oci {
@@ -39,6 +39,16 @@ impl TryFrom<TaskOci> for Oci {
             cwd.join(&task.spec_dir)
         };
 
+        // Use admin credentials when --admin flag is set
+        let (username, password) = if task.admin {
+            (
+                TEST_ADMIN_USERNAME.to_owned(),
+                TEST_ADMIN_API_TOKEN.to_owned(),
+            )
+        } else {
+            (task.username, task.password)
+        };
+
         Ok(Self {
             api_url: task.api_url,
             namespace: task.namespace,
@@ -48,8 +58,8 @@ impl TryFrom<TaskOci> for Oci {
             debug: task.debug,
             output_dir,
             spec_dir,
-            username: task.username,
-            password: task.password,
+            username,
+            password,
         })
     }
 }

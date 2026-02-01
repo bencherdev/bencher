@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 mod oci;
 mod test;
 
-pub use oci::TaskOci;
+pub use oci::{TEST_ADMIN_API_TOKEN, TEST_ADMIN_USERNAME, TaskOci};
 pub use test::{TaskExample, TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment};
 
 #[derive(Parser, Debug)]

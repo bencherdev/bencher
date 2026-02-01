@@ -203,7 +203,7 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
             SeedTest::try_from(task)?.exec()?;
 
             // Run OCI conformance tests
-            let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref()))?;
+            let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref(), true))?;
             oci.exec()?;
 
             Ok(())
@@ -218,7 +218,7 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
             SeedTest::try_from(task)?.exec()?;
 
             // Run OCI conformance tests
-            let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref()))?;
+            let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref(), true))?;
             oci.exec()?;
 
             if examples {

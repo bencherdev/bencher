@@ -8,9 +8,9 @@
 //! Clients authenticate using Basic auth with their Bencher API token
 //! as the password, and receive a short-lived JWT for OCI operations.
 //!
-//! RBAC validation is performed when a scope is requested:
-//! - "pull" action requires View permission on the project
-//! - "push" action requires Create permission on the project
+//! Authorization:
+//! - "pull" action requires server admin privileges
+//! - "push" action requires Create permission on the project (for claimed orgs)
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
@@ -112,67 +112,73 @@ pub async fn auth_oci_token_get(
         (None, vec![])
     };
 
-    // 4. Validate RBAC permissions if a repository is requested AND the organization is claimed
-    // The repository name maps to a project slug
-    // For unclaimed organizations, we allow access without RBAC (similar to push behavior)
-    if let Some(repo_name) = &repository {
-        // The repository name is a project UUID or slug
-        if let Ok(project_id) = repo_name.parse::<ProjectResourceId>()
-            && let Ok(query_project) =
-                QueryProject::from_resource_id(public_conn!(context), &project_id)
-        {
-            // Check if the organization is claimed
-            let is_claimed = if let Ok(org) = query_project.organization(public_conn!(context)) {
-                org.is_claimed(public_conn!(context)).unwrap_or(false)
-            } else {
-                false
-            };
+    // 4. Check admin status for pull requests
+    // Only server admins can pull OCI images (to prevent abuse of the registry)
+    if actions.contains(&"pull".to_owned()) {
+        let query_user = QueryUser::get_with_email(public_conn!(context), &email)
+            .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+        let auth_user = AuthUser::load(public_conn!(context), query_user)
+            .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
 
-            // Only require RBAC permissions if the organization is claimed
-            if is_claimed {
-                // Load the user to check permissions
-                let query_user =
-                    QueryUser::get_with_email(public_conn!(context), &email).map_err(|_| {
-                        unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref())
-                    })?;
-                let auth_user =
-                    AuthUser::load(public_conn!(context), query_user).map_err(|_| {
-                        unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref())
-                    })?;
-
-                // Determine required permission based on actions
-                let required_permission = if actions.contains(&"push".to_owned()) {
-                    Permission::Create
-                } else {
-                    Permission::View
-                };
-
-                // Check if user has permission
-                query_project
-                    .try_allowed(&context.rbac, &auth_user, required_permission)
-                    .map_err(|_| {
-                        HttpError::for_client_error(
-                            None,
-                            ClientErrorStatusCode::FORBIDDEN,
-                            format!(
-                                "Access denied to repository: {repo_name}. You need {required_permission:?} permission.",
-                            ),
-                        )
-                    })?;
-            }
-            // If organization is unclaimed, skip RBAC check and issue token
+        if !auth_user.is_admin(&context.rbac) {
+            return Err(HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::FORBIDDEN,
+                "Only server admins can pull OCI images".to_owned(),
+            ));
         }
-        // If project doesn't exist, we still issue the token.
-        // The actual operation will fail with a proper error when they try to use it.
     }
 
-    // 5. Create OCI token with the validated scope
+    // 5. Validate RBAC permissions for push if a repository is requested AND the organization is claimed
+    // The repository name maps to a project slug
+    // For unclaimed organizations, we allow push without RBAC
+    if actions.contains(&"push".to_owned())
+        && let Some(repo_name) = &repository
+        // The repository name is a project UUID or slug
+        && let Ok(project_id) = repo_name.parse::<ProjectResourceId>()
+        && let Ok(query_project) =
+            QueryProject::from_resource_id(public_conn!(context), &project_id)
+    {
+        // Check if the organization is claimed
+        let is_claimed = if let Ok(org) = query_project.organization(public_conn!(context)) {
+            org.is_claimed(public_conn!(context)).unwrap_or(false)
+        } else {
+            false
+        };
+
+        // Only require RBAC permissions if the organization is claimed
+        if is_claimed {
+            // Load the user to check permissions
+            let query_user = QueryUser::get_with_email(public_conn!(context), &email)
+                .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+            let auth_user = AuthUser::load(public_conn!(context), query_user)
+                .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+
+            // Check if user has Create permission for push
+            query_project
+                .try_allowed(&context.rbac, &auth_user, Permission::Create)
+                .map_err(|_| {
+                    HttpError::for_client_error(
+                        None,
+                        ClientErrorStatusCode::FORBIDDEN,
+                        format!(
+                            "Access denied to repository: {repo_name}. You need Create permission to push.",
+                        ),
+                    )
+                })?;
+        }
+        // If organization is unclaimed, skip RBAC check and issue token
+    }
+    // If project doesn't exist, we still issue the token.
+    // The actual operation will fail with a proper error when they try to use it.
+
+    // 6. Create OCI token with the validated scope
     let jwt = context
         .token_key
         .new_oci(email, OCI_TOKEN_TTL, repository, actions)
         .map_err(|e| HttpError::for_internal_error(format!("Failed to create OCI token: {e}")))?;
 
-    // 6. Build response
+    // 7. Build response
     let response = TokenResponse {
         token: jwt.to_string(),
         expires_in: OCI_TOKEN_TTL,
