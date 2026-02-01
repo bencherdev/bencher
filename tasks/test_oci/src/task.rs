@@ -20,6 +20,8 @@ pub struct Task {
     debug: bool,
     output_dir: PathBuf,
     spec_dir: PathBuf,
+    username: String,
+    password: String,
 }
 
 impl TryFrom<TaskOci> for Task {
@@ -48,6 +50,8 @@ impl TryFrom<TaskOci> for Task {
             debug: task.debug,
             output_dir,
             spec_dir,
+            username: task.username,
+            password: task.password,
         })
     }
 }
@@ -62,6 +66,7 @@ impl Task {
         println!("API URL: {}", self.api_url);
         println!("Namespace: {}", self.namespace);
         println!("Crossmount Namespace: {}", self.crossmount_namespace);
+        println!("Username: {}", self.username);
         println!();
 
         // Check if API is running
@@ -225,7 +230,9 @@ impl Task {
             .env("OCI_NAMESPACE", &self.namespace)
             .env("OCI_CROSSMOUNT_NAMESPACE", &self.crossmount_namespace)
             .env("OCI_DEBUG", if self.debug { "1" } else { "0" })
-            .env("OCI_REPORT_DIR", &self.output_dir);
+            .env("OCI_REPORT_DIR", &self.output_dir)
+            .env("OCI_USERNAME", &self.username)
+            .env("OCI_PASSWORD", &self.password);
 
         if self.pull_only {
             cmd.env("OCI_TEST_PULL", "1")
