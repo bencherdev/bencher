@@ -1,3 +1,5 @@
+#[cfg(test)]
+use criterion as _;
 use diesel::connection::SimpleConnection as _;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness as _, embed_migrations};
 

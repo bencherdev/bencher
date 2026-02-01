@@ -7,7 +7,10 @@ use bencher_json::{
         threshold::{JsonThreshold, JsonThresholdModel},
     },
 };
-use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BelongingToDsl as _, ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _,
+    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+};
 use dropshot::HttpError;
 use model::UpdateModel;
 use slog::Logger;
@@ -430,24 +433,68 @@ impl InsertThreshold {
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
 
+        // Fetch start point thresholds with their models in a single JOIN query
+        // This eliminates the N+1 query pattern where each threshold's model was fetched individually
         let start_point_thresholds = schema::threshold::table
+            .left_join(
+                schema::model::table
+                    .on(schema::model::id.nullable().eq(schema::threshold::model_id)),
+            )
             .filter(schema::threshold::branch_id.eq(branch_start_point.branch.id))
-            .load::<QueryThreshold>(auth_conn!(context))
+            .select((
+                QueryThreshold::as_select(),
+                Option::<QueryModel>::as_select(),
+            ))
+            .load::<(QueryThreshold, Option<QueryModel>)>(auth_conn!(context))
             .map_err(resource_not_found_err!(
                 Threshold,
                 &branch_start_point.branch
             ))?
             .into_iter()
-            .map(|threshold| ((threshold.testbed_id, threshold.measure_id), threshold))
+            .map(|(threshold, model)| {
+                (
+                    (threshold.testbed_id, threshold.measure_id),
+                    (threshold, model.map(QueryModel::into_model)),
+                )
+            })
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Start point thresholds: {start_point_thresholds:?}");
 
-        for ((start_point_testbed_id, start_point_measure_id), start_point_threshold) in
-            start_point_thresholds
+        Self::sync_thresholds_from_start_point(
+            log,
+            context,
+            query_branch,
+            start_point_thresholds,
+            &mut current_thresholds,
+        )
+        .await?;
+
+        slog::debug!(log, "Remaining current thresholds: {current_thresholds:?}");
+        for (_, current_threshold) in current_thresholds {
+            current_threshold.remove_current_model(write_conn!(context))?;
+            slog::debug!(
+                log,
+                "Removed model from current threshold {current_threshold:?}",
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Sync thresholds from the start point branch to the current branch.
+    /// Updates existing thresholds or creates new ones as needed.
+    async fn sync_thresholds_from_start_point(
+        log: &Logger,
+        context: &ApiContext,
+        query_branch: &QueryBranch,
+        start_point_thresholds: HashMap<(TestbedId, MeasureId), (QueryThreshold, Option<Model>)>,
+        current_thresholds: &mut HashMap<(TestbedId, MeasureId), QueryThreshold>,
+    ) -> Result<(), HttpError> {
+        for (
+            (start_point_testbed_id, start_point_measure_id),
+            (start_point_threshold, start_point_model),
+        ) in start_point_thresholds
         {
-            let start_point_model = start_point_threshold
-                .model(auth_conn!(context))?
-                .map(QueryModel::into_model);
             slog::debug!(
                 log,
                 "Processing start point threshold ({start_point_threshold:?}) with model ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
@@ -491,16 +538,6 @@ impl InsertThreshold {
                 );
             }
         }
-
-        slog::debug!(log, "Remaining current thresholds: {current_thresholds:?}");
-        for (_, current_threshold) in current_thresholds {
-            current_threshold.remove_current_model(write_conn!(context))?;
-            slog::debug!(
-                log,
-                "Removed model from current threshold {current_threshold:?}",
-            );
-        }
-
         Ok(())
     }
 

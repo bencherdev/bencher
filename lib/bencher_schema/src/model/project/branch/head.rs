@@ -168,17 +168,25 @@ impl QueryHead {
             ))?;
         slog::debug!(log, "Got version ids: {version_ids:?}");
 
-        // Add new head to all start point head versions
-        for version_id in version_ids {
-            let insert_head_version = InsertHeadVersion {
+        // Add new head to all start point head versions in a single batch insert
+        let insert_head_versions: Vec<InsertHeadVersion> = version_ids
+            .into_iter()
+            .map(|version_id| InsertHeadVersion {
                 head_id: self.id,
                 version_id,
-            };
+            })
+            .collect();
+
+        if !insert_head_versions.is_empty() {
             diesel::insert_into(schema::head_version::table)
-                .values(&insert_head_version)
+                .values(&insert_head_versions)
                 .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(HeadVersion, insert_head_version))?;
-            slog::debug!(log, "Inserted head version: {insert_head_version:?}");
+                .map_err(resource_conflict_err!(HeadVersion, &insert_head_versions))?;
+            slog::debug!(
+                log,
+                "Inserted {} head versions in batch",
+                insert_head_versions.len()
+            );
         }
 
         slog::debug!(log, "Cloned all head versions");

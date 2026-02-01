@@ -1397,6 +1397,7 @@ dependencies = [
  "bencher_token",
  "camino",
  "chrono",
+ "criterion",
  "css-inline",
  "dashmap",
  "derive_more 2.1.0",

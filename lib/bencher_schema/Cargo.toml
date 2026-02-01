@@ -69,5 +69,12 @@ tokio-rustls.workspace = true
 url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 
+[dev-dependencies]
+criterion.workspace = true
+
 [lints]
 workspace = true
+
+[[bench]]
+name = "schema"
+harness = false
