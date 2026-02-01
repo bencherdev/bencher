@@ -5,7 +5,7 @@
 //!
 //! This implements the virtio-mmio transport for vsock devices.
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::io::{Read as _, Write as _};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
@@ -31,8 +31,17 @@ const VIRTIO_VENDOR_ID: u32 = 0x554d_4551;
 /// The host's CID (Context ID).
 pub const HOST_CID: u64 = 2;
 
-/// Port for benchmark results (guest connects to HOST_CID:RESULTS_PORT).
-pub const RESULTS_PORT: u32 = 5000;
+/// Port for stdout (guest connects to HOST_CID:PORT_STDOUT).
+pub const PORT_STDOUT: u32 = 5000;
+
+/// Port for stderr.
+pub const PORT_STDERR: u32 = 5001;
+
+/// Port for exit code.
+pub const PORT_EXIT_CODE: u32 = 5002;
+
+/// Port for output file (optional).
+pub const PORT_OUTPUT_FILE: u32 = 5005;
 
 /// Maximum queue size.
 const QUEUE_SIZE: u16 = 256;
@@ -225,11 +234,12 @@ pub struct VirtioVsockDevice {
     /// Active guest-initiated connections (guest -> host).
     guest_connections: Vec<GuestConnection>,
 
-    /// Buffer for results received from guest on RESULTS_PORT.
-    results_buffer: Vec<u8>,
+    /// Buffers for data received from guest on each port.
+    /// Key is the port number, value is the data received.
+    port_buffers: HashMap<u32, Vec<u8>>,
 
-    /// Flag indicating results are complete (guest closed connection).
-    results_complete: bool,
+    /// Ports that have been closed by the guest (connection complete).
+    completed_ports: Vec<u32>,
 
     /// Pending response packets to send to guest.
     pending_rx: VecDeque<(VsockPacketHeader, Vec<u8>)>,
@@ -279,8 +289,8 @@ impl VirtioVsockDevice {
             queue_configs: Default::default(),
             connections: Vec::new(),
             guest_connections: Vec::new(),
-            results_buffer: Vec::new(),
-            results_complete: false,
+            port_buffers: HashMap::new(),
+            completed_ports: Vec::new(),
             pending_rx: VecDeque::new(),
             status: 0,
             features_sel: 0,
@@ -318,27 +328,88 @@ impl VirtioVsockDevice {
         self.interrupt_status != 0
     }
 
-    /// Check if results have been received from the guest.
+    /// Check if results have been received from the guest on any port.
     #[must_use]
     pub fn has_results(&self) -> bool {
-        self.results_complete || !self.results_buffer.is_empty()
+        !self.completed_ports.is_empty() || !self.port_buffers.is_empty()
     }
 
-    /// Check if results collection is complete (guest closed connection).
+    /// Check if results collection is complete for stdout (primary results port).
     #[must_use]
     pub fn results_complete(&self) -> bool {
-        self.results_complete
+        self.completed_ports.contains(&PORT_STDOUT)
     }
 
-    /// Take the collected results, leaving an empty buffer.
+    /// Check if a specific port has been completed (guest closed connection).
+    #[must_use]
+    pub fn port_complete(&self, port: u32) -> bool {
+        self.completed_ports.contains(&port)
+    }
+
+    /// Get data from a specific port, leaving an empty buffer.
+    pub fn take_port_data(&mut self, port: u32) -> Vec<u8> {
+        self.port_buffers.remove(&port).unwrap_or_default()
+    }
+
+    /// Get data from a specific port as a string.
+    #[must_use]
+    pub fn port_data_as_string(&self, port: u32) -> String {
+        self.port_buffers
+            .get(&port)
+            .map_or_else(String::new, |data| String::from_utf8_lossy(data).to_string())
+    }
+
+    /// Take the collected stdout results, leaving an empty buffer.
+    /// This is an alias for `take_port_data(PORT_STDOUT)`.
     pub fn take_results(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.results_buffer)
+        self.take_port_data(PORT_STDOUT)
     }
 
-    /// Get the collected results as a string.
+    /// Get the collected stdout results as a string.
+    /// This is an alias for `port_data_as_string(PORT_STDOUT)`.
     #[must_use]
     pub fn results_as_string(&self) -> String {
-        String::from_utf8_lossy(&self.results_buffer).to_string()
+        self.port_data_as_string(PORT_STDOUT)
+    }
+
+    /// Get stdout data.
+    #[must_use]
+    pub fn stdout(&self) -> String {
+        self.port_data_as_string(PORT_STDOUT)
+    }
+
+    /// Get stderr data.
+    #[must_use]
+    pub fn stderr(&self) -> String {
+        self.port_data_as_string(PORT_STDERR)
+    }
+
+    /// Get exit code (as string, caller should parse).
+    #[must_use]
+    pub fn exit_code_str(&self) -> String {
+        self.port_data_as_string(PORT_EXIT_CODE)
+    }
+
+    /// Get exit code as integer.
+    #[must_use]
+    pub fn exit_code(&self) -> Option<i32> {
+        let s = self.exit_code_str();
+        s.trim().parse().ok()
+    }
+
+    /// Get output file data if available.
+    #[must_use]
+    pub fn output_file(&self) -> Option<Vec<u8>> {
+        self.port_buffers.get(&PORT_OUTPUT_FILE).cloned()
+    }
+
+    /// Check if all expected ports are complete.
+    /// Expected: stdout, stderr, exit_code. Output file is optional.
+    #[must_use]
+    pub fn all_required_complete(&self) -> bool {
+        self.port_complete(PORT_STDOUT)
+            && self.port_complete(PORT_STDERR)
+            && self.port_complete(PORT_EXIT_CODE)
     }
 
     /// Get device features.
@@ -659,15 +730,22 @@ impl VirtioVsockDevice {
         self.pending_rx.push_back((response, Vec::new()));
     }
 
+    /// Check if this is a known results port.
+    fn is_results_port(port: u32) -> bool {
+        matches!(port, PORT_STDOUT | PORT_STDERR | PORT_EXIT_CODE | PORT_OUTPUT_FILE)
+    }
+
     /// Handle connection reset.
     fn handle_reset(&mut self, header: VsockPacketHeader) {
-        // Check if this is a guest-initiated connection being reset
-        if header.dst_port == RESULTS_PORT {
+        // Check if this is a guest-initiated connection to a results port
+        if Self::is_results_port(header.dst_port) {
             self.guest_connections.retain(|c| {
                 !(c.guest_port == header.src_port && c.host_port == header.dst_port)
             });
-            // Treat reset as results complete (even if unexpected)
-            self.results_complete = true;
+            // Treat reset as port complete (even if unexpected)
+            if !self.completed_ports.contains(&header.dst_port) {
+                self.completed_ports.push(header.dst_port);
+            }
             return;
         }
 
@@ -679,13 +757,15 @@ impl VirtioVsockDevice {
 
     /// Handle connection shutdown.
     fn handle_shutdown(&mut self, header: VsockPacketHeader) {
-        // Check if this is the results connection being closed
-        if header.dst_port == RESULTS_PORT {
+        // Check if this is a connection to a results port being closed
+        if Self::is_results_port(header.dst_port) {
             self.guest_connections.retain(|c| {
                 !(c.guest_port == header.src_port && c.host_port == header.dst_port)
             });
-            // Mark results as complete
-            self.results_complete = true;
+            // Mark port as complete
+            if !self.completed_ports.contains(&header.dst_port) {
+                self.completed_ports.push(header.dst_port);
+            }
             return;
         }
 
@@ -697,8 +777,8 @@ impl VirtioVsockDevice {
 
     /// Handle data from guest.
     fn handle_data(&mut self, header: VsockPacketHeader, data: Vec<u8>) {
-        // Check if this is data for the results port (guest-initiated connection)
-        if header.dst_port == RESULTS_PORT {
+        // Check if this is data for a results port (guest-initiated connection)
+        if Self::is_results_port(header.dst_port) {
             // Find the matching guest connection and update fwd_cnt
             for conn in &mut self.guest_connections {
                 if conn.guest_port == header.src_port && conn.host_port == header.dst_port {
@@ -706,8 +786,11 @@ impl VirtioVsockDevice {
                     break;
                 }
             }
-            // Collect the results
-            self.results_buffer.extend_from_slice(&data);
+            // Collect the data for this port
+            self.port_buffers
+                .entry(header.dst_port)
+                .or_default()
+                .extend_from_slice(&data);
             return;
         }
 
@@ -826,8 +909,8 @@ impl VirtioVsockDevice {
         self.queue_sel = 0;
         self.connections.clear();
         self.guest_connections.clear();
-        self.results_buffer.clear();
-        self.results_complete = false;
+        self.port_buffers.clear();
+        self.completed_ports.clear();
         self.pending_rx.clear();
         for i in 0..NUM_QUEUES {
             self.queue_configs[i] = QueueConfig::default();

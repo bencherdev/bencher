@@ -207,11 +207,25 @@ Results can be collected via two mechanisms:
 
 ### 1. virtio-vsock (Preferred)
 
-The guest sends JSON results over vsock to the host. This is faster and more reliable than serial output.
+The guest sends results over vsock to the host using dedicated ports. This is faster and more reliable than serial output.
 
 - **Guest CID**: 3
 - **Host CID**: 2
-- **Results Port**: 5000
+
+**Port Assignments:**
+
+| Port | Purpose | Content |
+| ---- | ------- | ------- |
+| 5000 | stdout | Standard output from the benchmark |
+| 5001 | stderr | Standard error from the benchmark |
+| 5002 | exit_code | Exit code as a string (e.g., "0") |
+| 5005 | output_file | Optional output file contents |
+
+The guest init script:
+1. Buffers stdout/stderr to `/run/bencher/stdout` and `/run/bencher/stderr`
+2. Captures the exit code to `/run/bencher/exit_code`
+3. Sends all files via vsock after the benchmark completes
+4. If `BENCHER_OUTPUT_FILE` is set, sends that file on port 5005
 
 ### 2. Serial Output (Fallback)
 

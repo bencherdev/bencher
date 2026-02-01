@@ -39,7 +39,7 @@ pub fn write_kernel_to_file(path: &Path) -> io::Result<()> {
     std::fs::write(path, kernel_bytes())
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
 

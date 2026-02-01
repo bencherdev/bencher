@@ -1,11 +1,12 @@
 //! Minimal vsock sender for guest VMs.
 //!
-//! This binary reads from stdin and sends the data to the host via vsock.
+//! This binary sends data to the host via vsock.
 //! It's designed to be statically compiled and included in guest rootfs.
 //!
 //! Usage:
-//!   echo "benchmark results" | vsock-send
-//!   ./benchmark | vsock-send
+//!   echo "benchmark results" | vsock-send                    # stdin to port 5000
+//!   echo "benchmark results" | vsock-send --port 5000        # stdin to specific port
+//!   vsock-send --port 5005 /path/to/file                     # file to specific port
 //!
 //! Build for guest VM:
 //!   cargo build --release --target x86_64-unknown-linux-musl
@@ -22,8 +23,8 @@ use std::os::unix::io::FromRawFd as _;
 /// Host CID (always 2 for vsock).
 const HOST_CID: u32 = 2;
 
-/// Port for benchmark results.
-const RESULTS_PORT: u32 = 5000;
+/// Default port for results.
+const DEFAULT_PORT: u32 = 5000;
 
 /// `AF_VSOCK` address family.
 const AF_VSOCK: libc::sa_family_t = 40;
@@ -48,7 +49,48 @@ fn main() {
     }
 }
 
+/// Parsed command line arguments.
+struct Args {
+    port: u32,
+    file: Option<String>,
+}
+
+/// Parse command line arguments.
+///
+/// Supports:
+///   --port <port>   Port to send to (default: 5000)
+///   <file>          Optional file to send (otherwise reads stdin)
+fn parse_args() -> Args {
+    let mut args = Args {
+        port: DEFAULT_PORT,
+        file: None,
+    };
+
+    let mut iter = std::env::args().skip(1);
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--port" | "-p" => {
+                if let Some(port_str) = iter.next()
+                    && let Ok(port) = port_str.parse()
+                {
+                    args.port = port;
+                }
+            }
+            _ if !arg.starts_with('-') => {
+                args.file = Some(arg);
+            }
+            _ => {
+                // Ignore unknown flags
+            }
+        }
+    }
+
+    args
+}
+
 fn run() -> Result<(), String> {
+    let args = parse_args();
+
     // SAFETY: libc::socket is safe to call with valid arguments.
     // AF_VSOCK and SOCK_STREAM are valid socket types on Linux.
     let fd = unsafe { libc::socket(libc::c_int::from(AF_VSOCK), SOCK_STREAM, 0) };
@@ -60,7 +102,7 @@ fn run() -> Result<(), String> {
     let addr = SockaddrVm {
         family: AF_VSOCK,
         reserved1: 0,
-        port: RESULTS_PORT,
+        port: args.port,
         cid: HOST_CID,
         zero: [0; 4],
     };
@@ -78,26 +120,49 @@ fn run() -> Result<(), String> {
     if ret < 0 {
         // SAFETY: fd is a valid file descriptor from socket().
         unsafe { libc::close(fd); }
-        return Err(format!("connect() failed: {}", std::io::Error::last_os_error()));
+        return Err(format!("connect() to port {} failed: {}", args.port, std::io::Error::last_os_error()));
     }
 
     // SAFETY: fd is a valid, connected socket file descriptor.
     // We take ownership and will close it when the File is dropped.
     let mut socket = unsafe { std::fs::File::from_raw_fd(fd) };
-    let mut stdin = std::io::stdin().lock();
-    let mut buffer = [0u8; 4096];
 
-    loop {
-        match stdin.read(&mut buffer) {
-            Ok(0) => break, // EOF
-            Ok(n) => {
-                let data = buffer.get(..n).ok_or("buffer index out of bounds")?;
-                if let Err(e) = socket.write_all(data) {
-                    return Err(format!("write() failed: {e}"));
+    // Read from file or stdin
+    if let Some(file_path) = &args.file {
+        // Read from file
+        let mut file = std::fs::File::open(file_path)
+            .map_err(|e| format!("failed to open {file_path}: {e}"))?;
+        let mut buffer = [0u8; 4096];
+        loop {
+            match file.read(&mut buffer) {
+                Ok(0) => break, // EOF
+                Ok(n) => {
+                    let data = buffer.get(..n).ok_or("buffer index out of bounds")?;
+                    if let Err(e) = socket.write_all(data) {
+                        return Err(format!("write() failed: {e}"));
+                    }
+                }
+                Err(e) => {
+                    return Err(format!("read() failed: {e}"));
                 }
             }
-            Err(e) => {
-                return Err(format!("read() failed: {e}"));
+        }
+    } else {
+        // Read from stdin
+        let mut stdin = std::io::stdin().lock();
+        let mut buffer = [0u8; 4096];
+        loop {
+            match stdin.read(&mut buffer) {
+                Ok(0) => break, // EOF
+                Ok(n) => {
+                    let data = buffer.get(..n).ok_or("buffer index out of bounds")?;
+                    if let Err(e) = socket.write_all(data) {
+                        return Err(format!("write() failed: {e}"));
+                    }
+                }
+                Err(e) => {
+                    return Err(format!("read() failed: {e}"));
+                }
             }
         }
     }
