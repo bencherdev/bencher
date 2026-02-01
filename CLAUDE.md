@@ -134,6 +134,8 @@ SQLite database located at `services/api/data/bencher.db` for testing. Access vi
 sqlite3 services/api/data/bencher.db
 ```
 
+If a database migration is already part of the `cloud` branch, then it has already been applied to production.
+
 ## Docker
 
 ```bash
@@ -163,6 +165,13 @@ These tasks are invoked using a Cargo `alias` in `.cargo/config.toml`.
 Administrative specific tasks that are only run locally and not in CI/CD are located in the catch all `xtask` crate.
 
 The only acceptable use of a shell script is as an ultra-lightweight wrapper around a shell command, like `git` or `docker`.
+
+## Git Flow
+
+- PRs are opened against the `devel` branch
+- To deploy to Bencher Cloud, the `cloud` branch is reset to `devel` and pushed
+- If `cloud` is successfully deployed, the `main` branch is reset to `cloud` in CI
+- Release tags (ex `v0.1.0`) are created off of the `devel` branch
 
 ## Bencher Documentation
 
