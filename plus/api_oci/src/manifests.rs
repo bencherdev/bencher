@@ -6,7 +6,8 @@
 //! - DELETE /v2/<name>/manifests/<reference> - Delete manifest
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Put};
-use bencher_oci_storage::{OciError, Reference, RepositoryName};
+use bencher_json::ProjectResourceId;
+use bencher_oci_storage::{OciError, Reference};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, RequestContext, UntypedBody, endpoint};
 use http::Response;
@@ -18,8 +19,8 @@ use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, 
 /// Path parameters for manifest endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ManifestPath {
-    /// Repository name (e.g., "library/ubuntu")
-    pub name: String,
+    /// Project resource ID (UUID or slug)
+    pub name: ProjectResourceId,
     /// Reference (tag or digest)
     pub reference: String,
 }
@@ -55,17 +56,14 @@ pub async fn oci_manifest_exists(
     let path = path.into_inner();
 
     // Authenticate
-    let scope = format!("repository:{}:pull", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "pull")
+    validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
+    // Parse reference
     let reference: Reference = path
         .reference
         .parse()
@@ -78,14 +76,14 @@ pub async fn oci_manifest_exists(
     let digest = match &reference {
         Reference::Digest(d) => d.clone(),
         Reference::Tag(t) => storage
-            .resolve_tag(&repository, t.as_str())
+            .resolve_tag(&path.name, t.as_str())
             .await
             .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
     };
 
     // Get manifest to check existence and get size
     let manifest = storage
-        .get_manifest_by_digest(&repository, &digest)
+        .get_manifest_by_digest(&path.name, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -129,17 +127,14 @@ pub async fn oci_manifest_get(
     let path = path.into_inner();
 
     // Authenticate
-    let scope = format!("repository:{}:pull", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "pull")
+    validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
+    // Parse reference
     let reference: Reference = path
         .reference
         .parse()
@@ -152,14 +147,14 @@ pub async fn oci_manifest_get(
     let digest = match &reference {
         Reference::Digest(d) => d.clone(),
         Reference::Tag(t) => storage
-            .resolve_tag(&repository, t.as_str())
+            .resolve_tag(&path.name, t.as_str())
             .await
             .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
     };
 
     // Get manifest content
     let manifest = storage
-        .get_manifest_by_digest(&repository, &digest)
+        .get_manifest_by_digest(&path.name, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -209,17 +204,14 @@ pub async fn oci_manifest_put(
     let body_bytes = body.as_bytes();
 
     // Authenticate
-    let scope = format!("repository:{}:push", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:push");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "push")
+    validate_oci_access(context, &token, &name_str, "push")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
+    // Parse reference
     let reference: Reference = path
         .reference
         .parse()
@@ -247,7 +239,7 @@ pub async fn oci_manifest_put(
 
     // Store the manifest
     let digest = storage
-        .put_manifest(&repository, bytes::Bytes::copy_from_slice(body_bytes), tag)
+        .put_manifest(&path.name, bytes::Bytes::copy_from_slice(body_bytes), tag)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -256,7 +248,7 @@ pub async fn oci_manifest_put(
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciManifestPush);
 
     // Build 201 Created response with Location and Docker-Content-Digest headers
-    let location = format!("/v2/{repository}/manifests/{digest}");
+    let location = format!("/v2/{}/manifests/{digest}", path.name);
 
     let mut builder = Response::builder()
         .status(http::StatusCode::CREATED)
@@ -296,17 +288,12 @@ pub async fn oci_manifest_delete(
     let path = path.into_inner();
 
     // Authenticate (delete requires push permission)
-    let scope = format!("repository:{}:push", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:push");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "push")
+    validate_oci_access(context, &token, &name_str, "push")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
     let storage = context.oci_storage()?;
@@ -321,14 +308,14 @@ pub async fn oci_manifest_delete(
         Reference::Digest(digest) => {
             // Delete by digest - delete the manifest itself
             storage
-                .delete_manifest(&repository, &digest)
+                .delete_manifest(&path.name, &digest)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         }
         Reference::Tag(tag) => {
             // Delete by tag - delete the tag link only (manifest may still exist)
             storage
-                .delete_tag(&repository, tag.as_str())
+                .delete_tag(&path.name, tag.as_str())
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         }

@@ -20,6 +20,7 @@ mod local;
 mod storage;
 mod types;
 
+pub use bencher_json::ProjectResourceId;
 pub use error::OciError;
 pub use storage::{OciStorage, OciStorageError};
-pub use types::{Digest, DigestError, Reference, RepositoryName, RepositoryNameError, Tag, UploadId};
+pub use types::{Digest, DigestError, Reference, Tag, UploadId};

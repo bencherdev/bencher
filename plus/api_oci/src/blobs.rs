@@ -9,7 +9,8 @@
 //! and variable path segments while maintaining OCI spec compliance.
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Post, Put};
-use bencher_oci_storage::{Digest, OciError, RepositoryName};
+use bencher_json::ProjectResourceId;
+use bencher_oci_storage::{Digest, OciError};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
 use http::Response;
@@ -21,8 +22,8 @@ use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct BlobPath {
-    /// Repository name (e.g., "library/ubuntu")
-    pub name: String,
+    /// Project resource ID (UUID or slug)
+    pub name: ProjectResourceId,
     /// Reference - either a digest (e.g., "sha256:abc123...") or "uploads"
     #[serde(rename = "ref")]
     pub reference: String,
@@ -84,17 +85,14 @@ pub async fn oci_blob_exists(
     }
 
     // Authenticate
-    let scope = format!("repository:{}:pull", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "pull")
+    validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
+    // Parse digest
     let digest: Digest = path
         .reference
         .parse()
@@ -105,7 +103,7 @@ pub async fn oci_blob_exists(
 
     // Check if blob exists and get size
     let size = storage
-        .get_blob_size(&repository, &digest)
+        .get_blob_size(&path.name, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -151,17 +149,14 @@ pub async fn oci_blob_get(
     }
 
     // Authenticate
-    let scope = format!("repository:{}:pull", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "pull")
+    validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
+    // Parse digest
     let digest: Digest = path
         .reference
         .parse()
@@ -172,7 +167,7 @@ pub async fn oci_blob_get(
 
     // Get blob content
     let (data, size) = storage
-        .get_blob(&repository, &digest)
+        .get_blob(&path.name, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -222,17 +217,14 @@ pub async fn oci_blob_delete(
     }
 
     // Authenticate (delete requires push permission)
-    let scope = format!("repository:{}:push", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:push");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "push")
+    validate_oci_access(context, &token, &name_str, "push")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
+    // Parse digest
     let digest: Digest = path
         .reference
         .parse()
@@ -243,7 +235,7 @@ pub async fn oci_blob_delete(
 
     // Delete the blob
     storage
-        .delete_blob(&repository, &digest)
+        .delete_blob(&path.name, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -286,17 +278,12 @@ pub async fn oci_upload_start(
     }
 
     // Authenticate
-    let scope = format!("repository:{}:push", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:push");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "push")
+    validate_oci_access(context, &token, &name_str, "push")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Parse repository name
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
     let storage = context.oci_storage()?;
@@ -306,19 +293,19 @@ pub async fn oci_upload_start(
         let digest: Digest = digest_str
             .parse()
             .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: digest_str.clone() }))?;
-        let from_repo: RepositoryName = from_name
+        let from_repo: ProjectResourceId = from_name
             .parse()
             .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: from_name.clone() }))?;
 
         // Try to mount the blob
         let mounted = storage
-            .mount_blob(&from_repo, &repository, &digest)
+            .mount_blob(&from_repo, &path.name, &digest)
             .await
             .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
         if mounted {
             // Mount successful - return 201 Created
-            let location = format!("/v2/{repository}/blobs/{digest}");
+            let location = format!("/v2/{}/blobs/{digest}", path.name);
             let response = Response::builder()
                 .status(http::StatusCode::CREATED)
                 .header(http::header::LOCATION, location)
@@ -332,12 +319,12 @@ pub async fn oci_upload_start(
 
     // Start a new upload session
     let upload_id = storage
-        .start_upload(&repository)
+        .start_upload(&path.name)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build 202 Accepted response
-    let location = format!("/v2/{repository}/blobs/uploads/{upload_id}");
+    let location = format!("/v2/{}/blobs/uploads/{upload_id}", path.name);
     let response = Response::builder()
         .status(http::StatusCode::ACCEPTED)
         .header(http::header::LOCATION, location)
@@ -381,17 +368,14 @@ pub async fn oci_upload_monolithic(
     }
 
     // Authenticate
-    let scope = format!("repository:{}:push", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:push");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "push")
+    validate_oci_access(context, &token, &name_str, "push")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
-    // Parse inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
+    // Parse digest
     let expected_digest: Digest = query
         .digest
         .parse()
@@ -402,7 +386,7 @@ pub async fn oci_upload_monolithic(
 
     // Start upload, append data, and complete in one operation
     let upload_id = storage
-        .start_upload(&repository)
+        .start_upload(&path.name)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -421,7 +405,7 @@ pub async fn oci_upload_monolithic(
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciBlobPush);
 
     // Build 201 Created response
-    let location = format!("/v2/{repository}/blobs/{actual_digest}");
+    let location = format!("/v2/{}/blobs/{actual_digest}", path.name);
     let response = Response::builder()
         .status(http::StatusCode::CREATED)
         .header(http::header::LOCATION, location)

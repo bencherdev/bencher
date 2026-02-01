@@ -2,22 +2,9 @@
 
 use std::fmt;
 use std::str::FromStr;
-use std::sync::OnceLock;
 
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-/// Regex for validating OCI repository names
-static NAME_REGEX: OnceLock<Regex> = OnceLock::new();
-
-fn get_name_regex() -> &'static Regex {
-    NAME_REGEX.get_or_init(|| {
-        // Safe: this regex is compile-time validated
-        #[expect(clippy::unwrap_used)]
-        Regex::new("^[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*$").unwrap()
-    })
-}
 
 /// A content-addressable digest (e.g., "sha256:abc123...")
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -83,52 +70,6 @@ impl FromStr for Digest {
         }
 
         Ok(Self(s.to_owned()))
-    }
-}
-
-/// A repository name (e.g., "library/ubuntu" or "myorg/myrepo")
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct RepositoryName(String);
-
-#[derive(Debug, Error)]
-pub enum RepositoryNameError {
-    #[error("Invalid repository name: {0}")]
-    Invalid(String),
-}
-
-impl RepositoryName {
-    /// Returns the repository name as a string slice
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    /// Validates a repository name according to OCI spec
-    fn is_valid(name: &str) -> bool {
-        // Repository name: [a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*
-        // Must be 1-256 characters
-        if name.is_empty() || name.len() > 256 {
-            return false;
-        }
-
-        get_name_regex().is_match(name)
-    }
-}
-
-impl fmt::Display for RepositoryName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl FromStr for RepositoryName {
-    type Err = RepositoryNameError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if Self::is_valid(s) {
-            Ok(Self(s.to_owned()))
-        } else {
-            Err(RepositoryNameError::Invalid(s.to_owned()))
-        }
     }
 }
 
@@ -281,18 +222,6 @@ mod tests {
             parsed.hex_hash(),
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
-    }
-
-    #[test]
-    fn repository_name_parsing() {
-        assert!("library/ubuntu".parse::<RepositoryName>().is_ok());
-        assert!("myorg/myrepo".parse::<RepositoryName>().is_ok());
-        assert!("simple".parse::<RepositoryName>().is_ok());
-        assert!("org/repo/sub".parse::<RepositoryName>().is_ok());
-
-        assert!("UPPER".parse::<RepositoryName>().is_err());
-        assert!("".parse::<RepositoryName>().is_err());
-        assert!("/leading".parse::<RepositoryName>().is_err());
     }
 
     #[test]
