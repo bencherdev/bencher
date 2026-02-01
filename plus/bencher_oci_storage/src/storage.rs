@@ -20,6 +20,7 @@ use aws_sdk_s3::Client;
 use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{ProjectResourceId, Secret, system::config::OciDataStore};
 use bytes::Bytes;
+use futures::stream::{self, StreamExt as _};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
@@ -90,6 +91,14 @@ pub struct OciStorageConfig {
 }
 
 /// Upload state stored in S3 for cross-instance consistency
+///
+/// ## Buffer Chunk Storage (O(1) appends)
+///
+/// Instead of storing a single buffer that grows with each append (O(n²) I/O),
+/// we store each incoming chunk as a separate S3 object. At completion, we
+/// stream through all chunks to compute the hash and upload multipart parts.
+///
+/// This reduces append operations from O(n²) to O(n) total I/O.
 #[derive(Debug, Serialize, Deserialize)]
 struct UploadState {
     /// S3 multipart upload ID
@@ -98,6 +107,10 @@ struct UploadState {
     repository: String,
     /// Completed parts with their `ETag`s
     parts: Vec<CompletedPartInfo>,
+    /// Number of buffer chunks stored (each chunk is a separate S3 object)
+    buffer_chunk_count: u32,
+    /// Total bytes across all buffer chunks
+    buffer_total_size: u64,
 }
 
 /// Information about a completed S3 multipart upload part
@@ -110,8 +123,13 @@ struct CompletedPartInfo {
 
 impl UploadState {
     /// Total bytes in completed parts
-    fn completed_size(&self) -> u64 {
+    fn completed_parts_size(&self) -> u64 {
         self.parts.iter().map(|p| p.size).sum()
+    }
+
+    /// Total bytes uploaded (completed parts + buffer chunks)
+    fn total_size(&self) -> u64 {
+        self.completed_parts_size() + self.buffer_total_size
     }
 
     /// Next part number to use
@@ -435,9 +453,12 @@ impl OciS3Storage {
         format!("{}/{}/state.json", self.global_prefix(), upload_id)
     }
 
-    /// Returns the S3 key for upload buffer (chunks < 5MB)
-    fn upload_buffer_key(&self, upload_id: &UploadId) -> String {
-        format!("{}/{}/buffer", self.global_prefix(), upload_id)
+    /// Returns the S3 key for a buffer chunk
+    ///
+    /// Buffer chunks are stored separately to avoid O(n²) read-modify-write
+    /// operations. Each append creates a new chunk object.
+    fn upload_buffer_chunk_key(&self, upload_id: &UploadId, chunk_num: u32) -> String {
+        format!("{}/{}/chunks/{:08}", self.global_prefix(), upload_id, chunk_num)
     }
 
     /// Returns the S3 key for the temporary upload data (multipart destination)
@@ -549,74 +570,60 @@ impl OciS3Storage {
         Ok(())
     }
 
-    /// Loads upload buffer from S3 (returns empty vec if not found)
-    async fn load_upload_buffer(&self, upload_id: &UploadId) -> Result<Vec<u8>, OciStorageError> {
-        let key = self.upload_buffer_key(upload_id);
-        match self
+    /// Stores a buffer chunk to S3
+    ///
+    /// This is an O(1) operation - no read-modify-write cycle.
+    async fn store_buffer_chunk(
+        &self,
+        upload_id: &UploadId,
+        chunk_num: u32,
+        data: Bytes,
+    ) -> Result<(), OciStorageError> {
+        let key = self.upload_buffer_chunk_key(upload_id, chunk_num);
+        self.client
+            .put_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .body(data.into())
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+        Ok(())
+    }
+
+    /// Loads a buffer chunk from S3
+    async fn load_buffer_chunk(
+        &self,
+        upload_id: &UploadId,
+        chunk_num: u32,
+    ) -> Result<Bytes, OciStorageError> {
+        let key = self.upload_buffer_chunk_key(upload_id, chunk_num);
+        let response = self
             .client
             .get_object()
             .bucket(&self.config.bucket_arn)
             .key(&key)
             .send()
             .await
-        {
-            Ok(response) => {
-                let data = response
-                    .body
-                    .collect()
-                    .await
-                    .map_err(|e| OciStorageError::S3(e.to_string()))?
-                    .into_bytes();
-                Ok(data.to_vec())
-            },
-            Err(e) => {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
-                    Ok(Vec::new())
-                } else {
-                    Err(OciStorageError::S3(e.to_string()))
-                }
-            },
-        }
-    }
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
 
-    /// Saves upload buffer to S3 (deletes if empty)
-    async fn save_upload_buffer(
-        &self,
-        upload_id: &UploadId,
-        buffer: &[u8],
-    ) -> Result<(), OciStorageError> {
-        let key = self.upload_buffer_key(upload_id);
+        let data = response
+            .body
+            .collect()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?
+            .into_bytes();
 
-        if buffer.is_empty() {
-            // Delete the buffer object if empty
-            let _unused = self
-                .client
-                .delete_object()
-                .bucket(&self.config.bucket_arn)
-                .key(&key)
-                .send()
-                .await;
-            Ok(())
-        } else {
-            self.client
-                .put_object()
-                .bucket(&self.config.bucket_arn)
-                .key(&key)
-                .body(buffer.to_vec().into())
-                .send()
-                .await
-                .map_err(|e| OciStorageError::S3(e.to_string()))?;
-            Ok(())
-        }
+        Ok(data)
     }
 
     /// Deletes all upload-related objects from S3
-    async fn cleanup_upload(&self, upload_id: &UploadId) {
+    async fn cleanup_upload(&self, upload_id: &UploadId, chunk_count: u32) {
         // Best effort cleanup - ignore errors
         let state_key = self.upload_state_key(upload_id);
-        let buffer_key = self.upload_buffer_key(upload_id);
         let data_key = self.upload_data_key(upload_id);
 
+        // Delete state
         let _unused = self
             .client
             .delete_object()
@@ -624,13 +631,8 @@ impl OciS3Storage {
             .key(&state_key)
             .send()
             .await;
-        let _unused = self
-            .client
-            .delete_object()
-            .bucket(&self.config.bucket_arn)
-            .key(&buffer_key)
-            .send()
-            .await;
+
+        // Delete multipart data object
         let _unused = self
             .client
             .delete_object()
@@ -638,6 +640,18 @@ impl OciS3Storage {
             .key(&data_key)
             .send()
             .await;
+
+        // Delete all buffer chunks
+        for i in 0..chunk_count {
+            let chunk_key = self.upload_buffer_chunk_key(upload_id, i);
+            let _unused = self
+                .client
+                .delete_object()
+                .bucket(&self.config.bucket_arn)
+                .key(&chunk_key)
+                .send()
+                .await;
+        }
     }
 
     // ==================== Upload Operations ====================
@@ -670,6 +684,8 @@ impl OciS3Storage {
             s3_upload_id,
             repository: repository.to_string(),
             parts: Vec::new(),
+            buffer_chunk_count: 0,
+            buffer_total_size: 0,
         };
         self.save_upload_state(&upload_id, &state).await?;
 
@@ -678,108 +694,119 @@ impl OciS3Storage {
 
     /// Appends data to an in-progress upload
     ///
-    /// Data is buffered in S3 until we accumulate enough for a 5MB part,
-    /// then uploaded as an S3 multipart part.
+    /// Each append is stored as a separate chunk in S3 (O(1) operation).
+    /// Chunks are combined and hashed at completion time.
     pub async fn append_upload(
         &self,
         upload_id: &UploadId,
         data: Bytes,
     ) -> Result<u64, OciStorageError> {
-        // Load current state and buffer
+        // Load current state
         let mut state = self.load_upload_state(upload_id).await?;
-        let mut buffer = self.load_upload_buffer(upload_id).await?;
 
-        // Append new data to buffer
-        buffer.extend_from_slice(&data);
+        // Store new data as a separate chunk (O(1) - no read-modify-write)
+        let chunk_num = state.buffer_chunk_count;
+        let data_len = data.len() as u64;
+        self.store_buffer_chunk(upload_id, chunk_num, data).await?;
 
-        // Upload complete parts (5MB each)
-        while buffer.len() >= MIN_PART_SIZE {
-            let part_data: Vec<u8> = buffer.drain(..MIN_PART_SIZE).collect();
-            self.upload_part(upload_id, &mut state, part_data).await?;
-        }
+        // Update state
+        state.buffer_chunk_count += 1;
+        state.buffer_total_size += data_len;
 
-        // Calculate total size
-        let total_size = state.completed_size() + buffer.len() as u64;
-
-        // Save updated state and buffer
+        // Save updated state
         self.save_upload_state(upload_id, &state).await?;
-        self.save_upload_buffer(upload_id, &buffer).await?;
 
-        Ok(total_size)
-    }
-
-    /// Uploads a single part to S3 multipart upload
-    async fn upload_part(
-        &self,
-        upload_id: &UploadId,
-        state: &mut UploadState,
-        data: Vec<u8>,
-    ) -> Result<(), OciStorageError> {
-        let data_key = self.upload_data_key(upload_id);
-        let part_number = state.next_part_number();
-        let part_size = data.len() as u64;
-
-        let response = self
-            .client
-            .upload_part()
-            .bucket(&self.config.bucket_arn)
-            .key(&data_key)
-            .upload_id(&state.s3_upload_id)
-            .part_number(part_number)
-            .body(data.into())
-            .send()
-            .await
-            .map_err(|e| OciStorageError::S3(e.to_string()))?;
-
-        let etag = response
-            .e_tag()
-            .ok_or_else(|| OciStorageError::S3("No ETag returned for part".to_owned()))?
-            .to_owned();
-
-        state.parts.push(CompletedPartInfo {
-            part_number,
-            etag,
-            size: part_size,
-        });
-
-        Ok(())
+        Ok(state.total_size())
     }
 
     /// Gets the current size of an in-progress upload
     pub async fn get_upload_size(&self, upload_id: &UploadId) -> Result<u64, OciStorageError> {
         let state = self.load_upload_state(upload_id).await?;
-        let buffer = self.load_upload_buffer(upload_id).await?;
-        Ok(state.completed_size() + buffer.len() as u64)
+        Ok(state.total_size())
     }
 
     /// Completes an upload and stores the blob
     ///
-    /// This:
-    /// 1. Uploads any remaining buffer as the final part
-    /// 2. Completes the S3 multipart upload
-    /// 3. Downloads and verifies the digest
-    /// 4. Copies to the final blob location
+    /// This uses incremental hashing to avoid downloading the entire blob:
+    /// 1. Streams through all buffer chunks, computing hash incrementally
+    /// 2. Uploads parts to S3 multipart when buffer reaches 5MB
+    /// 3. Verifies digest matches expected
+    /// 4. Copies completed multipart to final blob location
     /// 5. Cleans up temporary objects
     pub async fn complete_upload(
         &self,
         upload_id: &UploadId,
         expected_digest: &Digest,
     ) -> Result<Digest, OciStorageError> {
-        // Load state and buffer
+        // Load state
         let mut state = self.load_upload_state(upload_id).await?;
-        let buffer = self.load_upload_buffer(upload_id).await?;
+        let chunk_count = state.buffer_chunk_count;
 
-        // Upload any remaining buffer as the final part
-        if !buffer.is_empty() {
-            self.upload_part(upload_id, &mut state, buffer).await?;
-        }
-
-        // Must have at least one part
-        if state.parts.is_empty() {
-            self.cleanup_upload(upload_id).await;
+        // Must have some data
+        if chunk_count == 0 && state.parts.is_empty() {
+            self.cleanup_upload(upload_id, 0).await;
             return Err(OciStorageError::InvalidContent(
                 "Cannot complete upload with no data".to_owned(),
             ));
+        }
+
+        // Stream through chunks with incremental hashing
+        let mut hasher = Sha256::new();
+        let mut part_buffer = Vec::new();
+        let data_key = self.upload_data_key(upload_id);
+
+        for chunk_num in 0..chunk_count {
+            // Load chunk
+            let chunk = self.load_buffer_chunk(upload_id, chunk_num).await?;
+
+            // Update hash incrementally (no egress cost - we're reading to process)
+            hasher.update(&chunk);
+
+            // Add to part buffer
+            part_buffer.extend_from_slice(&chunk);
+
+            // Upload complete parts when we reach 5MB threshold
+            while part_buffer.len() >= MIN_PART_SIZE {
+                let part_data: Vec<u8> = part_buffer.drain(..MIN_PART_SIZE).collect();
+                self.upload_multipart_part(&mut state, &data_key, part_data)
+                    .await?;
+            }
+        }
+
+        // Upload any remaining data as the final part
+        if !part_buffer.is_empty() {
+            self.upload_multipart_part(&mut state, &data_key, part_buffer)
+                .await?;
+        }
+
+        // Must have at least one part for S3 multipart completion
+        if state.parts.is_empty() {
+            self.cleanup_upload(upload_id, chunk_count).await;
+            return Err(OciStorageError::InvalidContent(
+                "Cannot complete upload with no data".to_owned(),
+            ));
+        }
+
+        // Compute actual digest from incremental hash
+        let hash = hasher.finalize();
+        let actual_digest = Digest::sha256(&hex::encode(hash));
+
+        // Verify digest matches BEFORE completing multipart (fail fast)
+        if actual_digest.as_str() != expected_digest.as_str() {
+            // Abort the multipart upload
+            let _unused = self
+                .client
+                .abort_multipart_upload()
+                .bucket(&self.config.bucket_arn)
+                .key(&data_key)
+                .upload_id(&state.s3_upload_id)
+                .send()
+                .await;
+            self.cleanup_upload(upload_id, chunk_count).await;
+            return Err(OciStorageError::DigestMismatch {
+                expected: expected_digest.to_string(),
+                actual: actual_digest.to_string(),
+            });
         }
 
         // Build completed parts list for S3
@@ -793,8 +820,6 @@ impl OciS3Storage {
                     .build()
             })
             .collect();
-
-        let data_key = self.upload_data_key(upload_id);
 
         // Complete the multipart upload
         self.client
@@ -810,38 +835,6 @@ impl OciS3Storage {
             .send()
             .await
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
-
-        // Download and verify digest
-        let response = self
-            .client
-            .get_object()
-            .bucket(&self.config.bucket_arn)
-            .key(&data_key)
-            .send()
-            .await
-            .map_err(|e| OciStorageError::S3(e.to_string()))?;
-
-        let data = response
-            .body
-            .collect()
-            .await
-            .map_err(|e| OciStorageError::S3(e.to_string()))?
-            .into_bytes();
-
-        // Compute actual digest
-        let mut hasher = Sha256::new();
-        hasher.update(&data);
-        let hash = hasher.finalize();
-        let actual_digest = Digest::sha256(&hex::encode(hash));
-
-        // Verify digest matches
-        if actual_digest.as_str() != expected_digest.as_str() {
-            self.cleanup_upload(upload_id).await;
-            return Err(OciStorageError::DigestMismatch {
-                expected: expected_digest.to_string(),
-                actual: actual_digest.to_string(),
-            });
-        }
 
         // Parse repository name
         let repository: ProjectResourceId =
@@ -866,14 +859,50 @@ impl OciS3Storage {
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
 
         // Clean up temporary objects
-        self.cleanup_upload(upload_id).await;
+        self.cleanup_upload(upload_id, chunk_count).await;
 
         Ok(actual_digest)
     }
 
+    /// Uploads a single part to S3 multipart upload
+    async fn upload_multipart_part(
+        &self,
+        state: &mut UploadState,
+        data_key: &str,
+        data: Vec<u8>,
+    ) -> Result<(), OciStorageError> {
+        let part_number = state.next_part_number();
+        let part_size = data.len() as u64;
+
+        let response = self
+            .client
+            .upload_part()
+            .bucket(&self.config.bucket_arn)
+            .key(data_key)
+            .upload_id(&state.s3_upload_id)
+            .part_number(part_number)
+            .body(data.into())
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        let etag = response
+            .e_tag()
+            .ok_or_else(|| OciStorageError::S3("No ETag returned for part".to_owned()))?
+            .to_owned();
+
+        state.parts.push(CompletedPartInfo {
+            part_number,
+            etag,
+            size: part_size,
+        });
+
+        Ok(())
+    }
+
     /// Cancels an in-progress upload
     pub async fn cancel_upload(&self, upload_id: &UploadId) -> Result<(), OciStorageError> {
-        // Load state to get S3 upload ID
+        // Load state to get S3 upload ID and chunk count
         let state = self.load_upload_state(upload_id).await?;
         let data_key = self.upload_data_key(upload_id);
 
@@ -887,8 +916,8 @@ impl OciS3Storage {
             .send()
             .await;
 
-        // Clean up
-        self.cleanup_upload(upload_id).await;
+        // Clean up (including all buffer chunks)
+        self.cleanup_upload(upload_id, state.buffer_chunk_count).await;
 
         Ok(())
     }
@@ -1279,6 +1308,8 @@ impl OciS3Storage {
     }
 
     /// Lists all manifests that reference a given digest via their subject field
+    ///
+    /// Uses parallel fetches (up to 10 concurrent) for improved performance.
     pub async fn list_referrers(
         &self,
         repository: &ProjectResourceId,
@@ -1287,7 +1318,8 @@ impl OciS3Storage {
     ) -> Result<Vec<serde_json::Value>, OciStorageError> {
         let prefix = self.referrers_prefix(repository, subject_digest);
 
-        let mut referrers = Vec::new();
+        // First, collect all keys
+        let mut keys = Vec::new();
         let mut continuation_token: Option<String> = None;
 
         loop {
@@ -1308,39 +1340,9 @@ impl OciS3Storage {
 
             if let Some(contents) = response.contents {
                 for object in contents {
-                    let Some(key) = object.key else {
-                        continue;
-                    };
-                    // Get the referrer descriptor
-                    let Ok(resp) = self
-                        .client
-                        .get_object()
-                        .bucket(&self.config.bucket_arn)
-                        .key(&key)
-                        .send()
-                        .await
-                    else {
-                        continue;
-                    };
-                    let Ok(data) = resp.body.collect().await else {
-                        continue;
-                    };
-                    let Ok(descriptor) =
-                        serde_json::from_slice::<serde_json::Value>(&data.into_bytes())
-                    else {
-                        continue;
-                    };
-                    // Apply artifact type filter if specified
-                    if let Some(filter) = artifact_type_filter {
-                        let matches = descriptor
-                            .get("artifactType")
-                            .and_then(|a| a.as_str())
-                            .is_some_and(|at| at == filter);
-                        if !matches {
-                            continue;
-                        }
+                    if let Some(key) = object.key {
+                        keys.push(key);
                     }
-                    referrers.push(descriptor);
                 }
             }
 
@@ -1350,6 +1352,50 @@ impl OciS3Storage {
                 break;
             }
         }
+
+        // Fetch referrer descriptors in parallel (up to 10 concurrent)
+        let filter = artifact_type_filter.map(ToOwned::to_owned);
+        let referrers: Vec<serde_json::Value> = stream::iter(keys)
+            .map(|key| {
+                let client = &self.client;
+                let bucket = &self.config.bucket_arn;
+                let filter = filter.clone();
+                async move {
+                    // Get the referrer descriptor
+                    let Ok(resp) = client
+                        .get_object()
+                        .bucket(bucket)
+                        .key(&key)
+                        .send()
+                        .await
+                    else {
+                        return None;
+                    };
+                    let Ok(data) = resp.body.collect().await else {
+                        return None;
+                    };
+                    let Ok(descriptor) =
+                        serde_json::from_slice::<serde_json::Value>(&data.into_bytes())
+                    else {
+                        return None;
+                    };
+                    // Apply artifact type filter if specified
+                    if let Some(filter) = &filter {
+                        let matches = descriptor
+                            .get("artifactType")
+                            .and_then(|a| a.as_str())
+                            .is_some_and(|at| at == filter);
+                        if !matches {
+                            return None;
+                        }
+                    }
+                    Some(descriptor)
+                }
+            })
+            .buffer_unordered(10)
+            .filter_map(|x| async move { x })
+            .collect()
+            .await;
 
         Ok(referrers)
     }
