@@ -406,36 +406,39 @@ fn write_init_config(
 
 /// Install the bencher-init binary into the rootfs at /init.
 ///
-/// The init binary is looked for in the following locations (in order):
-/// 1. Next to the current executable (same directory as bencher-runner)
-/// 2. In PATH
+/// Uses the bundled init binary if available, otherwise falls back to searching on disk.
 #[cfg(target_os = "linux")]
 fn install_init_binary(rootfs: &camino::Utf8Path) -> Result<(), RunnerError> {
-    use std::fs;
-    use std::os::unix::fs::PermissionsExt as _;
+    use crate::init;
 
-    // Find the init binary
-    let init_binary = find_init_binary()?;
-
-    // Copy to /init in the rootfs
     let dest_path = rootfs.join("init");
-    fs::copy(&init_binary, &dest_path).map_err(|e| {
-        RunnerError::Config(format!(
-            "failed to copy init binary from {} to {}: {e}",
-            init_binary.display(),
-            dest_path
-        ))
-    })?;
 
-    // Make it executable
-    let mut perms = fs::metadata(&dest_path)?.permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&dest_path, perms)?;
+    if init::INIT_BUNDLED {
+        // Use the bundled init binary
+        init::write_init_to_file(dest_path.as_std_path())?;
+    } else {
+        // Fall back to searching for the binary on disk
+        let init_binary = find_init_binary()?;
+
+        std::fs::copy(&init_binary, &dest_path).map_err(|e| {
+            RunnerError::Config(format!(
+                "failed to copy init binary from {} to {}: {e}",
+                init_binary.display(),
+                dest_path
+            ))
+        })?;
+
+        // Make it executable
+        use std::os::unix::fs::PermissionsExt as _;
+        let mut perms = std::fs::metadata(&dest_path)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&dest_path, perms)?;
+    }
 
     Ok(())
 }
 
-/// Find the bencher-init binary.
+/// Find the bencher-init binary on disk (fallback when not bundled).
 #[cfg(target_os = "linux")]
 fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
     // Look in these locations in order
@@ -456,8 +459,7 @@ fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
     }
 
     Err(RunnerError::Config(
-        "bencher-init binary not found. Install it next to bencher-runner or in /usr/local/bin/."
-            .to_owned(),
+        "bencher-init binary not found. Build with: cargo build -p bencher_init".to_owned(),
     ))
 }
 

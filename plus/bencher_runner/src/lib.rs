@@ -37,18 +37,17 @@ use tempfile as _;
 
 mod config;
 mod error;
+#[cfg(target_os = "linux")]
+pub mod init;
 pub mod jail;
 mod run;
 #[cfg(target_os = "linux")]
-mod vmm;
+pub mod vmm;
 
 pub use config::Config;
 pub use error::RunnerError;
 pub use jail::ResourceLimits;
 pub use run::{execute, resolve_oci_image, run, run_with_args, RunArgs};
-
-#[cfg(target_os = "linux")]
-pub mod vmm;
 
 #[cfg(target_os = "linux")]
 pub use vmm::run_vmm;
