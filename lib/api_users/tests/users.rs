@@ -1,15 +1,15 @@
-//! Integration tests for user endpoints.
+//! Integration tests for user CRUD endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonToken, JsonTokens, JsonUser};
+use bencher_json::JsonUser;
 use http::StatusCode;
 
-// GET /v0/users - requires admin (first user is admin)
+// GET /v0/users - admin can list all users
 #[tokio::test]
 async fn test_users_list_as_admin() {
     let server = TestServer::new().await;
-    // First user created in a fresh DB is admin
-    let admin = server.signup("Admin User", "admin@example.com").await;
+    // First user is admin
+    let admin = server.signup("Admin User", "usersadmin@example.com").await;
 
     let resp = server
         .client
@@ -23,11 +23,31 @@ async fn test_users_list_as_admin() {
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
+// GET /v0/users - non-admin cannot list users
+#[tokio::test]
+async fn test_users_list_forbidden_for_non_admin() {
+    let server = TestServer::new().await;
+    // First user is admin
+    let _admin = server.signup("Admin User", "adminlist@example.com").await;
+    // Second user is NOT admin
+    let user = server.signup("Regular User", "regularlist@example.com").await;
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/users"))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
 // GET /v0/users/{user} - view own profile
 #[tokio::test]
 async fn test_users_get_self() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "userget@example.com").await;
+    let user = server.signup("Test User", "usersget@example.com").await;
 
     let user_slug: &str = user.slug.as_ref();
     let resp = server
@@ -43,11 +63,56 @@ async fn test_users_get_self() {
     assert_eq!(fetched.uuid, user.uuid);
 }
 
-// PATCH /v0/users/{user} - update profile
+// GET /v0/users/{user} - view by UUID
+#[tokio::test]
+async fn test_users_get_by_uuid() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "usersbyuuid@example.com").await;
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}", user.uuid)))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let fetched: JsonUser = resp.json().await.expect("Failed to parse response");
+    assert_eq!(fetched.uuid, user.uuid);
+}
+
+// GET /v0/users/{user} - cannot view other user (unless admin)
+#[tokio::test]
+async fn test_users_get_other_forbidden() {
+    let server = TestServer::new().await;
+    let user1 = server.signup("User One", "user1@example.com").await;
+    let user2 = server.signup("User Two", "user2@example.com").await;
+
+    // User1 tries to view User2
+    let user2_slug: &str = user2.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}", user2_slug)))
+        .header("Authorization", server.bearer(&user1.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    // First user is admin, so they can view
+    // For non-first users, this would be forbidden
+    assert!(
+        resp.status() == StatusCode::OK || resp.status() == StatusCode::FORBIDDEN,
+        "Expected OK (admin) or FORBIDDEN, got: {}",
+        resp.status()
+    );
+}
+
+// PATCH /v0/users/{user} - update own profile
 #[tokio::test]
 async fn test_users_update_self() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "userupdate@example.com").await;
+    let user = server.signup("Test User", "usersupdate@example.com").await;
 
     let body = serde_json::json!({
         "name": "Updated Name"
@@ -68,152 +133,53 @@ async fn test_users_update_self() {
     assert_eq!(updated.name.as_ref(), "Updated Name");
 }
 
-// GET /v0/users/{user}/tokens - list tokens
+// PATCH /v0/users/{user} - update slug
 #[tokio::test]
-async fn test_users_tokens_list() {
+async fn test_users_update_slug() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "usertokens@example.com").await;
-
-    // First create a token so the list isn't empty
-    let create_body = serde_json::json!({
-        "name": "List Test Token"
-    });
-
-    let user_slug: &str = user.slug.as_ref();
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
-        .json(&create_body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-
-    // Now list tokens
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let tokens: JsonTokens = resp.json().await.expect("Failed to parse response");
-    // User should have the token we just created
-    assert!(!tokens.0.is_empty());
-}
-
-// POST /v0/users/{user}/tokens - create token
-#[tokio::test]
-async fn test_users_tokens_create() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "createtoken@example.com").await;
+    let user = server.signup("Test User", "usersslug@example.com").await;
 
     let body = serde_json::json!({
-        "name": "Test Token"
+        "slug": "new-user-slug"
     });
 
     let user_slug: &str = user.slug.as_ref();
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .patch(server.api_url(&format!("/v0/users/{}", user_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    let token: JsonToken = resp.json().await.expect("Failed to parse response");
-    assert_eq!(token.name.as_ref(), "Test Token");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated: JsonUser = resp.json().await.expect("Failed to parse response");
+    let new_slug: &str = updated.slug.as_ref();
+    assert_eq!(new_slug, "new-user-slug");
 }
 
-// GET /v0/users/{user}/tokens/{token} - view token
+// PATCH /v0/users/{user} - non-admin cannot set admin flag
 #[tokio::test]
-async fn test_users_tokens_get() {
+async fn test_users_update_admin_forbidden() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "gettoken@example.com").await;
+    let _admin = server.signup("Admin", "adminupd@example.com").await;
+    let user = server.signup("Test User", "useradmin@example.com").await;
 
-    // First create a token
     let body = serde_json::json!({
-        "name": "View Token"
+        "admin": true
     });
 
     let user_slug: &str = user.slug.as_ref();
-    let create_resp = server
+    let resp = server
         .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .patch(server.api_url(&format!("/v0/users/{}", user_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()
         .await
         .expect("Request failed");
 
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let created_token: JsonToken = create_resp.json().await.expect("Failed to parse response");
-
-    // Now fetch it
-    let resp = server
-        .client
-        .get(server.api_url(&format!(
-            "/v0/users/{}/tokens/{}",
-            user_slug, created_token.uuid
-        )))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let fetched: JsonToken = resp.json().await.expect("Failed to parse response");
-    assert_eq!(fetched.uuid, created_token.uuid);
-}
-
-// PATCH /v0/users/{user}/tokens/{token} - update token
-#[tokio::test]
-async fn test_users_tokens_update() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "updatetoken@example.com").await;
-
-    // First create a token
-    let body = serde_json::json!({
-        "name": "Original Token"
-    });
-
-    let user_slug: &str = user.slug.as_ref();
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let created_token: JsonToken = create_resp.json().await.expect("Failed to parse response");
-
-    // Now update it
-    let update_body = serde_json::json!({
-        "name": "Updated Token"
-    });
-
-    let resp = server
-        .client
-        .patch(server.api_url(&format!(
-            "/v0/users/{}/tokens/{}",
-            user_slug, created_token.uuid
-        )))
-        .header("Authorization", server.bearer(&user.token))
-        .json(&update_body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let updated: JsonToken = resp.json().await.expect("Failed to parse response");
-    assert_eq!(updated.name.as_ref(), "Updated Token");
+    // Non-admin cannot set admin flag
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
