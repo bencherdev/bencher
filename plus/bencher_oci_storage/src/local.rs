@@ -25,6 +25,7 @@ use crate::types::{Digest, UploadId};
 /// A streaming body for blob content from local filesystem
 pub struct LocalBlobBody {
     inner: StreamBody<ReaderStreamAdapter>,
+    size: u64,
 }
 
 /// Adapter to convert `ReaderStream` errors to `BoxError`
@@ -58,18 +59,39 @@ impl hyper::body::Body for LocalBlobBody {
     ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         Pin::new(&mut self.inner).poll_frame(cx)
     }
+
+    fn size_hint(&self) -> hyper::body::SizeHint {
+        hyper::body::SizeHint::with_exact(self.size)
+    }
 }
 
 impl LocalBlobBody {
-    fn new(file: fs::File) -> Self {
+    pub(crate) fn new(file: fs::File, size: u64) -> Self {
         let reader_stream = ReaderStream::new(file);
         let adapter = ReaderStreamAdapter {
             inner: reader_stream,
         };
         Self {
             inner: StreamBody::new(adapter),
+            size,
         }
     }
+}
+
+/// Maps an IO result to an `OciStorageError`, converting `NotFound` errors
+/// to the provided error variant and other errors to `LocalStorage` errors.
+fn map_io_error<T>(
+    result: io::Result<T>,
+    not_found_error: OciStorageError,
+    other_error_msg: &str,
+) -> Result<T, OciStorageError> {
+    result.map_err(|e| {
+        if e.kind() == io::ErrorKind::NotFound {
+            not_found_error
+        } else {
+            OciStorageError::LocalStorage(format!("{other_error_msg}: {e}"))
+        }
+    })
 }
 
 /// Upload state stored on disk
@@ -178,13 +200,11 @@ impl OciLocalStorage {
         upload_id: &UploadId,
     ) -> Result<UploadState, OciStorageError> {
         let path = self.upload_state_path(upload_id);
-        let data = fs::read(&path).await.map_err(|e| {
-            if e.kind() == io::ErrorKind::NotFound {
-                OciStorageError::UploadNotFound(upload_id.to_string())
-            } else {
-                OciStorageError::LocalStorage(format!("Failed to read upload state: {e}"))
-            }
-        })?;
+        let data = map_io_error(
+            fs::read(&path).await,
+            OciStorageError::UploadNotFound(upload_id.to_string()),
+            "Failed to read upload state",
+        )?;
 
         serde_json::from_slice(&data).map_err(|e| OciStorageError::Json(e.to_string()))
     }
@@ -368,13 +388,11 @@ impl OciLocalStorage {
         digest: &Digest,
     ) -> Result<(Bytes, u64), OciStorageError> {
         let path = self.blob_path(repository, digest);
-        let data = fs::read(&path).await.map_err(|e| {
-            if e.kind() == io::ErrorKind::NotFound {
-                OciStorageError::BlobNotFound(digest.to_string())
-            } else {
-                OciStorageError::LocalStorage(format!("Failed to read blob: {e}"))
-            }
-        })?;
+        let data = map_io_error(
+            fs::read(&path).await,
+            OciStorageError::BlobNotFound(digest.to_string()),
+            "Failed to read blob",
+        )?;
 
         let size = data.len() as u64;
         Ok((Bytes::from(data), size))
@@ -392,25 +410,21 @@ impl OciLocalStorage {
         let path = self.blob_path(repository, digest);
 
         // Get file metadata for size
-        let metadata = fs::metadata(&path).await.map_err(|e| {
-            if e.kind() == io::ErrorKind::NotFound {
-                OciStorageError::BlobNotFound(digest.to_string())
-            } else {
-                OciStorageError::LocalStorage(format!("Failed to get blob metadata: {e}"))
-            }
-        })?;
+        let metadata = map_io_error(
+            fs::metadata(&path).await,
+            OciStorageError::BlobNotFound(digest.to_string()),
+            "Failed to get blob metadata",
+        )?;
         let size = metadata.len();
 
         // Open file for streaming
-        let file = fs::File::open(&path).await.map_err(|e| {
-            if e.kind() == io::ErrorKind::NotFound {
-                OciStorageError::BlobNotFound(digest.to_string())
-            } else {
-                OciStorageError::LocalStorage(format!("Failed to open blob file: {e}"))
-            }
-        })?;
+        let file = map_io_error(
+            fs::File::open(&path).await,
+            OciStorageError::BlobNotFound(digest.to_string()),
+            "Failed to open blob file",
+        )?;
 
-        Ok((LocalBlobBody::new(file), size))
+        Ok((LocalBlobBody::new(file, size), size))
     }
 
     /// Gets blob metadata (size) without downloading content
@@ -420,13 +434,11 @@ impl OciLocalStorage {
         digest: &Digest,
     ) -> Result<u64, OciStorageError> {
         let path = self.blob_path(repository, digest);
-        let metadata = fs::metadata(&path).await.map_err(|e| {
-            if e.kind() == io::ErrorKind::NotFound {
-                OciStorageError::BlobNotFound(digest.to_string())
-            } else {
-                OciStorageError::LocalStorage(format!("Failed to get blob metadata: {e}"))
-            }
-        })?;
+        let metadata = map_io_error(
+            fs::metadata(&path).await,
+            OciStorageError::BlobNotFound(digest.to_string()),
+            "Failed to get blob metadata",
+        )?;
 
         Ok(metadata.len())
     }
@@ -584,13 +596,11 @@ impl OciLocalStorage {
         digest: &Digest,
     ) -> Result<Bytes, OciStorageError> {
         let path = self.manifest_path(repository, digest);
-        let data = fs::read(&path).await.map_err(|e| {
-            if e.kind() == io::ErrorKind::NotFound {
-                OciStorageError::ManifestNotFound(digest.to_string())
-            } else {
-                OciStorageError::LocalStorage(format!("Failed to read manifest: {e}"))
-            }
-        })?;
+        let data = map_io_error(
+            fs::read(&path).await,
+            OciStorageError::ManifestNotFound(digest.to_string()),
+            "Failed to read manifest",
+        )?;
 
         Ok(Bytes::from(data))
     }
@@ -602,13 +612,11 @@ impl OciLocalStorage {
         tag: &str,
     ) -> Result<Digest, OciStorageError> {
         let path = self.tag_path(repository, tag);
-        let data = fs::read_to_string(&path).await.map_err(|e| {
-            if e.kind() == io::ErrorKind::NotFound {
-                OciStorageError::ManifestNotFound(tag.to_owned())
-            } else {
-                OciStorageError::LocalStorage(format!("Failed to read tag: {e}"))
-            }
-        })?;
+        let data = map_io_error(
+            fs::read_to_string(&path).await,
+            OciStorageError::ManifestNotFound(tag.to_owned()),
+            "Failed to read tag",
+        )?;
 
         data.trim()
             .parse()

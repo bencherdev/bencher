@@ -35,6 +35,7 @@ use crate::types::{Digest, UploadId};
 /// A streaming body for blob content from S3
 pub struct S3BlobBody {
     inner: ByteStream,
+    size: u64,
 }
 
 impl hyper::body::Body for S3BlobBody {
@@ -55,6 +56,10 @@ impl hyper::body::Body for S3BlobBody {
             Poll::Pending => Poll::Pending,
         }
     }
+
+    fn size_hint(&self) -> hyper::body::SizeHint {
+        hyper::body::SizeHint::with_exact(self.size)
+    }
 }
 
 /// Unified blob body type that wraps either S3 or local filesystem streams
@@ -74,6 +79,13 @@ impl hyper::body::Body for BlobBody {
         match self.get_mut() {
             Self::S3(s3) => Pin::new(s3).poll_frame(cx),
             Self::Local(local) => Pin::new(local).poll_frame(cx),
+        }
+    }
+
+    fn size_hint(&self) -> hyper::body::SizeHint {
+        match self {
+            Self::S3(s3) => s3.size_hint(),
+            Self::Local(local) => local.size_hint(),
         }
     }
 }
@@ -1132,7 +1144,13 @@ impl OciS3Storage {
             .content_length()
             .map_or(0, |len| u64::try_from(len).unwrap_or(0));
 
-        Ok((S3BlobBody { inner: response.body }, size))
+        Ok((
+            S3BlobBody {
+                inner: response.body,
+                size,
+            },
+            size,
+        ))
     }
 
     /// Gets blob metadata (size) without downloading content
