@@ -32,4 +32,7 @@ pub enum VmmError {
 
     #[error("VMM requires Linux with KVM support")]
     UnsupportedPlatform,
+
+    #[error("VM execution timed out after {0} seconds")]
+    Timeout(u64),
 }

@@ -6,6 +6,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 use kvm_ioctls::VcpuExit;
 
@@ -15,67 +16,99 @@ use crate::vcpu::Vcpu;
 
 /// Run the VM event loop.
 ///
-/// This runs the vCPUs and handles exits until the VM shuts down.
+/// This runs the vCPUs and handles exits until the VM shuts down or times out.
 ///
 /// # Arguments
 ///
 /// * `vcpus` - The virtual CPUs to run
 /// * `devices` - The device manager for handling I/O
+/// * `timeout_secs` - Maximum execution time in seconds (0 = no timeout)
 ///
 /// # Returns
 ///
-/// The benchmark results collected from the guest serial output.
+/// The benchmark results collected from the guest serial output or vsock.
 pub fn run(
     vcpus: &mut [Vcpu],
     devices: Arc<Mutex<DeviceManager>>,
+    timeout_secs: u64,
 ) -> Result<String, VmmError> {
     // Flag to signal all vCPUs to stop
     let shutdown = Arc::new(AtomicBool::new(false));
+    // Flag to track if we timed out
+    let timed_out = Arc::new(AtomicBool::new(false));
+
+    // Start timeout thread if timeout is set
+    let timeout_handle = if timeout_secs > 0 {
+        let shutdown_clone = Arc::clone(&shutdown);
+        let timed_out_clone = Arc::clone(&timed_out);
+        Some(thread::spawn(move || {
+            thread::sleep(Duration::from_secs(timeout_secs));
+            if !shutdown_clone.load(Ordering::Relaxed) {
+                timed_out_clone.store(true, Ordering::Relaxed);
+                shutdown_clone.store(true, Ordering::Relaxed);
+            }
+        }))
+    } else {
+        None
+    };
 
     // For single vCPU (common case), run in the current thread
-    if vcpus.len() == 1 {
-        return run_vcpu_loop(&mut vcpus[0], Arc::clone(&devices), Arc::clone(&shutdown));
-    }
+    let result = if vcpus.len() == 1 {
+        run_vcpu_loop(&mut vcpus[0], Arc::clone(&devices), Arc::clone(&shutdown))
+    } else {
+        // For multiple vCPUs, spawn threads
+        // Note: This is a simplified implementation. A production VMM would use
+        // proper thread synchronization and handle vCPU affinity.
+        let handles: Vec<_> = vcpus
+            .iter_mut()
+            .map(|vcpu| {
+                let devices = Arc::clone(&devices);
+                let shutdown = Arc::clone(&shutdown);
+                let vcpu_fd = vcpu.fd.try_clone().map_err(VmmError::Kvm)?;
+                let vcpu_index = vcpu.index;
 
-    // For multiple vCPUs, spawn threads
-    // Note: This is a simplified implementation. A production VMM would use
-    // proper thread synchronization and handle vCPU affinity.
-    let handles: Vec<_> = vcpus
-        .iter_mut()
-        .map(|vcpu| {
-            let devices = Arc::clone(&devices);
-            let shutdown = Arc::clone(&shutdown);
-            let vcpu_fd = vcpu.fd.try_clone().map_err(VmmError::Kvm)?;
-            let vcpu_index = vcpu.index;
+                Ok(thread::spawn(move || {
+                    let mut vcpu = Vcpu {
+                        fd: vcpu_fd,
+                        index: vcpu_index,
+                    };
+                    run_vcpu_loop(&mut vcpu, devices, shutdown)
+                }))
+            })
+            .collect::<Result<Vec<_>, VmmError>>()?;
 
-            Ok(thread::spawn(move || {
-                let mut vcpu = Vcpu {
-                    fd: vcpu_fd,
-                    index: vcpu_index,
-                };
-                run_vcpu_loop(&mut vcpu, devices, shutdown)
-            }))
-        })
-        .collect::<Result<Vec<_>, VmmError>>()?;
-
-    // Wait for all vCPU threads to complete
-    let mut result = Ok(String::new());
-    for handle in handles {
-        match handle.join() {
-            Ok(Ok(output)) => {
-                if !output.is_empty() {
-                    result = Ok(output);
+        // Wait for all vCPU threads to complete
+        let mut result = Ok(String::new());
+        for handle in handles {
+            match handle.join() {
+                Ok(Ok(output)) => {
+                    if !output.is_empty() {
+                        result = Ok(output);
+                    }
+                }
+                Ok(Err(e)) => {
+                    result = Err(e);
+                    break;
+                }
+                Err(_) => {
+                    result = Err(VmmError::Vcpu("vCPU thread panicked".to_owned()));
+                    break;
                 }
             }
-            Ok(Err(e)) => {
-                result = Err(e);
-                break;
-            }
-            Err(_) => {
-                result = Err(VmmError::Vcpu("vCPU thread panicked".to_owned()));
-                break;
-            }
         }
+        result
+    };
+
+    // Clean up timeout thread
+    if let Some(handle) = timeout_handle {
+        // Signal shutdown to stop the timeout thread if it's still waiting
+        shutdown.store(true, Ordering::Relaxed);
+        drop(handle); // Don't wait for it, just drop
+    }
+
+    // Check if we timed out
+    if timed_out.load(Ordering::Relaxed) {
+        return Err(VmmError::Timeout(timeout_secs));
     }
 
     result
@@ -218,25 +251,6 @@ fn handle_vcpu_exit(
             Ok(VmExitAction::Continue)
         }
     }
-}
-
-/// VM exit reasons we handle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VmExitReason {
-    /// I/O port access.
-    Io,
-
-    /// Memory-mapped I/O access.
-    Mmio,
-
-    /// CPU halted.
-    Hlt,
-
-    /// VM shutdown requested.
-    Shutdown,
-
-    /// Unknown exit reason.
-    Unknown(u32),
 }
 
 /// Result of handling a VM exit.

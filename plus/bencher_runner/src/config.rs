@@ -39,6 +39,13 @@ pub struct Config {
     /// Kernel command line arguments.
     #[serde(default = "default_kernel_cmdline")]
     pub kernel_cmdline: String,
+
+    /// Timeout for benchmark execution in seconds.
+    ///
+    /// If the benchmark doesn't complete within this time, it will be killed.
+    /// Defaults to 300 seconds (5 minutes).
+    #[serde(default = "default_timeout_secs")]
+    pub timeout_secs: u64,
 }
 
 const fn default_vcpus() -> u8 {
@@ -51,6 +58,10 @@ const fn default_memory_mib() -> u32 {
 
 fn default_kernel_cmdline() -> String {
     "console=ttyS0 reboot=k panic=1 pci=off".to_owned()
+}
+
+const fn default_timeout_secs() -> u64 {
+    300 // 5 minutes
 }
 
 impl Config {
@@ -70,6 +81,7 @@ impl Config {
             vcpus: default_vcpus(),
             memory_mib: default_memory_mib(),
             kernel_cmdline: default_kernel_cmdline(),
+            timeout_secs: default_timeout_secs(),
         }
     }
 
@@ -105,6 +117,13 @@ impl Config {
     #[must_use]
     pub fn with_kernel_cmdline<S: Into<String>>(mut self, cmdline: S) -> Self {
         self.kernel_cmdline = cmdline.into();
+        self
+    }
+
+    /// Set the timeout in seconds.
+    #[must_use]
+    pub fn with_timeout_secs(mut self, timeout_secs: u64) -> Self {
+        self.timeout_secs = timeout_secs;
         self
     }
 

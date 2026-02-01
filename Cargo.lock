@@ -1551,6 +1551,7 @@ dependencies = [
  "bencher_vmm",
  "camino",
  "serde",
+ "tempfile",
  "thiserror 2.0.17",
 ]
 

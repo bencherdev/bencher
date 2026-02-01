@@ -107,10 +107,14 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("  Kernel: {}", config.kernel);
     println!("  vCPUs: {}", config.vcpus);
     println!("  Memory: {} MiB", config.memory_mib);
+    println!("  Timeout: {} seconds", config.timeout_secs);
 
     // Create a temporary work directory
-    let work_dir = Utf8Path::new("/tmp/bencher-runner");
-    fs::create_dir_all(work_dir)?;
+    let temp_dir = tempfile::tempdir().map_err(|e| {
+        RunnerError::Config(format!("Failed to create temp directory: {e}"))
+    })?;
+    let work_dir = Utf8Path::from_path(temp_dir.path())
+        .ok_or_else(|| RunnerError::Config("Temp directory path is not UTF-8".to_owned()))?;
 
     let unpack_dir = work_dir.join("rootfs");
     let rootfs_path = work_dir.join("rootfs.squashfs");
@@ -166,12 +170,13 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
         memory_mib: config.memory_mib,
         kernel_cmdline: config.kernel_cmdline.clone(),
         vsock_path: Some(vsock_path.clone()),
+        timeout_secs: config.timeout_secs,
     };
 
     let results = bencher_vmm::run_vm(&vm_config)?;
 
-    // Clean up
-    drop(fs::remove_dir_all(work_dir));
+    // temp_dir is automatically cleaned up when dropped
+    drop(temp_dir);
 
     Ok(results)
 }

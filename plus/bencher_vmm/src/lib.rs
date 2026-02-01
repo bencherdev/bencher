@@ -65,7 +65,11 @@ mod stubs {
         pub memory_mib: u32,
         pub kernel_cmdline: String,
         pub vsock_path: Option<Utf8PathBuf>,
+        pub timeout_secs: u64,
     }
+
+    /// Default timeout in seconds (5 minutes).
+    const DEFAULT_TIMEOUT_SECS: u64 = 300;
 
     impl VmConfig {
         /// Create a new VM configuration.
@@ -77,6 +81,7 @@ mod stubs {
                 memory_mib: 512,
                 kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
                 vsock_path: None,
+                timeout_secs: DEFAULT_TIMEOUT_SECS,
             }
         }
 
@@ -84,6 +89,13 @@ mod stubs {
         #[must_use]
         pub fn with_vsock(mut self, socket_path: Utf8PathBuf) -> Self {
             self.vsock_path = Some(socket_path);
+            self
+        }
+
+        /// Set the execution timeout in seconds. Set to 0 to disable.
+        #[must_use]
+        pub fn with_timeout(mut self, timeout_secs: u64) -> Self {
+            self.timeout_secs = timeout_secs;
             self
         }
     }

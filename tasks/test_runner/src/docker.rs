@@ -33,13 +33,12 @@ pub fn docker_available() -> bool {
                 Ok(None) => {
                     // Still running, wait a bit more with timeout
                     std::thread::sleep(Duration::from_secs(2));
-                    match child.try_wait() {
-                        Ok(Some(status)) => status.success(),
-                        _ => {
-                            // Kill if still running
-                            drop(child.kill());
-                            false
-                        }
+                    if let Ok(Some(status)) = child.try_wait() {
+                        status.success()
+                    } else {
+                        // Kill if still running
+                        drop(child.kill());
+                        false
                     }
                 }
                 Err(_) => false,
