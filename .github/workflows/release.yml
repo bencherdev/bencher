@@ -16,6 +16,7 @@ env:
   API_DOCKER_IMAGE: bencher-api
   CONSOLE_DOCKER_IMAGE: bencher-console
   CLI_BIN_NAME: bencher
+  RUNNER_BIN_NAME: bencher-runner
 
 jobs:
   release_smoke_tests:
@@ -110,6 +111,16 @@ jobs:
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
 
+      - name: Download Runner Linux x86_64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
+
+      - name: Download Runner Linux ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
+
       # Load Docker images
       - name: Load API Image
         run: docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -192,3 +203,5 @@ jobs:
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
+            ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
+            ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
