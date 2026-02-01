@@ -13,6 +13,7 @@ use bencher_license::Licensor;
 use bencher_oci_storage::OciStorage;
 use bencher_recaptcha::RecaptchaClient;
 use bencher_schema::context::{Indexer, StatsSettings};
+use slog::{Logger, info};
 use tokio::runtime::Handle;
 use url::Url;
 
@@ -47,12 +48,14 @@ pub enum PlusError {
 
 impl Plus {
     pub fn new(
+        log: &Logger,
         console_url: &Url,
         plus: Option<JsonPlus>,
         database_path: &Path,
     ) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
             // No Plus config, but still provide local OCI storage
+            info!(log, "Using local filesystem OCI storage (no S3 configured)");
             return Ok(Self {
                 github_client: None,
                 google_client: None,
@@ -70,6 +73,11 @@ impl Plus {
 
         // Initialize OCI storage - uses S3 if configured, otherwise local filesystem
         let oci_data_store = plus.oci.map(|oci| oci.data_store);
+        if oci_data_store.is_none() {
+            info!(log, "Using local filesystem OCI storage (no S3 configured)");
+        } else {
+            info!(log, "Using S3 OCI storage");
+        }
         let oci_storage = Some(
             OciStorage::try_from_config(oci_data_store, database_path)
                 .map_err(PlusError::OciStorage)?,

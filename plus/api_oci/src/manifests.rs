@@ -89,8 +89,11 @@ pub async fn oci_manifest_exists(
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
-    // Determine content type (default to OCI manifest)
-    let content_type = "application/vnd.oci.image.manifest.v1+json";
+    // Determine content type from manifest (parse to get mediaType field)
+    let content_type = serde_json::from_slice::<serde_json::Value>(&manifest)
+        .ok()
+        .and_then(|v| v.get("mediaType").and_then(|m| m.as_str()).map(ToOwned::to_owned))
+        .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned());
 
     // Build response with OCI-compliant headers (no body for HEAD)
     let response = Response::builder()
@@ -164,9 +167,11 @@ pub async fn oci_manifest_get(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciManifestPull);
 
-    // Determine content type from manifest (default to OCI manifest)
-    // In a full implementation, we'd parse the manifest to determine the media type
-    let content_type = "application/vnd.oci.image.manifest.v1+json";
+    // Determine content type from manifest (parse to get mediaType field)
+    let content_type = serde_json::from_slice::<serde_json::Value>(&manifest)
+        .ok()
+        .and_then(|v| v.get("mediaType").and_then(|m| m.as_str()).map(ToOwned::to_owned))
+        .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned());
 
     // Build response with OCI-compliant headers
     let response = Response::builder()

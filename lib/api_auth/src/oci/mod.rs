@@ -7,11 +7,23 @@
 //! This endpoint implements the Docker Registry Auth specification.
 //! Clients authenticate using Basic auth with their Bencher API token
 //! as the password, and receive a short-lived JWT for OCI operations.
+//!
+//! RBAC validation is performed when a scope is requested:
+//! - "pull" action requires View permission on the project
+//! - "push" action requires Create permission on the project
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
-use bencher_json::{Email, Jwt};
-use bencher_schema::context::ApiContext;
+use bencher_json::{Email, Jwt, ProjectResourceId};
+use bencher_rbac::project::Permission;
+use bencher_schema::{
+    context::ApiContext,
+    model::{
+        project::QueryProject,
+        user::{QueryUser, auth::AuthUser},
+    },
+    public_conn,
+};
 use bencher_token::OCI_TOKEN_TTL;
 use chrono::Utc;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Query, RequestContext, endpoint};
@@ -98,16 +110,61 @@ pub async fn auth_oci_token_get(
         (None, vec![])
     };
 
-    // 4. Create OCI token with the validated scope
-    // Note: We're not doing full RBAC validation here - that happens when the token is used.
-    // The token just records what was requested; the actual permission check happens
-    // on each API call when the token is presented.
+    // 4. Validate RBAC permissions if a repository is requested
+    // The repository name maps to a project slug
+    if let Some(repo_name) = &repository {
+        // Load the user to check permissions
+        let query_user = QueryUser::get_with_email(public_conn!(context), &email)
+            .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+        let auth_user = AuthUser::load(
+            public_conn!(context),
+            query_user,
+        )
+        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+
+        // Try to find the project by slug
+        // The repository name could be "project-slug" or "org/project"
+        // We try to look it up as a project slug
+        let project_slug = repo_name
+            .split('/')
+            .next_back()
+            .unwrap_or(repo_name);
+
+        if let Ok(project_id) = project_slug.parse::<ProjectResourceId>()
+            && let Ok(query_project) =
+                QueryProject::from_resource_id(public_conn!(context), &project_id)
+        {
+            // Determine required permission based on actions
+            let required_permission = if actions.contains(&"push".to_owned()) {
+                Permission::Create
+            } else {
+                Permission::View
+            };
+
+            // Check if user has permission
+            query_project
+                .try_allowed(&context.rbac, &auth_user, required_permission)
+                .map_err(|_| {
+                    HttpError::for_client_error(
+                        None,
+                        ClientErrorStatusCode::FORBIDDEN,
+                        format!(
+                            "Access denied to repository: {repo_name}. You need {required_permission:?} permission.",
+                        ),
+                    )
+                })?;
+        }
+        // If project doesn't exist, we still issue the token.
+        // The actual operation will fail with a proper error when they try to use it.
+    }
+
+    // 5. Create OCI token with the validated scope
     let jwt = context
         .token_key
         .new_oci(email, repository, actions)
         .map_err(|e| HttpError::for_internal_error(format!("Failed to create OCI token: {e}")))?;
 
-    // 5. Build response
+    // 6. Build response
     let response = TokenResponse {
         token: jwt.to_string(),
         expires_in: OCI_TOKEN_TTL,
@@ -255,34 +312,11 @@ fn extract_basic_auth(rqctx: &RequestContext<ApiContext>) -> Result<(Email, Jwt)
 fn parse_scope(scope: &str) -> Result<(Option<String>, Vec<String>), HttpError> {
     let parts: Vec<&str> = scope.split(':').collect();
 
-    if parts.len() != 3 {
+    let [resource_type, repository_name, actions_str] = parts.as_slice() else {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::BAD_REQUEST,
             format!("Invalid scope format: {scope}. Expected: repository:name:actions"),
-        ));
-    }
-
-    // Safe to use get() since we checked length above
-    let Some(resource_type) = parts.first() else {
-        return Err(HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            format!("Invalid scope format: {scope}"),
-        ));
-    };
-    let Some(repository_name) = parts.get(1) else {
-        return Err(HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            format!("Invalid scope format: {scope}"),
-        ));
-    };
-    let Some(actions_str) = parts.get(2) else {
-        return Err(HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            format!("Invalid scope format: {scope}"),
         ));
     };
 
@@ -312,4 +346,41 @@ fn parse_scope(scope: &str) -> Result<(Option<String>, Vec<String>), HttpError> 
     }
 
     Ok((Some((*repository_name).to_owned()), actions))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_scope_valid() {
+        let (repo, actions) = parse_scope("repository:org/project:pull,push").unwrap();
+        assert_eq!(repo, Some("org/project".to_owned()));
+        assert_eq!(actions, vec!["pull", "push"]);
+    }
+
+    #[test]
+    fn test_parse_scope_single_action() {
+        let (repo, actions) = parse_scope("repository:myrepo:pull").unwrap();
+        assert_eq!(repo, Some("myrepo".to_owned()));
+        assert_eq!(actions, vec!["pull"]);
+    }
+
+    #[test]
+    fn test_parse_scope_invalid_format() {
+        let result = parse_scope("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_scope_invalid_resource_type() {
+        let result = parse_scope("image:myrepo:pull");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_scope_invalid_action() {
+        let result = parse_scope("repository:myrepo:delete");
+        assert!(result.is_err());
+    }
 }

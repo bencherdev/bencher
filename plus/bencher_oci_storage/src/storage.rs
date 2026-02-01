@@ -37,6 +37,9 @@ pub enum OciStorageError {
     #[error("S3 error: {0}")]
     S3(String),
 
+    #[error("IO error: {0}")]
+    Io(String),
+
     #[error("Upload not found: {0}")]
     UploadNotFound(String),
 
@@ -70,7 +73,7 @@ impl OciStorageError {
                 http::StatusCode::NOT_FOUND
             }
             Self::DigestMismatch { .. } | Self::InvalidContent(_) => http::StatusCode::BAD_REQUEST,
-            Self::S3(_) | Self::InvalidArn(_) | Self::Config(_) | Self::Json(_) => {
+            Self::S3(_) | Self::Io(_) | Self::InvalidArn(_) | Self::Config(_) | Self::Json(_) => {
                 http::StatusCode::INTERNAL_SERVER_ERROR
             }
         }

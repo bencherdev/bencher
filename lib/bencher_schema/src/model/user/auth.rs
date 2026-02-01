@@ -63,7 +63,7 @@ impl AuthUser {
         Self::load(conn, self.user.clone())
     }
 
-    fn load(conn: &mut DbConnection, query_user: QueryUser) -> Result<Self, HttpError> {
+    pub fn load(conn: &mut DbConnection, query_user: QueryUser) -> Result<Self, HttpError> {
         let (org_ids, org_roles) = Self::organization_roles(conn, &query_user)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, &query_user)?;
 

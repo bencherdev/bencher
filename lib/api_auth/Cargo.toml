@@ -10,6 +10,7 @@ publish = false
 default = []
 plus = [
     "dep:base64",
+    "dep:bencher_rbac",
     "dep:bencher_token",
     "dep:chrono",
     "dep:http",
@@ -27,6 +28,7 @@ base64 = { workspace = true, optional = true }
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_otel = { workspace = true, optional = true }
+bencher_rbac = { workspace = true, optional = true }
 bencher_schema.workspace = true
 bencher_token = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
