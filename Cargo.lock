@@ -1341,7 +1341,6 @@ dependencies = [
  "bytes",
  "hex",
  "http 1.4.0",
- "regex",
  "reqwest",
  "serde",
  "serde_json",

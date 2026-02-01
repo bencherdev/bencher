@@ -121,12 +121,8 @@ pub async fn auth_oci_token_get(
         let auth_user = AuthUser::load(public_conn!(context), query_user)
             .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
 
-        // Try to find the project by slug
-        // The repository name could be "project-slug" or "org/project"
-        // We try to look it up as a project slug
-        let project_slug = repo_name.split('/').next_back().unwrap_or(repo_name);
-
-        if let Ok(project_id) = project_slug.parse::<ProjectResourceId>()
+        // The repository name is a project UUID or slug
+        if let Ok(project_id) = repo_name.parse::<ProjectResourceId>()
             && let Ok(query_project) =
                 QueryProject::from_resource_id(public_conn!(context), &project_id)
         {

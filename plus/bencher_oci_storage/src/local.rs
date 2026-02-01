@@ -11,8 +11,10 @@ use sha2::{Digest as _, Sha256};
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
 
+use bencher_json::ProjectResourceId;
+
 use crate::storage::OciStorageError;
-use crate::types::{Digest, RepositoryName, UploadId};
+use crate::types::{Digest, UploadId};
 
 /// Upload state stored on disk
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -65,12 +67,12 @@ impl OciLocalStorage {
     }
 
     /// Returns the directory for a repository
-    fn repository_dir(&self, repository: &RepositoryName) -> PathBuf {
+    fn repository_dir(&self, repository: &ProjectResourceId) -> PathBuf {
         self.base_dir.join(repository.to_string())
     }
 
     /// Returns the path for a blob
-    fn blob_path(&self, repository: &RepositoryName, digest: &Digest) -> PathBuf {
+    fn blob_path(&self, repository: &ProjectResourceId, digest: &Digest) -> PathBuf {
         self.repository_dir(repository)
             .join("blobs")
             .join(digest.algorithm())
@@ -78,7 +80,7 @@ impl OciLocalStorage {
     }
 
     /// Returns the path for a manifest by digest
-    fn manifest_path(&self, repository: &RepositoryName, digest: &Digest) -> PathBuf {
+    fn manifest_path(&self, repository: &ProjectResourceId, digest: &Digest) -> PathBuf {
         self.repository_dir(repository)
             .join("manifests")
             .join("sha256")
@@ -86,12 +88,12 @@ impl OciLocalStorage {
     }
 
     /// Returns the path for a tag link
-    fn tag_path(&self, repository: &RepositoryName, tag: &str) -> PathBuf {
+    fn tag_path(&self, repository: &ProjectResourceId, tag: &str) -> PathBuf {
         self.repository_dir(repository).join("tags").join(tag)
     }
 
     /// Returns the directory for referrers to a given digest
-    fn referrers_dir(&self, repository: &RepositoryName, subject_digest: &Digest) -> PathBuf {
+    fn referrers_dir(&self, repository: &ProjectResourceId, subject_digest: &Digest) -> PathBuf {
         self.repository_dir(repository)
             .join("referrers")
             .join(subject_digest.algorithm())
@@ -101,7 +103,7 @@ impl OciLocalStorage {
     /// Returns the path for a referrer link
     fn referrer_path(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         subject_digest: &Digest,
         referrer_digest: &Digest,
     ) -> PathBuf {
@@ -150,7 +152,7 @@ impl OciLocalStorage {
     /// Starts a new upload session
     pub async fn start_upload(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
     ) -> Result<UploadId, OciStorageError> {
         let upload_id = UploadId::new();
         let upload_dir = self.upload_dir(&upload_id);
@@ -250,13 +252,12 @@ impl OciLocalStorage {
         }
 
         // Parse repository name
-        let repository: RepositoryName =
-            state
-                .repository
-                .parse()
-                .map_err(|e: crate::types::RepositoryNameError| {
-                    OciStorageError::InvalidContent(e.to_string())
-                })?;
+        let repository: ProjectResourceId = state
+            .repository
+            .parse()
+            .map_err(|e: bencher_json::ValidError| {
+                OciStorageError::InvalidContent(e.to_string())
+            })?;
 
         // Copy to final blob location
         let blob_path = self.blob_path(&repository, &actual_digest);
@@ -294,7 +295,7 @@ impl OciLocalStorage {
     /// Checks if a blob exists
     pub async fn blob_exists(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -304,7 +305,7 @@ impl OciLocalStorage {
     /// Gets a blob's content and size
     pub async fn get_blob(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(Bytes, u64), OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -323,7 +324,7 @@ impl OciLocalStorage {
     /// Gets blob metadata (size) without downloading content
     pub async fn get_blob_size(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<u64, OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -341,7 +342,7 @@ impl OciLocalStorage {
     /// Deletes a blob
     pub async fn delete_blob(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -358,8 +359,8 @@ impl OciLocalStorage {
     /// Mounts a blob from another repository (cross-repo blob mount)
     pub async fn mount_blob(
         &self,
-        from_repository: &RepositoryName,
-        to_repository: &RepositoryName,
+        from_repository: &ProjectResourceId,
+        to_repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         // Check if blob exists in source
@@ -389,7 +390,7 @@ impl OciLocalStorage {
     /// Stores a manifest
     pub async fn put_manifest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         content: Bytes,
         tag: Option<&str>,
     ) -> Result<Digest, OciStorageError> {
@@ -487,7 +488,7 @@ impl OciLocalStorage {
     /// Gets a manifest by digest
     pub async fn get_manifest_by_digest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<Bytes, OciStorageError> {
         let path = self.manifest_path(repository, digest);
@@ -505,7 +506,7 @@ impl OciLocalStorage {
     /// Resolves a tag to a digest
     pub async fn resolve_tag(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         tag: &str,
     ) -> Result<Digest, OciStorageError> {
         let path = self.tag_path(repository, tag);
@@ -525,7 +526,7 @@ impl OciLocalStorage {
     /// Lists all tags for a repository
     pub async fn list_tags(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
     ) -> Result<Vec<String>, OciStorageError> {
         let tags_dir = self.repository_dir(repository).join("tags");
 
@@ -554,7 +555,7 @@ impl OciLocalStorage {
     /// Deletes a manifest by digest
     pub async fn delete_manifest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         let path = self.manifest_path(repository, digest);
@@ -571,7 +572,7 @@ impl OciLocalStorage {
     /// Deletes a tag
     pub async fn delete_tag(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         tag: &str,
     ) -> Result<(), OciStorageError> {
         let path = self.tag_path(repository, tag);
@@ -588,7 +589,7 @@ impl OciLocalStorage {
     /// Lists all manifests that reference a given digest via their subject field
     pub async fn list_referrers(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         subject_digest: &Digest,
         artifact_type_filter: Option<&str>,
     ) -> Result<Vec<serde_json::Value>, OciStorageError> {

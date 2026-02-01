@@ -3,7 +3,8 @@
 //! - GET /v2/<name>/tags/list - List tags for a repository
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
-use bencher_oci_storage::{OciError, RepositoryName};
+use bencher_json::ProjectResourceId;
+use bencher_oci_storage::OciError;
 use bencher_schema::context::ApiContext;
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
@@ -14,8 +15,8 @@ use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, 
 /// Path parameters for tags list
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TagsPath {
-    /// Repository name (e.g., "library/ubuntu")
-    pub name: String,
+    /// Project resource ID (UUID or slug)
+    pub name: ProjectResourceId,
 }
 
 /// Query parameters for tags list pagination
@@ -69,24 +70,19 @@ pub async fn oci_tags_list(
     let query = query.into_inner();
 
     // Authenticate
-    let scope = format!("repository:{}:pull", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "pull")
+    validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
 
     // Get storage
     let storage = context.oci_storage()?;
 
     // List tags
     let mut tags = storage
-        .list_tags(&repository)
+        .list_tags(&path.name)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -113,7 +109,7 @@ pub async fn oci_tags_list(
     // TODO: Add Link header for pagination if there are more results
 
     Ok(Get::pub_response_ok(TagsListResponse {
-        name: repository.to_string(),
+        name: name_str,
         tags,
     }))
 }

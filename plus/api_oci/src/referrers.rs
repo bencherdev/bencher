@@ -6,7 +6,8 @@
 //! the specified digest via their `subject` field.
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
-use bencher_oci_storage::{Digest, OciError, RepositoryName};
+use bencher_json::ProjectResourceId;
+use bencher_oci_storage::{Digest, OciError};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
 use http::Response;
@@ -18,8 +19,8 @@ use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, 
 /// Path parameters for referrers endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReferrersPath {
-    /// Repository name (e.g., "library/ubuntu")
-    pub name: String,
+    /// Project resource ID (UUID or slug)
+    pub name: ProjectResourceId,
     /// Digest of the manifest to find referrers for
     pub digest: String,
 }
@@ -68,17 +69,14 @@ pub async fn oci_referrers_list(
     let query = query.into_inner();
 
     // Authenticate
-    let scope = format!("repository:{}:pull", path.name);
+    let name_str = path.name.to_string();
+    let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &path.name, "pull")
+    validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
 
-    // Parse and validate inputs
-    let repository: RepositoryName = path
-        .name
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: path.name.clone() }))?;
+    // Parse digest
     let digest: Digest = path
         .digest
         .parse()
@@ -89,7 +87,7 @@ pub async fn oci_referrers_list(
 
     // Get referrers from storage
     let referrers = storage
-        .list_referrers(&repository, &digest, query.artifact_type.as_deref())
+        .list_referrers(&path.name, &digest, query.artifact_type.as_deref())
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 

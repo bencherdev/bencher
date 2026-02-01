@@ -80,10 +80,6 @@ impl TokenKey {
         self.new_jwt(Audience::OAuth, email, ttl, None, Some(state), None)
     }
 
-    /// Create a new OCI registry access token
-    ///
-    /// These tokens are short-lived (5 minutes) and contain the authorized
-    /// repository and actions in the claims.
     pub fn new_oci(
         &self,
         email: Email,

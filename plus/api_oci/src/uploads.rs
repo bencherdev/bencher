@@ -15,6 +15,7 @@
 //! for conformance test compatibility.
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
+use bencher_json::ProjectResourceId;
 use bencher_oci_storage::{Digest, OciError, UploadId};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
@@ -25,8 +26,8 @@ use serde::Deserialize;
 /// Path parameters for upload session operations
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct UploadSessionPath {
-    /// Repository name (e.g., "library/ubuntu")
-    pub name: String,
+    /// Project resource ID (UUID or slug)
+    pub name: ProjectResourceId,
     /// Must be "uploads" for upload operations
     #[serde(rename = "ref")]
     pub reference: String,
@@ -83,7 +84,7 @@ pub async fn oci_upload_status(
     // No Bearer auth required - session ID serves as authentication
     // (obtained only via authenticated POST to start upload)
 
-    let repository_name = path.name.clone();
+    let repository_name = path.name.to_string();
 
     // Parse upload ID
     let upload_id: UploadId = path
@@ -138,7 +139,7 @@ pub async fn oci_upload_chunk(
     // No Bearer auth required - session ID serves as authentication
     // (obtained only via authenticated POST to start upload)
 
-    let repository_name = path.name.clone();
+    let repository_name = path.name.to_string();
     let data = body.as_bytes();
 
     // Parse upload ID
@@ -241,7 +242,7 @@ pub async fn oci_upload_complete(
     // (obtained only via authenticated POST to start upload)
 
     let query = query.into_inner();
-    let repository_name = path.name.clone();
+    let repository_name = path.name.to_string();
     let data = body.as_bytes();
 
     // Parse upload ID and expected digest

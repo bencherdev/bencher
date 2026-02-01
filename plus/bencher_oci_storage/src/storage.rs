@@ -18,14 +18,14 @@ use std::str::FromStr;
 
 use aws_sdk_s3::Client;
 use aws_sdk_s3::types::CompletedMultipartUpload;
-use bencher_json::{Secret, system::config::OciDataStore};
+use bencher_json::{ProjectResourceId, Secret, system::config::OciDataStore};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 use crate::local::OciLocalStorage;
-use crate::types::{Digest, RepositoryName, UploadId};
+use crate::types::{Digest, UploadId};
 
 /// Minimum part size for S3 multipart upload (5MB)
 /// S3 requires all parts except the last to be at least 5MB
@@ -165,7 +165,7 @@ impl OciStorage {
     /// Starts a new upload session
     pub async fn start_upload(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
     ) -> Result<UploadId, OciStorageError> {
         match self {
             Self::S3(s3) => s3.start_upload(repository).await,
@@ -218,7 +218,7 @@ impl OciStorage {
     /// Checks if a blob exists
     pub async fn blob_exists(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         match self {
@@ -230,7 +230,7 @@ impl OciStorage {
     /// Gets a blob's content and size
     pub async fn get_blob(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(Bytes, u64), OciStorageError> {
         match self {
@@ -242,7 +242,7 @@ impl OciStorage {
     /// Gets blob metadata (size) without downloading content
     pub async fn get_blob_size(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<u64, OciStorageError> {
         match self {
@@ -254,7 +254,7 @@ impl OciStorage {
     /// Deletes a blob
     pub async fn delete_blob(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         match self {
@@ -266,8 +266,8 @@ impl OciStorage {
     /// Mounts a blob from another repository (cross-repo blob mount)
     pub async fn mount_blob(
         &self,
-        from_repository: &RepositoryName,
-        to_repository: &RepositoryName,
+        from_repository: &ProjectResourceId,
+        to_repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         match self {
@@ -285,7 +285,7 @@ impl OciStorage {
     /// Stores a manifest
     pub async fn put_manifest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         content: Bytes,
         tag: Option<&str>,
     ) -> Result<Digest, OciStorageError> {
@@ -298,7 +298,7 @@ impl OciStorage {
     /// Gets a manifest by digest
     pub async fn get_manifest_by_digest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<Bytes, OciStorageError> {
         match self {
@@ -310,7 +310,7 @@ impl OciStorage {
     /// Resolves a tag to a digest
     pub async fn resolve_tag(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         tag: &str,
     ) -> Result<Digest, OciStorageError> {
         match self {
@@ -322,7 +322,7 @@ impl OciStorage {
     /// Lists all tags for a repository
     pub async fn list_tags(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
     ) -> Result<Vec<String>, OciStorageError> {
         match self {
             Self::S3(s3) => s3.list_tags(repository).await,
@@ -333,7 +333,7 @@ impl OciStorage {
     /// Deletes a manifest by digest
     pub async fn delete_manifest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         match self {
@@ -345,7 +345,7 @@ impl OciStorage {
     /// Deletes a tag
     pub async fn delete_tag(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         tag: &str,
     ) -> Result<(), OciStorageError> {
         match self {
@@ -357,7 +357,7 @@ impl OciStorage {
     /// Lists all manifests that reference a given digest via their subject field
     pub async fn list_referrers(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         subject_digest: &Digest,
         artifact_type_filter: Option<&str>,
     ) -> Result<Vec<serde_json::Value>, OciStorageError> {
@@ -415,7 +415,7 @@ impl OciS3Storage {
     // ==================== Key Generation ====================
 
     /// Returns the S3 key prefix for the given repository
-    fn key_prefix(&self, repository: &RepositoryName) -> String {
+    fn key_prefix(&self, repository: &ProjectResourceId) -> String {
         match &self.config.prefix {
             Some(prefix) => format!("{prefix}/{repository}"),
             None => repository.to_string(),
@@ -446,7 +446,7 @@ impl OciS3Storage {
     }
 
     /// Returns the S3 key for a blob
-    fn blob_key(&self, repository: &RepositoryName, digest: &Digest) -> String {
+    fn blob_key(&self, repository: &ProjectResourceId, digest: &Digest) -> String {
         format!(
             "{}/blobs/{}/{}",
             self.key_prefix(repository),
@@ -456,7 +456,7 @@ impl OciS3Storage {
     }
 
     /// Returns the S3 key for a manifest by digest
-    fn manifest_key_by_digest(&self, repository: &RepositoryName, digest: &Digest) -> String {
+    fn manifest_key_by_digest(&self, repository: &ProjectResourceId, digest: &Digest) -> String {
         format!(
             "{}/manifests/sha256/{}",
             self.key_prefix(repository),
@@ -465,12 +465,12 @@ impl OciS3Storage {
     }
 
     /// Returns the S3 key for a manifest tag link
-    fn tag_link_key(&self, repository: &RepositoryName, tag: &str) -> String {
+    fn tag_link_key(&self, repository: &ProjectResourceId, tag: &str) -> String {
         format!("{}/tags/{}", self.key_prefix(repository), tag)
     }
 
     /// Returns the S3 key prefix for referrers to a given digest
-    fn referrers_prefix(&self, repository: &RepositoryName, subject_digest: &Digest) -> String {
+    fn referrers_prefix(&self, repository: &ProjectResourceId, subject_digest: &Digest) -> String {
         format!(
             "{}/referrers/{}/{}",
             self.key_prefix(repository),
@@ -482,7 +482,7 @@ impl OciS3Storage {
     /// Returns the S3 key for a referrer link
     fn referrer_key(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         subject_digest: &Digest,
         referrer_digest: &Digest,
     ) -> String {
@@ -645,7 +645,7 @@ impl OciS3Storage {
     /// Starts a new upload session using S3 multipart upload
     pub async fn start_upload(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
     ) -> Result<UploadId, OciStorageError> {
         let upload_id = UploadId::new();
         let data_key = self.upload_data_key(&upload_id);
@@ -844,11 +844,11 @@ impl OciS3Storage {
         }
 
         // Parse repository name
-        let repository: RepositoryName =
+        let repository: ProjectResourceId =
             state
                 .repository
                 .parse()
-                .map_err(|e: crate::types::RepositoryNameError| {
+                .map_err(|e: bencher_json::ValidError| {
                     OciStorageError::InvalidContent(e.to_string())
                 })?;
 
@@ -898,7 +898,7 @@ impl OciS3Storage {
     /// Checks if a blob exists
     pub async fn blob_exists(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -924,7 +924,7 @@ impl OciS3Storage {
     /// Gets a blob's content and size
     pub async fn get_blob(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(Bytes, u64), OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -959,7 +959,7 @@ impl OciS3Storage {
     /// Gets blob metadata (size) without downloading content
     pub async fn get_blob_size(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<u64, OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -986,7 +986,7 @@ impl OciS3Storage {
     /// Deletes a blob
     pub async fn delete_blob(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -1004,8 +1004,8 @@ impl OciS3Storage {
     /// Mounts a blob from another repository (cross-repo blob mount)
     pub async fn mount_blob(
         &self,
-        from_repository: &RepositoryName,
-        to_repository: &RepositoryName,
+        from_repository: &ProjectResourceId,
+        to_repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         // Check if blob exists in source
@@ -1036,7 +1036,7 @@ impl OciS3Storage {
     /// Stores a manifest
     pub async fn put_manifest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         content: Bytes,
         tag: Option<&str>,
     ) -> Result<Digest, OciStorageError> {
@@ -1129,7 +1129,7 @@ impl OciS3Storage {
     /// Gets a manifest by digest
     pub async fn get_manifest_by_digest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<Bytes, OciStorageError> {
         let key = self.manifest_key_by_digest(repository, digest);
@@ -1161,7 +1161,7 @@ impl OciS3Storage {
     /// Resolves a tag to a digest
     pub async fn resolve_tag(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         tag: &str,
     ) -> Result<Digest, OciStorageError> {
         let key = self.tag_link_key(repository, tag);
@@ -1199,7 +1199,7 @@ impl OciS3Storage {
     /// Lists all tags for a repository
     pub async fn list_tags(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
     ) -> Result<Vec<String>, OciStorageError> {
         let prefix = format!("{}/tags/", self.key_prefix(repository));
 
@@ -1245,7 +1245,7 @@ impl OciS3Storage {
     /// Deletes a manifest by digest
     pub async fn delete_manifest(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         let key = self.manifest_key_by_digest(repository, digest);
@@ -1263,7 +1263,7 @@ impl OciS3Storage {
     /// Deletes a tag (removes the tag link, not the manifest itself)
     pub async fn delete_tag(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         tag: &str,
     ) -> Result<(), OciStorageError> {
         let key = self.tag_link_key(repository, tag);
@@ -1281,7 +1281,7 @@ impl OciS3Storage {
     /// Lists all manifests that reference a given digest via their subject field
     pub async fn list_referrers(
         &self,
-        repository: &RepositoryName,
+        repository: &ProjectResourceId,
         subject_digest: &Digest,
         artifact_type_filter: Option<&str>,
     ) -> Result<Vec<serde_json::Value>, OciStorageError> {
