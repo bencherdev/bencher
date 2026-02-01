@@ -25,7 +25,7 @@ pub struct Plus {
     pub biller: Option<Biller>,
     pub licensor: Licensor,
     pub recaptcha_client: Option<RecaptchaClient>,
-    pub oci_storage: Option<OciStorage>,
+    pub oci_storage: OciStorage,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -64,10 +64,8 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
-                oci_storage: Some(
-                    OciStorage::try_from_config(None, database_path)
-                        .map_err(PlusError::OciStorage)?,
-                ),
+                oci_storage: OciStorage::try_from_config(None, database_path)
+                    .map_err(PlusError::OciStorage)?,
             });
         };
 
@@ -78,10 +76,8 @@ impl Plus {
         } else {
             info!(log, "Using S3 OCI storage");
         }
-        let oci_storage = Some(
-            OciStorage::try_from_config(oci_data_store, database_path)
-                .map_err(PlusError::OciStorage)?,
-        );
+        let oci_storage = OciStorage::try_from_config(oci_data_store, database_path)
+            .map_err(PlusError::OciStorage)?;
 
         let github_client = plus.github.map(
             |JsonGitHub {

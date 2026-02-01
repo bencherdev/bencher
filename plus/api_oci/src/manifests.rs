@@ -76,7 +76,7 @@ pub async fn oci_manifest_exists(
         .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Resolve the reference to a digest
     let digest = match &reference {
@@ -151,7 +151,7 @@ pub async fn oci_manifest_get(
         .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Resolve the reference to a digest
     let digest = match &reference {
@@ -224,7 +224,7 @@ pub async fn oci_manifest_put(
         .map_err(|_err| crate::error::into_http_error(OciError::ManifestInvalid(path.reference.clone())))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Determine tag from reference (if it's a tag)
     let tag = match &reference {
@@ -306,7 +306,7 @@ pub async fn oci_manifest_delete(
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Parse reference - can be either a digest or a tag
     let reference: Reference = path

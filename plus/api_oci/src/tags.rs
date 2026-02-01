@@ -86,7 +86,7 @@ pub async fn oci_tags_list(
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // List tags
     let mut tags = storage
