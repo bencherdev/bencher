@@ -13,7 +13,10 @@ pub struct Config {
     pub oci_image: String,
 
     /// Path to the Linux kernel to boot.
-    pub kernel: Utf8PathBuf,
+    ///
+    /// If not specified, the bundled kernel will be used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kernel: Option<Utf8PathBuf>,
 
     /// JWT token for registry authentication.
     ///
@@ -65,17 +68,36 @@ const fn default_timeout_secs() -> u64 {
 }
 
 impl Config {
-    /// Create a new configuration with required fields.
+    /// Create a new configuration with the bundled kernel.
+    ///
+    /// # Arguments
+    ///
+    /// * `oci_image` - Local path or registry reference (e.g., `ghcr.io/owner/bench:v1`)
+    #[must_use]
+    pub fn new<S: Into<String>>(oci_image: S) -> Self {
+        Self {
+            oci_image: oci_image.into(),
+            kernel: None,
+            token: None,
+            cache_dir: None,
+            vcpus: default_vcpus(),
+            memory_mib: default_memory_mib(),
+            kernel_cmdline: default_kernel_cmdline(),
+            timeout_secs: default_timeout_secs(),
+        }
+    }
+
+    /// Create a new configuration with a custom kernel.
     ///
     /// # Arguments
     ///
     /// * `oci_image` - Local path or registry reference (e.g., `ghcr.io/owner/bench:v1`)
     /// * `kernel` - Path to the Linux kernel
     #[must_use]
-    pub fn new<S: Into<String>>(oci_image: S, kernel: Utf8PathBuf) -> Self {
+    pub fn with_kernel<S: Into<String>>(oci_image: S, kernel: Utf8PathBuf) -> Self {
         Self {
             oci_image: oci_image.into(),
-            kernel,
+            kernel: Some(kernel),
             token: None,
             cache_dir: None,
             vcpus: default_vcpus(),
