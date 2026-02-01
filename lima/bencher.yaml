@@ -10,10 +10,13 @@ vmType: vz
 # Enable nested virtualization (required for KVM inside the VM)
 nestedVirtualization: true
 
-# Enable Rosetta for x86_64 emulation (useful for cross-compilation)
-rosetta:
-  enabled: true
-  binfmt: true
+# VM-specific options
+vmOpts:
+  vz:
+    # Enable Rosetta for x86_64 emulation (useful for cross-compilation)
+    rosetta:
+      enabled: true
+      binfmt: true
 
 # VM resources
 cpus: 4
@@ -51,7 +54,9 @@ provision:
         libfontconfig1-dev \
         squashfs-tools \
         curl \
-        git
+        git \
+        clang \
+        mold
 
       # Ensure KVM is accessible
       if [ -e /dev/kvm ]; then
