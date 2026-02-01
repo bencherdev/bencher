@@ -6,12 +6,10 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use clap::Parser as _;
-
 use crate::parser::TaskOci;
 
 #[derive(Debug)]
-pub struct Task {
+pub struct Oci {
     api_url: String,
     namespace: String,
     crossmount_namespace: String,
@@ -24,7 +22,7 @@ pub struct Task {
     password: String,
 }
 
-impl TryFrom<TaskOci> for Task {
+impl TryFrom<TaskOci> for Oci {
     type Error = anyhow::Error;
 
     fn try_from(task: TaskOci) -> Result<Self, Self::Error> {
@@ -56,11 +54,7 @@ impl TryFrom<TaskOci> for Task {
     }
 }
 
-impl Task {
-    pub fn new() -> anyhow::Result<Self> {
-        TaskOci::parse().try_into()
-    }
-
+impl Oci {
     pub fn exec(&self) -> anyhow::Result<()> {
         println!("=== OCI Conformance Test Runner ===");
         println!("API URL: {}", self.api_url);

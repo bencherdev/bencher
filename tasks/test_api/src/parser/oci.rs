@@ -3,11 +3,8 @@ use clap::Parser;
 const TEST_USERNAME: &str = "muriel.bagge@nowhere.com";
 const TEST_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
 
+/// Run OCI Distribution Spec conformance tests
 #[derive(Parser, Debug)]
-#[clap(
-    name = "test-oci",
-    about = "Run OCI Distribution Spec conformance tests"
-)]
 pub struct TaskOci {
     /// API URL to test against
     #[clap(long, default_value = "http://localhost:61016")]

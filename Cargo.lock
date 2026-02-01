@@ -8688,14 +8688,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test_oci"
-version = "0.5.10"
-dependencies = [
- "anyhow",
- "clap",
-]
-
-[[package]]
 name = "testing_table"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
