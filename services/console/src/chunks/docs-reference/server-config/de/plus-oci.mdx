@@ -1,0 +1,26 @@
+### `plus.oci`
+
+Dieser Abschnitt spezifiziert die OCI (Open Container Initiative) Registry-Speicherkonfiguration.
+Bencher kann als OCI-kompatible Container-/Artefakt-Registry fungieren.
+
+Wenn dieser Abschnitt nicht konfiguriert ist, verwendet Bencher den lokalen Dateisystemspeicher
+in einem `oci`-Verzeichnis neben der Datenbankdatei.
+Dies ist geeignet für Entwicklung und Einzelinstanz-Deployments.
+
+Für Produktions-Deployments mit mehreren Instanzen oder für Dauerhaftigkeit
+konfigurieren Sie S3-basierten Speicher.
+
+Es gibt einen Speicher-`service`:
+- `aws_s3`: Speichern Sie OCI-Artefakte in AWS S3
+    - `access_key_id`: AWS-Zugangsschlüssel-ID
+    - `secret_access_key`: AWS-Geheimzugangsschlüssel
+    - `access_point`: S3 Access Point ARN mit optionalem Pfadpräfix.
+      Format: `arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
+
+|             Name             |                              Beispiel                               | Standardwert | Erforderlich |                              Beschreibung                               |
+| :--------------------------: | :-----------------------------------------------------------------: | :----------: | :----------: | :---------------------------------------------------------------------: |
+|          data_store          |                              \{ ... \}                              |     ---      |     Nein     |        Gibt das OCI-Speicher-Backend an. Lokal wenn weggelassen.        |
+|      data_store.service      |                              "aws_s3"                               |     ---      |      Ja      |                     Gibt den Speicherdiensttyp an.                      |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |     ---      |      Ja      |                        AWS-Zugangsschlüssel-ID.                         |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |     ---      |      Ja      |                       AWS-Geheimzugangsschlüssel.                       |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |     ---      |      Ja      | S3 Access Point ARN. Optionales Pfadpräfix nach dem Access-Point-Namen. |
