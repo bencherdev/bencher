@@ -140,6 +140,9 @@ pub async fn oci_blob_exists(
 }
 
 /// Download a blob (GET)
+///
+/// Streams the blob content rather than loading it entirely into memory,
+/// making this suitable for large container image layers.
 #[expect(
     clippy::map_err_ignore,
     reason = "Intentionally discarding auth errors for security"
@@ -187,9 +190,9 @@ pub async fn oci_blob_get(
     // Get storage
     let storage = context.oci_storage();
 
-    // Get blob content
-    let (data, size) = storage
-        .get_blob(&path.name, &digest)
+    // Get blob as streaming body
+    let (blob_body, size) = storage
+        .get_blob_stream(&path.name, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -197,7 +200,7 @@ pub async fn oci_blob_get(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciBlobPull);
 
-    // Build response with OCI-compliant headers
+    // Build response with OCI-compliant headers and streaming body
     let response = Response::builder()
         .status(http::StatusCode::OK)
         .header(http::header::CONTENT_TYPE, "application/octet-stream")
@@ -206,7 +209,7 @@ pub async fn oci_blob_get(
         .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
         .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "GET")
         .header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type")
-        .body(Body::from(data))
+        .body(Body::wrap(blob_body))
         .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)

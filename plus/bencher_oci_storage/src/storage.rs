@@ -14,19 +14,69 @@
 //! - Suitable for development and single-instance deployments
 
 use std::path::Path;
+use std::pin::Pin;
 use std::str::FromStr;
+use std::task::{Context, Poll};
 
 use aws_sdk_s3::Client;
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{ProjectResourceId, Secret, system::config::OciDataStore};
 use bytes::Bytes;
 use futures::stream::{self, StreamExt as _};
+use hyper::body::Frame;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
-use crate::local::OciLocalStorage;
+use crate::local::{LocalBlobBody, OciLocalStorage};
 use crate::types::{Digest, UploadId};
+
+/// A streaming body for blob content from S3
+pub struct S3BlobBody {
+    inner: ByteStream,
+}
+
+impl hyper::body::Body for S3BlobBody {
+    type Data = Bytes;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        match Pin::new(&mut self.inner).poll_next(cx) {
+            Poll::Ready(Some(Ok(bytes))) => Poll::Ready(Some(Ok(Frame::data(bytes)))),
+            Poll::Ready(Some(Err(e))) => {
+                let boxed: Box<dyn std::error::Error + Send + Sync> = Box::new(e);
+                Poll::Ready(Some(Err(boxed)))
+            }
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+/// Unified blob body type that wraps either S3 or local filesystem streams
+pub enum BlobBody {
+    S3(S3BlobBody),
+    Local(LocalBlobBody),
+}
+
+impl hyper::body::Body for BlobBody {
+    type Data = Bytes;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
+    fn poll_frame(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        match self.get_mut() {
+            Self::S3(s3) => Pin::new(s3).poll_frame(cx),
+            Self::Local(local) => Pin::new(local).poll_frame(cx),
+        }
+    }
+}
 
 /// Minimum part size for S3 multipart upload (5MB)
 /// S3 requires all parts except the last to be at least 5MB
@@ -245,7 +295,9 @@ impl OciStorage {
         }
     }
 
-    /// Gets a blob's content and size
+    /// Gets a blob's content and size (loads entire blob into memory)
+    ///
+    /// For large blobs, prefer `get_blob_stream` which streams the content.
     pub async fn get_blob(
         &self,
         repository: &ProjectResourceId,
@@ -254,6 +306,27 @@ impl OciStorage {
         match self {
             Self::S3(s3) => s3.get_blob(repository, digest).await,
             Self::Local(local) => local.get_blob(repository, digest).await,
+        }
+    }
+
+    /// Gets a blob as a streaming body
+    ///
+    /// Returns a streaming body and the blob size. The content is streamed
+    /// rather than loaded entirely into memory, making this suitable for large blobs.
+    pub async fn get_blob_stream(
+        &self,
+        repository: &ProjectResourceId,
+        digest: &Digest,
+    ) -> Result<(BlobBody, u64), OciStorageError> {
+        match self {
+            Self::S3(s3) => {
+                let (body, size) = s3.get_blob_stream(repository, digest).await?;
+                Ok((BlobBody::S3(body), size))
+            }
+            Self::Local(local) => {
+                let (body, size) = local.get_blob_stream(repository, digest).await?;
+                Ok((BlobBody::Local(body), size))
+            }
         }
     }
 
@@ -993,7 +1066,9 @@ impl OciS3Storage {
         }
     }
 
-    /// Gets a blob's content and size
+    /// Gets a blob's content and size (loads entire blob into memory)
+    ///
+    /// For large blobs, prefer `get_blob_stream` which streams the content.
     pub async fn get_blob(
         &self,
         repository: &ProjectResourceId,
@@ -1026,6 +1101,38 @@ impl OciS3Storage {
             .into_bytes();
 
         Ok((data, size))
+    }
+
+    /// Gets a blob as a streaming body
+    ///
+    /// Returns a streaming body and the blob size. The content is streamed
+    /// from S3 rather than loaded entirely into memory.
+    pub async fn get_blob_stream(
+        &self,
+        repository: &ProjectResourceId,
+        digest: &Digest,
+    ) -> Result<(S3BlobBody, u64), OciStorageError> {
+        let key = self.blob_key(repository, digest);
+        let response = self
+            .client
+            .get_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                    OciStorageError::BlobNotFound(digest.to_string())
+                } else {
+                    OciStorageError::S3(e.to_string())
+                }
+            })?;
+
+        let size = response
+            .content_length()
+            .map_or(0, |len| u64::try_from(len).unwrap_or(0));
+
+        Ok((S3BlobBody { inner: response.body }, size))
     }
 
     /// Gets blob metadata (size) without downloading content

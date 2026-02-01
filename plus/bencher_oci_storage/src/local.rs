@@ -4,17 +4,73 @@
 //! sibling to the database file. If the database is at `data/bencher.db`,
 //! OCI data will be stored under `data/oci/`.
 
+use std::io;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use bytes::Bytes;
+use http_body_util::StreamBody;
+use hyper::body::Frame;
 use sha2::{Digest as _, Sha256};
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
+use tokio_util::io::ReaderStream;
 
 use bencher_json::ProjectResourceId;
 
 use crate::storage::OciStorageError;
 use crate::types::{Digest, UploadId};
+
+/// A streaming body for blob content from local filesystem
+pub struct LocalBlobBody {
+    inner: StreamBody<ReaderStreamAdapter>,
+}
+
+/// Adapter to convert `ReaderStream` errors to `BoxError`
+struct ReaderStreamAdapter {
+    inner: ReaderStream<fs::File>,
+}
+
+impl futures::Stream for ReaderStreamAdapter {
+    type Item = Result<Frame<Bytes>, Box<dyn std::error::Error + Send + Sync>>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        match Pin::new(&mut self.inner).poll_next(cx) {
+            Poll::Ready(Some(Ok(bytes))) => Poll::Ready(Some(Ok(Frame::data(bytes)))),
+            Poll::Ready(Some(Err(e))) => {
+                let boxed: Box<dyn std::error::Error + Send + Sync> = Box::new(e);
+                Poll::Ready(Some(Err(boxed)))
+            }
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl hyper::body::Body for LocalBlobBody {
+    type Data = Bytes;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        Pin::new(&mut self.inner).poll_frame(cx)
+    }
+}
+
+impl LocalBlobBody {
+    fn new(file: fs::File) -> Self {
+        let reader_stream = ReaderStream::new(file);
+        let adapter = ReaderStreamAdapter {
+            inner: reader_stream,
+        };
+        Self {
+            inner: StreamBody::new(adapter),
+        }
+    }
+}
 
 /// Upload state stored on disk
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -123,7 +179,7 @@ impl OciLocalStorage {
     ) -> Result<UploadState, OciStorageError> {
         let path = self.upload_state_path(upload_id);
         let data = fs::read(&path).await.map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
+            if e.kind() == io::ErrorKind::NotFound {
                 OciStorageError::UploadNotFound(upload_id.to_string())
             } else {
                 OciStorageError::LocalStorage(format!("Failed to read upload state: {e}"))
@@ -303,7 +359,9 @@ impl OciLocalStorage {
         Ok(fs::try_exists(&path).await.unwrap_or(false))
     }
 
-    /// Gets a blob's content and size
+    /// Gets a blob's content and size (loads entire blob into memory)
+    ///
+    /// For large blobs, prefer `get_blob_stream` which streams the content.
     pub async fn get_blob(
         &self,
         repository: &ProjectResourceId,
@@ -311,7 +369,7 @@ impl OciLocalStorage {
     ) -> Result<(Bytes, u64), OciStorageError> {
         let path = self.blob_path(repository, digest);
         let data = fs::read(&path).await.map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
+            if e.kind() == io::ErrorKind::NotFound {
                 OciStorageError::BlobNotFound(digest.to_string())
             } else {
                 OciStorageError::LocalStorage(format!("Failed to read blob: {e}"))
@@ -322,6 +380,39 @@ impl OciLocalStorage {
         Ok((Bytes::from(data), size))
     }
 
+    /// Gets a blob as a streaming body
+    ///
+    /// Returns a streaming body and the blob size. The content is streamed
+    /// from disk rather than loaded entirely into memory.
+    pub async fn get_blob_stream(
+        &self,
+        repository: &ProjectResourceId,
+        digest: &Digest,
+    ) -> Result<(LocalBlobBody, u64), OciStorageError> {
+        let path = self.blob_path(repository, digest);
+
+        // Get file metadata for size
+        let metadata = fs::metadata(&path).await.map_err(|e| {
+            if e.kind() == io::ErrorKind::NotFound {
+                OciStorageError::BlobNotFound(digest.to_string())
+            } else {
+                OciStorageError::LocalStorage(format!("Failed to get blob metadata: {e}"))
+            }
+        })?;
+        let size = metadata.len();
+
+        // Open file for streaming
+        let file = fs::File::open(&path).await.map_err(|e| {
+            if e.kind() == io::ErrorKind::NotFound {
+                OciStorageError::BlobNotFound(digest.to_string())
+            } else {
+                OciStorageError::LocalStorage(format!("Failed to open blob file: {e}"))
+            }
+        })?;
+
+        Ok((LocalBlobBody::new(file), size))
+    }
+
     /// Gets blob metadata (size) without downloading content
     pub async fn get_blob_size(
         &self,
@@ -330,7 +421,7 @@ impl OciLocalStorage {
     ) -> Result<u64, OciStorageError> {
         let path = self.blob_path(repository, digest);
         let metadata = fs::metadata(&path).await.map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
+            if e.kind() == io::ErrorKind::NotFound {
                 OciStorageError::BlobNotFound(digest.to_string())
             } else {
                 OciStorageError::LocalStorage(format!("Failed to get blob metadata: {e}"))
@@ -350,7 +441,7 @@ impl OciLocalStorage {
         match fs::remove_file(&path).await {
             Ok(()) => Ok(()),
             // File already deleted or never existed - that's fine
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
             Err(e) => Err(OciStorageError::LocalStorage(format!(
                 "Failed to delete blob: {e}"
             ))),
@@ -494,7 +585,7 @@ impl OciLocalStorage {
     ) -> Result<Bytes, OciStorageError> {
         let path = self.manifest_path(repository, digest);
         let data = fs::read(&path).await.map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
+            if e.kind() == io::ErrorKind::NotFound {
                 OciStorageError::ManifestNotFound(digest.to_string())
             } else {
                 OciStorageError::LocalStorage(format!("Failed to read manifest: {e}"))
@@ -512,7 +603,7 @@ impl OciLocalStorage {
     ) -> Result<Digest, OciStorageError> {
         let path = self.tag_path(repository, tag);
         let data = fs::read_to_string(&path).await.map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
+            if e.kind() == io::ErrorKind::NotFound {
                 OciStorageError::ManifestNotFound(tag.to_owned())
             } else {
                 OciStorageError::LocalStorage(format!("Failed to read tag: {e}"))
@@ -582,7 +673,7 @@ impl OciLocalStorage {
         match fs::remove_file(&path).await {
             Ok(()) => Ok(()),
             // File already deleted or never existed - that's fine
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
             Err(e) => Err(OciStorageError::LocalStorage(format!(
                 "Failed to delete manifest: {e}"
             ))),
@@ -599,7 +690,7 @@ impl OciLocalStorage {
         match fs::remove_file(&path).await {
             Ok(()) => Ok(()),
             // File already deleted or never existed - that's fine
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
             Err(e) => Err(OciStorageError::LocalStorage(format!(
                 "Failed to delete tag: {e}"
             ))),

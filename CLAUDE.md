@@ -96,6 +96,7 @@ npm run setup                  # Run typeshare + wasm + copy files
 - Use `#[expect(...)]` instead of `#[allow(...)]` for lint suppression
 - Do **NOT** suppress a lint outside of a test module without explicit approval
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
+- All dependency versions go in the workspace `Cargo.toml`
 
 ### Frontend (TypeScript)
 

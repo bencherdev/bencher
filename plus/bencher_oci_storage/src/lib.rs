@@ -22,5 +22,5 @@ mod types;
 
 pub use bencher_json::ProjectResourceId;
 pub use error::OciError;
-pub use storage::{OciStorage, OciStorageError};
+pub use storage::{BlobBody, OciStorage, OciStorageError};
 pub use types::{Digest, DigestError, Reference, Tag, UploadId};
