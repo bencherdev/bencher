@@ -64,7 +64,7 @@ impl Config {
 
     /// Set the kernel command line.
     #[must_use]
-    pub fn with_kernel_cmdline(mut self, cmdline: impl Into<String>) -> Self {
+    pub fn with_kernel_cmdline<S: Into<String>>(mut self, cmdline: S) -> Self {
         self.kernel_cmdline = cmdline.into();
         self
     }

@@ -63,6 +63,7 @@ pub fn unpack(image_dir: &Utf8Path, target_dir: &Utf8Path) -> Result<(), OciErro
 }
 
 /// Simple logging helper (prints to stderr in debug builds).
+#[expect(clippy::print_stderr, clippy::needless_pass_by_value)]
 fn tracing_log(msg: String) {
     #[cfg(debug_assertions)]
     eprintln!("[bencher_oci] {msg}");
@@ -73,10 +74,9 @@ fn tracing_log(msg: String) {
 }
 
 /// Verify a blob's digest.
-#[expect(dead_code)]
-fn verify_digest(blob_path: &Utf8Path, expected_digest: &str) -> Result<(), OciError> {
-    use sha2::{Digest, Sha256};
-    use std::io::Read;
+pub fn verify_digest(blob_path: &Utf8Path, expected_digest: &str) -> Result<(), OciError> {
+    use sha2::{Digest as _, Sha256};
+    use std::io::Read as _;
 
     let mut file = std::fs::File::open(blob_path)?;
     let mut hasher = Sha256::new();
@@ -87,11 +87,11 @@ fn verify_digest(blob_path: &Utf8Path, expected_digest: &str) -> Result<(), OciE
         if bytes_read == 0 {
             break;
         }
-        hasher.update(&buffer[..bytes_read]);
+        hasher.update(buffer.get(..bytes_read).unwrap_or_default());
     }
 
     let hash = hasher.finalize();
-    let actual_digest = format!("sha256:{:x}", hash);
+    let actual_digest = format!("sha256:{hash:x}");
 
     if actual_digest != expected_digest {
         return Err(OciError::DigestMismatch {

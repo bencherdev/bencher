@@ -1,6 +1,6 @@
 use std::fs::{self, File};
 use std::io::Write as _;
-use std::os::unix::fs::PermissionsExt as _;
+use std::os::unix::fs::{symlink, PermissionsExt as _};
 use std::process::Command;
 
 use anyhow::Context as _;
@@ -20,6 +20,7 @@ impl TryFrom<TaskOci> for Oci {
 }
 
 impl Oci {
+    #[expect(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         create_test_image()
     }
@@ -82,6 +83,10 @@ fn create_rootfs(rootfs: &Utf8Path) -> anyhow::Result<()> {
     // Create init script
     create_init_script(rootfs)?;
 
+    // Write the command config (this would normally be done by the runner
+    // after parsing the OCI config, but for the test image we hardcode it)
+    write_command_config(rootfs, &["/usr/bin/bencher", "mock"], "/", &[])?;
+
     // Create basic /etc files
     create_etc_files(rootfs)?;
 
@@ -119,7 +124,7 @@ fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
     for util in utils {
         let link_path = rootfs.join(format!("bin/{util}"));
         if !link_path.exists() {
-            std::os::unix::fs::symlink("busybox", &link_path)?;
+            symlink("busybox", &link_path)?;
         }
     }
 
@@ -127,7 +132,7 @@ fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
     for util in ["init", "poweroff", "reboot", "halt"] {
         let link_path = rootfs.join(format!("sbin/{util}"));
         if !link_path.exists() {
-            std::os::unix::fs::symlink("../bin/busybox", &link_path)?;
+            symlink("../bin/busybox", &link_path)?;
         }
     }
 
@@ -197,10 +202,14 @@ esac
     Ok(())
 }
 
-/// Create the init script that runs bencher mock.
+/// Create the init script that reads command from OCI config.
 fn create_init_script(rootfs: &Utf8Path) -> anyhow::Result<()> {
+    // Create the bencher config directory
+    fs::create_dir_all(rootfs.join("etc/bencher"))?;
+
     let init_script = r#"#!/bin/sh
 # Bencher runner init script
+# This script reads the command from /etc/bencher/command and executes it
 
 # Mount essential filesystems
 mount -t proc none /proc 2>/dev/null
@@ -208,15 +217,29 @@ mount -t sysfs none /sys 2>/dev/null
 mount -t devtmpfs none /dev 2>/dev/null
 
 # Print startup message
-echo "=== Bencher Runner Test VM ==="
-echo "Running bencher mock..."
-echo ""
+echo "=== Bencher Runner VM ==="
 
-# Run the benchmark
-/usr/bin/bencher mock
-
-echo ""
-echo "=== Benchmark Complete ==="
+# Read and execute the command from config
+if [ -f /etc/bencher/command ]; then
+    echo "Executing command from OCI config..."
+    # Source environment if present
+    if [ -f /etc/bencher/env ]; then
+        . /etc/bencher/env
+    fi
+    # Change to working directory if specified
+    if [ -f /etc/bencher/workdir ]; then
+        cd "$(cat /etc/bencher/workdir)" || true
+    fi
+    # Execute the command
+    echo ""
+    sh -c "$(cat /etc/bencher/command)"
+    EXIT_CODE=$?
+    echo ""
+    echo "=== Command exited with code: $EXIT_CODE ==="
+else
+    echo "ERROR: No command found at /etc/bencher/command"
+    echo "The OCI image must have CMD or ENTRYPOINT set"
+fi
 
 # Shutdown
 echo "Shutting down..."
@@ -230,6 +253,59 @@ poweroff -f
 
     println!("Init script created");
     Ok(())
+}
+
+/// Write the command configuration files for the init script.
+///
+/// This writes:
+/// - `/etc/bencher/command` - The shell command to execute
+/// - `/etc/bencher/workdir` - The working directory (optional)
+/// - `/etc/bencher/env` - Environment variables as shell exports (optional)
+fn write_command_config(
+    rootfs: &Utf8Path,
+    command: &[&str],
+    workdir: &str,
+    env: &[(String, String)],
+) -> anyhow::Result<()> {
+    let config_dir = rootfs.join("etc/bencher");
+    fs::create_dir_all(&config_dir)?;
+
+    // Write the command as a shell-escaped string
+    let command_str = command
+        .iter()
+        .map(|arg| shell_escape(arg))
+        .collect::<Vec<_>>()
+        .join(" ");
+    fs::write(config_dir.join("command"), command_str)?;
+
+    // Write working directory
+    if !workdir.is_empty() && workdir != "/" {
+        fs::write(config_dir.join("workdir"), workdir)?;
+    }
+
+    // Write environment as shell exports
+    if !env.is_empty() {
+        use std::fmt::Write as _;
+        let mut env_script = String::new();
+        for (k, v) in env {
+            writeln!(env_script, "export {}={}", k, shell_escape(v))
+                .expect("writing to String cannot fail");
+        }
+        fs::write(config_dir.join("env"), env_script)?;
+    }
+
+    Ok(())
+}
+
+/// Simple shell escaping for arguments.
+fn shell_escape(s: &str) -> String {
+    if s.chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '/' || c == '.')
+    {
+        s.to_owned()
+    } else {
+        format!("'{}'", s.replace('\'', "'\"'\"'"))
+    }
 }
 
 /// Create basic /etc files.
@@ -334,7 +410,8 @@ fn create_image_config() -> serde_json::Value {
         "architecture": "amd64",
         "os": "linux",
         "config": {
-            "Cmd": ["/init"],
+            "Entrypoint": ["/usr/bin/bencher"],
+            "Cmd": ["mock"],
             "WorkingDir": "/"
         },
         "rootfs": {

@@ -53,13 +53,13 @@ pub struct BenchmarkResults {
 /// A single benchmark metric.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metric {
-    /// Name of the metric (e.g., "latency_ns", "throughput_ops_sec").
+    /// Name of the metric (e.g., `latency_ns`, `throughput_ops_sec`).
     pub name: String,
 
     /// Value of the metric.
     pub value: f64,
 
-    /// Unit of the metric (e.g., "ns", "ops/sec", "bytes").
+    /// Unit of the metric (e.g., `ns`, `ops/sec`, `bytes`).
     #[serde(default)]
     pub unit: Option<String>,
 }
@@ -80,7 +80,7 @@ impl BenchmarkResults {
 
     /// Create a new failed results object.
     #[must_use]
-    pub fn failure(error: impl Into<String>) -> Self {
+    pub fn failure<S: Into<String>>(error: S) -> Self {
         Self {
             success: false,
             error: Some(error.into()),
@@ -93,7 +93,7 @@ impl BenchmarkResults {
 
     /// Add a metric to the results.
     #[must_use]
-    pub fn with_metric(mut self, name: impl Into<String>, value: f64) -> Self {
+    pub fn with_metric<S: Into<String>>(mut self, name: S, value: f64) -> Self {
         self.metrics.push(Metric {
             name: name.into(),
             value,
@@ -104,11 +104,11 @@ impl BenchmarkResults {
 
     /// Add a metric with a unit to the results.
     #[must_use]
-    pub fn with_metric_unit(
+    pub fn with_metric_unit<S: Into<String>, U: Into<String>>(
         mut self,
-        name: impl Into<String>,
+        name: S,
         value: f64,
-        unit: impl Into<String>,
+        unit: U,
     ) -> Self {
         self.metrics.push(Metric {
             name: name.into(),
@@ -120,14 +120,14 @@ impl BenchmarkResults {
 
     /// Set the stdout output.
     #[must_use]
-    pub fn with_stdout(mut self, stdout: impl Into<String>) -> Self {
+    pub fn with_stdout<S: Into<String>>(mut self, stdout: S) -> Self {
         self.stdout = stdout.into();
         self
     }
 
     /// Set the stderr output.
     #[must_use]
-    pub fn with_stderr(mut self, stderr: impl Into<String>) -> Self {
+    pub fn with_stderr<S: Into<String>>(mut self, stderr: S) -> Self {
         self.stderr = stderr.into();
         self
     }
@@ -149,7 +149,7 @@ impl Default for BenchmarkResults {
 impl Metric {
     /// Create a new metric.
     #[must_use]
-    pub fn new(name: impl Into<String>, value: f64) -> Self {
+    pub fn new<S: Into<String>>(name: S, value: f64) -> Self {
         Self {
             name: name.into(),
             value,
@@ -159,7 +159,7 @@ impl Metric {
 
     /// Create a new metric with a unit.
     #[must_use]
-    pub fn with_unit(name: impl Into<String>, value: f64, unit: impl Into<String>) -> Self {
+    pub fn with_unit<S: Into<String>, U: Into<String>>(name: S, value: f64, unit: U) -> Self {
         Self {
             name: name.into(),
             value,

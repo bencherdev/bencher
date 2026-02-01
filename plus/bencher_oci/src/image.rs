@@ -35,13 +35,81 @@ pub struct ImageConfig {
     pub config: ImageConfiguration,
 }
 
+impl ImageConfig {
+    /// Get the command to run (combining ENTRYPOINT and CMD).
+    ///
+    /// OCI spec: the final command is `ENTRYPOINT + CMD`.
+    /// - If only CMD is set, run CMD
+    /// - If only ENTRYPOINT is set, run ENTRYPOINT
+    /// - If both are set, run ENTRYPOINT with CMD as arguments
+    #[must_use]
+    pub fn command(&self) -> Vec<String> {
+        let config = self.config.config();
+
+        let entrypoint: Vec<String> = config
+            .as_ref()
+            .and_then(|c| c.entrypoint().as_ref())
+            .map(|e| e.iter().map(String::clone).collect())
+            .unwrap_or_default();
+
+        let cmd: Vec<String> = config
+            .as_ref()
+            .and_then(|c| c.cmd().as_ref())
+            .map(|c| c.iter().map(String::clone).collect())
+            .unwrap_or_default();
+
+        if entrypoint.is_empty() {
+            cmd
+        } else {
+            let mut command = entrypoint;
+            command.extend(cmd);
+            command
+        }
+    }
+
+    /// Get the working directory.
+    #[must_use]
+    pub fn working_dir(&self) -> Option<&str> {
+        self.config
+            .config()
+            .as_ref()
+            .and_then(|c| c.working_dir().as_deref())
+    }
+
+    /// Get environment variables as key-value pairs.
+    #[must_use]
+    pub fn env(&self) -> Vec<(String, String)> {
+        self.config
+            .config()
+            .as_ref()
+            .and_then(|c| c.env().as_ref())
+            .map(|env| {
+                env.iter()
+                    .filter_map(|e| {
+                        e.split_once('=')
+                            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Get the user to run as.
+    #[must_use]
+    pub fn user(&self) -> Option<&str> {
+        self.config
+            .config()
+            .as_ref()
+            .and_then(|c| c.user().as_deref())
+    }
+}
+
 /// Parse the OCI layout from an image directory.
 pub fn parse_oci_layout(image_dir: &Utf8Path) -> Result<(), OciError> {
     let layout_path = image_dir.join("oci-layout");
 
-    let file = File::open(&layout_path).map_err(|e| {
-        OciError::InvalidLayout(format!("Cannot open oci-layout: {e}"))
-    })?;
+    let file = File::open(&layout_path)
+        .map_err(|e| OciError::InvalidLayout(format!("Cannot open oci-layout: {e}")))?;
 
     let layout: serde_json::Value = serde_json::from_reader(BufReader::new(file))?;
 
@@ -63,9 +131,8 @@ pub fn parse_oci_layout(image_dir: &Utf8Path) -> Result<(), OciError> {
 pub fn parse_index(image_dir: &Utf8Path) -> Result<ImageIndex, OciError> {
     let index_path = image_dir.join("index.json");
 
-    let file = File::open(&index_path).map_err(|e| {
-        OciError::InvalidLayout(format!("Cannot open index.json: {e}"))
-    })?;
+    let file = File::open(&index_path)
+        .map_err(|e| OciError::InvalidLayout(format!("Cannot open index.json: {e}")))?;
 
     let index = ImageIndex::from_reader(BufReader::new(file))
         .map_err(|e| OciError::InvalidLayout(format!("Invalid index.json: {e}")))?;
@@ -86,9 +153,8 @@ pub fn get_manifest(image_dir: &Utf8Path, index: &ImageIndex) -> Result<ImageMan
     let blob_path = digest_to_blob_path(image_dir, &digest);
 
     // Read and parse the manifest
-    let file = File::open(&blob_path).map_err(|e| {
-        OciError::MissingBlob(format!("Cannot open manifest blob {digest}: {e}"))
-    })?;
+    let file = File::open(&blob_path)
+        .map_err(|e| OciError::MissingBlob(format!("Cannot open manifest blob {digest}: {e}")))?;
 
     let manifest = OciImageManifest::from_reader(BufReader::new(file))
         .map_err(|e| OciError::InvalidLayout(format!("Invalid manifest: {e}")))?;
@@ -128,27 +194,74 @@ pub fn parse_config(image_dir: &Utf8Path, config_digest: &str) -> Result<ImageCo
 /// Digest format: `algorithm:hex`
 /// Blob path: `blobs/algorithm/hex`
 pub fn digest_to_blob_path(image_dir: &Utf8Path, digest: &str) -> camino::Utf8PathBuf {
-    let parts: Vec<&str> = digest.splitn(2, ':').collect();
-    if parts.len() == 2 {
-        image_dir.join("blobs").join(parts[0]).join(parts[1])
+    if let Some((algorithm, hex)) = digest.split_once(':') {
+        image_dir.join("blobs").join(algorithm).join(hex)
     } else {
         // Fallback for malformed digest
         image_dir.join("blobs").join("sha256").join(digest)
     }
 }
 
+/// Full parsed OCI image information.
+#[derive(Debug, Clone)]
+pub struct OciImage {
+    /// The image manifest.
+    pub manifest: ImageManifest,
+
+    /// The image configuration.
+    pub config: ImageConfig,
+}
+
+impl OciImage {
+    /// Parse an OCI image directory and return full image information.
+    pub fn parse(image_dir: &Utf8Path) -> Result<Self, OciError> {
+        // Validate layout
+        parse_oci_layout(image_dir)?;
+
+        // Parse index and manifest
+        let index = parse_index(image_dir)?;
+        let manifest = get_manifest(image_dir, &index)?;
+
+        // Parse config
+        let config = parse_config(image_dir, &manifest.config_digest)?;
+
+        Ok(Self { manifest, config })
+    }
+
+    /// Get the command to run in the container.
+    #[must_use]
+    pub fn command(&self) -> Vec<String> {
+        self.config.command()
+    }
+
+    /// Get the working directory.
+    #[must_use]
+    pub fn working_dir(&self) -> Option<&str> {
+        self.config.working_dir()
+    }
+
+    /// Get environment variables.
+    #[must_use]
+    pub fn env(&self) -> Vec<(String, String)> {
+        self.config.env()
+    }
+}
+
 /// Detect the media type of a layer.
-pub fn detect_layer_media_type(media_type: &MediaType) -> Result<super::LayerCompression, OciError> {
+#[expect(clippy::wildcard_enum_match_arm)]
+pub fn detect_layer_media_type(
+    media_type: &MediaType,
+) -> Result<super::LayerCompression, OciError> {
     match media_type {
         MediaType::ImageLayerGzip | MediaType::ImageLayerNonDistributableGzip => {
             Ok(super::LayerCompression::Gzip)
-        }
+        },
         MediaType::ImageLayerZstd | MediaType::ImageLayerNonDistributableZstd => {
             Ok(super::LayerCompression::Zstd)
-        }
+        },
         MediaType::ImageLayer | MediaType::ImageLayerNonDistributable => {
             Ok(super::LayerCompression::None)
-        }
+        },
         other => Err(OciError::UnsupportedMediaType(format!("{other:?}"))),
     }
 }

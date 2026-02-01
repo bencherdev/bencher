@@ -23,6 +23,7 @@ impl TryFrom<TaskKernel> for Kernel {
 }
 
 impl Kernel {
+    #[expect(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         ensure_kernel()
     }

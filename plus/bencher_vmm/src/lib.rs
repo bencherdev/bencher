@@ -12,8 +12,8 @@
 //!
 //! # Architecture Support (Linux only)
 //!
-//! - **x86_64**: Full support for Linux guests with bzImage kernels
-//! - **aarch64**: Partial support (device tree generation TODO)
+//! - **`x86_64`**: Full support for Linux guests with `bzImage` kernels
+//! - **`aarch64`**: Partial support (device tree generation TODO)
 //!
 //! # Features
 //!

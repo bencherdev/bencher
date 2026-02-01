@@ -25,6 +25,7 @@ impl TryFrom<TaskTest> for Test {
 }
 
 impl Test {
+    #[expect(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         run_test()
     }
@@ -46,13 +47,20 @@ fn run_test() -> anyhow::Result<()> {
     if is_linux && has_kvm {
         // Run directly on Linux
         run_test_native()
-    } else if docker::docker_available() {
-        // Run via Docker on macOS (or Linux without KVM)
-        run_test_docker()
     } else {
-        println!("Warning: Neither KVM nor Docker is available.");
-        println!("Running in mock mode (no actual VM execution).");
-        run_test_mock()
+        print!("Checking Docker availability... ");
+        std::io::Write::flush(&mut std::io::stdout())?;
+        if docker::docker_available() {
+            println!("available");
+            // Run via Docker on macOS (or Linux without KVM)
+            run_test_docker()
+        } else {
+            println!("not available");
+            println!();
+            println!("Warning: Neither KVM nor Docker is available.");
+            println!("Running in mock mode (no actual VM execution).");
+            run_test_mock()
+        }
     }
 }
 
