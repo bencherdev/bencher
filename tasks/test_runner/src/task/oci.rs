@@ -190,7 +190,37 @@ case "$1" in
 {
   "bencher::mock_0": {
     "latency": {
-      "value": 0.0
+      "value": 4.5535649932187034,
+      "lower_value": 4.098208493896833,
+      "upper_value": 5.008921492540574
+    }
+  },
+  "bencher::mock_1": {
+    "latency": {
+      "value": 16.537506086518523,
+      "lower_value": 14.88375547786667,
+      "upper_value": 18.191256695170374
+    }
+  },
+  "bencher::mock_2": {
+    "latency": {
+      "value": 20.221420814607537,
+      "lower_value": 18.199278733146784,
+      "upper_value": 22.24356289606829
+    }
+  },
+  "bencher::mock_3": {
+    "latency": {
+      "value": 34.92859461603261,
+      "lower_value": 31.435735154429352,
+      "upper_value": 38.42145407763587
+    }
+  },
+  "bencher::mock_4": {
+    "latency": {
+      "value": 42.40432493036204,
+      "lower_value": 38.163892437325835,
+      "upper_value": 46.64475742339824
     }
   }
 }

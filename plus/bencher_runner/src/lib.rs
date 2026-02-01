@@ -10,6 +10,10 @@
 //! - VM lifecycle management
 //! - Result collection
 
+// tempfile is only used on Linux in the execute function, but we import it
+// unconditionally to satisfy the unused-crate-dependencies lint
+use tempfile as _;
+
 mod config;
 mod error;
 mod run;

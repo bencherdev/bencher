@@ -88,8 +88,14 @@ pub mod vsock_op {
     pub const CREDIT_REQUEST: u16 = 7;
 }
 
+/// vsock packet header size in bytes.
+pub const VSOCK_HEADER_SIZE: usize = 44;
+
 /// vsock packet header.
-#[repr(C, packed)]
+///
+/// This struct uses a packed representation to match the wire format.
+/// Use the `from_bytes` and `to_bytes` methods for safe serialization.
+#[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct VsockPacketHeader {
     pub src_cid: u64,
@@ -105,7 +111,51 @@ pub struct VsockPacketHeader {
 }
 
 impl VsockPacketHeader {
-    const SIZE: usize = std::mem::size_of::<Self>();
+    const SIZE: usize = VSOCK_HEADER_SIZE;
+
+    /// Read a header from a byte slice (safe, handles alignment).
+    #[must_use]
+    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() < Self::SIZE {
+            return None;
+        }
+        Some(Self {
+            src_cid: u64::from_le_bytes([
+                bytes[0], bytes[1], bytes[2], bytes[3],
+                bytes[4], bytes[5], bytes[6], bytes[7],
+            ]),
+            dst_cid: u64::from_le_bytes([
+                bytes[8], bytes[9], bytes[10], bytes[11],
+                bytes[12], bytes[13], bytes[14], bytes[15],
+            ]),
+            src_port: u32::from_le_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]),
+            dst_port: u32::from_le_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]),
+            len: u32::from_le_bytes([bytes[24], bytes[25], bytes[26], bytes[27]]),
+            type_: u16::from_le_bytes([bytes[28], bytes[29]]),
+            op: u16::from_le_bytes([bytes[30], bytes[31]]),
+            flags: u32::from_le_bytes([bytes[32], bytes[33], bytes[34], bytes[35]]),
+            buf_alloc: u32::from_le_bytes([bytes[36], bytes[37], bytes[38], bytes[39]]),
+            fwd_cnt: u32::from_le_bytes([bytes[40], bytes[41], bytes[42], bytes[43]]),
+        })
+    }
+
+    /// Write the header to a byte slice (safe, handles alignment).
+    pub fn to_bytes(&self, bytes: &mut [u8]) -> bool {
+        if bytes.len() < Self::SIZE {
+            return false;
+        }
+        bytes[0..8].copy_from_slice(&self.src_cid.to_le_bytes());
+        bytes[8..16].copy_from_slice(&self.dst_cid.to_le_bytes());
+        bytes[16..20].copy_from_slice(&self.src_port.to_le_bytes());
+        bytes[20..24].copy_from_slice(&self.dst_port.to_le_bytes());
+        bytes[24..28].copy_from_slice(&self.len.to_le_bytes());
+        bytes[28..30].copy_from_slice(&self.type_.to_le_bytes());
+        bytes[30..32].copy_from_slice(&self.op.to_le_bytes());
+        bytes[32..36].copy_from_slice(&self.flags.to_le_bytes());
+        bytes[36..40].copy_from_slice(&self.buf_alloc.to_le_bytes());
+        bytes[40..44].copy_from_slice(&self.fwd_cnt.to_le_bytes());
+        true
+    }
 }
 
 /// A vsock connection from the host (Unix socket) to the guest.
@@ -131,16 +181,19 @@ struct VsockConnection {
 }
 
 /// A guest-initiated connection (guest connects to host).
+///
+/// Note: Credit flow control fields are reserved for future use.
+#[expect(dead_code)]
 struct GuestConnection {
     /// Guest's source port.
     guest_port: u32,
     /// Host's destination port (what the guest connected to).
     host_port: u32,
-    /// Buffer allocation advertised by guest.
+    /// Buffer allocation advertised by guest (reserved for credit flow).
     peer_buf_alloc: u32,
-    /// Forward count from guest.
+    /// Forward count from guest (reserved for credit flow).
     peer_fwd_cnt: u32,
-    /// Our buffer allocation.
+    /// Our buffer allocation (reserved for credit flow).
     buf_alloc: u32,
     /// Bytes we've forwarded.
     fwd_cnt: u32,
@@ -460,14 +513,10 @@ impl VirtioVsockDevice {
                 // Write header to first descriptor
                 if let Some(desc) = chain.next() {
                     if desc.is_write_only() {
-                        let header_bytes = unsafe {
-                            std::slice::from_raw_parts(
-                                (&header as *const VsockPacketHeader).cast::<u8>(),
-                                VsockPacketHeader::SIZE,
-                            )
-                        };
-                        if mem.write_slice(header_bytes, desc.addr()).is_ok() {
-                            total_written += VsockPacketHeader::SIZE as u32;
+                        let mut header_bytes = [0u8; VSOCK_HEADER_SIZE];
+                        header.to_bytes(&mut header_bytes);
+                        if mem.write_slice(&header_bytes, desc.addr()).is_ok() {
+                            total_written += VSOCK_HEADER_SIZE as u32;
                         }
                     }
                 }
@@ -509,18 +558,18 @@ impl VirtioVsockDevice {
 
             // Read header from first descriptor
             let header = if let Some(desc) = chain.next() {
-                let mut header = VsockPacketHeader::default();
-                let header_bytes = unsafe {
-                    std::slice::from_raw_parts_mut(
-                        (&mut header as *mut VsockPacketHeader).cast::<u8>(),
-                        VsockPacketHeader::SIZE,
-                    )
-                };
-                if mem.read_slice(header_bytes, desc.addr()).is_err() {
+                let mut header_bytes = [0u8; VSOCK_HEADER_SIZE];
+                if mem.read_slice(&mut header_bytes, desc.addr()).is_err() {
                     self.queues[TX_QUEUE].add_used(mem, head_index, 0).ok();
                     continue;
                 }
-                header
+                match VsockPacketHeader::from_bytes(&header_bytes) {
+                    Some(h) => h,
+                    None => {
+                        self.queues[TX_QUEUE].add_used(mem, head_index, 0).ok();
+                        continue;
+                    }
+                }
             } else {
                 self.queues[TX_QUEUE].add_used(mem, head_index, 0).ok();
                 continue;

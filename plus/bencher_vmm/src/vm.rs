@@ -35,7 +35,16 @@ pub struct VmConfig {
     ///
     /// If set, results will be collected via vsock instead of serial output.
     pub vsock_path: Option<Utf8PathBuf>,
+
+    /// Timeout for VM execution in seconds.
+    ///
+    /// If the VM doesn't shut down within this time, it will be killed.
+    /// Defaults to 300 seconds (5 minutes). Set to 0 for no timeout.
+    pub timeout_secs: u64,
 }
+
+/// Default timeout in seconds (5 minutes).
+const DEFAULT_TIMEOUT_SECS: u64 = 300;
 
 impl VmConfig {
     /// Create a new VM configuration.
@@ -47,6 +56,7 @@ impl VmConfig {
             memory_mib: 512,
             kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
             vsock_path: None,
+            timeout_secs: DEFAULT_TIMEOUT_SECS,
         }
     }
 
@@ -54,6 +64,13 @@ impl VmConfig {
     #[must_use]
     pub fn with_vsock(mut self, socket_path: Utf8PathBuf) -> Self {
         self.vsock_path = Some(socket_path);
+        self
+    }
+
+    /// Set the execution timeout in seconds. Set to 0 to disable.
+    #[must_use]
+    pub fn with_timeout(mut self, timeout_secs: u64) -> Self {
+        self.timeout_secs = timeout_secs;
         self
     }
 }
@@ -76,6 +93,9 @@ pub struct Vm {
 
     /// Device manager.
     devices: Arc<Mutex<DeviceManager>>,
+
+    /// Execution timeout in seconds (0 = no timeout).
+    timeout_secs: u64,
 }
 
 impl Vm {
@@ -141,14 +161,15 @@ impl Vm {
             guest_memory,
             vcpus,
             devices: Arc::new(Mutex::new(devices)),
+            timeout_secs: config.timeout_secs,
         })
     }
 
-    /// Run the VM until it shuts down.
+    /// Run the VM until it shuts down or times out.
     ///
-    /// Returns the benchmark results collected via serial output.
+    /// Returns the benchmark results collected via serial output or vsock.
     pub fn run(&mut self) -> Result<String, VmmError> {
-        crate::event_loop::run(&mut self.vcpus, Arc::clone(&self.devices))
+        crate::event_loop::run(&mut self.vcpus, Arc::clone(&self.devices), self.timeout_secs)
     }
 }
 
