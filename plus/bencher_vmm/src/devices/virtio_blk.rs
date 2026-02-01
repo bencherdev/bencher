@@ -288,7 +288,6 @@ impl VirtioBlkDevice {
     }
 
     /// Read a block from the device.
-    #[expect(dead_code)]
     pub fn read_block(&mut self, sector: u64, buf: &mut [u8]) -> Result<usize, VmmError> {
         self.file.seek(SeekFrom::Start(sector * 512))?;
         Ok(self.file.read(buf)?)

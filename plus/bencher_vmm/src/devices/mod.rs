@@ -77,7 +77,6 @@ impl DeviceManager {
     }
 
     /// Setup virtio-vsock device for host-guest communication.
-    #[expect(dead_code)]
     pub fn setup_virtio_vsock(&mut self, guest_cid: u64, socket_path: &Utf8Path) -> Result<(), VmmError> {
         let device = VirtioVsockDevice::new(guest_cid, socket_path)?;
         self.virtio_vsock = Some(device);

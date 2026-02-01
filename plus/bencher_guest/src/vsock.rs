@@ -1,16 +1,19 @@
-//! vsock communication for guest-host interaction.
+//! Vsock communication for guest-host interaction.
 //!
 //! This module provides helpers for connecting to the host via vsock
 //! and sending/receiving benchmark data.
+//!
+//! On Linux, this uses real vsock for VM-host communication.
+//! On other platforms (macOS), it falls back to Unix sockets for development.
 
-use std::io::{self, BufRead as _, BufReader, Read as _, Write as _};
-use std::os::unix::net::UnixStream;
+use std::io::{self, BufRead as _, BufReader};
 
 use thiserror::Error;
 
 use crate::protocol::{BenchmarkParams, BenchmarkResults};
 
 /// The host's CID (Context ID) for vsock.
+/// CID 2 is always the host in the vsock address space.
 pub const HOST_CID: u32 = 2;
 
 /// Default port for Bencher communication.
@@ -34,22 +37,59 @@ pub enum VsockError {
 
 /// A connection to the host via vsock.
 pub struct VsockConnection {
-    stream: UnixStream,
+    inner: ConnectionInner,
 }
 
+// Linux implementation using the vsock crate
+#[cfg(target_os = "linux")]
+type ConnectionInner = vsock::VsockStream;
+
+// Non-Linux fallback using Unix sockets
+#[cfg(not(target_os = "linux"))]
+use std::os::unix::net::UnixStream;
+
+#[cfg(not(target_os = "linux"))]
+type ConnectionInner = UnixStream;
+
 impl VsockConnection {
+    /// Connect to the host via vsock.
+    #[cfg(target_os = "linux")]
+    pub fn connect(cid: u32, port: u32) -> Result<Self, VsockError> {
+        let stream = vsock::VsockStream::connect_with_cid_port(cid, port).map_err(|e| {
+            VsockError::Connection(format!("Failed to connect to vsock CID {cid} port {port}: {e}"))
+        })?;
+        Ok(Self { inner: stream })
+    }
+
+    /// Connect to Unix socket fallback for non-Linux development.
+    #[cfg(not(target_os = "linux"))]
+    pub fn connect(_cid: u32, port: u32) -> Result<Self, VsockError> {
+        // On non-Linux, fall back to Unix sockets for development/testing.
+        let socket_path = format!("/tmp/bencher-vsock-{port}.sock");
+
+        let stream = UnixStream::connect(&socket_path).map_err(|e| {
+            VsockError::Connection(format!(
+                "Failed to connect to Unix socket {socket_path}: {e} \
+                 (Note: real vsock is only available on Linux)"
+            ))
+        })?;
+        Ok(Self { inner: stream })
+    }
+
     /// Send benchmark results to the host.
     pub fn send_results(&mut self, results: &BenchmarkResults) -> Result<(), VsockError> {
+        use std::io::Write as _;
+
         let json = serde_json::to_vec(results)?;
-        self.stream.write_all(&json)?;
-        self.stream.write_all(b"\n")?;
-        self.stream.flush()?;
+        self.inner.write_all(&json)?;
+        self.inner.write_all(b"\n")?;
+        self.inner.flush()?;
         Ok(())
     }
 
     /// Receive benchmark parameters from the host.
     pub fn receive_params(&mut self) -> Result<BenchmarkParams, VsockError> {
-        let mut reader = BufReader::new(&self.stream);
+        let mut reader = BufReader::new(&self.inner);
         let mut line = String::new();
         reader.read_line(&mut line)?;
         let params = serde_json::from_str(&line)?;
@@ -58,24 +98,27 @@ impl VsockConnection {
 
     /// Read raw data from the connection.
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, VsockError> {
-        Ok(self.stream.read(buf)?)
+        use std::io::Read as _;
+        Ok(self.inner.read(buf)?)
     }
 
     /// Write raw data to the connection.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, VsockError> {
-        Ok(self.stream.write(buf)?)
+        use std::io::Write as _;
+        Ok(self.inner.write(buf)?)
     }
 
     /// Flush the connection.
     pub fn flush(&mut self) -> Result<(), VsockError> {
-        Ok(self.stream.flush()?)
+        use std::io::Write as _;
+        Ok(self.inner.flush()?)
     }
 }
 
 /// Connect to the host via vsock.
 ///
-/// This function attempts to connect to the Bencher host using vsock.
-/// In a real implementation, this would use the actual vsock system calls.
+/// On Linux, this uses real vsock to connect to the host.
+/// On other platforms, this falls back to Unix sockets for development.
 ///
 /// # Returns
 ///
@@ -86,29 +129,7 @@ pub fn connect_to_host() -> Result<VsockConnection, VsockError> {
 
 /// Connect to the host via vsock on a specific port.
 pub fn connect_to_host_port(port: u32) -> Result<VsockConnection, VsockError> {
-    // In a real implementation, this would use:
-    // let fd = socket(AF_VSOCK, SOCK_STREAM, 0);
-    // connect(fd, sockaddr_vm { cid: HOST_CID, port });
-    //
-    // For now, we use a Unix socket as a placeholder for development.
-    // This allows testing on systems without vsock support.
-
-    let socket_path = format!("/tmp/bencher-vsock-{port}.sock");
-
-    match UnixStream::connect(&socket_path) {
-        Ok(stream) => Ok(VsockConnection { stream }),
-        Err(e) => {
-            // Try the actual vsock path as fallback
-            // This is the path where the VMM would create the socket
-            let vsock_path = format!("/dev/vsock/{port}");
-            match UnixStream::connect(&vsock_path) {
-                Ok(stream) => Ok(VsockConnection { stream }),
-                Err(_) => Err(VsockError::Connection(format!(
-                    "Failed to connect to host: {e}"
-                ))),
-            }
-        }
-    }
+    VsockConnection::connect(HOST_CID, port)
 }
 
 /// Send results to the host using the default connection.
@@ -125,11 +146,17 @@ pub fn send_results(results: &BenchmarkResults) -> Result<(), VsockError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{VsockError, HOST_CID};
 
     #[test]
     fn test_vsock_error_display() {
         let err = VsockError::Connection("test error".to_owned());
         assert!(err.to_string().contains("test error"));
+    }
+
+    #[test]
+    fn test_host_cid() {
+        // Host CID is always 2 in vsock
+        assert_eq!(HOST_CID, 2);
     }
 }

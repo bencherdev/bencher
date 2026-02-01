@@ -48,16 +48,16 @@ impl VmConfig {
 /// A running virtual machine.
 pub struct Vm {
     /// The KVM file descriptor.
-    #[expect(dead_code)]
-    kvm: Kvm,
+    /// Kept alive for the VM's lifetime (dropping closes KVM handle).
+    _kvm: Kvm,
 
     /// The VM file descriptor.
-    #[expect(dead_code)]
-    vm_fd: VmFd,
+    /// Kept alive for the VM's lifetime (dropping closes VM handle).
+    _vm_fd: VmFd,
 
     /// Guest memory.
-    #[expect(dead_code)]
-    guest_memory: GuestMemoryMmap,
+    /// Kept alive for the VM's lifetime (dropping unmaps memory).
+    _guest_memory: GuestMemoryMmap,
 
     /// Virtual CPUs.
     vcpus: Vec<Vcpu>,
@@ -102,9 +102,9 @@ impl Vm {
         let devices = crate::devices::setup_devices(&vm_fd, &config.rootfs_path)?;
 
         Ok(Self {
-            kvm,
-            vm_fd,
-            guest_memory,
+            _kvm: kvm,
+            _vm_fd: vm_fd,
+            _guest_memory: guest_memory,
             vcpus,
             devices: Arc::new(Mutex::new(devices)),
         })
