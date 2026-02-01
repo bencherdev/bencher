@@ -6,7 +6,7 @@ use http::StatusCode;
 
 // POST /v0/run - create a run with authentication
 #[tokio::test]
-async fn test_run_post_authenticated() {
+async fn run_post_authenticated() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "runauth@example.com").await;
     let org = server.create_org(&user, "Run Org").await;
@@ -46,7 +46,7 @@ async fn test_run_post_authenticated() {
 
 // POST /v0/run - run with existing project creates branch/testbed as needed
 #[tokio::test]
-async fn test_run_post_creates_branch_testbed() {
+async fn run_post_creates_branch_testbed() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "runcreate@example.com").await;
     let org = server.create_org(&user, "Run Create Org").await;
@@ -89,7 +89,7 @@ async fn test_run_post_creates_branch_testbed() {
 
 // POST /v0/run - run without authentication (public run)
 #[tokio::test]
-async fn test_run_post_unauthenticated() {
+async fn run_post_unauthenticated() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "runpublic@example.com").await;
     let org = server.create_org(&user, "Public Run Org").await;

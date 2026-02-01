@@ -1,7 +1,6 @@
 #![expect(
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
-    clippy::redundant_test_prefix,
     clippy::uninlined_format_args,
     clippy::unwrap_used,
     clippy::expect_used
