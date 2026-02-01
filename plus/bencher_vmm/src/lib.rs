@@ -35,6 +35,8 @@ mod gic;
 #[cfg(target_os = "linux")]
 mod memory;
 #[cfg(target_os = "linux")]
+mod sandbox;
+#[cfg(target_os = "linux")]
 mod vcpu;
 #[cfg(target_os = "linux")]
 mod vm;
