@@ -187,6 +187,7 @@ name = "api_oci"
 version = "0.5.10"
 dependencies = [
  "api_auth",
+ "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
  "bencher_oci_storage",
@@ -196,11 +197,15 @@ dependencies = [
  "bencher_token",
  "bytes",
  "dropshot",
+ "hex",
  "http 1.4.0",
+ "reqwest",
  "schemars 0.8.22",
  "serde",
  "serde_json",
+ "sha2",
  "slog",
+ "tokio",
 ]
 
 [[package]]

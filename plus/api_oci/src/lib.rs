@@ -1,4 +1,12 @@
 #![cfg(feature = "plus")]
+// Dev-dependencies are used in tests but not in the lib crate
+#![cfg_attr(
+    test,
+    expect(
+        unused_crate_dependencies,
+        reason = "dev-dependencies used by integration tests"
+    )
+)]
 
 //! Bencher OCI Registry API - A Bencher Plus Feature
 //!
