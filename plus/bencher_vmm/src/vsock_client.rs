@@ -252,6 +252,181 @@ impl BenchmarkClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{BufRead, BufReader, Write};
+    use std::os::unix::net::UnixListener;
+    use std::thread;
 
-    // Tests would require a running VM, so they're integration tests
+    /// Create a temporary socket path for testing.
+    fn temp_socket_path() -> String {
+        format!(
+            "/tmp/bencher_vmm_test_{}.sock",
+            std::process::id()
+        )
+    }
+
+    #[test]
+    fn test_vsock_client_send_recv() {
+        let socket_path = temp_socket_path();
+        let _ = std::fs::remove_file(&socket_path);
+
+        // Create a listener
+        let listener = UnixListener::bind(&socket_path).unwrap();
+
+        // Spawn a thread to accept and echo
+        let socket_path_clone = socket_path.clone();
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 1024];
+            let n = stream.read(&mut buf).unwrap();
+            stream.write_all(&buf[..n]).unwrap();
+        });
+
+        // Connect client
+        let mut client = VsockClient::connect(
+            Utf8Path::new(&socket_path),
+            Some(Duration::from_secs(5)),
+        )
+        .unwrap();
+
+        // Send and receive
+        let message = b"hello world";
+        client.send(message).unwrap();
+
+        let mut response = [0u8; 1024];
+        let n = client.recv(&mut response).unwrap();
+
+        assert_eq!(&response[..n], message);
+
+        handle.join().unwrap();
+        let _ = std::fs::remove_file(&socket_path);
+    }
+
+    #[test]
+    fn test_vsock_client_send_recv_line() {
+        let socket_path = temp_socket_path() + "_line";
+        let _ = std::fs::remove_file(&socket_path);
+
+        let listener = UnixListener::bind(&socket_path).unwrap();
+
+        let handle = thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut writer = stream;
+
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+
+            // Echo back with "echo: " prefix
+            writeln!(writer, "echo: {}", line.trim()).unwrap();
+        });
+
+        let mut client = VsockClient::connect(
+            Utf8Path::new(&socket_path),
+            Some(Duration::from_secs(5)),
+        )
+        .unwrap();
+
+        client.send_line("test message").unwrap();
+        let response = client.recv_line().unwrap();
+
+        assert_eq!(response, "echo: test message");
+
+        handle.join().unwrap();
+        let _ = std::fs::remove_file(&socket_path);
+    }
+
+    #[test]
+    fn test_vsock_client_request_response() {
+        let socket_path = temp_socket_path() + "_req";
+        let _ = std::fs::remove_file(&socket_path);
+
+        let listener = UnixListener::bind(&socket_path).unwrap();
+
+        let handle = thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut writer = stream;
+
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+
+            // Parse as JSON and respond
+            if line.contains("ping") {
+                writeln!(writer, r#"{{"status": "pong"}}"#).unwrap();
+            } else {
+                writeln!(writer, r#"{{"error": "unknown"}}"#).unwrap();
+            }
+        });
+
+        let mut client = VsockClient::connect(
+            Utf8Path::new(&socket_path),
+            Some(Duration::from_secs(5)),
+        )
+        .unwrap();
+
+        let response = client.request(r#"{"command": "ping"}"#).unwrap();
+        assert!(response.contains("pong"));
+
+        handle.join().unwrap();
+        let _ = std::fs::remove_file(&socket_path);
+    }
+
+    #[test]
+    fn test_vsock_client_builder() {
+        let socket_path = temp_socket_path() + "_builder";
+        let _ = std::fs::remove_file(&socket_path);
+
+        let listener = UnixListener::bind(&socket_path).unwrap();
+
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream.write_all(b"ok").unwrap();
+        });
+
+        let mut client = VsockClientBuilder::new(Utf8Path::new(&socket_path))
+            .timeout(Duration::from_secs(5))
+            .connect()
+            .unwrap();
+
+        let mut buf = [0u8; 2];
+        let n = client.recv(&mut buf).unwrap();
+        assert_eq!(&buf[..n], b"ok");
+
+        handle.join().unwrap();
+        let _ = std::fs::remove_file(&socket_path);
+    }
+
+    #[test]
+    fn test_benchmark_client_ping() {
+        let socket_path = temp_socket_path() + "_bench";
+        let _ = std::fs::remove_file(&socket_path);
+
+        let listener = UnixListener::bind(&socket_path).unwrap();
+
+        let handle = thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut writer = stream;
+
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+
+            if line.contains("ping") {
+                writeln!(writer, r#"{{"status": "pong"}}"#).unwrap();
+            }
+        });
+
+        let vsock = VsockClient::connect(
+            Utf8Path::new(&socket_path),
+            Some(Duration::from_secs(5)),
+        )
+        .unwrap();
+
+        let mut client = BenchmarkClient::new(vsock);
+        let result = client.ping().unwrap();
+        assert!(result);
+
+        handle.join().unwrap();
+        let _ = std::fs::remove_file(&socket_path);
+    }
 }
