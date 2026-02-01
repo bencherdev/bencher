@@ -20,7 +20,9 @@ use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
 use bencher_oci_storage::{Digest, OciError, UploadId};
 use bencher_schema::context::ApiContext;
-use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
+use dropshot::{
+    Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint,
+};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -66,7 +68,12 @@ pub async fn oci_upload_session_options(
     _rqctx: RequestContext<ApiContext>,
     _path: Path<UploadSessionPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Put.into(), Delete.into()]))
+    Ok(Endpoint::cors(&[
+        Get.into(),
+        Patch.into(),
+        Put.into(),
+        Delete.into(),
+    ]))
 }
 
 /// Get upload status
@@ -93,10 +100,11 @@ pub async fn oci_upload_status(
     let repository_name = path.name.to_string();
 
     // Parse upload ID
-    let upload_id: UploadId = path
-        .session_id
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
+    let upload_id: UploadId = path.session_id.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::BlobUploadUnknown {
+            upload_id: path.session_id.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -153,10 +161,11 @@ pub async fn oci_upload_chunk(
     let data = body.as_bytes();
 
     // Parse upload ID
-    let upload_id: UploadId = path
-        .session_id
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
+    let upload_id: UploadId = path.session_id.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::BlobUploadUnknown {
+            upload_id: path.session_id.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -175,13 +184,9 @@ pub async fn oci_upload_chunk(
         && let Ok(range_str) = content_range.to_str()
     {
         // Parse the range, handling both formats
-        let range_part = range_str
-            .strip_prefix("bytes ")
-            .unwrap_or(range_str);
+        let range_part = range_str.strip_prefix("bytes ").unwrap_or(range_str);
         // Remove trailing /total if present
-        let range_nums = range_part
-            .split_once('/')
-            .map_or(range_part, |(r, _)| r);
+        let range_nums = range_part.split_once('/').map_or(range_part, |(r, _)| r);
 
         if let Some((start_str, _end_str)) = range_nums.split_once('-')
             && let Ok(start) = start_str.parse::<u64>()
@@ -201,7 +206,9 @@ pub async fn oci_upload_chunk(
                 .header("Docker-Upload-UUID", upload_id.to_string())
                 .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
                 .body(Body::empty())
-                .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to build response: {e}"))
+                })?;
             return Ok(response);
         }
     }
@@ -260,14 +267,16 @@ pub async fn oci_upload_complete(
     let data = body.as_bytes();
 
     // Parse upload ID and expected digest
-    let upload_id: UploadId = path
-        .session_id
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
-    let expected_digest: Digest = query
-        .digest
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: query.digest.clone() }))?;
+    let upload_id: UploadId = path.session_id.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::BlobUploadUnknown {
+            upload_id: path.session_id.clone(),
+        })
+    })?;
+    let expected_digest: Digest = query.digest.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::DigestInvalid {
+            digest: query.digest.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -326,10 +335,11 @@ pub async fn oci_upload_cancel(
     apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
     // Parse upload ID
-    let upload_id: UploadId = path
-        .session_id
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
+    let upload_id: UploadId = path.session_id.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::BlobUploadUnknown {
+            upload_id: path.session_id.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();

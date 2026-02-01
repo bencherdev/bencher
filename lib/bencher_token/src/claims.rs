@@ -11,13 +11,13 @@ use super::{TokenError, audience::Audience};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub aud: String,                // Audience
-    pub exp: i64,                   // Expiration time (as UTC timestamp)
-    pub iat: i64,                   // Issued at (as UTC timestamp)
-    pub iss: String,                // Issuer
-    pub sub: Email,                 // Subject (whom token refers to)
-    pub org: Option<OrgClaims>,     // Organization (for invitation)
-    pub state: Option<StateClaims>, // State (for OAuth)
+    pub aud: String,                 // Audience
+    pub exp: i64,                    // Expiration time (as UTC timestamp)
+    pub iat: i64,                    // Issued at (as UTC timestamp)
+    pub iss: String,                 // Issuer
+    pub sub: Email,                  // Subject (whom token refers to)
+    pub org: Option<OrgClaims>,      // Organization (for invitation)
+    pub state: Option<StateClaims>,  // State (for OAuth)
     pub oci: Option<OciScopeClaims>, // OCI scope (for registry access)
 }
 

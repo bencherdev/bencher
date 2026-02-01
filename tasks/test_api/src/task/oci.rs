@@ -97,7 +97,10 @@ impl Oci {
         println!("Checking API connectivity...");
 
         // Parse host and port from URL
-        let url = self.api_url.trim_start_matches("http://").trim_start_matches("https://");
+        let url = self
+            .api_url
+            .trim_start_matches("http://")
+            .trim_start_matches("https://");
         let addr = if url.contains(':') {
             url.split('/').next().unwrap_or("localhost:61016")
         } else {
@@ -126,7 +129,10 @@ impl Oci {
 
     fn ensure_spec_cloned(&self) -> anyhow::Result<()> {
         if self.spec_dir.join("conformance/go.mod").exists() {
-            println!("distribution-spec already cloned at {}", self.spec_dir.display());
+            println!(
+                "distribution-spec already cloned at {}",
+                self.spec_dir.display()
+            );
             return Ok(());
         }
 
@@ -258,7 +264,10 @@ impl Oci {
         if output.status.success() {
             Ok(())
         } else {
-            anyhow::bail!("Conformance tests failed with exit code: {:?}", output.status.code())
+            anyhow::bail!(
+                "Conformance tests failed with exit code: {:?}",
+                output.status.code()
+            )
         }
     }
 

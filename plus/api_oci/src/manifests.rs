@@ -16,7 +16,10 @@ use serde::Deserialize;
 
 #[cfg(feature = "plus")]
 use crate::auth::apply_auth_rate_limit;
-use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access, validate_push_access};
+use crate::auth::{
+    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
+    validate_push_access,
+};
 
 /// Path parameters for manifest endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -70,10 +73,11 @@ pub async fn oci_manifest_exists(
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse reference
-    let reference: Reference = path
-        .reference
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
+    let reference: Reference = path.reference.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::ManifestUnknown {
+            reference: path.reference.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -96,7 +100,11 @@ pub async fn oci_manifest_exists(
     // Determine content type from manifest (parse to get mediaType field)
     let content_type = serde_json::from_slice::<serde_json::Value>(&manifest)
         .ok()
-        .and_then(|v| v.get("mediaType").and_then(|m| m.as_str()).map(ToOwned::to_owned))
+        .and_then(|v| {
+            v.get("mediaType")
+                .and_then(|m| m.as_str())
+                .map(ToOwned::to_owned)
+        })
         .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned());
 
     // Build response with OCI-compliant headers (no body for HEAD)
@@ -145,10 +153,11 @@ pub async fn oci_manifest_get(
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse reference
-    let reference: Reference = path
-        .reference
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
+    let reference: Reference = path.reference.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::ManifestUnknown {
+            reference: path.reference.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -175,7 +184,11 @@ pub async fn oci_manifest_get(
     // Determine content type from manifest (parse to get mediaType field)
     let content_type = serde_json::from_slice::<serde_json::Value>(&manifest)
         .ok()
-        .and_then(|v| v.get("mediaType").and_then(|m| m.as_str()).map(ToOwned::to_owned))
+        .and_then(|v| {
+            v.get("mediaType")
+                .and_then(|m| m.as_str())
+                .map(ToOwned::to_owned)
+        })
         .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned());
 
     // Build response with OCI-compliant headers
@@ -218,10 +231,9 @@ pub async fn oci_manifest_put(
     let project_slug = &push_access.project.slug;
 
     // Parse reference
-    let reference: Reference = path
-        .reference
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::ManifestInvalid(path.reference.clone())))?;
+    let reference: Reference = path.reference.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::ManifestInvalid(path.reference.clone()))
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -262,7 +274,10 @@ pub async fn oci_manifest_put(
         .header("Docker-Content-Digest", digest.to_string())
         .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
         .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "PUT")
-        .header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Authorization");
+        .header(
+            http::header::ACCESS_CONTROL_ALLOW_HEADERS,
+            "Content-Type, Authorization",
+        );
 
     // Add OCI-Subject header if manifest has a subject field
     if let Some(subject) = subject_digest {
@@ -309,10 +324,11 @@ pub async fn oci_manifest_delete(
     let storage = context.oci_storage();
 
     // Parse reference - can be either a digest or a tag
-    let reference: Reference = path
-        .reference
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::ManifestUnknown { reference: path.reference.clone() }))?;
+    let reference: Reference = path.reference.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::ManifestUnknown {
+            reference: path.reference.clone(),
+        })
+    })?;
 
     match reference {
         Reference::Digest(digest) => {
@@ -321,14 +337,14 @@ pub async fn oci_manifest_delete(
                 .delete_manifest(&path.name, &digest)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-        }
+        },
         Reference::Tag(tag) => {
             // Delete by tag - delete the tag link only (manifest may still exist)
             storage
                 .delete_tag(&path.name, tag.as_str())
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-        }
+        },
     }
 
     // OCI spec requires 202 Accepted for DELETE

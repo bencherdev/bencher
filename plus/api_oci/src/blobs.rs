@@ -12,14 +12,19 @@ use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Post, Put};
 use bencher_json::ProjectResourceId;
 use bencher_oci_storage::{Digest, OciError};
 use bencher_schema::context::ApiContext;
-use dropshot::{Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint};
+use dropshot::{
+    Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint,
+};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 #[cfg(feature = "plus")]
 use crate::auth::apply_auth_rate_limit;
-use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access, validate_push_access};
+use crate::auth::{
+    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
+    validate_push_access,
+};
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -57,7 +62,12 @@ pub async fn oci_blob_options(
     _rqctx: RequestContext<ApiContext>,
     _path: Path<BlobPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Delete.into(), Post.into(), Put.into()]))
+    Ok(Endpoint::cors(&[
+        Get.into(),
+        Delete.into(),
+        Post.into(),
+        Put.into(),
+    ]))
 }
 
 /// Check if a blob exists (HEAD) or start upload check
@@ -99,10 +109,11 @@ pub async fn oci_blob_exists(
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse digest
-    let digest: Digest = path
-        .reference
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
+    let digest: Digest = path.reference.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::DigestInvalid {
+            digest: path.reference.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -167,10 +178,11 @@ pub async fn oci_blob_get(
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse digest
-    let digest: Digest = path
-        .reference
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
+    let digest: Digest = path.reference.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::DigestInvalid {
+            digest: path.reference.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -239,10 +251,11 @@ pub async fn oci_blob_delete(
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse digest
-    let digest: Digest = path
-        .reference
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
+    let digest: Digest = path.reference.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::DigestInvalid {
+            digest: path.reference.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -300,12 +313,16 @@ pub async fn oci_upload_start(
 
     // Handle cross-repository mount if requested
     if let (Some(digest_str), Some(from_name)) = (&query.digest, &query.from) {
-        let digest: Digest = digest_str
-            .parse()
-            .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: digest_str.clone() }))?;
-        let from_repo: ProjectResourceId = from_name
-            .parse()
-            .map_err(|_err| crate::error::into_http_error(OciError::NameInvalid { name: from_name.clone() }))?;
+        let digest: Digest = digest_str.parse().map_err(|_err| {
+            crate::error::into_http_error(OciError::DigestInvalid {
+                digest: digest_str.clone(),
+            })
+        })?;
+        let from_repo: ProjectResourceId = from_name.parse().map_err(|_err| {
+            crate::error::into_http_error(OciError::NameInvalid {
+                name: from_name.clone(),
+            })
+        })?;
 
         // Try to mount the blob
         let mounted = storage
@@ -322,7 +339,9 @@ pub async fn oci_upload_start(
                 .header("Docker-Content-Digest", digest.to_string())
                 .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
                 .body(Body::empty())
-                .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to build response: {e}"))
+                })?;
             return Ok(response);
         }
     }
@@ -382,10 +401,11 @@ pub async fn oci_upload_monolithic(
     let project_slug = &push_access.project.slug;
 
     // Parse digest
-    let expected_digest: Digest = query
-        .digest
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: query.digest.clone() }))?;
+    let expected_digest: Digest = query.digest.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::DigestInvalid {
+            digest: query.digest.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();

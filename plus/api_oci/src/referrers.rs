@@ -16,7 +16,9 @@ use serde::Deserialize;
 
 #[cfg(feature = "plus")]
 use crate::auth::apply_auth_rate_limit;
-use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access};
+use crate::auth::{
+    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
+};
 
 /// Path parameters for referrers endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -83,10 +85,11 @@ pub async fn oci_referrers_list(
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Parse digest
-    let digest: Digest = path
-        .digest
-        .parse()
-        .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.digest.clone() }))?;
+    let digest: Digest = path.digest.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::DigestInvalid {
+            digest: path.digest.clone(),
+        })
+    })?;
 
     // Get storage
     let storage = context.oci_storage();

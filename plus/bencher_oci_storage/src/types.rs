@@ -160,14 +160,14 @@ impl FromStr for Reference {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // If it contains a colon and looks like a digest, parse as digest
-        if s.contains(':') && let Ok(digest) = s.parse::<Digest>() {
+        if s.contains(':')
+            && let Ok(digest) = s.parse::<Digest>()
+        {
             return Ok(Self::Digest(digest));
         }
 
         // Otherwise, try to parse as a tag
-        s.parse::<Tag>()
-            .map(Self::Tag)
-            .map_err(|e| e.to_string())
+        s.parse::<Tag>().map(Self::Tag).map_err(|e| e.to_string())
     }
 }
 

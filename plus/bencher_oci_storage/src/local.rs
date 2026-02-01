@@ -252,12 +252,13 @@ impl OciLocalStorage {
         }
 
         // Parse repository name
-        let repository: ProjectResourceId = state
-            .repository
-            .parse()
-            .map_err(|e: bencher_json::ValidError| {
-                OciStorageError::InvalidContent(e.to_string())
-            })?;
+        let repository: ProjectResourceId =
+            state
+                .repository
+                .parse()
+                .map_err(|e: bencher_json::ValidError| {
+                    OciStorageError::InvalidContent(e.to_string())
+                })?;
 
         // Copy to final blob location
         let blob_path = self.blob_path(&repository, &actual_digest);

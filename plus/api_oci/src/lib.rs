@@ -81,9 +81,7 @@ impl Registrar for Api {
 }
 
 /// Public function to register OCI endpoints
-pub fn register(
-    api: &mut ApiDescription<ApiContext>,
-) -> Result<(), ApiDescriptionRegisterError> {
+pub fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), ApiDescriptionRegisterError> {
     Api::register(
         api,
         true, // http_options
