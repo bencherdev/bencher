@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for project alert endpoints.
 
 use bencher_api_tests::TestServer;
@@ -34,7 +39,9 @@ async fn test_alerts_list_with_pagination() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "alertpage@example.com").await;
     let org = server.create_org(&user, "Alert Page Org").await;
-    let project = server.create_project(&user, &org, "Alert Page Project").await;
+    let project = server
+        .create_project(&user, &org, "Alert Page Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server
@@ -55,9 +62,13 @@ async fn test_alerts_list_with_pagination() {
 #[tokio::test]
 async fn test_alerts_get_not_found() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "alertnotfound@example.com").await;
+    let user = server
+        .signup("Test User", "alertnotfound@example.com")
+        .await;
     let org = server.create_org(&user, "Alert NotFound Org").await;
-    let project = server.create_project(&user, &org, "Alert NotFound Project").await;
+    let project = server
+        .create_project(&user, &org, "Alert NotFound Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server

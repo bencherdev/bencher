@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for user token endpoints.
 
 use bencher_api_tests::TestServer;
@@ -136,7 +141,9 @@ async fn test_tokens_get() {
 #[tokio::test]
 async fn test_tokens_get_not_found() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "tokensnotfound@example.com").await;
+    let user = server
+        .signup("Test User", "tokensnotfound@example.com")
+        .await;
 
     let user_slug: &str = user.slug.as_ref();
     let resp = server

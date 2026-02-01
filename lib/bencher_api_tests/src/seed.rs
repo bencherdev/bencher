@@ -79,9 +79,7 @@ impl TestServer {
             .expect("Failed to generate auth token");
 
         // Confirm the user to get their actual data and a client token
-        let confirm_body = JsonConfirm {
-            token: auth_token,
-        };
+        let confirm_body = JsonConfirm { token: auth_token };
 
         let confirm_resp = self
             .client

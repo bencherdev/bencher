@@ -179,6 +179,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
+      - name: Set CLI version
+        shell: bash
+        run: |
+          VERSION="${{ github.head_ref || github.ref_name }}"
+          echo "CLI_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
       - uses: mlugg/setup-zig@v1
@@ -202,23 +207,23 @@ jobs:
         run: cargo build --profile release-small --target ${{ matrix.target }}
       - name: Rename Unix CLI bin
         if: (!startsWith(matrix.build, 'windows'))
-        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
       - name: Rename Windows CLI bin
         if: startsWith(matrix.build, 'windows')
-        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
       - name: Upload Unix CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
-          path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
+          path: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
           if-no-files-found: error
       - name: Upload Windows CLI Artifact
         if: startsWith(matrix.build, 'windows')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
-          path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
+          path: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
           if-no-files-found: error
 
   package_cli:
@@ -240,18 +245,23 @@ jobs:
       CLI_DEB_DIR: deb
     steps:
       - uses: actions/checkout@v6
+      - name: Set CLI version
+        shell: bash
+        run: |
+          VERSION="${{ github.head_ref || github.ref_name }}"
+          echo "CLI_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
       - name: Download CLI Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ inputs.mold-version }}
       - name: Build .deb package
-        run: cargo gen-pkg deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+        run: cargo gen-pkg deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
       - name: Test install .deb package
         if: matrix.build == 'linux-x86-64'
-        run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
+        run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
       - name: Sanity test .deb package installation
         if: matrix.build == 'linux-x86-64'
         run: |
@@ -261,6 +271,6 @@ jobs:
       - name: Upload .deb Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
-          path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
+          path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
           if-no-files-found: error

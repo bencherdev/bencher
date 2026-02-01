@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for organization projects endpoints.
 
 use bencher_api_tests::TestServer;
@@ -15,10 +20,7 @@ async fn test_projects_list_empty() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/organizations/{}/projects",
-            org_slug
-        )))
+        .get(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await
@@ -41,10 +43,7 @@ async fn test_projects_list_with_project() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/organizations/{}/projects",
-            org_slug
-        )))
+        .get(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await
@@ -70,10 +69,7 @@ async fn test_projects_create() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{}/projects",
-            org_slug
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()
@@ -100,10 +96,7 @@ async fn test_projects_create_with_url() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{}/projects",
-            org_slug
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()
@@ -130,10 +123,7 @@ async fn test_projects_create_duplicate_slug() {
     // First project
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{}/projects",
-            org_slug
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()
@@ -144,10 +134,7 @@ async fn test_projects_create_duplicate_slug() {
     // Second project with same slug should fail
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{}/projects",
-            org_slug
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()

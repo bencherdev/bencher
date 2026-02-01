@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for server `OpenAPI` spec endpoint.
 
 use bencher_api_tests::TestServer;
@@ -59,5 +64,8 @@ async fn test_spec_openapi_version() {
 
     // Should be OpenAPI 3.x
     let openapi = body.get("openapi").and_then(|v| v.as_str());
-    assert!(openapi.is_some_and(|v| v.starts_with("3.")), "Should be OpenAPI 3.x");
+    assert!(
+        openapi.is_some_and(|v| v.starts_with("3.")),
+        "Should be OpenAPI 3.x"
+    );
 }

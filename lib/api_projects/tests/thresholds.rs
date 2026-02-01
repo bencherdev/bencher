@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for project threshold endpoints.
 
 use bencher_api_tests::TestServer;
@@ -9,9 +14,13 @@ use http::StatusCode;
 #[tokio::test]
 async fn test_thresholds_list() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "thresholdlist@example.com").await;
+    let user = server
+        .signup("Test User", "thresholdlist@example.com")
+        .await;
     let org = server.create_org(&user, "Threshold Org").await;
-    let project = server.create_project(&user, &org, "Threshold Project").await;
+    let project = server
+        .create_project(&user, &org, "Threshold Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server
@@ -32,9 +41,13 @@ async fn test_thresholds_list() {
 #[tokio::test]
 async fn test_thresholds_list_requires_auth() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "thresholdauth@example.com").await;
+    let user = server
+        .signup("Test User", "thresholdauth@example.com")
+        .await;
     let org = server.create_org(&user, "Threshold Auth Org").await;
-    let project = server.create_project(&user, &org, "Threshold Auth Project").await;
+    let project = server
+        .create_project(&user, &org, "Threshold Auth Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server
@@ -56,9 +69,13 @@ async fn test_thresholds_list_requires_auth() {
 #[tokio::test]
 async fn test_thresholds_get_not_found() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "thresholdnotfound@example.com").await;
+    let user = server
+        .signup("Test User", "thresholdnotfound@example.com")
+        .await;
     let org = server.create_org(&user, "Threshold NotFound Org").await;
-    let project = server.create_project(&user, &org, "Threshold NotFound Project").await;
+    let project = server
+        .create_project(&user, &org, "Threshold NotFound Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server

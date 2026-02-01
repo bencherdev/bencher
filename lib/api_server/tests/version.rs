@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for server version endpoint.
 
 use bencher_api_tests::TestServer;
@@ -37,5 +42,8 @@ async fn test_version_format() {
     assert_eq!(resp.status(), StatusCode::OK);
     let body: JsonApiVersion = resp.json().await.expect("Failed to parse response");
     // Version should contain dots (semver format)
-    assert!(body.version.contains('.'), "Version should be semver format");
+    assert!(
+        body.version.contains('.'),
+        "Version should be semver format"
+    );
 }

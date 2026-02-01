@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for project measure endpoints.
 
 use bencher_api_tests::TestServer;
@@ -30,9 +35,13 @@ async fn test_measures_list() {
 #[tokio::test]
 async fn test_measures_create() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "measurecreate@example.com").await;
+    let user = server
+        .signup("Test User", "measurecreate@example.com")
+        .await;
     let org = server.create_org(&user, "Measure Create Org").await;
-    let project = server.create_project(&user, &org, "Measure Create Project").await;
+    let project = server
+        .create_project(&user, &org, "Measure Create Project")
+        .await;
 
     let body = serde_json::json!({
         "name": "Latency",
@@ -59,9 +68,13 @@ async fn test_measures_create() {
 #[tokio::test]
 async fn test_measures_create_auto_slug() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "measureautoslug@example.com").await;
+    let user = server
+        .signup("Test User", "measureautoslug@example.com")
+        .await;
     let org = server.create_org(&user, "Measure AutoSlug Org").await;
-    let project = server.create_project(&user, &org, "Measure AutoSlug Project").await;
+    let project = server
+        .create_project(&user, &org, "Measure AutoSlug Project")
+        .await;
 
     // Slug is optional - will be auto-generated from name
     let body = serde_json::json!({
@@ -86,9 +99,13 @@ async fn test_measures_create_auto_slug() {
 #[tokio::test]
 async fn test_measures_delete() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "measuredelete@example.com").await;
+    let user = server
+        .signup("Test User", "measuredelete@example.com")
+        .await;
     let org = server.create_org(&user, "Measure Delete Org").await;
-    let project = server.create_project(&user, &org, "Measure Delete Project").await;
+    let project = server
+        .create_project(&user, &org, "Measure Delete Project")
+        .await;
 
     let body = serde_json::json!({
         "name": "Delete Measure",

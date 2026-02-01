@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for project report endpoints.
 
 use bencher_api_tests::TestServer;
@@ -34,7 +39,9 @@ async fn test_reports_list_with_pagination() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "reportpage@example.com").await;
     let org = server.create_org(&user, "Report Page Org").await;
-    let project = server.create_project(&user, &org, "Report Page Project").await;
+    let project = server
+        .create_project(&user, &org, "Report Page Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server
@@ -55,9 +62,13 @@ async fn test_reports_list_with_pagination() {
 #[tokio::test]
 async fn test_reports_get_not_found() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "reportnotfound@example.com").await;
+    let user = server
+        .signup("Test User", "reportnotfound@example.com")
+        .await;
     let org = server.create_org(&user, "Report NotFound Org").await;
-    let project = server.create_project(&user, &org, "Report NotFound Project").await;
+    let project = server
+        .create_project(&user, &org, "Report NotFound Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server
@@ -78,9 +89,13 @@ async fn test_reports_get_not_found() {
 #[tokio::test]
 async fn test_reports_delete_not_found() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "reportdelnotfound@example.com").await;
+    let user = server
+        .signup("Test User", "reportdelnotfound@example.com")
+        .await;
     let org = server.create_org(&user, "Report Del NotFound Org").await;
-    let project = server.create_project(&user, &org, "Report Del NotFound Project").await;
+    let project = server
+        .create_project(&user, &org, "Report Del NotFound Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server

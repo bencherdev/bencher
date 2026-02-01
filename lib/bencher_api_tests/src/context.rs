@@ -3,10 +3,11 @@ use std::{path::PathBuf, sync::Arc};
 use bencher_endpoint::Registrar as _;
 use bencher_rbac::init_rbac;
 use bencher_schema::{
+    ApiContext,
     context::{Database, DbConnection, Messenger},
-    run_migrations, ApiContext,
+    run_migrations,
 };
-use bencher_token::{TokenKey, DEFAULT_SECRET_KEY};
+use bencher_token::{DEFAULT_SECRET_KEY, TokenKey};
 use diesel::{
     Connection as _,
     r2d2::{ConnectionManager, Pool},
@@ -82,8 +83,7 @@ impl TestServer {
             indexer: None,
             stats: bencher_schema::context::StatsSettings::default(),
             biller: None,
-            licensor: bencher_license::Licensor::self_hosted()
-                .expect("Failed to create licensor"),
+            licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
             recaptcha_client: None,
             is_bencher_cloud: false,
         };

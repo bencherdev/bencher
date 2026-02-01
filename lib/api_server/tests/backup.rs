@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for server backup endpoint.
 
 use bencher_api_tests::TestServer;
@@ -27,7 +32,9 @@ async fn test_backup_forbidden_for_non_admin() {
     // First user is admin
     let _admin = server.signup("Admin User", "backupadmin@example.com").await;
     // Second user is NOT admin
-    let user = server.signup("Regular User", "backupuser@example.com").await;
+    let user = server
+        .signup("Regular User", "backupuser@example.com")
+        .await;
 
     let body = serde_json::json!({});
 

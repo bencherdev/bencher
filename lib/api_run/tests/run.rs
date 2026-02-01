@@ -50,7 +50,9 @@ async fn test_run_post_creates_branch_testbed() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "runcreate@example.com").await;
     let org = server.create_org(&user, "Run Create Org").await;
-    let project = server.create_project(&user, &org, "Auto Create Project").await;
+    let project = server
+        .create_project(&user, &org, "Auto Create Project")
+        .await;
 
     // BMF format results
     let bmf_results = serde_json::json!({
@@ -91,7 +93,9 @@ async fn test_run_post_unauthenticated() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "runpublic@example.com").await;
     let org = server.create_org(&user, "Public Run Org").await;
-    let project = server.create_project(&user, &org, "Public Run Project").await;
+    let project = server
+        .create_project(&user, &org, "Public Run Project")
+        .await;
 
     // BMF format results
     let bmf_results = serde_json::json!({

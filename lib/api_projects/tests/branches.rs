@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for project branch endpoints.
 
 use bencher_api_tests::TestServer;
@@ -32,7 +37,9 @@ async fn test_branches_create() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "branchcreate@example.com").await;
     let org = server.create_org(&user, "Branch Create Org").await;
-    let project = server.create_project(&user, &org, "Branch Create Project").await;
+    let project = server
+        .create_project(&user, &org, "Branch Create Project")
+        .await;
 
     let body = serde_json::json!({
         "name": "feature-branch",
@@ -58,9 +65,13 @@ async fn test_branches_create() {
 #[tokio::test]
 async fn test_branches_create_auto_slug() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "branchautoslug@example.com").await;
+    let user = server
+        .signup("Test User", "branchautoslug@example.com")
+        .await;
     let org = server.create_org(&user, "Branch Auto Org").await;
-    let project = server.create_project(&user, &org, "Branch Auto Project").await;
+    let project = server
+        .create_project(&user, &org, "Branch Auto Project")
+        .await;
 
     // Branch names follow git naming rules - no spaces allowed
     let body = serde_json::json!({
@@ -86,7 +97,9 @@ async fn test_branches_get() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "branchget@example.com").await;
     let org = server.create_org(&user, "Branch Get Org").await;
-    let project = server.create_project(&user, &org, "Branch Get Project").await;
+    let project = server
+        .create_project(&user, &org, "Branch Get Project")
+        .await;
 
     // Create a branch first
     let body = serde_json::json!({
@@ -128,7 +141,9 @@ async fn test_branches_delete() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "branchdelete@example.com").await;
     let org = server.create_org(&user, "Branch Delete Org").await;
-    let project = server.create_project(&user, &org, "Branch Delete Project").await;
+    let project = server
+        .create_project(&user, &org, "Branch Delete Project")
+        .await;
 
     // Create a branch first
     let body = serde_json::json!({

@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for project CRUD endpoints.
 
 use bencher_api_tests::TestServer;
@@ -129,7 +134,9 @@ async fn test_projects_update_url() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projurlupd@example.com").await;
     let org = server.create_org(&user, "URL Update Org").await;
-    let project = server.create_project(&user, &org, "URL Update Project").await;
+    let project = server
+        .create_project(&user, &org, "URL Update Project")
+        .await;
 
     let body = serde_json::json!({
         "url": "https://github.com/updated/project"

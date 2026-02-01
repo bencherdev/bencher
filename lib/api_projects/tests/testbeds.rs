@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for project testbed endpoints.
 
 use bencher_api_tests::TestServer;
@@ -30,9 +35,13 @@ async fn test_testbeds_list() {
 #[tokio::test]
 async fn test_testbeds_create() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "testbedcreate@example.com").await;
+    let user = server
+        .signup("Test User", "testbedcreate@example.com")
+        .await;
     let org = server.create_org(&user, "Testbed Create Org").await;
-    let project = server.create_project(&user, &org, "Testbed Create Project").await;
+    let project = server
+        .create_project(&user, &org, "Testbed Create Project")
+        .await;
 
     let body = serde_json::json!({
         "name": "linux-server",
@@ -60,7 +69,9 @@ async fn test_testbeds_create_duplicate() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "testbeddup@example.com").await;
     let org = server.create_org(&user, "Testbed Dup Org").await;
-    let project = server.create_project(&user, &org, "Testbed Dup Project").await;
+    let project = server
+        .create_project(&user, &org, "Testbed Dup Project")
+        .await;
 
     let body = serde_json::json!({
         "name": "dup-testbed",
@@ -96,9 +107,13 @@ async fn test_testbeds_create_duplicate() {
 #[tokio::test]
 async fn test_testbeds_delete() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "testbeddelete@example.com").await;
+    let user = server
+        .signup("Test User", "testbeddelete@example.com")
+        .await;
     let org = server.create_org(&user, "Testbed Delete Org").await;
-    let project = server.create_project(&user, &org, "Testbed Delete Project").await;
+    let project = server
+        .create_project(&user, &org, "Testbed Delete Project")
+        .await;
 
     let body = serde_json::json!({
         "name": "delete-testbed",

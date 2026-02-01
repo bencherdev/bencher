@@ -1,8 +1,16 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for organization member endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonMembers, organization::member::{JsonNewMember, OrganizationRole}};
+use bencher_json::{
+    JsonMembers,
+    organization::member::{JsonNewMember, OrganizationRole},
+};
 use http::StatusCode;
 
 // GET /v0/organizations/{organization}/members - list members
@@ -15,10 +23,7 @@ async fn test_members_list() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/organizations/{}/members",
-            org_slug
-        )))
+        .get(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await
@@ -34,16 +39,15 @@ async fn test_members_list() {
 #[tokio::test]
 async fn test_members_creator_is_member() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "creatormember@example.com").await;
+    let user = server
+        .signup("Test User", "creatormember@example.com")
+        .await;
     let org = server.create_org(&user, "Creator Member Org").await;
 
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/organizations/{}/members",
-            org_slug
-        )))
+        .get(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await
@@ -73,10 +77,7 @@ async fn test_members_invite() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{}/members",
-            org_slug
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()
@@ -103,10 +104,7 @@ async fn test_members_invite_no_name() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{}/members",
-            org_slug
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()
@@ -132,10 +130,7 @@ async fn test_members_invite_invalid_email() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{}/members",
-            org_slug
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .json(&body)
         .send()

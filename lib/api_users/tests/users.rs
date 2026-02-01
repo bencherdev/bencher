@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for user CRUD endpoints.
 
 use bencher_api_tests::TestServer;
@@ -31,7 +36,9 @@ async fn test_users_list_forbidden_for_non_admin() {
     // First user is admin
     let _admin = server.signup("Admin User", "adminlist@example.com").await;
     // Second user is NOT admin
-    let user = server.signup("Regular User", "regularlist@example.com").await;
+    let user = server
+        .signup("Regular User", "regularlist@example.com")
+        .await;
 
     let resp = server
         .client

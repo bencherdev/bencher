@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for organization permission endpoints.
 
 use bencher_api_tests::TestServer;
@@ -15,10 +20,7 @@ async fn test_allowed_view() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/organizations/{}/allowed/view",
-            org_slug
-        )))
+        .get(server.api_url(&format!("/v0/organizations/{}/allowed/view", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await
@@ -39,10 +41,7 @@ async fn test_allowed_edit() {
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/organizations/{}/allowed/edit",
-            org_slug
-        )))
+        .get(server.api_url(&format!("/v0/organizations/{}/allowed/edit", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await
@@ -58,16 +57,15 @@ async fn test_allowed_edit() {
 #[tokio::test]
 async fn test_allowed_delete() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "alloweddelete@example.com").await;
+    let user = server
+        .signup("Test User", "alloweddelete@example.com")
+        .await;
     let org = server.create_org(&user, "Delete Allowed Org").await;
 
     let org_slug: &str = org.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/organizations/{}/allowed/delete",
-            org_slug
-        )))
+        .get(server.api_url(&format!("/v0/organizations/{}/allowed/delete", org_slug)))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await
@@ -83,7 +81,9 @@ async fn test_allowed_delete() {
 #[tokio::test]
 async fn test_allowed_invalid_permission() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "allowedinvalid@example.com").await;
+    let user = server
+        .signup("Test User", "allowedinvalid@example.com")
+        .await;
     let org = server.create_org(&user, "Invalid Allowed Org").await;
 
     let org_slug: &str = org.slug.as_ref();

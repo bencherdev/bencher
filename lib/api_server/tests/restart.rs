@@ -1,4 +1,9 @@
-#![allow(unused_crate_dependencies, clippy::tests_outside_test_module, clippy::redundant_test_prefix, clippy::uninlined_format_args)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::redundant_test_prefix,
+    clippy::uninlined_format_args
+)]
 //! Integration tests for server restart endpoint.
 
 use bencher_api_tests::TestServer;
@@ -25,9 +30,13 @@ async fn test_restart_requires_auth() {
 async fn test_restart_forbidden_for_non_admin() {
     let server = TestServer::new().await;
     // First user is admin
-    let _admin = server.signup("Admin User", "restartadmin@example.com").await;
+    let _admin = server
+        .signup("Admin User", "restartadmin@example.com")
+        .await;
     // Second user is NOT admin
-    let user = server.signup("Regular User", "restartuser@example.com").await;
+    let user = server
+        .signup("Regular User", "restartuser@example.com")
+        .await;
 
     let body = serde_json::json!({});
 
@@ -50,7 +59,9 @@ async fn test_restart_forbidden_for_non_admin() {
 async fn test_restart_as_admin_with_delay() {
     let server = TestServer::new().await;
     // First user is admin
-    let admin = server.signup("Admin User", "adminrestart@example.com").await;
+    let admin = server
+        .signup("Admin User", "adminrestart@example.com")
+        .await;
 
     // Request restart with a long delay so it doesn't actually happen during test
     let body = serde_json::json!({
