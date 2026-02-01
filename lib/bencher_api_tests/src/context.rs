@@ -86,6 +86,11 @@ impl TestServer {
             licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
             recaptcha_client: None,
             is_bencher_cloud: false,
+            oci_storage: bencher_oci_storage::OciStorage::try_from_config(
+                None,
+                std::path::Path::new(&db_path),
+            )
+            .expect("Failed to create OCI storage"),
         };
         #[cfg(not(feature = "plus"))]
         let context = ApiContext {

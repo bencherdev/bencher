@@ -89,7 +89,7 @@ pub async fn oci_referrers_list(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.digest.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Get referrers from storage
     let referrers = storage

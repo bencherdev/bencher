@@ -105,7 +105,7 @@ pub async fn oci_blob_exists(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Check if blob exists and get size
     let size = storage
@@ -173,7 +173,7 @@ pub async fn oci_blob_get(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Get blob content
     let (data, size) = storage
@@ -245,7 +245,7 @@ pub async fn oci_blob_delete(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: path.reference.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Delete the blob
     storage
@@ -296,7 +296,7 @@ pub async fn oci_upload_start(
     let project_slug = &push_access.project.slug;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Handle cross-repository mount if requested
     if let (Some(digest_str), Some(from_name)) = (&query.digest, &query.from) {
@@ -388,7 +388,7 @@ pub async fn oci_upload_monolithic(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: query.digest.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Start upload, append data, and complete in one operation
     let upload_id = storage

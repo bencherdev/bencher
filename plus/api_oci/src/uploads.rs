@@ -99,7 +99,7 @@ pub async fn oci_upload_status(
         .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Get current upload size
     let size = storage
@@ -159,7 +159,7 @@ pub async fn oci_upload_chunk(
         .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Get current upload size for Content-Range validation
     let current_size = storage
@@ -270,7 +270,7 @@ pub async fn oci_upload_complete(
         .map_err(|_err| crate::error::into_http_error(OciError::DigestInvalid { digest: query.digest.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // If there's data in the body, append it first
     if !data.is_empty() {
@@ -332,7 +332,7 @@ pub async fn oci_upload_cancel(
         .map_err(|_err| crate::error::into_http_error(OciError::BlobUploadUnknown { upload_id: path.session_id.clone() }))?;
 
     // Get storage
-    let storage = context.oci_storage()?;
+    let storage = context.oci_storage();
 
     // Cancel the upload
     storage

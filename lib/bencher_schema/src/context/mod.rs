@@ -66,7 +66,7 @@ pub struct ApiContext {
     #[cfg(feature = "plus")]
     pub is_bencher_cloud: bool,
     #[cfg(feature = "plus")]
-    pub oci_storage: Option<OciStorage>,
+    pub oci_storage: OciStorage,
 }
 
 #[macro_export]
@@ -117,10 +117,8 @@ impl ApiContext {
     }
 
     #[cfg(feature = "plus")]
-    pub fn oci_storage(&self) -> Result<&OciStorage, HttpError> {
-        self.oci_storage
-            .as_ref()
-            .ok_or_else(|| crate::error::locked_error("OCI storage not configured"))
+    pub fn oci_storage(&self) -> &OciStorage {
+        &self.oci_storage
     }
 
     #[cfg(feature = "plus")]
