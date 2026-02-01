@@ -8,6 +8,8 @@ use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, RequestContext, endpoint};
 use http::Response;
 
+#[cfg(feature = "plus")]
+use crate::auth::apply_auth_rate_limit;
 use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate};
 
 /// CORS preflight for OCI base endpoint
@@ -35,9 +37,7 @@ pub async fn oci_base_options(
     path = "/v2/",
     tags = ["oci"],
 }]
-pub async fn oci_base(
-    rqctx: RequestContext<ApiContext>,
-) -> Result<Response<Body>, HttpError> {
+pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
 
     // Try to extract and validate bearer token
@@ -45,10 +45,14 @@ pub async fn oci_base(
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, None))?;
 
     // Validate the OCI token
-    context
+    let claims = context
         .token_key
         .validate_oci(&token)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, None))?;
+
+    // Apply rate limiting
+    #[cfg(feature = "plus")]
+    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Return 200 OK with empty JSON body
     Response::builder()

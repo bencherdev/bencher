@@ -10,7 +10,11 @@ use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access};
+#[cfg(feature = "plus")]
+use crate::auth::apply_auth_rate_limit;
+use crate::auth::{
+    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
+};
 
 /// Path parameters for tags list
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -74,8 +78,12 @@ pub async fn oci_tags_list(
     let scope = format!("repository:{name_str}:pull");
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    validate_oci_access(context, &token, &name_str, "pull")
+    let claims = validate_oci_access(context, &token, &name_str, "pull")
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
+
+    // Apply rate limiting
+    #[cfg(feature = "plus")]
+    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Get storage
     let storage = context.oci_storage()?;
