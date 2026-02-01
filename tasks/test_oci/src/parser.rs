@@ -1,5 +1,8 @@
 use clap::Parser;
 
+const TEST_USERNAME: &str = "muriel.bagge@nowhere.com";
+const TEST_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
+
 #[derive(Parser, Debug)]
 #[clap(
     name = "test-oci",
@@ -37,4 +40,12 @@ pub struct TaskOci {
     /// Path to distribution-spec clone (will clone if not exists)
     #[clap(long, default_value = "./distribution-spec")]
     pub spec_dir: String,
+
+    /// Username for OCI authentication (email address)
+    #[clap(long, default_value = TEST_USERNAME)]
+    pub username: String,
+
+    /// Password for OCI authentication (API token)
+    #[clap(long, default_value = TEST_API_TOKEN)]
+    pub password: String,
 }

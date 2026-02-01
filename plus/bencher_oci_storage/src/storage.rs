@@ -603,11 +603,13 @@ impl OciStorage {
             })?;
 
         // Copy to final blob location
+        // For S3 Access Points, copy source must use the format:
+        // arn:aws:s3:region:account-id:accesspoint/accesspoint-name/object/key
         let blob_key = self.blob_key(&repository, &actual_digest);
         self.client
             .copy_object()
             .bucket(&self.config.bucket_arn)
-            .copy_source(format!("{}/{}", self.config.bucket_arn, data_key))
+            .copy_source(format!("{}/object/{}", self.config.bucket_arn, data_key))
             .key(&blob_key)
             .send()
             .await
@@ -762,13 +764,15 @@ impl OciStorage {
         }
 
         // Copy the blob to the new repository
+        // For S3 Access Points, copy source must use the format:
+        // arn:aws:s3:region:account-id:accesspoint/accesspoint-name/object/key
         let source_key = self.blob_key(from_repository, digest);
         let dest_key = self.blob_key(to_repository, digest);
 
         self.client
             .copy_object()
             .bucket(&self.config.bucket_arn)
-            .copy_source(format!("{}/{}", self.config.bucket_arn, source_key))
+            .copy_source(format!("{}/object/{}", self.config.bucket_arn, source_key))
             .key(&dest_key)
             .send()
             .await
