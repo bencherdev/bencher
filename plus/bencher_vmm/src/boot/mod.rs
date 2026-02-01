@@ -9,6 +9,12 @@ mod x86_64;
 #[cfg(target_arch = "aarch64")]
 mod aarch64;
 
+#[cfg(target_arch = "aarch64")]
+pub use aarch64::load_kernel as load_kernel_aarch64;
+
+#[cfg(target_arch = "x86_64")]
+pub use x86_64::load_kernel;
+
 use camino::Utf8Path;
 use vm_memory::GuestMemoryMmap;
 
@@ -20,35 +26,12 @@ pub struct KernelEntry {
     pub entry_addr: u64,
 }
 
-/// Load a Linux kernel into guest memory.
-///
-/// # Arguments
-///
-/// * `guest_memory` - The guest memory to load the kernel into
-/// * `kernel_path` - Path to the kernel image
-/// * `cmdline` - Kernel command line arguments
-///
-/// # Returns
-///
-/// The kernel entry point information.
-pub fn load_kernel(
+/// Load a Linux kernel into guest memory (x86_64).
+#[cfg(target_arch = "x86_64")]
+pub fn load_kernel_x86_64(
     guest_memory: &GuestMemoryMmap,
     kernel_path: &Utf8Path,
     cmdline: &str,
 ) -> Result<KernelEntry, VmmError> {
-    #[cfg(target_arch = "x86_64")]
-    {
-        x86_64::load_kernel(guest_memory, kernel_path, cmdline)
-    }
-
-    #[cfg(target_arch = "aarch64")]
-    {
-        aarch64::load_kernel(guest_memory, kernel_path, cmdline)
-    }
-
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
-    {
-        let _ = (guest_memory, kernel_path, cmdline);
-        Err(VmmError::UnsupportedArch)
-    }
+    x86_64::load_kernel(guest_memory, kernel_path, cmdline)
 }

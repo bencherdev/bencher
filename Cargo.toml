@@ -179,6 +179,7 @@ zstd = "0.13"
 # rust-vmm
 virtio-queue = "0.14"
 vm-memory = { version = "0.16", features = ["backend-mmap"] }
+vm-fdt = "0.3"
 vm-superio = "0.8"
 vmm-sys-util = "0.12"
 vsock = "0.5"
