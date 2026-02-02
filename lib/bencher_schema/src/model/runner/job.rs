@@ -66,6 +66,26 @@ impl QueryJob {
             modified: self.modified,
         }
     }
+
+    pub fn into_json_for_project(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
+        let runner_uuid = if let Some(runner_id) = self.runner_id {
+            QueryRunner::get(conn, runner_id).ok().map(|r| r.uuid)
+        } else {
+            None
+        };
+
+        Ok(JsonJob {
+            uuid: self.uuid,
+            status: self.status,
+            runner: runner_uuid,
+            claimed: self.claimed,
+            started: self.started,
+            completed: self.completed,
+            exit_code: self.exit_code,
+            created: self.created,
+            modified: self.modified,
+        })
+    }
 }
 
 #[derive(Debug, diesel::Insertable)]
