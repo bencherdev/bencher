@@ -29,7 +29,7 @@ const RUNNER_TOKEN_PREFIX: &str = "bencher_runner_";
 
 pub type RunnersPagination = JsonPagination<RunnersSort>;
 
-#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RunnersSort {
     /// Sort by runner name.

@@ -62,7 +62,11 @@ async fn claim_job_inner(
     claim_request: JsonClaimJob,
 ) -> Result<Option<JsonJob>, HttpError> {
     // Cap poll timeout at 60 seconds
+    // TODO: Implement long-polling using this timeout value
     let _poll_timeout = claim_request.poll_timeout.min(60);
+
+    // Hold the write lock to atomically claim a job
+    let conn = write_conn!(context);
 
     // Try to claim a pending job (ordered by priority DESC, created ASC)
     // For now, just do a single check without long-polling
@@ -70,7 +74,7 @@ async fn claim_job_inner(
     let pending_job: Option<QueryJob> = schema::job::table
         .filter(schema::job::status.eq(JobStatus::Pending))
         .order((schema::job::priority.desc(), schema::job::created.asc()))
-        .first(auth_conn!(context))
+        .first(conn)
         .optional()
         .map_err(resource_not_found_err!(Job))?;
 
@@ -95,7 +99,7 @@ async fn claim_job_inner(
             .filter(schema::job::status.eq(JobStatus::Pending)),
     )
     .set(&update_job)
-    .execute(write_conn!(context))
+    .execute(conn)
     .map_err(resource_conflict_err!(Job, job))?;
 
     if updated == 0 {
