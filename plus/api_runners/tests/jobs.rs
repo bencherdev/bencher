@@ -1,8 +1,4 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for runner agent job endpoints.
 //!
 //! Note: These tests require a job to exist in the database.
@@ -21,7 +17,7 @@ async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -> Js
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", format!("Bearer {}", admin_token))
+        .header("Authorization", format!("Bearer {admin_token}"))
         .json(&body)
         .send()
         .await
@@ -46,7 +42,7 @@ async fn test_claim_job_no_jobs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {}", runner_token))
+        .header("Authorization", format!("Bearer {runner_token}"))
         .json(&body)
         .send()
         .await
@@ -100,7 +96,7 @@ async fn test_claim_job_wrong_runner_token() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid)))
-        .header("Authorization", format!("Bearer {}", runner1_token))
+        .header("Authorization", format!("Bearer {runner1_token}"))
         .json(&body)
         .send()
         .await
@@ -138,7 +134,7 @@ async fn test_claim_job_locked_runner() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {}", runner_token))
+        .header("Authorization", format!("Bearer {runner_token}"))
         .json(&body)
         .send()
         .await
@@ -187,10 +183,7 @@ async fn test_update_job_invalid_token() {
 
     let resp = server
         .client
-        .patch(server.api_url(&format!(
-            "/v0/runners/{}/jobs/{}",
-            runner.uuid, fake_job_uuid
-        )))
+        .patch(server.api_url(&format!("/v0/runners/{}/jobs/{fake_job_uuid}", runner.uuid)))
         .header("Authorization", "Bearer bencher_runner_invalid")
         .json(&body)
         .send()
@@ -218,11 +211,8 @@ async fn test_update_job_not_found() {
 
     let resp = server
         .client
-        .patch(server.api_url(&format!(
-            "/v0/runners/{}/jobs/{}",
-            runner.uuid, fake_job_uuid
-        )))
-        .header("Authorization", format!("Bearer {}", runner_token))
+        .patch(server.api_url(&format!("/v0/runners/{}/jobs/{fake_job_uuid}", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
         .json(&body)
         .send()
         .await
@@ -285,7 +275,7 @@ async fn test_claim_job_archived_runner() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {}", runner_token))
+        .header("Authorization", format!("Bearer {runner_token}"))
         .json(&body)
         .send()
         .await
