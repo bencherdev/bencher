@@ -4,16 +4,17 @@ use http::HeaderMap;
 use slog::Logger;
 
 pub(super) fn remote_ip(log: &Logger, headers: &HeaderMap) -> Option<IpAddr> {
-    let remote_ip = remote_ip_inner(headers);
-    if let Some(ip) = &remote_ip {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIp);
-        slog::info!(log, "Remote IP"; "remote_ip" => %ip);
-    } else {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIpNotFound);
-    }
-    remote_ip
+    remote_ip_inner(headers)
+        .inspect(|remote_ip| {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIp);
+            slog::info!(log, "Remote IP"; "remote_ip" => %remote_ip);
+        })
+        .or_else(|| {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserIpNotFound);
+            None
+        })
 }
 
 fn remote_ip_inner(headers: &HeaderMap) -> Option<IpAddr> {
