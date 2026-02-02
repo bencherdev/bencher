@@ -79,6 +79,13 @@ pub enum ApiCounter {
     OciManifestPull,
     OciTagsList,
 
+    // Runner metrics
+    RunnerCreate,
+    RunnerUpdate,
+    RunnerTokenRotate,
+    RunnerJobClaim,
+    RunnerJobUpdate(JobStatusKind),
+
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
     SelfHostedServerStats(Uuid),
@@ -137,6 +144,13 @@ impl ApiCounter {
             Self::OciManifestPush => "oci.manifest.push",
             Self::OciManifestPull => "oci.manifest.pull",
             Self::OciTagsList => "oci.tags.list",
+
+            // Runner metrics
+            Self::RunnerCreate => "runner.create",
+            Self::RunnerUpdate => "runner.update",
+            Self::RunnerTokenRotate => "runner.token.rotate",
+            Self::RunnerJobClaim => "runner.job.claim",
+            Self::RunnerJobUpdate(_) => "runner.job.update",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -201,6 +215,13 @@ impl ApiCounter {
             Self::OciManifestPull => "Counts the number of OCI manifest pulls",
             Self::OciTagsList => "Counts the number of OCI tags list requests",
 
+            // Runner metrics
+            Self::RunnerCreate => "Counts the number of runner creations",
+            Self::RunnerUpdate => "Counts the number of runner updates",
+            Self::RunnerTokenRotate => "Counts the number of runner token rotations",
+            Self::RunnerJobClaim => "Counts the number of runner job claims",
+            Self::RunnerJobUpdate(_) => "Counts the number of runner job status updates",
+
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
             Self::SelfHostedServerStats(_) => "Counts the number of self-hosted server stats sent",
@@ -230,7 +251,11 @@ impl ApiCounter {
             | Self::OciBlobPull
             | Self::OciManifestPush
             | Self::OciManifestPull
-            | Self::OciTagsList => Vec::new(),
+            | Self::OciTagsList
+            | Self::RunnerCreate
+            | Self::RunnerUpdate
+            | Self::RunnerTokenRotate
+            | Self::RunnerJobClaim => Vec::new(),
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),
@@ -249,6 +274,7 @@ impl ApiCounter {
             | Self::UserInviteMax(interval_kind) => {
                 vec![interval_kind.into()]
             },
+            Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(server_uuid)
             | Self::SelfHostedServerStats(server_uuid) => self_hosted_attributes(server_uuid),
@@ -378,6 +404,33 @@ impl From<AuthorizationKind> for opentelemetry::KeyValue {
 
 impl AuthorizationKind {
     const KEY: &str = "authorization";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum JobStatusKind {
+    Running,
+    Completed,
+    Failed,
+}
+
+impl fmt::Display for JobStatusKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Running => write!(f, "running"),
+            Self::Completed => write!(f, "completed"),
+            Self::Failed => write!(f, "failed"),
+        }
+    }
+}
+
+impl From<JobStatusKind> for opentelemetry::KeyValue {
+    fn from(status_kind: JobStatusKind) -> Self {
+        opentelemetry::KeyValue::new(JobStatusKind::KEY, status_kind.to_string())
+    }
+}
+
+impl JobStatusKind {
+    const KEY: &str = "job.status";
 }
 
 fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
