@@ -128,3 +128,17 @@ pub struct JsonUpdateJobResponse {
     /// If true, job was canceled - runner should stop execution
     pub canceled: bool,
 }
+
+/// Request to claim a job (runner agent endpoint)
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonClaimJob {
+    /// Maximum time to wait for a job (long-poll), in seconds. Max 60.
+    #[serde(default = "default_poll_timeout")]
+    pub poll_timeout: u32,
+}
+
+fn default_poll_timeout() -> u32 {
+    30
+}
