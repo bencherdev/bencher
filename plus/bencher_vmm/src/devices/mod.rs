@@ -7,11 +7,13 @@
 //! - virtio-vsock for host-guest communication
 
 mod i8042;
+mod pit;
 mod serial;
 mod virtio_blk;
 mod virtio_vsock;
 
 pub use i8042::I8042Device;
+pub use pit::PitDevice;
 pub use serial::SerialDevice;
 pub use virtio_blk::VirtioBlkDevice;
 pub use virtio_vsock::VirtioVsockDevice;
@@ -37,6 +39,9 @@ pub const SERIAL_PORT_END: u16 = 0x3ff;
 /// I/O port for the i8042 keyboard controller.
 pub const I8042_DATA_PORT: u16 = 0x60;
 pub const I8042_COMMAND_PORT: u16 = 0x64;
+
+/// Timer IRQ (IRQ0 from PIT).
+pub const TIMER_IRQ: u32 = 0;
 
 /// MMIO base address for virtio devices.
 pub const VIRTIO_MMIO_BASE: u64 = 0xd000_0000;
@@ -72,6 +77,9 @@ pub struct DeviceManager {
     /// i8042 keyboard controller (for shutdown).
     pub i8042: I8042Device,
 
+    /// Programmable Interval Timer (for timer interrupts).
+    pub pit: PitDevice,
+
     /// virtio-blk device (for rootfs).
     pub virtio_blk: Option<VirtioBlkDevice>,
 
@@ -88,6 +96,7 @@ impl DeviceManager {
         Ok(Self {
             serial: SerialDevice::new()?,
             i8042: I8042Device::new(),
+            pit: PitDevice::new(),
             virtio_blk: None,
             virtio_vsock: None,
             vm_fd: None,
@@ -147,6 +156,15 @@ impl DeviceManager {
         }
     }
 
+    /// Check and inject timer interrupt if needed.
+    ///
+    /// This should be called periodically in the event loop.
+    pub fn check_timer(&mut self) {
+        if self.pit.check_interrupt() {
+            self.inject_irq(TIMER_IRQ);
+        }
+    }
+
     /// Check if any virtio device has a pending interrupt.
     #[must_use]
     pub fn has_pending_virtio_interrupt(&self) -> bool {
@@ -163,6 +181,9 @@ impl DeviceManager {
             }
             I8042_DATA_PORT | I8042_COMMAND_PORT => {
                 self.i8042.read(port, data);
+            }
+            pit::PIT_CHANNEL_0..=pit::PIT_MODE_COMMAND => {
+                self.pit.read(port, data);
             }
             _ => {
                 // Unknown port, return 0xff
@@ -181,6 +202,10 @@ impl DeviceManager {
                 false
             }
             I8042_DATA_PORT | I8042_COMMAND_PORT => self.i8042.write(port, data),
+            pit::PIT_CHANNEL_0..=pit::PIT_MODE_COMMAND => {
+                self.pit.write(port, data);
+                false
+            }
             _ => {
                 // Unknown port, ignore
                 false

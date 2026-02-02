@@ -230,6 +230,8 @@ fn handle_vcpu_exit(
                 VmmError::Device("Failed to lock device manager".to_owned())
             })?;
             dm.handle_io_read(port, data);
+            // Check if timer interrupt should fire
+            dm.check_timer();
             Ok(VmExitAction::Continue)
         }
 
@@ -243,6 +245,9 @@ fn handle_vcpu_exit(
             // Collect serial output
             let output = dm.get_serial_output();
             serial_output.extend(output);
+
+            // Check if timer interrupt should fire
+            dm.check_timer();
 
             if should_shutdown {
                 Ok(VmExitAction::Shutdown)
@@ -282,15 +287,38 @@ fn handle_vcpu_exit(
             // After MMIO write, poll vsock for any pending activity
             dm.poll_vsock();
 
+            // Check if timer interrupt should fire
+            dm.check_timer();
+
             Ok(VmExitAction::Continue)
         }
 
         VcpuExit::Hlt => {
             // CPU is halted, waiting for interrupt
-            // In a simple VMM, we can treat this as shutdown
-            // A production VMM would wait for interrupts
-            eprintln!("[VMM] Exit: Hlt");
-            Ok(VmExitAction::Shutdown)
+            // Inject a timer interrupt to wake it up
+            let mut dm = devices.lock().map_err(|_| {
+                VmmError::Device("Failed to lock device manager".to_owned())
+            })?;
+
+            // Small sleep to avoid busy-waiting when guest is idle
+            std::thread::sleep(std::time::Duration::from_micros(100));
+
+            // Check and inject timer interrupt
+            dm.check_timer();
+
+            // Collect any serial output
+            let output = dm.get_serial_output();
+            serial_output.extend(output);
+
+            // Log first few Hlt exits
+            static HLT_LOG_COUNT: std::sync::atomic::AtomicU64 =
+                std::sync::atomic::AtomicU64::new(0);
+            let count = HLT_LOG_COUNT.fetch_add(1, Ordering::Relaxed);
+            if count < 5 {
+                eprintln!("[VMM] Exit: Hlt (#{count}, will inject timer)");
+            }
+
+            Ok(VmExitAction::Continue)
         }
 
         VcpuExit::Shutdown => {
