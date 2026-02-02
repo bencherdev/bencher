@@ -142,3 +142,11 @@ pub struct JsonClaimJob {
 fn default_poll_timeout() -> u32 {
     30
 }
+
+/// A list of jobs
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonJobs(pub Vec<JsonJob>);
+
+crate::from_vec!(JsonJobs[JsonJob]);
