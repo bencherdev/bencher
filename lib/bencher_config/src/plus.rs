@@ -64,7 +64,7 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
-                oci_storage: OciStorage::try_from_config(None, database_path, None)
+                oci_storage: OciStorage::try_from_config(log.clone(), None, database_path, None)
                     .map_err(PlusError::OciStorage)?,
             });
         };
@@ -79,7 +79,7 @@ impl Plus {
             info!(log, "Using S3 OCI storage");
         }
         let oci_storage =
-            OciStorage::try_from_config(oci_data_store, database_path, upload_timeout)
+            OciStorage::try_from_config(log.clone(), oci_data_store, database_path, upload_timeout)
                 .map_err(PlusError::OciStorage)?;
 
         let github_client = plus.github.map(

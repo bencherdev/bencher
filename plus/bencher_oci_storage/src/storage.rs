@@ -31,6 +31,7 @@ use futures::stream::{self, StreamExt as _};
 use hyper::body::Frame;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
+use slog::Logger;
 use thiserror::Error;
 
 use crate::local::{LocalBlobBody, OciLocalStorage};
@@ -237,6 +238,7 @@ impl OciStorage {
     /// The `upload_timeout` specifies how long (in seconds) before stale uploads
     /// are cleaned up. Pass `None` to use the default (1 hour).
     pub fn try_from_config(
+        log: Logger,
         data_store: Option<OciDataStore>,
         database_path: &Path,
         upload_timeout: Option<u64>,
@@ -250,6 +252,7 @@ impl OciStorage {
             }) => OciS3Storage::new(access_key_id, secret_access_key, &access_point, timeout)
                 .map(OciStorage::S3),
             None => Ok(OciStorage::Local(OciLocalStorage::new(
+                log,
                 database_path,
                 timeout,
             ))),

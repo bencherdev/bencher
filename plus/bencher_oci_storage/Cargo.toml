@@ -24,6 +24,7 @@ plus = [
     "dep:serde",
     "dep:serde_json",
     "dep:sha2",
+    "dep:slog",
     "dep:thiserror",
     "dep:tokio",
     "dep:tokio-util",
@@ -51,6 +52,7 @@ hyper = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true, features = ["fs", "io-util"] }
 tokio-util = { workspace = true, optional = true }

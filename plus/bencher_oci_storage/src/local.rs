@@ -14,6 +14,7 @@ use chrono::Utc;
 use http_body_util::StreamBody;
 use hyper::body::Frame;
 use sha2::{Digest as _, Sha256};
+use slog::{Logger, error};
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
 use tokio_util::io::ReaderStream;
@@ -112,6 +113,8 @@ pub(crate) struct OciLocalStorage {
     base_dir: PathBuf,
     /// Upload timeout in seconds for stale upload cleanup
     upload_timeout: u64,
+    /// Logger for error reporting
+    log: Logger,
 }
 
 impl OciLocalStorage {
@@ -119,7 +122,7 @@ impl OciLocalStorage {
     ///
     /// The `database_path` is the path to the `SQLite` database file.
     /// OCI data will be stored in an `oci` subdirectory next to it.
-    pub fn new(database_path: &Path, upload_timeout: u64) -> Self {
+    pub fn new(log: Logger, database_path: &Path, upload_timeout: u64) -> Self {
         let base_dir = database_path
             .parent()
             .map_or_else(|| PathBuf::from("oci"), |p| p.join("oci"));
@@ -127,6 +130,7 @@ impl OciLocalStorage {
         Self {
             base_dir,
             upload_timeout,
+            log,
         }
     }
 
@@ -274,8 +278,9 @@ impl OciLocalStorage {
         upload_id: &UploadId,
         data: Bytes,
     ) -> Result<u64, OciStorageError> {
-        // Load current state
-        let mut state = self.load_upload_state(upload_id).await?;
+        // Verify upload exists by loading state (we don't use the size from state
+        // to avoid race conditions - we get the actual file size after appending)
+        let _state = self.load_upload_state(upload_id).await?;
 
         // Append data to file
         let data_path = self.upload_data_path(upload_id);
@@ -291,17 +296,32 @@ impl OciLocalStorage {
             OciStorageError::LocalStorage(format!("Failed to write upload data: {e}"))
         })?;
 
-        // Update state
-        state.size += data.len() as u64;
-        self.save_upload_state(upload_id, &state).await?;
+        // Sync to ensure data is written before we get the size
+        file.sync_all().await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to sync upload data: {e}"))
+        })?;
 
-        Ok(state.size)
+        // Get the actual file size - this is atomic and avoids race conditions
+        // where concurrent appends could corrupt a manually-tracked size counter
+        let metadata = file.metadata().await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to get upload file metadata: {e}"))
+        })?;
+
+        Ok(metadata.len())
     }
 
     /// Gets the current size of an in-progress upload
     pub async fn get_upload_size(&self, upload_id: &UploadId) -> Result<u64, OciStorageError> {
-        let state = self.load_upload_state(upload_id).await?;
-        Ok(state.size)
+        // Verify upload exists
+        let _state = self.load_upload_state(upload_id).await?;
+
+        // Get actual file size to avoid race conditions with concurrent appends
+        let data_path = self.upload_data_path(upload_id);
+        let metadata = fs::metadata(&data_path).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to get upload file metadata: {e}"))
+        })?;
+
+        Ok(metadata.len())
     }
 
     /// Completes an upload and stores the blob
@@ -387,9 +407,10 @@ impl OciLocalStorage {
     fn spawn_stale_upload_cleanup(&self) {
         let uploads_dir = self.uploads_dir();
         let upload_timeout = self.upload_timeout;
+        let log = self.log.clone();
 
         tokio::spawn(async move {
-            cleanup_stale_uploads_local(uploads_dir, upload_timeout).await;
+            cleanup_stale_uploads_local(&log, &uploads_dir, upload_timeout).await;
         });
     }
 
@@ -780,8 +801,10 @@ impl OciLocalStorage {
 /// Cleans up all stale uploads in the given uploads directory.
 ///
 /// This is a standalone async function that can be spawned as a background task.
-async fn cleanup_stale_uploads_local(uploads_dir: PathBuf, upload_timeout: u64) {
-    let Ok(mut entries) = fs::read_dir(&uploads_dir).await else {
+/// Individual upload cleanup failures are logged but don't stop processing.
+async fn cleanup_stale_uploads_local(log: &Logger, uploads_dir: &Path, upload_timeout: u64) {
+    let Ok(mut entries) = fs::read_dir(uploads_dir).await else {
+        // Directory doesn't exist or can't be read - nothing to clean up
         return;
     };
 
@@ -807,9 +830,11 @@ async fn cleanup_stale_uploads_local(uploads_dir: PathBuf, upload_timeout: u64) 
             continue;
         };
 
-        // Check if the upload is stale
-        if (now - state.created_at) > timeout_secs {
-            let _unused = fs::remove_dir_all(entry.path()).await;
+        // Check if the upload is stale and remove it
+        if (now - state.created_at) > timeout_secs
+            && let Err(e) = fs::remove_dir_all(entry.path()).await
+        {
+            error!(log, "Failed to remove stale upload"; "upload_id" => &upload_id_str, "error" => %e);
         }
     }
 }
