@@ -9,6 +9,7 @@ use serde_json as _;
 use tokio as _;
 
 mod jobs;
+mod runner_token;
 mod runners;
 mod token;
 
