@@ -134,13 +134,8 @@ pub struct JsonUpdateJobResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaimJob {
-    /// Maximum time to wait for a job (long-poll), in seconds. Max 60.
-    #[serde(default = "default_poll_timeout")]
-    pub poll_timeout: u32,
-}
-
-fn default_poll_timeout() -> u32 {
-    30
+    /// Maximum time to wait for a job (long-poll), in seconds. Max 60 (default 30)
+    pub poll_timeout: Option<u32>,
 }
 
 /// A list of jobs
