@@ -86,7 +86,6 @@ CREATE TABLE job (
 
     -- Results
     exit_code INTEGER,
-    error_message TEXT,
 
     created TIMESTAMP NOT NULL,
     modified TIMESTAMP NOT NULL
@@ -140,14 +139,13 @@ pub struct JobSpec {
 
 Requires server admin permissions.
 
-| Method | Endpoint                            | Description                          |
-| ------ | ----------------------------------- | ------------------------------------ |
-| POST   | `/v0/runners`                       | Create runner, returns token         |
-| GET    | `/v0/runners`                       | List runners                         |
-| GET    | `/v0/runners/{runner}`              | Get runner details                   |
-| DELETE | `/v0/runners/{runner}`              | Archive runner (soft delete)         |
-| PATCH  | `/v0/runners/{runner}`              | Update runner (name, labels, locked) |
-| POST   | `/v0/runners/{runner}/rotate-token` | Generate new token (invalidates old) |
+| Method | Endpoint                     | Description                                    |
+| ------ | ---------------------------- | ---------------------------------------------- |
+| POST   | `/v0/runners`                | Create runner, returns token                   |
+| GET    | `/v0/runners`                | List runners                                   |
+| GET    | `/v0/runners/{runner}`       | Get runner details                             |
+| PATCH  | `/v0/runners/{runner}`       | Update runner (name, labels, locked, archived) |
+| POST   | `/v0/runners/{runner}/token` | Generate new token (invalidates old)           |
 
 ### Job Management (Project Scoped)
 
@@ -166,11 +164,8 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 
 | Method | Endpoint                          | Description                                            |
 | ------ | --------------------------------- | ------------------------------------------------------ |
-| POST   | `/v0/runner/claim`                | Long-poll to claim a job (from any accessible project) |
-| POST   | `/v0/runner/jobs/{job}/started`   | Mark job as running (after setup)                      |
-| POST   | `/v0/runner/jobs/{job}/heartbeat` | Lightweight heartbeat                                  |
-| POST   | `/v0/runner/jobs/{job}/completed` | Submit results                                         |
-| POST   | `/v0/runner/jobs/{job}/failed`    | Report failure                                         |
+| POST   | `/v0/runners/{runner}/jobs`       | Long-poll to claim a job (from any accessible project) |
+| PATCH  | `/v0/runners/{runner}/jobs/{job}` | Update job status (running, completed, failed)         |
 
 ## Endpoint Details
 
@@ -190,12 +185,11 @@ pub struct RunnerCreated {
 }
 ```
 
-### POST /v0/runner/claim - Claim Job (Long-Poll)
+### POST /v0/runners/{runner}/jobs - Claim Job (Long-Poll)
 
 ```rust
 // Request
 pub struct ClaimRequest {
-    pub runner_uuid: Uuid,
     pub labels: Vec<String>,        // Runner's current capabilities
     pub poll_timeout_seconds: u32,  // Max 60
 }
@@ -219,38 +213,30 @@ The claim endpoint:
 3. If no matching jobs, holds connection open until timeout or job arrives
 4. Returns job (including project context) or empty response on timeout
 
-### POST /v0/runner/jobs/{job}/heartbeat - Heartbeat
-
-Serves dual purpose: liveness check AND billing increment (see Billing section).
+### PATCH /v0/runners/{runner}/jobs/{job} - Update Job Status
 
 ```rust
-// Request - intentionally minimal
-pub struct Heartbeat {
-    pub runner_uuid: Uuid,
+// Request
+pub struct UpdateJob {
+    pub status: JobStatus,              // running, completed, failed
+    pub exit_code: Option<i32>,         // Required for completed/failed
+    pub stdout: Option<String>,         // Standard output
+    pub stderr: Option<String>,         // Standard error
+    pub output: Option<String>,         // Combined or additional output
 }
 
 // Response
-pub struct HeartbeatAck {
-    pub continue: bool,  // false = job was canceled, stop execution
+pub struct UpdateJobResponse {
+    pub canceled: bool,  // true = job was canceled, stop execution
 }
 ```
 
-API-side on each heartbeat:
-1. Update `last_heartbeat` on job and runner
-2. Calculate elapsed minutes, bill unbilled time to Stripe
-3. Return `continue: false` if job was canceled by user
+**Status transitions:**
+- `running` - Called after setup, before benchmark execution begins
+- `completed` - Benchmark finished successfully (include exit_code, output, results)
+- `failed` - Benchmark failed (include exit_code, output, error details)
 
-### POST /v0/runner/jobs/{job}/completed - Report Results
-
-```rust
-pub struct JobCompleted {
-    pub runner_uuid: Uuid,
-    pub exit_code: i32,
-    pub output: String,           // stdout/stderr
-    pub results: Option<JsonValue>, // Parsed benchmark results (if adapter succeeded)
-    pub duration_seconds: f64,
-}
-```
+Note: Heartbeat is handled out-of-band (not via REST API).
 
 ## Background Job: Stale Job Reaper
 
@@ -335,30 +321,29 @@ User submits job via CLI or API
 ## Runner Execution Flow
 
 ```
-1. Idle: Long-poll /v0/runner/claim
+1. Idle: Long-poll POST /v0/runners/{runner}/jobs
                 │
                 ▼ (job received, includes report context)
-2. Send "claimed" implicit via claim response
+2. Job "claimed" implicitly via claim response
                 │
                 ▼
 3. Clone repo, run setup_command
                 │
                 ▼
-4. POST /v0/runner/jobs/{job}/started
+4. PATCH /v0/runners/{runner}/jobs/{job} { status: "running" }
                 │
                 ▼
-5. Fork heartbeat process (pinned to separate CPU core)
-   - Sends heartbeat every 30s
+5. Start heartbeat (out-of-band, pinned to separate CPU core)
    - Main benchmark cores isolated
                 │
                 ▼
 6. Execute benchmark_command
                 │
                 ▼
-7. Kill heartbeat process
+7. Stop heartbeat
                 │
                 ▼
-8. POST /v0/runner/jobs/{job}/completed (or /failed)
+8. PATCH /v0/runners/{runner}/jobs/{job} { status: "completed", ... }
    - Results attached to the Report
                 │
                 ▼
@@ -380,38 +365,18 @@ The claim endpoint orders pending jobs by `(priority DESC, created ASC)` so paid
 
 ### Usage-Based Billing
 
-Usage is tracked per-minute via Stripe's usage-based pricing. The heartbeat serves double duty:
+Usage is tracked per-minute via Stripe's usage-based pricing. Heartbeats (received out-of-band) serve double duty:
 
 1. **Liveness check** - Confirms runner is still executing the job
-2. **Billing increment** - Reports 1 minute of usage to Stripe
-
-```
-Heartbeat received
-       │
-       ▼
-┌──────────────────────────┐
-│ Update last_heartbeat │
-└──────────────────────────┘
-       │
-       ▼
-┌──────────────────────────┐
-│ Look up org's Stripe     │
-│ subscription             │
-└──────────────────────────┘
-       │
-       ▼
-┌──────────────────────────┐
-│ POST to Stripe usage     │
-│ record endpoint (+1 min) │
-└──────────────────────────┘
-```
+2. **Billing increment** - Reports usage to Stripe
 
 The API tracks which minutes have been billed via `last_billed_minute` on the job (to avoid double-counting if heartbeats arrive early).
 
 On each heartbeat:
-1. Calculate `elapsed_minutes = (now - started) / 60`
-2. If `elapsed_minutes > last_billed_minute`, bill the difference to Stripe
-3. Update `last_billed_minute = elapsed_minutes`
+1. Update `last_heartbeat` on job and runner
+2. Calculate `elapsed_minutes = (now - started) / 60`
+3. If `elapsed_minutes > last_billed_minute`, bill the difference to Stripe
+4. Update `last_billed_minute = elapsed_minutes`
 
 ## Authentication
 
@@ -465,7 +430,7 @@ fn validate_runner_token(token: &str) -> Result<Runner, AuthError> {
 
 If a token is compromised:
 1. Lock the runner: `PATCH /v0/runners/{runner}` with `locked: true`
-2. Generate new token: `POST /v0/runners/{runner}/rotate-token`
+2. Generate new token: `POST /v0/runners/{runner}/token`
 3. Update runner agent with new token
 4. Unlock the runner: `PATCH /v0/runners/{runner}` with `locked: false`
 
@@ -476,7 +441,7 @@ Authorization: Bearer bencher_runner_<token>
 ```
 
 This token is scoped to:
-- Only the runner agent endpoints (`/v0/runner/*`)
+- Only the runner agent endpoints (`/v0/runners/{runner}/jobs[/{job}]`)
 - Can claim jobs from any project on the server
 - Can only perform operations on jobs claimed by this runner
 
@@ -485,7 +450,7 @@ This token is scoped to:
 - [x] **Runner scope**: ~~Project-scoped or organization-scoped?~~ **Decided: Server-scoped** - Runners can execute jobs from any project on the server (both self-hosted and cloud)
 - [x] **Job priority**: ~~FIFO or priority field?~~ **Decided: Priority + FIFO** - Bencher Plus customers get priority, FIFO within tiers
 - [x] **Usage billing**: ~~How to track?~~ **Decided: Stripe usage-based pricing** - Heartbeats trigger per-minute billing to Stripe
-- [ ] **Heartbeat protocol**: HTTP vs UDP? (Currently: HTTP for simplicity)
+- [ ] **Heartbeat protocol**: Out-of-band (not REST API) - UDP? WebSocket? gRPC stream?
 - [ ] **Result storage**: Store in job table or separate results table linked to existing perf tables?
 - [ ] **Retry policy**: Auto-retry failed jobs? How many times?
 
