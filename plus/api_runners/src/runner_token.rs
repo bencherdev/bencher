@@ -7,7 +7,7 @@ use bencher_schema::{
     schema,
 };
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
-use dropshot::HttpError;
+use dropshot::{HttpError, RequestContext};
 
 use crate::runners::hash_token;
 
@@ -22,7 +22,20 @@ pub struct RunnerToken {
 }
 
 impl RunnerToken {
-    pub async fn from_header(
+    /// Extract and validate runner token from a request.
+    pub async fn from_request(
+        rqctx: &RequestContext<ApiContext>,
+        expected_runner: &RunnerResourceId,
+    ) -> Result<Self, HttpError> {
+        let auth_header = rqctx
+            .request
+            .headers()
+            .get("Authorization")
+            .and_then(|v| v.to_str().ok());
+        Self::from_header(rqctx.context(), auth_header, expected_runner).await
+    }
+
+    async fn from_header(
         context: &ApiContext,
         auth_header: Option<&str>,
         expected_runner: &RunnerResourceId,

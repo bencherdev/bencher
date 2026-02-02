@@ -50,16 +50,8 @@ pub async fn runner_jobs_post(
     path_params: Path<RunnerJobsParams>,
     body: TypedBody<JsonClaimJob>,
 ) -> Result<ResponseOk<Option<JsonJob>>, HttpError> {
-    let auth_header = rqctx
-        .request
-        .headers()
-        .get("Authorization")
-        .and_then(|v| v.to_str().ok());
-
     let path_params = path_params.into_inner();
-    let runner_token =
-        RunnerToken::from_header(rqctx.context(), auth_header, &path_params.runner).await?;
-
+    let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
     let json = claim_job_inner(rqctx.context(), runner_token, body.into_inner()).await?;
     Ok(Post::auth_response_ok(json))
 }
@@ -154,16 +146,8 @@ pub async fn runner_job_patch(
     path_params: Path<RunnerJobParams>,
     body: TypedBody<JsonUpdateJob>,
 ) -> Result<ResponseOk<JsonUpdateJobResponse>, HttpError> {
-    let auth_header = rqctx
-        .request
-        .headers()
-        .get("Authorization")
-        .and_then(|v| v.to_str().ok());
-
     let path_params = path_params.into_inner();
-    let runner_token =
-        RunnerToken::from_header(rqctx.context(), auth_header, &path_params.runner).await?;
-
+    let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
     let json = update_job_inner(
         rqctx.context(),
         runner_token,
