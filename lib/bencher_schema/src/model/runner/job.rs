@@ -34,7 +34,6 @@ pub struct QueryJob {
     pub last_heartbeat: Option<DateTime>,
     pub last_billed_minute: Option<i32>,
     pub exit_code: Option<i32>,
-    pub error_message: Option<String>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -88,6 +87,5 @@ pub struct UpdateJob {
     pub last_heartbeat: Option<Option<DateTime>>,
     pub last_billed_minute: Option<Option<i32>>,
     pub exit_code: Option<Option<i32>>,
-    pub error_message: Option<Option<String>>,
     pub modified: Option<DateTime>,
 }

@@ -78,7 +78,10 @@ pub use project::{
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
 };
 pub use run::JsonNewRun;
-pub use runner::{JobStatus, JobUuid, JsonJob, JsonRunner, RunnerState, RunnerUuid};
+pub use runner::{
+    JobStatus, JobUuid, JsonJob, JsonRunner, JsonUpdateJob, JsonUpdateJobResponse, RunnerState,
+    RunnerUuid,
+};
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},

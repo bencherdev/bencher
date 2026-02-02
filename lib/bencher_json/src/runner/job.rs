@@ -102,3 +102,29 @@ pub struct JsonJob {
     pub created: DateTime,
     pub modified: DateTime,
 }
+
+/// Update job status (runner agent endpoint)
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateJob {
+    /// New job status (running, completed, failed)
+    pub status: JobStatus,
+    /// Exit code (required for completed/failed)
+    pub exit_code: Option<i32>,
+    /// Standard output
+    pub stdout: Option<String>,
+    /// Standard error
+    pub stderr: Option<String>,
+    /// Combined or additional output
+    pub output: Option<String>,
+}
+
+/// Response to job update
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateJobResponse {
+    /// If true, job was canceled - runner should stop execution
+    pub canceled: bool,
+}

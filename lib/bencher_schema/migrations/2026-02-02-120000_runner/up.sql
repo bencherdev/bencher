@@ -37,7 +37,6 @@ CREATE TABLE job (
     last_heartbeat BIGINT,
     last_billed_minute INTEGER DEFAULT 0,
     exit_code INTEGER,
-    error_message TEXT,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
     FOREIGN KEY (report_id) REFERENCES report (id) ON DELETE CASCADE,
