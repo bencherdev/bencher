@@ -8,6 +8,8 @@ pub(crate) mod x86_64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) mod aarch64;
 
+use std::sync::Arc;
+
 use kvm_ioctls::{Kvm, VcpuFd, VmFd};
 use vm_memory::GuestMemoryMmap;
 
@@ -37,7 +39,7 @@ pub struct Vcpu {
 /// A vector of configured vCPUs.
 pub fn create_vcpus(
     kvm: &Kvm,
-    vm_fd: &VmFd,
+    vm_fd: &Arc<VmFd>,
     guest_memory: &GuestMemoryMmap,
     vcpu_count: u8,
     entry_point: u64,
@@ -50,7 +52,7 @@ pub fn create_vcpus(
             .map_err(VmmError::Kvm)?;
 
         // Configure the vCPU (architecture-specific)
-        configure_vcpu(kvm, vm_fd, &vcpu_fd, guest_memory, index, entry_point)?;
+        configure_vcpu(kvm, vm_fd.as_ref(), &vcpu_fd, guest_memory, index, entry_point)?;
 
         vcpus.push(Vcpu {
             fd: vcpu_fd,

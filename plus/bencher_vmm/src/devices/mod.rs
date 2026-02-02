@@ -24,6 +24,12 @@ use vm_memory::GuestMemoryMmap;
 
 use crate::error::VmmError;
 
+/// IRQ number for virtio-blk (as specified in kernel cmdline).
+pub const VIRTIO_BLK_IRQ: u32 = 5;
+
+/// IRQ number for virtio-vsock.
+pub const VIRTIO_VSOCK_IRQ: u32 = 6;
+
 /// I/O port for the first serial port (COM1).
 pub const SERIAL_PORT_BASE: u16 = 0x3f8;
 pub const SERIAL_PORT_END: u16 = 0x3ff;
@@ -41,7 +47,7 @@ pub const GUEST_CID: u64 = 3;
 
 /// Setup all required virtual devices.
 pub fn setup_devices(
-    _vm_fd: &VmFd,
+    _vm_fd: &Arc<VmFd>,
     rootfs_path: &Utf8Path,
     vsock_path: Option<&Utf8Path>,
 ) -> Result<DeviceManager, VmmError> {
@@ -71,6 +77,9 @@ pub struct DeviceManager {
 
     /// virtio-vsock device (for host-guest communication).
     pub virtio_vsock: Option<VirtioVsockDevice>,
+
+    /// VM file descriptor for interrupt injection.
+    vm_fd: Option<Arc<VmFd>>,
 }
 
 impl DeviceManager {
@@ -81,7 +90,26 @@ impl DeviceManager {
             i8042: I8042Device::new(),
             virtio_blk: None,
             virtio_vsock: None,
+            vm_fd: None,
         })
+    }
+
+    /// Set the VM file descriptor for interrupt injection.
+    pub fn set_vm_fd(&mut self, vm_fd: Arc<VmFd>) {
+        self.vm_fd = Some(vm_fd);
+    }
+
+    /// Inject an IRQ to the guest.
+    fn inject_irq(&self, irq: u32) {
+        if let Some(ref vm_fd) = self.vm_fd {
+            if let Err(e) = vm_fd.set_irq_line(irq, true) {
+                eprintln!("[DEVICES] Failed to assert IRQ {irq}: {e}");
+            }
+            // De-assert after a brief moment (edge-triggered)
+            if let Err(e) = vm_fd.set_irq_line(irq, false) {
+                eprintln!("[DEVICES] Failed to deassert IRQ {irq}: {e}");
+            }
+        }
     }
 
     /// Setup virtio-blk device with a rootfs image.
@@ -191,7 +219,10 @@ impl DeviceManager {
         if addr >= VIRTIO_MMIO_BASE && addr < VIRTIO_MMIO_BASE + VIRTIO_MMIO_SIZE {
             if let Some(ref mut blk) = self.virtio_blk {
                 let offset = addr - VIRTIO_MMIO_BASE;
-                blk.write(offset, data);
+                let needs_irq = blk.write(offset, data);
+                if needs_irq {
+                    self.inject_irq(VIRTIO_BLK_IRQ);
+                }
                 return;
             }
         }
