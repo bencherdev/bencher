@@ -171,9 +171,15 @@ impl Oci {
         Ok(())
     }
 
+    fn conformance_binary_path(&self) -> PathBuf {
+        let conformance_dir = self.spec_dir.join("conformance");
+        let binary_name = format!("conformance.test{}", env::consts::EXE_SUFFIX);
+        conformance_dir.join(binary_name)
+    }
+
     fn build_conformance_tests(&self) -> anyhow::Result<()> {
         let conformance_dir = self.spec_dir.join("conformance");
-        let conformance_binary = conformance_dir.join("conformance.test");
+        let conformance_binary = self.conformance_binary_path();
 
         if conformance_binary.exists() && self.skip_build {
             println!("Skipping build (--skip-build specified)");
@@ -191,7 +197,18 @@ impl Oci {
         let status = Command::new("go")
             .args(["test", "-c"])
             .current_dir(&conformance_dir)
-            .status()?;
+            .status()
+            .map_err(|e| {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    anyhow::anyhow!(
+                        "Go is not installed or not in PATH.\n\
+                         Please install Go 1.17+ to build and run conformance tests.\n\
+                         See: https://go.dev/doc/install"
+                    )
+                } else {
+                    anyhow::anyhow!("Failed to execute go command: {e}")
+                }
+            })?;
 
         if !status.success() {
             anyhow::bail!(
@@ -205,7 +222,7 @@ impl Oci {
 
     fn run_conformance_tests(&self) -> anyhow::Result<()> {
         let conformance_dir = self.spec_dir.join("conformance");
-        let conformance_binary = conformance_dir.join("conformance.test");
+        let conformance_binary = self.conformance_binary_path();
 
         if !conformance_binary.exists() {
             anyhow::bail!(
