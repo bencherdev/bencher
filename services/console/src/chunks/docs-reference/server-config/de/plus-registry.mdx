@@ -1,4 +1,4 @@
-### `plus.oci`
+### `plus.registry`
 
 Dieser Abschnitt spezifiziert die OCI (Open Container Initiative) Registry-Speicherkonfiguration.
 Bencher kann als OCI-kompatible Container-/Artefakt-Registry fungieren.
@@ -23,5 +23,5 @@ Es gibt einen Speicher-`service`:
 |      data_store.service      |                              "aws_s3"                               |     ---      |      Ja      |                                   Gibt den Speicherdiensttyp an.                                    |
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |     ---      |      Ja      |                                      AWS-Zugangsschlüssel-ID.                                       |
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |     ---      |      Ja      |                                     AWS-Geheimzugangsschlüssel.                                     |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |     ---      |      Ja      |               S3 Access Point ARN. Optionales Pfadpräfix nach dem Access-Point-Namen.               |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |     ---      |      Ja      |               S3 Access Point ARN. Optionales Pfadpräfix nach dem Access-Point-Namen.               |
 |       upload_timeout         |                                3600                                 |     3600     |     Nein     | Upload-Sitzungs-Timeout in Sekunden. Veraltete Uploads werden bei neuen Uploads bereinigt. |

@@ -23,7 +23,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{
     ProjectResourceId, Secret,
-    system::config::{DEFAULT_UPLOAD_TIMEOUT_SECS, OciDataStore},
+    system::config::{DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
 };
 use bytes::Bytes;
 use chrono::Utc;
@@ -232,13 +232,13 @@ impl OciStorage {
     /// are cleaned up. Pass `None` to use the default (1 hour).
     pub fn try_from_config(
         log: Logger,
-        data_store: Option<OciDataStore>,
+        data_store: Option<RegistryDataStore>,
         database_path: &Path,
         upload_timeout: Option<u64>,
     ) -> Result<Self, OciStorageError> {
         let timeout = upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS);
         match data_store {
-            Some(OciDataStore::AwsS3 {
+            Some(RegistryDataStore::AwsS3 {
                 access_key_id,
                 secret_access_key,
                 access_point,

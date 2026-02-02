@@ -9,16 +9,16 @@ pub mod cloud;
 pub mod github;
 pub mod google;
 pub mod litestream;
-pub mod oci;
 pub mod rate_limiting;
+pub mod registry;
 pub mod stats;
 
 pub use cloud::JsonCloud;
 pub use github::JsonGitHub;
 pub use google::JsonGoogle;
 pub use litestream::JsonLitestream;
-pub use oci::JsonOci;
 pub use rate_limiting::JsonRateLimiting;
+pub use registry::JsonRegistry;
 pub use stats::JsonStats;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,7 +37,7 @@ pub struct JsonPlus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cloud: Option<JsonCloud>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub oci: Option<JsonOci>,
+    pub registry: Option<JsonRegistry>,
 }
 
 impl Sanitize for JsonPlus {
@@ -45,6 +45,6 @@ impl Sanitize for JsonPlus {
         self.github.sanitize();
         self.litestream.sanitize();
         self.cloud.sanitize();
-        self.oci.sanitize();
+        self.registry.sanitize();
     }
 }

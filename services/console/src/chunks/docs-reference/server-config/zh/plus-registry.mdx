@@ -1,4 +1,4 @@
-### `plus.oci`
+### `plus.registry`
 
 此部分指定 OCI（Open Container Initiative）注册表存储配置。
 Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
@@ -23,5 +23,5 @@ Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
 |      data_store.service      |                              "aws_s3"                               |  ---   |  是   |                      指定存储服务类型。                       |
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |  ---   |  是   |                       AWS 访问密钥 ID。                       |
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   |  是   |                      AWS 秘密访问密钥。                       |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |  ---   |  是   |           S3 访问点 ARN。访问点名称后可选路径前缀。           |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   |  是   |           S3 访问点 ARN。访问点名称后可选路径前缀。           |
 |       upload_timeout         |                                3600                                 |  3600  |  否   | 上传会话超时时间（秒）。过期上传在启动新上传时被清理。 |
