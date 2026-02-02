@@ -58,13 +58,26 @@ pub struct TaskOci {
 }
 
 impl TaskOci {
-    /// Create a `TaskOci` configured for smoke tests with the given API URL
+    /// Create a `TaskOci` configured for smoke tests with the given API URL and default credentials
     pub fn for_test(api_url: &str, admin: bool) -> Self {
         let (username, password) = if admin {
-            (TEST_ADMIN_USERNAME, TEST_ADMIN_API_TOKEN)
+            (
+                TEST_ADMIN_USERNAME.to_owned(),
+                TEST_ADMIN_API_TOKEN.to_owned(),
+            )
         } else {
-            (TEST_USERNAME, TEST_API_TOKEN)
+            (TEST_USERNAME.to_owned(), TEST_API_TOKEN.to_owned())
         };
+        Self::for_test_with_credentials(api_url, admin, username, password)
+    }
+
+    /// Create a `TaskOci` configured for smoke tests with custom credentials
+    pub fn for_test_with_credentials(
+        api_url: &str,
+        admin: bool,
+        username: String,
+        password: String,
+    ) -> Self {
         Self {
             api_url: api_url.to_owned(),
             namespace: "namespace".to_owned(),
@@ -75,8 +88,8 @@ impl TaskOci {
             output_dir: "./oci-conformance-results".to_owned(),
             spec_dir: "./distribution-spec".to_owned(),
             admin,
-            username: username.to_owned(),
-            password: password.to_owned(),
+            username,
+            password,
         }
     }
 }
