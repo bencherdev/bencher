@@ -12,8 +12,9 @@ use linux_loader::loader::KernelLoader;
 use vm_fdt::{FdtWriter, FdtWriterResult};
 use vm_memory::{Bytes, GuestAddress, GuestMemory, GuestMemoryMmap};
 
+use crate::devices::{VIRTIO_MMIO_BASE, VIRTIO_MMIO_SIZE};
 use crate::error::VmmError;
-use crate::gic::{Gic, GicVersion, GIC_NR_IRQS};
+use crate::gic::{Gic, GicVersion};
 use crate::vcpu::aarch64::{DTB_ADDR, KERNEL_LOAD_ADDR};
 
 use super::KernelEntry;
@@ -36,8 +37,11 @@ const PL031_RTC_SIZE: u64 = 0x1000;
 /// RTC IRQ (SPI 2 = 32 + 2 = 34).
 const PL031_RTC_IRQ: u32 = 34;
 
-/// Maximum size for the device tree blob.
-const FDT_MAX_SIZE: usize = 0x20_0000; // 2 MiB
+/// virtio-blk IRQ (SPI 4 = 32 + 4 = 36).
+const VIRTIO_BLK_IRQ: u32 = 36;
+
+/// virtio-vsock IRQ (SPI 5 = 32 + 5 = 37).
+const VIRTIO_VSOCK_IRQ: u32 = 37;
 
 /// Load an aarch64 Linux kernel.
 pub fn load_kernel(
@@ -47,6 +51,7 @@ pub fn load_kernel(
     vcpu_count: u32,
     memory_size: u64,
     gic: &Gic,
+    has_vsock: bool,
 ) -> Result<KernelEntry, VmmError> {
     // Open the kernel file
     let mut kernel_file =
@@ -56,7 +61,7 @@ pub fn load_kernel(
     let entry_addr = load_kernel_image(guest_memory, &mut kernel_file)?;
 
     // Setup device tree
-    setup_device_tree(guest_memory, cmdline, vcpu_count, memory_size, gic)?;
+    setup_device_tree(guest_memory, cmdline, vcpu_count, memory_size, gic, has_vsock)?;
 
     Ok(KernelEntry { entry_addr })
 }
@@ -104,6 +109,7 @@ fn load_kernel_image(
 /// - Memory configuration
 /// - GIC interrupt controller
 /// - Serial port (PL011)
+/// - virtio-mmio devices (blk, vsock)
 /// - Chosen node with command line
 fn setup_device_tree(
     guest_memory: &GuestMemoryMmap,
@@ -111,8 +117,9 @@ fn setup_device_tree(
     vcpu_count: u32,
     memory_size: u64,
     gic: &Gic,
+    has_vsock: bool,
 ) -> Result<(), VmmError> {
-    let fdt_blob = create_fdt(cmdline, vcpu_count, memory_size, gic)
+    let fdt_blob = create_fdt(cmdline, vcpu_count, memory_size, gic, has_vsock)
         .map_err(|e| VmmError::Boot(format!("Failed to create FDT: {e:?}")))?;
 
     // Write the FDT to guest memory
@@ -129,6 +136,7 @@ fn create_fdt(
     vcpu_count: u32,
     memory_size: u64,
     gic: &Gic,
+    has_vsock: bool,
 ) -> FdtWriterResult<Vec<u8>> {
     let mut fdt = FdtWriter::new()?;
 
@@ -159,6 +167,12 @@ fn create_fdt(
 
     // RTC (PL031)
     create_rtc_node(&mut fdt)?;
+
+    // virtio-mmio devices
+    create_virtio_blk_node(&mut fdt)?;
+    if has_vsock {
+        create_virtio_vsock_node(&mut fdt)?;
+    }
 
     fdt.end_node(root)?;
 
@@ -290,6 +304,33 @@ fn create_rtc_node(fdt: &mut FdtWriter) -> FdtWriterResult<()> {
     fdt.property_string("clock-names", "apb_pclk")?;
     fdt.property_array_u32("clocks", &[0x8000])?;
     fdt.end_node(rtc)?;
+    Ok(())
+}
+
+/// Create the virtio-blk (virtio-mmio) node.
+fn create_virtio_blk_node(fdt: &mut FdtWriter) -> FdtWriterResult<()> {
+    let node_name = format!("virtio_mmio@{VIRTIO_MMIO_BASE:x}");
+    let node = fdt.begin_node(&node_name)?;
+    fdt.property_string("compatible", "virtio,mmio")?;
+    fdt.property_array_u64("reg", &[VIRTIO_MMIO_BASE, VIRTIO_MMIO_SIZE])?;
+    // Interrupt: SPI type (0), IRQ number (offset from 32), edge-triggered rising (1)
+    fdt.property_array_u32("interrupts", &[0, VIRTIO_BLK_IRQ - 32, 1])?;
+    fdt.property_null("dma-coherent")?;
+    fdt.end_node(node)?;
+    Ok(())
+}
+
+/// Create the virtio-vsock (virtio-mmio) node.
+fn create_virtio_vsock_node(fdt: &mut FdtWriter) -> FdtWriterResult<()> {
+    let vsock_base = VIRTIO_MMIO_BASE + VIRTIO_MMIO_SIZE;
+    let node_name = format!("virtio_mmio@{vsock_base:x}");
+    let node = fdt.begin_node(&node_name)?;
+    fdt.property_string("compatible", "virtio,mmio")?;
+    fdt.property_array_u64("reg", &[vsock_base, VIRTIO_MMIO_SIZE])?;
+    // Interrupt: SPI type (0), IRQ number (offset from 32), edge-triggered rising (1)
+    fdt.property_array_u32("interrupts", &[0, VIRTIO_VSOCK_IRQ - 32, 1])?;
+    fdt.property_null("dma-coherent")?;
+    fdt.end_node(node)?;
     Ok(())
 }
 

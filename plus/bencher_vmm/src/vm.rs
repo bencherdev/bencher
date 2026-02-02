@@ -54,7 +54,7 @@ impl VmConfig {
             rootfs_path,
             vcpus: 1,
             memory_mib: 512,
-            kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
+            kernel_cmdline: "earlyprintk=serial,ttyS0,115200 console=ttyS0,115200 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
             vsock_path: None,
             timeout_secs: DEFAULT_TIMEOUT_SECS,
         }
@@ -119,33 +119,60 @@ impl Vm {
 
         // Step 5: Create interrupt controller and load kernel (architecture-specific)
         #[cfg(target_arch = "x86_64")]
-        {
+        let kernel_entry = {
             create_irq_chip_x86_64(&vm_fd)?;
-            let _kernel_entry = crate::boot::load_kernel(
+
+            // Build kernel command line with virtio-mmio device parameters
+            // Format: virtio_mmio.device=<size>@<base>:<irq>
+            let virtio_blk_base = crate::devices::VIRTIO_MMIO_BASE;
+            let virtio_vsock_base = virtio_blk_base + crate::devices::VIRTIO_MMIO_SIZE;
+            let mmio_size = crate::devices::VIRTIO_MMIO_SIZE;
+
+            let mut cmdline = config.kernel_cmdline.clone();
+            // virtio-blk on IRQ 5
+            cmdline.push_str(&format!(
+                " virtio_mmio.device={mmio_size:#x}@{virtio_blk_base:#x}:5"
+            ));
+            // virtio-vsock on IRQ 6 (if enabled)
+            if config.vsock_path.is_some() {
+                cmdline.push_str(&format!(
+                    " virtio_mmio.device={mmio_size:#x}@{virtio_vsock_base:#x}:6"
+                ));
+            }
+
+            crate::boot::load_kernel(
                 guest_memory.as_ref(),
                 &config.kernel_path,
-                &config.kernel_cmdline,
-            )?;
-        }
+                &cmdline,
+            )?
+        };
 
         #[cfg(target_arch = "aarch64")]
-        {
+        let kernel_entry = {
             // Create GIC (tries GICv3, falls back to GICv2)
             let gic = crate::gic::Gic::new(&vm_fd, u64::from(config.vcpus))?;
 
-            // Load kernel with device tree
-            let _kernel_entry = crate::boot::load_kernel_aarch64(
+            // Load kernel with device tree (including virtio devices)
+            let has_vsock = config.vsock_path.is_some();
+            crate::boot::load_kernel_aarch64(
                 guest_memory.as_ref(),
                 &config.kernel_path,
                 &config.kernel_cmdline,
                 u32::from(config.vcpus),
                 memory_size,
                 &gic,
-            )?;
-        }
+                has_vsock,
+            )?
+        };
 
-        // Step 6: Create vCPUs
-        let vcpus = crate::vcpu::create_vcpus(&kvm, &vm_fd, guest_memory.as_ref(), config.vcpus)?;
+        // Step 6: Create vCPUs with the kernel entry point
+        let vcpus = crate::vcpu::create_vcpus(
+            &kvm,
+            &vm_fd,
+            guest_memory.as_ref(),
+            config.vcpus,
+            kernel_entry.entry_addr,
+        )?;
 
         // Step 7: Setup devices and pass guest memory for virtio queue processing
         let mut devices = crate::devices::setup_devices(

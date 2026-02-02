@@ -76,6 +76,11 @@ fn load_kernel_image(
         )
         .map_err(|e| VmmError::KernelLoad(e.to_string()))?;
 
+        eprintln!(
+            "[BOOT] ELF kernel loaded: entry={:#x}",
+            kernel_entry.kernel_load.0
+        );
+
         Ok(kernel_entry.kernel_load.0)
     } else {
         // Assume bzImage format
@@ -108,6 +113,8 @@ fn setup_cmdline(guest_memory: &GuestMemoryMmap, cmdline: &str) -> Result<(), Vm
             CMDLINE_MAX_SIZE
         )));
     }
+
+    eprintln!("[BOOT] Kernel cmdline: {cmdline}");
 
     // Write command line with null terminator
     let mut cmdline_bytes = cmdline.as_bytes().to_vec();
@@ -143,28 +150,45 @@ fn setup_boot_params(guest_memory: &GuestMemoryMmap, cmdline_size: usize) -> Res
     Ok(())
 }
 
+/// E820 memory type: Reserved.
+const E820_RESERVED: u32 = 2;
+
 /// Setup the e820 memory map.
 fn setup_e820(params: &mut boot_params, guest_memory: &GuestMemoryMmap) -> Result<(), VmmError> {
     use linux_loader::loader::bootparam::boot_e820_entry;
     use vm_memory::GuestMemoryRegion;
 
-    let mut entry_count = 0u8;
+    // Get total memory size
+    let total_memory: u64 = guest_memory.iter().map(|r| r.len()).sum();
 
-    for region in guest_memory.iter() {
-        if entry_count as usize >= params.e820_table.len() {
-            break;
-        }
+    // Create proper e820 map matching standard x86 memory layout:
+    // Entry 0: Usable low memory (0 - 0x9FC00 = 0 to 639KB) - for real mode trampoline
+    // Entry 1: Reserved BIOS area (0x9FC00 - 0x100000)
+    // Entry 2: Usable high memory (1MB - end)
+    params.e820_table[0] = boot_e820_entry {
+        addr: 0,
+        size: 0x0009_FC00, // 639 KB - leave room for EBDA
+        type_: E820_RAM,
+    };
 
-        params.e820_table[entry_count as usize] = boot_e820_entry {
-            addr: region.start_addr().0,
-            size: region.len(),
-            type_: E820_RAM,
-        };
+    params.e820_table[1] = boot_e820_entry {
+        addr: 0x0009_FC00, // 639 KB
+        size: 0x0010_0000 - 0x0009_FC00, // Up to 1 MiB
+        type_: E820_RESERVED,
+    };
 
-        entry_count += 1;
-    }
+    params.e820_table[2] = boot_e820_entry {
+        addr: 0x0010_0000, // 1 MiB
+        size: total_memory - 0x0010_0000,
+        type_: E820_RAM,
+    };
 
-    params.e820_entries = entry_count;
+    params.e820_entries = 3;
+
+    eprintln!(
+        "[BOOT] e820 map: RAM 0-639KB, reserved 639KB-1MB, RAM 1MB-{}MB",
+        total_memory / (1024 * 1024)
+    );
 
     Ok(())
 }
