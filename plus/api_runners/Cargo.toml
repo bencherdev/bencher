@@ -10,11 +10,12 @@ publish = false
 default = []
 plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_schema/plus"]
 sentry = ["bencher_schema/sentry"]
-otel = ["bencher_endpoint/otel", "bencher_schema/otel"]
+otel = ["bencher_endpoint/otel", "bencher_schema/otel", "dep:bencher_otel"]
 
 [dependencies]
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_otel = { workspace = true, optional = true }
 bencher_schema.workspace = true
 diesel.workspace = true
 dropshot.workspace = true

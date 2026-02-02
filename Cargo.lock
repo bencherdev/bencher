@@ -279,6 +279,7 @@ dependencies = [
  "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
+ "bencher_otel",
  "bencher_schema",
  "diesel",
  "dropshot",

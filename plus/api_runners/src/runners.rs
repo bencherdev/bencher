@@ -187,6 +187,9 @@ async fn post_inner(
         HttpError::for_internal_error("Failed to create runner token".to_owned())
     })?;
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerCreate);
+
     Ok(JsonRunnerToken {
         uuid,
         token: secret,
@@ -282,6 +285,9 @@ async fn patch_inner(
             Runner,
             (&query_runner, &json_runner)
         ))?;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerUpdate);
 
     let runner = QueryRunner::get(auth_conn!(context), query_runner.id)?;
     Ok(runner.into_json())
