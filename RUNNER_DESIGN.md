@@ -151,12 +151,10 @@ Requires server admin permissions.
 
 Jobs belong to projects, but can be executed by any runner on the server.
 
-| Method | Endpoint                            | Description                |
-| ------ | ----------------------------------- | -------------------------- |
-| POST   | `/v0/projects/{project}/jobs`       | Submit new job             |
-| GET    | `/v0/projects/{project}/jobs`       | List jobs (filterable)     |
-| GET    | `/v0/projects/{project}/jobs/{job}` | Get job details + results  |
-| DELETE | `/v0/projects/{project}/jobs/{job}` | Cancel pending/running job |
+| Method | Endpoint                            | Description               |
+| ------ | ----------------------------------- | ------------------------- |
+| GET    | `/v0/projects/{project}/jobs`       | List jobs (filterable)    |
+| GET    | `/v0/projects/{project}/jobs/{job}` | Get job details + results |
 
 ### Runner Agent Endpoints
 
