@@ -30,6 +30,7 @@ pub struct Vcpu {
 /// * `vm_fd` - The VM file descriptor
 /// * `guest_memory` - The guest memory
 /// * `vcpu_count` - The number of vCPUs to create
+/// * `entry_point` - The kernel entry point address (used on x86_64)
 ///
 /// # Returns
 ///
@@ -39,6 +40,7 @@ pub fn create_vcpus(
     vm_fd: &VmFd,
     guest_memory: &GuestMemoryMmap,
     vcpu_count: u8,
+    entry_point: u64,
 ) -> Result<Vec<Vcpu>, VmmError> {
     let mut vcpus = Vec::with_capacity(vcpu_count as usize);
 
@@ -48,7 +50,7 @@ pub fn create_vcpus(
             .map_err(VmmError::Kvm)?;
 
         // Configure the vCPU (architecture-specific)
-        configure_vcpu(kvm, vm_fd, &vcpu_fd, guest_memory, index)?;
+        configure_vcpu(kvm, vm_fd, &vcpu_fd, guest_memory, index, entry_point)?;
 
         vcpus.push(Vcpu {
             fd: vcpu_fd,
@@ -67,8 +69,9 @@ fn configure_vcpu(
     vcpu_fd: &VcpuFd,
     guest_memory: &GuestMemoryMmap,
     index: u8,
+    entry_point: u64,
 ) -> Result<(), VmmError> {
-    x86_64::configure_vcpu(kvm, vcpu_fd, guest_memory, index)
+    x86_64::configure_vcpu(kvm, vcpu_fd, guest_memory, index, entry_point)
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -78,6 +81,7 @@ fn configure_vcpu(
     vcpu_fd: &VcpuFd,
     guest_memory: &GuestMemoryMmap,
     index: u8,
+    _entry_point: u64,
 ) -> Result<(), VmmError> {
     aarch64::configure_vcpu(vm_fd, vcpu_fd, guest_memory, index)
 }
@@ -89,6 +93,7 @@ fn configure_vcpu(
     _vcpu_fd: &VcpuFd,
     _guest_memory: &GuestMemoryMmap,
     _index: u8,
+    _entry_point: u64,
 ) -> Result<(), VmmError> {
     Err(VmmError::UnsupportedArch)
 }
