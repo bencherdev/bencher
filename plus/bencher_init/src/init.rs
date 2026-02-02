@@ -52,17 +52,25 @@ fn default_workdir() -> String {
 fn console_log(msg: &str) {
     use std::io::Write;
     let formatted = format!("[bencher-init] {msg}\n");
+    let bytes = formatted.as_bytes();
 
-    // Try /dev/ttyS0 first (serial console the kernel uses)
+    // First, try writing directly to stdout (fd 1) which kernel sets up to /dev/console
+    // This is the most reliable early output method
+    let written = unsafe { libc::write(libc::STDOUT_FILENO, bytes.as_ptr().cast(), bytes.len()) };
+    if written > 0 {
+        return;
+    }
+
+    // Try /dev/ttyS0 (serial console the kernel uses)
     if let Ok(mut f) = fs::OpenOptions::new().write(true).open("/dev/ttyS0") {
-        let _ = f.write_all(formatted.as_bytes());
+        let _ = f.write_all(bytes);
         let _ = f.flush();
         return;
     }
 
     // Try /dev/console (kernel-provided)
     if let Ok(mut f) = fs::OpenOptions::new().write(true).open("/dev/console") {
-        let _ = f.write_all(formatted.as_bytes());
+        let _ = f.write_all(bytes);
         let _ = f.flush();
         return;
     }
