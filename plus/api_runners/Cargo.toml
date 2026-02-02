@@ -19,12 +19,16 @@ bencher_otel = { workspace = true, optional = true }
 bencher_schema = { workspace = true, features = ["plus"] }
 diesel.workspace = true
 dropshot.workspace = true
+futures.workspace = true
 schemars.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 sha2 = "0.10"
+slog.workspace = true
 rand = "0.8"
 hex = "0.4"
 tokio = { workspace = true, features = ["time"] }
+tokio-tungstenite.workspace = true
 uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]

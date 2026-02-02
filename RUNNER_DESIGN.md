@@ -160,10 +160,10 @@ Jobs belong to projects, but can be executed by any runner on the server.
 
 Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 
-| Method | Endpoint                          | Description                                            |
-| ------ | --------------------------------- | ------------------------------------------------------ |
-| POST   | `/v0/runners/{runner}/jobs`       | Long-poll to claim a job (from any accessible project) |
-| PATCH  | `/v0/runners/{runner}/jobs/{job}` | Update job status (running, completed, failed)         |
+| Method    | Endpoint                                  | Description                                            |
+| --------- | ----------------------------------------- | ------------------------------------------------------ |
+| POST      | `/v0/runners/{runner}/jobs`               | Long-poll to claim a job (from any accessible project) |
+| WebSocket | `/v0/runners/{runner}/jobs/{job}/channel` | Heartbeat and status updates during job execution      |
 
 ## Endpoint Details
 
@@ -212,30 +212,68 @@ The claim endpoint:
 4. If no matching jobs, holds connection open until timeout or job arrives
 5. Returns job (including project context) or empty response on timeout
 
-### PATCH /v0/runners/{runner}/jobs/{job} - Update Job Status
+### WebSocket /v0/runners/{runner}/jobs/{job}/channel - Job Execution Channel
+
+WebSocket connection for heartbeat and job status updates. Established after claiming a job, before benchmark execution begins.
+
+**Authentication:** Runner token passed via `Sec-WebSocket-Protocol: bearer.<token>` header.
 
 ```rust
-// Request
-pub struct UpdateJob {
-    pub status: JobStatus,              // running, completed, failed
-    pub exit_code: Option<i32>,         // Required for completed/failed
-    pub stdout: Option<String>,         // Standard output
-    pub stderr: Option<String>,         // Standard error
-    pub output: Option<String>,         // Combined or additional output
+// Runner → Server messages (JSON)
+#[serde(tag = "event", rename_all = "snake_case")]
+enum RunnerMessage {
+    /// Job setup complete, benchmark execution starting
+    Running,
+    /// Periodic heartbeat (~1/sec), keeps job alive and triggers billing
+    Heartbeat,
+    /// Benchmark completed successfully
+    Completed {
+        exit_code: i32,
+        output: Option<String>,
+    },
+    /// Benchmark failed
+    Failed {
+        exit_code: Option<i32>,
+        error: String,
+    },
 }
 
-// Response
-pub struct UpdateJobResponse {
-    pub canceled: bool,  // true = job was canceled, stop execution
+// Server → Runner messages (JSON)
+#[serde(tag = "event", rename_all = "snake_case")]
+enum ServerMessage {
+    /// Acknowledge received message
+    Ack,
+    /// Job was canceled, stop execution immediately
+    Cancel,
 }
 ```
 
-**Status transitions:**
-- `running` - Called after setup, before benchmark execution begins
-- `completed` - Benchmark finished successfully (include exit_code, output, results)
-- `failed` - Benchmark failed (include exit_code, output, error details)
+**Connection flow:**
+```
+Runner                              Server
+  │                                    │
+  ├──[WS] Connect with runner token ──►│  Validate token, verify job ownership
+  │◄─────────────── Connected ─────────┤
+  │                                    │
+  ├──── { "event": "running" } ────────►│  Mark job running, start billing clock
+  │◄──── { "event": "ack" } ────────────┤
+  │                                    │
+  │  ┌─── benchmark executes ───┐      │
+  ├──┼─ { "event": "heartbeat" } ──────►│  Update last_heartbeat, bill if minute elapsed
+  │◄─┼── { "event": "ack" } ───────────┤  (or { "event": "cancel" } if user canceled)
+  │  └──────────────────────────┘      │
+  │                                    │
+  ├──── { "event": "completed", ... } ─►│  Mark job completed, stop billing
+  │◄──── { "event": "ack" } ────────────┤
+  │                                    │
+  ├──[WS Close] ──────────────────────►│
+```
 
-Note: Heartbeat is handled out-of-band (not via REST API).
+**Advantages over REST polling:**
+- ~20x less network overhead per heartbeat (~50 bytes vs ~700 bytes)
+- Immediate cancellation notification (server push)
+- Connection loss detected immediately (vs 90 second timeout)
+- Billing based on connection duration, not polling
 
 ## Background Job: Stale Job Reaper
 
@@ -326,27 +364,27 @@ User submits job via CLI or API
 2. Job "claimed" implicitly via claim response
                 │
                 ▼
-3. Clone repo, run setup_command
+3. Open WebSocket: /v0/runners/{runner}/jobs/{job}/channel
                 │
                 ▼
-4. PATCH /v0/runners/{runner}/jobs/{job} { status: "running" }
+4. Clone repo, run setup_command
                 │
                 ▼
-5. Start heartbeat (out-of-band, pinned to separate CPU core)
+5. Send { "event": "running" } over WebSocket
+   - Heartbeat thread starts (pinned to separate CPU core)
    - Main benchmark cores isolated
                 │
                 ▼
 6. Execute benchmark_command
+   - Heartbeat messages sent ~1/sec over WebSocket
+   - Server may send { "event": "cancel" } at any time
                 │
                 ▼
-7. Stop heartbeat
-                │
-                ▼
-8. PATCH /v0/runners/{runner}/jobs/{job} { status: "completed", ... }
+7. Send { "event": "completed", ... } or { "event": "failed", ... }
    - Results attached to the Report
                 │
                 ▼
-9. Return to idle, resume long-poll
+8. Close WebSocket, return to idle
 ```
 
 ## Billing & Priority
@@ -440,7 +478,7 @@ Authorization: Bearer bencher_runner_<token>
 ```
 
 This token is scoped to:
-- Only the runner agent endpoints (`/v0/runners/{runner}/jobs[/{job}]`)
+- Only the runner agent endpoints (`/v0/runners/{runner}/jobs[/{job}[/channel]]`)
 - Can claim jobs from any project on the server
 - Can only perform operations on jobs claimed by this runner
 
@@ -449,7 +487,7 @@ This token is scoped to:
 - [x] **Runner scope**: ~~Project-scoped or organization-scoped?~~ **Decided: Server-scoped** - Runners can execute jobs from any project on the server (both self-hosted and cloud)
 - [x] **Job priority**: ~~FIFO or priority field?~~ **Decided: Priority + FIFO** - Bencher Plus customers get priority, FIFO within tiers
 - [x] **Usage billing**: ~~How to track?~~ **Decided: Stripe usage-based pricing** - Heartbeats trigger per-minute billing to Stripe
-- [ ] **Heartbeat protocol**: Out-of-band (not REST API) - UDP? WebSocket? gRPC stream?
+- [x] **Heartbeat protocol**: ~~UDP? WebSocket? gRPC stream?~~ **Decided: WebSocket** - Low overhead, immediate cancellation, connection-based liveness detection
 - [ ] **Result storage**: Store in job table or separate results table linked to existing perf tables?
 - [ ] **Retry policy**: Auto-retry failed jobs? How many times?
 
