@@ -23,6 +23,7 @@ pub mod organization;
 pub mod pagination;
 pub mod project;
 pub mod run;
+pub mod runner;
 pub mod system;
 pub(crate) mod typed_db;
 pub(crate) mod typed_slug;
@@ -75,6 +76,7 @@ pub use project::{
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
 };
 pub use run::JsonNewRun;
+pub use runner::{JobStatus, JobUuid, JsonJob, JsonRunner, RunnerState, RunnerUuid};
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},

@@ -364,9 +364,9 @@ impl QueryProject {
         visibility
             .is_public()
             .then_some(())
-            .ok_or(crate::error::payment_required_error(format!(
-                "Private projects are only available with the an active Bencher Plus plan. Please upgrade your plan at: https://bencher.dev/pricing"
-            )))
+            .ok_or(crate::error::payment_required_error(
+                "Private projects are only available with the an active Bencher Plus plan. Please upgrade your plan at: https://bencher.dev/pricing".to_owned()
+            ))
     }
 
     pub fn is_allowed(

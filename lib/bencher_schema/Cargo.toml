@@ -53,7 +53,7 @@ chrono.workspace = true
 css-inline.workspace = true
 dashmap = { workspace = true, optional = true }
 derive_more.workspace = true
-diesel = { workspace = true, features = ["chrono", "sqlite"] }
+diesel = { workspace = true, features = ["chrono", "sqlite", "32-column-tables"] }
 diesel_migrations.workspace = true
 dropshot.workspace = true
 http = { workspace = true, optional = true }
