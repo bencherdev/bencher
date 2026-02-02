@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, ResourceName, Slug};
+use bencher_json::{DateTime, JsonRunner, ResourceName, RunnerResourceId, Slug};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
@@ -33,6 +33,13 @@ pub struct QueryRunner {
 }
 
 impl QueryRunner {
+    pub fn get(conn: &mut DbConnection, id: RunnerId) -> Result<Self, HttpError> {
+        schema::runner::table
+            .filter(schema::runner::id.eq(id))
+            .first(conn)
+            .map_err(resource_not_found_err!(Runner, id))
+    }
+
     pub fn from_uuid(conn: &mut DbConnection, uuid: RunnerUuid) -> Result<Self, HttpError> {
         schema::runner::table
             .filter(schema::runner::uuid.eq(uuid))
@@ -47,12 +54,36 @@ impl QueryRunner {
             .map_err(resource_not_found_err!(Runner, slug))
     }
 
+    pub fn from_resource_id(
+        conn: &mut DbConnection,
+        resource_id: &RunnerResourceId,
+    ) -> Result<Self, HttpError> {
+        match resource_id {
+            RunnerResourceId::Uuid(uuid) => Self::from_uuid(conn, *uuid),
+            RunnerResourceId::Slug(slug) => Self::from_slug(conn, slug.as_ref()),
+        }
+    }
+
     pub fn is_locked(&self) -> bool {
         self.locked.is_some()
     }
 
     pub fn is_archived(&self) -> bool {
         self.archived.is_some()
+    }
+
+    pub fn into_json(self) -> JsonRunner {
+        JsonRunner {
+            uuid: self.uuid,
+            name: self.name,
+            slug: self.slug,
+            state: self.state,
+            locked: self.locked,
+            archived: self.archived,
+            last_heartbeat: self.last_heartbeat,
+            created: self.created,
+            modified: self.modified,
+        }
     }
 }
 

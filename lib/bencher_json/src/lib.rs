@@ -79,8 +79,9 @@ pub use project::{
 };
 pub use run::JsonNewRun;
 pub use runner::{
-    JobStatus, JobUuid, JsonJob, JsonRunner, JsonUpdateJob, JsonUpdateJobResponse, RunnerState,
-    RunnerUuid,
+    JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonNewRunner, JsonRunner, JsonRunnerToken,
+    JsonRunners, JsonUpdateJob, JsonUpdateJobResponse, JsonUpdateRunner, RunnerResourceId,
+    RunnerSlug, RunnerState, RunnerUuid,
 };
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},

@@ -1,0 +1,281 @@
+use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
+use bencher_json::{
+    DateTime, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonUpdateJob, JsonUpdateJobResponse,
+    RunnerResourceId,
+};
+use bencher_schema::{
+    auth_conn,
+    context::ApiContext,
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
+    model::runner::{QueryJob, QueryRunner, RunnerId, UpdateJob},
+    schema, write_conn,
+};
+use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
+use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+use crate::runners::hash_token;
+
+/// Runner token prefix
+const RUNNER_TOKEN_PREFIX: &str = "bencher_runner_";
+
+/// Extract and validate runner token from Authorization header
+#[derive(Debug)]
+pub struct RunnerToken {
+    pub runner_id: RunnerId,
+    pub runner_uuid: bencher_json::RunnerUuid,
+}
+
+impl RunnerToken {
+    pub async fn from_header(
+        context: &ApiContext,
+        auth_header: Option<&str>,
+        expected_runner: &RunnerResourceId,
+    ) -> Result<Self, HttpError> {
+        let token = auth_header
+            .and_then(|h| h.strip_prefix("Bearer "))
+            .ok_or_else(|| forbidden_error("Missing or invalid Authorization header"))?;
+
+        // Validate token format
+        if !token.starts_with(RUNNER_TOKEN_PREFIX) {
+            return Err(forbidden_error("Invalid runner token format"));
+        }
+
+        // Hash the token
+        let token_hash = hash_token(token);
+
+        // Look up runner by token hash
+        let runner: QueryRunner = schema::runner::table
+            .filter(schema::runner::token_hash.eq(&token_hash))
+            .filter(schema::runner::archived.is_null())
+            .first(auth_conn!(context))
+            .optional()
+            .map_err(resource_not_found_err!(Runner))?
+            .ok_or_else(|| forbidden_error("Invalid runner token"))?;
+
+        // Check if runner is locked
+        if runner.is_locked() {
+            return Err(forbidden_error("Runner is locked"));
+        }
+
+        // Verify the runner matches the path parameter
+        let expected = QueryRunner::from_resource_id(auth_conn!(context), expected_runner)?;
+        if runner.id != expected.id {
+            return Err(forbidden_error(
+                "Runner token does not match the runner in the path",
+            ));
+        }
+
+        Ok(Self {
+            runner_id: runner.id,
+            runner_uuid: runner.uuid,
+        })
+    }
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct RunnerJobsParams {
+    /// The slug or UUID for a runner.
+    pub runner: RunnerResourceId,
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path = "/v0/runners/{runner}/jobs",
+    tags = ["runners"]
+}]
+pub async fn runner_jobs_options(
+    _rqctx: RequestContext<ApiContext>,
+    _path_params: Path<RunnerJobsParams>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Post.into()]))
+}
+
+/// Claim a job
+///
+/// Long-poll to claim a pending job for execution.
+/// Authenticated via runner token.
+/// Returns a job if one is available, or empty response on timeout.
+#[endpoint {
+    method = POST,
+    path = "/v0/runners/{runner}/jobs",
+    tags = ["runners"]
+}]
+pub async fn runner_jobs_post(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<RunnerJobsParams>,
+    body: TypedBody<JsonClaimJob>,
+) -> Result<ResponseOk<Option<JsonJob>>, HttpError> {
+    let auth_header = rqctx
+        .request
+        .headers()
+        .get("Authorization")
+        .and_then(|v| v.to_str().ok());
+
+    let path_params = path_params.into_inner();
+    let runner_token =
+        RunnerToken::from_header(rqctx.context(), auth_header, &path_params.runner).await?;
+
+    let json = claim_job_inner(rqctx.context(), runner_token, body.into_inner()).await?;
+    Ok(Post::auth_response_ok(json))
+}
+
+async fn claim_job_inner(
+    context: &ApiContext,
+    runner_token: RunnerToken,
+    claim_request: JsonClaimJob,
+) -> Result<Option<JsonJob>, HttpError> {
+    // Cap poll timeout at 60 seconds
+    let _poll_timeout = claim_request.poll_timeout.min(60);
+
+    // Try to claim a pending job (ordered by priority DESC, created ASC)
+    // For now, just do a single check without long-polling
+    // Long-polling will be implemented in a future iteration
+    let pending_job: Option<QueryJob> = schema::job::table
+        .filter(schema::job::status.eq(JobStatus::Pending))
+        .order((schema::job::priority.desc(), schema::job::created.asc()))
+        .first(auth_conn!(context))
+        .optional()
+        .map_err(resource_not_found_err!(Job))?;
+
+    let Some(job) = pending_job else {
+        return Ok(None);
+    };
+
+    // Atomically claim the job
+    let now = DateTime::now();
+    let update_job = UpdateJob {
+        status: Some(JobStatus::Claimed),
+        runner_id: Some(Some(runner_token.runner_id)),
+        claimed: Some(Some(now)),
+        last_heartbeat: Some(Some(now)),
+        modified: Some(now),
+        ..Default::default()
+    };
+
+    let updated = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job.id))
+            .filter(schema::job::status.eq(JobStatus::Pending)),
+    )
+    .set(&update_job)
+    .execute(write_conn!(context))
+    .map_err(resource_conflict_err!(Job, job))?;
+
+    if updated == 0 {
+        // Job was claimed by another runner
+        return Ok(None);
+    }
+
+    // Return the claimed job
+    let claimed_job = QueryJob::get(auth_conn!(context), job.id)?;
+    Ok(Some(claimed_job.into_json(runner_token.runner_uuid)))
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct RunnerJobParams {
+    /// The slug or UUID for a runner.
+    pub runner: RunnerResourceId,
+    /// The UUID for a job.
+    pub job: JobUuid,
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path = "/v0/runners/{runner}/jobs/{job}",
+    tags = ["runners"]
+}]
+pub async fn runner_job_options(
+    _rqctx: RequestContext<ApiContext>,
+    _path_params: Path<RunnerJobParams>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Patch.into()]))
+}
+
+/// Update job status
+///
+/// Update the status of a job being executed.
+/// Authenticated via runner token.
+/// Used to mark jobs as running, completed, or failed.
+#[endpoint {
+    method = PATCH,
+    path = "/v0/runners/{runner}/jobs/{job}",
+    tags = ["runners"]
+}]
+pub async fn runner_job_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<RunnerJobParams>,
+    body: TypedBody<JsonUpdateJob>,
+) -> Result<ResponseOk<JsonUpdateJobResponse>, HttpError> {
+    let auth_header = rqctx
+        .request
+        .headers()
+        .get("Authorization")
+        .and_then(|v| v.to_str().ok());
+
+    let path_params = path_params.into_inner();
+    let runner_token =
+        RunnerToken::from_header(rqctx.context(), auth_header, &path_params.runner).await?;
+
+    let json = update_job_inner(
+        rqctx.context(),
+        runner_token,
+        path_params.job,
+        body.into_inner(),
+    )
+    .await?;
+    Ok(Patch::auth_response_ok(json))
+}
+
+async fn update_job_inner(
+    context: &ApiContext,
+    runner_token: RunnerToken,
+    job_uuid: JobUuid,
+    update_request: JsonUpdateJob,
+) -> Result<JsonUpdateJobResponse, HttpError> {
+    let job = QueryJob::from_uuid(auth_conn!(context), job_uuid)?;
+
+    // Verify this runner owns this job
+    if job.runner_id != Some(runner_token.runner_id) {
+        return Err(forbidden_error("Job is not assigned to this runner"));
+    }
+
+    // Verify valid state transition
+    let valid_transition = matches!(
+        (job.status, update_request.status),
+        (JobStatus::Claimed, JobStatus::Running | JobStatus::Failed)
+            | (JobStatus::Running, JobStatus::Completed | JobStatus::Failed)
+    );
+
+    if !valid_transition {
+        return Err(forbidden_error(format!(
+            "Invalid status transition from {:?} to {:?}",
+            job.status, update_request.status
+        )));
+    }
+
+    let now = DateTime::now();
+    let job_update = UpdateJob {
+        status: Some(update_request.status),
+        started: (update_request.status == JobStatus::Running).then_some(Some(now)),
+        completed: update_request.status.is_terminal().then_some(Some(now)),
+        exit_code: update_request
+            .status
+            .is_terminal()
+            .then_some(update_request.exit_code),
+        modified: Some(now),
+        ..Default::default()
+    };
+
+    diesel::update(schema::job::table.filter(schema::job::id.eq(job.id)))
+        .set(&job_update)
+        .execute(write_conn!(context))
+        .map_err(resource_conflict_err!(Job, job))?;
+
+    // Check if job was canceled
+    let refreshed_job = QueryJob::get(auth_conn!(context), job.id)?;
+    let canceled = refreshed_job.status == JobStatus::Canceled;
+
+    Ok(JsonUpdateJobResponse { canceled })
+}

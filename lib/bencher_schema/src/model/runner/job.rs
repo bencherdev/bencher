@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, JobStatus, JobUuid};
+use bencher_json::{DateTime, JobStatus, JobUuid, JsonJob, RunnerUuid};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
@@ -39,11 +39,32 @@ pub struct QueryJob {
 }
 
 impl QueryJob {
+    pub fn get(conn: &mut DbConnection, id: JobId) -> Result<Self, HttpError> {
+        schema::job::table
+            .filter(schema::job::id.eq(id))
+            .first(conn)
+            .map_err(resource_not_found_err!(Job, id))
+    }
+
     pub fn from_uuid(conn: &mut DbConnection, uuid: JobUuid) -> Result<Self, HttpError> {
         schema::job::table
             .filter(schema::job::uuid.eq(uuid))
             .first(conn)
             .map_err(resource_not_found_err!(Job, uuid))
+    }
+
+    pub fn into_json(self, runner_uuid: RunnerUuid) -> JsonJob {
+        JsonJob {
+            uuid: self.uuid,
+            status: self.status,
+            runner: Some(runner_uuid),
+            claimed: self.claimed,
+            started: self.started,
+            completed: self.completed,
+            exit_code: self.exit_code,
+            created: self.created,
+            modified: self.modified,
+        }
     }
 }
 
