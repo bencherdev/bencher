@@ -97,6 +97,10 @@ npm run setup                  # Run typeshare + wasm + copy files
 - Do **NOT** suppress a lint outside of a test module without explicit approval
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - All dependency versions go in the workspace `Cargo.toml`
+- When doing a `/review` of code, check:
+  - `cargo check --no-default-features`
+  - `cargo gen-types`
+    - If the API has changed at all
 
 ### Frontend (TypeScript)
 

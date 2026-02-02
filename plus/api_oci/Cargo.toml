@@ -9,31 +9,45 @@ publish = false
 [features]
 default = []
 plus = [
+    "dep:api_auth",
     "api_auth/plus",
+    "dep:bencher_endpoint",
     "bencher_endpoint/plus",
+    "dep:bencher_json",
+    "dep:bencher_oci_storage",
     "bencher_oci_storage/plus",
+    "dep:bencher_rbac",
+    "dep:bencher_schema",
     "bencher_schema/plus",
+    "dep:bencher_token",
+    "dep:bytes",
+    "dep:dropshot",
+    "dep:http",
+    "dep:schemars",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:slog",
 ]
 sentry = []
 otel = ["dep:bencher_otel"]
 
 [dependencies]
-api_auth.workspace = true
-bencher_endpoint.workspace = true
-bencher_json.workspace = true
-bencher_oci_storage.workspace = true
+api_auth = { workspace = true, optional = true }
+bencher_endpoint = { workspace = true, optional = true }
+bencher_json = { workspace = true, optional = true }
+bencher_oci_storage = { workspace = true, optional = true }
 bencher_otel = { workspace = true, optional = true }
-bencher_rbac.workspace = true
-bencher_schema.workspace = true
-bencher_token.workspace = true
+bencher_rbac = { workspace = true, optional = true }
+bencher_schema = { workspace = true, optional = true }
+bencher_token = { workspace = true, optional = true }
 
-bytes.workspace = true
-dropshot.workspace = true
-http.workspace = true
-schemars.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-slog.workspace = true
+bytes = { workspace = true, optional = true }
+dropshot = { workspace = true, optional = true }
+http = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
