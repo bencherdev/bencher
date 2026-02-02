@@ -168,6 +168,9 @@ async fn claim_job_inner(
         return Ok(None);
     }
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
+
     // Return the claimed job
     let claimed_job = QueryJob::get(auth_conn!(context), job.id)?;
     Ok(Some(claimed_job.into_json(runner_token.runner_uuid)))
@@ -272,6 +275,20 @@ async fn update_job_inner(
         .set(&job_update)
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Job, job))?;
+
+    #[cfg(feature = "otel")]
+    {
+        let status_kind = match update_request.status {
+            JobStatus::Running => bencher_otel::JobStatusKind::Running,
+            JobStatus::Completed => bencher_otel::JobStatusKind::Completed,
+            JobStatus::Failed => bencher_otel::JobStatusKind::Failed,
+            // These statuses shouldn't reach here due to validation, but handle them
+            JobStatus::Pending | JobStatus::Claimed | JobStatus::Canceled => {
+                bencher_otel::JobStatusKind::Failed
+            },
+        };
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(status_kind));
+    }
 
     // Check if job was canceled
     let refreshed_job = QueryJob::get(auth_conn!(context), job.id)?;
