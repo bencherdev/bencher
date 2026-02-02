@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
 use bencher_json::{
     DateTime, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonUpdateJob, JsonUpdateJobResponse,
@@ -7,7 +9,7 @@ use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
-    model::runner::{QueryJob, UpdateJob},
+    model::runner::{JobId, QueryJob, UpdateJob},
     schema, write_conn,
 };
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
@@ -16,6 +18,15 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::runner_token::RunnerToken;
+
+/// Poll interval for long-polling (1 second)
+const POLL_INTERVAL: Duration = Duration::from_secs(1);
+/// Default poll timeout (30 seconds)
+const DEFAULT_POLL_TIMEOUT: u32 = 30;
+/// Minimum poll timeout (1 second)
+const MIN_POLL_TIMEOUT: u32 = 1;
+/// Maximum poll timeout (60 seconds)
+const MAX_POLL_TIMEOUT: u32 = 60;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerJobsParams {
@@ -62,15 +73,38 @@ async fn claim_job_inner(
     claim_request: JsonClaimJob,
 ) -> Result<Option<JsonJob>, HttpError> {
     // Cap poll timeout at 60 seconds
-    // TODO: Implement long-polling using this timeout value
-    let _poll_timeout = claim_request.poll_timeout.min(60);
+    let poll_timeout = claim_request
+        .poll_timeout
+        .unwrap_or(DEFAULT_POLL_TIMEOUT)
+        .clamp(MIN_POLL_TIMEOUT, MAX_POLL_TIMEOUT);
+    let deadline = Instant::now() + Duration::from_secs(u64::from(poll_timeout));
 
-    // Hold the write lock to atomically claim a job
+    loop {
+        // Try to claim a job (connection is released when function returns)
+        if let Some(job_id) = try_claim_job(context, &runner_token).await? {
+            let claimed_job = QueryJob::get(auth_conn!(context), job_id)?;
+            return Ok(Some(claimed_job.into_json(runner_token.runner_uuid)));
+        }
+
+        // Check if we've exceeded the timeout
+        if Instant::now() >= deadline {
+            return Ok(None);
+        }
+
+        // Wait before trying again
+        tokio::time::sleep(POLL_INTERVAL).await;
+    }
+}
+
+/// Attempt to claim a pending job.
+/// Returns `Ok(Some(job_id))` if a job was claimed, `Ok(None)` if no jobs available.
+async fn try_claim_job(
+    context: &ApiContext,
+    runner_token: &RunnerToken,
+) -> Result<Option<JobId>, HttpError> {
     let conn = write_conn!(context);
 
     // Try to claim a pending job (ordered by priority DESC, created ASC)
-    // For now, just do a single check without long-polling
-    // Long-polling will be implemented in a future iteration
     let pending_job: Option<QueryJob> = schema::job::table
         .filter(schema::job::status.eq(JobStatus::Pending))
         .order((schema::job::priority.desc(), schema::job::created.asc()))
@@ -102,17 +136,14 @@ async fn claim_job_inner(
     .execute(conn)
     .map_err(resource_conflict_err!(Job, job))?;
 
-    if updated == 0 {
+    if updated > 0 {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
+        Ok(Some(job.id))
+    } else {
         // Job was claimed by another runner
-        return Ok(None);
+        Ok(None)
     }
-
-    #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
-
-    // Return the claimed job
-    let claimed_job = QueryJob::get(auth_conn!(context), job.id)?;
-    Ok(Some(claimed_job.into_json(runner_token.runner_uuid)))
 }
 
 #[derive(Deserialize, JsonSchema)]
