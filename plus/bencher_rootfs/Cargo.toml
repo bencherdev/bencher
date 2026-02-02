@@ -22,5 +22,8 @@ bencher_oci = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 
+[dev-dependencies]
+tempfile = { workspace = true }
+
 [lints]
 workspace = true

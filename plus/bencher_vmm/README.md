@@ -69,7 +69,7 @@ The VMM implements defense-in-depth with multiple security layers:
 
 ### 1. Capability Dropping
 
-All Linux capabilities are dropped before VM execution, except `CAP_NET_ADMIN` (required for vsock on some systems). This prevents privilege escalation even if the VMM process is compromised.
+All Linux capabilities are dropped before VM execution. This prevents privilege escalation even if the VMM process is compromised.
 
 ### 2. Seccomp Filters
 

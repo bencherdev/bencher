@@ -1518,6 +1518,7 @@ dependencies = [
  "backhand",
  "bencher_oci",
  "camino",
+ "tempfile",
  "thiserror 2.0.17",
 ]
 

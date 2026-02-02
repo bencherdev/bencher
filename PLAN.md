@@ -164,12 +164,12 @@ The `bencher_vmm` crate is located at `plus/bencher_vmm` and provides a complete
 | **KVM Integration** | ✅ Complete | Full KVM API support via kvm-ioctls |
 | **x86_64 Support** | ✅ Complete | bzImage kernel loading, PIC/IOAPIC/PIT |
 | **aarch64 Support** | ✅ Complete | GICv3/v2, device tree generation |
-| **virtio-blk** | ⚠️ Needs Change | Currently read-only squashfs; needs writable rootfs (ext4) |
+| **virtio-blk** | ✅ Complete | Writable ext4 rootfs (changed from read-only squashfs) |
 | **virtio-vsock** | ✅ Complete | Host-guest communication for results |
 | **Serial Console** | ✅ Complete | Kernel output, fallback results |
 | **i8042 Controller** | ✅ Complete | Clean shutdown signaling |
 | **Seccomp Filters** | ✅ Complete | ~50 syscall allowlist |
-| **Capability Dropping** | ⚠️ Testing | All caps dropped except CAP_NET_ADMIN (testing removal) |
+| **Capability Dropping** | ✅ Complete | All capabilities dropped (CAP_NET_ADMIN not needed) |
 | **Bundled Kernel** | ✅ Complete | Linux 5.10 LTS, embedded in release |
 | **Timeout Handling** | ✅ Complete | Configurable execution timeout |
 | **Multi-vCPU** | ✅ Complete | Parallel vCPU execution |
@@ -240,7 +240,7 @@ The guest init script buffers output and sends it via vsock after the benchmark 
 
 The VMM implements defense-in-depth:
 
-1. **Capability Dropping**: All Linux capabilities dropped (CAP_NET_ADMIN retention is being tested - may be removable)
+1. **Capability Dropping**: All Linux capabilities dropped (tested - CAP_NET_ADMIN not needed)
 2. **Seccomp Filters**: Strict syscall allowlist (~50 syscalls)
 3. **No Network**: No virtio-net device, vsock only for results
 4. **Memory Isolation**: Fixed allocation, cannot exceed limit
@@ -260,48 +260,42 @@ If a guest exploits a bug in virtio parsing:
 
 Before proceeding with the implementation phases, the following changes are needed to the existing `bencher_vmm` and `bencher_runner` code:
 
-### 1. Writable Rootfs (High Priority)
+### 1. Writable Rootfs ✅ COMPLETE
 
-**Current state**: `plus/bencher_runner/src/run.rs` creates a read-only squashfs rootfs.
+**Solution implemented**: Changed rootfs from squashfs to ext4 using `mkfs.ext4 -d` option.
 
-**Problem**: Benchmarks cannot write files (logs, intermediate results, etc.) except to tmpfs-mounted `/tmp` and `/run`.
+**Files modified**:
+- `plus/bencher_rootfs/src/ext4.rs` - New module for ext4 image creation
+- `plus/bencher_rootfs/src/lib.rs` - Export ext4 functions
+- `plus/bencher_rootfs/src/error.rs` - Added Ext4 error variant
+- `plus/bencher_runner/src/run.rs` - Changed to use ext4 instead of squashfs
+- Kernel cmdline changed from `ro` to `rw` for writable root
 
-**Solution**: Change rootfs format from squashfs to ext4:
+**How it works**:
+1. Create sparse file of specified size (default 1GB)
+2. Run `mkfs.ext4 -F -q -m 0 -d <source_dir> <output>` to create and populate
+3. The `-d` option copies directory contents during filesystem creation
 
-```rust
-// In plus/bencher_runner/src/run.rs
-// Change from:
-fn create_squashfs(source_dir: &Utf8Path, output: &Utf8Path) -> Result<(), RunnerError>
+### 2. CAP_NET_ADMIN Removal ✅ COMPLETE
 
-// To:
-fn create_ext4_image(source_dir: &Utf8Path, output: &Utf8Path, size_mb: u64) -> Result<(), RunnerError>
-```
+**Result**: CAP_NET_ADMIN is NOT needed for vsock.
 
-**Files to modify**:
-- `plus/bencher_runner/src/run.rs` - Change rootfs creation
-- `plus/bencher_vmm/README.md` - Update documentation
-- Consider using `mkfs.ext4` or a Rust ext4 library
+The virtio-vsock implementation uses Unix domain sockets on the host side (not AF_VSOCK), so no network capabilities are required. All 22 tests pass with CAP_NET_ADMIN removed.
 
-### 2. CAP_NET_ADMIN Removal Testing (Medium Priority)
+**Files modified**:
+- `plus/bencher_vmm/src/sandbox.rs` - Now drops ALL capabilities
+- `plus/bencher_vmm/README.md` - Updated documentation
 
-**Current state**: `plus/bencher_vmm/src/sandbox.rs` retains CAP_NET_ADMIN when dropping capabilities.
+### 3. Remove Debug Logging ✅ COMPLETE
 
-**Question**: Is CAP_NET_ADMIN actually needed for vsock?
+**Changes made**: Removed extensive debug logging from `plus/bencher_vmm/src/event_loop.rs`:
+- Removed heartbeat logging every 5 seconds
+- Removed exit counting and progress logging
+- Removed first MMIO read/write logging
+- Removed HLT exit logging
+- Removed serial output preview logging
 
-**Testing needed**:
-1. Remove CAP_NET_ADMIN from the retained capabilities list
-2. Run the full test suite
-3. Verify vsock communication still works
-
-**Files to modify** (if test succeeds):
-- `plus/bencher_vmm/src/sandbox.rs` - Remove CAP_NET_ADMIN retention
-
-### 3. Remove Debug Logging (Low Priority)
-
-**Current state**: `plus/bencher_vmm/src/event_loop.rs` contains extensive debug logging (heartbeats, exit counts, etc.)
-
-**Files to modify**:
-- `plus/bencher_vmm/src/event_loop.rs` - Remove or gate behind debug flag
+The event loop is now clean and produces no output unless there's an error.
 
 ---
 

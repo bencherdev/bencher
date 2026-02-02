@@ -11,6 +11,9 @@ pub enum RootfsError {
     #[error("Squashfs error: {0}")]
     Squashfs(String),
 
+    #[error("ext4 error: {0}")]
+    Ext4(String),
+
     #[error("Path error: {0}")]
     Path(String),
 }

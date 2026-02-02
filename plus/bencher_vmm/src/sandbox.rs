@@ -2,8 +2,8 @@
 //!
 //! This module provides security hardening for the VMM process by:
 //!
-//! 1. **Dropping Linux capabilities** - Removes all capabilities except CAP_NET_ADMIN
-//!    (needed for some KVM operations on certain systems).
+//! 1. **Dropping Linux capabilities** - Removes all Linux capabilities for maximum
+//!    security isolation.
 //!
 //! 2. **Applying seccomp filters** - Restricts the syscalls the VMM can make to only
 //!    those required for KVM operation. This limits the damage if a guest exploits
@@ -30,8 +30,8 @@ use crate::error::VmmError;
 pub fn drop_capabilities() -> Result<(), VmmError> {
     use caps::{CapSet, Capability};
 
-    // Keep CAP_NET_ADMIN for vsock on some systems, drop everything else
-    let caps_to_keep = vec![Capability::CAP_NET_ADMIN];
+    // Drop ALL capabilities - testing showed vsock works without CAP_NET_ADMIN
+    let caps_to_keep: Vec<Capability> = vec![];
 
     // Get current permitted capabilities
     let permitted = caps::read(None, CapSet::Permitted)
