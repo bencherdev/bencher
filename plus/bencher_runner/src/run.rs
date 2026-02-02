@@ -34,7 +34,7 @@ pub async fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         cache_dir: None,
         vcpus: args.vcpus,
         memory_mib: args.memory_mib,
-        kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
+        kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw".to_owned(),
         timeout_secs: args.timeout_secs,
         output_file: args.output_file.clone(),
     };
@@ -49,7 +49,7 @@ pub async fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
 /// This function:
 /// 1. Creates a temporary work directory (jail root)
 /// 2. Resolves OCI image (local or registry)
-/// 3. Creates squashfs rootfs
+/// 3. Creates ext4 rootfs
 /// 4. Writes kernel to jail root
 /// 5. Execs to `bencher-runner vmm` with the jail root
 #[cfg(target_os = "linux")]
@@ -74,12 +74,12 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
     fs::create_dir_all(&jail_root)?;
 
     let unpack_dir = jail_root.join("unpack");
-    let rootfs_path = Utf8PathBuf::from("/rootfs.squashfs"); // Path inside jail after pivot_root
+    let rootfs_path = Utf8PathBuf::from("/rootfs.ext4"); // Path inside jail after pivot_root
     let kernel_path = Utf8PathBuf::from("/vmlinux"); // Path inside jail after pivot_root
     let vsock_path = Utf8PathBuf::from("/vsock.sock"); // Path inside jail after pivot_root
 
     // Actual paths on host filesystem (in jail_root)
-    let host_rootfs_path = jail_root.join("rootfs.squashfs");
+    let host_rootfs_path = jail_root.join("rootfs.ext4");
     let host_kernel_path = jail_root.join("vmlinux");
     let host_vsock_path = jail_root.join("vsock.sock");
 
@@ -127,11 +127,11 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
     println!("Installing init binary...");
     install_init_binary(&unpack_dir)?;
 
-    // Step 6: Create squashfs rootfs
-    println!("Creating squashfs at {host_rootfs_path}...");
-    bencher_rootfs::create_squashfs(&unpack_dir, &host_rootfs_path)?;
+    // Step 6: Create ext4 rootfs
+    println!("Creating ext4 at {host_rootfs_path}...");
+    bencher_rootfs::create_ext4(&unpack_dir, &host_rootfs_path)?;
 
-    // Clean up the unpack directory - we only need the squashfs now
+    // Clean up the unpack directory - we only need the ext4 now
     let _ = fs::remove_dir_all(&unpack_dir);
 
     // Step 7: Write bundled kernel to jail root
@@ -192,7 +192,7 @@ pub async fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
 /// 1. Parse configuration
 /// 2. Resolve OCI image (local or pull from registry)
 /// 3. Unpack OCI image to directory
-/// 4. Create squashfs rootfs from directory
+/// 4. Create ext4 rootfs from directory
 /// 5. Boot VM with kernel and rootfs
 /// 6. Collect benchmark results via serial output
 /// 7. Return results
@@ -302,7 +302,7 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
         .ok_or_else(|| RunnerError::Config("Temp directory path is not UTF-8".to_owned()))?;
 
     let unpack_dir = work_dir.join("rootfs");
-    let rootfs_path = work_dir.join("rootfs.squashfs");
+    let rootfs_path = work_dir.join("rootfs.ext4");
     let vsock_path = work_dir.join("vsock.sock");
 
     // Get kernel path - use provided path or write bundled kernel to temp dir
@@ -356,9 +356,9 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("Installing init binary...");
     install_init_binary(&unpack_dir)?;
 
-    // Step 6: Create squashfs rootfs
-    println!("Creating squashfs at {rootfs_path}...");
-    bencher_rootfs::create_squashfs(&unpack_dir, &rootfs_path)?;
+    // Step 6: Create ext4 rootfs
+    println!("Creating ext4 at {rootfs_path}...");
+    bencher_rootfs::create_ext4(&unpack_dir, &rootfs_path)?;
 
     // Step 6: Boot VM and run benchmark
     println!("Booting VM with vsock at {vsock_path}...");

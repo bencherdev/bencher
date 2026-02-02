@@ -113,70 +113,20 @@ fn run_vcpu_loop(
     shutdown: Arc<AtomicBool>,
 ) -> Result<String, VmmError> {
     let mut serial_output = Vec::new();
-    let mut exit_count: u64 = 0;
-    let mut io_in_count: u64 = 0;
-    let mut io_out_count: u64 = 0;
-    let mut mmio_read_count: u64 = 0;
-    let mut mmio_write_count: u64 = 0;
-    let mut other_count: u64 = 0;
-    let mut last_report: u64 = 0;
-
-    eprintln!("[VMM] Starting vCPU loop");
-    let start_time = std::time::Instant::now();
-    let mut last_time_report = start_time;
 
     loop {
         // Check if we should stop
         if shutdown.load(Ordering::Relaxed) {
-            eprintln!("[VMM] Shutdown flag set, exiting loop");
             break;
-        }
-
-        // Every 5 seconds, print a heartbeat
-        let now = std::time::Instant::now();
-        if now.duration_since(last_time_report).as_secs() >= 5 {
-            eprintln!(
-                "[VMM] Heartbeat: running for {:?}, {} exits so far",
-                now.duration_since(start_time),
-                exit_count
-            );
-            last_time_report = now;
         }
 
         // Run the vCPU until it exits
         match vcpu.fd.run() {
             Ok(exit_reason) => {
-                exit_count += 1;
-
-                // Track exit types
-                match &exit_reason {
-                    VcpuExit::IoIn(_, _) => io_in_count += 1,
-                    VcpuExit::IoOut(_, _) => io_out_count += 1,
-                    VcpuExit::MmioRead(_, _) => mmio_read_count += 1,
-                    VcpuExit::MmioWrite(_, _) => mmio_write_count += 1,
-                    _ => other_count += 1,
-                }
-
-                // Log progress every 1000 exits
-                if exit_count - last_report >= 1000 {
-                    // Also print serial output preview
-                    let serial_preview = if serial_output.len() > 100 {
-                        String::from_utf8_lossy(&serial_output[serial_output.len()-100..]).to_string()
-                    } else {
-                        String::from_utf8_lossy(&serial_output).to_string()
-                    };
-                    eprintln!(
-                        "[VMM] Exits: total={}, serial_len={}, last_100_chars: {:?}",
-                        exit_count, serial_output.len(), serial_preview
-                    );
-                    last_report = exit_count;
-                }
-
                 let action = handle_vcpu_exit(exit_reason, &devices, &mut serial_output)?;
                 match action {
                     VmExitAction::Continue => continue,
                     VmExitAction::Shutdown => {
-                        eprintln!("[VMM] Shutdown after {exit_count} vCPU exits, serial: {} bytes", serial_output.len());
                         shutdown.store(true, Ordering::Relaxed);
                         break;
                     }
@@ -203,17 +153,11 @@ fn run_vcpu_loop(
 
     if let Some(results) = dm.get_vsock_results() {
         if !results.is_empty() {
-            eprintln!("[VMM] Returning vsock results: {} bytes", results.len());
             return Ok(results);
         }
     }
 
     // Fall back to serial output
-    eprintln!("[VMM] Returning serial output: {} bytes", serial_output.len());
-    if !serial_output.is_empty() {
-        let preview_len = serial_output.len().min(500);
-        eprintln!("[VMM] Serial: {:?}", String::from_utf8_lossy(&serial_output[..preview_len]));
-    }
     let output = String::from_utf8_lossy(&serial_output).to_string();
     Ok(output)
 }
@@ -230,7 +174,6 @@ fn handle_vcpu_exit(
                 VmmError::Device("Failed to lock device manager".to_owned())
             })?;
             dm.handle_io_read(port, data);
-            // Check if timer interrupt should fire
             dm.check_timer();
             Ok(VmExitAction::Continue)
         }
@@ -246,7 +189,6 @@ fn handle_vcpu_exit(
             let output = dm.get_serial_output();
             serial_output.extend(output);
 
-            // Check if timer interrupt should fire
             dm.check_timer();
 
             if should_shutdown {
@@ -257,30 +199,15 @@ fn handle_vcpu_exit(
         }
 
         VcpuExit::MmioRead(addr, data) => {
-            // Log first MMIO read
-            static MMIO_READ_LOG_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-            let count = MMIO_READ_LOG_COUNT.fetch_add(1, Ordering::Relaxed);
-            if count == 0 {
-                eprintln!("[VMM] First MmioRead addr={addr:#x} len={}", data.len());
-            }
-
             let mut dm = devices.lock().map_err(|_| {
                 VmmError::Device("Failed to lock device manager".to_owned())
             })?;
             dm.handle_mmio_read(addr, data);
-            // Check if timer interrupt should fire
             dm.check_timer();
             Ok(VmExitAction::Continue)
         }
 
         VcpuExit::MmioWrite(addr, data) => {
-            // Log first MMIO write
-            static MMIO_WRITE_LOG_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-            let count = MMIO_WRITE_LOG_COUNT.fetch_add(1, Ordering::Relaxed);
-            if count == 0 {
-                eprintln!("[VMM] First MmioWrite addr={addr:#x} data={data:?}");
-            }
-
             let mut dm = devices.lock().map_err(|_| {
                 VmmError::Device("Failed to lock device manager".to_owned())
             })?;
@@ -289,7 +216,6 @@ fn handle_vcpu_exit(
             // After MMIO write, poll vsock for any pending activity
             dm.poll_vsock();
 
-            // Check if timer interrupt should fire
             dm.check_timer();
 
             Ok(VmExitAction::Continue)
@@ -297,7 +223,6 @@ fn handle_vcpu_exit(
 
         VcpuExit::Hlt => {
             // CPU is halted, waiting for interrupt
-            // Inject a timer interrupt to wake it up
             let mut dm = devices.lock().map_err(|_| {
                 VmmError::Device("Failed to lock device manager".to_owned())
             })?;
@@ -312,24 +237,12 @@ fn handle_vcpu_exit(
             let output = dm.get_serial_output();
             serial_output.extend(output);
 
-            // Log first few Hlt exits
-            static HLT_LOG_COUNT: std::sync::atomic::AtomicU64 =
-                std::sync::atomic::AtomicU64::new(0);
-            let count = HLT_LOG_COUNT.fetch_add(1, Ordering::Relaxed);
-            if count < 5 {
-                eprintln!("[VMM] Exit: Hlt (#{count}, will inject timer)");
-            }
-
             Ok(VmExitAction::Continue)
         }
 
-        VcpuExit::Shutdown => {
-            eprintln!("[VMM] Exit: Shutdown");
-            Ok(VmExitAction::Shutdown)
-        }
+        VcpuExit::Shutdown => Ok(VmExitAction::Shutdown),
 
-        VcpuExit::SystemEvent(event_type, flags) => {
-            eprintln!("[VMM] Exit: SystemEvent type={event_type} flags={flags:?}");
+        VcpuExit::SystemEvent(event_type, _flags) => {
             // System events include shutdown, reset, crash
             // Event type 1 = shutdown, 2 = reset
             if event_type == 1 || event_type == 2 {
@@ -340,13 +253,7 @@ fn handle_vcpu_exit(
         }
 
         // Handle other exit reasons
-        other => {
-            // Log first 20 unknown exits, then every 1000th
-            static OTHER_LOG_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-            let count = OTHER_LOG_COUNT.fetch_add(1, Ordering::Relaxed);
-            if count < 20 || count % 1000 == 0 {
-                eprintln!("[VMM] Exit #{count}: {other:?}");
-            }
+        _other => {
             // Check timer on every unknown exit
             let mut dm = devices.lock().map_err(|_| {
                 VmmError::Device("Failed to lock device manager".to_owned())
