@@ -96,7 +96,7 @@ mod stubs {
                 rootfs_path,
                 vcpus: 1,
                 memory_mib: 512,
-                kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro".to_owned(),
+                kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw".to_owned(),
                 vsock_path: None,
                 timeout_secs: DEFAULT_TIMEOUT_SECS,
             }
