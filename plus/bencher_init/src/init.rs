@@ -159,20 +159,61 @@ fn mount_filesystems() -> Result<(), InitError> {
     let _ = fs::create_dir_all("/tmp");
     let _ = fs::create_dir_all("/run");
 
-    // Mount proc
-    mount("proc", "/proc", "proc", 0, None)?;
+    // Mount proc (if not already mounted)
+    if !is_mounted("/proc") {
+        mount("proc", "/proc", "proc", 0, None)?;
+    } else {
+        console_log("proc already mounted");
+    }
 
-    // Mount sysfs
-    mount("sysfs", "/sys", "sysfs", 0, None)?;
+    // Mount sysfs (if not already mounted)
+    if !is_mounted("/sys") {
+        mount("sysfs", "/sys", "sysfs", 0, None)?;
+    } else {
+        console_log("sysfs already mounted");
+    }
 
-    // Mount devtmpfs
-    mount("devtmpfs", "/dev", "devtmpfs", 0, None)?;
+    // Mount devtmpfs (if not already mounted)
+    if !is_mounted("/dev") {
+        mount("devtmpfs", "/dev", "devtmpfs", 0, None)?;
+    } else {
+        console_log("devtmpfs already mounted");
+    }
 
     // Mount tmpfs on /tmp and /run
-    mount("tmpfs", "/tmp", "tmpfs", 0, Some("mode=1777"))?;
-    mount("tmpfs", "/run", "tmpfs", 0, Some("mode=755"))?;
+    if !is_mounted("/tmp") {
+        mount("tmpfs", "/tmp", "tmpfs", 0, Some("mode=1777"))?;
+    }
+    if !is_mounted("/run") {
+        mount("tmpfs", "/run", "tmpfs", 0, Some("mode=755"))?;
+    }
 
     Ok(())
+}
+
+/// Check if a path is already a mount point.
+fn is_mounted(path: &str) -> bool {
+    // Check /proc/mounts to see if the path is mounted
+    if let Ok(contents) = fs::read_to_string("/proc/self/mounts") {
+        for line in contents.lines() {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 && parts[1] == path {
+                return true;
+            }
+        }
+    }
+    // If we can't read /proc/mounts (e.g., /proc not mounted yet),
+    // check if the path looks like it has a filesystem mounted
+    // by comparing device IDs of the path and its parent
+    if let (Ok(path_stat), Ok(parent_stat)) = (
+        std::fs::metadata(path),
+        std::fs::metadata(Path::new(path).parent().unwrap_or(Path::new("/")))
+    ) {
+        use std::os::unix::fs::MetadataExt;
+        // Different device ID means different filesystem = mounted
+        return path_stat.dev() != parent_stat.dev();
+    }
+    false
 }
 
 /// Wrapper around mount(2).
