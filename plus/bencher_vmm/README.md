@@ -214,12 +214,12 @@ The guest sends results over vsock to the host using dedicated ports. This is fa
 
 **Port Assignments:**
 
-| Port | Purpose | Content |
-| ---- | ------- | ------- |
-| 5000 | stdout | Standard output from the benchmark |
-| 5001 | stderr | Standard error from the benchmark |
-| 5002 | exit_code | Exit code as a string (e.g., "0") |
-| 5005 | output_file | Optional output file contents |
+| Port | Purpose     | Content                            |
+| ---- | ----------- | ---------------------------------- |
+| 5000 | stdout      | Standard output from the benchmark |
+| 5001 | stderr      | Standard error from the benchmark  |
+| 5002 | exit_code   | Exit code as a string (e.g., "0")  |
+| 5005 | output_file | Optional output file contents      |
 
 The guest init script:
 1. Buffers stdout/stderr to `/run/bencher/stdout` and `/run/bencher/stderr`
