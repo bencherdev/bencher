@@ -140,14 +140,14 @@ pub struct JobSpec {
 
 Requires server admin permissions.
 
-| Method | Endpoint                                   | Description                          |
-| ------ | ------------------------------------------ | ------------------------------------ |
-| POST   | `/v0/server/runners`                       | Create runner, returns token         |
-| GET    | `/v0/server/runners`                       | List runners                         |
-| GET    | `/v0/server/runners/{runner}`              | Get runner details                   |
-| DELETE | `/v0/server/runners/{runner}`              | Archive runner (soft delete)         |
-| PATCH  | `/v0/server/runners/{runner}`              | Update runner (name, labels, locked) |
-| POST   | `/v0/server/runners/{runner}/rotate-token` | Generate new token (invalidates old) |
+| Method | Endpoint                            | Description                          |
+| ------ | ----------------------------------- | ------------------------------------ |
+| POST   | `/v0/runners`                       | Create runner, returns token         |
+| GET    | `/v0/runners`                       | List runners                         |
+| GET    | `/v0/runners/{runner}`              | Get runner details                   |
+| DELETE | `/v0/runners/{runner}`              | Archive runner (soft delete)         |
+| PATCH  | `/v0/runners/{runner}`              | Update runner (name, labels, locked) |
+| POST   | `/v0/runners/{runner}/rotate-token` | Generate new token (invalidates old) |
 
 ### Job Management (Project Scoped)
 
@@ -174,7 +174,7 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 
 ## Endpoint Details
 
-### POST /v0/projects/{project}/runners - Register Runner
+### POST /v0/runners - Register Runner
 
 ```rust
 // Request (by project admin)
@@ -464,10 +464,10 @@ fn validate_runner_token(token: &str) -> Result<Runner, AuthError> {
 ### Token Rotation
 
 If a token is compromised:
-1. Lock the runner: `PATCH /v0/server/runners/{runner}` with `locked: true`
-2. Generate new token: `POST /v0/server/runners/{runner}/rotate-token`
+1. Lock the runner: `PATCH /v0/runners/{runner}` with `locked: true`
+2. Generate new token: `POST /v0/runners/{runner}/rotate-token`
 3. Update runner agent with new token
-4. Unlock the runner: `PATCH /v0/server/runners/{runner}` with `locked: false`
+4. Unlock the runner: `PATCH /v0/runners/{runner}` with `locked: false`
 
 ### Request Header
 
