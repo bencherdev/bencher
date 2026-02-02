@@ -9,7 +9,7 @@ use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
-    model::runner::{JobId, QueryJob, UpdateJob},
+    model::runner::{QueryJob, UpdateJob},
     schema, write_conn,
 };
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
@@ -81,9 +81,8 @@ async fn claim_job_inner(
 
     loop {
         // Try to claim a job (connection is released when function returns)
-        if let Some(job_id) = try_claim_job(context, &runner_token).await? {
-            let claimed_job = QueryJob::get(auth_conn!(context), job_id)?;
-            return Ok(Some(claimed_job.into_json(runner_token.runner_uuid)));
+        if let Some(json_job) = try_claim_job(context, &runner_token).await? {
+            return Ok(Some(json_job));
         }
 
         // Check if we've exceeded the timeout
@@ -101,7 +100,7 @@ async fn claim_job_inner(
 async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
-) -> Result<Option<JobId>, HttpError> {
+) -> Result<Option<JsonJob>, HttpError> {
     let conn = write_conn!(context);
 
     // Try to claim a pending job (ordered by priority DESC, created ASC)
@@ -112,7 +111,7 @@ async fn try_claim_job(
         .optional()
         .map_err(resource_not_found_err!(Job))?;
 
-    let Some(job) = pending_job else {
+    let Some(query_job) = pending_job else {
         return Ok(None);
     };
 
@@ -129,17 +128,28 @@ async fn try_claim_job(
 
     let updated = diesel::update(
         schema::job::table
-            .filter(schema::job::id.eq(job.id))
+            .filter(schema::job::id.eq(query_job.id))
             .filter(schema::job::status.eq(JobStatus::Pending)),
     )
     .set(&update_job)
     .execute(conn)
-    .map_err(resource_conflict_err!(Job, job))?;
+    .map_err(resource_conflict_err!(Job, query_job))?;
 
     if updated > 0 {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
-        Ok(Some(job.id))
+        // Return JSON with updated status (query_job still has Pending status)
+        Ok(Some(JsonJob {
+            uuid: query_job.uuid,
+            status: JobStatus::Claimed,
+            runner: Some(runner_token.runner_uuid),
+            claimed: Some(now),
+            started: None,
+            completed: None,
+            exit_code: None,
+            created: query_job.created,
+            modified: now,
+        }))
     } else {
         // Job was claimed by another runner
         Ok(None)
