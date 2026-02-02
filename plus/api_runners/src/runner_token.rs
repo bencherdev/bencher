@@ -9,10 +9,7 @@ use bencher_schema::{
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, RequestContext};
 
-use crate::runners::hash_token;
-
-/// Runner token prefix
-const RUNNER_TOKEN_PREFIX: &str = "bencher_runner_";
+use crate::runners::{RUNNER_TOKEN_PREFIX, hash_token};
 
 /// Extract and validate runner token from Authorization header
 #[derive(Debug)]

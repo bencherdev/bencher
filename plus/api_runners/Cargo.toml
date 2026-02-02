@@ -16,7 +16,7 @@ otel = ["bencher_endpoint/otel", "bencher_schema/otel", "dep:bencher_otel"]
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_otel = { workspace = true, optional = true }
-bencher_schema.workspace = true
+bencher_schema = { workspace = true, features = ["plus"] }
 diesel.workspace = true
 dropshot.workspace = true
 schemars.workspace = true
@@ -29,7 +29,9 @@ uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
-bencher_json = { workspace = true, features = ["server", "schema"] }
+bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_schema = { workspace = true, features = ["plus"] }
+diesel.workspace = true
 http.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

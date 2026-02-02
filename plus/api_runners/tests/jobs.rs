@@ -6,7 +6,7 @@
 //! some tests may be marked as ignored until full integration is available.
 
 use bencher_api_tests::TestServer;
-use bencher_json::JsonRunnerToken;
+use bencher_json::{JsonJob, JsonRunnerToken, JsonUpdateJobResponse};
 use http::StatusCode;
 
 // Helper to create a runner and get its token
@@ -282,4 +282,425 @@ async fn test_claim_job_archived_runner() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// =============================================================================
+// Job State Transition Tests
+// =============================================================================
+//
+// These tests verify the complete job lifecycle: pending → claimed → running → completed/failed
+
+mod job_lifecycle {
+    use super::*;
+    use bencher_json::{BranchUuid, DateTime, JobStatus, JobUuid};
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    /// Helper to insert a test job directly into the database.
+    /// Returns the job UUID.
+    fn insert_test_job(server: &TestServer, report_id: i32) -> JobUuid {
+        let mut conn = server.db_conn();
+        let now = DateTime::now();
+        let job_uuid = JobUuid::new();
+
+        diesel::insert_into(schema::job::table)
+            .values((
+                schema::job::uuid.eq(&job_uuid),
+                schema::job::report_id.eq(report_id),
+                schema::job::status.eq(JobStatus::Pending),
+                schema::job::spec.eq("{}"),
+                schema::job::timeout.eq(3600),
+                schema::job::priority.eq(0),
+                schema::job::created.eq(&now),
+                schema::job::modified.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert test job");
+
+        job_uuid
+    }
+
+    /// Helper to create minimal test infrastructure (project, branch, testbed, head, version, report).
+    /// Returns the report ID that can be used to create jobs.
+    fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
+        let mut conn = server.db_conn();
+        let now = DateTime::now();
+
+        // Create a testbed
+        let testbed_uuid = bencher_json::TestbedUuid::new();
+        diesel::insert_into(schema::testbed::table)
+            .values((
+                schema::testbed::uuid.eq(&testbed_uuid),
+                schema::testbed::project_id.eq(project_id),
+                schema::testbed::name.eq("test-testbed"),
+                schema::testbed::slug.eq("test-testbed"),
+                schema::testbed::created.eq(&now),
+                schema::testbed::modified.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert testbed");
+        let testbed_id: i32 = schema::testbed::table
+            .filter(schema::testbed::uuid.eq(&testbed_uuid))
+            .select(schema::testbed::id)
+            .first(&mut conn)
+            .expect("Failed to get testbed ID");
+
+        // Create a version
+        let version_uuid = bencher_json::VersionUuid::new();
+        diesel::insert_into(schema::version::table)
+            .values((
+                schema::version::uuid.eq(&version_uuid),
+                schema::version::project_id.eq(project_id),
+                schema::version::number.eq(1),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert version");
+        let version_id: i32 = schema::version::table
+            .filter(schema::version::uuid.eq(&version_uuid))
+            .select(schema::version::id)
+            .first(&mut conn)
+            .expect("Failed to get version ID");
+
+        // Create a branch
+        let branch_uuid = BranchUuid::new();
+        diesel::insert_into(schema::branch::table)
+            .values((
+                schema::branch::uuid.eq(&branch_uuid),
+                schema::branch::project_id.eq(project_id),
+                schema::branch::name.eq("main"),
+                schema::branch::slug.eq("main"),
+                schema::branch::created.eq(&now),
+                schema::branch::modified.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert branch");
+        let branch_id: i32 = schema::branch::table
+            .filter(schema::branch::uuid.eq(&branch_uuid))
+            .select(schema::branch::id)
+            .first(&mut conn)
+            .expect("Failed to get branch ID");
+
+        // Create a head
+        let head_uuid = bencher_json::HeadUuid::new();
+        diesel::insert_into(schema::head::table)
+            .values((
+                schema::head::uuid.eq(&head_uuid),
+                schema::head::branch_id.eq(branch_id),
+                schema::head::created.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert head");
+        let head_id: i32 = schema::head::table
+            .filter(schema::head::uuid.eq(&head_uuid))
+            .select(schema::head::id)
+            .first(&mut conn)
+            .expect("Failed to get head ID");
+
+        // Create a report
+        let report_uuid = bencher_json::ReportUuid::new();
+        diesel::insert_into(schema::report::table)
+            .values((
+                schema::report::uuid.eq(&report_uuid),
+                schema::report::project_id.eq(project_id),
+                schema::report::head_id.eq(head_id),
+                schema::report::version_id.eq(version_id),
+                schema::report::testbed_id.eq(testbed_id),
+                schema::report::adapter.eq(0), // Magic adapter
+                schema::report::start_time.eq(&now),
+                schema::report::end_time.eq(&now),
+                schema::report::created.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert report");
+
+        schema::report::table
+            .filter(schema::report::uuid.eq(&report_uuid))
+            .select(schema::report::id)
+            .first(&mut conn)
+            .expect("Failed to get report ID")
+    }
+
+    /// Helper to get the project ID from a project slug
+    fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
+        let mut conn = server.db_conn();
+        schema::project::table
+            .filter(schema::project::slug.eq(project_slug))
+            .select(schema::project::id)
+            .first(&mut conn)
+            .expect("Failed to get project ID")
+    }
+
+    // Test the full job lifecycle: claim → running → completed
+    #[tokio::test]
+    async fn test_job_lifecycle_completed() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "lifecycle1@example.com").await;
+        let org = server.create_org(&admin, "Lifecycle Org").await;
+        let project = server.create_project(&admin, &org, "Lifecycle Project").await;
+
+        // Create a runner
+        let runner = create_runner(&server, &admin.token, "Lifecycle Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        // Create test infrastructure and a pending job
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+        let job_uuid = insert_test_job(&server, report_id);
+
+        // Step 1: Claim the job
+        let body = serde_json::json!({
+            "poll_timeout": 5
+        });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let claimed_job: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+        let claimed_job = claimed_job.expect("Expected to claim a job");
+        assert_eq!(claimed_job.uuid, job_uuid);
+        assert_eq!(claimed_job.status, JobStatus::Claimed);
+
+        // Step 2: Update to running
+        let body = serde_json::json!({
+            "status": "running"
+        });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, job_uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let response: JsonUpdateJobResponse = resp.json().await.expect("Failed to parse response");
+        assert!(!response.canceled);
+
+        // Step 3: Update to completed
+        let body = serde_json::json!({
+            "status": "completed",
+            "exit_code": 0
+        });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, job_uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let response: JsonUpdateJobResponse = resp.json().await.expect("Failed to parse response");
+        assert!(!response.canceled);
+
+        // Verify final state via project jobs endpoint
+        let project_slug: &str = project.slug.as_ref();
+        let resp = server
+            .client
+            .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+            .header("Authorization", server.bearer(&admin.token))
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
+        assert_eq!(final_job.status, JobStatus::Completed);
+        assert_eq!(final_job.exit_code, Some(0));
+    }
+
+    // Test the job lifecycle with failure: claim → running → failed
+    #[tokio::test]
+    async fn test_job_lifecycle_failed() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "lifecycle2@example.com").await;
+        let org = server.create_org(&admin, "Lifecycle Fail Org").await;
+        let project = server
+            .create_project(&admin, &org, "Lifecycle Fail Project")
+            .await;
+
+        // Create a runner
+        let runner = create_runner(&server, &admin.token, "Lifecycle Fail Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        // Create test infrastructure and a pending job
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+        let job_uuid = insert_test_job(&server, report_id);
+
+        // Step 1: Claim the job
+        let body = serde_json::json!({
+            "poll_timeout": 5
+        });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let claimed_job: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+        assert!(claimed_job.is_some());
+
+        // Step 2: Update to running
+        let body = serde_json::json!({
+            "status": "running"
+        });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, job_uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Step 3: Update to failed
+        let body = serde_json::json!({
+            "status": "failed",
+            "exit_code": 1,
+            "stderr": "Benchmark failed with error"
+        });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, job_uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Verify final state
+        let project_slug: &str = project.slug.as_ref();
+        let resp = server
+            .client
+            .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+            .header("Authorization", server.bearer(&admin.token))
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
+        assert_eq!(final_job.status, JobStatus::Failed);
+        assert_eq!(final_job.exit_code, Some(1));
+    }
+
+    // Test invalid state transition: claimed → completed (skipping running)
+    #[tokio::test]
+    async fn test_job_invalid_transition_claimed_to_completed() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "lifecycle3@example.com").await;
+        let org = server.create_org(&admin, "Invalid Trans Org").await;
+        let project = server
+            .create_project(&admin, &org, "Invalid Trans Project")
+            .await;
+
+        // Create a runner
+        let runner = create_runner(&server, &admin.token, "Invalid Trans Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        // Create test infrastructure and a pending job
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+        let job_uuid = insert_test_job(&server, report_id);
+
+        // Claim the job
+        let body = serde_json::json!({
+            "poll_timeout": 5
+        });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Try to go directly from claimed to completed (invalid)
+        let body = serde_json::json!({
+            "status": "completed",
+            "exit_code": 0
+        });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, job_uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // Test that a different runner cannot update another runner's job
+    #[tokio::test]
+    async fn test_job_wrong_runner_update() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "lifecycle4@example.com").await;
+        let org = server.create_org(&admin, "Wrong Runner Org").await;
+        let project = server
+            .create_project(&admin, &org, "Wrong Runner Project")
+            .await;
+
+        // Create two runners
+        let runner1 = create_runner(&server, &admin.token, "Runner One Lifecycle").await;
+        let runner1_token: &str = runner1.token.as_ref();
+        let runner2 = create_runner(&server, &admin.token, "Runner Two Lifecycle").await;
+        let runner2_token: &str = runner2.token.as_ref();
+
+        // Create test infrastructure and a pending job
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+        let job_uuid = insert_test_job(&server, report_id);
+
+        // Runner 1 claims the job
+        let body = serde_json::json!({
+            "poll_timeout": 5
+        });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid)))
+            .header("Authorization", format!("Bearer {runner1_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Runner 2 tries to update the job (should fail)
+        let body = serde_json::json!({
+            "status": "running"
+        });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner2.uuid, job_uuid)))
+            .header("Authorization", format!("Bearer {runner2_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
 }

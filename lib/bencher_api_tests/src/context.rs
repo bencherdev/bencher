@@ -29,6 +29,8 @@ pub struct TestServer {
     pub url: String,
     /// Token key for generating test tokens (private - use `token_key()` accessor)
     token_key: TokenKey,
+    /// Database path for test setup (private - use `db_conn()` accessor)
+    db_path: String,
     /// Keep the temp file alive for the duration of the test
     db_file: NamedTempFile,
 }
@@ -239,8 +241,16 @@ impl TestServer {
             client,
             url,
             token_key,
+            db_path,
             db_file,
         }
+    }
+
+    /// Get a database connection for test setup.
+    /// Use this to insert test data directly into the database.
+    #[expect(clippy::expect_used)]
+    pub fn db_conn(&self) -> DbConnection {
+        DbConnection::establish(&self.db_path).expect("Failed to establish database connection")
     }
 
     /// Get the token key for generating test tokens
