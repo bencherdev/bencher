@@ -17,7 +17,10 @@ pub use cgroup::CgroupManager;
 #[cfg(target_os = "linux")]
 pub use chroot::{create_jail_root, do_pivot_root, mount_essential_filesystems};
 #[cfg(target_os = "linux")]
-pub use namespace::{create_namespaces, drop_capabilities, set_no_new_privs, setup_uid_gid_mapping};
+pub use namespace::{
+    create_other_namespaces, create_user_namespace, drop_capabilities, set_no_new_privs,
+    setup_uid_gid_mapping,
+};
 #[cfg(target_os = "linux")]
 pub use rlimit::apply_rlimits;
 

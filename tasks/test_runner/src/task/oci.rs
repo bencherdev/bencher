@@ -441,7 +441,7 @@ fn create_layer_tarball(rootfs: &Utf8Path, output: &Utf8Path) -> anyhow::Result<
     }
 
     // Calculate diff_id (SHA256 of uncompressed tar)
-    let uncompressed_bytes = std::fs::read(&uncompressed_tar_path)?;
+    let uncompressed_bytes = fs::read(&uncompressed_tar_path)?;
     let mut hasher = Sha256::new();
     hasher.update(&uncompressed_bytes);
     let diff_id = format!("sha256:{:x}", hasher.finalize());
@@ -453,7 +453,7 @@ fn create_layer_tarball(rootfs: &Utf8Path, output: &Utf8Path) -> anyhow::Result<
     encoder.finish()?;
 
     // Clean up uncompressed tar
-    drop(std::fs::remove_file(&uncompressed_tar_path));
+    drop(fs::remove_file(&uncompressed_tar_path));
 
     Ok(diff_id)
 }
