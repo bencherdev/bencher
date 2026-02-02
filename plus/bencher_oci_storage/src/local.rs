@@ -10,6 +10,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use bytes::Bytes;
+use chrono::Utc;
 use http_body_util::StreamBody;
 use hyper::body::Frame;
 use sha2::{Digest as _, Sha256};
@@ -42,7 +43,7 @@ impl futures::Stream for ReaderStreamAdapter {
             Poll::Ready(Some(Err(e))) => {
                 let boxed: Box<dyn std::error::Error + Send + Sync> = Box::new(e);
                 Poll::Ready(Some(Err(boxed)))
-            }
+            },
             Poll::Ready(None) => Poll::Ready(None),
             Poll::Pending => Poll::Pending,
         }
@@ -101,12 +102,16 @@ struct UploadState {
     repository: String,
     /// Total bytes uploaded so far
     size: u64,
+    /// Unix timestamp when the upload was created
+    created_at: i64,
 }
 
 /// OCI Storage implementation using local filesystem
 pub(crate) struct OciLocalStorage {
     /// Base directory for OCI storage (e.g., `data/oci`)
     base_dir: PathBuf,
+    /// Upload timeout in seconds for stale upload cleanup
+    upload_timeout: u64,
 }
 
 impl OciLocalStorage {
@@ -114,12 +119,15 @@ impl OciLocalStorage {
     ///
     /// The `database_path` is the path to the `SQLite` database file.
     /// OCI data will be stored in an `oci` subdirectory next to it.
-    pub fn new(database_path: &Path) -> Self {
+    pub fn new(database_path: &Path, upload_timeout: u64) -> Self {
         let base_dir = database_path
             .parent()
             .map_or_else(|| PathBuf::from("oci"), |p| p.join("oci"));
 
-        Self { base_dir }
+        Self {
+            base_dir,
+            upload_timeout,
+        }
     }
 
     // ==================== Path Generation ====================
@@ -226,10 +234,15 @@ impl OciLocalStorage {
     // ==================== Upload Operations ====================
 
     /// Starts a new upload session
+    ///
+    /// Also spawns a background task to clean up any stale uploads older than `upload_timeout`.
     pub async fn start_upload(
         &self,
         repository: &ProjectResourceId,
     ) -> Result<UploadId, OciStorageError> {
+        // Spawn background cleanup task (non-blocking)
+        self.spawn_stale_upload_cleanup();
+
         let upload_id = UploadId::new();
         let upload_dir = self.upload_dir(&upload_id);
 
@@ -244,10 +257,11 @@ impl OciLocalStorage {
             OciStorageError::LocalStorage(format!("Failed to create upload data file: {e}"))
         })?;
 
-        // Save initial state
+        // Save initial state with creation timestamp
         let state = UploadState {
             repository: repository.to_string(),
             size: 0,
+            created_at: Utc::now().timestamp(),
         };
         self.save_upload_state(&upload_id, &state).await?;
 
@@ -365,6 +379,18 @@ impl OciLocalStorage {
     async fn cleanup_upload(&self, upload_id: &UploadId) {
         let upload_dir = self.upload_dir(upload_id);
         let _unused = fs::remove_dir_all(&upload_dir).await;
+    }
+
+    /// Spawns a background task to clean up all stale uploads that have exceeded the timeout.
+    ///
+    /// This runs asynchronously and does not block the current upload operation.
+    fn spawn_stale_upload_cleanup(&self) {
+        let uploads_dir = self.uploads_dir();
+        let upload_timeout = self.upload_timeout;
+
+        tokio::spawn(async move {
+            cleanup_stale_uploads_local(uploads_dir, upload_timeout).await;
+        });
     }
 
     // ==================== Blob Operations ====================
@@ -748,5 +774,42 @@ impl OciLocalStorage {
         }
 
         Ok(referrers)
+    }
+}
+
+/// Cleans up all stale uploads in the given uploads directory.
+///
+/// This is a standalone async function that can be spawned as a background task.
+async fn cleanup_stale_uploads_local(uploads_dir: PathBuf, upload_timeout: u64) {
+    let Ok(mut entries) = fs::read_dir(&uploads_dir).await else {
+        return;
+    };
+
+    let now = Utc::now().timestamp();
+    let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
+
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let Some(upload_id_str) = entry.file_name().to_str().map(ToOwned::to_owned) else {
+            continue;
+        };
+
+        // Validate upload ID format (we don't use the parsed value, just validate)
+        if upload_id_str.parse::<UploadId>().is_err() {
+            continue;
+        }
+
+        // Try to load the state to check creation time
+        let state_path = entry.path().join("state.json");
+        let Ok(data) = fs::read(&state_path).await else {
+            continue;
+        };
+        let Ok(state) = serde_json::from_slice::<UploadState>(&data) else {
+            continue;
+        };
+
+        // Check if the upload is stale
+        if (now - state.created_at) > timeout_secs {
+            let _unused = fs::remove_dir_all(entry.path()).await;
+        }
     }
 }

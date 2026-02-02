@@ -1347,6 +1347,7 @@ dependencies = [
  "aws-sdk-s3",
  "bencher_json",
  "bytes",
+ "chrono",
  "futures",
  "hex",
  "http 1.4.0",

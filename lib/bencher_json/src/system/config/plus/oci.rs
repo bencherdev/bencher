@@ -3,12 +3,24 @@ use bencher_valid::{Sanitize, Secret};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Default upload timeout: 1 hour (3600 seconds)
+pub const DEFAULT_UPLOAD_TIMEOUT_SECS: u64 = 3600;
+
 /// OCI Registry configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOci {
     /// S3 storage configuration for OCI registry
     pub data_store: OciDataStore,
+    /// Upload session timeout in seconds.
+    /// Uploads older than this are cleaned up when new uploads start.
+    /// Defaults to 3600 (1 hour).
+    #[serde(default = "default_upload_timeout")]
+    pub upload_timeout: u64,
+}
+
+fn default_upload_timeout() -> u64 {
+    DEFAULT_UPLOAD_TIMEOUT_SECS
 }
 
 impl Sanitize for JsonOci {

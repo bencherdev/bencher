@@ -17,10 +17,11 @@ There is one storage `service`:
     - `access_point`: S3 Access Point ARN with optional path prefix.
       Format: `arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
 
-|             Name             |                               Example                               | Default | Required |                            Description                             |
-| :--------------------------: | :-----------------------------------------------------------------: | :-----: | :------: | :----------------------------------------------------------------: |
-|          data_store          |                              \{ ... \}                              |   ---   |    No    |        Specifies the OCI storage backend. Local if omitted.        |
-|      data_store.service      |                              "aws_s3"                               |   ---   |   Yes    |                Specifies the storage service type.                 |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |   ---   |   Yes    |                         AWS access key ID.                         |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |   ---   |   Yes    |                       AWS secret access key.                       |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |   ---   |   Yes    | S3 Access Point ARN. Optional path prefix after access point name. |
+|             Name             |                               Example                               | Default | Required |                                       Description                                        |
+| :--------------------------: | :-----------------------------------------------------------------: | :-----: | :------: | :--------------------------------------------------------------------------------------: |
+|          data_store          |                              \{ ... \}                              |   ---   |    No    |               Specifies the OCI storage backend. Local if omitted.                       |
+|      data_store.service      |                              "aws_s3"                               |   ---   |   Yes    |                       Specifies the storage service type.                                |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |   ---   |   Yes    |                                AWS access key ID.                                        |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |   ---   |   Yes    |                              AWS secret access key.                                      |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |   ---   |   Yes    |        S3 Access Point ARN. Optional path prefix after access point name.                |
+|       upload_timeout         |                                3600                                 |  3600   |    No    | Upload session timeout in seconds. Stale uploads are cleaned up when new uploads start. |

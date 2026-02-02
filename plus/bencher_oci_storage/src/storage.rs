@@ -21,8 +21,12 @@ use std::task::{Context, Poll};
 use aws_sdk_s3::Client;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::CompletedMultipartUpload;
-use bencher_json::{ProjectResourceId, Secret, system::config::OciDataStore};
+use bencher_json::{
+    ProjectResourceId, Secret,
+    system::config::{DEFAULT_UPLOAD_TIMEOUT_SECS, OciDataStore},
+};
 use bytes::Bytes;
+use chrono::Utc;
 use futures::stream::{self, StreamExt as _};
 use hyper::body::Frame;
 use serde::{Deserialize, Serialize};
@@ -51,7 +55,7 @@ impl hyper::body::Body for S3BlobBody {
             Poll::Ready(Some(Err(e))) => {
                 let boxed: Box<dyn std::error::Error + Send + Sync> = Box::new(e);
                 Poll::Ready(Some(Err(boxed)))
-            }
+            },
             Poll::Ready(None) => Poll::Ready(None),
             Poll::Pending => Poll::Pending,
         }
@@ -173,6 +177,8 @@ struct UploadState {
     buffer_chunk_count: u32,
     /// Total bytes across all buffer chunks
     buffer_total_size: u64,
+    /// Unix timestamp when the upload was created
+    created_at: i64,
 }
 
 /// Information about a completed S3 multipart upload part
@@ -206,6 +212,8 @@ impl UploadState {
 pub(crate) struct OciS3Storage {
     client: Client,
     config: OciStorageConfig,
+    /// Upload timeout in seconds for stale upload cleanup
+    upload_timeout: u64,
 }
 
 /// OCI Storage backend - supports S3 or local filesystem
@@ -225,18 +233,26 @@ impl OciStorage {
     ///
     /// If S3 configuration is provided, uses S3 backend.
     /// Otherwise, falls back to local filesystem storage.
+    ///
+    /// The `upload_timeout` specifies how long (in seconds) before stale uploads
+    /// are cleaned up. Pass `None` to use the default (1 hour).
     pub fn try_from_config(
         data_store: Option<OciDataStore>,
         database_path: &Path,
+        upload_timeout: Option<u64>,
     ) -> Result<Self, OciStorageError> {
+        let timeout = upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS);
         match data_store {
             Some(OciDataStore::AwsS3 {
                 access_key_id,
                 secret_access_key,
                 access_point,
-            }) => OciS3Storage::new(access_key_id, secret_access_key, &access_point)
+            }) => OciS3Storage::new(access_key_id, secret_access_key, &access_point, timeout)
                 .map(OciStorage::S3),
-            None => Ok(OciStorage::Local(OciLocalStorage::new(database_path))),
+            None => Ok(OciStorage::Local(OciLocalStorage::new(
+                database_path,
+                timeout,
+            ))),
         }
     }
 
@@ -334,11 +350,11 @@ impl OciStorage {
             Self::S3(s3) => {
                 let (body, size) = s3.get_blob_stream(repository, digest).await?;
                 Ok((BlobBody::S3(body), size))
-            }
+            },
             Self::Local(local) => {
                 let (body, size) = local.get_blob_stream(repository, digest).await?;
                 Ok((BlobBody::Local(body), size))
-            }
+            },
         }
     }
 
@@ -484,6 +500,7 @@ impl OciS3Storage {
         access_key_id: String,
         secret_access_key: Secret,
         access_point: &str,
+        upload_timeout: u64,
     ) -> Result<Self, OciStorageError> {
         // Parse the S3 ARN
         let arn = S3Arn::from_str(access_point)
@@ -512,7 +529,11 @@ impl OciS3Storage {
             prefix: arn.bucket_path.clone(),
         };
 
-        Ok(Self { client, config })
+        Ok(Self {
+            client,
+            config,
+            upload_timeout,
+        })
     }
 
     // ==================== Key Generation ====================
@@ -744,13 +765,31 @@ impl OciS3Storage {
         }
     }
 
+    /// Spawns a background task to clean up all stale uploads that have exceeded the timeout.
+    ///
+    /// This runs asynchronously and does not block the current upload operation.
+    fn spawn_stale_upload_cleanup(&self) {
+        let client = self.client.clone();
+        let config = self.config.clone();
+        let upload_timeout = self.upload_timeout;
+
+        tokio::spawn(async move {
+            cleanup_stale_uploads_s3(client, config, upload_timeout).await;
+        });
+    }
+
     // ==================== Upload Operations ====================
 
     /// Starts a new upload session using S3 multipart upload
+    ///
+    /// Also spawns a background task to clean up any stale uploads older than `upload_timeout`.
     pub async fn start_upload(
         &self,
         repository: &ProjectResourceId,
     ) -> Result<UploadId, OciStorageError> {
+        // Spawn background cleanup task (non-blocking)
+        self.spawn_stale_upload_cleanup();
+
         let upload_id = UploadId::new();
         let data_key = self.upload_data_key(&upload_id);
 
@@ -769,13 +808,14 @@ impl OciS3Storage {
             .ok_or_else(|| OciStorageError::S3("No upload ID returned".to_owned()))?
             .to_owned();
 
-        // Save initial state
+        // Save initial state with creation timestamp
         let state = UploadState {
             s3_upload_id,
             repository: repository.to_string(),
             parts: Vec::new(),
             buffer_chunk_count: 0,
             buffer_total_size: 0,
+            created_at: Utc::now().timestamp(),
         };
         self.save_upload_state(&upload_id, &state).await?;
 
@@ -1690,5 +1730,112 @@ impl S3Arn {
             account_id = self.account_id,
             bucket_name = self.bucket_name
         )
+    }
+}
+
+// ==================== Stale Upload Cleanup ====================
+
+/// Cleans up all stale uploads in S3 that have exceeded the timeout.
+///
+/// This is a standalone async function that can be spawned as a background task.
+async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, upload_timeout: u64) {
+    let global_prefix = match &config.prefix {
+        Some(prefix) => format!("{prefix}/_uploads"),
+        None => "_uploads".to_owned(),
+    };
+
+    // List upload directories
+    let prefix = format!("{global_prefix}/");
+    let Ok(response) = client
+        .list_objects_v2()
+        .bucket(&config.bucket_arn)
+        .prefix(&prefix)
+        .delimiter("/")
+        .send()
+        .await
+    else {
+        return;
+    };
+
+    let now = Utc::now().timestamp();
+    let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
+
+    let Some(prefixes) = response.common_prefixes else {
+        return;
+    };
+
+    for prefix in prefixes {
+        let Some(prefix_str) = prefix.prefix else {
+            continue;
+        };
+
+        // Extract upload ID from prefix (format: "_uploads/{upload_id}/")
+        let upload_id_str = prefix_str
+            .trim_start_matches(&format!("{global_prefix}/"))
+            .trim_end_matches('/');
+
+        let Ok(upload_id) = upload_id_str.parse::<UploadId>() else {
+            continue;
+        };
+
+        // Load the state to check creation time
+        let state_key = format!("{global_prefix}/{upload_id}/state.json");
+        let Ok(response) = client
+            .get_object()
+            .bucket(&config.bucket_arn)
+            .key(&state_key)
+            .send()
+            .await
+        else {
+            continue;
+        };
+
+        let Ok(data) = response.body.collect().await else {
+            continue;
+        };
+
+        let Ok(state) = serde_json::from_slice::<UploadState>(&data.into_bytes()) else {
+            continue;
+        };
+
+        // Check if the upload is stale
+        if (now - state.created_at) > timeout_secs {
+            // Abort the S3 multipart upload
+            let data_key = format!("{global_prefix}/{upload_id}/data");
+            let _unused = client
+                .abort_multipart_upload()
+                .bucket(&config.bucket_arn)
+                .key(&data_key)
+                .upload_id(&state.s3_upload_id)
+                .send()
+                .await;
+
+            // Delete state file
+            let _unused = client
+                .delete_object()
+                .bucket(&config.bucket_arn)
+                .key(&state_key)
+                .send()
+                .await;
+
+            // Delete data file
+            let _unused = client
+                .delete_object()
+                .bucket(&config.bucket_arn)
+                .key(&data_key)
+                .send()
+                .await;
+
+            // Delete all buffer chunks
+            for i in 0..state.buffer_chunk_count {
+                let chunk_key = format!("{global_prefix}/{upload_id}/chunks/{i:08}");
+                let _unused = client
+                    .delete_object()
+                    .bucket(&config.bucket_arn)
+                    .key(&chunk_key)
+                    .send()
+                    .await;
+            }
+        }
     }
 }

@@ -25,7 +25,7 @@ pub use plus::{
         recaptcha::JsonRecaptcha,
     },
     litestream::{JsonLitestream, JsonReplica},
-    oci::OciDataStore,
+    oci::{DEFAULT_UPLOAD_TIMEOUT_SECS, OciDataStore},
     rate_limiting::{JsonPublicRateLimiter, JsonRateLimiting, JsonUserRateLimiter},
     stats::JsonStats,
 };

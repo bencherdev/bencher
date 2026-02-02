@@ -89,6 +89,7 @@ impl TestServer {
             oci_storage: bencher_oci_storage::OciStorage::try_from_config(
                 None,
                 std::path::Path::new(&db_path),
+                None, // Use default upload timeout
             )
             .expect("Failed to create OCI storage"),
         };

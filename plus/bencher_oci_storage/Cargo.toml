@@ -15,6 +15,7 @@ plus = [
     "dep:aws-sdk-s3",
     "dep:bencher_json",
     "dep:bytes",
+    "dep:chrono",
     "dep:futures",
     "dep:hex",
     "dep:http",
@@ -41,6 +42,7 @@ aws-sdk-s3 = { workspace = true, optional = true }
 
 # External dependencies
 bytes = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
