@@ -107,19 +107,22 @@ impl Oci {
         println!("Checking API connectivity...");
 
         // Parse host and port from URL
+        let is_https = self.api_url.starts_with("https://");
         let url = self
             .api_url
             .trim_start_matches("http://")
             .trim_start_matches("https://");
-        let addr = if url.contains(':') {
-            url.split('/').next().unwrap_or("localhost:61016")
+        let host = url.split('/').next().unwrap_or("localhost");
+        let addr = if host.contains(':') {
+            host.to_owned()
         } else {
-            "localhost:61016"
+            let default_port = if is_https { 443 } else { 80 };
+            format!("{host}:{default_port}")
         };
 
         // Try to connect with retries
         for i in 1..=5 {
-            if TcpStream::connect(addr).is_ok() {
+            if TcpStream::connect(&addr).is_ok() {
                 println!("API is running!");
                 return Ok(());
             }
