@@ -146,6 +146,9 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - When reviewing code, also check:
   - `cargo check --no-default-features`
   - `cargo gen-types` (if the API changed at all)
+- Maximum cognitive complexity: 25
+- Use absolute paths sparingly (max 3 segments, diesel crate exempt)
+- Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
 
 ### Frontend (TypeScript)
 
