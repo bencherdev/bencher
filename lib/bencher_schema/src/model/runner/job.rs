@@ -53,21 +53,7 @@ impl QueryJob {
             .map_err(resource_not_found_err!(Job, uuid))
     }
 
-    pub fn into_json(self, runner_uuid: RunnerUuid) -> JsonJob {
-        JsonJob {
-            uuid: self.uuid,
-            status: self.status,
-            runner: Some(runner_uuid),
-            claimed: self.claimed,
-            started: self.started,
-            completed: self.completed,
-            exit_code: self.exit_code,
-            created: self.created,
-            modified: self.modified,
-        }
-    }
-
-    pub fn into_json_for_project(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
         let runner_uuid = if let Some(runner_id) = self.runner_id {
             QueryRunner::get(conn, runner_id).ok().map(|r| r.uuid)
         } else {
@@ -85,6 +71,31 @@ impl QueryJob {
             created: self.created,
             modified: self.modified,
         })
+    }
+
+    /// Alias for `into_json` for project-scoped job queries.
+    pub fn into_json_for_project(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
+        self.into_json(conn)
+    }
+
+    /// Alias for `into_json` when fetching with runner info.
+    pub fn into_json_with_runner(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
+        self.into_json(conn)
+    }
+
+    /// Convert to JSON using a known runner UUID (avoids database lookup).
+    pub fn into_json_with_known_runner(self, runner_uuid: RunnerUuid) -> JsonJob {
+        JsonJob {
+            uuid: self.uuid,
+            status: self.status,
+            runner: Some(runner_uuid),
+            claimed: self.claimed,
+            started: self.started,
+            completed: self.completed,
+            exit_code: self.exit_code,
+            created: self.created,
+            modified: self.modified,
+        }
     }
 }
 

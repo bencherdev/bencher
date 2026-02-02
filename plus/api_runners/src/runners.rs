@@ -25,7 +25,7 @@ use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 
 /// Runner token prefix
-const RUNNER_TOKEN_PREFIX: &str = "bencher_runner_";
+pub const RUNNER_TOKEN_PREFIX: &str = "bencher_runner_";
 
 pub type RunnersPagination = JsonPagination<RunnersSort>;
 

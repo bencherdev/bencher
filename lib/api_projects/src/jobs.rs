@@ -129,11 +129,11 @@ async fn get_ls_inner(
         (&query_project, &pagination_params, &query_params)
     ))?;
 
-    let conn = public_conn!(context, public_user);
-    let json_jobs = jobs
-        .into_iter()
-        .map(|job| job.into_json_for_project(conn))
-        .collect::<Result<Vec<_>, _>>()?;
+    let json_jobs = public_conn!(context, public_user, |conn| {
+        jobs.into_iter()
+            .map(|job| job.into_json_with_runner(conn))
+            .collect::<Result<Vec<_>, _>>()?
+    });
 
     // Build query again for count
     let mut count_query = schema::job::table

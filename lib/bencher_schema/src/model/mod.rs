@@ -1,5 +1,6 @@
 pub mod organization;
 pub mod project;
+#[cfg(feature = "plus")]
 pub mod runner;
 pub mod server;
 pub mod user;
