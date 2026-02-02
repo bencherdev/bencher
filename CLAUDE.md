@@ -137,6 +137,17 @@ sqlite3 services/api/data/bencher.db
 
 If a database migration is already part of the `cloud` branch, then it has already been applied to production.
 
+## Database Access
+
+In the Rust code there are three macros used to access the database:
+
+1. `public_conn!()` - For read-only public access
+   1. This optionally takes in a `PublicUser`
+2. `auth_conn!()` - For read-only authenticated access
+3. `write_conn!()` - For single writer access
+
+All of these macros have a single-use and expanded closure-like form for use multiple times in the same scope.
+
 ## Docker
 
 ```bash
