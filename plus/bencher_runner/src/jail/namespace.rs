@@ -4,13 +4,23 @@ use nix::sched::{unshare, CloneFlags};
 
 use crate::RunnerError;
 
-/// Create new namespaces for isolation.
+/// Create new user namespace for isolation.
 ///
-/// Creates: user, mount, network, UTS, IPC namespaces.
+/// This must be called BEFORE setup_uid_gid_mapping(), and the UID/GID mapping
+/// must be set up BEFORE creating other namespaces (mount, network, etc.).
+pub fn create_user_namespace() -> Result<(), RunnerError> {
+    unshare(CloneFlags::CLONE_NEWUSER)
+        .map_err(|e| RunnerError::Jail(format!("unshare user namespace failed: {e}")))?;
+    Ok(())
+}
+
+/// Create remaining namespaces after UID/GID mapping is set up.
+///
+/// Creates: mount, network, UTS, IPC namespaces.
 /// Does NOT create PID namespace (not needed for VMM, would require fork).
-pub fn create_namespaces() -> Result<(), RunnerError> {
-    let flags = CloneFlags::CLONE_NEWUSER
-        | CloneFlags::CLONE_NEWNS
+/// Must be called AFTER setup_uid_gid_mapping().
+pub fn create_other_namespaces() -> Result<(), RunnerError> {
+    let flags = CloneFlags::CLONE_NEWNS
         | CloneFlags::CLONE_NEWNET
         | CloneFlags::CLONE_NEWUTS
         | CloneFlags::CLONE_NEWIPC;

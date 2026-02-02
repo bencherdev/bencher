@@ -10,8 +10,9 @@
 use camino::Utf8PathBuf;
 
 use crate::jail::{
-    apply_rlimits, create_namespaces, do_pivot_root, drop_capabilities,
-    mount_essential_filesystems, set_no_new_privs, setup_uid_gid_mapping, ResourceLimits,
+    apply_rlimits, create_other_namespaces, create_user_namespace, do_pivot_root,
+    drop_capabilities, mount_essential_filesystems, set_no_new_privs, setup_uid_gid_mapping,
+    ResourceLimits,
 };
 use crate::RunnerError;
 
@@ -61,28 +62,33 @@ pub struct VmmConfig {
 ///
 /// Results are printed to stdout.
 pub fn run_vmm(config: &VmmConfig) -> Result<(), RunnerError> {
-    // Step 1: Create namespaces (user, mount, network, etc.)
-    create_namespaces()?;
+    // Step 1: Create user namespace first (required before setting up UID/GID mapping)
+    create_user_namespace()?;
 
     // Step 2: Set up UID/GID mapping (run as root inside the namespace)
+    // This must be done BEFORE creating other namespaces like mount/network
     setup_uid_gid_mapping()?;
 
-    // Step 3: Pivot root to the jail
+    // Step 3: Create remaining namespaces (mount, network, UTS, IPC)
+    // Now that we have CAP_SYS_ADMIN in the user namespace, these will work
+    create_other_namespaces()?;
+
+    // Step 4: Pivot root to the jail
     do_pivot_root(&config.jail_root)?;
 
-    // Step 4: Mount essential filesystems (/proc, /dev)
+    // Step 5: Mount essential filesystems (/proc, /dev)
     mount_essential_filesystems()?;
 
-    // Step 5: Apply rlimits
+    // Step 6: Apply rlimits
     apply_rlimits(&config.limits)?;
 
-    // Step 6: Set PR_SET_NO_NEW_PRIVS
+    // Step 7: Set PR_SET_NO_NEW_PRIVS
     set_no_new_privs()?;
 
-    // Step 7: Drop all capabilities
+    // Step 8: Drop all capabilities
     drop_capabilities()?;
 
-    // Step 8 & 9: Create VMM config and run
+    // Step 9 & 10: Create VMM config and run
     // The VMM will apply its own seccomp filters
     let vm_config = bencher_vmm::VmConfig {
         kernel_path: config.kernel_path.clone(),

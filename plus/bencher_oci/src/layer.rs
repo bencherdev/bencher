@@ -2,10 +2,11 @@
 
 use std::fs::File;
 use std::io::{BufReader, Read};
+use std::path::PathBuf;
 
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
-use tar::Archive;
+use tar::{Archive, EntryType};
 
 use crate::error::OciError;
 
@@ -54,7 +55,18 @@ pub fn extract_layer(
     Ok(())
 }
 
+/// A deferred hard link to create after all regular files are extracted.
+struct DeferredHardLink {
+    /// Path to create the link at.
+    link_path: PathBuf,
+    /// Path the link should point to.
+    link_target: PathBuf,
+}
+
 /// Extract a tar archive to a directory.
+///
+/// Hard links are deferred until after all regular files are extracted,
+/// since the link target might appear later in the archive.
 fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError> {
     let mut archive = Archive::new(reader);
 
@@ -62,6 +74,9 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
     archive.set_overwrite(true);
     archive.set_preserve_permissions(true);
     archive.set_unpack_xattrs(true);
+
+    // Collect hard links to create after all regular files are extracted
+    let mut deferred_hardlinks: Vec<DeferredHardLink> = Vec::new();
 
     for entry in archive.entries()? {
         let mut entry = entry?;
@@ -75,7 +90,6 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
             continue;
         }
 
-        // Extract the entry
         let target_path = target_dir.join(path.to_string_lossy().as_ref());
 
         // Create parent directories if needed
@@ -83,8 +97,32 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
             std::fs::create_dir_all(parent)?;
         }
 
+        // Check if this is a hard link - defer it for later
+        if entry.header().entry_type() == EntryType::Link {
+            if let Ok(Some(link_name)) = entry.link_name() {
+                let link_target = target_dir.join(link_name.to_string_lossy().as_ref());
+                deferred_hardlinks.push(DeferredHardLink {
+                    link_path: target_path.into_std_path_buf(),
+                    link_target: link_target.into_std_path_buf(),
+                });
+            }
+            continue;
+        }
+
+        // Extract regular files, directories, symlinks, etc.
         entry.unpack(&target_path).map_err(|e| {
             OciError::LayerExtraction(format!("Failed to extract {}: {e}", path.display()))
+        })?;
+    }
+
+    // Now create all deferred hard links
+    for hardlink in deferred_hardlinks {
+        std::fs::hard_link(&hardlink.link_target, &hardlink.link_path).map_err(|e| {
+            OciError::LayerExtraction(format!(
+                "Failed to create hard link from {} to {}: {e}",
+                hardlink.link_target.display(),
+                hardlink.link_path.display()
+            ))
         })?;
     }
 
