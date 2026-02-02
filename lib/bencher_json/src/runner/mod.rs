@@ -1,13 +1,18 @@
-use bencher_valid::{DateTime, ResourceName, Slug};
+use bencher_valid::{DateTime, ResourceId, ResourceName, Secret, Slug};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub mod job;
 
-pub use job::{JobStatus, JobUuid, JsonJob, JsonUpdateJob, JsonUpdateJobResponse};
+pub use job::{JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonUpdateJob, JsonUpdateJobResponse};
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);
+crate::typed_slug::typed_slug!(RunnerSlug, ResourceName);
+
+/// A runner UUID or slug.
+#[typeshare::typeshare]
+pub type RunnerResourceId = ResourceId<RunnerUuid, RunnerSlug>;
 
 /// Runner state
 #[typeshare::typeshare]
@@ -85,4 +90,49 @@ pub struct JsonRunner {
     pub last_heartbeat: Option<DateTime>,
     pub created: DateTime,
     pub modified: DateTime,
+}
+
+/// List of runners
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRunners(pub Vec<JsonRunner>);
+
+crate::from_vec!(JsonRunners[JsonRunner]);
+
+/// Create a new runner
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonNewRunner {
+    /// The name of the runner.
+    pub name: ResourceName,
+    /// The preferred slug for the runner.
+    /// If not provided, the slug will be generated from the name.
+    pub slug: Option<Slug>,
+}
+
+/// Runner token response (returned on create or rotate)
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRunnerToken {
+    pub uuid: RunnerUuid,
+    /// The runner token. Only shown once - store it securely!
+    pub token: Secret,
+}
+
+/// Update a runner
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateRunner {
+    /// The new name for the runner.
+    pub name: Option<ResourceName>,
+    /// The new slug for the runner.
+    pub slug: Option<Slug>,
+    /// Lock the runner (set to current time) or unlock (set to null).
+    pub locked: Option<Option<DateTime>>,
+    /// Archive the runner (set to current time) or unarchive (set to null).
+    pub archived: Option<Option<DateTime>>,
 }
