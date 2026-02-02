@@ -206,10 +206,11 @@ pub struct Job {
 ```
 
 The claim endpoint:
-1. Finds pending jobs across all projects where `required_labels` ⊆ runner's `labels`
-2. Atomically updates job status to `claimed`, sets `runner_id` and `claimed`
-3. If no matching jobs, holds connection open until timeout or job arrives
-4. Returns job (including project context) or empty response on timeout
+1. Applies IP-based rate limiting to prevent abuse of long-polling
+2. Finds pending jobs across all projects where `required_labels` ⊆ runner's `labels`
+3. Atomically updates job status to `claimed`, sets `runner_id` and `claimed`
+4. If no matching jobs, holds connection open until timeout or job arrives
+5. Returns job (including project context) or empty response on timeout
 
 ### PATCH /v0/runners/{runner}/jobs/{job} - Update Job Status
 
@@ -384,9 +385,9 @@ Runner tokens use random bytes with a prefix (not JWTs):
 
 ```rust
 // Generation (only done once, at runner creation)
-let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-let token = format!("bencher_runner_{}", base62_encode(&random_bytes));
-// Example: bencher_runner_7kX9mQ2nLp4RtYvW8sZxCbNdEfGhJk3M
+let random_bytes: [u8; 32] = rand::random();
+let token = format!("bencher_runner_{}", hex::encode(&random_bytes));
+// Example: bencher_runner_a1b2c3d4e5f6...
 
 // Storage (only the hash is stored, never the token itself)
 let token_hash = sha256(token.as_bytes());

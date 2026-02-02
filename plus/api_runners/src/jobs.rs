@@ -61,9 +61,19 @@ pub async fn runner_jobs_post(
     path_params: Path<RunnerJobsParams>,
     body: TypedBody<JsonClaimJob>,
 ) -> Result<ResponseOk<Option<JsonJob>>, HttpError> {
+    let context = rqctx.context();
+
+    // IP-based rate limiting
+    #[cfg(feature = "plus")]
+    if let Some(remote_ip) =
+        bencher_schema::context::RateLimiting::remote_ip(&rqctx.log, rqctx.request.headers())
+    {
+        context.rate_limiting.public_request(remote_ip)?;
+    }
+
     let path_params = path_params.into_inner();
     let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
-    let json = claim_job_inner(rqctx.context(), runner_token, body.into_inner()).await?;
+    let json = claim_job_inner(context, runner_token, body.into_inner()).await?;
     Ok(Post::auth_response_ok(json))
 }
 
