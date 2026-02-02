@@ -8,6 +8,7 @@ use serde_json as _;
 #[cfg(test)]
 use tokio as _;
 
+mod channel;
 mod jobs;
 mod runner_token;
 mod runners;
@@ -44,6 +45,9 @@ impl bencher_endpoint::Registrar for Api {
         }
         api_description.register(jobs::runner_jobs_post)?;
         api_description.register(jobs::runner_job_patch)?;
+
+        // WebSocket channel for job execution
+        api_description.register(channel::runner_job_channel)?;
 
         Ok(())
     }

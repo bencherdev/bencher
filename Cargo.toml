@@ -149,6 +149,7 @@ tempfile = "3"
 thiserror = "2.0"
 tokio = "1.48"
 tokio-rustls = {version =  "0.26", default-features = false, features = ["logging", "tls12", "ring"]}
+tokio-tungstenite = "0.26"
 tokio-util = { version = "0.7", features = ["io"] }
 typeshare = "1.0"
 url = "2.5"
