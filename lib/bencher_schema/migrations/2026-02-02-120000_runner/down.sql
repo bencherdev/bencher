@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS index_job_pending;
+DROP TABLE IF EXISTS job;
+DROP TABLE IF EXISTS runner;
