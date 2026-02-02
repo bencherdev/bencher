@@ -4545,6 +4545,215 @@
         }
       }
     },
+    "/v0/projects/{project}/jobs": {
+      "get": {
+        "tags": [
+          "projects",
+          "jobs"
+        ],
+        "summary": "List jobs for a project",
+        "description": "List all jobs for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the jobs are sorted by creation date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of jobs.",
+        "operationId": "proj_jobs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/ProjJobsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "description": "Filter by job status.",
+            "schema": {
+              "$ref": "#/components/schemas/JobStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonJobs"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/jobs/{job}": {
+      "get": {
+        "tags": [
+          "projects",
+          "jobs"
+        ],
+        "summary": "View a job",
+        "description": "View a job for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "operationId": "proj_job_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "description": "The UUID for a job.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JobUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonJob"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/measures": {
       "get": {
         "tags": [
@@ -7291,6 +7500,625 @@
         }
       }
     },
+    "/v0/runners": {
+      "get": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "List runners",
+        "description": "List all runners on the server. The user must be an admin to use this endpoint.",
+        "operationId": "runners_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/RunnersSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "Include archived runners.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "description": "Filter by runner name, exact match.",
+            "schema": {
+              "$ref": "#/components/schemas/ResourceName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "description": "Search by runner name, slug, or UUID.",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRunners"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "Create a runner",
+        "description": "Create a new runner on the server. The user must be an admin to use this endpoint. Returns the runner token which is only shown once.",
+        "operationId": "runners_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewRunner"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRunnerToken"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/runners/{runner}": {
+      "get": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "View a runner",
+        "description": "View a runner on the server. The user must be an admin to use this endpoint.",
+        "operationId": "runner_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRunner"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "Update a runner",
+        "description": "Update a runner on the server. The user must be an admin to use this endpoint. Can be used to lock, unlock, archive, or unarchive a runner.",
+        "operationId": "runner_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateRunner"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRunner"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/runners/{runner}/jobs": {
+      "post": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "Claim a job",
+        "description": "Long-poll to claim a pending job for execution. Authenticated via runner token. Returns a job if one is available, or empty response on timeout.",
+        "operationId": "runner_jobs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonClaimJob"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonJob"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/runners/{runner}/jobs/{job}": {
+      "patch": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "Update job status",
+        "description": "Update the status of a job being executed. Authenticated via runner token. Used to mark jobs as running, completed, or failed.",
+        "operationId": "runner_job_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "description": "The UUID for a job.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JobUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateJob"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUpdateJobResponse"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/runners/{runner}/token": {
+      "post": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "Rotate runner token",
+        "description": "Generate a new token for a runner, invalidating the old one. The user must be an admin to use this endpoint. Returns the new token which is only shown once.",
+        "operationId": "runner_token_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRunnerToken"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/server/backup": {
       "post": {
         "tags": [
@@ -9626,6 +10454,22 @@
         "format": "uint32",
         "minimum": 0
       },
+      "JobStatus": {
+        "description": "Job status",
+        "type": "string",
+        "enum": [
+          "pending",
+          "claimed",
+          "running",
+          "completed",
+          "failed",
+          "canceled"
+        ]
+      },
+      "JobUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "JsonAccept": {
         "type": "object",
         "properties": {
@@ -9978,6 +10822,19 @@
           "url"
         ]
       },
+      "JsonClaimJob": {
+        "description": "Request to claim a job (runner agent endpoint)",
+        "type": "object",
+        "properties": {
+          "poll_timeout": {
+            "description": "Maximum time to wait for a job (long-poll), in seconds. Max 60.",
+            "default": 30,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        }
+      },
       "JsonCloud": {
         "type": "object",
         "properties": {
@@ -10304,6 +11161,74 @@
           "bing",
           "google"
         ]
+      },
+      "JsonJob": {
+        "description": "A benchmark job",
+        "type": "object",
+        "properties": {
+          "claimed": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "completed": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "exit_code": {
+            "nullable": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "runner": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RunnerUuid"
+              }
+            ]
+          },
+          "started": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/JobUuid"
+          }
+        },
+        "required": [
+          "created",
+          "modified",
+          "status",
+          "uuid"
+        ]
+      },
+      "JsonJobs": {
+        "description": "A list of jobs",
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonJob"
+        }
       },
       "JsonLicense": {
         "type": "object",
@@ -11181,6 +12106,32 @@
           "end_time",
           "results",
           "start_time"
+        ]
+      },
+      "JsonNewRunner": {
+        "description": "Create a new runner",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "The name of the runner.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "description": "The preferred slug for the runner. If not provided, the slug will be generated from the name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
         ]
       },
       "JsonNewSso": {
@@ -12837,6 +13788,90 @@
           }
         }
       },
+      "JsonRunner": {
+        "description": "A benchmark runner",
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "last_heartbeat": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "locked": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "modified": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "state": {
+            "$ref": "#/components/schemas/RunnerState"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/RunnerUuid"
+          }
+        },
+        "required": [
+          "created",
+          "modified",
+          "name",
+          "slug",
+          "state",
+          "uuid"
+        ]
+      },
+      "JsonRunnerToken": {
+        "description": "Runner token response (returned on create or rotate)",
+        "type": "object",
+        "properties": {
+          "token": {
+            "description": "The runner token. Only shown once - store it securely!",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/RunnerUuid"
+          }
+        },
+        "required": [
+          "token",
+          "uuid"
+        ]
+      },
+      "JsonRunners": {
+        "description": "List of runners",
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonRunner"
+        }
+      },
       "JsonSecurity": {
         "type": "object",
         "properties": {
@@ -13675,6 +14710,57 @@
           "config"
         ]
       },
+      "JsonUpdateJob": {
+        "description": "Update job status (runner agent endpoint)",
+        "type": "object",
+        "properties": {
+          "exit_code": {
+            "nullable": true,
+            "description": "Exit code (required for completed/failed)",
+            "type": "integer",
+            "format": "int32"
+          },
+          "output": {
+            "nullable": true,
+            "description": "Combined or additional output",
+            "type": "string"
+          },
+          "status": {
+            "description": "New job status (running, completed, failed)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobStatus"
+              }
+            ]
+          },
+          "stderr": {
+            "nullable": true,
+            "description": "Standard error",
+            "type": "string"
+          },
+          "stdout": {
+            "nullable": true,
+            "description": "Standard output",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "JsonUpdateJobResponse": {
+        "description": "Response to job update",
+        "type": "object",
+        "properties": {
+          "canceled": {
+            "description": "If true, job was canceled - runner should stop execution",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "canceled"
+        ]
+      },
       "JsonUpdateMeasure": {
         "type": "object",
         "properties": {
@@ -13816,6 +14902,48 @@
             "$ref": "#/components/schemas/JsonProjectPatchNull"
           }
         ]
+      },
+      "JsonUpdateRunner": {
+        "description": "Update a runner",
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "description": "Archive the runner (set to current time) or unarchive (set to null).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "locked": {
+            "nullable": true,
+            "description": "Lock the runner (set to current time) or unlock (set to null).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "name": {
+            "nullable": true,
+            "description": "The new name for the runner.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "description": "The new slug for the runner.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          }
+        }
       },
       "JsonUpdateStartPoint": {
         "type": "object",
@@ -14378,6 +15506,19 @@
           "type": "string"
         }
       },
+      "RunnerState": {
+        "description": "Runner state",
+        "type": "string",
+        "enum": [
+          "offline",
+          "idle",
+          "running"
+        ]
+      },
+      "RunnerUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "SampleSize": {
         "type": "integer",
         "format": "uint32",
@@ -14698,6 +15839,17 @@
           }
         ]
       },
+      "ProjJobsSort": {
+        "oneOf": [
+          {
+            "description": "Sort by creation date time.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          }
+        ]
+      },
       "ProjMeasuresSort": {
         "oneOf": [
           {
@@ -14774,6 +15926,17 @@
           }
         ]
       },
+      "RunnersSort": {
+        "oneOf": [
+          {
+            "description": "Sort by runner name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
+        ]
+      },
       "BooleanParam": {
         "description": "Optional boolean parameter",
         "type": "boolean"
@@ -14838,6 +16001,9 @@
       "name": "checkout"
     },
     {
+      "name": "jobs"
+    },
+    {
       "name": "measures",
       "description": "Measures"
     },
@@ -14881,6 +16047,9 @@
     {
       "name": "run",
       "description": "Run"
+    },
+    {
+      "name": "runners"
     },
     {
       "name": "server",
