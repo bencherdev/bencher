@@ -46,6 +46,7 @@ pub struct TagsListResponse {
     method = OPTIONS,
     path = "/v2/{name}/tags/list",
     tags = ["oci"],
+    unpublished = true,
 }]
 pub async fn oci_tags_options(
     _rqctx: RequestContext<ApiContext>,

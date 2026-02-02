@@ -688,6 +688,47 @@
         }
       }
     },
+    "/v0/auth/oci/token": {
+      "get": {
+        "tags": [
+          "auth",
+          "oci"
+        ],
+        "summary": "OCI token endpoint",
+        "description": "Authenticates users via Basic auth (email:bencher-api-token) and returns a short-lived JWT for OCI operations.",
+        "operationId": "auth_oci_token_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "description": "Scope in format \"repository:name:action,action\" e.g., \"repository:org/project:pull,push\"",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "service",
+            "description": "Service identifier (e.g., \"registry.bencher.dev\") Not currently used but accepted for OCI spec compliance",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/v0/auth/signup": {
       "post": {
         "tags": [
@@ -8650,6 +8691,777 @@
           }
         }
       }
+    },
+    "/v2": {
+      "get": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "OCI API version check endpoint",
+        "description": "Returns 200 OK if authenticated and the registry implements the OCI Distribution Spec. Returns 401 Unauthorized with WWW-Authenticate header if not authenticated.",
+        "operationId": "oci_base",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/{name}/blobs/{ref}": {
+      "get": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Download a blob (GET)",
+        "description": "Streams the blob content rather than loading it entirely into memory, making this suitable for large container image layers.",
+        "operationId": "oci_blob_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Reference - either a digest (e.g., \"sha256:abc123...\") or \"uploads\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)",
+        "description": "Authentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
+        "operationId": "oci_upload_monolithic",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Reference - either a digest (e.g., \"sha256:abc123...\") or \"uploads\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "digest",
+            "description": "Expected digest of the complete blob",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Start a new blob upload (POST to /v2/{name}/blobs/uploads)",
+        "description": "Authentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
+        "operationId": "oci_upload_start",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Reference - either a digest (e.g., \"sha256:abc123...\") or \"uploads\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "digest",
+            "description": "Digest of blob to mount from another repository",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "description": "Source repository for cross-repo mount",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Delete a blob (DELETE)",
+        "operationId": "oci_blob_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Reference - either a digest (e.g., \"sha256:abc123...\") or \"uploads\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Check if a blob exists (HEAD) or start upload check",
+        "operationId": "oci_blob_exists",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Reference - either a digest (e.g., \"sha256:abc123...\") or \"uploads\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/{name}/blobs/{ref}/{session_id}": {
+      "get": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Get upload status",
+        "operationId": "oci_upload_status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Must be \"uploads\" for upload operations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "description": "Upload session ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Complete an upload (with digest verification)",
+        "operationId": "oci_upload_complete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Must be \"uploads\" for upload operations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "description": "Upload session ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "digest",
+            "description": "Expected digest of the complete blob",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Cancel an upload",
+        "operationId": "oci_upload_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Must be \"uploads\" for upload operations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "description": "Upload session ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Upload a chunk of data",
+        "operationId": "oci_upload_chunk",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "description": "Must be \"uploads\" for upload operations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "description": "Upload session ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/{name}/manifests/{reference}": {
+      "get": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Download a manifest",
+        "operationId": "oci_manifest_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reference",
+            "description": "Reference (tag or digest)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Upload a manifest",
+        "description": "Authentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
+        "operationId": "oci_manifest_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reference",
+            "description": "Reference (tag or digest)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Delete a manifest",
+        "operationId": "oci_manifest_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reference",
+            "description": "Reference (tag or digest)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "Check if a manifest exists",
+        "operationId": "oci_manifest_exists",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reference",
+            "description": "Reference (tag or digest)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/{name}/referrers/{digest}": {
+      "get": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "List referrers to a manifest",
+        "description": "Returns an image index containing descriptors of all manifests that reference the specified digest via their `subject` field.",
+        "operationId": "oci_referrers_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "digest",
+            "description": "Digest of the manifest to find referrers for",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "artifactType",
+            "description": "Filter by artifact type",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/{name}/tags/list": {
+      "get": {
+        "tags": [
+          "oci"
+        ],
+        "summary": "List tags for a repository",
+        "operationId": "oci_tags_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Project resource ID (UUID or slug)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "last",
+            "description": "Last tag from previous response (for pagination)",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "n",
+            "description": "Number of tags to return",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagsListResponse"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10649,6 +11461,30 @@
           "user"
         ]
       },
+      "JsonOci": {
+        "description": "OCI Registry configuration",
+        "type": "object",
+        "properties": {
+          "data_store": {
+            "description": "S3 storage configuration for OCI registry",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OciDataStore"
+              }
+            ]
+          },
+          "upload_timeout": {
+            "description": "Upload session timeout in seconds. Uploads older than this are cleaned up when new uploads start. Defaults to 3600 (1 hour).",
+            "default": 3600,
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "data_store"
+        ]
+      },
       "JsonOneMetric": {
         "type": "object",
         "properties": {
@@ -11242,6 +12078,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonLitestream"
+              }
+            ]
+          },
+          "oci": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonOci"
               }
             ]
           },
@@ -13443,6 +14287,38 @@
       "NonEmpty": {
         "type": "string"
       },
+      "OciDataStore": {
+        "description": "OCI Registry storage backend",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "access_key_id": {
+                "type": "string"
+              },
+              "access_point": {
+                "description": "S3 Access Point ARN with optional path prefix Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/oci-path]",
+                "type": "string"
+              },
+              "secret_access_key": {
+                "$ref": "#/components/schemas/Secret"
+              },
+              "service": {
+                "type": "string",
+                "enum": [
+                  "aws_s3"
+                ]
+              }
+            },
+            "required": [
+              "access_key_id",
+              "access_point",
+              "secret_access_key",
+              "service"
+            ]
+          }
+        ]
+      },
       "OrganizationRole": {
         "oneOf": [
           {
@@ -13608,6 +14484,27 @@
       "SsoUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "TagsListResponse": {
+        "description": "Response for tags list",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Repository name",
+            "type": "string"
+          },
+          "tags": {
+            "description": "List of tags",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "tags"
+        ]
       },
       "TestbedSlug": {
         "$ref": "#/components/schemas/Slug"
@@ -14011,6 +14908,9 @@
     {
       "name": "models",
       "description": "Models"
+    },
+    {
+      "name": "oci"
     },
     {
       "name": "organizations",

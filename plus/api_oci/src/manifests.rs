@@ -35,6 +35,7 @@ pub struct ManifestPath {
     method = OPTIONS,
     path = "/v2/{name}/manifests/{reference}",
     tags = ["oci"],
+    unpublished = true,
 }]
 pub async fn oci_manifest_options(
     _rqctx: RequestContext<ApiContext>,

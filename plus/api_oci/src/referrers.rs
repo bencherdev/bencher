@@ -42,6 +42,7 @@ pub struct ReferrersQuery {
     method = OPTIONS,
     path = "/v2/{name}/referrers/{digest}",
     tags = ["oci"],
+    unpublished = true,
 }]
 pub async fn oci_referrers_options(
     _rqctx: RequestContext<ApiContext>,

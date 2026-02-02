@@ -57,6 +57,7 @@ pub struct MonolithicUploadQuery {
     method = OPTIONS,
     path = "/v2/{name}/blobs/{ref}",
     tags = ["oci"],
+    unpublished = true,
 }]
 pub async fn oci_blob_options(
     _rqctx: RequestContext<ApiContext>,

@@ -17,6 +17,7 @@ use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate};
     method = OPTIONS,
     path = "/v2/",
     tags = ["oci"],
+    unpublished = true,
 }]
 pub async fn oci_base_options(
     _rqctx: RequestContext<ApiContext>,

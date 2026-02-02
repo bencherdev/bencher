@@ -63,6 +63,7 @@ fn validate_uploads_ref(reference: &str) -> Result<(), HttpError> {
     method = OPTIONS,
     path = "/v2/{name}/blobs/{ref}/{session_id}",
     tags = ["oci"],
+    unpublished = true,
 }]
 pub async fn oci_upload_session_options(
     _rqctx: RequestContext<ApiContext>,
