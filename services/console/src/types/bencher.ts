@@ -42,6 +42,32 @@ export type Index = number;
 
 export type Iteration = number;
 
+/** Job status */
+export enum JobStatus {
+	Pending = "pending",
+	Claimed = "claimed",
+	Running = "running",
+	Completed = "completed",
+	Failed = "failed",
+	Canceled = "canceled",
+}
+
+/** A benchmark job */
+export interface JsonJob {
+	uuid: JobUuid;
+	status: JobStatus;
+	runner?: RunnerUuid;
+	claimed?: string;
+	started?: string;
+	completed?: string;
+	exit_code?: number;
+	created: string;
+	modified: string;
+}
+
+/** A list of jobs */
+export type JsonJobs = JsonJob[];
+
 /** A measure UUID, slug, or name. */
 export type MeasureNameId = Uuid | Slug | string;
 
@@ -224,6 +250,31 @@ export type JsonReportResults = JsonReportIteration[];
 
 export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
+export type Slug = string;
+
+/** Runner state */
+export enum RunnerState {
+	Offline = "offline",
+	Idle = "idle",
+	Running = "running",
+}
+
+/** A benchmark runner */
+export interface JsonRunner {
+	uuid: RunnerUuid;
+	name: ResourceName;
+	slug: string;
+	state: RunnerState;
+	locked?: string;
+	archived?: string;
+	last_heartbeat?: string;
+	created: string;
+	modified: string;
+}
+
+/** List of runners */
+export type JsonRunners = JsonRunner[];
+
 export type Jwt = string;
 
 export type LastFour = string;
@@ -245,9 +296,10 @@ export type ProjectResourceId = Uuid | Slug;
 
 export type RunContext = Record<string, string>;
 
-export type Secret = string;
+/** A runner UUID or slug. */
+export type RunnerResourceId = Uuid | Slug;
 
-export type Slug = string;
+export type Secret = string;
 
 /** A testbed UUID, slug, or name. */
 export type TestbedNameId = Uuid | Slug | string;
@@ -309,6 +361,12 @@ export interface JsonCardDetails {
 export interface JsonCheckout {
 	session: string;
 	url: string;
+}
+
+/** Request to claim a job (runner agent endpoint) */
+export interface JsonClaimJob {
+	/** Maximum time to wait for a job (long-poll), in seconds. Max 60. */
+	poll_timeout: number;
 }
 
 export interface JsonConfirm {
@@ -462,6 +520,17 @@ export interface JsonNewProject {
 	 * Creating a `private` project requires a valid Bencher Plus subscription.
 	 */
 	visibility?: Visibility;
+}
+
+/** Create a new runner */
+export interface JsonNewRunner {
+	/** The name of the runner. */
+	name: ResourceName;
+	/**
+	 * The preferred slug for the runner.
+	 * If not provided, the slug will be generated from the name.
+	 */
+	slug?: string;
 }
 
 export interface JsonNewSso {
@@ -682,6 +751,13 @@ export interface JsonReport {
 	created: string;
 }
 
+/** Runner token response (returned on create or rotate) */
+export interface JsonRunnerToken {
+	uuid: RunnerUuid;
+	/** The runner token. Only shown once - store it securely! */
+	token: Secret;
+}
+
 export interface JsonSignup {
 	name: UserName;
 	slug?: Slug;
@@ -713,6 +789,38 @@ export enum UpdateAlertStatus {
 export interface JsonUpdateAlert {
 	/** The new status of the alert. */
 	status?: UpdateAlertStatus;
+}
+
+/** Update job status (runner agent endpoint) */
+export interface JsonUpdateJob {
+	/** New job status (running, completed, failed) */
+	status: JobStatus;
+	/** Exit code (required for completed/failed) */
+	exit_code?: number;
+	/** Standard output */
+	stdout?: string;
+	/** Standard error */
+	stderr?: string;
+	/** Combined or additional output */
+	output?: string;
+}
+
+/** Response to job update */
+export interface JsonUpdateJobResponse {
+	/** If true, job was canceled - runner should stop execution */
+	canceled: boolean;
+}
+
+/** Update a runner */
+export interface JsonUpdateRunner {
+	/** The new name for the runner. */
+	name?: ResourceName;
+	/** The new slug for the runner. */
+	slug?: string;
+	/** Lock the runner (set to current time) or unlock (set to null). */
+	locked?: string | null;
+	/** Archive the runner (set to current time) or unarchive (set to null). */
+	archived?: string | null;
 }
 
 export interface JsonUpdateUser {
