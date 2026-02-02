@@ -268,6 +268,8 @@ fn handle_vcpu_exit(
                 VmmError::Device("Failed to lock device manager".to_owned())
             })?;
             dm.handle_mmio_read(addr, data);
+            // Check if timer interrupt should fire
+            dm.check_timer();
             Ok(VmExitAction::Continue)
         }
 
@@ -345,7 +347,15 @@ fn handle_vcpu_exit(
             if count < 20 || count % 1000 == 0 {
                 eprintln!("[VMM] Exit #{count}: {other:?}");
             }
-            // Unknown exit, continue for now
+            // Check timer on every unknown exit
+            let mut dm = devices.lock().map_err(|_| {
+                VmmError::Device("Failed to lock device manager".to_owned())
+            })?;
+            dm.check_timer();
+            // Collect any serial output
+            let output = dm.get_serial_output();
+            serial_output.extend(output);
+
             Ok(VmExitAction::Continue)
         }
     }

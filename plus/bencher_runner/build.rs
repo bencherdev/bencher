@@ -90,14 +90,15 @@ fn find_init_binary() -> Option<PathBuf> {
         }
 
         // Check various possible locations
+        // Prefer musl target (statically linked) over native/gnu (dynamically linked)
         let candidates = [
-            // Same profile, no target triple (native build)
-            workspace_root.join("target").join(&profile).join("bencher-init"),
-            // With musl target
+            // With musl target (preferred - statically linked)
             workspace_root.join("target")
                 .join(format!("{target_arch}-unknown-linux-musl"))
                 .join(&profile)
                 .join("bencher-init"),
+            // Same profile, no target triple (native build)
+            workspace_root.join("target").join(&profile).join("bencher-init"),
             // With gnu target
             workspace_root.join("target")
                 .join(format!("{target_arch}-unknown-linux-gnu"))
