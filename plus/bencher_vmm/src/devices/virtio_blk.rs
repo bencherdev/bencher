@@ -255,9 +255,10 @@ impl VirtioBlkDevice {
     }
 
     /// Write to MMIO registers.
-    pub fn write(&mut self, offset: u64, data: &[u8]) {
+    /// Returns true if an interrupt should be injected to the guest.
+    pub fn write(&mut self, offset: u64, data: &[u8]) -> bool {
         if data.len() < 4 {
-            return;
+            return false;
         }
 
         let value = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
@@ -285,12 +286,17 @@ impl VirtioBlkDevice {
             regs::QUEUE_READY => {
                 if value == 1 {
                     self.activate_queue();
+                    eprintln!("[VIRTIO-BLK] Queue activated: desc={:#x} avail={:#x} used={:#x} size={}",
+                        self.queue_desc, self.queue_avail, self.queue_used, self.queue_num);
                 }
                 self.queue_ready = value == 1;
             }
             regs::QUEUE_NOTIFY => {
                 // Guest is notifying us that there's work to do
-                self.process_queue();
+                let processed = self.process_queue();
+                if processed {
+                    return true; // Signal that interrupt should be injected
+                }
             }
             regs::INTERRUPT_ACK => {
                 self.interrupt_status &= !value;
@@ -321,6 +327,8 @@ impl VirtioBlkDevice {
             }
             _ => {}
         }
+
+        false
     }
 
     /// Activate the queue with the configured addresses.
@@ -342,53 +350,81 @@ impl VirtioBlkDevice {
     }
 
     /// Process all available requests in the queue.
-    fn process_queue(&mut self) {
+    /// Returns true if any requests were processed (interrupt should be injected).
+    pub fn process_queue(&mut self) -> bool {
         // Clone the Arc to avoid borrowing self while processing
         let Some(mem_arc) = self.guest_memory.clone() else {
-            return;
+            return false;
         };
 
         let mem = mem_arc.as_ref();
+        let mut processed_any = false;
 
         // Process all available descriptor chains
-        while let Some(mut chain) = self.queue.pop_descriptor_chain(mem) {
+        while let Some(chain) = self.queue.pop_descriptor_chain(mem) {
+            processed_any = true;
             let head_index = chain.head_index();
             let mut bytes_written = 0u32;
             let mut status = status::VIRTIO_BLK_S_OK;
 
-            // Read the request header from the first descriptor
-            let header = match self.read_request_header(&chain, mem) {
+            // Collect all descriptors to find header, data, and status
+            let descriptors: Vec<_> = chain.collect();
+            if descriptors.is_empty() {
+                continue;
+            }
+
+            // First descriptor is always the header
+            let header_desc = &descriptors[0];
+
+            // Read the request header
+            let header = match self.read_header_from_desc(mem, header_desc.addr()) {
                 Ok(h) => h,
                 Err(_) => {
                     status = status::VIRTIO_BLK_S_IOERR;
-                    self.complete_request(mem, head_index, 0, status);
+                    // Try to find status descriptor and complete
+                    if let Some(status_desc) = descriptors.last() {
+                        self.complete_request(mem, head_index, 0, status, status_desc.addr());
+                    }
                     continue;
                 }
             };
 
-            // Skip the header descriptor
-            let _ = chain.next();
+            // Last descriptor is the status descriptor
+            let status_desc = descriptors.last().expect("already checked non-empty");
+            let status_addr = status_desc.addr();
+
+            // Data descriptors are everything between header and status
+            let data_descriptors = if descriptors.len() > 2 {
+                &descriptors[1..descriptors.len() - 1]
+            } else {
+                &[]
+            };
 
             // Process based on request type
             match header.request_type {
                 request_type::VIRTIO_BLK_T_IN => {
                     // Read operation: read from disk to guest memory
-                    match self.handle_read(&mut chain, mem, header.sector) {
+                    match self.handle_read_descs(mem, header.sector, data_descriptors) {
                         Ok(len) => bytes_written = len,
-                        Err(_) => status = status::VIRTIO_BLK_S_IOERR,
+                        Err(e) => {
+                            eprintln!("[VIRTIO-BLK] Read error: {e}");
+                            status = status::VIRTIO_BLK_S_IOERR;
+                        }
                     }
                 }
                 request_type::VIRTIO_BLK_T_OUT => {
                     // Write operation: write from guest memory to disk
                     if self.read_only {
                         status = status::VIRTIO_BLK_S_IOERR;
-                    } else if let Err(_) = self.handle_write(&mut chain, mem, header.sector) {
+                    } else if let Err(e) = self.handle_write_descs(mem, header.sector, data_descriptors) {
+                        eprintln!("[VIRTIO-BLK] Write error: {e}");
                         status = status::VIRTIO_BLK_S_IOERR;
                     }
                 }
                 request_type::VIRTIO_BLK_T_FLUSH => {
                     // Flush operation
-                    if let Err(_) = self.file.sync_all() {
+                    if let Err(e) = self.file.sync_all() {
+                        eprintln!("[VIRTIO-BLK] Flush error: {e}");
                         status = status::VIRTIO_BLK_S_IOERR;
                     }
                 }
@@ -397,28 +433,29 @@ impl VirtioBlkDevice {
                     bytes_written = 0;
                 }
                 _ => {
+                    eprintln!("[VIRTIO-BLK] Unsupported request type: {}", header.request_type);
                     status = status::VIRTIO_BLK_S_UNSUPP;
                 }
             }
 
             // Write status to the last descriptor and complete the request
-            self.complete_request(mem, head_index, bytes_written, status);
+            self.complete_request(mem, head_index, bytes_written, status, status_addr);
         }
 
-        // Signal interrupt if we processed any requests
-        self.interrupt_status |= 1;
+        if processed_any {
+            // Signal interrupt
+            self.interrupt_status |= 1;
+        }
+
+        processed_any
     }
 
-    /// Read the request header from a descriptor chain.
-    fn read_request_header(
+    /// Read header from a specific guest address.
+    fn read_header_from_desc(
         &self,
-        chain: &virtio_queue::DescriptorChain<&GuestMemoryMmap>,
         mem: &GuestMemoryMmap,
+        addr: GuestAddress,
     ) -> Result<VirtioBlkReqHeader, VmmError> {
-        let desc = chain.clone().next().ok_or_else(|| {
-            VmmError::Device("Missing header descriptor".to_owned())
-        })?;
-
         let mut header = VirtioBlkReqHeader::default();
         let header_bytes = unsafe {
             std::slice::from_raw_parts_mut(
@@ -427,33 +464,26 @@ impl VirtioBlkDevice {
             )
         };
 
-        mem.read_slice(header_bytes, desc.addr())
+        mem.read_slice(header_bytes, addr)
             .map_err(|e| VmmError::Device(format!("Failed to read header: {e}")))?;
 
         Ok(header)
     }
 
-    /// Handle a read request (VIRTIO_BLK_T_IN).
-    fn handle_read(
+    /// Handle a read request using descriptor slice.
+    fn handle_read_descs(
         &mut self,
-        chain: &mut virtio_queue::DescriptorChain<&GuestMemoryMmap>,
         mem: &GuestMemoryMmap,
         sector: u64,
+        descriptors: &[virtio_queue::Descriptor],
     ) -> Result<u32, VmmError> {
         let mut total_read = 0u32;
-        let mut current_sector = sector;
+        let mut current_offset = sector * SECTOR_SIZE;
 
-        // Process data descriptors (all but the last one which is for status)
-        let descriptors: Vec<_> = chain.collect();
-        let data_descriptors = if descriptors.is_empty() {
-            &[]
-        } else {
-            &descriptors[..descriptors.len().saturating_sub(1)]
-        };
-
-        for desc in data_descriptors {
+        for desc in descriptors {
+            // For reads, we write to write-only descriptors
             if !desc.is_write_only() {
-                continue; // Skip read-only descriptors in a read operation
+                continue;
             }
 
             let len = desc.len() as usize;
@@ -461,7 +491,7 @@ impl VirtioBlkDevice {
 
             // Read from the backing file
             self.file
-                .seek(SeekFrom::Start(current_sector * SECTOR_SIZE))
+                .seek(SeekFrom::Start(current_offset))
                 .map_err(|e| VmmError::Device(format!("Seek failed: {e}")))?;
 
             let bytes_read = self.file
@@ -473,32 +503,25 @@ impl VirtioBlkDevice {
                 .map_err(|e| VmmError::Device(format!("Write to guest failed: {e}")))?;
 
             total_read += bytes_read as u32;
-            current_sector += (bytes_read as u64 + SECTOR_SIZE - 1) / SECTOR_SIZE;
+            current_offset += bytes_read as u64;
         }
 
         Ok(total_read)
     }
 
-    /// Handle a write request (VIRTIO_BLK_T_OUT).
-    fn handle_write(
+    /// Handle a write request using descriptor slice.
+    fn handle_write_descs(
         &mut self,
-        chain: &mut virtio_queue::DescriptorChain<&GuestMemoryMmap>,
         mem: &GuestMemoryMmap,
         sector: u64,
+        descriptors: &[virtio_queue::Descriptor],
     ) -> Result<(), VmmError> {
-        let mut current_sector = sector;
+        let mut current_offset = sector * SECTOR_SIZE;
 
-        // Process data descriptors (all but the last one which is for status)
-        let descriptors: Vec<_> = chain.collect();
-        let data_descriptors = if descriptors.is_empty() {
-            &[]
-        } else {
-            &descriptors[..descriptors.len().saturating_sub(1)]
-        };
-
-        for desc in data_descriptors {
+        for desc in descriptors {
+            // For writes, we read from read-only descriptors
             if desc.is_write_only() {
-                continue; // Skip write-only descriptors in a write operation
+                continue;
             }
 
             let len = desc.len() as usize;
@@ -510,14 +533,14 @@ impl VirtioBlkDevice {
 
             // Write to the backing file
             self.file
-                .seek(SeekFrom::Start(current_sector * SECTOR_SIZE))
+                .seek(SeekFrom::Start(current_offset))
                 .map_err(|e| VmmError::Device(format!("Seek failed: {e}")))?;
 
             self.file
                 .write_all(&buffer)
                 .map_err(|e| VmmError::Device(format!("Write failed: {e}")))?;
 
-            current_sector += (len as u64 + SECTOR_SIZE - 1) / SECTOR_SIZE;
+            current_offset += len as u64;
         }
 
         Ok(())
@@ -530,17 +553,19 @@ impl VirtioBlkDevice {
         head_index: u16,
         bytes_written: u32,
         status: u8,
+        status_addr: GuestAddress,
     ) {
-        // Find the status descriptor (last in the chain) and write status
-        // For simplicity, we add the used entry with the bytes written
-        // The status is written by finding the status descriptor address
+        // Write the status byte to the status descriptor in guest memory
+        if let Err(e) = mem.write_obj(status, status_addr) {
+            eprintln!("[VIRTIO-BLK] Failed to write status byte: {e}");
+        }
 
-        // Add to used ring - the bytes_written includes the status byte
+        // Add to used ring - the total length includes data + status byte
         let len = bytes_written + 1; // +1 for status byte
         self.queue
             .add_used(mem, head_index, len)
             .unwrap_or_else(|e| {
-                eprintln!("Failed to add used entry: {e}");
+                eprintln!("[VIRTIO-BLK] Failed to add used entry: {e}");
             });
     }
 

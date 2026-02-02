@@ -195,7 +195,7 @@ async fn run_benchmark() -> anyhow::Result<()> {
     let config = bencher_runner::Config::new(oci_image.clone())
         .with_vcpus(1)
         .with_memory_mib(256)
-        .with_kernel_cmdline("earlyprintk=serial,ttyS0,115200 console=ttyS0,115200 reboot=k panic=1 pci=off root=/dev/vda ro init=/init nokaslr");
+        .with_kernel_cmdline("earlyprintk=serial,ttyS0,115200 console=ttyS0,115200 reboot=k panic=1 pci=off root=/dev/vda ro init=/init nokaslr devtmpfs.mount=1");
 
     println!("VM Configuration:");
     println!(

@@ -348,11 +348,15 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("Unpacking OCI image to {unpack_dir}...");
     bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
 
-    // Step 4: Write command config and init script for the VM
-    println!("Writing init script...");
+    // Step 4: Write command config for the VM
+    println!("Writing init config...");
     write_init_config(&unpack_dir, &command, workdir, &env, config.output_file.as_deref())?;
 
-    // Step 5: Create squashfs rootfs
+    // Step 5: Install init binary
+    println!("Installing init binary...");
+    install_init_binary(&unpack_dir)?;
+
+    // Step 6: Create squashfs rootfs
     println!("Creating squashfs at {rootfs_path}...");
     bencher_rootfs::create_squashfs(&unpack_dir, &rootfs_path)?;
 

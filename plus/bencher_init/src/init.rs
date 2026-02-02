@@ -48,15 +48,40 @@ fn default_workdir() -> String {
     "/".to_owned()
 }
 
+/// Write a message to the console for debugging.
+fn console_log(msg: &str) {
+    use std::io::Write;
+    let formatted = format!("[bencher-init] {msg}\n");
+
+    // Try /dev/ttyS0 first (serial console the kernel uses)
+    if let Ok(mut f) = fs::OpenOptions::new().write(true).open("/dev/ttyS0") {
+        let _ = f.write_all(formatted.as_bytes());
+        let _ = f.flush();
+        return;
+    }
+
+    // Try /dev/console (kernel-provided)
+    if let Ok(mut f) = fs::OpenOptions::new().write(true).open("/dev/console") {
+        let _ = f.write_all(formatted.as_bytes());
+        let _ = f.flush();
+        return;
+    }
+
+    // Fall back to stderr
+    eprint!("{formatted}");
+}
+
 /// Main entry point for the init process.
 pub fn run() -> ExitCode {
+    console_log("starting...");
+
     // Ensure we're PID 1
     if std::process::id() != 1 {
-        eprintln!("bencher-init: warning: not running as PID 1");
+        console_log("warning: not running as PID 1");
     }
 
     if let Err(e) = run_init() {
-        eprintln!("bencher-init: fatal error: {e}");
+        console_log(&format!("fatal error: {e}"));
         // Try to send error via vsock before dying
         let error_msg = format!("init error: {e}");
         let _ = send_vsock(ports::STDERR, error_msg.as_bytes());
@@ -65,22 +90,29 @@ pub fn run() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    console_log("completed successfully");
     ExitCode::SUCCESS
 }
 
 fn run_init() -> Result<(), InitError> {
+    console_log("mounting filesystems...");
     // Step 1: Mount essential filesystems
     mount_filesystems()?;
+    console_log("filesystems mounted");
 
     // Step 2: Set up signal handlers
     setup_signal_handlers()?;
+    console_log("signal handlers set up");
 
     // Step 3: Read config
+    console_log("reading config...");
     let config = read_config()?;
+    console_log(&format!("config loaded: command={:?}", config.command));
 
     // Step 4: Change to working directory
     std::env::set_current_dir(&config.workdir)
         .map_err(|e| InitError::Io(format!("chdir to {}: {e}", config.workdir)))?;
+    console_log(&format!("changed to workdir: {}", config.workdir));
 
     // Step 5: Set environment variables
     for (key, value) in &config.env {
@@ -89,12 +121,22 @@ fn run_init() -> Result<(), InitError> {
     }
 
     // Step 6: Run the benchmark
+    console_log(&format!("running benchmark: {}", config.command.join(" ")));
     let result = run_benchmark(&config)?;
+    console_log(&format!(
+        "benchmark finished: exit_code={}, stdout_len={}, stderr_len={}",
+        result.exit_code,
+        result.stdout.len(),
+        result.stderr.len()
+    ));
 
     // Step 7: Send results via vsock
+    console_log("sending results via vsock...");
     send_results(&result, config.output_file.as_deref())?;
+    console_log("results sent");
 
     // Step 8: Shutdown
+    console_log("shutting down...");
     poweroff();
 
     Ok(())
@@ -415,7 +457,7 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
         svm_reserved1: 0,
         svm_port: port,
         svm_cid: VSOCK_CID_HOST,
-        svm_flags: 0,
+        svm_zero: [0; 4],
     };
 
     let ret = unsafe {

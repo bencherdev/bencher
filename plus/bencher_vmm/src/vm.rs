@@ -81,9 +81,8 @@ pub struct Vm {
     /// Kept alive for the VM's lifetime (dropping closes KVM handle).
     _kvm: Kvm,
 
-    /// The VM file descriptor.
-    /// Kept alive for the VM's lifetime (dropping closes VM handle).
-    _vm_fd: VmFd,
+    /// The VM file descriptor (shared with devices for interrupt injection).
+    vm_fd: Arc<VmFd>,
 
     /// Guest memory (shared with devices for virtio queue processing).
     guest_memory: Arc<GuestMemoryMmap>,
@@ -165,6 +164,9 @@ impl Vm {
             )?
         };
 
+        // Wrap vm_fd in Arc for sharing with devices
+        let vm_fd = Arc::new(vm_fd);
+
         // Step 6: Create vCPUs with the kernel entry point
         let vcpus = crate::vcpu::create_vcpus(
             &kvm,
@@ -174,17 +176,18 @@ impl Vm {
             kernel_entry.entry_addr,
         )?;
 
-        // Step 7: Setup devices and pass guest memory for virtio queue processing
+        // Step 7: Setup devices and pass guest memory + vm_fd for virtio queue processing
         let mut devices = crate::devices::setup_devices(
             &vm_fd,
             &config.rootfs_path,
             config.vsock_path.as_deref(),
         )?;
         devices.set_guest_memory(Arc::clone(&guest_memory));
+        devices.set_vm_fd(Arc::clone(&vm_fd));
 
         Ok(Self {
             _kvm: kvm,
-            _vm_fd: vm_fd,
+            vm_fd,
             guest_memory,
             vcpus,
             devices: Arc::new(Mutex::new(devices)),
