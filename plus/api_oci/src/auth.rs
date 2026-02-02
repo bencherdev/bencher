@@ -233,16 +233,25 @@ pub async fn validate_push_access(
             "authenticated" => claims.is_some()
         );
 
-        // If authenticated user is pushing to unclaimed project, claim the organization
-        if let PublicUser::Auth(auth_user) = &public_user
-            && let Err(e) = query_organization.claim(context, &auth_user.user).await
-        {
-            slog::warn!(
-                log,
-                "Failed to claim organization during OCI push";
-                "organization" => %query_organization.uuid,
-                "error" => %e
-            );
+        // If authenticated user is pushing to unclaimed project, claim the organization.
+        // This must succeed - if it fails, we reject the push to prevent the user
+        // from thinking they own the project when they don't.
+        if let PublicUser::Auth(auth_user) = &public_user {
+            query_organization
+                .claim(context, &auth_user.user)
+                .await
+                .map_err(|e| {
+                    slog::error!(
+                        log,
+                        "Failed to claim organization during OCI push - rejecting push";
+                        "organization" => %query_organization.uuid,
+                        "user" => %auth_user.user.uuid,
+                        "error" => %e
+                    );
+                    HttpError::for_internal_error(format!(
+                        "Failed to claim organization: {e}. Push rejected to prevent security issues."
+                    ))
+                })?;
         }
 
         return Ok(PushAccess {

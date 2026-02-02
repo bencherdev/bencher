@@ -169,8 +169,10 @@ pub async fn auth_oci_token_get(
         }
         // If organization is unclaimed, skip RBAC check and issue token
     }
-    // If project doesn't exist, we still issue the token.
-    // The actual operation will fail with a proper error when they try to use it.
+    // If the project doesn't exist (or we couldn't parse the repository name),
+    // we still issue the token. This is intentional to avoid information disclosure
+    // about which projects exist. The actual push operation will create the project
+    // on-the-fly or fail with a proper error if the UUID doesn't exist.
 
     // 6. Create OCI token with the validated scope
     let jwt = context
