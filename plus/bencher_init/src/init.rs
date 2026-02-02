@@ -49,34 +49,77 @@ fn default_workdir() -> String {
 }
 
 /// Write a message to the console for debugging.
+/// Uses direct serial port I/O on x86_64 for reliable early boot output.
 fn console_log(msg: &str) {
-    use std::io::Write;
     let formatted = format!("[bencher-init] {msg}\n");
     let bytes = formatted.as_bytes();
 
-    // First, try writing directly to stdout (fd 1) which kernel sets up to /dev/console
-    // This is the most reliable early output method
-    let written = unsafe { libc::write(libc::STDOUT_FILENO, bytes.as_ptr().cast(), bytes.len()) };
-    if written > 0 {
+    // Use direct serial port I/O for reliable output even before /dev is mounted
+    #[cfg(target_arch = "x86_64")]
+    {
+        serial_write(bytes);
         return;
     }
 
-    // Try /dev/ttyS0 (serial console the kernel uses)
-    if let Ok(mut f) = fs::OpenOptions::new().write(true).open("/dev/ttyS0") {
-        let _ = f.write_all(bytes);
-        let _ = f.flush();
-        return;
+    // Fallback for non-x86_64 architectures
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        use std::io::Write;
+        // Try stdout first
+        let written = unsafe { libc::write(libc::STDOUT_FILENO, bytes.as_ptr().cast(), bytes.len()) };
+        if written > 0 {
+            return;
+        }
+
+        // Try /dev/ttyS0 (serial console the kernel uses)
+        if let Ok(mut f) = fs::OpenOptions::new().write(true).open("/dev/ttyS0") {
+            let _ = f.write_all(bytes);
+            let _ = f.flush();
+            return;
+        }
+
+        // Fall back to stderr
+        eprint!("{}", String::from_utf8_lossy(bytes));
+    }
+}
+
+/// Write bytes directly to the serial port (COM1 at 0x3F8).
+/// This works even before /dev is mounted.
+#[cfg(target_arch = "x86_64")]
+fn serial_write(data: &[u8]) {
+    const COM1_DATA: u16 = 0x3F8;
+    const COM1_LSR: u16 = 0x3FD;
+    const LSR_THRE: u8 = 0x20; // Transmit Holding Register Empty
+
+    // Try to get I/O port access (requires root, which init has)
+    unsafe {
+        let _ = libc::iopl(3);
     }
 
-    // Try /dev/console (kernel-provided)
-    if let Ok(mut f) = fs::OpenOptions::new().write(true).open("/dev/console") {
-        let _ = f.write_all(bytes);
-        let _ = f.flush();
-        return;
+    for &byte in data {
+        // Wait for transmit holding register to be empty
+        unsafe {
+            loop {
+                let status: u8;
+                std::arch::asm!(
+                    "in al, dx",
+                    in("dx") COM1_LSR,
+                    out("al") status,
+                    options(nostack, nomem, preserves_flags)
+                );
+                if status & LSR_THRE != 0 {
+                    break;
+                }
+            }
+            // Write byte to data register
+            std::arch::asm!(
+                "out dx, al",
+                in("dx") COM1_DATA,
+                in("al") byte,
+                options(nostack, nomem, preserves_flags)
+            );
+        }
     }
-
-    // Fall back to stderr
-    eprint!("{formatted}");
 }
 
 /// Main entry point for the init process.

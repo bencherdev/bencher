@@ -192,11 +192,12 @@ async fn run_benchmark() -> anyhow::Result<()> {
         .context("Failed to create squashfs")?;
 
     // Create runner config using the bundled kernel
-    // Added loglevel=7 and debug for more verbose kernel output
+    // Kernel cmdline: kernel parameters first, then init=/init last
+    // (parameters after init= can be passed as init arguments)
     let config = bencher_runner::Config::new(oci_image.clone())
         .with_vcpus(1)
         .with_memory_mib(256)
-        .with_kernel_cmdline("earlyprintk=serial,ttyS0,115200 console=ttyS0,115200 loglevel=7 debug reboot=k panic=1 pci=off root=/dev/vda ro init=/init nokaslr devtmpfs.mount=1");
+        .with_kernel_cmdline("earlyprintk=serial,ttyS0,115200 console=ttyS0,115200 loglevel=7 reboot=k panic=1 pci=off nokaslr devtmpfs.mount=1 root=/dev/vda ro init=/init");
 
     println!("VM Configuration:");
     println!(
