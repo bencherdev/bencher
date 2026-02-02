@@ -26,7 +26,7 @@ plus = [
     "bencher_recaptcha/plus",
 ]
 sentry = ["dep:sentry"]
-otel = ["dep:bencher_otel", "bencher_recaptcha/otel"]
+otel = ["dep:bencher_otel", "bencher_recaptcha?/otel"]
 
 [dependencies]
 async-compression = { workspace = true, features = ["tokio", "gzip"] }

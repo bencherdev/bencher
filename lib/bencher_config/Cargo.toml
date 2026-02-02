@@ -21,7 +21,7 @@ plus = [
     "bencher_schema/plus",
 ]
 sentry = ["bencher_schema/sentry"]
-otel = ["bencher_endpoint/otel", "bencher_recaptcha/otel"]
+otel = ["bencher_endpoint/otel", "bencher_recaptcha?/otel"]
 
 [dependencies]
 bencher_billing = { workspace = true, optional = true }
