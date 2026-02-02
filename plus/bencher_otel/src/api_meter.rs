@@ -72,6 +72,13 @@ pub enum ApiCounter {
     // Email
     EmailSend,
 
+    // OCI Registry metrics
+    OciBlobPush,
+    OciBlobPull,
+    OciManifestPush,
+    OciManifestPull,
+    OciTagsList,
+
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
     SelfHostedServerStats(Uuid),
@@ -123,6 +130,13 @@ impl ApiCounter {
             Self::CreateMax(_, _) => "create.max",
 
             Self::EmailSend => "email.send",
+
+            // OCI Registry metrics
+            Self::OciBlobPush => "oci.blob.push",
+            Self::OciBlobPull => "oci.blob.pull",
+            Self::OciManifestPush => "oci.manifest.push",
+            Self::OciManifestPull => "oci.manifest.pull",
+            Self::OciTagsList => "oci.tags.list",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -180,6 +194,13 @@ impl ApiCounter {
 
             Self::EmailSend => "Counts the number of sent emails",
 
+            // OCI Registry metrics
+            Self::OciBlobPush => "Counts the number of OCI blob pushes",
+            Self::OciBlobPull => "Counts the number of OCI blob pulls",
+            Self::OciManifestPush => "Counts the number of OCI manifest pushes",
+            Self::OciManifestPull => "Counts the number of OCI manifest pulls",
+            Self::OciTagsList => "Counts the number of OCI tags list requests",
+
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
             Self::SelfHostedServerStats(_) => "Counts the number of self-hosted server stats sent",
@@ -204,7 +225,12 @@ impl ApiCounter {
             | Self::UserInvite
             | Self::UserClaim
             | Self::UserCheckout
-            | Self::EmailSend => Vec::new(),
+            | Self::EmailSend
+            | Self::OciBlobPush
+            | Self::OciBlobPull
+            | Self::OciManifestPush
+            | Self::OciManifestPull
+            | Self::OciTagsList => Vec::new(),
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),

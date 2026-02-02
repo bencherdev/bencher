@@ -1,5 +1,7 @@
 #![cfg(feature = "plus")]
 
+use std::path::Path;
+
 use bencher_billing::Biller;
 use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
@@ -8,8 +10,10 @@ use bencher_json::{
     system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha},
 };
 use bencher_license::Licensor;
+use bencher_oci_storage::OciStorage;
 use bencher_recaptcha::RecaptchaClient;
 use bencher_schema::context::{Indexer, StatsSettings};
+use slog::{Logger, info};
 use tokio::runtime::Handle;
 use url::Url;
 
@@ -21,6 +25,7 @@ pub struct Plus {
     pub biller: Option<Biller>,
     pub licensor: Licensor,
     pub recaptcha_client: Option<RecaptchaClient>,
+    pub oci_storage: OciStorage,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -37,11 +42,20 @@ pub enum PlusError {
     Billing(bencher_billing::BillingError),
     #[error("{0}")]
     Index(#[from] bencher_schema::context::IndexError),
+    #[error("Failed to initialize OCI storage: {0}")]
+    OciStorage(bencher_oci_storage::OciStorageError),
 }
 
 impl Plus {
-    pub fn new(console_url: &Url, plus: Option<JsonPlus>) -> Result<Self, PlusError> {
+    pub fn new(
+        log: &Logger,
+        console_url: &Url,
+        plus: Option<JsonPlus>,
+        database_path: &Path,
+    ) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
+            // No Plus config, but still provide local OCI storage
+            info!(log, "Using local filesystem OCI storage (no S3 configured)");
             return Ok(Self {
                 github_client: None,
                 google_client: None,
@@ -50,8 +64,23 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
+                oci_storage: OciStorage::try_from_config(log.clone(), None, database_path, None)
+                    .map_err(PlusError::OciStorage)?,
             });
         };
+
+        // Initialize OCI storage - uses S3 if configured, otherwise local filesystem
+        let (oci_data_store, upload_timeout) = plus.oci.map_or((None, None), |oci| {
+            (Some(oci.data_store), Some(oci.upload_timeout))
+        });
+        if oci_data_store.is_none() {
+            info!(log, "Using local filesystem OCI storage (no S3 configured)");
+        } else {
+            info!(log, "Using S3 OCI storage");
+        }
+        let oci_storage =
+            OciStorage::try_from_config(log.clone(), oci_data_store, database_path, upload_timeout)
+                .map_err(PlusError::OciStorage)?;
 
         let github_client = plus.github.map(
             |JsonGitHub {
@@ -95,6 +124,7 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
+                oci_storage,
             });
         };
 
@@ -124,6 +154,7 @@ impl Plus {
             biller,
             licensor,
             recaptcha_client,
+            oci_storage,
         })
     }
 }

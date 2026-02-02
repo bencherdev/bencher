@@ -11,7 +11,9 @@ mod error;
 mod key;
 
 pub use audience::Audience;
-pub use claims::{Claims, InviteClaims, OAuthClaims, OrgClaims, StateClaims};
+pub use claims::{
+    Claims, InviteClaims, OAuthClaims, OciClaims, OciScopeClaims, OrgClaims, StateClaims,
+};
 pub use error::TokenError;
 pub use key::TokenKey;
 

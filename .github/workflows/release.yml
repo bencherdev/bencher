@@ -32,6 +32,10 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         with:
           mold-version: ${{ inputs.mold-version }}
+      - name: Setup Go (for OCI conformance tests)
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
       - name: Run Smoke Test
         env:
           RUST_BACKTRACE: full

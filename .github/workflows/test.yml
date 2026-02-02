@@ -6,6 +6,9 @@ on:
       mold-version:
         type: string
         required: true
+      go-version:
+        type: string
+        required: true
       is-fork:
         type: boolean
         required: true
@@ -75,6 +78,10 @@ jobs:
         if: ${{ inputs.is-fork }}
         with:
           mold-version: ${{ inputs.mold-version }}
+      - name: Setup Go (for OCI conformance tests)
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
       - name: Run Smoke Test
         env:
           RUST_BACKTRACE: full

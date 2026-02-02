@@ -226,7 +226,8 @@ async fn into_context(
         licensor,
         indexer,
         recaptcha_client,
-    } = Plus::new(&console_url, plus).map_err(ConfigTxError::Plus)?;
+        oci_storage,
+    } = Plus::new(log, &console_url, plus, &database.path).map_err(ConfigTxError::Plus)?;
 
     #[cfg(feature = "plus")]
     let is_bencher_cloud = bencher_json::is_bencher_cloud(&console_url) && biller.is_some();
@@ -266,6 +267,8 @@ async fn into_context(
         recaptcha_client,
         #[cfg(feature = "plus")]
         is_bencher_cloud,
+        #[cfg(feature = "plus")]
+        oci_storage,
     })
 }
 

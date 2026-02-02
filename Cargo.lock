@@ -151,12 +151,15 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 name = "api_auth"
 version = "0.5.10"
 dependencies = [
+ "base64 0.22.1",
  "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
  "bencher_otel",
+ "bencher_rbac",
  "bencher_schema",
  "bencher_token",
+ "chrono",
  "dropshot",
  "http 1.4.0",
  "schemars 0.8.22",
@@ -177,6 +180,32 @@ dependencies = [
  "bencher_schema",
  "dropshot",
  "sentry",
+]
+
+[[package]]
+name = "api_oci"
+version = "0.5.10"
+dependencies = [
+ "api_auth",
+ "bencher_api_tests",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_oci_storage",
+ "bencher_otel",
+ "bencher_rbac",
+ "bencher_schema",
+ "bencher_token",
+ "bytes",
+ "dropshot",
+ "hex",
+ "http 1.4.0",
+ "reqwest",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "sha2",
+ "slog",
+ "tokio",
 ]
 
 [[package]]
@@ -1041,6 +1070,7 @@ version = "0.5.10"
 dependencies = [
  "api_auth",
  "api_checkout",
+ "api_oci",
  "api_organizations",
  "api_projects",
  "api_run",
@@ -1072,6 +1102,7 @@ dependencies = [
  "bencher_endpoint",
  "bencher_json",
  "bencher_license",
+ "bencher_oci_storage",
  "bencher_rbac",
  "bencher_schema",
  "bencher_token",
@@ -1187,6 +1218,7 @@ dependencies = [
  "bencher_google_client",
  "bencher_json",
  "bencher_license",
+ "bencher_oci_storage",
  "bencher_rbac",
  "bencher_recaptcha",
  "bencher_schema",
@@ -1308,6 +1340,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_oci_storage"
+version = "0.5.10"
+dependencies = [
+ "aws-credential-types",
+ "aws-sdk-s3",
+ "bencher_json",
+ "bytes",
+ "chrono",
+ "futures",
+ "hex",
+ "http 1.4.0",
+ "http-body-util",
+ "hyper 1.8.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "slog",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-util",
+ "uuid 1.19.0",
+]
+
+[[package]]
 name = "bencher_otel"
 version = "0.5.10"
 dependencies = [
@@ -1390,6 +1447,7 @@ dependencies = [
  "bencher_google_index",
  "bencher_json",
  "bencher_license",
+ "bencher_oci_storage",
  "bencher_otel",
  "bencher_rank",
  "bencher_rbac",

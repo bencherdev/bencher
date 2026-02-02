@@ -1,0 +1,27 @@
+### `plus.oci`
+
+Cette section spécifie la configuration du stockage du registre OCI (Open Container Initiative).
+Bencher peut fonctionner comme un registre de conteneurs/artefacts compatible OCI.
+
+Si cette section n'est pas configurée, Bencher utilisera le stockage du système de fichiers local
+dans un répertoire `oci` adjacent au fichier de base de données.
+Ceci est adapté au développement et aux déploiements à instance unique.
+
+Pour les déploiements de production avec plusieurs instances ou pour la durabilité,
+configurez le stockage basé sur S3.
+
+Il existe un `service` de stockage :
+- `aws_s3` : Stocker les artefacts OCI dans AWS S3
+    - `access_key_id` : ID de clé d'accès AWS
+    - `secret_access_key` : Clé d'accès secrète AWS
+    - `access_point` : ARN du point d'accès S3 avec préfixe de chemin optionnel.
+      Format : `arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
+
+|             Nom              |                               Exemple                               | Par défaut | Requis |                                              Description                                               |
+| :--------------------------: | :-----------------------------------------------------------------: | :--------: | :----: | :----------------------------------------------------------------------------------------------------: |
+|          data_store          |                              \{ ... \}                              |    ---     |  Non   |                              Spécifie le backend de stockage OCI. Local si omis.                       |
+|      data_store.service      |                              "aws_s3"                               |    ---     |  Oui   |                                   Spécifie le type de service de stockage.                             |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |    ---     |  Oui   |                                            ID de clé d'accès AWS.                                      |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |    ---     |  Oui   |                                           Clé d'accès secrète AWS.                                     |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |    ---     |  Oui   |              ARN du point d'accès S3. Préfixe de chemin optionnel après le nom du point d'accès.       |
+|       upload_timeout         |                                3600                                 |    3600    |  Non   | Délai d'expiration de la session d'upload en secondes. Les uploads obsolètes sont nettoyés au démarrage de nouveaux uploads. |

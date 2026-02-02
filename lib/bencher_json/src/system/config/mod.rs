@@ -16,7 +16,7 @@ pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]
 pub use plus::{
-    JsonGitHub, JsonGoogle, JsonPlus,
+    JsonGitHub, JsonGoogle, JsonOci, JsonPlus,
     cloud::{
         JsonCloud,
         billing::{JsonBilling, JsonProduct, JsonProducts},
@@ -25,6 +25,7 @@ pub use plus::{
         recaptcha::JsonRecaptcha,
     },
     litestream::{JsonLitestream, JsonReplica},
+    oci::{DEFAULT_UPLOAD_TIMEOUT_SECS, OciDataStore},
     rate_limiting::{JsonPublicRateLimiter, JsonRateLimiting, JsonUserRateLimiter},
     stats::JsonStats,
 };

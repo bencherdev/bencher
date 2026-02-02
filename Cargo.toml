@@ -47,6 +47,8 @@ api_projects = { path = "lib/api_projects" }
 api_run = { path = "lib/api_run" }
 api_server = { path = "lib/api_server" }
 api_users = { path = "lib/api_users" }
+# plus API endpoints
+api_oci = { path = "plus/api_oci" }
 # plus
 bencher_billing = { path = "plus/bencher_billing" }
 bencher_bing_index = { path = "plus/bencher_bing_index" }
@@ -56,6 +58,7 @@ bencher_google_index = { path = "plus/bencher_google_index" }
 bencher_license = { path = "plus/bencher_license" }
 bencher_otel = { path = "plus/bencher_otel" }
 bencher_otel_provider = { path = "plus/bencher_otel_provider" }
+bencher_oci_storage = { path = "plus/bencher_oci_storage" }
 bencher_recaptcha = { path = "plus/bencher_recaptcha" }
 # crates.io
 anyhow = "1.0"
@@ -88,11 +91,16 @@ futures-util = "0.3"
 gix = { version = "0.75", default-features = false }
 gix-hash = "0.20"
 git-validate = "0.7"
+hex = "0.4"
 http = "1.4"
+http-body-util = "0.1"
+hyper = "1.8"
 image = "0.25"
 jsonwebtoken = { version = "10.2", features = ["rust_crypto"] }
 # https://github.com/diesel-rs/diesel/blob/2e85ba060d3d70ea605ea58a79b8a435749a7adc/diesel/Cargo.toml#L53
-libsqlite3-sys = ">=0.17.2, <0.36.0"
+# https://github.com/tauri-apps/tauri/discussions/6183
+# Always needed for Windows and all other targets when building a distroless image
+libsqlite3-sys = { version = ">=0.17.2, <0.36.0", features = ["bundled"] }
 literally = "0.1"
 mail-send = "0.5"
 minijinja = "2.3"
@@ -127,6 +135,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 serde_yaml = "0.9"
+sha2 = "0.10"
 slog = "2.8"
 slog-term = "2.9"
 slug = "0.1"
@@ -135,9 +144,11 @@ strip-ansi-escapes = "0.2"
 syn = "2.0"
 tabled = "0.20"
 tame-oauth = "0.10"
+tempfile = "3"
 thiserror = "2.0"
 tokio = "1.48"
 tokio-rustls = {version =  "0.26", default-features = false, features = ["logging", "tls12", "ring"]}
+tokio-util = { version = "0.7", features = ["io"] }
 typeshare = "1.0"
 url = "2.5"
 uuid = "1.19"

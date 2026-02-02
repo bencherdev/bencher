@@ -1,0 +1,65 @@
+[package]
+name = "bencher_oci_storage"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+# Required due to feature unification
+# https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
+plus = [
+    "dep:aws-credential-types",
+    "dep:aws-sdk-s3",
+    "dep:bencher_json",
+    "dep:bytes",
+    "dep:chrono",
+    "dep:futures",
+    "dep:hex",
+    "dep:http",
+    "dep:http-body-util",
+    "dep:hyper",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:sha2",
+    "dep:slog",
+    "dep:thiserror",
+    "dep:tokio",
+    "dep:tokio-util",
+    "dep:uuid",
+]
+sentry = []
+otel = []
+
+[dependencies]
+# Bencher internal crates
+bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
+
+# AWS S3 (same as database backup)
+aws-credential-types = { workspace = true, optional = true }
+aws-sdk-s3 = { workspace = true, optional = true }
+
+# External dependencies
+bytes = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
+http = { workspace = true, optional = true }
+http-body-util = { workspace = true, optional = true }
+hyper = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["fs", "io-util"] }
+tokio-util = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true, features = ["v4"] }
+
+[dev-dependencies]
+reqwest = { workspace = true, features = ["blocking"] }
+
+[lints]
+workspace = true

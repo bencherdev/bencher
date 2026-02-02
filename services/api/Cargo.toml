@@ -9,8 +9,10 @@ publish = false
 [features]
 default = ["plus", "sentry", "otel"]
 plus = [
+    "dep:api_oci",
     "api_auth/plus",
     "api_checkout/plus",
+    "api_oci/plus",
     "api_organizations/plus",
     "api_projects/plus",
     "api_run/plus",
@@ -26,6 +28,7 @@ sentry = [
     "dep:sentry",
     "api_auth/sentry",
     "api_checkout/sentry",
+    "api_oci/sentry",
     "api_organizations/sentry",
     "api_projects/sentry",
     "api_run/sentry",
@@ -39,6 +42,7 @@ otel = [
     "dep:bencher_otel_provider",
     "api_auth/otel",
     "api_checkout/otel",
+    "api_oci/otel",
     "api_organizations/otel",
     "api_projects/otel",
     "api_run/otel",
@@ -52,6 +56,7 @@ otel = [
 [dependencies]
 api_auth.workspace = true
 api_checkout = { workspace = true, optional = true }
+api_oci = { workspace = true, optional = true }
 api_organizations.workspace = true
 api_projects.workspace = true
 api_run.workspace = true
@@ -65,19 +70,13 @@ bencher_schema.workspace = true
 bencher_otel = { workspace = true, optional = true }
 bencher_otel_provider = { workspace = true, optional = true }
 dropshot.workspace = true
+libsqlite3-sys.workspace = true
 sentry = { workspace = true, optional = true }
 serde_yaml.workspace = true
 slog.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
 tokio-rustls.workspace = true
-
-# https://github.com/diesel-rs/diesel/blob/2e85ba060d3d70ea605ea58a79b8a435749a7adc/diesel/Cargo.toml#L53
-# https://github.com/tauri-apps/tauri/discussions/6183
-# Always needed for Windows and all other targets when building a distroless image
-[dependencies.libsqlite3-sys]
-workspace = true
-features = ["bundled"]
 
 [lints]
 workspace = true
