@@ -8,7 +8,7 @@ publish = false
 
 [features]
 default = ["plus"]
-plus = ["dep:bencher_runner", "dep:tokio"]
+plus = ["dep:bencher_runner"]
 
 [dependencies]
 anyhow = { workspace = true }
@@ -17,7 +17,6 @@ clap = { workspace = true }
 [target.'cfg(target_os = "linux")'.dependencies]
 camino = { workspace = true }
 bencher_runner = { workspace = true, optional = true, features = ["plus"] }
-tokio = { workspace = true, optional = true, features = ["rt-multi-thread", "macros"] }
 
 [lints]
 workspace = true

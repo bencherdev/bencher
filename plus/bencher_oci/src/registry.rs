@@ -11,8 +11,6 @@ use std::fs;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine as _;
 use camino::{Utf8Path, Utf8PathBuf};
-use reqwest::header::{ACCEPT, AUTHORIZATION, WWW_AUTHENTICATE};
-use reqwest::{Client, StatusCode};
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 
@@ -125,8 +123,8 @@ impl TokenResponse {
 
 /// OCI registry client for pulling images.
 pub struct RegistryClient {
-    /// HTTP client.
-    client: Client,
+    /// HTTP agent.
+    agent: ureq::Agent,
 
     /// Base JWT token for authentication (provided at startup).
     base_token: Option<String>,
@@ -138,13 +136,14 @@ pub struct RegistryClient {
 impl RegistryClient {
     /// Create a new registry client.
     pub fn new() -> Result<Self, OciError> {
-        let client = Client::builder()
+        let config = ureq::Agent::config_builder()
             .user_agent("bencher-runner/1.0")
-            .build()
-            .map_err(|e| OciError::Registry(format!("Failed to create HTTP client: {e}")))?;
+            .http_status_as_error(false)
+            .build();
+        let agent = ureq::Agent::new_with_config(config);
 
         Ok(Self {
-            client,
+            agent,
             base_token: None,
             bearer_tokens: HashMap::new(),
         })
@@ -158,16 +157,7 @@ impl RegistryClient {
     }
 
     /// Pull an image from a registry and save it in OCI layout format.
-    ///
-    /// # Arguments
-    ///
-    /// * `image_ref` - The image reference to pull
-    /// * `output_dir` - Directory to save the OCI layout
-    ///
-    /// # Returns
-    ///
-    /// The path to the OCI image directory.
-    pub async fn pull(
+    pub fn pull(
         &mut self,
         image_ref: &ImageReference,
         output_dir: &Utf8Path,
@@ -181,7 +171,7 @@ impl RegistryClient {
         fs::write(&layout_path, r#"{"imageLayoutVersion":"1.0.0"}"#)?;
 
         // Pull manifest
-        let (manifest_digest, manifest_bytes) = self.pull_manifest(image_ref).await?;
+        let (manifest_digest, manifest_bytes) = self.pull_manifest(image_ref)?;
 
         // Save manifest blob
         let manifest_hash = manifest_digest.strip_prefix("sha256:").unwrap_or(&manifest_digest);
@@ -209,7 +199,7 @@ impl RegistryClient {
                 .ok_or_else(|| OciError::Registry("Manifest missing digest".to_owned()))?;
 
             // Pull the actual manifest
-            let (_, nested_bytes) = self.pull_blob(image_ref, nested_digest).await?;
+            let (_, nested_bytes) = self.pull_blob(image_ref, nested_digest)?;
 
             // Save nested manifest blob
             let nested_hash = nested_digest.strip_prefix("sha256:").unwrap_or(nested_digest);
@@ -228,7 +218,7 @@ impl RegistryClient {
             .and_then(|d| d.as_str())
             .ok_or_else(|| OciError::Registry("Manifest missing config digest".to_owned()))?;
 
-        let (_, config_bytes) = self.pull_blob(image_ref, config_digest).await?;
+        let (_, config_bytes) = self.pull_blob(image_ref, config_digest)?;
         let config_hash = config_digest.strip_prefix("sha256:").unwrap_or(config_digest);
         let config_path = blobs_dir.join(config_hash);
         fs::write(&config_path, &config_bytes)?;
@@ -249,7 +239,7 @@ impl RegistryClient {
                     continue;
                 }
 
-                let (_, layer_bytes) = self.pull_blob(image_ref, layer_digest).await?;
+                let (_, layer_bytes) = self.pull_blob(image_ref, layer_digest)?;
                 fs::write(&layer_path, &layer_bytes)?;
             }
         }
@@ -270,7 +260,7 @@ impl RegistryClient {
     }
 
     /// Pull an image manifest.
-    async fn pull_manifest(
+    fn pull_manifest(
         &mut self,
         image_ref: &ImageReference,
     ) -> Result<(String, Vec<u8>), OciError> {
@@ -281,23 +271,22 @@ impl RegistryClient {
 
         let accept = MANIFEST_MEDIA_TYPES.join(", ");
 
-        // First attempt - may need authentication
-        let response = self.authenticated_request(&url, image_ref, &accept).await?;
+        let mut response = self.authenticated_request(&url, image_ref, &accept)?;
 
         let bytes = response
-            .bytes()
-            .await
+            .body_mut()
+            .read_to_vec()
             .map_err(|e| OciError::Registry(format!("Failed to read manifest: {e}")))?;
 
         // Compute digest
         let hash = Sha256::digest(&bytes);
         let computed_digest = format!("sha256:{hash:x}");
 
-        Ok((computed_digest, bytes.to_vec()))
+        Ok((computed_digest, bytes))
     }
 
     /// Pull a blob from the registry.
-    async fn pull_blob(
+    fn pull_blob(
         &mut self,
         image_ref: &ImageReference,
         digest: &str,
@@ -307,11 +296,11 @@ impl RegistryClient {
             image_ref.registry, image_ref.repository
         );
 
-        let response = self.authenticated_request(&url, image_ref, "*/*").await?;
+        let mut response = self.authenticated_request(&url, image_ref, "*/*")?;
 
         let bytes = response
-            .bytes()
-            .await
+            .body_mut()
+            .read_to_vec()
             .map_err(|e| OciError::Registry(format!("Failed to read blob: {e}")))?;
 
         // Verify digest
@@ -326,50 +315,49 @@ impl RegistryClient {
             });
         }
 
-        Ok((digest.to_owned(), bytes.to_vec()))
+        Ok((digest.to_owned(), bytes))
     }
 
     /// Make an authenticated request to the registry.
-    async fn authenticated_request(
+    fn authenticated_request(
         &mut self,
         url: &str,
         image_ref: &ImageReference,
         accept: &str,
-    ) -> Result<reqwest::Response, OciError> {
+    ) -> Result<ureq::http::Response<ureq::Body>, OciError> {
         // Build the scope for this request
         let scope = format!("repository:{}:pull", image_ref.repository);
 
-        // Check if we have a cached token
-        let mut request = self.client.get(url).header(ACCEPT, accept);
+        // Build request with cached token if available
+        let mut request = self.agent.get(url).header("Accept", accept);
 
         if let Some(token) = self.bearer_tokens.get(&scope) {
-            request = request.header(AUTHORIZATION, format!("Bearer {token}"));
+            request = request.header("Authorization", &format!("Bearer {token}"));
         }
 
         let response = request
-            .send()
-            .await
+            .call()
             .map_err(|e| OciError::Registry(format!("Request failed: {e}")))?;
 
         // If unauthorized, get a token and retry
-        if response.status() == StatusCode::UNAUTHORIZED {
+        if response.status() == 401 {
             let www_auth = response
                 .headers()
-                .get(WWW_AUTHENTICATE)
+                .get("www-authenticate")
                 .and_then(|h| h.to_str().ok())
-                .ok_or_else(|| OciError::Registry("Missing WWW-Authenticate header".to_owned()))?;
+                .ok_or_else(|| OciError::Registry("Missing WWW-Authenticate header".to_owned()))?
+                .to_owned();
 
-            let token = self.get_token(www_auth, &scope).await?;
+            let token = self.get_token(&www_auth, &scope)?;
             self.bearer_tokens.insert(scope.clone(), token.clone());
 
             // Retry with token
             let response = self
-                .client
+                .agent
                 .get(url)
-                .header(ACCEPT, accept)
-                .header(AUTHORIZATION, format!("Bearer {token}"))
-                .send()
-                .await
+                .header("Accept", accept)
+                .header("Authorization", &format!("Bearer {token}"))
+                .call()
                 .map_err(|e| OciError::Registry(format!("Request failed: {e}")))?;
 
             if !response.status().is_success() {
@@ -393,14 +381,8 @@ impl RegistryClient {
     }
 
     /// Get a bearer token from the authentication service.
-    ///
-    /// This implements the Docker registry authentication flow:
-    /// 1. Parse WWW-Authenticate header to get realm, service, and scope
-    /// 2. Request token from the realm with credentials
-    /// 3. Return the bearer token
-    async fn get_token(&self, www_auth: &str, scope: &str) -> Result<String, OciError> {
+    fn get_token(&self, www_auth: &str, scope: &str) -> Result<String, OciError> {
         // Parse WWW-Authenticate header
-        // Format: Bearer realm="https://auth.example.com/token",service="registry.example.com",scope="..."
         let params = Self::parse_www_authenticate(www_auth);
 
         let realm = params
@@ -413,31 +395,32 @@ impl RegistryClient {
         let token_url = format!("{realm}?service={service}&scope={scope}");
 
         // Make token request
-        let mut request = self.client.get(&token_url);
+        let mut request = self.agent.get(&token_url);
 
         // If we have a base token, use it as Basic auth password
         if let Some(base_token) = &self.base_token {
-            // Use the token as the password with a placeholder username
             let credentials = BASE64_STANDARD.encode(format!("_token:{base_token}"));
-            request = request.header(AUTHORIZATION, format!("Basic {credentials}"));
+            request = request.header("Authorization", &format!("Basic {credentials}"));
         }
 
         let response = request
-            .send()
-            .await
+            .call()
             .map_err(|e| OciError::Registry(format!("Token request failed: {e}")))?;
 
         if !response.status().is_success() {
             let status = response.status();
-            let body = response.text().await.unwrap_or_default();
+            let body = response
+                .into_body()
+                .read_to_string()
+                .unwrap_or_default();
             return Err(OciError::Registry(format!(
                 "Token request failed with status {status}: {body}"
             )));
         }
 
         let token_response: TokenResponse = response
-            .json()
-            .await
+            .into_body()
+            .read_json()
             .map_err(|e| OciError::Registry(format!("Failed to parse token response: {e}")))?;
 
         token_response

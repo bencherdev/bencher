@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name = "bencher-runner")]
-#[command(about = "Execute benchmarks in isolated VMs", long_about = None)]
+#[command(about = "Execute benchmarks in isolated Firecracker microVMs", long_about = None)]
 pub struct TaskRunner {
     #[command(subcommand)]
     pub sub: TaskSub,
@@ -10,10 +10,8 @@ pub struct TaskRunner {
 
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
-    /// Pull image, create rootfs, and execute in isolated VM.
+    /// Pull image, create rootfs, and execute in isolated Firecracker microVM.
     Run(TaskRun),
-    /// Run VMM directly (internal, called by 'run').
-    Vmm(TaskVmm),
 }
 
 /// Arguments for the `run` subcommand.
@@ -42,44 +40,4 @@ pub struct TaskRun {
     /// Output file path inside guest.
     #[arg(long)]
     pub output: Option<String>,
-}
-
-/// Arguments for the `vmm` subcommand.
-#[derive(Parser, Debug)]
-pub struct TaskVmm {
-    /// Path to the jail root directory.
-    #[arg(long)]
-    pub jail_root: String,
-
-    /// Path to the kernel (relative to jail root after pivot).
-    #[arg(long)]
-    pub kernel: String,
-
-    /// Path to the rootfs (relative to jail root after pivot).
-    #[arg(long)]
-    pub rootfs: String,
-
-    /// Path to vsock socket (relative to jail root after pivot).
-    #[arg(long)]
-    pub vsock: Option<String>,
-
-    /// Number of vCPUs.
-    #[arg(long, default_value = "1")]
-    pub vcpus: u8,
-
-    /// Memory in MiB.
-    #[arg(long, default_value = "512")]
-    pub memory: u32,
-
-    /// Execution timeout in seconds.
-    #[arg(long, default_value = "300")]
-    pub timeout: u64,
-
-    /// Kernel command line.
-    #[arg(long, default_value = "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init")]
-    pub cmdline: String,
-
-    /// Per-run nonce for HMAC result integrity verification.
-    #[arg(long)]
-    pub nonce: Option<String>,
 }

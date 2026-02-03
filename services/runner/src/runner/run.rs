@@ -25,9 +25,8 @@ impl TryFrom<TaskRun> for Run {
 }
 
 impl Run {
-    #[tokio::main]
-    pub async fn exec(self) -> anyhow::Result<()> {
-        bencher_runner::run_with_args(&self.args).await?;
+    pub fn exec(self) -> anyhow::Result<()> {
+        bencher_runner::run_with_args(&self.args)?;
         Ok(())
     }
 }

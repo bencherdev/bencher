@@ -4,13 +4,9 @@ use crate::parser::{TaskRunner, TaskSub};
 
 #[cfg(all(feature = "plus", target_os = "linux"))]
 mod run;
-#[cfg(all(feature = "plus", target_os = "linux"))]
-mod vmm;
 
 #[cfg(all(feature = "plus", target_os = "linux"))]
 use run::Run;
-#[cfg(all(feature = "plus", target_os = "linux"))]
-use vmm::Vmm;
 
 #[derive(Debug)]
 pub struct Runner {
@@ -21,8 +17,6 @@ pub struct Runner {
 pub enum Sub {
     #[cfg(all(feature = "plus", target_os = "linux"))]
     Run(Run),
-    #[cfg(all(feature = "plus", target_os = "linux"))]
-    Vmm(Vmm),
     #[cfg(not(all(feature = "plus", target_os = "linux")))]
     Unsupported,
 }
@@ -44,7 +38,6 @@ impl TryFrom<TaskSub> for Sub {
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
             TaskSub::Run(run) => Self::Run(run.try_into()?),
-            TaskSub::Vmm(vmm) => Self::Vmm(vmm.try_into()?),
         })
     }
 
@@ -69,8 +62,6 @@ impl Sub {
         match self {
             #[cfg(all(feature = "plus", target_os = "linux"))]
             Self::Run(run) => run.exec(),
-            #[cfg(all(feature = "plus", target_os = "linux"))]
-            Self::Vmm(vmm) => vmm.exec(),
             #[cfg(not(all(feature = "plus", target_os = "linux")))]
             Self::Unsupported => {
                 anyhow::bail!("bencher-runner requires Linux with the `plus` feature")

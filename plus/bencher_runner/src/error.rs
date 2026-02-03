@@ -8,8 +8,9 @@ pub enum RunnerError {
     #[error("Rootfs error: {0}")]
     Rootfs(#[from] bencher_rootfs::RootfsError),
 
-    #[error("VMM error: {0}")]
-    Vmm(#[from] bencher_vmm::VmmError),
+    #[cfg(target_os = "linux")]
+    #[error("Firecracker error: {0}")]
+    Firecracker(#[from] crate::firecracker::FirecrackerError),
 
     #[error("Jail error: {0}")]
     Jail(String),

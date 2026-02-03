@@ -1,32 +1,17 @@
-//! Jail isolation for VMM processes.
+//! Resource management for Firecracker microVMs.
 //!
-//! This module provides Linux namespace and filesystem isolation
-//! for running VMM processes securely.
+//! This module provides cgroup-based resource limits
+//! for controlling Firecracker microVM processes.
 
 #[cfg(target_os = "linux")]
 mod cgroup;
-#[cfg(target_os = "linux")]
-mod chroot;
-#[cfg(target_os = "linux")]
-mod namespace;
-#[cfg(target_os = "linux")]
-mod rlimit;
 
 #[cfg(target_os = "linux")]
 pub use cgroup::CgroupManager;
-#[cfg(target_os = "linux")]
-pub use chroot::{create_jail_root, do_pivot_root};
-#[cfg(target_os = "linux")]
-pub use namespace::{
-    create_other_namespaces, create_user_namespace, drop_capabilities, fork_into_pid_namespace,
-    get_uid_gid, set_no_new_privs, setup_uid_gid_mapping,
-};
-#[cfg(target_os = "linux")]
-pub use rlimit::apply_rlimits;
 
 use serde::{Deserialize, Serialize};
 
-/// Resource limits for the jailed VMM process.
+/// Resource limits for the Firecracker microVM process.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceLimits {
     /// Maximum CPU time in microseconds per second.
