@@ -1382,9 +1382,11 @@ dependencies = [
 name = "bencher_init"
 version = "0.5.10"
 dependencies = [
+ "hmac",
  "libc",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]
@@ -1680,6 +1682,7 @@ dependencies = [
  "camino",
  "caps",
  "event-manager",
+ "hmac",
  "kvm-bindings",
  "kvm-ioctls",
  "libc",

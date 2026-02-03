@@ -18,8 +18,8 @@ pub use cgroup::CgroupManager;
 pub use chroot::{create_jail_root, do_pivot_root};
 #[cfg(target_os = "linux")]
 pub use namespace::{
-    create_other_namespaces, create_user_namespace, drop_capabilities, get_uid_gid,
-    set_no_new_privs, setup_uid_gid_mapping,
+    create_other_namespaces, create_user_namespace, drop_capabilities, fork_into_pid_namespace,
+    get_uid_gid, set_no_new_privs, setup_uid_gid_mapping,
 };
 #[cfg(target_os = "linux")]
 pub use rlimit::apply_rlimits;

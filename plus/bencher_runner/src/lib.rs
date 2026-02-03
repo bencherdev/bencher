@@ -40,6 +40,7 @@ mod error;
 #[cfg(target_os = "linux")]
 pub mod init;
 pub mod jail;
+pub mod metrics;
 mod run;
 #[cfg(target_os = "linux")]
 pub mod vmm;

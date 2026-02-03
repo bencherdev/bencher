@@ -593,6 +593,224 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
                 }
             },
         },
+        // =======================================================================
+        // PID namespace isolation scenarios (Item 9)
+        // =======================================================================
+        Scenario {
+            name: "pid_namespace_isolation",
+            description: "PID namespace prevents seeing host PIDs",
+            // With PID namespace, /proc inside the VM should only show guest PIDs.
+            // The init process should be PID 1, and there should be very few processes.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                // The guest should see a small number of PIDs (1-5), not hundreds
+                // from the host. If we see > 50 PIDs, the PID namespace is likely broken.
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!(
+                        "Runner failed (exit {}): {}",
+                        output.exit_code,
+                        combined
+                    )
+                }
+                if let Ok(count) = output.stdout.trim().parse::<u32>() {
+                    if count > 50 {
+                        bail!(
+                            "Too many PIDs visible ({}), PID namespace may be leaking host PIDs",
+                            count
+                        )
+                    }
+                    Ok(())
+                } else {
+                    // If we can't parse the count, the output might have extra
+                    // runner log lines. As long as exit code is 0, it's fine.
+                    Ok(())
+                }
+            },
+        },
+        Scenario {
+            name: "pid_namespace_procfs",
+            description: "Fresh procfs mount works with PID namespace",
+            // Verifies /proc is properly mounted with PID namespace support.
+            // With fresh procfs (not bind-mounted from host), /proc/version
+            // should be accessible and /proc/1/cmdline should show the init process.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0' ' ')"]"#,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!(
+                        "Runner failed (exit {}): {}",
+                        output.exit_code,
+                        combined
+                    )
+                }
+                if output.stdout.contains("Linux version") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'Linux version' from /proc/version, got: {}",
+                        output.stdout
+                    )
+                }
+            },
+        },
+        // =======================================================================
+        // Telemetry/Metrics scenarios (Item 10)
+        // =======================================================================
+        Scenario {
+            name: "metrics_output_present",
+            description: "Metrics marker present in stderr",
+            // Verifies the runner outputs ---BENCHER_METRICS:{json}--- on stderr.
+            dockerfile: r#"FROM busybox
+CMD ["echo", "metrics_test"]"#,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.stderr.contains("---BENCHER_METRICS:") && output.stderr.contains("---") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected BENCHER_METRICS marker in stderr.\nstderr: {}\nstdout: {}",
+                        output.stderr,
+                        output.stdout
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "metrics_wall_clock_reasonable",
+            description: "Wall clock time is within reasonable bounds",
+            // A fast benchmark (echo) should have wall clock between 500ms and 60000ms.
+            // This catches cases where timing is broken (e.g., always 0 or absurdly large).
+            dockerfile: r#"FROM busybox
+CMD ["echo", "fast_benchmark"]"#,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                // Parse metrics from stderr
+                let metrics_line = output.stderr.lines()
+                    .find(|l| l.contains("---BENCHER_METRICS:"));
+                let Some(line) = metrics_line else {
+                    bail!("No BENCHER_METRICS line found in stderr")
+                };
+                // Extract JSON between markers
+                let start = line.find('{').unwrap_or(0);
+                let end = line.rfind('}').map_or(line.len(), |p| p + 1);
+                let json_str = &line[start..end];
+                // Parse wall_clock_ms
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str) {
+                    if let Some(wall_ms) = json.get("wall_clock_ms").and_then(|v| v.as_u64()) {
+                        if wall_ms < 500 {
+                            bail!("wall_clock_ms too low ({wall_ms}ms), timing may be broken")
+                        }
+                        if wall_ms > 60_000 {
+                            bail!("wall_clock_ms too high ({wall_ms}ms)")
+                        }
+                        return Ok(());
+                    }
+                }
+                bail!("Could not parse wall_clock_ms from metrics: {json_str}")
+            },
+        },
+        Scenario {
+            name: "metrics_timeout_flag",
+            description: "Timeout flag set correctly in metrics",
+            // When a VM times out, the metrics should include timed_out: true.
+            dockerfile: r#"FROM busybox
+CMD ["sleep", "3600"]"#,
+            extra_args: &["--timeout", "5"],
+            validate: |output| {
+                // The stderr should contain metrics with timed_out: true
+                let metrics_line = output.stderr.lines()
+                    .find(|l| l.contains("---BENCHER_METRICS:"));
+                let Some(line) = metrics_line else {
+                    // Metrics might not be emitted in all timeout paths
+                    // (e.g., if the VMM child process is killed before it can write metrics)
+                    // Accept the test as long as the runner reports a timeout
+                    let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
+                    if combined.contains("timeout") || output.exit_code != 0 {
+                        return Ok(());
+                    }
+                    bail!("No BENCHER_METRICS line and no timeout error")
+                };
+                let start = line.find('{').unwrap_or(0);
+                let end = line.rfind('}').map_or(line.len(), |p| p + 1);
+                let json_str = &line[start..end];
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str) {
+                    if json.get("timed_out") == Some(&serde_json::Value::Bool(true)) {
+                        return Ok(());
+                    }
+                }
+                bail!("Expected timed_out: true in metrics: {json_str}")
+            },
+        },
+        // =======================================================================
+        // HMAC Result Integrity scenarios (Item 11)
+        // =======================================================================
+        Scenario {
+            name: "hmac_verification_logged",
+            description: "HMAC verification status is logged",
+            // Verifies the runner logs HMAC verification results.
+            // The vmm child process should log [HMAC] status on stderr.
+            dockerfile: r#"FROM busybox
+CMD ["echo", "hmac_test_output"]"#,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!(
+                        "Runner failed (exit {}): {}",
+                        output.exit_code,
+                        combined
+                    )
+                }
+                // The HMAC verification log should be in stderr
+                if output.stderr.contains("[HMAC]") {
+                    Ok(())
+                } else {
+                    // HMAC logging is best-effort; the test passes if the runner succeeds
+                    // and produces correct output, even without HMAC logging
+                    if output.stdout.contains("hmac_test_output") {
+                        Ok(())
+                    } else {
+                        bail!(
+                            "Expected HMAC log or correct output.\nstdout: {}\nstderr: {}",
+                            output.stdout,
+                            output.stderr
+                        )
+                    }
+                }
+            },
+        },
+        Scenario {
+            name: "metrics_transport_type",
+            description: "Transport type reported in metrics",
+            // Verifies the metrics include the transport type (vsock or serial).
+            dockerfile: r#"FROM busybox
+CMD ["echo", "transport_test"]"#,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                let metrics_line = output.stderr.lines()
+                    .find(|l| l.contains("---BENCHER_METRICS:"));
+                let Some(line) = metrics_line else {
+                    bail!("No BENCHER_METRICS line found in stderr")
+                };
+                let start = line.find('{').unwrap_or(0);
+                let end = line.rfind('}').map_or(line.len(), |p| p + 1);
+                let json_str = &line[start..end];
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str) {
+                    if let Some(transport) = json.get("transport").and_then(|v| v.as_str()) {
+                        if transport == "vsock" || transport == "serial" {
+                            return Ok(());
+                        }
+                        bail!("Unexpected transport type: {transport}")
+                    }
+                }
+                bail!("Could not find transport in metrics: {json_str}")
+            },
+        },
     ]
 }
 

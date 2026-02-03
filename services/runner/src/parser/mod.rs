@@ -78,4 +78,8 @@ pub struct TaskVmm {
     /// Kernel command line.
     #[arg(long, default_value = "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init")]
     pub cmdline: String,
+
+    /// Per-run nonce for HMAC result integrity verification.
+    #[arg(long)]
+    pub nonce: Option<String>,
 }

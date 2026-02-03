@@ -24,6 +24,7 @@ impl TryFrom<TaskVmm> for Vmm {
                 kernel_cmdline: task.cmdline,
                 timeout_secs: task.timeout,
                 limits: ResourceLimits::default(),
+                nonce: task.nonce,
             },
         })
     }

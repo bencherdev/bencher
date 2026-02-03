@@ -38,7 +38,7 @@ uuid = { workspace = true, features = ["v4"], optional = true }
 # Linux-only dependencies for jail isolation
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = { workspace = true }
-nix = { version = "0.30", features = ["user", "mount", "sched", "resource", "fs"] }
+nix = { version = "0.30", features = ["user", "mount", "sched", "resource", "fs", "process", "signal"] }
 caps = { workspace = true }
 
 [lints]
