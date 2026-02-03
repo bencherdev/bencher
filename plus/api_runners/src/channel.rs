@@ -174,99 +174,190 @@ async fn handle_runner_message(
     job_id: JobId,
     msg: RunnerMessage,
 ) -> Result<ServerMessage, Box<dyn std::error::Error + Send + Sync>> {
-    let now = DateTime::now();
-
     match msg {
         RunnerMessage::Running => {
             slog::info!(log, "Job running"; "job_id" => ?job_id);
-
-            let update = UpdateJob {
-                status: Some(JobStatus::Running),
-                started: Some(Some(now)),
-                last_heartbeat: Some(Some(now)),
-                modified: Some(now),
-                ..Default::default()
-            };
-
-            diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                .set(&update)
-                .execute(write_conn!(context))?;
-
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-                bencher_otel::JobStatusKind::Running,
-            ));
+            handle_running(log, context, job_id).await?;
         }
         RunnerMessage::Heartbeat => {
             slog::debug!(log, "Job heartbeat"; "job_id" => ?job_id);
-
-            // Update last_heartbeat and check for billing
-            let job: QueryJob = schema::job::table
-                .filter(schema::job::id.eq(job_id))
-                .first(auth_conn!(context))
-                .map_err(resource_not_found_err!(Job, job_id))?;
-
-            // Check if job was canceled
-            if job.status == JobStatus::Canceled {
-                return Ok(ServerMessage::Cancel);
+            if let Some(cancel) = handle_heartbeat(context, job_id).await? {
+                return Ok(cancel);
             }
-
-            let update = UpdateJob {
-                last_heartbeat: Some(Some(now)),
-                modified: Some(now),
-                ..Default::default()
-            };
-
-            diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                .set(&update)
-                .execute(write_conn!(context))?;
-
-            // TODO: Billing logic - check elapsed minutes and bill to Stripe
         }
         RunnerMessage::Completed { exit_code, output } => {
             slog::info!(log, "Job completed"; "job_id" => ?job_id, "exit_code" => exit_code);
-
-            let update = UpdateJob {
-                status: Some(JobStatus::Completed),
-                completed: Some(Some(now)),
-                exit_code: Some(Some(exit_code)),
-                modified: Some(now),
-                ..Default::default()
-            };
-
-            diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                .set(&update)
-                .execute(write_conn!(context))?;
-
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-                bencher_otel::JobStatusKind::Completed,
-            ));
-
-            // TODO: Store output somewhere (job table or separate results table)
-            drop(output);
+            handle_completed(log, context, job_id, exit_code, output).await?;
         }
         RunnerMessage::Failed { exit_code, error } => {
             slog::warn!(log, "Job failed"; "job_id" => ?job_id, "exit_code" => ?exit_code, "error" => &error);
-
-            let update = UpdateJob {
-                status: Some(JobStatus::Failed),
-                completed: Some(Some(now)),
-                exit_code: Some(exit_code),
-                modified: Some(now),
-                ..Default::default()
-            };
-
-            diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                .set(&update)
-                .execute(write_conn!(context))?;
-
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-                bencher_otel::JobStatusKind::Failed,
-            ));
+            handle_failed(log, context, job_id, exit_code).await?;
         }
     }
 
     Ok(ServerMessage::Ack)
+}
+
+/// Handle a Running message: transition job from Claimed to Running.
+async fn handle_running(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let now = DateTime::now();
+
+    // Validate state transition: only Claimed -> Running is valid
+    let job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(write_conn!(context))
+        .map_err(resource_not_found_err!(Job, job_id))?;
+
+    if job.status != JobStatus::Claimed {
+        slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "running");
+        return Err(format!(
+            "Invalid state transition from {:?} to Running, expected Claimed",
+            job.status
+        ).into());
+    }
+
+    let update = UpdateJob {
+        status: Some(JobStatus::Running),
+        started: Some(Some(now)),
+        last_heartbeat: Some(Some(now)),
+        modified: Some(now),
+        ..Default::default()
+    };
+
+    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+        .set(&update)
+        .execute(write_conn!(context))?;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+        bencher_otel::JobStatusKind::Running,
+    ));
+
+    Ok(())
+}
+
+/// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation.
+async fn handle_heartbeat(
+    context: &ApiContext,
+    job_id: JobId,
+) -> Result<Option<ServerMessage>, Box<dyn std::error::Error + Send + Sync>> {
+    let now = DateTime::now();
+
+    let job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(auth_conn!(context))
+        .map_err(resource_not_found_err!(Job, job_id))?;
+
+    // Check if job was canceled
+    if job.status == JobStatus::Canceled {
+        return Ok(Some(ServerMessage::Cancel));
+    }
+
+    let update = UpdateJob {
+        last_heartbeat: Some(Some(now)),
+        modified: Some(now),
+        ..Default::default()
+    };
+
+    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+        .set(&update)
+        .execute(write_conn!(context))?;
+
+    // TODO: Billing logic - check elapsed minutes and bill to Stripe
+
+    Ok(None)
+}
+
+/// Handle a Completed message: transition job from Running to Completed.
+async fn handle_completed(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+    exit_code: i32,
+    output: Option<String>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let now = DateTime::now();
+
+    // Validate state transition: only Running -> Completed is valid
+    let job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(write_conn!(context))
+        .map_err(resource_not_found_err!(Job, job_id))?;
+
+    if job.status != JobStatus::Running {
+        slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "completed");
+        return Err(format!(
+            "Invalid state transition from {:?} to Completed, expected Running",
+            job.status
+        ).into());
+    }
+
+    let update = UpdateJob {
+        status: Some(JobStatus::Completed),
+        completed: Some(Some(now)),
+        exit_code: Some(Some(exit_code)),
+        modified: Some(now),
+        ..Default::default()
+    };
+
+    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+        .set(&update)
+        .execute(write_conn!(context))?;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+        bencher_otel::JobStatusKind::Completed,
+    ));
+
+    // TODO: Store output somewhere (job table or separate results table)
+    drop(output);
+
+    Ok(())
+}
+
+/// Handle a Failed message: transition job from Claimed or Running to Failed.
+async fn handle_failed(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+    exit_code: Option<i32>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let now = DateTime::now();
+
+    // Validate state transition: Claimed -> Failed or Running -> Failed
+    let job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(write_conn!(context))
+        .map_err(resource_not_found_err!(Job, job_id))?;
+
+    if !matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
+        slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "failed");
+        return Err(format!(
+            "Invalid state transition from {:?} to Failed, expected Claimed or Running",
+            job.status
+        ).into());
+    }
+
+    let update = UpdateJob {
+        status: Some(JobStatus::Failed),
+        completed: Some(Some(now)),
+        exit_code: Some(exit_code),
+        modified: Some(now),
+        ..Default::default()
+    };
+
+    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+        .set(&update)
+        .execute(write_conn!(context))?;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+        bencher_otel::JobStatusKind::Failed,
+    ));
+
+    Ok(())
 }

@@ -10,7 +10,7 @@ use bencher_schema::{
     model::{
         project::QueryProject,
         runner::QueryJob,
-        user::public::{PubBearerToken, PublicUser},
+        user::public::PublicUser,
     },
     public_conn, schema,
 };
@@ -189,17 +189,9 @@ pub async fn proj_job_options(
 }]
 pub async fn proj_job_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
     path_params: Path<ProjJobParams>,
 ) -> Result<ResponseOk<JsonJob>, HttpError> {
-    let public_user = PublicUser::from_token(
-        &rqctx.log,
-        rqctx.context(),
-        #[cfg(feature = "plus")]
-        rqctx.request.headers(),
-        bearer_token,
-    )
-    .await?;
+    let public_user = PublicUser::new(&rqctx).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
     Ok(Get::response_ok(json, public_user.is_auth()))
 }

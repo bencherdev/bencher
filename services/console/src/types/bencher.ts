@@ -365,8 +365,8 @@ export interface JsonCheckout {
 
 /** Request to claim a job (runner agent endpoint) */
 export interface JsonClaimJob {
-	/** Maximum time to wait for a job (long-poll), in seconds. Max 60. */
-	poll_timeout: number;
+	/** Maximum time to wait for a job (long-poll), in seconds. Max 60 (default 30) */
+	poll_timeout?: number;
 }
 
 export interface JsonConfirm {
