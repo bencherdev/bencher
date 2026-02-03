@@ -8043,6 +8043,47 @@
         }
       }
     },
+    "/v0/runners/{runner}/jobs/{job}/channel": {
+      "get": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "WebSocket channel for job execution",
+        "description": "Establishes a persistent connection for heartbeat and status updates. Authentication is via runner token in the Authorization header.",
+        "operationId": "runner_job_channel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "description": "The UUID for a job.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JobUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-dropshot-websocket": {}
+      }
+    },
     "/v0/runners/{runner}/token": {
       "post": {
         "tags": [
@@ -10827,8 +10868,8 @@
         "type": "object",
         "properties": {
           "poll_timeout": {
-            "description": "Maximum time to wait for a job (long-poll), in seconds. Max 60.",
-            "default": 30,
+            "nullable": true,
+            "description": "Maximum time to wait for a job (long-poll), in seconds. Max 60 (default 30)",
             "type": "integer",
             "format": "uint32",
             "minimum": 0

@@ -489,6 +489,7 @@ This token is scoped to:
 - [x] **Usage billing**: ~~How to track?~~ **Decided: Stripe usage-based pricing** - Heartbeats trigger per-minute billing to Stripe
 - [x] **Heartbeat protocol**: ~~UDP? WebSocket? gRPC stream?~~ **Decided: WebSocket** - Low overhead, immediate cancellation, connection-based liveness detection
 - [ ] **Result storage**: Store in job table or separate results table linked to existing perf tables?
+- [ ] **Output storage**: Store benchmark output from WebSocket `completed` messages (currently dropped). Needed before the runner feature is usable end-to-end.
 - [ ] **Retry policy**: Auto-retry failed jobs? How many times?
 
 ## Implementation Phases
