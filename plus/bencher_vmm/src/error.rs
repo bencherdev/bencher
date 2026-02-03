@@ -42,4 +42,7 @@ pub enum VmmError {
 
     #[error("Sandbox error: {0}")]
     Sandbox(String),
+
+    #[error("Result integrity check failed: HMAC mismatch")]
+    IntegrityCheckFailed,
 }

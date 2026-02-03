@@ -40,6 +40,9 @@ pub const PORT_STDERR: u32 = 5001;
 /// Port for exit code.
 pub const PORT_EXIT_CODE: u32 = 5002;
 
+/// Port for HMAC integrity tag.
+pub const PORT_HMAC: u32 = 5003;
+
 /// Port for output file (optional).
 pub const PORT_OUTPUT_FILE: u32 = 5005;
 
@@ -397,6 +400,18 @@ impl VirtioVsockDevice {
         s.trim().parse().ok()
     }
 
+    /// Get raw bytes from a specific port (non-destructive).
+    #[must_use]
+    pub fn port_data_bytes(&self, port: u32) -> Option<&[u8]> {
+        self.port_buffers.get(&port).map(|v| v.as_slice())
+    }
+
+    /// Get HMAC data if available.
+    #[must_use]
+    pub fn hmac_data(&self) -> Option<Vec<u8>> {
+        self.port_buffers.get(&PORT_HMAC).cloned()
+    }
+
     /// Get output file data if available.
     #[must_use]
     pub fn output_file(&self) -> Option<Vec<u8>> {
@@ -743,7 +758,7 @@ impl VirtioVsockDevice {
 
     /// Check if this is a known results port.
     fn is_results_port(port: u32) -> bool {
-        matches!(port, PORT_STDOUT | PORT_STDERR | PORT_EXIT_CODE | PORT_OUTPUT_FILE)
+        matches!(port, PORT_STDOUT | PORT_STDERR | PORT_EXIT_CODE | PORT_HMAC | PORT_OUTPUT_FILE)
     }
 
     /// Handle connection reset.

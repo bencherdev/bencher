@@ -41,6 +41,12 @@ pub struct VmConfig {
     /// If the VM doesn't shut down within this time, it will be killed.
     /// Defaults to 300 seconds (5 minutes). Set to 0 for no timeout.
     pub timeout_secs: u64,
+
+    /// Per-run nonce for HMAC result integrity verification.
+    ///
+    /// When set, the VMM will verify the HMAC tag sent by the guest
+    /// to ensure result integrity.
+    pub nonce: Option<String>,
 }
 
 /// Default timeout in seconds (5 minutes).
@@ -57,6 +63,7 @@ impl VmConfig {
             kernel_cmdline: "earlyprintk=serial,ttyS0,115200 console=ttyS0,115200 reboot=k panic=1 pci=off root=/dev/vda rw".to_owned(),
             vsock_path: None,
             timeout_secs: DEFAULT_TIMEOUT_SECS,
+            nonce: None,
         }
     }
 
@@ -95,6 +102,9 @@ pub struct Vm {
 
     /// Execution timeout in seconds (0 = no timeout).
     timeout_secs: u64,
+
+    /// Per-run nonce for HMAC verification.
+    nonce: Option<String>,
 }
 
 impl Vm {
@@ -192,6 +202,7 @@ impl Vm {
             vcpus,
             devices: Arc::new(Mutex::new(devices)),
             timeout_secs: config.timeout_secs,
+            nonce: config.nonce.clone(),
         })
     }
 
@@ -201,7 +212,7 @@ impl Vm {
     /// before entering the VM run loop to limit the attack surface.
     ///
     /// Returns the benchmark results collected via serial output or vsock.
-    pub fn run(&mut self) -> Result<String, VmmError> {
+    pub fn run(&mut self) -> Result<crate::VmResults, VmmError> {
         // Apply security sandboxing before running the VM
         // This is done here (not in new()) because:
         // 1. All setup requiring elevated syscalls is complete
@@ -211,7 +222,12 @@ impl Vm {
         crate::sandbox::apply_seccomp()?;
 
         let vcpus = std::mem::take(&mut self.vcpus);
-        crate::event_loop::run(vcpus, Arc::clone(&self.devices), self.timeout_secs)
+        crate::event_loop::run(
+            vcpus,
+            Arc::clone(&self.devices),
+            self.timeout_secs,
+            self.nonce.as_deref(),
+        )
     }
 }
 
@@ -225,8 +241,9 @@ impl Vm {
 ///
 /// # Returns
 ///
-/// The benchmark results collected from the guest via serial output, as a JSON string.
-pub fn run_vm(config: &VmConfig) -> Result<String, VmmError> {
+/// The benchmark results collected from the guest via serial output or vsock,
+/// along with HMAC verification status and transport type.
+pub fn run_vm(config: &VmConfig) -> Result<crate::VmResults, VmmError> {
     let mut vm = Vm::new(config)?;
     vm.run()
 }

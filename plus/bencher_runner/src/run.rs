@@ -150,6 +150,9 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
     println!("Unpacking OCI image to {unpack_dir}...");
     bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
 
+    // Generate a per-run nonce for HMAC result integrity verification
+    let nonce = uuid::Uuid::new_v4().to_string();
+
     // Step 4: Write command config for the VM
     println!("Writing init config...");
     write_init_config(
@@ -158,6 +161,7 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
         workdir,
         &env,
         config.output_file.as_deref(),
+        Some(&nonce),
     )?;
 
     // Step 5: Copy bencher-init binary to /init
@@ -198,6 +202,8 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
         config.memory_mib.to_string(),
         "--timeout".to_owned(),
         config.timeout_secs.to_string(),
+        "--nonce".to_owned(),
+        nonce,
     ];
 
     println!("Exec'ing to vmm subcommand...");
@@ -389,9 +395,12 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("Unpacking OCI image to {unpack_dir}...");
     bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
 
+    // Generate a per-run nonce for HMAC result integrity verification
+    let nonce = uuid::Uuid::new_v4().to_string();
+
     // Step 4: Write command config for the VM
     println!("Writing init config...");
-    write_init_config(&unpack_dir, &command, workdir, &env, config.output_file.as_deref())?;
+    write_init_config(&unpack_dir, &command, workdir, &env, config.output_file.as_deref(), Some(&nonce))?;
 
     // Step 5: Install init binary
     println!("Installing init binary...");
@@ -411,14 +420,23 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
         kernel_cmdline: config.kernel_cmdline.clone(),
         vsock_path: Some(vsock_path.clone()),
         timeout_secs: config.timeout_secs,
+        nonce: Some(nonce),
     };
 
-    let results = bencher_vmm::run_vm(&vm_config)?;
+    let vm_results = bencher_vmm::run_vm(&vm_config)?;
+
+    // Log HMAC verification status
+    match vm_results.hmac_verified {
+        Some(true) => println!("HMAC verification: passed"),
+        Some(false) => eprintln!("WARNING: HMAC verification failed — results may be tampered"),
+        None => println!("HMAC verification: not available"),
+    }
+    println!("Transport: {}", vm_results.transport);
 
     // temp_dir is automatically cleaned up when dropped
     drop(temp_dir);
 
-    Ok(results)
+    Ok(vm_results.output)
 }
 
 /// Write the init config for the VM.
@@ -431,6 +449,7 @@ fn write_init_config(
     workdir: &str,
     env: &[(String, String)],
     output_file: Option<&str>,
+    nonce: Option<&str>,
 ) -> Result<(), RunnerError> {
     use std::fs;
 
@@ -443,6 +462,7 @@ fn write_init_config(
         "workdir": workdir,
         "env": env,
         "output_file": output_file,
+        "nonce": nonce,
     });
 
     let config_path = config_dir.join("config.json");

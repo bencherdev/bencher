@@ -1,6 +1,8 @@
 //! Linux namespace management.
 
 use nix::sched::{unshare, CloneFlags};
+use nix::sys::wait::{waitpid, WaitStatus};
+use nix::unistd::{fork, ForkResult};
 
 use crate::RunnerError;
 
@@ -16,18 +18,62 @@ pub fn create_user_namespace() -> Result<(), RunnerError> {
 
 /// Create remaining namespaces after UID/GID mapping is set up.
 ///
-/// Creates: mount, network, UTS, IPC namespaces.
-/// Does NOT create PID namespace (not needed for VMM, would require fork).
+/// Creates: mount, network, UTS, IPC, and PID namespaces.
+/// PID namespace requires `fork()` after this call — the child process
+/// enters the new PID namespace as PID 1.
 /// Must be called AFTER setup_uid_gid_mapping().
 pub fn create_other_namespaces() -> Result<(), RunnerError> {
     let flags = CloneFlags::CLONE_NEWNS
         | CloneFlags::CLONE_NEWNET
         | CloneFlags::CLONE_NEWUTS
-        | CloneFlags::CLONE_NEWIPC;
+        | CloneFlags::CLONE_NEWIPC
+        | CloneFlags::CLONE_NEWPID;
 
     unshare(flags).map_err(|e| RunnerError::Jail(format!("unshare failed: {e}")))?;
 
     Ok(())
+}
+
+/// Fork into the PID namespace.
+///
+/// After `unshare(CLONE_NEWPID)`, the calling process is NOT in the new
+/// PID namespace — only its children are. This function forks and returns:
+/// - `Ok(None)` in the child (which is PID 1 in the new namespace)
+/// - `Ok(Some(exit_code))` in the parent after the child exits
+///
+/// The child should perform the remaining jail setup and VMM execution.
+/// The parent should propagate the child's exit code.
+///
+/// # Safety
+///
+/// This must be called while the process is single-threaded. No threads
+/// should have been spawned yet (the VMM creates threads later).
+pub fn fork_into_pid_namespace() -> Result<Option<i32>, RunnerError> {
+    // SAFETY: fork() is safe here because we are single-threaded at this point.
+    // No threads have been spawned yet — threads are only created later by the VMM.
+    match unsafe { fork() } {
+        Ok(ForkResult::Parent { child }) => {
+            // Parent: wait for the child to exit
+            loop {
+                match waitpid(child, None) {
+                    Ok(WaitStatus::Exited(_, code)) => return Ok(Some(code)),
+                    Ok(WaitStatus::Signaled(_, sig, _)) => {
+                        return Ok(Some(128 + sig as i32));
+                    }
+                    Ok(_) => continue, // Other status (stopped, continued), keep waiting
+                    Err(nix::errno::Errno::EINTR) => continue,
+                    Err(e) => {
+                        return Err(RunnerError::Jail(format!("waitpid failed: {e}")));
+                    }
+                }
+            }
+        }
+        Ok(ForkResult::Child) => {
+            // Child: now PID 1 in the new namespace
+            Ok(None)
+        }
+        Err(e) => Err(RunnerError::Jail(format!("fork failed: {e}"))),
+    }
 }
 
 /// Set `PR_SET_NO_NEW_PRIVS` to prevent privilege escalation.

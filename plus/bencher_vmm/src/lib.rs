@@ -53,6 +53,8 @@ pub use kernel::{kernel_bytes, write_kernel_to_file};
 #[cfg(target_os = "linux")]
 pub use vm::{Vm, VmConfig, run_vm};
 #[cfg(target_os = "linux")]
+pub use event_loop::verify_hmac;
+#[cfg(target_os = "linux")]
 pub use vsock_client::{VsockClient, VsockClientBuilder, BenchmarkClient};
 
 /// Vsock port constants for guest-host communication.
@@ -63,8 +65,43 @@ pub mod ports {
     pub const STDERR: u32 = 5001;
     /// Port for exit code.
     pub const EXIT_CODE: u32 = 5002;
+    /// Port for HMAC integrity tag.
+    pub const HMAC: u32 = 5003;
     /// Port for output file (optional).
     pub const OUTPUT_FILE: u32 = 5005;
+}
+
+/// Transport used to collect results from the guest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Transport {
+    /// Results collected via virtio-vsock.
+    Vsock,
+    /// Results collected via serial console.
+    Serial,
+}
+
+impl std::fmt::Display for Transport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Vsock => write!(f, "vsock"),
+            Self::Serial => write!(f, "serial"),
+        }
+    }
+}
+
+/// Results from a VM execution.
+#[derive(Debug, Clone)]
+pub struct VmResults {
+    /// Benchmark output (stdout from the guest).
+    pub output: String,
+    /// Whether HMAC verification passed, failed, or was not available.
+    ///
+    /// - `Some(true)` — HMAC verified successfully
+    /// - `Some(false)` — HMAC verification failed (possible tampering)
+    /// - `None` — No HMAC available (no nonce provided or serial fallback without HMAC)
+    pub hmac_verified: Option<bool>,
+    /// Transport used to collect results.
+    pub transport: Transport,
 }
 
 // Non-Linux stubs
@@ -83,6 +120,7 @@ mod stubs {
         pub kernel_cmdline: String,
         pub vsock_path: Option<Utf8PathBuf>,
         pub timeout_secs: u64,
+        pub nonce: Option<String>,
     }
 
     /// Default timeout in seconds (5 minutes).
@@ -99,6 +137,7 @@ mod stubs {
                 kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw".to_owned(),
                 vsock_path: None,
                 timeout_secs: DEFAULT_TIMEOUT_SECS,
+                nonce: None,
             }
         }
 
@@ -125,13 +164,13 @@ mod stubs {
             Err(VmmError::UnsupportedPlatform)
         }
 
-        pub fn run(&mut self) -> Result<String, VmmError> {
+        pub fn run(&mut self) -> Result<super::VmResults, VmmError> {
             Err(VmmError::UnsupportedPlatform)
         }
     }
 
     /// Run a VM (stub for non-Linux).
-    pub fn run_vm(_config: &VmConfig) -> Result<String, VmmError> {
+    pub fn run_vm(_config: &VmConfig) -> Result<super::VmResults, VmmError> {
         Err(VmmError::UnsupportedPlatform)
     }
 }

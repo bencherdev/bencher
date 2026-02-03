@@ -47,6 +47,8 @@ impl VcpuSignaler {
     /// Send SIGALRM to all registered vCPU threads.
     ///
     /// This interrupts any blocking KVM ioctls, causing them to return EINTR.
+    /// Uses `tgkill` to target each vCPU thread individually, ensuring ALL
+    /// threads are interrupted even when there are multiple vCPUs.
     fn signal_all(&self) {
         if let Ok(tids) = self.tids.lock() {
             for &tid in &*tids {
@@ -66,8 +68,9 @@ impl VcpuSignaler {
 const MAX_SERIAL_OUTPUT_SIZE: usize = 10 * 1024 * 1024;
 
 /// Serial marker indicating the guest has finished and results are ready.
-/// When this marker appears in the serial output, the VMM shuts down the VM.
-const SERIAL_EXIT_MARKER: &[u8] = b"---BENCHER_EXIT_CODE:";
+/// This marker is written AFTER all result data (stdout, stderr, HMAC, exit code)
+/// to ensure all preceding data is fully captured before the VMM shuts down.
+const SERIAL_EXIT_MARKER: &[u8] = b"---BENCHER_DONE---";
 
 /// Grace period after timeout before forceful termination (in milliseconds).
 ///
@@ -84,15 +87,18 @@ const TIMEOUT_GRACE_PERIOD_MS: u64 = 1000;
 /// * `vcpus` - The virtual CPUs to run
 /// * `devices` - The device manager for handling I/O
 /// * `timeout_secs` - Maximum execution time in seconds (0 = no timeout)
+/// * `nonce` - Optional nonce for HMAC result integrity verification
 ///
 /// # Returns
 ///
-/// The benchmark results collected from the guest serial output or vsock.
+/// The benchmark results collected from the guest serial output or vsock,
+/// along with HMAC verification status and transport type.
 pub fn run(
     mut vcpus: Vec<Vcpu>,
     devices: Arc<Mutex<DeviceManager>>,
     timeout_secs: u64,
-) -> Result<String, VmmError> {
+    nonce: Option<&str>,
+) -> Result<crate::VmResults, VmmError> {
     // Install a no-op SIGALRM handler so the signal interrupts blocking KVM
     // ioctls (causing EINTR) without terminating the process.
     // SAFETY: Setting a signal handler is safe; we use a no-op handler.
@@ -215,13 +221,16 @@ pub fn run(
 
     // Extract any captured output (serial or vsock) regardless of outcome.
     // This must happen before the timeout/error checks so partial output is preserved.
-    let captured_output = extract_output(&devices, &serial_output);
+    let captured_output = extract_output(&devices, &serial_output, nonce);
 
     // Check if we timed out (use SeqCst to ensure we see the latest value)
     if timed_out.load(Ordering::SeqCst) {
+        let partial = captured_output
+            .map(|r| r.output)
+            .unwrap_or_default();
         return Err(VmmError::Timeout {
             timeout_secs,
-            partial_output: captured_output.unwrap_or_default(),
+            partial_output: partial,
         });
     }
 
@@ -421,11 +430,13 @@ fn handle_vcpu_exit(
     }
 }
 
-/// Extract captured output from vsock (preferred) or serial buffer.
+/// Extract captured output from vsock (preferred) or serial buffer,
+/// performing HMAC verification when a nonce is available.
 fn extract_output(
     devices: &Arc<Mutex<DeviceManager>>,
     serial_output: &Arc<Mutex<Vec<u8>>>,
-) -> Result<String, String> {
+    nonce: Option<&str>,
+) -> Result<crate::VmResults, String> {
     // Prefer vsock results if available
     let dm = devices
         .lock()
@@ -433,7 +444,32 @@ fn extract_output(
 
     if let Some(results) = dm.get_vsock_results() {
         if !results.is_empty() {
-            return Ok(results);
+            // Get raw vsock bytes for HMAC verification (must match exactly
+            // what the guest sent, avoiding any UTF-8 lossy conversion).
+            let stdout_bytes = dm.get_vsock_stdout_bytes().unwrap_or_default();
+            let stderr_bytes = dm.get_vsock_stderr_bytes().unwrap_or_default();
+            let exit_code_bytes = dm.get_vsock_exit_code_bytes().unwrap_or_default();
+            let hmac_data = dm.get_vsock_hmac();
+
+            let hmac_verified = match (nonce, hmac_data) {
+                (Some(n), Some(received_hmac)) => {
+                    Some(verify_hmac(
+                        n,
+                        stdout_bytes,
+                        stderr_bytes,
+                        exit_code_bytes,
+                        &received_hmac,
+                    ))
+                }
+                (Some(_), None) => Some(false), // Nonce provided but no HMAC received
+                (None, _) => None,              // No nonce, skip verification
+            };
+
+            return Ok(crate::VmResults {
+                output: results,
+                hmac_verified,
+                transport: crate::Transport::Vsock,
+            });
         }
     }
     drop(dm);
@@ -445,15 +481,123 @@ fn extract_output(
     let raw = String::from_utf8_lossy(&serial);
 
     // Parse structured output from serial markers (written by bencher-init).
-    // Format:
-    //   ---BENCHER_STDOUT_BEGIN---
-    //   <stdout>
-    //   ---BENCHER_STDOUT_END---
-    //   ---BENCHER_STDERR_BEGIN---
-    //   <stderr>
-    //   ---BENCHER_STDERR_END---
-    //   ---BENCHER_EXIT_CODE:<code>---
-    Ok(parse_serial_output(&raw))
+    let output = parse_serial_output(&raw);
+
+    // Try to extract HMAC from serial markers
+    let hmac_verified = nonce.map(|n| {
+        if let Some(hmac_hex) = parse_serial_hmac(&raw) {
+            // For serial, reconstruct the data the guest signed
+            let stdout = parse_serial_section(&raw, "STDOUT");
+            let stderr = parse_serial_section(&raw, "STDERR");
+            let exit_code = parse_serial_exit_code(&raw);
+            let received_hmac = hex_decode(&hmac_hex);
+            verify_hmac(
+                n,
+                stdout.as_bytes(),
+                stderr.as_bytes(),
+                exit_code.as_bytes(),
+                &received_hmac,
+            )
+        } else {
+            false // Nonce provided but no HMAC in serial output
+        }
+    });
+
+    Ok(crate::VmResults {
+        output,
+        hmac_verified,
+        transport: crate::Transport::Serial,
+    })
+}
+
+/// Verify an HMAC-SHA256 tag over the benchmark results.
+///
+/// The HMAC is computed over: `stdout_bytes || stderr_bytes || exit_code_bytes`
+/// using the nonce as the key.
+pub fn verify_hmac(
+    nonce: &str,
+    stdout: &[u8],
+    stderr: &[u8],
+    exit_code: &[u8],
+    received_hmac: &[u8],
+) -> bool {
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+
+    type HmacSha256 = Hmac<Sha256>;
+
+    let Ok(mut mac) = HmacSha256::new_from_slice(nonce.as_bytes()) else {
+        return false;
+    };
+    mac.update(stdout);
+    mac.update(stderr);
+    mac.update(exit_code);
+
+    mac.verify_slice(received_hmac).is_ok()
+}
+
+/// Parse HMAC hex from serial output markers.
+///
+/// Looks for `---BENCHER_HMAC:<hex>---` in the serial stream.
+fn parse_serial_hmac(raw: &str) -> Option<String> {
+    const HMAC_BEGIN: &str = "---BENCHER_HMAC:";
+    const HMAC_END: &str = "---";
+
+    let start = raw.find(HMAC_BEGIN)?;
+    let hex_start = start + HMAC_BEGIN.len();
+    let remaining = &raw[hex_start..];
+    let end = remaining.find(HMAC_END)?;
+    Some(remaining[..end].to_owned())
+}
+
+/// Parse a section from serial markers (STDOUT or STDERR content).
+///
+/// The serial format is: `---BENCHER_<NAME>_BEGIN---\n<raw_bytes>\n---BENCHER_<NAME>_END---`
+/// The `\n` after BEGIN and before END are separators, not part of the content.
+/// We strip exactly one trailing `\n` (the separator) to recover the original raw bytes.
+fn parse_serial_section(raw: &str, name: &str) -> String {
+    let begin_marker = format!("---BENCHER_{name}_BEGIN---");
+    let end_marker = format!("---BENCHER_{name}_END---");
+
+    if let Some(begin) = raw.find(&begin_marker) {
+        let after_begin = begin + begin_marker.len();
+        let content_start = if raw[after_begin..].starts_with('\n') {
+            after_begin + 1
+        } else {
+            after_begin
+        };
+        if let Some(end) = raw[content_start..].find(&end_marker) {
+            let content = &raw[content_start..content_start + end];
+            // Strip exactly one trailing \n (the separator before the END marker).
+            // This preserves the raw bytes exactly as the guest sent them.
+            return content.strip_suffix('\n').unwrap_or(content).to_owned();
+        }
+    }
+    String::new()
+}
+
+/// Parse exit code from serial markers.
+fn parse_serial_exit_code(raw: &str) -> String {
+    const MARKER: &str = "---BENCHER_EXIT_CODE:";
+    if let Some(start) = raw.find(MARKER) {
+        let code_start = start + MARKER.len();
+        if let Some(end) = raw[code_start..].find("---") {
+            return raw[code_start..code_start + end].to_owned();
+        }
+    }
+    String::new()
+}
+
+/// Decode a hex string to bytes.
+fn hex_decode(hex: &str) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(hex.len() / 2);
+    let mut chars = hex.chars();
+    while let (Some(a), Some(b)) = (chars.next(), chars.next()) {
+        if let (Some(hi), Some(lo)) = (a.to_digit(16), b.to_digit(16)) {
+            bytes.push((hi as u8) << 4 | lo as u8);
+        }
+    }
+    bytes
 }
 
 /// Parse structured benchmark output from raw serial stream.
@@ -476,8 +620,8 @@ fn parse_serial_output(raw: &str) -> String {
 
         if let Some(end) = raw[content_start..].find(STDOUT_END) {
             let content = &raw[content_start..content_start + end];
-            // Trim trailing newline added by the marker format
-            return content.trim_end_matches('\n').to_owned();
+            // Strip exactly one trailing \n (the separator before the END marker)
+            return content.strip_suffix('\n').unwrap_or(content).to_owned();
         }
     }
 

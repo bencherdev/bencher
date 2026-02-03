@@ -302,6 +302,30 @@ impl DeviceManager {
         self.virtio_vsock.as_ref().map(|v| v.stdout())
     }
 
+    /// Get raw stdout bytes from the guest.
+    #[must_use]
+    pub fn get_vsock_stdout_bytes(&self) -> Option<&[u8]> {
+        self.virtio_vsock
+            .as_ref()
+            .and_then(|v| v.port_data_bytes(virtio_vsock::PORT_STDOUT))
+    }
+
+    /// Get raw stderr bytes from the guest.
+    #[must_use]
+    pub fn get_vsock_stderr_bytes(&self) -> Option<&[u8]> {
+        self.virtio_vsock
+            .as_ref()
+            .and_then(|v| v.port_data_bytes(virtio_vsock::PORT_STDERR))
+    }
+
+    /// Get raw exit code bytes from the guest.
+    #[must_use]
+    pub fn get_vsock_exit_code_bytes(&self) -> Option<&[u8]> {
+        self.virtio_vsock
+            .as_ref()
+            .and_then(|v| v.port_data_bytes(virtio_vsock::PORT_EXIT_CODE))
+    }
+
     /// Get stderr from the guest.
     #[must_use]
     pub fn get_vsock_stderr(&self) -> Option<String> {
@@ -312,6 +336,12 @@ impl DeviceManager {
     #[must_use]
     pub fn get_vsock_exit_code(&self) -> Option<i32> {
         self.virtio_vsock.as_ref().and_then(|v| v.exit_code())
+    }
+
+    /// Get the HMAC data from the guest (if provided).
+    #[must_use]
+    pub fn get_vsock_hmac(&self) -> Option<Vec<u8>> {
+        self.virtio_vsock.as_ref().and_then(|v| v.hmac_data())
     }
 
     /// Get the output file data from the guest (if provided).
