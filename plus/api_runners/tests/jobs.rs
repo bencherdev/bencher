@@ -286,7 +286,9 @@ mod job_lifecycle {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "lifecycle1@example.com").await;
         let org = server.create_org(&admin, "Lifecycle Org").await;
-        let project = server.create_project(&admin, &org, "Lifecycle Project").await;
+        let project = server
+            .create_project(&admin, &org, "Lifecycle Project")
+            .await;
 
         // Create a runner
         let runner = create_runner(&server, &admin.token, "Lifecycle Runner").await;
@@ -500,6 +502,76 @@ mod job_lifecycle {
             .expect("Request failed");
 
         assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // Test concurrent job claiming: two runners race for the same job, exactly one wins
+    #[tokio::test]
+    async fn test_concurrent_job_claim() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "concurrent1@example.com").await;
+        let org = server.create_org(&admin, "Concurrent Org").await;
+        let project = server
+            .create_project(&admin, &org, "Concurrent Project")
+            .await;
+
+        // Create two runners
+        let runner1 = create_runner(&server, &admin.token, "Concurrent Runner 1").await;
+        let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner2 = create_runner(&server, &admin.token, "Concurrent Runner 2").await;
+        let runner2_token: String = runner2.token.as_ref().to_owned();
+
+        // Create a single pending job
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+        let job_uuid = insert_test_job(&server, report_id);
+
+        // Both runners try to claim concurrently
+        let claim_body = serde_json::json!({ "poll_timeout": 1 });
+
+        let server_url_1 = server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid));
+        let server_url_2 = server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid));
+        let client = &server.client;
+
+        let (resp1, resp2) = tokio::join!(
+            async {
+                client
+                    .post(&server_url_1)
+                    .header("Authorization", format!("Bearer {runner1_token}"))
+                    .json(&claim_body)
+                    .send()
+                    .await
+                    .expect("Request 1 failed")
+            },
+            async {
+                client
+                    .post(&server_url_2)
+                    .header("Authorization", format!("Bearer {runner2_token}"))
+                    .json(&claim_body)
+                    .send()
+                    .await
+                    .expect("Request 2 failed")
+            },
+        );
+
+        assert_eq!(resp1.status(), StatusCode::OK);
+        assert_eq!(resp2.status(), StatusCode::OK);
+
+        let job1: Option<JsonJob> = resp1.json().await.expect("Failed to parse response 1");
+        let job2: Option<JsonJob> = resp2.json().await.expect("Failed to parse response 2");
+
+        // Exactly one runner should have claimed the job
+        let claimed_count = [&job1, &job2]
+            .iter()
+            .filter(|j| j.as_ref().is_some_and(|j| j.uuid == job_uuid))
+            .count();
+        assert_eq!(
+            claimed_count, 1,
+            "Expected exactly one runner to claim the job, but {claimed_count} claimed it"
+        );
+
+        // The other should get None (no jobs available)
+        let none_count = [&job1, &job2].iter().filter(|j| j.is_none()).count();
+        assert_eq!(none_count, 1, "Expected exactly one runner to get no job");
     }
 
     // Test that a different runner cannot update another runner's job

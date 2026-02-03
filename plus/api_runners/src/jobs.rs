@@ -111,13 +111,11 @@ async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
 ) -> Result<Option<JsonJob>, HttpError> {
-    let conn = write_conn!(context);
-
     // Try to claim a pending job (ordered by priority DESC, created ASC)
     let pending_job: Option<QueryJob> = schema::job::table
         .filter(schema::job::status.eq(JobStatus::Pending))
         .order((schema::job::priority.desc(), schema::job::created.asc()))
-        .first(conn)
+        .first(auth_conn!(context))
         .optional()
         .map_err(resource_not_found_err!(Job))?;
 
@@ -142,7 +140,7 @@ async fn try_claim_job(
             .filter(schema::job::status.eq(JobStatus::Pending)),
     )
     .set(&update_job)
-    .execute(conn)
+    .execute(write_conn!(context))
     .map_err(resource_conflict_err!(Job, query_job))?;
 
     if updated > 0 {
@@ -162,6 +160,7 @@ async fn try_claim_job(
         }))
     } else {
         // Job was claimed by another runner
+        // This is okay, and better than optimistically locking
         Ok(None)
     }
 }

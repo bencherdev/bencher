@@ -143,9 +143,7 @@ async fn send_msg(ws: &mut WsStream, msg: &RunnerMessage) {
 async fn recv_msg(ws: &mut WsStream) -> ServerMessage {
     let msg = ws.next().await.expect("Stream ended").expect("WS error");
     match msg {
-        Message::Text(text) => {
-            serde_json::from_str(&text).expect("Failed to parse server message")
-        }
+        Message::Text(text) => serde_json::from_str(&text).expect("Failed to parse server message"),
         other => panic!("Expected text message, got: {other:?}"),
     }
 }
@@ -160,9 +158,9 @@ async fn assert_ws_closed(ws: &mut WsStream) {
     // Give the server a moment to close the connection
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     match ws.next().await {
-        None => {}                        // Stream ended
-        Some(Ok(Message::Close(_))) => {} // Explicit close frame
-        Some(Err(_)) => {}               // Connection reset (e.g. handler error)
+        None => {},                        // Stream ended
+        Some(Ok(Message::Close(_))) => {}, // Explicit close frame
+        Some(Err(_)) => {},                // Connection reset (e.g. handler error)
         Some(Ok(other)) => panic!("Expected stream to be closed, got: {other:?}"),
     }
 }
@@ -204,9 +202,7 @@ async fn test_channel_invalid_token() {
         &server,
         &format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}/channel"),
     );
-    let mut request = url
-        .into_client_request()
-        .expect("Failed to build request");
+    let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
         "Authorization",
         "Bearer bencher_runner_badbadbadbad"
@@ -217,11 +213,11 @@ async fn test_channel_invalid_token() {
     // The WebSocket upgrade may succeed (dropshot upgrades before handler runs),
     // but the connection should immediately close.
     match tokio_tungstenite::connect_async(request).await {
-        Err(_) => {} // Connection rejected at HTTP level, expected
+        Err(_) => {}, // Connection rejected at HTTP level, expected
         Ok((mut ws, _)) => {
             // Connection upgraded, but handler should close it immediately
             assert_ws_closed(&mut ws).await;
-        }
+        },
     }
 }
 
@@ -248,10 +244,10 @@ async fn test_channel_wrong_runner() {
     // Try to open channel with runner2 (doesn't own the job)
     let request = ws_request(&server, runner2.uuid, &runner2_token, job_uuid);
     match tokio_tungstenite::connect_async(request).await {
-        Err(_) => {}
+        Err(_) => {},
         Ok((mut ws, _)) => {
             assert_ws_closed(&mut ws).await;
-        }
+        },
     }
 }
 
@@ -275,10 +271,10 @@ async fn test_channel_job_not_claimed() {
 
     let request = ws_request(&server, runner.uuid, &runner_token, job_uuid);
     match tokio_tungstenite::connect_async(request).await {
-        Err(_) => {}
+        Err(_) => {},
         Ok((mut ws, _)) => {
             assert_ws_closed(&mut ws).await;
-        }
+        },
     }
 }
 
@@ -293,10 +289,10 @@ async fn test_channel_job_already_running() {
 
     let request = ws_request(&server, runner_uuid, &runner_token, job_uuid);
     match tokio_tungstenite::connect_async(request).await {
-        Err(_) => {}
+        Err(_) => {},
         Ok((mut ws, _)) => {
             assert_ws_closed(&mut ws).await;
-        }
+        },
     }
 }
 
