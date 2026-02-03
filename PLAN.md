@@ -2,22 +2,23 @@
 
 ## Executive Summary
 
-This document outlines the architecture for adding bare metal runner support to Bencher. The design supports both Bencher Cloud and Self-Hosted deployments, with a path toward bring-your-own-runner (BYOR) support. The solution uses **bencher_vmm**, a custom-built VMM based on the rust-vmm ecosystem, providing hardware-level security isolation with minimal performance overhead (<5%), while being fully integrated into the Bencher codebase and deployable as a single binary on any bare metal server with KVM support.
+This document outlines the architecture for adding bare metal runner support to Bencher. The design supports both Bencher Cloud and Self-Hosted deployments, with a path toward bring-your-own-runner (BYOR) support. The solution uses **Firecracker**, AWS's open-source microVM manager, providing hardware-level security isolation with minimal performance overhead (<5%), battle-tested multi-tenant security, and a clean REST API for VM lifecycle management.
 
-### Why a Custom VMM?
+### Why Firecracker?
 
-The `bencher_vmm` crate (`plus/bencher_vmm`) provides a purpose-built VMM specifically designed for Bencher's benchmark runner use case. It offers several advantages over using Firecracker as an external dependency:
+Firecracker is a purpose-built microVM manager created by AWS for Lambda and Fargate. It provides exactly the isolation properties Bencher needs, with years of production hardening and security audits at massive scale.
 
-| Aspect | bencher_vmm | Firecracker |
-|--------|-------------|-------------|
-| **Deployment** | Single Rust binary | External process + REST API |
-| **Integration** | Native Rust, direct function calls | HTTP API, process management |
-| **Maintenance** | Full control, tailored to Bencher | Depends on AWS release cycle |
-| **Dependencies** | Same rust-vmm crates as Firecracker | External binary |
-| **Security** | Equivalent (seccomp + capability dropping) | Equivalent |
-| **Features** | Exactly what we need | Many unused features |
+| Aspect | Firecracker | Alternatives |
+|--------|-------------|--------------|
+| **Security** | Years of security audits at AWS scale | Custom VMMs have unproven security posture |
+| **Overhead** | <5% CPU, ~5 MiB memory per VM | Equivalent to any KVM-based solution |
+| **Boot time** | ~125ms | Comparable to other microVMs |
+| **Maturity** | Production-proven at massive scale | Custom solutions require extensive hardening |
+| **Maintenance** | Active open-source community + AWS backing | Custom VMMs require in-house security expertise |
+| **Jailer** | Built-in jailer with seccomp, cgroups, namespaces | Must be implemented from scratch |
+| **vsock** | Native virtio-vsock support | Same |
 
-The custom VMM is built on the same foundation as Firecracker (rust-vmm crates) but is optimized for Bencher's specific requirements: running isolated benchmarks with minimal overhead and collecting results via vsock.
+Firecracker is managed as an external process per VM, controlled via a REST API over a Unix domain socket. The Bencher runner daemon manages Firecracker processes and communicates with guests via vsock for result collection.
 
 ---
 
@@ -26,18 +27,20 @@ The custom VMM is built on the same foundation as Firecracker (rust-vmm crates) 
 1. [Goals and Requirements](#goals-and-requirements)
 2. [Architecture Overview](#architecture-overview)
 3. [Isolation Strategy](#isolation-strategy)
-4. [bencher_vmm Overview](#bencher_vmm-overview)
-5. [OCI Image Handling](#oci-image-handling)
-6. [Runner Daemon Design](#runner-daemon-design)
-7. [Job Scheduling and Queue](#job-scheduling-and-queue)
-8. [API and CLI Changes](#api-and-cli-changes)
-9. [Security Considerations](#security-considerations)
-10. [Performance Considerations](#performance-considerations)
-11. [Networking](#networking)
-12. [Storage and Artifacts](#storage-and-artifacts)
-13. [Observability](#observability)
-14. [Implementation Phases](#implementation-phases)
-15. [Open Questions](#open-questions)
+4. [Firecracker Integration](#firecracker-integration)
+5. [Migration: bencher_vmm to Firecracker](#step-by-step-migration-from-bencher_vmm-to-firecracker)
+6. [Production Hardening Checklist](#production-hardening-checklist)
+7. [OCI Image Handling](#oci-image-handling)
+8. [Runner Daemon Design](#runner-daemon-design)
+9. [Job Scheduling and Queue](#job-scheduling-and-queue)
+10. [API and CLI Changes](#api-and-cli-changes)
+11. [Security Considerations](#security-considerations)
+12. [Performance Considerations](#performance-considerations)
+13. [Networking](#networking)
+14. [Storage and Artifacts](#storage-and-artifacts)
+15. [Observability](#observability)
+16. [Implementation Phases](#implementation-phases)
+17. [Open Questions](#open-questions)
 
 ---
 
@@ -96,8 +99,8 @@ The custom VMM is built on the same foundation as Firecracker (rust-vmm crates) 
             │ └────┬─────┘ │ │ └────┬─────┘ │ │ └────┬─────┘ │
             │      │       │ │      │       │ │      │       │
             │ ┌────┴─────┐ │ │ ┌────┴─────┐ │ │ ┌────┴─────┐ │
-            │ │bencher_  │ │ │ │bencher_  │ │ │ │bencher_  │ │
-            │ │  vmm     │ │ │ │  vmm     │ │ │ │  vmm     │ │
+            │ │Firecrac- │ │ │ │Firecrac- │ │ │ │Firecrac- │ │
+            │ │  ker VM  │ │ │ │  ker VM  │ │ │ │  ker VM  │ │
             │ └──────────┘ │ │ └──────────┘ │ │ └──────────┘ │
             └──────────────┘ └──────────────┘ └──────────────┘
 ```
@@ -110,42 +113,45 @@ The custom VMM is built on the same foundation as Firecracker (rust-vmm crates) 
 | **Job Queue**          | Persistent queue for benchmark jobs (SQLite for self-hosted, PostgreSQL for Cloud) |
 | **Image Registry**     | OCI-compliant registry for storing benchmark images                                |
 | **Runner Daemon**      | Long-running process on bare metal servers that polls for jobs and executes them   |
-| **bencher_vmm**        | Custom VMM providing hardware-level isolation via KVM (part of Bencher codebase)   |
+| **Firecracker**        | AWS open-source microVM manager providing hardware-level isolation via KVM         |
 
 ---
 
 ## Isolation Strategy
 
-All benchmark jobs run inside isolated VMs managed by `bencher_vmm`. This provides hardware-level isolation suitable for multi-tenant environments.
+All benchmark jobs run inside isolated Firecracker microVMs. This provides hardware-level isolation suitable for multi-tenant environments, backed by years of production hardening at AWS.
 
-### bencher_vmm Characteristics
+### Firecracker Characteristics
 
-| Criteria           | bencher_vmm                                          |
+| Criteria           | Firecracker                                          |
 | ------------------ | ---------------------------------------------------- |
 | CPU Overhead       | <5% (>95% of bare metal)                             |
-| Boot Time          | ~100-200ms                                           |
-| Memory Overhead    | <5 MiB per VM                                        |
-| Security Isolation | Hardware-level via KVM + seccomp + capability drop   |
+| Boot Time          | ~125ms                                               |
+| Memory Overhead    | ~5 MiB per VM                                        |
+| Security Isolation | Hardware-level via KVM + jailer (seccomp, cgroups, namespaces) |
 | Architecture       | x86_64 and aarch64 supported                         |
 | Vendor Lock-in     | None (open source, runs on any KVM host)             |
-| Deployment         | Single binary (kernel embedded in release builds)    |
+| Deployment         | Single static binary + kernel image                  |
 
-### Why bencher_vmm?
+### Why Firecracker over Alternatives?
 
 | Alternative          | Why Not                                                                              |
 | -------------------- | ------------------------------------------------------------------------------------ |
 | **Plain Containers** | Shared kernel is insufficient security boundary for untrusted multi-tenant workloads |
-| **Firecracker**      | External process management, HTTP API overhead, unused features                      |
+| **Custom VMM**       | Unproven security posture; VMMs are hard to get right and require dedicated security audits |
 | **Kata Containers**  | ~17% CPU overhead, 130 MiB memory per pod - too heavy                                |
 | **gVisor**           | 10x syscall overhead, unsuitable for syscall-heavy benchmarks                        |
-| **Cloud Hypervisor** | External dependency, less control over features                                      |
-| **QEMU/KVM**         | Higher overhead, slower boot, more complex                                           |
+| **Cloud Hypervisor** | Less mature, smaller community, fewer security audits                                |
+| **QEMU/KVM**         | Higher overhead, slower boot, larger attack surface                                  |
 
 ### Configuration
 
 ```toml
 # runner.toml
-[vmm]
+[firecracker]
+binary_path = "/usr/local/bin/firecracker"
+jailer_path = "/usr/local/bin/jailer"
+kernel_path = "/var/lib/bencher/vmlinux"
 vcpus = 4
 memory_mib = 4096
 timeout_secs = 300
@@ -153,27 +159,9 @@ timeout_secs = 300
 
 ---
 
-## bencher_vmm Overview
+## Firecracker Integration
 
-The `bencher_vmm` crate is located at `plus/bencher_vmm` and provides a complete VMM implementation.
-
-### Current Features
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **KVM Integration** | ✅ Complete | Full KVM API support via kvm-ioctls |
-| **x86_64 Support** | ✅ Complete | bzImage kernel loading, PIC/IOAPIC/PIT |
-| **aarch64 Support** | ✅ Complete | GICv3/v2, device tree generation |
-| **virtio-blk** | ✅ Complete | Writable ext4 rootfs (changed from read-only squashfs) |
-| **virtio-vsock** | ✅ Complete | Host-guest communication for results |
-| **Serial Console** | ✅ Complete | Kernel output, fallback results |
-| **i8042 Controller** | ✅ Complete | Clean shutdown signaling |
-| **Seccomp Filters** | ✅ Complete | ~50 syscall allowlist |
-| **Capability Dropping** | ✅ Complete | All capabilities dropped (CAP_NET_ADMIN not needed) |
-| **Bundled Kernel** | ✅ Complete | Linux 5.10 LTS, embedded in release |
-| **Timeout Handling** | ✅ Complete | Configurable execution timeout |
-| **Multi-vCPU** | ✅ Complete | Parallel vCPU execution |
-| **Guest Init Binary** | ✅ Complete | Rust-based PID 1 (bencher-init) at `plus/bencher_init/` |
+The runner daemon manages Firecracker processes to provide hardware-isolated VM execution for each benchmark job.
 
 ### Architecture
 
@@ -181,46 +169,82 @@ The `bencher_vmm` crate is located at `plus/bencher_vmm` and provides a complete
 ┌─────────────────────────────────────────────────────────────┐
 │                         Host                                │
 │  ┌─────────────────────────────────────────────────────────┐│
-│  │                    bencher_vmm                          ││
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐  ││
-│  │  │  KVM FD  │ │  VM FD   │ │ vCPU FDs │ │  Devices   │  ││
-│  │  └──────────┘ └──────────┘ └──────────┘ └────────────┘  ││
-│  │                                              │          ││
-│  │  ┌─────────────────────────────────────────────────────┐││
-│  │  │              Device Manager                         │││
-│  │  │  ┌────────┐ ┌────────┐ ┌───────────┐ ┌────────────┐ │││
-│  │  │  │ Serial │ │ i8042  │ │virtio-blk │ │virtio-vsock│ │││
-│  │  │  └────────┘ └────────┘ └───────────┘ └────────────┘ │││
-│  │  └─────────────────────────────────────────────────────┘││
+│  │                  Runner Daemon                          ││
+│  │  ┌──────────────────────────────────────────────────┐   ││
+│  │  │          Firecracker Manager                     │   ││
+│  │  │  ┌─────────────┐  ┌───────────┐  ┌────────────┐ │   ││
+│  │  │  │ API Client  │  │  Process  │  │   Vsock    │ │   ││
+│  │  │  │ (Unix sock) │  │  Manager  │  │  Listener  │ │   ││
+│  │  │  └─────────────┘  └───────────┘  └────────────┘ │   ││
+│  │  └──────────────────────────────────────────────────┘   ││
 │  └─────────────────────────────────────────────────────────┘│
 │                              │                              │
 │  ┌───────────────────────────┴───────────────────────────┐  │
-│  │                    Guest VM                           │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌────────────────┐ │  │
-│  │  │   Kernel    │  │   ext4      │  │   Benchmark    │ │  │
-│  │  │  (Linux)    │  │   rootfs    │  │    Process     │ │  │
-│  │  └─────────────┘  └─────────────┘  └────────────────┘ │  │
+│  │              Firecracker (jailer)                      │  │
+│  │  ┌─────────────┐  ┌─────────────┐                     │  │
+│  │  │  microVM    │  │  Devices:   │                     │  │
+│  │  │  (KVM)      │  │  virtio-blk │                     │  │
+│  │  │             │  │  virtio-vsock│                     │  │
+│  │  └─────────────┘  └─────────────┘                     │  │
+│  │                                                       │  │
+│  │  ┌─────────────────────────────────────────────────┐  │  │
+│  │  │                  Guest VM                       │  │  │
+│  │  │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │  │  │
+│  │  │  │  Kernel  │  │  ext4    │  │  Benchmark   │  │  │  │
+│  │  │  │ (Linux)  │  │  rootfs  │  │   Process    │  │  │  │
+│  │  │  └──────────┘  └──────────┘  └──────────────┘  │  │  │
+│  │  └─────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Usage
+### Firecracker VM Lifecycle
+
+The runner daemon manages each Firecracker VM through its REST API:
 
 ```rust
-use bencher_vmm::{VmConfig, run_vm};
-use camino::Utf8PathBuf;
+use crate::firecracker::{FirecrackerProcess, FirecrackerConfig, MachineConfig, BootSource, Drive, Vsock, Action};
 
-// Create VM configuration
-let config = VmConfig::new(
-    Utf8PathBuf::from("/path/to/vmlinux"),
-    Utf8PathBuf::from("/path/to/rootfs.squashfs"),
-)
-.with_vsock(Utf8PathBuf::from("/tmp/vsock.sock"))
-.with_timeout(120); // 2 minute timeout
+// 1. Start Firecracker process (via jailer for production)
+let fc = FirecrackerProcess::start(&FirecrackerConfig {
+    binary: "/usr/local/bin/firecracker".into(),
+    jailer: Some("/usr/local/bin/jailer".into()),
+    socket_path: work_dir.join("firecracker.sock"),
+    id: job_id.to_string(),
+})?;
 
-// Run the VM and get results
-let results = run_vm(&config)?;
-println!("Benchmark results: {results}");
+// 2. Configure the VM via REST API
+fc.put_machine_config(&MachineConfig {
+    vcpu_count: 4,
+    mem_size_mib: 4096,
+    smt: false, // Disable SMT for consistent benchmarks
+})?;
+
+fc.put_boot_source(&BootSource {
+    kernel_image_path: "/var/lib/bencher/vmlinux".into(),
+    boot_args: "console=ttyS0 reboot=k panic=1 pci=off rw".into(),
+})?;
+
+fc.put_drive(&Drive {
+    drive_id: "rootfs".into(),
+    path_on_host: rootfs_path.into(),
+    is_root_device: true,
+    is_read_only: false,
+})?;
+
+fc.put_vsock(&Vsock {
+    guest_cid: 3,
+    uds_path: vsock_path.into(),
+})?;
+
+// 3. Boot the VM
+fc.put_action(&Action::InstanceStart)?;
+
+// 4. Collect results via vsock
+let results = collect_results_via_vsock(&vsock_path)?;
+
+// 5. Kill the process when done
+fc.kill()?;
 ```
 
 ### Result Collection
@@ -234,147 +258,302 @@ Results are collected via virtio-vsock on dedicated ports:
 | 5002 | exit_code   | Exit code as a string (e.g., "0")  |
 | 5005 | output_file | Optional output file contents      |
 
-The guest init script buffers output and sends it via vsock after the benchmark completes.
+The guest init binary (bencher-init) buffers output and sends it via vsock after the benchmark completes.
 
-### Security Hardening
+### Security Model
 
-The VMM implements defense-in-depth:
+Firecracker provides defense-in-depth through multiple layers:
 
-1. **Capability Dropping**: All Linux capabilities dropped (tested - CAP_NET_ADMIN not needed)
-2. **Seccomp Filters**: Strict syscall allowlist (~50 syscalls)
-3. **No Network**: No virtio-net device, vsock only for results
-4. **Memory Isolation**: Fixed allocation, cannot exceed limit
-
-> **Note**: The current implementation uses read-only squashfs for the rootfs. This needs to change to a writable format (ext4 or overlay) to support benchmarks that write files during execution.
-
-If a guest exploits a bug in virtio parsing:
-- ❌ Cannot `execve` to spawn processes
-- ❌ Cannot `open` new files
-- ❌ Cannot create network sockets
-- ❌ Cannot escalate privileges
-- ✅ Limited to ~50 KVM-related syscalls
+1. **Jailer**: Runs Firecracker in a restricted environment with:
+   - New PID, network, mount, and user namespaces
+   - `chroot` to an isolated directory
+   - Seccomp filters (Firecracker's built-in allowlist)
+   - `cgroups` for resource limits
+   - All capabilities dropped
+2. **Minimal device model**: Only virtio-blk, virtio-vsock, serial — no USB, no PCI, no GPU
+3. **No network**: No virtio-net device configured; vsock is the only communication channel
+4. **Memory isolation**: Fixed allocation, no ballooning, cannot exceed limit
+5. **Battle-tested**: Firecracker's security has been audited and hardened for AWS Lambda/Fargate workloads
 
 ---
 
 ## Required Changes to Existing Code
 
-Before proceeding with the implementation phases, the following changes are needed to the existing `bencher_vmm` and `bencher_runner` code:
+Before proceeding with the implementation phases, the following changes are needed to migrate from the existing `bencher_vmm` custom VMM to Firecracker:
 
-### 1. Writable Rootfs ✅ COMPLETE
+### 1. Replace bencher_vmm with Firecracker Client
+
+**Status**: Needed
+
+The custom `bencher_vmm` crate (`plus/bencher_vmm`) will be replaced with a Firecracker API client module in the runner daemon. The runner will manage Firecracker as an external process via its REST API over a Unix domain socket.
+
+**Changes needed**:
+- Remove `plus/bencher_vmm` crate (replaced by Firecracker binary)
+- Add `plus/bencher_runner/src/firecracker/` module with:
+  - `client.rs` — HTTP client for Firecracker's REST API (Unix socket)
+  - `process.rs` — Firecracker/jailer process lifecycle management
+  - `config.rs` — VM configuration types matching Firecracker's API
+- Update `plus/bencher_runner/src/run.rs` to use Firecracker client instead of `bencher_vmm`
+
+### 2. Writable Rootfs ✅ COMPLETE
 
 **Solution implemented**: Changed rootfs from squashfs to ext4 using `mkfs.ext4 -d` option.
 
+This work carries forward — Firecracker supports ext4 rootfs via its virtio-blk device with `is_read_only: false`.
+
 **Files modified**:
-- `plus/bencher_rootfs/src/ext4.rs` - New module for ext4 image creation
+- `plus/bencher_rootfs/src/ext4.rs` - ext4 image creation
 - `plus/bencher_rootfs/src/lib.rs` - Export ext4 functions
 - `plus/bencher_rootfs/src/error.rs` - Added Ext4 error variant
-- `plus/bencher_runner/src/run.rs` - Changed to use ext4 instead of squashfs
-- Kernel cmdline changed from `ro` to `rw` for writable root
+- `plus/bencher_runner/src/run.rs` - Uses ext4 instead of squashfs
 
-**How it works**:
-1. Create sparse file of specified size (default 1GB)
-2. Run `mkfs.ext4 -F -q -m 0 -d <source_dir> <output>` to create and populate
-3. The `-d` option copies directory contents during filesystem creation
+### 3. Guest Init System (bencher-init) — No Changes Needed
 
-### 2. CAP_NET_ADMIN Removal ✅ COMPLETE
+The `bencher-init` binary at `plus/bencher_init/` works identically under Firecracker as it did under `bencher_vmm`. It communicates via virtio-vsock (CID-based addressing), which Firecracker supports natively. No changes required.
 
-**Result**: CAP_NET_ADMIN is NOT needed for vsock.
+### Step-by-Step Migration from bencher_vmm to Firecracker
 
-The virtio-vsock implementation uses Unix domain sockets on the host side (not AF_VSOCK), so no network capabilities are required. All 22 tests pass with CAP_NET_ADMIN removed.
+The current execution model is a two-phase process: the `run` subcommand prepares the rootfs and jail, then `exec()`s into the `vmm` subcommand which sets up namespaces, mounts, pivot_root, and calls `bencher_vmm::run_vm()`. Firecracker replaces the second phase — its jailer handles namespace/mount/pivot_root isolation, and the Firecracker process handles KVM, devices, and the event loop.
 
-**Files modified**:
-- `plus/bencher_vmm/src/sandbox.rs` - Now drops ALL capabilities
-- `plus/bencher_vmm/README.md` - Updated documentation
+#### What stays the same
 
-### 3. Remove Debug Logging ✅ COMPLETE
+- `plus/bencher_init/` — Guest init binary. Unchanged. Communicates via vsock (CID 2, ports 5000-5005).
+- `plus/bencher_rootfs/` — ext4 rootfs creation. Unchanged. Firecracker's `virtio-blk` with `is_read_only: false` supports the same ext4 images.
+- `plus/bencher_oci/` — OCI image pulling and unpacking. Unchanged.
+- `plus/bencher_runner/src/run.rs` — Phase 1 orchestration (OCI pull, rootfs creation, init binary injection, config.json writing). Mostly unchanged; the exec-to-vmm-subcommand call at the end is replaced with a Firecracker launch.
+- Vsock result collection protocol (ports 5000-5005, same data format).
 
-**Changes made**: Removed extensive debug logging from `plus/bencher_vmm/src/event_loop.rs`:
-- Removed heartbeat logging every 5 seconds
-- Removed exit counting and progress logging
-- Removed first MMIO read/write logging
-- Removed HLT exit logging
-- Removed serial output preview logging
+#### Step 1: Add Firecracker binary management
 
-The event loop is now clean and produces no output unless there's an error.
+Create `plus/bencher_runner/src/firecracker/process.rs`.
+
+This module manages the Firecracker process lifecycle:
+- Start the `firecracker` binary (or `jailer` wrapping `firecracker`) as a child process
+- The process listens on a Unix domain socket for its REST API
+- Wait for the socket to become available (poll with short backoff)
+- Provide `kill()` and `kill_after_grace_period()` for cleanup
+- In production, use the jailer: `jailer --id {job_id} --exec-file /usr/local/bin/firecracker --uid {uid} --gid {gid} -- --api-sock /run/firecracker.sock`
+- In development, run Firecracker directly without the jailer
+
+The jailer replaces the manual namespace/mount/pivot_root setup currently in `plus/bencher_runner/src/vmm.rs`.
+
+#### Step 2: Add Firecracker REST API client
+
+Create `plus/bencher_runner/src/firecracker/client.rs`.
+
+HTTP client that speaks to Firecracker's API over the Unix domain socket. Needs to support these endpoints:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `PUT` | `/machine-config` | Set vCPU count, memory, SMT |
+| `PUT` | `/boot-source` | Set kernel path and boot args |
+| `PUT` | `/drives/{id}` | Attach rootfs block device |
+| `PUT` | `/vsock` | Configure vsock (guest CID + UDS path) |
+| `PUT` | `/actions` | `InstanceStart`, `SendCtrlAltDel` |
+| `GET` | `/` | Health check / wait for ready |
+
+Use `hyper` with a Unix socket connector (already in the dependency tree via `reqwest`), or a minimal hand-rolled HTTP/1.1 client since the Firecracker API is simple PUT/GET with JSON bodies. No external SDK crate is needed.
+
+#### Step 3: Add Firecracker configuration types
+
+Create `plus/bencher_runner/src/firecracker/config.rs`.
+
+Define Rust structs matching Firecracker's API request/response schemas:
+
+```rust
+#[derive(Serialize)]
+pub struct MachineConfig {
+    pub vcpu_count: u8,
+    pub mem_size_mib: u32,
+    pub smt: bool,
+}
+
+#[derive(Serialize)]
+pub struct BootSource {
+    pub kernel_image_path: String,
+    pub boot_args: String,
+}
+
+#[derive(Serialize)]
+pub struct Drive {
+    pub drive_id: String,
+    pub path_on_host: String,
+    pub is_root_device: bool,
+    pub is_read_only: bool,
+}
+
+#[derive(Serialize)]
+pub struct Vsock {
+    pub guest_cid: u32,
+    pub uds_path: String,
+}
+
+#[derive(Serialize)]
+pub struct Action {
+    pub action_type: ActionType,
+}
+
+#[derive(Serialize)]
+pub enum ActionType {
+    InstanceStart,
+    SendCtrlAltDel,
+}
+```
+
+#### Step 4: Add vsock result listener
+
+Create `plus/bencher_runner/src/firecracker/vsock.rs`.
+
+Firecracker exposes guest vsock connections as connections on a host-side Unix domain socket. When the guest connects to CID 2 on port 5000, Firecracker forwards the connection to the UDS path specified in the vsock config. The host-side listener must:
+
+1. Accept connections on the vsock UDS
+2. Read the port number from Firecracker's vsock handshake (the first line is `CONNECT {port}\n` or similar, depending on the Firecracker vsock implementation — consult Firecracker docs for the exact protocol)
+3. Route data to the appropriate buffer based on port (5000=stdout, 5001=stderr, 5002=exit_code, 5005=output_file)
+4. Enforce a maximum buffer size (10 MiB) per port to prevent memory exhaustion
+5. Return collected results once all expected ports have reported or the VM exits
+
+This replaces the vsock handling that was previously internal to `bencher_vmm::event_loop`.
+
+#### Step 5: Replace vmm.rs with Firecracker orchestration
+
+Rewrite `plus/bencher_runner/src/vmm.rs` (~242 LOC).
+
+The current `vmm.rs` does:
+1. Create namespaces (user, mount, network, UTS, IPC, PID)
+2. Fork into PID namespace
+3. Mount procfs, devtmpfs, tmpfs
+4. Bind-mount `/dev/kvm`
+5. `pivot_root` to jail directory
+6. Apply rlimits, `PR_SET_NO_NEW_PRIVS`, drop capabilities
+7. Construct `VmConfig` and call `bencher_vmm::run_vm()`
+8. Print results to stdout
+
+Steps 1-6 are replaced by the Firecracker jailer. The new `vmm.rs` becomes:
+
+1. Copy the rootfs image for this job (each job gets its own writable copy)
+2. Start Firecracker via jailer (Step 1)
+3. Configure VM via REST API (Steps 2-3): machine config, boot source, rootfs drive, vsock
+4. Start vsock listener (Step 4)
+5. Boot the VM (`InstanceStart`)
+6. Wait for results from vsock listener, with timeout
+7. On timeout or completion: send `SendCtrlAltDel`, wait grace period, then kill process
+8. Print results to stdout (same format as before)
+
+#### Step 6: Update run.rs to remove exec-to-vmm pattern
+
+Currently `plus/bencher_runner/src/run.rs` prepares everything and then calls `Command::new(current_exe).arg("vmm").exec()` which replaces the process. With Firecracker, the runner can manage the Firecracker process as a child instead of replacing itself. This simplifies error handling and allows the runner to monitor the Firecracker process.
+
+Change the end of `run.rs` from:
+```rust
+// Old: exec() into vmm subcommand (never returns)
+Command::new(std::env::current_exe()?).arg("vmm").args(&vmm_args).exec();
+```
+To:
+```rust
+// New: launch Firecracker as a child process
+let results = firecracker::run_job(&firecracker_config, &job_config).await?;
+println!("{}", results.output);
+```
+
+This also means the `vmm` subcommand in the runner binary (`services/runner/src/runner/vmm.rs`) can be removed — the runner no longer needs to re-exec itself.
+
+#### Step 7: Update kernel management
+
+The current `bencher_vmm` build script (`plus/bencher_vmm/build.rs`) downloads a Linux kernel at compile time and embeds it in the binary via `include_bytes!`. With Firecracker:
+
+- The kernel is a separate file on disk, not embedded in the runner binary
+- Use the same kernel that Firecracker CI publishes (the current build script already downloads from Firecracker's CI artifacts)
+- Move the kernel download logic from `bencher_vmm/build.rs` to a setup step in the runner daemon, or distribute the kernel alongside the Firecracker binary
+- Update `runner.toml` to require `kernel_path` configuration
+
+#### Step 8: Remove HMAC verification
+
+The current HMAC-SHA256 "integrity verification" (vsock port 5003, nonce in config.json) provides no security benefit: the guest has the key and can compute a valid HMAC over arbitrary data. Remove:
+
+- `verify_hmac()` from the runner's result handling
+- `nonce` field from the init config.json schema
+- HMAC computation from `plus/bencher_init/src/init.rs`
+- Vsock port 5003 (HMAC port)
+- `---BENCHER_HMAC:{hex}---` serial markers
+
+This simplifies both the guest init and the host-side result collection.
+
+#### Step 9: Remove bencher_vmm crate
+
+Once steps 1-8 are complete and tests pass:
+
+1. Delete `plus/bencher_vmm/` entirely (~5,800 LOC)
+2. Remove `bencher_vmm` from the workspace `Cargo.toml`
+3. Remove `bencher_vmm` dependency from `plus/bencher_runner/Cargo.toml`
+4. Remove `bencher_vmm` feature flags from `plus/bencher_runner/Cargo.toml`
+5. Delete `plus/bencher_runner/src/jail/` — namespace, chroot, and rlimit setup is now handled by the jailer. Keep `cgroup.rs` only if the jailer's built-in cgroup support is insufficient for I/O throttling (check Firecracker jailer docs).
+
+#### Step 10: Update tests
+
+- **Unit tests**: Add tests for the Firecracker API client (mock the Unix socket)
+- **Integration tests**: Update `tasks/test_runner/` to test Firecracker-based execution. These tests require a Linux host with KVM and the Firecracker binary installed.
+- **Remove**: All `bencher_vmm` unit tests (they test KVM internals that are now Firecracker's responsibility)
+- **Keep**: `bencher_init` tests, `bencher_rootfs` tests, OCI tests — all unchanged
+
+#### Summary of LOC changes (estimated)
+
+| Action | LOC |
+|--------|-----|
+| Delete `plus/bencher_vmm/` | -5,800 |
+| Delete `plus/bencher_runner/src/vmm.rs` (old) | -242 |
+| Delete `plus/bencher_runner/src/jail/` (most of it) | -400 |
+| Add `plus/bencher_runner/src/firecracker/` | +600 |
+| Modify `plus/bencher_runner/src/run.rs` | ~100 changed |
+| Modify `plus/bencher_init/src/init.rs` (remove HMAC) | -80 |
+| **Net change** | ~-5,800 |
 
 ---
 
 ## Production Hardening Checklist
 
-Before the VMM is ready to handle arbitrary benchmark workloads from untrusted users, the following items must be addressed:
+Before the runner is ready to handle arbitrary benchmark workloads from untrusted users, the following items must be addressed. Switching to Firecracker eliminates several categories of issues (seccomp, capability management, VMM-level race conditions) since Firecracker and its jailer handle these.
 
-### Critical Issues (Must Fix)
+### Runner-Level Issues
 
-- [x] **1. Output Buffer Limits** (`plus/bencher_vmm/src/event_loop.rs`) ✅
-  - Serial output accumulated without size limits - malicious workload can exhaust host memory
-  - Cap `serial_output: Vec<u8>` at a reasonable size (e.g., 10MB)
-  - Test scenario: `output_flood` - workload that outputs gigabytes of data
-  - **Fixed**: Added `MAX_SERIAL_OUTPUT_SIZE` constant (10 MiB) and `extend_with_limit()` helper
-
-- [x] **2. Disk I/O Limits** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
-  - No `io.max` for blkio throttling
+- [x] **1. Disk I/O Limits** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
   - Workload can perform excessive disk I/O, affecting other processes on the host
-  - Test scenario: `disk_flood` - workload that writes continuously to disk
-  - **Fixed**: Added `io_read_bps`/`io_write_bps` to `ResourceLimits`, enabled io controller, added `apply_io_limits()` that discovers block devices
+  - **Fixed**: Added `io_read_bps`/`io_write_bps` to `ResourceLimits`, enabled io controller
 
-- [x] **3. Timeout Race Condition** (`plus/bencher_vmm/src/event_loop.rs:40-53`) ✅
-  - Sleep-based timeout with potential race condition
-  - Timeout thread spawned but never joined (`drop(handle)` at line 98)
-  - No forceful SIGKILL fallback if graceful shutdown fails
-  - Test scenario: `timeout_enforced` - workload that ignores shutdown signals
-  - **Fixed**: Use `SeqCst` ordering for atomics, properly join timeout thread
-
-- [x] **4. Environment Variable Sanitization** (`plus/bencher_runner/src/run.rs`) ✅
+- [x] **2. Environment Variable Sanitization** (`plus/bencher_runner/src/run.rs`) ✅
   - `LD_PRELOAD`, `LD_LIBRARY_PATH`, `PATH` passed directly from OCI image
-  - Could allow loading malicious libraries inside the VM
-  - Blocklist dangerous environment variables
-  - **Fixed**: Added `BLOCKED_ENV_VARS` list and `sanitize_env()` function
+  - **Fixed**: Added allowlist-based `sanitize_env()` function (only explicitly permitted variables are passed through)
 
-### High Priority (Should Fix)
-
-- [x] **5. Seccomp Argument Filtering** (`plus/bencher_vmm/src/sandbox.rs`) ✅
-  - All rules use empty `Vec::new()` for argument conditions
-  - `prctl`, `clone3`, file operations allowed without restriction
-  - Add argument validation for sensitive syscalls
-  - **Fixed**: Added argument filtering for `ioctl` (KVM type 0xAE only), `socket` (AF_UNIX only), `prctl` (PR_SET_NAME only)
-
-- [x] **6. Vsock Reliability** (`plus/bencher_init/src/init.rs`) ✅
-  - Blocking connect with no timeout - can hang indefinitely
-  - Single failed send closes socket without retry
-  - Add connect/read timeouts in init
-  - **Fixed**: Added `SO_SNDTIMEO` (5s) on vsock sockets, retry logic (3 attempts with backoff), EINTR handling in write loop
-
-- [x] **7. Cgroup Controller Failures** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
+- [x] **3. Cgroup Controller Failures** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
   - `enable_controllers()` silently ignores failures
-  - If controllers aren't enabled, limits may not apply
-  - Fail if required limits can't be applied
   - **Fixed**: Validate required controllers (cpu, memory, pids) are enabled after write; graceful fallback when io controller unavailable
 
-- [x] **8. OOM Killer Protection** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
-  - If memory limit is hit, OOM killer behavior is undefined
-  - Set `memory.oom.group` or handle OOM events explicitly
-  - **Fixed**: Set `memory.oom.group=1` for group kill on OOM, disabled swap with `memory.swap.max=0` for accurate benchmarking
+- [x] **4. OOM Killer Protection** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
+  - **Fixed**: Set `memory.oom.group=1` for group kill on OOM, disabled swap with `memory.swap.max=0`
 
-### Medium Priority (Nice to Have)
+### Guest Init Issues
 
-- [ ] **9. PID Namespace**
-  - Acknowledged in code but not implemented
-  - Would require fork-based architecture change
-  - **Deferred**: Low security impact - VMM is already in mount/network/user/UTS/IPC namespaces with capabilities dropped, seccomp, and pivot_root
+- [x] **5. Vsock Reliability** (`plus/bencher_init/src/init.rs`) ✅
+  - Blocking connect with no timeout - can hang indefinitely
+  - **Fixed**: Added `SO_SNDTIMEO` (5s) on vsock sockets, retry logic (3 attempts with backoff), EINTR handling in write loop
 
-- [ ] **10. Telemetry/Metrics**
-  - No CPU time tracking, memory peak, syscall auditing
-  - Makes debugging production issues difficult
-  - **Deferred**: Feature addition, not a security fix
+- [ ] **6. Output Buffer Limits**
+  - The runner must cap the amount of data it reads from vsock to prevent a malicious guest from exhausting host memory
+  - Set a maximum size (e.g., 10 MiB) when reading from vsock ports
 
-- [ ] **11. Result Integrity Verification**
-  - Results could be tampered with between guest and host
-  - Consider HMAC or other validation
-  - **Deferred**: Low risk since vsock is host-local (not network), tampering requires compromising the VMM
+### Addressed by Firecracker
 
-- [x] **12. Serial Output Race in Multi-vCPU** (`plus/bencher_vmm/src/event_loop.rs`) ✅
-  - Multiple vCPU threads can write to `serial_output` simultaneously without mutex protection
-  - **Fixed**: Changed to shared `Arc<Mutex<Vec<u8>>>` serial output buffer used by all vCPU threads; result extraction moved to after thread join
+The following issues from the previous custom VMM approach are now handled by Firecracker and its jailer:
+
+- **Seccomp filters**: Firecracker ships its own seccomp profile, maintained by AWS
+- **Capability dropping**: The jailer drops all capabilities
+- **PID/mount/network namespaces**: The jailer creates all necessary namespaces
+- **Timeout enforcement**: Runner sends `SendCtrlAltDel` action via API, then kills the Firecracker process after a grace period
+- **Serial output race conditions**: Not applicable — Firecracker handles serial internally
+
+### Deferred
+
+- [ ] **7. Telemetry/Metrics** — Feature addition, not a security fix
+- [ ] **8. Spectre/Meltdown/MDS Mitigations** — Host kernel must be configured with appropriate mitigations (`l1tf=flush`, separate physical cores per tenant). Document required host kernel parameters.
 
 ---
 
@@ -467,21 +646,15 @@ GET  /v2/{project}/blobs/{digest}     # Pull blob
 
 ### Image-to-Rootfs Conversion
 
-For bencher_vmm, OCI images must be converted to a bootable rootfs:
+For Firecracker, OCI images must be converted to a bootable rootfs:
 
 ```
 OCI Image ──▶ Unpack layers ──▶ Install bencher-init ──▶ Write config.json ──▶ Create rootfs image
 ```
 
-**Rootfs format options** (current: squashfs, needs change to writable):
+**Rootfs format**: ext4 (writable, standard, supported by Firecracker's virtio-blk with `is_read_only: false`).
 
-| Format | Pros | Cons |
-|--------|------|------|
-| **squashfs** (current) | Compressed, fast to create | Read-only, benchmarks can't write files |
-| **ext4 image** | Writable, standard | Larger size, slower to create |
-| **overlay on squashfs** | Compressed base + writable layer | More complex, needs kernel support |
-
-The runner daemon handles this conversion (currently in `plus/bencher_runner/src/run.rs`):
+The runner daemon handles this conversion (in `plus/bencher_runner/src/run.rs`):
 
 ```rust
 // Simplified flow from actual implementation
@@ -495,8 +668,8 @@ async fn convert_oci_to_rootfs(image_ref: &str, config: &BenchmarkConfig) -> Res
     // 3. Write config.json with command, workdir, env, output_file
     write_init_config(&unpacked_dir, &config)?;
 
-    // 4. Create rootfs image (currently squashfs, should be ext4)
-    let rootfs_path = create_rootfs_image(&unpacked_dir)?;
+    // 4. Create ext4 rootfs image
+    let rootfs_path = create_ext4_rootfs(&unpacked_dir)?;
 
     Ok(rootfs_path)
 }
@@ -533,7 +706,7 @@ Cache eviction policy:
 The **Runner Daemon** (`bencher-runner`) is a long-running process that:
 1. Registers with the Bencher API server
 2. Polls for available jobs
-3. Executes benchmarks in isolation via bencher_vmm
+3. Executes benchmarks in isolated Firecracker microVMs
 4. Reports results back to the API
 
 ### State Machine
@@ -653,34 +826,45 @@ async fn run_daemon(config: &RunnerConfig) -> Result<()> {
 ### Job Execution Flow
 
 ```rust
-use bencher_vmm::{VmConfig, run_vm, write_kernel_to_file};
+use crate::firecracker::{FirecrackerProcess, MachineConfig, BootSource, Drive, Vsock, Action};
 
 async fn execute_job(job: &Job, config: &RunnerConfig) -> JobResult {
-    // 1. Pull and convert image to squashfs
+    // 1. Pull and convert image to ext4 rootfs
     let rootfs_path = prepare_image(&job.image_ref).await?;
 
-    // 2. Write bundled kernel to temp file (if needed)
-    let kernel_path = config.kernel_path.clone()
-        .unwrap_or_else(|| {
-            let path = config.cache_dir.join("vmlinux");
-            write_kernel_to_file(&path).expect("Failed to write kernel");
-            path
-        });
+    // 2. Create work directory for this job
+    let work_dir = config.work_dir.join(&job.job_id.to_string());
+    std::fs::create_dir_all(&work_dir)?;
+    let socket_path = work_dir.join("firecracker.sock");
+    let vsock_path = work_dir.join("vsock.sock");
 
-    // 3. Create VM configuration
-    let vsock_path = create_temp_socket()?;
-    let vm_config = VmConfig::new(kernel_path, rootfs_path)
-        .with_vsock(vsock_path.clone())
-        .with_timeout(job.timeout.as_secs());
+    // 3. Start Firecracker process (via jailer in production)
+    let fc = FirecrackerProcess::start(&config.firecracker, &socket_path, &job.job_id)?;
 
-    // 4. Run the VM (blocking until complete or timeout)
-    let output = run_vm(&vm_config)?;
+    // 4. Configure and boot the VM
+    fc.put_machine_config(&MachineConfig {
+        vcpu_count: job.resources.vcpus,
+        mem_size_mib: job.resources.memory_mib,
+        smt: false,
+    }).await?;
+    fc.put_boot_source(&BootSource {
+        kernel_image_path: config.kernel_path.clone(),
+        boot_args: "console=ttyS0 reboot=k panic=1 pci=off rw".into(),
+    }).await?;
+    fc.put_drive("rootfs", &rootfs_path, true, false).await?;
+    fc.put_vsock(3, &vsock_path).await?;
+    fc.put_action(Action::InstanceStart).await?;
 
-    // 5. Parse results based on configured adapter
+    // 5. Collect results via vsock (with timeout)
+    let output = collect_results_via_vsock(&vsock_path, job.timeout).await?;
+
+    // 6. Shutdown and cleanup
+    let _ = fc.put_action(Action::SendCtrlAltDel).await;
+    fc.kill_after_grace_period(Duration::from_secs(5)).await;
+    cleanup_work_dir(&work_dir)?;
+
+    // 7. Parse results based on configured adapter
     let results = parse_results(&output, &job.output_format)?;
-
-    // 6. Cleanup
-    cleanup_temp_files(&vsock_path, &rootfs_path)?;
 
     JobResult {
         status: JobStatus::Success,
@@ -834,36 +1018,40 @@ async fn assign_job_to_runner(
     // 2. Matches runner capabilities
     // 3. Has labels that match runner labels
 
-    let job = sqlx::query_as!(Job, r#"
-        SELECT * FROM jobs
-        WHERE state = 'pending'
-        AND (
-            -- Resource requirements
-            json_extract(resources, '$.vcpus') <= ?
-            AND json_extract(resources, '$.memory_mib') <= ?
-        )
-        ORDER BY priority DESC, created_at ASC
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-    "#, runner.capabilities.vcpu_count, runner.capabilities.memory_mib)
-    .fetch_optional(db)
-    .await?;
+    // Use BEGIN IMMEDIATE for atomic claim in SQLite
+    // (SQLite doesn't support FOR UPDATE SKIP LOCKED)
+    let job = db.transaction::<_, _, Error>(|tx| {
+        Box::pin(async move {
+            let job = sqlx::query_as!(Job, r#"
+                SELECT * FROM jobs
+                WHERE state = 'pending'
+                AND (
+                    json_extract(resources, '$.vcpus') <= ?
+                    AND json_extract(resources, '$.memory_mib') <= ?
+                )
+                ORDER BY priority DESC, created_at ASC
+                LIMIT 1
+            "#, runner.capabilities.vcpu_count, runner.capabilities.memory_mib)
+            .fetch_optional(&mut **tx)
+            .await?;
 
-    if let Some(job) = job {
-        // Atomically assign to runner
-        sqlx::query!(r#"
-            UPDATE jobs
-            SET state = 'assigned',
-                state_data = json_object('runner_id', ?)
-            WHERE job_id = ? AND state = 'pending'
-        "#, runner.runner_id, job.job_id)
-        .execute(db)
-        .await?;
+            if let Some(ref job) = job {
+                // Atomically assign to runner within the same transaction
+                sqlx::query!(r#"
+                    UPDATE jobs
+                    SET state = 'assigned',
+                        state_data = json_object('runner_id', ?)
+                    WHERE job_id = ? AND state = 'pending'
+                "#, runner.runner_id, job.job_id)
+                .execute(&mut **tx)
+                .await?;
+            }
 
-        Ok(Some(job))
-    } else {
-        Ok(None)
-    }
+            Ok(job)
+        })
+    }).await?;
+
+    Ok(job)
 }
 ```
 
@@ -1031,42 +1219,44 @@ bencher run \
 
 | Threat                       | Mitigation                                                                       |
 | ---------------------------- | -------------------------------------------------------------------------------- |
-| **Malicious benchmark code** | bencher_vmm provides hardware isolation via KVM; code cannot escape VM           |
-| **Resource exhaustion**      | Strict resource limits (CPU, memory, disk) enforced by VM configuration          |
+| **Malicious benchmark code** | Firecracker provides hardware isolation via KVM; code cannot escape VM            |
+| **Resource exhaustion**      | Strict resource limits (CPU, memory, disk) enforced by VM + jailer cgroups       |
 | **Network attacks**          | VMs have no network access; vsock is the only communication channel              |
 | **Data exfiltration**        | No network egress; results must be returned via vsock protocol                   |
-| **VMM exploit**              | Seccomp filters limit VMM to ~50 syscalls; capabilities dropped                  |
+| **VMM exploit**              | Firecracker's jailer: seccomp, namespaces, chroot, capabilities dropped           |
 | **Runner compromise**        | Runners use short-lived tokens; minimal API access                               |
 | **Image tampering**          | Images are content-addressed (SHA256); verified on pull                          |
 | **Timing attacks**           | VMs are destroyed after each job; no persistent state                            |
 
-### bencher_vmm Security Layers
+### Firecracker Security Layers
 
-The VMM implements defense-in-depth with multiple layers:
+Firecracker implements defense-in-depth with multiple layers, managed by its **jailer** binary:
 
 ```
-Vm::new()           <- File opens, mmap, KVM setup (all syscalls allowed)
+jailer (PID 1 in namespace)
+    │
+    ├── Create namespaces (PID, mount, network, user)
+    ├── chroot to isolated directory
+    ├── Drop all capabilities
+    ├── Apply cgroup limits (CPU, memory, pids)
     │
     ▼
-Vm::run()
+firecracker process
     │
-    ├── drop_capabilities()  <- Drop all caps except CAP_NET_ADMIN
-    ├── apply_seccomp()      <- Install syscall filter (irreversible)
+    ├── Apply seccomp BPF filters (Firecracker's built-in allowlist)
     │
     ▼
-event_loop::run()   <- Only ~50 allowed syscalls work here
+KVM VM execution    <- Hardware-isolated guest
 ```
 
-**Allowed syscall categories:**
-- KVM: `ioctl`
-- Memory: `mmap`, `munmap`, `mprotect`, `madvise`, `brk`
-- File I/O: `read`, `write`, `close`, `fstat`
-- Polling: `ppoll`, `epoll_wait`, `eventfd2`
-- Threading: `futex`, `clone3`, `sched_yield`
-- Signals: `rt_sigaction`, `rt_sigprocmask`
-- Process: `exit`, `exit_group`, `getpid`
+**Key security properties:**
+- Firecracker runs in its own PID namespace (cannot see host processes)
+- Chrooted to a per-VM directory (cannot access host filesystem)
+- Network namespace is empty (no host network access)
+- Seccomp filter maintained by AWS, regularly audited
+- Minimal device model: only virtio-blk, virtio-vsock, serial, i8042
 
-**Any syscall not in this list results in immediate process termination.**
+**The runner daemon never needs to implement seccomp or capability management — the jailer handles it.**
 
 ### Runner Authentication
 
@@ -1142,7 +1332,7 @@ Secrets are:
 To achieve consistent benchmark results:
 
 1. **Disable SMT (Hyperthreading) in Guest**
-   - bencher_vmm configures VMs without SMT by default
+   - Firecracker's `machine-config` API accepts `smt: false`
 
 2. **CPU Pinning on Host**
    ```bash
@@ -1179,13 +1369,13 @@ To achieve consistent benchmark results:
    - Store images and rootfs on local NVMe, not network storage
 
 2. **Rootfs Format**
-   - Currently squashfs (read-only), changing to ext4 (writable)
+   - ext4 with `is_read_only: false` in Firecracker drive config
    - ext4 allows benchmarks to write files during execution
-   - Consider sparse files for faster creation
+   - Use sparse files for faster creation
 
 3. **Pre-convert Images**
-   - Image-to-squashfs conversion is cached
-   - Subsequent runs reuse cached rootfs
+   - Image-to-ext4 conversion is cached
+   - Subsequent runs get a copy-on-write clone of the cached rootfs
 
 ### Warmup Runs
 
@@ -1331,7 +1521,7 @@ CLI (bencher run)
   └── API Server (create job)
         └── Job Queue (enqueue)
               └── Runner (poll)
-                    └── bencher_vmm (boot + execute)
+                    └── Firecracker (boot + execute)
                           └── Guest (benchmark)
 ```
 
@@ -1377,32 +1567,33 @@ CLI (bencher run)
 
 **Deliverable**: Users can push images to Bencher and reference them in jobs
 
-### Phase 3: VMM Integration (2-3 weeks)
+### Phase 3: Firecracker Integration (2-3 weeks)
 
-**Goal**: Hardware-isolated job execution using bencher_vmm
+**Goal**: Hardware-isolated job execution using Firecracker
 
-> Note: This phase is shorter than originally planned because bencher_vmm and the guest init system (bencher-init) already exist. The main work items are:
+1. **Firecracker Client Module**
+   - REST API client over Unix domain socket
+   - Firecracker/jailer process lifecycle management
+   - VM configuration and boot
+   - Graceful shutdown (`SendCtrlAltDel` + kill after grace period)
 
-1. **Image-to-Rootfs Pipeline** (exists, needs modification)
+2. **Image-to-Rootfs Pipeline** (exists, needs minor updates)
    - OCI image unpacking ✅ exists
    - Init binary injection ✅ exists (bencher-init)
    - Config.json writing ✅ exists
-   - **Change squashfs to ext4** ⚠️ needed for writable rootfs
+   - ext4 rootfs creation ✅ exists
 
-2. **Guest Init System** ✅ Complete
+3. **Guest Init System** ✅ Complete (no changes needed)
    - Rust-based init binary (`plus/bencher_init/`)
    - vsock-based result streaming (ports 5000-5005)
-   - Graceful shutdown via reboot(RB_POWER_OFF)
+   - Works identically under Firecracker
 
-3. **Security Testing**
-   - Test removal of CAP_NET_ADMIN from capability drop
-   - Verify vsock still works without network capabilities
+4. **Runner Integration**
+   - Replace `bencher_vmm` calls with Firecracker client in `plus/bencher_runner/`
+   - Job queue integration with API
+   - Vsock result collection from Firecracker's vsock UDS
 
-4. **Runner Integration** (partially exists)
-   - Integrate bencher_vmm into runner daemon ✅ exists (`plus/bencher_runner/`)
-   - Job queue integration ⚠️ needs API integration
-
-**Deliverable**: Jobs run in isolated VMs via bencher_vmm with writable rootfs
+**Deliverable**: Jobs run in isolated Firecracker microVMs with writable rootfs
 
 ### Phase 4: Production Hardening (2-3 weeks)
 
@@ -1414,7 +1605,7 @@ CLI (bencher run)
    - Rootfs caching
 
 2. **Reliability**
-   - Job timeout handling (already in bencher_vmm)
+   - Job timeout handling (Firecracker `SendCtrlAltDel` + process kill)
    - Runner failover
    - Graceful shutdown
    - Error recovery
@@ -1482,17 +1673,17 @@ CLI (bencher run)
 
 ### 3. Windows/macOS Support
 - **Question**: When/if to add non-Linux runner support?
-- **Considerations**: bencher_vmm requires KVM (Linux-only)
+- **Considerations**: Firecracker requires KVM (Linux-only)
 - **Proposed**: Linux-only; Windows/macOS would require alternative isolation (containers or different VMM)
 
 ### 4. ARM Production Readiness
 - **Question**: When to enable ARM runners in production?
-- **Considerations**: bencher_vmm already supports aarch64, needs production testing
+- **Considerations**: Firecracker supports aarch64, needs production testing
 - **Proposed**: Phase 5 or 6, after x86_64 is stable in production
 
 ### 5. GPU/Accelerator Support
 - **Question**: Will benchmarks need GPU access?
-- **Considerations**: bencher_vmm doesn't support GPU passthrough
+- **Considerations**: Firecracker doesn't support GPU passthrough
 - **Proposed**: Out of scope for initial implementation; revisit based on demand
 
 ### 6. Persistent Storage
@@ -1514,16 +1705,16 @@ CLI (bencher run)
 
 ## Appendix A: Technology Comparison Matrix
 
-| Feature         | bencher_vmm    | Firecracker    | Cloud Hypervisor | Kata      | gVisor                   | Containers |
-| --------------- | -------------- | -------------- | ---------------- | --------- | ------------------------ | ---------- |
-| CPU Overhead    | <5%            | <5%            | <5%              | ~17%      | 0% (CPU), 10x (syscalls) | ~0%        |
-| Boot Time       | ~100-200ms     | ~125ms         | ~200ms           | 150-300ms | 50-100ms                 | <50ms      |
-| Memory Overhead | <5 MiB         | <5 MiB         | ~5-10 MiB        | ~130 MiB  | Low                      | Minimal    |
-| Security        | Hardware + seccomp | Hardware    | Hardware         | Hardware  | Application              | Process    |
-| OCI Support     | Via conversion | Via containerd | Via Kata         | Native    | Native                   | Native     |
-| KVM Required    | Yes            | Yes            | Yes              | Yes       | No                       | No         |
-| Integration     | Native Rust    | External proc  | External proc    | External  | External                 | External   |
-| ARM Support     | Yes            | Yes            | Yes              | Yes       | Yes                      | Yes        |
+| Feature         | Firecracker (chosen) | Cloud Hypervisor | Kata      | gVisor                   | Containers |
+| --------------- | -------------------- | ---------------- | --------- | ------------------------ | ---------- |
+| CPU Overhead    | <5%                  | <5%              | ~17%      | 0% (CPU), 10x (syscalls) | ~0%        |
+| Boot Time       | ~125ms               | ~200ms           | 150-300ms | 50-100ms                 | <50ms      |
+| Memory Overhead | ~5 MiB               | ~5-10 MiB        | ~130 MiB  | Low                      | Minimal    |
+| Security        | Hardware + jailer    | Hardware         | Hardware  | Application              | Process    |
+| OCI Support     | Via conversion       | Via Kata         | Native    | Native                   | Native     |
+| KVM Required    | Yes                  | Yes              | Yes       | No                       | No         |
+| Maturity        | AWS production       | Moderate         | CNCF      | Google production        | Mature     |
+| ARM Support     | Yes                  | Yes              | Yes       | Yes                      | Yes        |
 
 ## Appendix B: Runner Hardware Recommendations
 
@@ -1545,44 +1736,44 @@ CLI (bencher run)
 | OS        | Linux 5.10+ | Linux 6.1+  |
 | KVM       | Required    | Required    |
 
-## Appendix C: bencher_vmm Module Structure
+## Appendix C: Firecracker Integration Module Structure
 
 ```
-plus/bencher_vmm/
+plus/bencher_runner/src/
+├── firecracker/
+│   ├── mod.rs              # Public API
+│   ├── client.rs           # HTTP client for Firecracker REST API (Unix socket)
+│   ├── process.rs          # Firecracker/jailer process lifecycle
+│   ├── config.rs           # VM configuration types (MachineConfig, BootSource, Drive, Vsock)
+│   └── error.rs            # Error types
+├── vsock/
+│   ├── mod.rs              # Vsock result collection
+│   └── listener.rs         # Listen on vsock UDS for guest results
+├── image/
+│   ├── mod.rs              # OCI image handling
+│   ├── pull.rs             # Image pull from registry
+│   ├── rootfs.rs           # OCI-to-ext4 conversion
+│   └── cache.rs            # Image/rootfs cache (LRU)
+├── run.rs                  # Job execution orchestration
+├── daemon.rs               # Runner daemon main loop
+└── lib.rs
+
+plus/bencher_init/          # Guest init binary (unchanged)
 ├── src/
-│   ├── lib.rs              # Public API
-│   ├── vm.rs               # VM lifecycle management
-│   ├── memory.rs           # Guest memory setup
-│   ├── event_loop.rs       # vCPU event loop
-│   ├── sandbox.rs          # Seccomp + capability dropping
-│   ├── kernel.rs           # Bundled kernel handling
-│   ├── error.rs            # Error types
-│   ├── vsock_client.rs     # Host-side vsock client
-│   ├── boot/
-│   │   ├── mod.rs          # Boot abstraction
-│   │   ├── x86_64.rs       # x86_64 kernel loading
-│   │   └── aarch64.rs      # ARM64 kernel + device tree
-│   ├── vcpu/
-│   │   ├── mod.rs          # vCPU abstraction
-│   │   ├── x86_64.rs       # x86_64 vCPU setup
-│   │   └── aarch64.rs      # ARM64 vCPU setup
-│   ├── devices/
-│   │   ├── mod.rs          # Device manager
-│   │   ├── serial.rs       # 16550A UART
-│   │   ├── i8042.rs        # Keyboard controller
-│   │   ├── pit.rs          # Programmable interval timer
-│   │   ├── virtio_blk.rs   # Block device
-│   │   └── virtio_vsock.rs # Vsock device
-│   └── gic.rs              # ARM GIC (aarch64 only)
-├── build.rs                # Kernel download at build time
-├── Cargo.toml
-└── README.md
+│   └── main.rs             # PID 1: mount, exec benchmark, send results via vsock
+└── Cargo.toml
+
+plus/bencher_rootfs/        # Rootfs creation utilities (unchanged)
+├── src/
+│   ├── ext4.rs             # ext4 image creation via mkfs.ext4
+│   └── lib.rs
+└── Cargo.toml
 ```
 
 ## Appendix D: References
 
-1. [rust-vmm Project](https://github.com/rust-vmm)
-2. [Firecracker](https://github.com/firecracker-microvm/firecracker) - Architecture inspiration
+1. [Firecracker](https://github.com/firecracker-microvm/firecracker) - MicroVM manager
+2. [Firecracker Jailer](https://github.com/firecracker-microvm/firecracker/blob/main/docs/jailer.md) - Security isolation
 3. [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec)
 4. [OCI Image Specification](https://github.com/opencontainers/image-spec)
 5. [KVM API Documentation](https://www.kernel.org/doc/html/latest/virt/kvm/api.html)
