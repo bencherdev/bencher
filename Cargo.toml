@@ -65,7 +65,6 @@ bencher_oci_storage = { path = "plus/bencher_oci_storage" }
 bencher_recaptcha = { path = "plus/bencher_recaptcha" }
 # plus - runner
 bencher_runner = { path = "plus/bencher_runner" }
-bencher_vmm = { path = "plus/bencher_vmm" }
 bencher_oci = { path = "plus/bencher_oci" }
 bencher_rootfs = { path = "plus/bencher_rootfs" }
 bencher_guest = { path = "plus/bencher_guest" }
@@ -96,7 +95,6 @@ diesel = { version = "2.3", default-features = false, features = ["r2d2", "with-
 diesel_migrations = "2.3"
 dotenvy = "0.15"
 email_address = "0.2"
-event-manager = "0.4"
 flate2 = "1.0"
 fs-err = "3.2"
 futures = "0.3"
@@ -112,13 +110,10 @@ hyper = "1.8"
 image = "0.25"
 jsonwebtoken = { version = "10.2", features = ["rust_crypto"] }
 libc = "0.2"
-kvm-bindings = { version = "0.10", features = ["fam-wrappers"] }
-kvm-ioctls = "0.19"
 # https://github.com/diesel-rs/diesel/blob/2e85ba060d3d70ea605ea58a79b8a435749a7adc/diesel/Cargo.toml#L53
 # https://github.com/tauri-apps/tauri/discussions/6183
 # Always needed for Windows and all other targets when building a distroless image
 libsqlite3-sys = { version = ">=0.17.2, <0.36.0", features = ["bundled"] }
-linux-loader = "0.13"
 literally = "0.1"
 mail-send = "0.5"
 minijinja = "2.3"
@@ -154,7 +149,6 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 serde_yaml = "0.9"
-hmac = "0.12"
 sha2 = "0.10"
 slog = "2.8"
 slog-term = "2.9"
@@ -172,24 +166,15 @@ tokio-rustls = {version =  "0.26", default-features = false, features = ["loggin
 tokio-tungstenite = "0.26"
 tokio-util = { version = "0.7", features = ["io"] }
 typeshare = "1.0"
-ureq = "3.0"
 url = "2.5"
 urlencoding = "2.1"
 uuid = "1.19"
 wasm-bindgen = "0.2"
 wasm-bindgen-test = "0.3"
 windows = "0.62"
+ureq = "3.0"
 zstd = "0.13"
-# rust-vmm
-seccompiler = "0.4"
-virtio-queue = "0.14"
-vm-memory = { version = "0.16", features = ["backend-mmap"] }
-vm-fdt = "0.3"
-vm-superio = "0.8"
-vmm-sys-util = "0.12"
 vsock = "0.5"
-# security
-caps = "0.5"
 # oxide
 dropshot = { version = "0.16", default-features = false }
 progenitor = { version = "0.11", default-features = false }

@@ -22,7 +22,7 @@ plus = [
 registry = [
     "plus",
     "dep:base64",
-    "dep:reqwest",
+    "dep:ureq",
 ]
 
 [dependencies]
@@ -30,7 +30,7 @@ base64 = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
 oci-spec = { workspace = true, optional = true }
-reqwest = { workspace = true, optional = true, features = ["json", "rustls-tls"] }
+ureq = { workspace = true, optional = true, features = ["json"] }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }

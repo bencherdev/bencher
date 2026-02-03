@@ -17,7 +17,6 @@ mod ports {
     pub const STDOUT: u32 = 5000;
     pub const STDERR: u32 = 5001;
     pub const EXIT_CODE: u32 = 5002;
-    pub const HMAC: u32 = 5003;
     pub const OUTPUT_FILE: u32 = 5005;
 }
 
@@ -43,9 +42,6 @@ struct Config {
     env: Vec<(String, String)>,
     /// Optional output file to send back.
     output_file: Option<String>,
-    /// Per-run nonce for HMAC result integrity verification.
-    #[serde(default)]
-    nonce: Option<String>,
 }
 
 fn default_workdir() -> String {
@@ -187,11 +183,11 @@ fn run_init() -> Result<(), InitError> {
 
     // Step 7: Send results via vsock, fall back to serial
     console_log("sending results via vsock...");
-    match send_results(&result, config.output_file.as_deref(), config.nonce.as_deref()) {
+    match send_results(&result, config.output_file.as_deref()) {
         Ok(()) => console_log("results sent via vsock"),
         Err(e) => {
             console_log(&format!("vsock failed ({e}), falling back to serial output"));
-            output_results_serial(&result, config.nonce.as_deref());
+            output_results_serial(&result);
         }
     }
 
@@ -566,7 +562,6 @@ fn wait_for_child(
 fn send_results(
     result: &BenchmarkResult,
     output_file: Option<&str>,
-    nonce: Option<&str>,
 ) -> Result<(), InitError> {
     // Send stdout
     send_vsock(ports::STDOUT, &result.stdout)?;
@@ -577,12 +572,6 @@ fn send_results(
     // Send exit code
     let exit_code_str = result.exit_code.to_string();
     send_vsock(ports::EXIT_CODE, exit_code_str.as_bytes())?;
-
-    // Compute and send HMAC if nonce is available
-    if let Some(nonce) = nonce {
-        let hmac_tag = compute_hmac(nonce, &result.stdout, &result.stderr, exit_code_str.as_bytes());
-        send_vsock(ports::HMAC, &hmac_tag)?;
-    }
 
     // Send output file if specified and exists
     if let Some(path) = output_file {
@@ -595,34 +584,6 @@ fn send_results(
     }
 
     Ok(())
-}
-
-/// Compute HMAC-SHA256 over the benchmark results using the nonce as key.
-///
-/// The HMAC is computed over: `stdout || stderr || exit_code_bytes`
-fn compute_hmac(nonce: &str, stdout: &[u8], stderr: &[u8], exit_code: &[u8]) -> Vec<u8> {
-    use hmac::{Hmac, Mac};
-    use sha2::Sha256;
-
-    type HmacSha256 = Hmac<Sha256>;
-
-    let mut mac = HmacSha256::new_from_slice(nonce.as_bytes())
-        .expect("HMAC can take key of any size");
-    mac.update(stdout);
-    mac.update(stderr);
-    mac.update(exit_code);
-
-    mac.finalize().into_bytes().to_vec()
-}
-
-/// Encode bytes as lowercase hex string.
-fn hex_encode(bytes: &[u8]) -> String {
-    let mut s = String::with_capacity(bytes.len() * 2);
-    for b in bytes {
-        use std::fmt::Write;
-        write!(s, "{b:02x}").unwrap();
-    }
-    s
 }
 
 /// Vsock connect/send timeout in seconds.
@@ -746,10 +707,7 @@ fn send_vsock_once(port: u32, data: &[u8]) -> Result<(), InitError> {
 /// ---BENCHER_STDERR_END---
 /// ---BENCHER_EXIT_CODE:<code>---
 /// ```
-fn output_results_serial(result: &BenchmarkResult, nonce: Option<&str>) {
-    // Write raw stdout/stderr between markers without adding padding newlines.
-    // The HMAC is computed over the exact raw bytes, so the serial format must
-    // preserve them exactly to allow the VMM to reconstruct and verify.
+fn output_results_serial(result: &BenchmarkResult) {
     serial_write(b"---BENCHER_STDOUT_BEGIN---\n");
     serial_write(&result.stdout);
     serial_write(b"\n---BENCHER_STDOUT_END---\n");
@@ -757,15 +715,6 @@ fn output_results_serial(result: &BenchmarkResult, nonce: Option<&str>) {
     serial_write(b"---BENCHER_STDERR_BEGIN---\n");
     serial_write(&result.stderr);
     serial_write(b"\n---BENCHER_STDERR_END---\n");
-
-    // Send HMAC before exit code marker (so it's captured before shutdown)
-    if let Some(nonce) = nonce {
-        let exit_code_str = result.exit_code.to_string();
-        let hmac_tag = compute_hmac(nonce, &result.stdout, &result.stderr, exit_code_str.as_bytes());
-        let hmac_hex = hex_encode(&hmac_tag);
-        let hmac_line = format!("---BENCHER_HMAC:{hmac_hex}---\n");
-        serial_write(hmac_line.as_bytes());
-    }
 
     let exit_line = format!("---BENCHER_EXIT_CODE:{}---\n", result.exit_code);
     serial_write(exit_line.as_bytes());

@@ -56,9 +56,9 @@ pub struct RunArgs {
 
 /// Run the `run` subcommand with parsed arguments.
 ///
-/// This prepares the jail environment and execs to the `vmm` subcommand.
+/// Prepares the rootfs and launches a Firecracker microVM.
 #[cfg(target_os = "linux")]
-pub async fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
+pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // Build config from args
     let config = crate::Config {
         oci_image: args.image.clone(),
@@ -72,155 +72,14 @@ pub async fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         output_file: args.output_file.clone(),
     };
 
-    // Prepare the environment (creates rootfs, writes init script, etc.)
-    // then exec to the vmm subcommand
-    exec_to_vmm(&config).await
-}
-
-/// Prepare the jail environment and exec to the vmm subcommand.
-///
-/// This function:
-/// 1. Creates a temporary work directory (jail root)
-/// 2. Resolves OCI image (local or registry)
-/// 3. Creates ext4 rootfs
-/// 4. Writes kernel to jail root
-/// 5. Execs to `bencher-runner vmm` with the jail root
-#[cfg(target_os = "linux")]
-async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
-    use std::fs;
-    use std::os::unix::process::CommandExt as _;
-    use std::process::Command;
-
-    println!("Preparing benchmark run:");
-    println!("  OCI image: {}", config.oci_image);
-    println!("  vCPUs: {}", config.vcpus);
-    println!("  Memory: {} MiB", config.memory_mib);
-    println!("  Timeout: {} seconds", config.timeout_secs);
-
-    // Clean up any stale jail directories from previous runs
-    cleanup_stale_jails();
-
-    // Create a persistent work directory for the jail
-    // We use a directory under /tmp that won't be cleaned up when we exec
-    let run_id = uuid::Uuid::new_v4();
-    let jail_root = Utf8PathBuf::from(format!("/tmp/bencher/{run_id}"));
-    fs::create_dir_all(&jail_root)?;
-
-    let unpack_dir = jail_root.join("unpack");
-    let rootfs_path = Utf8PathBuf::from("/rootfs.ext4"); // Path inside jail after pivot_root
-    let kernel_path = Utf8PathBuf::from("/vmlinux"); // Path inside jail after pivot_root
-    let vsock_path = Utf8PathBuf::from("/vsock.sock"); // Path inside jail after pivot_root
-
-    // Actual paths on host filesystem (in jail_root)
-    let host_rootfs_path = jail_root.join("rootfs.ext4");
-    let host_kernel_path = jail_root.join("vmlinux");
-    let host_vsock_path = jail_root.join("vsock.sock");
-
-    // Step 1: Resolve OCI image (local path or pull from registry)
-    let cache_dir = config.cache_dir();
-    let oci_image_path =
-        resolve_oci_image(&config.oci_image, config.token.as_deref(), &cache_dir).await?;
-
-    // Step 2: Parse OCI image config to get the command
-    println!("Parsing OCI image config...");
-    let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
-    let command = oci_image.command();
-    let workdir = oci_image
-        .working_dir()
-        .filter(|w| !w.is_empty())
-        .unwrap_or("/");
-    // Sanitize environment variables to remove dangerous ones like LD_PRELOAD
-    let env = sanitize_env(&oci_image.env());
-
-    if command.is_empty() {
-        // Clean up on error
-        let _ = fs::remove_dir_all(&jail_root);
-        return Err(RunnerError::Config(
-            "OCI image has no CMD or ENTRYPOINT set".to_owned(),
-        ));
-    }
-
-    println!("  Command: {}", command.join(" "));
-    println!("  WorkDir: {workdir}");
-    if !env.is_empty() {
-        println!("  Env: {} variables", env.len());
-    }
-
-    // Step 3: Unpack OCI image
-    println!("Unpacking OCI image to {unpack_dir}...");
-    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
-
-    // Generate a per-run nonce for HMAC result integrity verification
-    let nonce = uuid::Uuid::new_v4().to_string();
-
-    // Step 4: Write command config for the VM
-    println!("Writing init config...");
-    write_init_config(
-        &unpack_dir,
-        &command,
-        workdir,
-        &env,
-        config.output_file.as_deref(),
-        Some(&nonce),
-    )?;
-
-    // Step 5: Copy bencher-init binary to /init
-    println!("Installing init binary...");
-    install_init_binary(&unpack_dir)?;
-
-    // Step 6: Create ext4 rootfs
-    println!("Creating ext4 at {host_rootfs_path}...");
-    bencher_rootfs::create_ext4(&unpack_dir, &host_rootfs_path)?;
-
-    // Clean up the unpack directory - we only need the ext4 now
-    let _ = fs::remove_dir_all(&unpack_dir);
-
-    // Step 7: Write bundled kernel to jail root
-    println!("Writing bundled kernel to {host_kernel_path}...");
-    bencher_vmm::write_kernel_to_file(host_kernel_path.as_std_path())?;
-
-    // Step 8: Get the path to ourselves for exec
-    let exe_path = std::env::current_exe().map_err(|e| {
-        let _ = fs::remove_dir_all(&jail_root);
-        RunnerError::Io(e)
-    })?;
-
-    // Step 9: Build arguments for vmm subcommand
-    let vmm_args = vec![
-        "vmm".to_owned(),
-        "--jail-root".to_owned(),
-        jail_root.to_string(),
-        "--kernel".to_owned(),
-        kernel_path.to_string(),
-        "--rootfs".to_owned(),
-        rootfs_path.to_string(),
-        "--vsock".to_owned(),
-        vsock_path.to_string(),
-        "--vcpus".to_owned(),
-        config.vcpus.to_string(),
-        "--memory".to_owned(),
-        config.memory_mib.to_string(),
-        "--timeout".to_owned(),
-        config.timeout_secs.to_string(),
-        "--nonce".to_owned(),
-        nonce,
-    ];
-
-    println!("Exec'ing to vmm subcommand...");
-    println!("  Jail root: {jail_root}");
-
-    // Exec to ourselves with vmm subcommand
-    // This replaces our process, so we don't return
-    let err = Command::new(&exe_path).args(&vmm_args).exec();
-
-    // If we get here, exec failed
-    let _ = fs::remove_dir_all(&jail_root);
-    Err(RunnerError::Io(err))
+    let output = execute(&config)?;
+    println!("{output}");
+    Ok(())
 }
 
 /// Non-Linux stub for `run_with_args`.
 #[cfg(not(target_os = "linux"))]
-pub async fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
+pub fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
     Err(RunnerError::Config(
         "bencher-runner requires Linux".to_owned(),
     ))
@@ -229,21 +88,11 @@ pub async fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
 /// Run the benchmark runner.
 ///
 /// This is the main entry point for the runner binary.
-/// For now, this is a placeholder that will be expanded
-/// to handle the full benchmark execution pipeline:
-///
-/// 1. Parse configuration
-/// 2. Resolve OCI image (local or pull from registry)
-/// 3. Unpack OCI image to directory
-/// 4. Create ext4 rootfs from directory
-/// 5. Boot VM with kernel and rootfs
-/// 6. Collect benchmark results via serial output
-/// 7. Return results
-pub async fn run() -> Result<(), RunnerError> {
+pub fn run() -> Result<(), RunnerError> {
     println!("Bencher Runner starting...");
-    println!("Pipeline: OCI (local or registry) -> Rootfs -> VMM -> Results");
+    println!("Pipeline: OCI (local or registry) -> Rootfs -> Firecracker -> Results");
     println!();
-    println!("This runner requires Linux with KVM support.");
+    println!("This runner requires Linux with KVM support and Firecracker.");
     println!("Use `bencher_runner::execute()` with a Config to run benchmarks.");
 
     Ok(())
@@ -263,7 +112,7 @@ pub async fn run() -> Result<(), RunnerError> {
 /// # Returns
 ///
 /// Path to the local OCI image directory.
-pub async fn resolve_oci_image(
+pub fn resolve_oci_image(
     oci_image: &str,
     token: Option<&str>,
     cache_dir: &Utf8Path,
@@ -305,7 +154,7 @@ pub async fn resolve_oci_image(
         bencher_oci::RegistryClient::new()?
     };
 
-    client.pull(&image_ref, &image_cache).await?;
+    client.pull(&image_ref, &image_cache)?;
     println!("Image pulled to: {image_cache}");
 
     Ok(image_cache)
@@ -313,16 +162,18 @@ pub async fn resolve_oci_image(
 
 /// Execute a single benchmark run with the given configuration.
 ///
+/// Prepares the rootfs and launches a Firecracker microVM.
+///
 /// # Arguments
 ///
 /// * `config` - The benchmark run configuration
 ///
 /// # Returns
 ///
-/// The benchmark results as a string (from the VM via vsock or serial).
+/// The benchmark results as a string (from the VM via vsock).
 #[cfg(target_os = "linux")]
-pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
-    use std::fs;
+pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
+    use crate::firecracker::{FirecrackerJobConfig, run_firecracker};
 
     println!("Executing benchmark run:");
     println!("  OCI image: {}", config.oci_image);
@@ -331,7 +182,7 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
         config
             .kernel
             .as_ref()
-            .map_or("(bundled)", |p| p.as_str())
+            .map_or("(system)", |p| p.as_str())
     );
     println!("  vCPUs: {}", config.vcpus);
     println!("  Memory: {} MiB", config.memory_mib);
@@ -346,16 +197,12 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
 
     let unpack_dir = work_dir.join("rootfs");
     let rootfs_path = work_dir.join("rootfs.ext4");
-    let vsock_path = work_dir.join("vsock.sock");
 
-    // Get kernel path - use provided path or write bundled kernel to temp dir
+    // Get kernel path - use provided path or find system kernel
     let kernel_path = if let Some(ref kernel) = config.kernel {
         kernel.clone()
     } else {
-        let bundled_kernel_path = work_dir.join("vmlinux");
-        println!("Writing bundled kernel to {bundled_kernel_path}...");
-        bencher_vmm::write_kernel_to_file(bundled_kernel_path.as_std_path())?;
-        bundled_kernel_path
+        find_kernel()?
     };
 
     // Step 1: Resolve OCI image (local path or pull from registry)
@@ -365,8 +212,7 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
         &config.oci_image,
         config.token.as_deref(),
         &cache_dir,
-    )
-    .await?;
+    )?;
 
     // Step 2: Parse OCI image config to get the command
     println!("Parsing OCI image config...");
@@ -395,12 +241,9 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("Unpacking OCI image to {unpack_dir}...");
     bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
 
-    // Generate a per-run nonce for HMAC result integrity verification
-    let nonce = uuid::Uuid::new_v4().to_string();
-
     // Step 4: Write command config for the VM
     println!("Writing init config...");
-    write_init_config(&unpack_dir, &command, workdir, &env, config.output_file.as_deref(), Some(&nonce))?;
+    write_init_config(&unpack_dir, &command, workdir, &env, config.output_file.as_deref())?;
 
     // Step 5: Install init binary
     println!("Installing init binary...");
@@ -410,33 +253,28 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("Creating ext4 at {rootfs_path}...");
     bencher_rootfs::create_ext4(&unpack_dir, &rootfs_path)?;
 
-    // Step 6: Boot VM and run benchmark
-    println!("Booting VM with vsock at {vsock_path}...");
-    let vm_config = bencher_vmm::VmConfig {
-        kernel_path,
-        rootfs_path,
+    // Step 7: Find Firecracker binary
+    let firecracker_bin = find_firecracker_binary()?;
+
+    // Step 8: Run benchmark in Firecracker microVM
+    println!("Launching Firecracker microVM...");
+    let fc_config = FirecrackerJobConfig {
+        firecracker_bin,
+        kernel_path: kernel_path.to_string(),
+        rootfs_path: rootfs_path.to_string(),
         vcpus: config.vcpus,
         memory_mib: config.memory_mib,
-        kernel_cmdline: config.kernel_cmdline.clone(),
-        vsock_path: Some(vsock_path.clone()),
+        boot_args: config.kernel_cmdline.clone(),
         timeout_secs: config.timeout_secs,
-        nonce: Some(nonce),
+        work_dir: work_dir.to_string(),
     };
 
-    let vm_results = bencher_vmm::run_vm(&vm_config)?;
-
-    // Log HMAC verification status
-    match vm_results.hmac_verified {
-        Some(true) => println!("HMAC verification: passed"),
-        Some(false) => eprintln!("WARNING: HMAC verification failed — results may be tampered"),
-        None => println!("HMAC verification: not available"),
-    }
-    println!("Transport: {}", vm_results.transport);
+    let output = run_firecracker(&fc_config)?;
 
     // temp_dir is automatically cleaned up when dropped
     drop(temp_dir);
 
-    Ok(vm_results.output)
+    Ok(output)
 }
 
 /// Write the init config for the VM.
@@ -449,7 +287,6 @@ fn write_init_config(
     workdir: &str,
     env: &[(String, String)],
     output_file: Option<&str>,
-    nonce: Option<&str>,
 ) -> Result<(), RunnerError> {
     use std::fs;
 
@@ -462,7 +299,6 @@ fn write_init_config(
         "workdir": workdir,
         "env": env,
         "output_file": output_file,
-        "nonce": nonce,
     });
 
     let config_path = config_dir.join("config.json");
@@ -532,6 +368,63 @@ fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
     ))
 }
 
+/// Find the Firecracker binary on the system.
+#[cfg(target_os = "linux")]
+fn find_firecracker_binary() -> Result<String, RunnerError> {
+    let candidates = [
+        // Next to the current executable
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("firecracker")))
+            .map(|p| p.to_string_lossy().into_owned()),
+        // Common installation paths
+        Some("/usr/local/bin/firecracker".to_owned()),
+        Some("/usr/bin/firecracker".to_owned()),
+    ];
+
+    for candidate in candidates.into_iter().flatten() {
+        if std::path::Path::new(&candidate).exists() {
+            return Ok(candidate);
+        }
+    }
+
+    Err(RunnerError::Config(
+        "firecracker binary not found. Install from: https://github.com/firecracker-microvm/firecracker/releases".to_owned(),
+    ))
+}
+
+/// Find the kernel image on the system.
+#[cfg(target_os = "linux")]
+fn find_kernel() -> Result<Utf8PathBuf, RunnerError> {
+    let candidates = [
+        // Bencher's shared location
+        "/usr/local/share/bencher/vmlinux",
+        // Next to the current executable
+    ];
+
+    for candidate in candidates {
+        if std::path::Path::new(candidate).exists() {
+            return Ok(Utf8PathBuf::from(candidate));
+        }
+    }
+
+    // Try next to the current executable
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            let kernel = parent.join("vmlinux");
+            if kernel.exists() {
+                if let Some(path) = kernel.to_str() {
+                    return Ok(Utf8PathBuf::from(path));
+                }
+            }
+        }
+    }
+
+    Err(RunnerError::Config(
+        "kernel image (vmlinux) not found. Place at /usr/local/share/bencher/vmlinux".to_owned(),
+    ))
+}
+
 /// Sanitize environment variables by removing dangerous ones.
 ///
 /// This filters out environment variables that could be used to inject
@@ -561,54 +454,9 @@ fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
     sanitized
 }
 
-/// Base directory for jail roots.
-#[cfg(target_os = "linux")]
-const JAIL_BASE_DIR: &str = "/tmp/bencher";
-
-/// Clean up stale jail directories from previous runs.
-///
-/// This removes any leftover directories in `/tmp/bencher/` that were
-/// not cleaned up due to the pivot_root architecture (we can't clean up after
-/// ourselves once we've pivoted into the jail).
-#[cfg(target_os = "linux")]
-fn cleanup_stale_jails() {
-    let base_dir = std::path::Path::new(JAIL_BASE_DIR);
-
-    if !base_dir.exists() {
-        return;
-    }
-
-    let entries = match std::fs::read_dir(base_dir) {
-        Ok(entries) => entries,
-        Err(e) => {
-            eprintln!("Warning: failed to read {JAIL_BASE_DIR}: {e}");
-            return;
-        }
-    };
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-
-        // Only clean up directories (each run creates a UUID-named directory)
-        if !path.is_dir() {
-            continue;
-        }
-
-        // Try to remove the directory and its contents
-        if let Err(e) = std::fs::remove_dir_all(&path) {
-            eprintln!(
-                "Warning: failed to clean up stale jail {}: {e}",
-                path.display()
-            );
-        } else {
-            println!("Cleaned up stale jail: {}", path.display());
-        }
-    }
-}
-
 /// Execute a single benchmark run (non-Linux stub).
 #[cfg(not(target_os = "linux"))]
-pub async fn execute(_config: &crate::Config) -> Result<String, RunnerError> {
+pub fn execute(_config: &crate::Config) -> Result<String, RunnerError> {
     Err(RunnerError::Config(
         "Benchmark execution requires Linux with KVM support".to_owned(),
     ))
