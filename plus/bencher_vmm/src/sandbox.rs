@@ -15,7 +15,10 @@
 
 use std::collections::BTreeMap;
 
-use seccompiler::{BpfProgram, SeccompAction, SeccompFilter, SeccompRule, TargetArch};
+use seccompiler::{
+    BpfProgram, SeccompAction, SeccompCmpArgLen, SeccompCmpOp, SeccompCondition, SeccompFilter,
+    SeccompRule, TargetArch,
+};
 
 use crate::error::VmmError;
 
@@ -81,6 +84,11 @@ pub fn apply_seccomp() -> Result<(), VmmError> {
 }
 
 /// Build the seccomp filter with allowed syscalls.
+///
+/// Syscalls are restricted with argument-level filtering where practical:
+/// - `ioctl`: Only KVM ioctls (type 0xAE) are allowed
+/// - `socket`: Only AF_UNIX sockets are allowed (no network)
+/// - `prctl`: Only PR_SET_NAME is allowed (used by Rust runtime)
 fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     use libc::*;
 
@@ -91,8 +99,25 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     // Helper to add a simple allow rule (empty Vec means unconditional allow)
     let allow = |syscall: i64| (syscall, vec![]);
 
+    // Helper for creating seccomp errors
+    let seccomp_err =
+        |msg: &str, e| VmmError::Sandbox(format!("Failed to create seccomp {msg}: {e}"));
+
     // === KVM operations ===
-    rules.push(allow(SYS_ioctl)); // KVM ioctls
+    // Restrict ioctl to KVM type only (type byte = 0xAE in bits 8-15)
+    // This prevents abuse of ioctl for non-KVM device manipulation.
+    // The ioctl request number encoding: bits 8-15 = type, bits 0-7 = nr
+    rules.push((
+        SYS_ioctl,
+        vec![SeccompRule::new(vec![SeccompCondition::new(
+            1, // arg1 = ioctl request number
+            SeccompCmpArgLen::Dword,
+            SeccompCmpOp::MaskedEq(0x0000_FF00),
+            0x0000_AE00, // KVM type = 0xAE
+        )
+        .map_err(|e| seccomp_err("ioctl condition", e))?])
+        .map_err(|e| seccomp_err("ioctl rule", e))?],
+    ));
 
     // === Memory operations ===
     rules.push(allow(SYS_mmap)); // Memory mapping (needed for KVM memory regions)
@@ -122,7 +147,18 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     rules.push(allow(SYS_getdents64)); // Read directory entries
 
     // === Socket operations (for vsock) ===
-    rules.push(allow(SYS_socket)); // Create socket
+    // Restrict socket creation to AF_UNIX only - prevents network access from VMM
+    rules.push((
+        SYS_socket,
+        vec![SeccompRule::new(vec![SeccompCondition::new(
+            0, // arg0 = domain
+            SeccompCmpArgLen::Dword,
+            SeccompCmpOp::Eq,
+            AF_UNIX as u64,
+        )
+        .map_err(|e| seccomp_err("socket condition", e))?])
+        .map_err(|e| seccomp_err("socket rule", e))?],
+    ));
     rules.push(allow(SYS_bind)); // Bind socket
     rules.push(allow(SYS_listen)); // Listen on socket
     rules.push(allow(SYS_accept4)); // Accept connection
@@ -170,8 +206,19 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     rules.push(allow(SYS_getpid)); // Get process ID (for logging)
     rules.push(allow(SYS_getrandom)); // Random numbers (for crypto/vsock)
 
-    // === Memory info ===
-    rules.push(allow(SYS_prctl)); // Process control (for security features)
+    // === Process info ===
+    // Restrict prctl to PR_SET_NAME only (used by Rust runtime for thread naming)
+    rules.push((
+        SYS_prctl,
+        vec![SeccompRule::new(vec![SeccompCondition::new(
+            0, // arg0 = option
+            SeccompCmpArgLen::Dword,
+            SeccompCmpOp::Eq,
+            PR_SET_NAME as u64,
+        )
+        .map_err(|e| seccomp_err("prctl condition", e))?])
+        .map_err(|e| seccomp_err("prctl rule", e))?],
+    ));
 
     // Build the filter map
     let rules_map: BTreeMap<i64, Vec<SeccompRule>> = rules.into_iter().collect();
@@ -185,8 +232,8 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     // Default action: kill the process if a disallowed syscall is attempted
     SeccompFilter::new(
         rules_map,
-        SeccompAction::KillProcess,  // Kill on violation
-        SeccompAction::Allow,        // Allow matched rules
+        SeccompAction::KillProcess, // Kill on violation
+        SeccompAction::Allow,       // Allow matched rules
         arch,
     )
     .map_err(|e| VmmError::Sandbox(format!("Failed to create seccomp filter: {e}")))

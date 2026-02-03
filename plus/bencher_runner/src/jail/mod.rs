@@ -49,6 +49,16 @@ pub struct ResourceLimits {
     /// Maximum number of processes/threads.
     #[serde(default = "default_max_procs")]
     pub max_procs: u64,
+
+    /// Maximum I/O read bandwidth in bytes per second.
+    /// Applied via cgroup v2 io.max.
+    #[serde(default)]
+    pub io_read_bps: Option<u64>,
+
+    /// Maximum I/O write bandwidth in bytes per second.
+    /// Applied via cgroup v2 io.max.
+    #[serde(default)]
+    pub io_write_bps: Option<u64>,
 }
 
 const fn default_cpu_period() -> u64 {
@@ -71,6 +81,8 @@ impl Default for ResourceLimits {
             memory_bytes: None,
             max_fds: default_max_fds(),
             max_procs: default_max_procs(),
+            io_read_bps: None,
+            io_write_bps: None,
         }
     }
 }
@@ -93,6 +105,14 @@ impl ResourceLimits {
     #[must_use]
     pub fn with_memory_limit(mut self, bytes: u64) -> Self {
         self.memory_bytes = Some(bytes);
+        self
+    }
+
+    /// Set I/O bandwidth limits in bytes per second.
+    #[must_use]
+    pub fn with_io_limits(mut self, read_bps: u64, write_bps: u64) -> Self {
+        self.io_read_bps = Some(read_bps);
+        self.io_write_bps = Some(write_bps);
         self
     }
 }
