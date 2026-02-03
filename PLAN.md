@@ -299,6 +299,85 @@ The event loop is now clean and produces no output unless there's an error.
 
 ---
 
+## Production Hardening Checklist
+
+Before the VMM is ready to handle arbitrary benchmark workloads from untrusted users, the following items must be addressed:
+
+### Critical Issues (Must Fix)
+
+- [x] **1. Output Buffer Limits** (`plus/bencher_vmm/src/event_loop.rs`) ✅
+  - Serial output accumulated without size limits - malicious workload can exhaust host memory
+  - Cap `serial_output: Vec<u8>` at a reasonable size (e.g., 10MB)
+  - Test scenario: `output_flood` - workload that outputs gigabytes of data
+  - **Fixed**: Added `MAX_SERIAL_OUTPUT_SIZE` constant (10 MiB) and `extend_with_limit()` helper
+
+- [x] **2. Disk I/O Limits** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
+  - No `io.max` for blkio throttling
+  - Workload can perform excessive disk I/O, affecting other processes on the host
+  - Test scenario: `disk_flood` - workload that writes continuously to disk
+  - **Fixed**: Added `io_read_bps`/`io_write_bps` to `ResourceLimits`, enabled io controller, added `apply_io_limits()` that discovers block devices
+
+- [x] **3. Timeout Race Condition** (`plus/bencher_vmm/src/event_loop.rs:40-53`) ✅
+  - Sleep-based timeout with potential race condition
+  - Timeout thread spawned but never joined (`drop(handle)` at line 98)
+  - No forceful SIGKILL fallback if graceful shutdown fails
+  - Test scenario: `timeout_enforced` - workload that ignores shutdown signals
+  - **Fixed**: Use `SeqCst` ordering for atomics, properly join timeout thread
+
+- [x] **4. Environment Variable Sanitization** (`plus/bencher_runner/src/run.rs`) ✅
+  - `LD_PRELOAD`, `LD_LIBRARY_PATH`, `PATH` passed directly from OCI image
+  - Could allow loading malicious libraries inside the VM
+  - Blocklist dangerous environment variables
+  - **Fixed**: Added `BLOCKED_ENV_VARS` list and `sanitize_env()` function
+
+### High Priority (Should Fix)
+
+- [x] **5. Seccomp Argument Filtering** (`plus/bencher_vmm/src/sandbox.rs`) ✅
+  - All rules use empty `Vec::new()` for argument conditions
+  - `prctl`, `clone3`, file operations allowed without restriction
+  - Add argument validation for sensitive syscalls
+  - **Fixed**: Added argument filtering for `ioctl` (KVM type 0xAE only), `socket` (AF_UNIX only), `prctl` (PR_SET_NAME only)
+
+- [x] **6. Vsock Reliability** (`plus/bencher_init/src/init.rs`) ✅
+  - Blocking connect with no timeout - can hang indefinitely
+  - Single failed send closes socket without retry
+  - Add connect/read timeouts in init
+  - **Fixed**: Added `SO_SNDTIMEO` (5s) on vsock sockets, retry logic (3 attempts with backoff), EINTR handling in write loop
+
+- [x] **7. Cgroup Controller Failures** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
+  - `enable_controllers()` silently ignores failures
+  - If controllers aren't enabled, limits may not apply
+  - Fail if required limits can't be applied
+  - **Fixed**: Validate required controllers (cpu, memory, pids) are enabled after write; graceful fallback when io controller unavailable
+
+- [x] **8. OOM Killer Protection** (`plus/bencher_runner/src/jail/cgroup.rs`) ✅
+  - If memory limit is hit, OOM killer behavior is undefined
+  - Set `memory.oom.group` or handle OOM events explicitly
+  - **Fixed**: Set `memory.oom.group=1` for group kill on OOM, disabled swap with `memory.swap.max=0` for accurate benchmarking
+
+### Medium Priority (Nice to Have)
+
+- [ ] **9. PID Namespace**
+  - Acknowledged in code but not implemented
+  - Would require fork-based architecture change
+  - **Deferred**: Low security impact - VMM is already in mount/network/user/UTS/IPC namespaces with capabilities dropped, seccomp, and pivot_root
+
+- [ ] **10. Telemetry/Metrics**
+  - No CPU time tracking, memory peak, syscall auditing
+  - Makes debugging production issues difficult
+  - **Deferred**: Feature addition, not a security fix
+
+- [ ] **11. Result Integrity Verification**
+  - Results could be tampered with between guest and host
+  - Consider HMAC or other validation
+  - **Deferred**: Low risk since vsock is host-local (not network), tampering requires compromising the VMM
+
+- [x] **12. Serial Output Race in Multi-vCPU** (`plus/bencher_vmm/src/event_loop.rs`) ✅
+  - Multiple vCPU threads can write to `serial_output` simultaneously without mutex protection
+  - **Fixed**: Changed to shared `Arc<Mutex<Vec<u8>>>` serial output buffer used by all vCPU threads; result extraction moved to after thread join
+
+---
+
 ## OCI Image Handling
 
 ### Image Workflow

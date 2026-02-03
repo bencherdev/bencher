@@ -125,7 +125,7 @@ fn run_all_scenarios(scenarios: &[Scenario]) -> Result<()> {
             }
             Err(e) => {
                 println!("FAILED");
-                errors.push((scenario.name, e.to_string()));
+                errors.push((scenario.name, format!("{e:?}")));
                 failed += 1;
             }
         }
@@ -198,8 +198,10 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
                     Ok(())
                 } else {
                     bail!(
-                        "Expected 'test_value' in output, got: {}",
-                        output.stdout
+                        "Expected 'test_value' in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
+                        output.stdout,
+                        output.stderr,
+                        output.exit_code
                     )
                 }
             },
@@ -342,6 +344,53 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
                     Ok(())
                 } else {
                     bail!("Expected network failure, got: {combined}")
+                }
+            },
+        },
+        // =======================================================================
+        // Security hardening scenarios
+        // =======================================================================
+        Scenario {
+            name: "output_flood",
+            description: "Large output is truncated (not OOM)",
+            // Generate ~20MB of output - should be truncated to ~10MB limit
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && echo DONE"]"#,
+            extra_args: &["--timeout", "120"],
+            validate: |output| {
+                // The key test: the runner completes without OOM and output is bounded.
+                // The runner may return non-zero exit code (e.g., if the VM is killed
+                // due to output flooding), which is acceptable behavior.
+                let combined_len = output.stdout.len() + output.stderr.len();
+                // Output should be bounded - 15MB threshold means our 10MB limit works
+                if combined_len > 15 * 1024 * 1024 {
+                    bail!(
+                        "Output too large ({combined_len} bytes), limit not enforced"
+                    )
+                }
+                // Runner completed (didn't hang or OOM) - that's a pass
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "timeout_enforced",
+            description: "Timeout kills hanging process",
+            // This process ignores signals and runs forever
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]"#,
+            extra_args: &["--timeout", "5"],
+            validate: |output| {
+                // The VM should be killed after 5 seconds due to timeout
+                // The process ignores SIGTERM/SIGINT, so we need forceful termination
+                let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
+                if combined.contains("timeout") || output.exit_code != 0 {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected timeout error, got exit_code={}, output={}",
+                        output.exit_code,
+                        combined
+                    )
                 }
             },
         },

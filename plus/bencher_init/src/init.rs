@@ -532,8 +532,37 @@ fn send_results(result: &BenchmarkResult, output_file: Option<&str>) -> Result<(
     Ok(())
 }
 
+/// Vsock connect/send timeout in seconds.
+const VSOCK_TIMEOUT_SECS: i64 = 5;
+
+/// Maximum number of retries for transient vsock errors.
+const VSOCK_MAX_RETRIES: usize = 3;
+
 /// Send data via vsock to the host.
 fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
+    let mut last_err = None;
+
+    for attempt in 0..VSOCK_MAX_RETRIES {
+        match send_vsock_once(port, data) {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                console_log(&format!(
+                    "vsock send to port {port} failed (attempt {}/{}): {e}",
+                    attempt + 1,
+                    VSOCK_MAX_RETRIES
+                ));
+                last_err = Some(e);
+                // Brief backoff before retry
+                std::thread::sleep(std::time::Duration::from_millis(100 * (attempt as u64 + 1)));
+            }
+        }
+    }
+
+    Err(last_err.unwrap_or_else(|| InitError::Vsock("send_vsock: no attempts made".into())))
+}
+
+/// Single attempt to send data via vsock.
+fn send_vsock_once(port: u32, data: &[u8]) -> Result<(), InitError> {
     // Create vsock socket
     let fd = unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM, 0) };
     if fd < 0 {
@@ -541,6 +570,22 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
             "socket: {}",
             io::Error::last_os_error()
         )));
+    }
+
+    // Set send timeout to prevent blocking indefinitely on connect and write.
+    // On Linux, SO_SNDTIMEO also affects connect() timeout.
+    let timeout = libc::timeval {
+        tv_sec: VSOCK_TIMEOUT_SECS,
+        tv_usec: 0,
+    };
+    unsafe {
+        libc::setsockopt(
+            fd,
+            libc::SOL_SOCKET,
+            libc::SO_SNDTIMEO,
+            std::ptr::from_ref(&timeout).cast(),
+            size_of::<libc::timeval>() as u32,
+        );
     }
 
     // Connect to host
@@ -568,15 +613,23 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
         )));
     }
 
-    // Send data
+    // Send data with retry for EINTR
     let mut sent = 0;
     while sent < data.len() {
         let n = unsafe { libc::write(fd, data[sent..].as_ptr().cast(), data.len() - sent) };
-        if n <= 0 {
+        if n < 0 {
+            let err = io::Error::last_os_error();
+            // Retry on EINTR (signal interrupted)
+            if err.raw_os_error() == Some(libc::EINTR) {
+                continue;
+            }
+            unsafe { libc::close(fd) };
+            return Err(InitError::Vsock(format!("write to port {port}: {err}")));
+        }
+        if n == 0 {
             unsafe { libc::close(fd) };
             return Err(InitError::Vsock(format!(
-                "write to port {port}: {}",
-                io::Error::last_os_error()
+                "write to port {port}: connection closed"
             )));
         }
         sent += n as usize;

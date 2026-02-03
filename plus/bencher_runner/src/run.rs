@@ -4,6 +4,39 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
 
+/// Environment variables that are blocked for security reasons.
+///
+/// These variables could be used to inject malicious code or libraries
+/// into the guest process if passed through from the OCI image.
+#[cfg(target_os = "linux")]
+const BLOCKED_ENV_VARS: &[&str] = &[
+    // Dynamic linker variables - could load malicious libraries
+    "LD_PRELOAD",
+    "LD_LIBRARY_PATH",
+    "LD_AUDIT",
+    "LD_DEBUG",
+    "LD_DEBUG_OUTPUT",
+    "LD_DYNAMIC_WEAK",
+    "LD_HWCAP_MASK",
+    "LD_ORIGIN_PATH",
+    "LD_POINTER_GUARD",
+    "LD_PROFILE",
+    "LD_PROFILE_OUTPUT",
+    "LD_SHOW_AUXV",
+    "LD_USE_LOAD_BIAS",
+    "LD_BIND_NOW",
+    "LD_BIND_NOT",
+    // glibc malloc hooks
+    "MALLOC_CHECK_",
+    "MALLOC_TRACE",
+    // Other potentially dangerous variables
+    "BASH_ENV",
+    "ENV",
+    "CDPATH",
+    "GLOBIGNORE",
+    "IFS",
+];
+
 /// Arguments for the `run` subcommand.
 #[derive(Debug, Clone)]
 pub struct RunArgs {
@@ -93,7 +126,8 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
     let command = oci_image.command();
     let workdir = oci_image.working_dir().unwrap_or("/");
-    let env = oci_image.env();
+    // Sanitize environment variables to remove dangerous ones like LD_PRELOAD
+    let env = sanitize_env(&oci_image.env());
 
     if command.is_empty() {
         // Clean up on error
@@ -330,7 +364,8 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
     let command = oci_image.command();
     let workdir = oci_image.working_dir().unwrap_or("/");
-    let env = oci_image.env();
+    // Sanitize environment variables to remove dangerous ones like LD_PRELOAD
+    let env = sanitize_env(&oci_image.env());
 
     if command.is_empty() {
         return Err(RunnerError::Config(
@@ -469,6 +504,35 @@ fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
     Err(RunnerError::Config(
         "bencher-init binary not found. Build with: cargo build -p bencher_init".to_owned(),
     ))
+}
+
+/// Sanitize environment variables by removing dangerous ones.
+///
+/// This filters out environment variables that could be used to inject
+/// malicious code into the guest process, such as LD_PRELOAD.
+#[cfg(target_os = "linux")]
+fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
+    let mut sanitized = Vec::with_capacity(env.len());
+    let mut blocked_count = 0;
+
+    for (key, value) in env {
+        let key_upper = key.to_uppercase();
+        let is_blocked = BLOCKED_ENV_VARS
+            .iter()
+            .any(|blocked| key_upper == *blocked || key_upper.starts_with(&format!("{blocked}_")));
+
+        if is_blocked {
+            blocked_count += 1;
+        } else {
+            sanitized.push((key.clone(), value.clone()));
+        }
+    }
+
+    if blocked_count > 0 {
+        println!("  Blocked {blocked_count} dangerous environment variable(s)");
+    }
+
+    sanitized
 }
 
 /// Base directory for jail roots.
