@@ -87,6 +87,8 @@ lib/
   bencher_schema/    # Database schema, models, migrations (Diesel)
   bencher_valid/     # Input validation (compiled to WASM for frontend)
 plus/             # Bencher Plus (commercial) features
+  api_oci/           # OCI Distribution Spec registry endpoints
+  bencher_oci_storage/ # OCI blob/manifest storage (S3-backed)
 tasks/            # Build tasks invoked via cargo aliases
 xtask/            # Administrative tasks (local only, not CI)
 ```
@@ -123,6 +125,14 @@ Defined in `.cargo/config.toml`:
 - `otel` - OpenTelemetry observability
 
 Default builds include all features. Build without: `cargo build --no-default-features`
+
+### OCI Registry (Plus Feature)
+
+The API server includes an OCI Distribution Spec compliant container registry, registered at `/v2/` paths. Key crates:
+- `plus/api_oci` - Dropshot endpoints for blobs, manifests, tags, referrers, and uploads
+- `plus/bencher_oci_storage` - Storage backend using S3 (via Access Points)
+- OCI auth tokens use a dedicated `Oci` audience in `bencher_token`
+- Registry is configured via `JsonRegistry` in the server config (`plus.registry`)
 
 ## Code Style Rules
 
