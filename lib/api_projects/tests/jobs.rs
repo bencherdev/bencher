@@ -73,9 +73,7 @@ async fn test_jobs_list_with_status_filter() {
     let project_slug: &str = project.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/projects/{project_slug}/jobs?status=pending"
-        )))
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs?status=pending")))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await
@@ -97,9 +95,7 @@ async fn test_jobs_list_ascending_order() {
     let project_slug: &str = project.slug.as_ref();
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/projects/{project_slug}/jobs?direction=asc"
-        )))
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs?direction=asc")))
         .header("Authorization", server.bearer(&user.token))
         .send()
         .await

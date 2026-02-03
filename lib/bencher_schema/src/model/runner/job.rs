@@ -73,16 +73,6 @@ impl QueryJob {
         })
     }
 
-    /// Alias for `into_json` for project-scoped job queries.
-    pub fn into_json_for_project(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
-        self.into_json(conn)
-    }
-
-    /// Alias for `into_json` when fetching with runner info.
-    pub fn into_json_with_runner(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
-        self.into_json(conn)
-    }
-
     /// Convert to JSON using a known runner UUID (avoids database lookup).
     pub fn into_json_with_known_runner(self, runner_uuid: RunnerUuid) -> JsonJob {
         JsonJob {

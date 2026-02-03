@@ -7,11 +7,7 @@ use bencher_json::{
 use bencher_schema::{
     context::ApiContext,
     error::resource_not_found_err,
-    model::{
-        project::QueryProject,
-        runner::QueryJob,
-        user::public::PublicUser,
-    },
+    model::{project::QueryProject, runner::QueryJob, user::public::PublicUser},
     public_conn, schema,
 };
 use diesel::{
@@ -131,7 +127,7 @@ async fn get_ls_inner(
 
     let json_jobs = public_conn!(context, public_user, |conn| {
         jobs.into_iter()
-            .map(|job| job.into_json_with_runner(conn))
+            .map(|job| job.into_json(conn))
             .collect::<Result<Vec<_>, _>>()?
     });
 
@@ -219,5 +215,5 @@ async fn get_one_inner(
             (&query_project, path_params.job)
         ))?;
 
-    job.into_json_for_project(public_conn!(context, public_user))
+    job.into_json(public_conn!(context, public_user))
 }
