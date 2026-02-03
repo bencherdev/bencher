@@ -22,7 +22,11 @@ mod error;
 #[cfg(target_os = "linux")]
 pub mod firecracker;
 #[cfg(target_os = "linux")]
+pub mod firecracker_bin;
+#[cfg(target_os = "linux")]
 pub mod init;
+#[cfg(target_os = "linux")]
+pub mod kernel;
 pub mod jail;
 pub mod metrics;
 mod run;

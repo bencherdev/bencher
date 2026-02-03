@@ -198,9 +198,14 @@ pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     let unpack_dir = work_dir.join("rootfs");
     let rootfs_path = work_dir.join("rootfs.ext4");
 
-    // Get kernel path - use provided path or find system kernel
+    // Get kernel path - use bundled, provided, or find system kernel
     let kernel_path = if let Some(ref kernel) = config.kernel {
         kernel.clone()
+    } else if crate::kernel::KERNEL_BUNDLED {
+        let kernel_dest = work_dir.join("vmlinux");
+        crate::kernel::write_kernel_to_file(kernel_dest.as_std_path())?;
+        println!("  Extracted bundled kernel to {kernel_dest}");
+        kernel_dest
     } else {
         find_kernel()?
     };
@@ -253,8 +258,15 @@ pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("Creating ext4 at {rootfs_path}...");
     bencher_rootfs::create_ext4(&unpack_dir, &rootfs_path)?;
 
-    // Step 7: Find Firecracker binary
-    let firecracker_bin = find_firecracker_binary()?;
+    // Step 7: Find Firecracker binary - use bundled or find on system
+    let firecracker_bin = if crate::firecracker_bin::FIRECRACKER_BUNDLED {
+        let fc_dest = work_dir.join("firecracker");
+        crate::firecracker_bin::write_firecracker_to_file(fc_dest.as_std_path())?;
+        println!("  Extracted bundled firecracker to {fc_dest}");
+        fc_dest.to_string()
+    } else {
+        find_firecracker_binary()?
+    };
 
     // Step 8: Run benchmark in Firecracker microVM
     println!("Launching Firecracker microVM...");
