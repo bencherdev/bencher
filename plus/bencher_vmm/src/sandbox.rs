@@ -204,6 +204,8 @@ fn build_seccomp_filter() -> Result<SeccompFilter, VmmError> {
     rules.push(allow(SYS_exit)); // Exit thread
     rules.push(allow(SYS_exit_group)); // Exit process
     rules.push(allow(SYS_getpid)); // Get process ID (for logging)
+    rules.push(allow(SYS_kill)); // Send signal (timeout uses SIGALRM to interrupt vCPU)
+    rules.push(allow(SYS_tgkill)); // Thread-directed signal (used by some kill implementations)
     rules.push(allow(SYS_getrandom)); // Random numbers (for crypto/vsock)
 
     // === Process info ===

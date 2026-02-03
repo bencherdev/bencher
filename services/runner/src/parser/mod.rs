@@ -76,6 +76,6 @@ pub struct TaskVmm {
     pub timeout: u64,
 
     /// Kernel command line.
-    #[arg(long, default_value = "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro")]
+    #[arg(long, default_value = "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init")]
     pub cmdline: String,
 }

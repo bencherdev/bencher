@@ -181,20 +181,64 @@ fn run_init() -> Result<(), InitError> {
         result.stderr.len()
     ));
 
-    // Step 7: Send results via vsock
+    // Step 7: Send results via vsock, fall back to serial
     console_log("sending results via vsock...");
-    send_results(&result, config.output_file.as_deref())?;
-    console_log("results sent");
+    match send_results(&result, config.output_file.as_deref()) {
+        Ok(()) => console_log("results sent via vsock"),
+        Err(e) => {
+            console_log(&format!("vsock failed ({e}), falling back to serial output"));
+            output_results_serial(&result);
+        }
+    }
 
     // Step 8: Shutdown
-    console_log("shutting down...");
-    poweroff();
+    // Exit the init process. Since we're PID 1, this causes a kernel panic:
+    //   "Attempted to kill init!"
+    // With panic=1 in cmdline, the kernel reboots after 1 second.
+    // With reboot=t, the reboot triggers a triple-fault → VcpuExit::Shutdown.
+    console_log("exiting (will trigger kernel panic → reboot → VM shutdown)...");
+    // Sync filesystems before exit
+    unsafe { libc::sync() };
+    // Return Ok to let main() exit with ExitCode::SUCCESS
+    Ok(())
+}
 
+/// Remount the root filesystem read-write.
+///
+/// The kernel always mounts root read-only initially. The init process
+/// must remount it read-write so we can create directories like /proc, /sys, etc.
+fn remount_root_rw() -> Result<(), InitError> {
+    let source = CString::new("none").unwrap();
+    let target = CString::new("/").unwrap();
+
+    let ret = unsafe {
+        libc::mount(
+            source.as_ptr(),
+            target.as_ptr(),
+            std::ptr::null(),
+            libc::MS_REMOUNT,
+            std::ptr::null(),
+        )
+    };
+
+    if ret != 0 {
+        return Err(InitError::Mount(format!(
+            "remount / rw: {}",
+            io::Error::last_os_error()
+        )));
+    }
+
+    console_log("remounted / read-write");
     Ok(())
 }
 
 /// Mount essential filesystems.
 fn mount_filesystems() -> Result<(), InitError> {
+    // Remount root filesystem read-write first.
+    // The kernel initially mounts root read-only even with 'rw' in cmdline;
+    // init is responsible for remounting it read-write.
+    remount_root_rw()?;
+
     // Create mount points if they don't exist
     let _ = fs::create_dir_all("/proc");
     let _ = fs::create_dir_all("/sys");
@@ -307,10 +351,10 @@ fn setup_signal_handlers() -> Result<(), InitError> {
         if libc::signal(libc::SIGINT, handle_signal as libc::sighandler_t) == libc::SIG_ERR {
             return Err(InitError::Signal("failed to set SIGINT handler".into()));
         }
-        // Ignore SIGCHLD - we handle child reaping explicitly
-        if libc::signal(libc::SIGCHLD, libc::SIG_IGN) == libc::SIG_ERR {
-            return Err(InitError::Signal("failed to ignore SIGCHLD".into()));
-        }
+        // Use default SIGCHLD handler - we reap children explicitly via waitpid.
+        // Do NOT use SIG_IGN, as that causes children to be auto-reaped and
+        // waitpid(-1) to return ECHILD, preventing exit code collection.
+        libc::signal(libc::SIGCHLD, libc::SIG_DFL);
     }
 
     Ok(())
@@ -478,8 +522,15 @@ fn wait_for_child(
         } else if waited == 0 {
             // No children ready, sleep briefly
             std::thread::sleep(std::time::Duration::from_millis(10));
+        } else {
+            // waited == -1: error or no children
+            // ECHILD means our child was already reaped (e.g., SIGCHLD was SIG_IGN)
+            let err = io::Error::last_os_error();
+            if err.raw_os_error() == Some(libc::ECHILD) {
+                // Child already reaped, we can't get exit code
+                exit_code = Some(1);
+            }
         }
-        // waited == -1 means no children or error, continue
 
         // If we have exit code, do one more read to drain pipes
         if exit_code.is_some() {
@@ -533,10 +584,10 @@ fn send_results(result: &BenchmarkResult, output_file: Option<&str>) -> Result<(
 }
 
 /// Vsock connect/send timeout in seconds.
-const VSOCK_TIMEOUT_SECS: i64 = 5;
+const VSOCK_TIMEOUT_SECS: i64 = 2;
 
 /// Maximum number of retries for transient vsock errors.
-const VSOCK_MAX_RETRIES: usize = 3;
+const VSOCK_MAX_RETRIES: usize = 1;
 
 /// Send data via vsock to the host.
 fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
@@ -639,12 +690,64 @@ fn send_vsock_once(port: u32, data: &[u8]) -> Result<(), InitError> {
     Ok(())
 }
 
+/// Output benchmark results via serial port.
+///
+/// This is the fallback when vsock is unavailable. The output format uses
+/// markers so the VMM can parse results from the serial stream:
+///
+/// ```text
+/// ---BENCHER_STDOUT_BEGIN---
+/// <stdout content>
+/// ---BENCHER_STDOUT_END---
+/// ---BENCHER_STDERR_BEGIN---
+/// <stderr content>
+/// ---BENCHER_STDERR_END---
+/// ---BENCHER_EXIT_CODE:<code>---
+/// ```
+fn output_results_serial(result: &BenchmarkResult) {
+    serial_write(b"---BENCHER_STDOUT_BEGIN---\n");
+    serial_write(&result.stdout);
+    if !result.stdout.ends_with(b"\n") {
+        serial_write(b"\n");
+    }
+    serial_write(b"---BENCHER_STDOUT_END---\n");
+
+    serial_write(b"---BENCHER_STDERR_BEGIN---\n");
+    serial_write(&result.stderr);
+    if !result.stderr.ends_with(b"\n") {
+        serial_write(b"\n");
+    }
+    serial_write(b"---BENCHER_STDERR_END---\n");
+
+    let exit_line = format!("---BENCHER_EXIT_CODE:{}---\n", result.exit_code);
+    serial_write(exit_line.as_bytes());
+}
+
 /// Shut down the system.
+///
+/// Writes to I/O port 0x604 (QEMU/Firecracker exit port) to signal the VMM
+/// that the guest is done. This triggers `VcpuExit::IoOut` which the VMM
+/// handles as a shutdown. Falls back to `reboot(RB_POWER_OFF)` if the
+/// port write doesn't cause an exit.
 fn poweroff() {
     // Sync filesystems
     unsafe { libc::sync() };
 
-    // reboot(2) with RB_POWER_OFF
+    // Write to I/O port 0x604 to signal shutdown to the VMM.
+    // This is the standard exit port used by Firecracker and QEMU.
+    #[cfg(target_arch = "x86_64")]
+    unsafe {
+        // Get I/O port access (requires iopl >= 1)
+        let _ = libc::iopl(3);
+        std::arch::asm!(
+            "out dx, al",
+            in("dx") 0x604u16,
+            in("al") 0x00u8,
+            options(nostack, nomem, preserves_flags)
+        );
+    }
+
+    // Fallback: use reboot syscall
     unsafe {
         libc::reboot(libc::RB_POWER_OFF);
     }

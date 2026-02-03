@@ -14,11 +14,60 @@ use crate::devices::DeviceManager;
 use crate::error::VmmError;
 use crate::vcpu::Vcpu;
 
+/// Shared state for signaling vCPU threads to stop.
+///
+/// Each vCPU thread registers its Linux thread ID (TID) on startup.
+/// When shutdown is triggered, SIGALRM is sent to each registered TID
+/// using `tgkill`, ensuring all threads are interrupted even if they
+/// are blocked inside a KVM ioctl.
+struct VcpuSignaler {
+    /// Linux thread IDs of vCPU threads.
+    tids: Mutex<Vec<i32>>,
+    /// Process ID for tgkill.
+    pid: i32,
+}
+
+impl VcpuSignaler {
+    fn new() -> Self {
+        Self {
+            tids: Mutex::new(Vec::new()),
+            pid: std::process::id() as i32,
+        }
+    }
+
+    /// Register the current thread as a vCPU thread.
+    fn register_current_thread(&self) {
+        // SAFETY: gettid() is always safe to call.
+        let tid = unsafe { libc::syscall(libc::SYS_gettid) } as i32;
+        if let Ok(mut tids) = self.tids.lock() {
+            tids.push(tid);
+        }
+    }
+
+    /// Send SIGALRM to all registered vCPU threads.
+    ///
+    /// This interrupts any blocking KVM ioctls, causing them to return EINTR.
+    fn signal_all(&self) {
+        if let Ok(tids) = self.tids.lock() {
+            for &tid in &*tids {
+                // SAFETY: Sending SIGALRM to threads in our own process is safe.
+                unsafe {
+                    libc::syscall(libc::SYS_tgkill, self.pid, tid, libc::SIGALRM);
+                }
+            }
+        }
+    }
+}
+
 /// Maximum size for serial output buffer (10 MiB).
 ///
 /// This prevents malicious workloads from exhausting host memory by
 /// generating excessive output. Output beyond this limit is discarded.
 const MAX_SERIAL_OUTPUT_SIZE: usize = 10 * 1024 * 1024;
+
+/// Serial marker indicating the guest has finished and results are ready.
+/// When this marker appears in the serial output, the VMM shuts down the VM.
+const SERIAL_EXIT_MARKER: &[u8] = b"---BENCHER_EXIT_CODE:";
 
 /// Grace period after timeout before forceful termination (in milliseconds).
 ///
@@ -44,22 +93,50 @@ pub fn run(
     devices: Arc<Mutex<DeviceManager>>,
     timeout_secs: u64,
 ) -> Result<String, VmmError> {
+    // Install a no-op SIGALRM handler so the signal interrupts blocking KVM
+    // ioctls (causing EINTR) without terminating the process.
+    // SAFETY: Setting a signal handler is safe; we use a no-op handler.
+    unsafe {
+        libc::signal(libc::SIGALRM, noop_signal_handler as libc::sighandler_t);
+    }
+
     // Flag to signal all vCPUs to stop
     let shutdown = Arc::new(AtomicBool::new(false));
     // Flag to track if we timed out
     let timed_out = Arc::new(AtomicBool::new(false));
+    // Signaler for interrupting vCPU threads via tgkill
+    let signaler = Arc::new(VcpuSignaler::new());
 
-    // Start timeout thread if timeout is set
-    // The timeout thread will signal shutdown after the timeout expires.
-    // We use SeqCst ordering to ensure visibility across threads.
+    // Start timeout thread if timeout is set.
+    // The timeout thread signals shutdown, then sends SIGALRM to each vCPU
+    // thread individually using tgkill to ensure all are interrupted.
     let timeout_handle = if timeout_secs > 0 {
         let shutdown_clone = Arc::clone(&shutdown);
         let timed_out_clone = Arc::clone(&timed_out);
+        let signaler_clone = Arc::clone(&signaler);
         Some(thread::spawn(move || {
-            thread::sleep(Duration::from_secs(timeout_secs));
+            // Sleep in 100ms increments so we can detect early shutdown
+            let total_ms = timeout_secs * 1000;
+            let mut elapsed_ms = 0u64;
+            while elapsed_ms < total_ms {
+                if shutdown_clone.load(Ordering::SeqCst) {
+                    return; // VM already shut down, no timeout needed
+                }
+                thread::sleep(Duration::from_millis(100));
+                elapsed_ms += 100;
+            }
             // Only set timeout if we haven't already shut down
             if !shutdown_clone.swap(true, Ordering::SeqCst) {
                 timed_out_clone.store(true, Ordering::SeqCst);
+
+                // Send SIGALRM to each vCPU thread individually using tgkill.
+                // Send multiple rounds to ensure all threads are interrupted,
+                // even if some are between checking the shutdown flag and
+                // entering the KVM ioctl.
+                for _ in 0..3 {
+                    signaler_clone.signal_all();
+                    thread::sleep(Duration::from_millis(200));
+                }
             }
         }))
     } else {
@@ -72,10 +149,12 @@ pub fn run(
 
     // For single vCPU (common case), run in the current thread
     let result = if vcpus.len() == 1 {
+        signaler.register_current_thread();
         run_vcpu_loop(
             &mut vcpus[0],
             Arc::clone(&devices),
             Arc::clone(&shutdown),
+            Arc::clone(&signaler),
             Arc::clone(&serial_output),
         )
     } else {
@@ -85,25 +164,34 @@ pub fn run(
             .map(|mut vcpu| {
                 let devices = Arc::clone(&devices);
                 let shutdown = Arc::clone(&shutdown);
+                let signaler = Arc::clone(&signaler);
                 let serial_output = Arc::clone(&serial_output);
 
                 thread::spawn(move || {
-                    run_vcpu_loop(&mut vcpu, devices, shutdown, serial_output)
+                    signaler.register_current_thread();
+                    run_vcpu_loop(&mut vcpu, devices, shutdown, signaler, serial_output)
                 })
             })
             .collect();
 
-        // Wait for all vCPU threads to complete
+        // Wait for all vCPU threads to complete.
+        // Use a polling join with grace period to avoid hanging if a
+        // thread is stuck despite signaling.
         let mut result = Ok(());
         for handle in handles {
             match handle.join() {
                 Ok(Ok(())) => {}
                 Ok(Err(e)) => {
                     result = Err(e);
+                    // Signal remaining threads to stop
+                    shutdown.store(true, Ordering::SeqCst);
+                    signaler.signal_all();
                     break;
                 }
                 Err(_) => {
                     result = Err(VmmError::Vcpu("vCPU thread panicked".to_owned()));
+                    shutdown.store(true, Ordering::SeqCst);
+                    signaler.signal_all();
                     break;
                 }
             }
@@ -116,8 +204,7 @@ pub fn run(
         // Signal shutdown to wake up the timeout thread if it's still waiting
         shutdown.store(true, Ordering::SeqCst);
 
-        // Wait for the timeout thread to finish, but with a grace period
-        // This prevents hanging if the timeout thread is stuck
+        // Wait for the timeout thread to finish
         let join_result = handle.join();
 
         // If join failed, the thread panicked - but we still want to check timeout
@@ -126,31 +213,23 @@ pub fn run(
         }
     }
 
+    // Extract any captured output (serial or vsock) regardless of outcome.
+    // This must happen before the timeout/error checks so partial output is preserved.
+    let captured_output = extract_output(&devices, &serial_output);
+
     // Check if we timed out (use SeqCst to ensure we see the latest value)
     if timed_out.load(Ordering::SeqCst) {
-        return Err(VmmError::Timeout(timeout_secs));
+        return Err(VmmError::Timeout {
+            timeout_secs,
+            partial_output: captured_output.unwrap_or_default(),
+        });
     }
 
     // Propagate any vCPU errors
     result?;
 
-    // Prefer vsock results if available, fall back to serial output
-    let dm = devices.lock().map_err(|_| {
-        VmmError::Device("Failed to lock device manager".to_owned())
-    })?;
-
-    if let Some(results) = dm.get_vsock_results() {
-        if !results.is_empty() {
-            return Ok(results);
-        }
-    }
-
-    // Fall back to serial output
-    let serial = serial_output.lock().map_err(|_| {
-        VmmError::Device("Failed to lock serial output".to_owned())
-    })?;
-    let output = String::from_utf8_lossy(&serial).to_string();
-    Ok(output)
+    // Return the captured output
+    captured_output.map_err(|e| VmmError::Device(format!("Failed to extract output: {e}")))
 }
 
 /// Run the main loop for a single vCPU.
@@ -158,6 +237,7 @@ fn run_vcpu_loop(
     vcpu: &mut Vcpu,
     devices: Arc<Mutex<DeviceManager>>,
     shutdown: Arc<AtomicBool>,
+    signaler: Arc<VcpuSignaler>,
     serial_output: Arc<Mutex<Vec<u8>>>,
 ) -> Result<(), VmmError> {
     loop {
@@ -175,6 +255,8 @@ fn run_vcpu_loop(
                     VmExitAction::Continue => continue,
                     VmExitAction::Shutdown => {
                         shutdown.store(true, Ordering::SeqCst);
+                        // Signal all other vCPU threads to wake up
+                        signaler.signal_all();
                         break;
                     }
                 }
@@ -213,6 +295,21 @@ fn handle_vcpu_exit(
         }
 
         VcpuExit::IoOut(port, data) => {
+            // Detect i8042 keyboard controller reset (port 0x64, value 0xFE).
+            // The Linux kernel uses this for reboots with reboot=k.
+            // Also detect writes to port 0x64 with pulse CPU reset bit.
+            if port == 0x64 && !data.is_empty() && (data[0] & 0x02) != 0 {
+                return Ok(VmExitAction::Shutdown);
+            }
+            // Detect ACPI/QEMU reset (port 0x604, value 0x00).
+            if port == 0x604 {
+                return Ok(VmExitAction::Shutdown);
+            }
+            // Detect Fast A20/Reset (port 0x92, bit 0 = reset)
+            if port == 0x92 && !data.is_empty() && (data[0] & 0x01) != 0 {
+                return Ok(VmExitAction::Shutdown);
+            }
+
             let mut dm = devices.lock().map_err(|_| {
                 VmmError::Device("Failed to lock device manager".to_owned())
             })?;
@@ -221,13 +318,17 @@ fn handle_vcpu_exit(
 
             // Collect serial output (with size limit to prevent memory exhaustion)
             let output = dm.get_serial_output();
+            let mut results_complete = false;
             if let Ok(mut buf) = serial_output.lock() {
                 extend_with_limit(&mut buf, &output, MAX_SERIAL_OUTPUT_SIZE);
+                // Check if the guest has written the exit code marker, indicating
+                // the benchmark is complete and results are ready.
+                results_complete = serial_has_exit_marker(&buf);
             }
 
             dm.check_timer();
 
-            if should_shutdown {
+            if should_shutdown || results_complete {
                 Ok(VmExitAction::Shutdown)
             } else {
                 Ok(VmExitAction::Continue)
@@ -271,11 +372,17 @@ fn handle_vcpu_exit(
 
             // Collect any serial output (with size limit)
             let output = dm.get_serial_output();
+            let mut results_complete = false;
             if let Ok(mut buf) = serial_output.lock() {
                 extend_with_limit(&mut buf, &output, MAX_SERIAL_OUTPUT_SIZE);
+                results_complete = serial_has_exit_marker(&buf);
             }
 
-            Ok(VmExitAction::Continue)
+            if results_complete {
+                Ok(VmExitAction::Shutdown)
+            } else {
+                Ok(VmExitAction::Continue)
+            }
         }
 
         VcpuExit::Shutdown => Ok(VmExitAction::Shutdown),
@@ -299,13 +406,95 @@ fn handle_vcpu_exit(
             dm.check_timer();
             // Collect any serial output (with size limit)
             let output = dm.get_serial_output();
+            let mut results_complete = false;
             if let Ok(mut buf) = serial_output.lock() {
                 extend_with_limit(&mut buf, &output, MAX_SERIAL_OUTPUT_SIZE);
+                results_complete = serial_has_exit_marker(&buf);
             }
 
-            Ok(VmExitAction::Continue)
+            if results_complete {
+                Ok(VmExitAction::Shutdown)
+            } else {
+                Ok(VmExitAction::Continue)
+            }
         }
     }
+}
+
+/// Extract captured output from vsock (preferred) or serial buffer.
+fn extract_output(
+    devices: &Arc<Mutex<DeviceManager>>,
+    serial_output: &Arc<Mutex<Vec<u8>>>,
+) -> Result<String, String> {
+    // Prefer vsock results if available
+    let dm = devices
+        .lock()
+        .map_err(|_| "Failed to lock device manager".to_owned())?;
+
+    if let Some(results) = dm.get_vsock_results() {
+        if !results.is_empty() {
+            return Ok(results);
+        }
+    }
+    drop(dm);
+
+    // Fall back to serial output
+    let serial = serial_output
+        .lock()
+        .map_err(|_| "Failed to lock serial output".to_owned())?;
+    let raw = String::from_utf8_lossy(&serial);
+
+    // Parse structured output from serial markers (written by bencher-init).
+    // Format:
+    //   ---BENCHER_STDOUT_BEGIN---
+    //   <stdout>
+    //   ---BENCHER_STDOUT_END---
+    //   ---BENCHER_STDERR_BEGIN---
+    //   <stderr>
+    //   ---BENCHER_STDERR_END---
+    //   ---BENCHER_EXIT_CODE:<code>---
+    Ok(parse_serial_output(&raw))
+}
+
+/// Parse structured benchmark output from raw serial stream.
+///
+/// Extracts the stdout content between `---BENCHER_STDOUT_BEGIN---` and
+/// `---BENCHER_STDOUT_END---` markers. If no markers are found, returns
+/// the raw serial output as-is (for debugging).
+fn parse_serial_output(raw: &str) -> String {
+    const STDOUT_BEGIN: &str = "---BENCHER_STDOUT_BEGIN---";
+    const STDOUT_END: &str = "---BENCHER_STDOUT_END---";
+
+    if let Some(begin) = raw.find(STDOUT_BEGIN) {
+        let after_begin = begin + STDOUT_BEGIN.len();
+        // Skip the newline after the begin marker
+        let content_start = if raw[after_begin..].starts_with('\n') {
+            after_begin + 1
+        } else {
+            after_begin
+        };
+
+        if let Some(end) = raw[content_start..].find(STDOUT_END) {
+            let content = &raw[content_start..content_start + end];
+            // Trim trailing newline added by the marker format
+            return content.trim_end_matches('\n').to_owned();
+        }
+    }
+
+    // No markers found - return raw serial output for debugging
+    raw.to_owned()
+}
+
+/// Check if the serial output buffer contains the exit code marker.
+fn serial_has_exit_marker(buf: &[u8]) -> bool {
+    if buf.len() < SERIAL_EXIT_MARKER.len() {
+        return false;
+    }
+    // Search only the last 1024 bytes for performance
+    let search_start = buf.len().saturating_sub(1024);
+    buf[search_start..]
+        .windows(SERIAL_EXIT_MARKER.len())
+        .any(|w| w == SERIAL_EXIT_MARKER)
 }
 
 /// Extend a buffer with new data, respecting a maximum size limit.
@@ -320,6 +509,16 @@ fn extend_with_limit(buffer: &mut Vec<u8>, data: &[u8], max_size: usize) {
     let remaining = max_size - buffer.len();
     let to_add = data.len().min(remaining);
     buffer.extend_from_slice(&data[..to_add]);
+}
+
+/// No-op signal handler for SIGALRM.
+///
+/// When the timeout expires, we send SIGALRM to interrupt blocked KVM ioctls.
+/// This handler does nothing - its purpose is to prevent the default handler
+/// (which terminates the process) from running.
+extern "C" fn noop_signal_handler(_signum: libc::c_int) {
+    // Intentionally empty. The signal delivery itself is what interrupts
+    // the blocking KVM ioctl, causing it to return EINTR.
 }
 
 /// Result of handling a VM exit.

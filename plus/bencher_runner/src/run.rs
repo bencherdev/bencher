@@ -67,7 +67,7 @@ pub async fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         cache_dir: None,
         vcpus: args.vcpus,
         memory_mib: args.memory_mib,
-        kernel_cmdline: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw".to_owned(),
+        kernel_cmdline: "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init".to_owned(),
         timeout_secs: args.timeout_secs,
         output_file: args.output_file.clone(),
     };
@@ -125,7 +125,10 @@ async fn exec_to_vmm(config: &crate::Config) -> Result<(), RunnerError> {
     println!("Parsing OCI image config...");
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
     let command = oci_image.command();
-    let workdir = oci_image.working_dir().unwrap_or("/");
+    let workdir = oci_image
+        .working_dir()
+        .filter(|w| !w.is_empty())
+        .unwrap_or("/");
     // Sanitize environment variables to remove dangerous ones like LD_PRELOAD
     let env = sanitize_env(&oci_image.env());
 
@@ -363,7 +366,10 @@ pub async fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("Parsing OCI image config...");
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
     let command = oci_image.command();
-    let workdir = oci_image.working_dir().unwrap_or("/");
+    let workdir = oci_image
+        .working_dir()
+        .filter(|w| !w.is_empty())
+        .unwrap_or("/");
     // Sanitize environment variables to remove dangerous ones like LD_PRELOAD
     let env = sanitize_env(&oci_image.env());
 

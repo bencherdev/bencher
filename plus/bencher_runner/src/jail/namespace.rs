@@ -43,15 +43,25 @@ pub fn set_no_new_privs() -> Result<(), RunnerError> {
     Ok(())
 }
 
+/// Capture the current UID and GID before entering a new user namespace.
+///
+/// Must be called BEFORE `create_user_namespace()` because `getuid()`/`getgid()`
+/// return the overflow UID/GID (65534) after `unshare(CLONE_NEWUSER)` until the
+/// mapping is written.
+pub fn get_uid_gid() -> (nix::unistd::Uid, nix::unistd::Gid) {
+    (nix::unistd::getuid(), nix::unistd::getgid())
+}
+
 /// Set up UID/GID mapping for user namespace.
 ///
-/// Maps UID 0 inside to the current user outside.
-pub fn setup_uid_gid_mapping() -> Result<(), RunnerError> {
+/// Maps UID 0 inside to the given UID/GID outside (captured before `unshare`).
+pub fn setup_uid_gid_mapping(
+    uid: nix::unistd::Uid,
+    gid: nix::unistd::Gid,
+) -> Result<(), RunnerError> {
     use std::fs;
 
     let pid = std::process::id();
-    let uid = nix::unistd::getuid();
-    let gid = nix::unistd::getgid();
 
     // Map root inside to current user outside
     let uid_map = format!("0 {uid} 1\n");
