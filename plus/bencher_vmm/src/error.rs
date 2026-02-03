@@ -33,8 +33,12 @@ pub enum VmmError {
     #[error("VMM requires Linux with KVM support")]
     UnsupportedPlatform,
 
-    #[error("VM execution timed out after {0} seconds")]
-    Timeout(u64),
+    #[error("VM execution timed out after {timeout_secs} seconds")]
+    Timeout {
+        timeout_secs: u64,
+        /// Any partial output captured before the timeout.
+        partial_output: String,
+    },
 
     #[error("Sandbox error: {0}")]
     Sandbox(String),

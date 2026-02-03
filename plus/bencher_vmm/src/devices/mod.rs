@@ -123,7 +123,7 @@ impl DeviceManager {
 
     /// Setup virtio-blk device with a rootfs image.
     pub fn setup_virtio_blk(&mut self, rootfs_path: &Utf8Path) -> Result<(), VmmError> {
-        let device = VirtioBlkDevice::new(rootfs_path, true)?;
+        let device = VirtioBlkDevice::new(rootfs_path, false)?;
         self.virtio_blk = Some(device);
         Ok(())
     }
