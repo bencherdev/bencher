@@ -1,6 +1,5 @@
 mod api_meter;
 
 pub use api_meter::{
-    ApiCounter, ApiMeter, AuthMethod, AuthorizationKind, IntervalKind, JobStatusKind,
-    OAuthProvider,
+    ApiCounter, ApiMeter, AuthMethod, AuthorizationKind, IntervalKind, JobStatusKind, OAuthProvider,
 };

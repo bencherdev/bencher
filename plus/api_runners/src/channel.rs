@@ -11,14 +11,19 @@ use bencher_schema::{
     schema, write_conn,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use dropshot::{Path, RequestContext, WebsocketConnection, WebsocketChannelResult, channel};
+use dropshot::WebsocketConnectionRaw;
+use dropshot::{Path, RequestContext, WebsocketChannelResult, WebsocketConnection, channel};
 use futures::{SinkExt as _, StreamExt as _};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use dropshot::WebsocketConnectionRaw;
+use std::time::Duration;
+
 use tokio_tungstenite::tungstenite::{Message, protocol::Role};
 
 use crate::runner_token::RunnerToken;
+
+/// Maximum time to wait for a message before considering the runner dead.
+const HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(90);
 
 /// Path parameters for the job channel endpoint.
 #[derive(Deserialize, JsonSchema)]
@@ -101,12 +106,9 @@ pub async fn runner_job_channel(
     let job_id = job.id;
 
     // Upgrade to WebSocket and handle messages
-    let ws_stream = tokio_tungstenite::WebSocketStream::from_raw_socket(
-        conn.into_inner(),
-        Role::Server,
-        None,
-    )
-    .await;
+    let ws_stream =
+        tokio_tungstenite::WebSocketStream::from_raw_socket(conn.into_inner(), Role::Server, None)
+            .await;
 
     handle_websocket(&log, context, job_id, ws_stream).await?;
 
@@ -122,13 +124,35 @@ async fn handle_websocket(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (mut tx, mut rx) = ws_stream.split();
 
-    while let Some(msg_result) = rx.next().await {
+    loop {
+        let msg_result = match tokio::time::timeout(HEARTBEAT_TIMEOUT, rx.next()).await {
+            Ok(Some(msg_result)) => msg_result,
+            Ok(None) => {
+                // Stream ended (client disconnected cleanly)
+                break;
+            },
+            Err(_elapsed) => {
+                slog::warn!(log, "Heartbeat timeout, marking job as failed"; "job_id" => ?job_id);
+                let now = DateTime::now();
+                let update = UpdateJob {
+                    status: Some(JobStatus::Failed),
+                    completed: Some(Some(now)),
+                    modified: Some(now),
+                    ..Default::default()
+                };
+                diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+                    .set(&update)
+                    .execute(write_conn!(context))?;
+                break;
+            },
+        };
+
         let msg = match msg_result {
             Ok(msg) => msg,
             Err(e) => {
                 slog::warn!(log, "WebSocket error"; "error" => %e);
                 break;
-            }
+            },
         };
 
         match msg {
@@ -138,7 +162,7 @@ async fn handle_websocket(
                     Err(e) => {
                         slog::warn!(log, "Invalid message"; "error" => %e, "text" => text.to_string());
                         continue;
-                    }
+                    },
                 };
 
                 let response = handle_runner_message(log, context, job_id, runner_msg).await?;
@@ -150,17 +174,17 @@ async fn handle_websocket(
                 if matches!(response, ServerMessage::Cancel) {
                     break;
                 }
-            }
+            },
             Message::Close(_) => {
                 slog::info!(log, "WebSocket closed by client");
                 break;
-            }
+            },
             Message::Ping(data) => {
                 tx.send(Message::Pong(data)).await?;
-            }
+            },
             Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {
                 // Ignore binary messages, pong responses, and raw frames
-            }
+            },
         }
     }
 
@@ -178,21 +202,21 @@ async fn handle_runner_message(
         RunnerMessage::Running => {
             slog::info!(log, "Job running"; "job_id" => ?job_id);
             handle_running(log, context, job_id).await?;
-        }
+        },
         RunnerMessage::Heartbeat => {
             slog::debug!(log, "Job heartbeat"; "job_id" => ?job_id);
             if let Some(cancel) = handle_heartbeat(context, job_id).await? {
                 return Ok(cancel);
             }
-        }
+        },
         RunnerMessage::Completed { exit_code, output } => {
             slog::info!(log, "Job completed"; "job_id" => ?job_id, "exit_code" => exit_code);
             handle_completed(log, context, job_id, exit_code, output).await?;
-        }
+        },
         RunnerMessage::Failed { exit_code, error } => {
             slog::warn!(log, "Job failed"; "job_id" => ?job_id, "exit_code" => ?exit_code, "error" => &error);
             handle_failed(log, context, job_id, exit_code).await?;
-        }
+        },
     }
 
     Ok(ServerMessage::Ack)
@@ -217,7 +241,8 @@ async fn handle_running(
         return Err(format!(
             "Invalid state transition from {:?} to Running, expected Claimed",
             job.status
-        ).into());
+        )
+        .into());
     }
 
     let update = UpdateJob {
@@ -263,6 +288,8 @@ async fn handle_heartbeat(
         ..Default::default()
     };
 
+    // It is okay to wait until here to get the write lock
+    // Worst case, we add an extra write if the job was canceled between reads
     diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
         .set(&update)
         .execute(write_conn!(context))?;
@@ -293,7 +320,8 @@ async fn handle_completed(
         return Err(format!(
             "Invalid state transition from {:?} to Completed, expected Running",
             job.status
-        ).into());
+        )
+        .into());
     }
 
     let update = UpdateJob {
@@ -339,7 +367,8 @@ async fn handle_failed(
         return Err(format!(
             "Invalid state transition from {:?} to Failed, expected Claimed or Running",
             job.status
-        ).into());
+        )
+        .into());
     }
 
     let update = UpdateJob {
