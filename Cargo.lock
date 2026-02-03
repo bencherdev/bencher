@@ -1559,11 +1559,14 @@ dependencies = [
  "bencher_oci",
  "bencher_rootfs",
  "camino",
+ "flate2",
  "libc",
  "serde",
  "serde_json",
+ "tar",
  "tempfile",
  "thiserror 2.0.17",
+ "ureq",
  "uuid 1.19.0",
 ]
 
@@ -1573,7 +1576,6 @@ version = "0.5.10"
 dependencies = [
  "anyhow",
  "bencher_runner",
- "camino",
  "clap",
 ]
 
@@ -9038,7 +9040,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "tar",
- "tokio",
 ]
 
 [[package]]

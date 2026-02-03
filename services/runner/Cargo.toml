@@ -15,7 +15,6 @@ anyhow = { workspace = true }
 clap = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-camino = { workspace = true }
 bencher_runner = { workspace = true, optional = true, features = ["plus"] }
 
 [lints]

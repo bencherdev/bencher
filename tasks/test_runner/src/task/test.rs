@@ -168,8 +168,7 @@ fn run_test_mock() -> anyhow::Result<()> {
 }
 
 /// Run the actual benchmark using `bencher_runner`.
-#[tokio::main]
-async fn run_benchmark() -> anyhow::Result<()> {
+fn run_benchmark() -> anyhow::Result<()> {
     println!("Starting benchmark VM...");
     println!();
 
@@ -213,7 +212,7 @@ async fn run_benchmark() -> anyhow::Result<()> {
     println!();
 
     println!("Running benchmark...");
-    let result = bencher_runner::execute(&config).await?;
+    let result = bencher_runner::execute(&config)?;
 
     println!();
     println!("=== Benchmark Output ===");

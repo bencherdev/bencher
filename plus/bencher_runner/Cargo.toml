@@ -36,5 +36,10 @@ uuid = { workspace = true, features = ["v4"], optional = true }
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = { workspace = true }
 
+[build-dependencies]
+flate2 = { workspace = true }
+tar = { workspace = true }
+ureq = { workspace = true }
+
 [lints]
 workspace = true
