@@ -16,6 +16,9 @@ plus = [
     "dep:serde_json",
     "dep:tempfile",
     "dep:thiserror",
+    "dep:tungstenite",
+    "dep:ureq",
+    "dep:url",
     "dep:uuid",
     "bencher_oci/plus",
     "bencher_oci/registry",
@@ -30,7 +33,10 @@ serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
-uuid = { workspace = true, features = ["v4"], optional = true }
+tungstenite = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true, features = ["json"] }
+url = { workspace = true, optional = true }
+uuid = { workspace = true, features = ["v4", "serde"], optional = true }
 
 # Linux-only dependencies
 [target.'cfg(target_os = "linux")'.dependencies]
