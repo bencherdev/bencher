@@ -30,8 +30,10 @@ pub mod kernel;
 pub mod jail;
 pub mod metrics;
 mod run;
+pub mod tuning;
 
 pub use config::Config;
 pub use error::RunnerError;
 pub use jail::ResourceLimits;
 pub use run::{execute, resolve_oci_image, run, run_with_args, RunArgs};
+pub use tuning::TuningConfig;

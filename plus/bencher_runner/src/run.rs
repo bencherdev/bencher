@@ -3,6 +3,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
+use crate::tuning::TuningConfig;
 
 /// Environment variables that are blocked for security reasons.
 ///
@@ -52,6 +53,8 @@ pub struct RunArgs {
     pub timeout_secs: u64,
     /// Output file path inside guest.
     pub output_file: Option<String>,
+    /// Host tuning configuration.
+    pub tuning: TuningConfig,
 }
 
 /// Run the `run` subcommand with parsed arguments.
@@ -59,6 +62,9 @@ pub struct RunArgs {
 /// Prepares the rootfs and launches a Firecracker microVM.
 #[cfg(target_os = "linux")]
 pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
+    // Apply host tuning — guard restores settings on drop
+    let _tuning_guard = crate::tuning::apply(&args.tuning);
+
     // Build config from args
     let config = crate::Config {
         oci_image: args.image.clone(),
