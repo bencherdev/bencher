@@ -271,9 +271,5 @@ async fn update_job_inner(
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(status_kind));
     }
 
-    // Check if job was canceled
-    let refreshed_job = QueryJob::get(auth_conn!(context), job.id)?;
-    let canceled = refreshed_job.status == JobStatus::Canceled;
-
-    Ok(JsonUpdateJobResponse { canceled })
+    Ok(JsonUpdateJobResponse { canceled: false })
 }
