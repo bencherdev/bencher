@@ -108,11 +108,14 @@ impl ConfigTx {
             plus,
         }) = config;
 
+        let request_body_max_bytes = server.request_body_max_bytes;
+
         debug!(log, "Creating internal configuration");
         let context = into_context(
             log,
             console,
             security,
+            request_body_max_bytes,
             smtp,
             database,
             restart_tx,
@@ -159,6 +162,7 @@ impl ConfigTx {
 }
 
 #[expect(
+    clippy::too_many_arguments,
     clippy::too_many_lines,
     reason = "Context initialization needs to handle DB setup, PRAGMAs, migrations, and pool creation"
 )]
@@ -166,6 +170,7 @@ async fn into_context(
     log: &Logger,
     console: JsonConsole,
     security: JsonSecurity,
+    request_body_max_bytes: usize,
     smtp: Option<JsonSmtp>,
     json_database: JsonDatabase,
     restart_tx: Sender<()>,
@@ -270,6 +275,7 @@ async fn into_context(
     debug!(log, "Creating API context");
     Ok(ApiContext {
         console_url,
+        request_body_max_bytes,
         token_key,
         rbac,
         messenger: smtp.into(),
