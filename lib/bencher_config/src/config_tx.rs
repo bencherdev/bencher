@@ -18,13 +18,19 @@ use bencher_json::{
 use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
-use bencher_schema::{context::RateLimiting, model::server::QueryServer, write_conn};
+use bencher_schema::{
+    context::RateLimiting,
+    model::{runner::job::spawn_heartbeat_timeout, server::QueryServer},
+    write_conn,
+};
 use bencher_token::TokenKey;
 use diesel::{
     Connection as _,
     connection::SimpleConnection as _,
     r2d2::{ConnectionManager, Pool},
 };
+#[cfg(feature = "plus")]
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
@@ -138,6 +144,9 @@ impl ConfigTx {
 
         #[cfg(feature = "plus")]
         spawn_stats(log.clone(), &context).await?;
+
+        #[cfg(feature = "plus")]
+        spawn_job_recovery(log.clone(), &context).await;
 
         let mut api_description = ApiDescription::new();
         debug!(log, "Registering server APIs");
@@ -301,6 +310,8 @@ async fn into_context(
         is_bencher_cloud,
         #[cfg(feature = "plus")]
         oci_storage,
+        #[cfg(feature = "plus")]
+        heartbeat_timeout: std::time::Duration::from_secs(90),
     })
 }
 
@@ -475,6 +486,46 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
         IfExists::Fail => ConfigLoggingIfExists::Fail,
         IfExists::Truncate => ConfigLoggingIfExists::Truncate,
         IfExists::Append => ConfigLoggingIfExists::Append,
+    }
+}
+
+#[cfg(feature = "plus")]
+async fn spawn_job_recovery(log: Logger, context: &ApiContext) {
+    use bencher_json::JobStatus;
+    use bencher_schema::{model::runner::QueryJob, schema};
+    use diesel::BoolExpressionMethods as _;
+
+    let conn = &mut *context.database.connection.lock().await;
+    let in_flight_jobs: Vec<QueryJob> = match schema::job::table
+        .filter(
+            schema::job::status
+                .eq(JobStatus::Claimed)
+                .or(schema::job::status.eq(JobStatus::Running)),
+        )
+        .load(conn)
+    {
+        Ok(jobs) => jobs,
+        Err(e) => {
+            error!(log, "Failed to query in-flight jobs for recovery: {e}");
+            return;
+        },
+    };
+
+    let count = in_flight_jobs.len();
+    if count > 0 {
+        info!(
+            log,
+            "Found {count} in-flight job(s), scheduling heartbeat timeout recovery"
+        );
+    }
+
+    for job in in_flight_jobs {
+        spawn_heartbeat_timeout(
+            log.clone(),
+            context.heartbeat_timeout,
+            context.database.connection.clone(),
+            job.id,
+        );
     }
 }
 

@@ -104,6 +104,7 @@ impl TestServer {
                 None, // Use default upload timeout
             )
             .expect("Failed to create OCI storage"),
+            heartbeat_timeout: std::time::Duration::from_secs(5),
         };
         #[cfg(not(feature = "plus"))]
         let context = ApiContext {

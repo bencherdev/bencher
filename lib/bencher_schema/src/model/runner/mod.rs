@@ -12,7 +12,7 @@ use crate::{
 
 pub mod job;
 
-pub use job::{InsertJob, JobId, QueryJob, UpdateJob};
+pub use job::{InsertJob, JobId, QueryJob, UpdateJob, spawn_heartbeat_timeout};
 
 crate::macros::typed_id::typed_id!(RunnerId);
 

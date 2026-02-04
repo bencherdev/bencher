@@ -626,3 +626,47 @@ mod job_lifecycle {
         assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     }
 }
+
+// =============================================================================
+// Timing Tests
+// =============================================================================
+
+// POST /v0/runners/{runner}/jobs - poll timeout respects the requested duration
+#[tokio::test]
+async fn test_claim_job_poll_timeout_timing() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "polltiming@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Poll Timing Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+
+    let body = serde_json::json!({
+        "poll_timeout": 2
+    });
+
+    let start = std::time::Instant::now();
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let elapsed = start.elapsed();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Option<serde_json::Value> = resp.json().await.expect("Failed to parse response");
+    assert!(body.is_none(), "Expected no job to be claimed");
+
+    // Should have waited at least 2 seconds
+    assert!(
+        elapsed >= std::time::Duration::from_secs(2),
+        "Expected at least 2s elapsed, got {elapsed:?}"
+    );
+    // Should not have waited more than 4 seconds
+    assert!(
+        elapsed < std::time::Duration::from_secs(4),
+        "Expected less than 4s elapsed, got {elapsed:?}"
+    );
+}

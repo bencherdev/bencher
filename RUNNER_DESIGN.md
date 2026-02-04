@@ -272,47 +272,30 @@ Runner                              Server
 **Advantages over REST polling:**
 - ~20x less network overhead per heartbeat (~50 bytes vs ~700 bytes)
 - Immediate cancellation notification (server push)
-- Connection loss detected immediately (vs 90 second timeout)
+- Connection loss triggers per-job timeout recovery (no periodic reaper needed)
+- Reconnection supported: runner can reconnect to a `Running` job after a transient disconnect
 - Billing based on connection duration, not polling
 
-## Background Job: Stale Job Reaper
+## Timeout-Based Job Recovery
 
-Runs every 30 seconds to handle dead runners:
+Instead of a periodic reaper, stale jobs are recovered via per-job timeout tasks. This provides faster, more precise recovery without polling overhead.
 
-```rust
-async fn reap_stale_jobs(db: &DbPool) {
-    // Jobs claimed but no heartbeat for too long
-    let stale_threshold = Utc::now() - Duration::seconds(90);
+**Two complementary mechanisms:**
 
-    sqlx::query!(
-        r#"
-        UPDATE job
-        SET status = 'pending',
-            runner_id = NULL,
-            claimed = NULL,
-            last_heartbeat = NULL
-        WHERE status IN ('claimed', 'running')
-          AND last_heartbeat < $1
-        "#,
-        stale_threshold
-    )
-    .execute(db)
-    .await?;
+1. **Inline WS timeout** — While the WebSocket connection is open, `tokio::time::timeout(heartbeat_timeout, rx.next())` detects a "connected but silent" runner. On timeout, the job is marked `Failed` immediately within the WS loop.
 
-    // Also mark runners as offline if no heartbeat
-    sqlx::query!(
-        r#"
-        UPDATE runner
-        SET state = 'offline'
-        WHERE state != 'offline'
-          AND last_heartbeat < $1
-        "#,
-        stale_threshold
-    )
-    .execute(db)
-    .await?;
-}
-```
+2. **Spawned disconnect timeout** — When a WebSocket disconnects and the job is still in-flight (non-terminal), a background `tokio::spawn` task sleeps for `heartbeat_timeout`. After waking, it checks:
+   - If the job reached a terminal state: do nothing (finished normally).
+   - If `last_heartbeat` is recent (within the timeout window): the runner reconnected — schedule another timeout for the remaining duration.
+   - Otherwise: mark the job as `Failed`.
+
+**Startup recovery:** On server startup, all `Claimed` or `Running` jobs are queried and a timeout task is spawned for each, recovering jobs that were in-flight when the server previously shut down.
+
+**Heartbeat timeout is configurable** via `ApiContext.heartbeat_timeout` (default: 90 seconds in production, 5 seconds in tests).
+
+### WebSocket Reconnection
+
+If a runner disconnects and reconnects to a `Running` job, the WebSocket channel accepts the connection (status check allows `Claimed | Running`). Sending a `Running` message on a job that is already `Running` is idempotent — it updates `last_heartbeat` without changing the status or `started` timestamp. This cancels any pending disconnect-timeout task (via the `last_heartbeat` freshness check).
 
 ## Job State Machine
 
@@ -488,6 +471,7 @@ This token is scoped to:
 - [x] **Job priority**: ~~FIFO or priority field?~~ **Decided: Priority + FIFO** - Bencher Plus customers get priority, FIFO within tiers
 - [x] **Usage billing**: ~~How to track?~~ **Decided: Stripe usage-based pricing** - Heartbeats trigger per-minute billing to Stripe
 - [x] **Heartbeat protocol**: ~~UDP? WebSocket? gRPC stream?~~ **Decided: WebSocket** - Low overhead, immediate cancellation, connection-based liveness detection
+- [x] **Stale job recovery**: ~~Periodic reaper or per-job timeout?~~ **Decided: Per-job timeout** - Spawned on WS disconnect and at startup; no periodic polling
 - [ ] **Result storage**: Store in job table or separate results table linked to existing perf tables?
 - [ ] **Output storage**: Store benchmark output from WebSocket `completed` messages (currently dropped). Needed before the runner feature is usable end-to-end.
 - [ ] **Retry policy**: Auto-retry failed jobs? How many times?
