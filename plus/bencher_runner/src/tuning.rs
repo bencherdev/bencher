@@ -297,3 +297,146 @@ pub struct TuningGuard;
 pub fn apply(_config: &TuningConfig) -> TuningGuard {
     TuningGuard
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_enables_all_tuning() {
+        let config = TuningConfig::default();
+        assert!(config.disable_aslr);
+        assert!(config.disable_nmi_watchdog);
+        assert_eq!(config.swappiness, Some(10));
+        assert_eq!(config.perf_event_paranoid, Some(-1));
+        assert_eq!(config.governor.as_deref(), Some("performance"));
+        assert!(config.disable_smt);
+        assert!(config.disable_turbo);
+    }
+
+    #[test]
+    fn disabled_config_changes_nothing() {
+        let config = TuningConfig::disabled();
+        assert!(!config.disable_aslr);
+        assert!(!config.disable_nmi_watchdog);
+        assert_eq!(config.swappiness, None);
+        assert_eq!(config.perf_event_paranoid, None);
+        assert_eq!(config.governor, None);
+        assert!(!config.disable_smt);
+        assert!(!config.disable_turbo);
+    }
+
+    #[test]
+    fn apply_returns_guard() {
+        // On any platform, apply should return without panic
+        let config = TuningConfig::default();
+        let _guard = apply(&config);
+    }
+
+    #[test]
+    fn apply_disabled_returns_guard() {
+        let config = TuningConfig::disabled();
+        let _guard = apply(&config);
+    }
+
+    #[test]
+    fn config_clone() {
+        let config = TuningConfig::default();
+        let cloned = config.clone();
+        assert_eq!(config.disable_aslr, cloned.disable_aslr);
+        assert_eq!(config.swappiness, cloned.swappiness);
+        assert_eq!(config.governor, cloned.governor);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn guard_drop_restores_via_tempfile() {
+        use std::fs;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test_sysctl");
+        fs::write(&path, "original").unwrap();
+
+        {
+            let mut guard = TuningGuard { saved: Vec::new() };
+            guard.saved.push(SavedSetting {
+                path: path.clone(),
+                value: "original".to_owned(),
+                label: "test".to_owned(),
+            });
+            // Simulate the tuning having changed the value
+            fs::write(&path, "changed").unwrap();
+            assert_eq!(fs::read_to_string(&path).unwrap(), "changed");
+        }
+        // Guard dropped — should restore
+        assert_eq!(fs::read_to_string(&path).unwrap(), "original");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn guard_restores_in_reverse_order() {
+        use std::fs;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path1 = dir.path().join("first");
+        let path2 = dir.path().join("second");
+        fs::write(&path1, "a").unwrap();
+        fs::write(&path2, "b").unwrap();
+
+        {
+            let mut guard = TuningGuard { saved: Vec::new() };
+            guard.saved.push(SavedSetting {
+                path: path1.clone(),
+                value: "a_orig".to_owned(),
+                label: "first".to_owned(),
+            });
+            guard.saved.push(SavedSetting {
+                path: path2.clone(),
+                value: "b_orig".to_owned(),
+                label: "second".to_owned(),
+            });
+        }
+        // Both should be restored
+        assert_eq!(fs::read_to_string(&path1).unwrap(), "a_orig");
+        assert_eq!(fs::read_to_string(&path2).unwrap(), "b_orig");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn write_sysctl_skips_missing_path() {
+        let mut guard = TuningGuard { saved: Vec::new() };
+        write_sysctl(&mut guard, "/nonexistent/path/value", "0", "test");
+        assert!(guard.saved.is_empty(), "should not save anything for missing path");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn write_sysctl_skips_if_already_set() {
+        use std::fs;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("value");
+        fs::write(&path, "0").unwrap();
+
+        let mut guard = TuningGuard { saved: Vec::new() };
+        write_sysctl(&mut guard, path.to_str().unwrap(), "0", "test");
+        assert!(guard.saved.is_empty(), "should not save when value already matches");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn write_sysctl_saves_and_writes() {
+        use std::fs;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("value");
+        fs::write(&path, "60").unwrap();
+
+        let mut guard = TuningGuard { saved: Vec::new() };
+        write_sysctl(&mut guard, path.to_str().unwrap(), "10", "test");
+
+        assert_eq!(guard.saved.len(), 1);
+        assert_eq!(guard.saved[0].value, "60");
+        assert_eq!(fs::read_to_string(&path).unwrap(), "10");
+    }
+}

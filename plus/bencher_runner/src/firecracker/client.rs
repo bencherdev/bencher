@@ -223,3 +223,121 @@ fn parse_http_response(data: &[u8]) -> Result<(u16, String), FirecrackerError> {
 
     Ok((status_code, body))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- find_header_end ---
+
+    #[test]
+    fn find_header_end_normal_response() {
+        let data = b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}";
+        assert_eq!(find_header_end(data), Some(34));
+    }
+
+    #[test]
+    fn find_header_end_no_terminator() {
+        let data = b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n";
+        assert_eq!(find_header_end(data), None);
+    }
+
+    #[test]
+    fn find_header_end_empty() {
+        assert_eq!(find_header_end(b""), None);
+    }
+
+    #[test]
+    fn find_header_end_just_terminator() {
+        assert_eq!(find_header_end(b"\r\n\r\n"), Some(0));
+    }
+
+    // --- response_complete ---
+
+    #[test]
+    fn response_complete_with_content_length_fulfilled() {
+        let data = b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}";
+        assert!(response_complete(data));
+    }
+
+    #[test]
+    fn response_complete_with_content_length_incomplete() {
+        let data = b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n{}";
+        assert!(!response_complete(data));
+    }
+
+    #[test]
+    fn response_complete_no_content_length() {
+        // No Content-Length means assume complete (Firecracker convention)
+        let data = b"HTTP/1.1 204 No Content\r\n\r\n";
+        assert!(response_complete(data));
+    }
+
+    #[test]
+    fn response_complete_no_header_end() {
+        let data = b"HTTP/1.1 200 OK\r\nContent";
+        assert!(!response_complete(data));
+    }
+
+    #[test]
+    fn response_complete_zero_content_length() {
+        let data = b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+        assert!(response_complete(data));
+    }
+
+    // --- parse_http_response ---
+
+    #[test]
+    fn parse_http_200_with_body() {
+        let data = b"HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\n{\"status\":\"ok\"}";
+        let (status, body) = parse_http_response(data).unwrap();
+        assert_eq!(status, 200);
+        assert_eq!(body, "{\"status\":\"ok\"}");
+    }
+
+    #[test]
+    fn parse_http_204_no_content() {
+        let data = b"HTTP/1.1 204 No Content\r\n\r\n";
+        let (status, body) = parse_http_response(data).unwrap();
+        assert_eq!(status, 204);
+        assert_eq!(body, "");
+    }
+
+    #[test]
+    fn parse_http_400_error() {
+        let data = b"HTTP/1.1 400 Bad Request\r\n\r\n{\"error\":\"bad\"}";
+        let (status, body) = parse_http_response(data).unwrap();
+        assert_eq!(status, 400);
+        assert_eq!(body, "{\"error\":\"bad\"}");
+    }
+
+    #[test]
+    fn parse_http_empty_response_errors() {
+        let result = parse_http_response(b"");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_http_malformed_status_defaults_to_500() {
+        // No status code in the status line
+        let data = b"HTTP/1.1\r\n\r\n";
+        let (status, _) = parse_http_response(data).unwrap();
+        assert_eq!(status, 500);
+    }
+
+    #[test]
+    fn parse_http_non_numeric_status_defaults_to_500() {
+        let data = b"HTTP/1.1 abc OK\r\n\r\n";
+        let (status, _) = parse_http_response(data).unwrap();
+        assert_eq!(status, 500);
+    }
+
+    #[test]
+    fn parse_http_no_header_body_separator() {
+        // Status line only, no \r\n\r\n — body should be empty
+        let data = b"HTTP/1.1 200 OK\r\n";
+        let (status, body) = parse_http_response(data).unwrap();
+        assert_eq!(status, 200);
+        assert_eq!(body, "");
+    }
+}

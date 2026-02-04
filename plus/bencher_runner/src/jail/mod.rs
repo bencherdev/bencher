@@ -101,3 +101,84 @@ impl ResourceLimits {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resource_limits_defaults() {
+        let limits = ResourceLimits::default();
+        assert_eq!(limits.cpu_quota_us, None);
+        assert_eq!(limits.cpu_period_us, 100_000);
+        assert_eq!(limits.memory_bytes, None);
+        assert_eq!(limits.max_fds, 1024);
+        assert_eq!(limits.max_procs, 64);
+        assert_eq!(limits.io_read_bps, None);
+        assert_eq!(limits.io_write_bps, None);
+    }
+
+    #[test]
+    fn with_cpu_limit_one_cpu() {
+        let limits = ResourceLimits::default().with_cpu_limit(1.0);
+        assert_eq!(limits.cpu_quota_us, Some(100_000));
+    }
+
+    #[test]
+    fn with_cpu_limit_half_cpu() {
+        let limits = ResourceLimits::default().with_cpu_limit(0.5);
+        assert_eq!(limits.cpu_quota_us, Some(50_000));
+    }
+
+    #[test]
+    fn with_cpu_limit_two_cpus() {
+        let limits = ResourceLimits::default().with_cpu_limit(2.0);
+        assert_eq!(limits.cpu_quota_us, Some(200_000));
+    }
+
+    #[test]
+    fn with_memory_limit() {
+        let limits = ResourceLimits::default().with_memory_limit(1024 * 1024 * 512);
+        assert_eq!(limits.memory_bytes, Some(536_870_912));
+    }
+
+    #[test]
+    fn with_io_limits() {
+        let limits = ResourceLimits::default().with_io_limits(1_000_000, 500_000);
+        assert_eq!(limits.io_read_bps, Some(1_000_000));
+        assert_eq!(limits.io_write_bps, Some(500_000));
+    }
+
+    #[test]
+    fn builder_chain() {
+        let limits = ResourceLimits::default()
+            .with_cpu_limit(2.0)
+            .with_memory_limit(1024)
+            .with_io_limits(100, 200);
+        assert_eq!(limits.cpu_quota_us, Some(200_000));
+        assert_eq!(limits.memory_bytes, Some(1024));
+        assert_eq!(limits.io_read_bps, Some(100));
+        assert_eq!(limits.io_write_bps, Some(200));
+    }
+
+    #[test]
+    fn serde_round_trip() {
+        let limits = ResourceLimits::default()
+            .with_cpu_limit(1.5)
+            .with_memory_limit(2048);
+        let json = serde_json::to_string(&limits).unwrap();
+        let parsed: ResourceLimits = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.cpu_quota_us, limits.cpu_quota_us);
+        assert_eq!(parsed.memory_bytes, Some(2048));
+        assert_eq!(parsed.cpu_period_us, 100_000);
+    }
+
+    #[test]
+    fn serde_deserialize_minimal() {
+        let json = "{}";
+        let limits: ResourceLimits = serde_json::from_str(json).unwrap();
+        assert_eq!(limits.cpu_quota_us, None);
+        assert_eq!(limits.cpu_period_us, 100_000);
+        assert_eq!(limits.max_procs, 64);
+    }
+}
