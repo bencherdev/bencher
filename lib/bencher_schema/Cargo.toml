@@ -67,7 +67,7 @@ reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
 sentry = { workspace = true, optional = true }
 slog.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["fs", "rt-multi-thread", "time"] }
 tokio-rustls.workspace = true
 url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }

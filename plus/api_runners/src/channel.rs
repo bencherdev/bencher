@@ -7,7 +7,7 @@ use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{forbidden_error, resource_not_found_err},
-    model::runner::{JobId, QueryJob, UpdateJob},
+    model::runner::{JobId, QueryJob, UpdateJob, job::spawn_heartbeat_timeout},
     schema, write_conn,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -25,8 +25,9 @@ use tokio_tungstenite::tungstenite::{
 
 use crate::runner_token::RunnerToken;
 
-/// Maximum time to wait for a message before considering the runner dead.
-const HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(90);
+/// Default heartbeat timeout when the `plus` feature is not enabled.
+#[cfg(not(feature = "plus"))]
+const DEFAULT_HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(90);
 
 /// Path parameters for the job channel endpoint.
 #[derive(Deserialize, JsonSchema)]
@@ -103,10 +104,10 @@ pub async fn runner_job_channel(
         return Err(forbidden_error("Job is not assigned to this runner").into());
     }
 
-    // Only allow channel for claimed jobs (not yet running)
-    if job.status != JobStatus::Claimed {
+    // Only allow channel for claimed or running jobs (running allows reconnection)
+    if !matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
         return Err(forbidden_error(format!(
-            "Cannot open channel for job in {:?} status, expected Claimed",
+            "Cannot open channel for job in {:?} status, expected Claimed or Running",
             job.status
         ))
         .into());
@@ -125,7 +126,24 @@ pub async fn runner_job_channel(
     )
     .await;
 
-    handle_websocket(&log, context, job_id, ws_stream).await?;
+    #[cfg(feature = "plus")]
+    let heartbeat_timeout = context.heartbeat_timeout;
+    #[cfg(not(feature = "plus"))]
+    let heartbeat_timeout = DEFAULT_HEARTBEAT_TIMEOUT;
+
+    handle_websocket(&log, context, job_id, ws_stream, heartbeat_timeout).await?;
+
+    // After WS disconnect, check if job is still in-flight and spawn a timeout task
+    let job = QueryJob::get(write_conn!(context), job_id)?;
+    if !job.status.is_terminal() {
+        slog::info!(log, "WS disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job_id);
+        spawn_heartbeat_timeout(
+            log,
+            heartbeat_timeout,
+            context.database.connection.clone(),
+            job_id,
+        );
+    }
 
     Ok(())
 }
@@ -136,11 +154,12 @@ async fn handle_websocket(
     context: &ApiContext,
     job_id: JobId,
     ws_stream: tokio_tungstenite::WebSocketStream<WebsocketConnectionRaw>,
+    heartbeat_timeout: Duration,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (mut tx, mut rx) = ws_stream.split();
 
     loop {
-        let msg_result = match tokio::time::timeout(HEARTBEAT_TIMEOUT, rx.next()).await {
+        let msg_result = match tokio::time::timeout(heartbeat_timeout, rx.next()).await {
             Ok(Some(msg_result)) => msg_result,
             Ok(None) => {
                 // Stream ended (client disconnected cleanly)
@@ -237,7 +256,8 @@ async fn handle_runner_message(
     Ok(ServerMessage::Ack)
 }
 
-/// Handle a Running message: transition job from Claimed to Running.
+/// Handle a Running message: transition job from Claimed to Running,
+/// or update heartbeat if already Running (reconnection case).
 async fn handle_running(
     log: &slog::Logger,
     context: &ApiContext,
@@ -245,37 +265,51 @@ async fn handle_running(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let now = DateTime::now();
 
-    // Validate state transition: only Claimed -> Running is valid
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
         .first(write_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
 
-    if job.status != JobStatus::Claimed {
-        slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "running");
-        return Err(format!(
-            "Invalid state transition from {:?} to Running, expected Claimed",
-            job.status
-        )
-        .into());
+    match job.status {
+        JobStatus::Running => {
+            // Reconnection case: just update heartbeat
+            slog::info!(log, "Runner reconnected to running job"; "job_id" => ?job_id);
+            let update = UpdateJob {
+                last_heartbeat: Some(Some(now)),
+                modified: Some(now),
+                ..Default::default()
+            };
+            diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+                .set(&update)
+                .execute(write_conn!(context))?;
+        },
+        JobStatus::Claimed => {
+            // Normal transition: Claimed -> Running
+            let update = UpdateJob {
+                status: Some(JobStatus::Running),
+                started: Some(Some(now)),
+                last_heartbeat: Some(Some(now)),
+                modified: Some(now),
+                ..Default::default()
+            };
+            diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+                .set(&update)
+                .execute(write_conn!(context))?;
+
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                bencher_otel::JobStatusKind::Running,
+            ));
+        },
+        JobStatus::Pending | JobStatus::Completed | JobStatus::Failed | JobStatus::Canceled => {
+            slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "running");
+            return Err(format!(
+                "Invalid state transition from {:?} to Running, expected Claimed or Running",
+                job.status
+            )
+            .into());
+        },
     }
-
-    let update = UpdateJob {
-        status: Some(JobStatus::Running),
-        started: Some(Some(now)),
-        last_heartbeat: Some(Some(now)),
-        modified: Some(now),
-        ..Default::default()
-    };
-
-    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-        .set(&update)
-        .execute(write_conn!(context))?;
-
-    #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-        bencher_otel::JobStatusKind::Running,
-    ));
 
     Ok(())
 }

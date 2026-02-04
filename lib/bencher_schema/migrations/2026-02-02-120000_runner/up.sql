@@ -12,7 +12,6 @@ CREATE TABLE runner (
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL
 );
-
 -- Job status enum (stored as integer)
 -- 0 = pending
 -- 1 = claimed
@@ -20,7 +19,6 @@ CREATE TABLE runner (
 -- 3 = completed
 -- 4 = failed
 -- 5 = canceled
-
 -- Job: tied to a report, executed by a runner
 CREATE TABLE job (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -42,6 +40,6 @@ CREATE TABLE job (
     FOREIGN KEY (report_id) REFERENCES report (id) ON DELETE CASCADE,
     FOREIGN KEY (runner_id) REFERENCES runner (id) ON DELETE RESTRICT
 );
-
 -- Index for job claiming (ordered by priority, then FIFO)
-CREATE INDEX index_job_pending ON job(status, priority DESC, created ASC) WHERE status = 0;
+CREATE INDEX index_job_pending ON job(status, priority DESC, created ASC)
+WHERE status = 0;

@@ -348,3 +348,53 @@ async fn test_runners_list_with_archived() {
     let found = runners.0.iter().any(|r| r.uuid == runner_token.uuid);
     assert!(found, "Archived runner should appear when archived=true");
 }
+
+// GET /v0/runners - X-Total-Count header reflects the number of runners
+#[tokio::test]
+async fn test_runners_total_count_header() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "runnertotalcount@example.com").await;
+
+    // Create 2 runners
+    let body1 = serde_json::json!({ "name": "Count Runner 1" });
+    server
+        .client
+        .post(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body1)
+        .send()
+        .await
+        .expect("Request failed");
+
+    let body2 = serde_json::json!({ "name": "Count Runner 2" });
+    server
+        .client
+        .post(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body2)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // List runners and check X-Total-Count header
+    let resp = server
+        .client
+        .get(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let total_count = resp
+        .headers()
+        .get("X-Total-Count")
+        .expect("Missing X-Total-Count header")
+        .to_str()
+        .expect("Invalid header value");
+    let count: u64 = total_count.parse().expect("Invalid count");
+    assert!(
+        count >= 2,
+        "Expected at least 2 runners in X-Total-Count, got {count}"
+    );
+}

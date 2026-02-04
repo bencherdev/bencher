@@ -278,7 +278,7 @@ async fn test_channel_job_not_claimed() {
     }
 }
 
-/// Connect to a job that is already running.
+/// Reconnect to a job that is already running (reconnection scenario).
 #[tokio::test]
 async fn test_channel_job_already_running() {
     let server = TestServer::new().await;
@@ -287,13 +287,23 @@ async fn test_channel_job_already_running() {
     // Set job to Running directly in DB
     set_job_status(&server, job_uuid, JobStatus::Running);
 
-    let request = ws_request(&server, runner_uuid, &runner_token, job_uuid);
-    match tokio_tungstenite::connect_async(request).await {
-        Err(_) => {},
-        Ok((mut ws, _)) => {
-            assert_ws_closed(&mut ws).await;
-        },
-    }
+    // Reconnection should succeed
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running (idempotent for reconnection) and get Ack
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Job should still be Running
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Send Heartbeat to verify the connection is fully functional
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
@@ -436,6 +446,44 @@ async fn test_channel_invalid_json() {
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// Heartbeat timeout: open WS, send Running, then go silent.
+/// The server should mark the job as Failed after the heartbeat timeout (5s in tests).
+/// Uses tokio time manipulation to avoid waiting real wall-clock time.
+#[tokio::test]
+async fn test_channel_heartbeat_timeout() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "hbtimeout").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running to start the job
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Pause tokio time and advance past the heartbeat timeout (5s in tests).
+    // advance() fires all pending timers and processes resulting tasks, so the
+    // server's timeout handler runs during the advance — marking the job as
+    // Failed and closing the connection — without any real wall-clock wait.
+    tokio::time::pause();
+    tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    tokio::time::resume();
+
+    // The server's heartbeat timeout should have fired and closed the connection.
+    match ws.next().await {
+        None | Some(Ok(Message::Close(_))) | Some(Err(_)) => {
+            // Connection closed as expected
+        },
+        Some(Ok(other)) => {
+            panic!("Expected connection to close from timeout, got: {other:?}");
+        },
+    }
+
+    // Verify job is marked as Failed (already done inline by the WS timeout handler)
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 }
 
 /// Ping frame receives a Pong response.

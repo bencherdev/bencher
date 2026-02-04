@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use bencher_json::{DateTime, JobStatus, JobUuid, JsonJob, RunnerUuid};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
+use tokio::sync::Mutex;
 
 use crate::{
     context::DbConnection,
@@ -130,4 +133,71 @@ pub struct UpdateJob {
     pub last_billed_minute: Option<Option<i32>>,
     pub exit_code: Option<Option<i32>>,
     pub modified: Option<DateTime>,
+}
+
+/// Spawn a background task that marks a job as failed if no heartbeat is received
+/// within the timeout period. This handles both "disconnected runner" recovery
+/// and startup recovery for in-flight jobs.
+pub fn spawn_heartbeat_timeout(
+    log: slog::Logger,
+    timeout: std::time::Duration,
+    connection: Arc<Mutex<DbConnection>>,
+    job_id: JobId,
+) {
+    tokio::spawn(async move {
+        tokio::time::sleep(timeout).await;
+
+        let mut conn = connection.lock().await;
+
+        // Read the current job state
+        let job: QueryJob = match schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .first(&mut *conn)
+        {
+            Ok(job) => job,
+            Err(e) => {
+                slog::error!(log, "Failed to read job for heartbeat timeout"; "job_id" => ?job_id, "error" => %e);
+                return;
+            },
+        };
+
+        // If the job is already in a terminal state, nothing to do
+        if job.status.is_terminal() {
+            return;
+        }
+
+        // If the runner reconnected and sent a recent heartbeat, don't fail the job
+        if let Some(last_heartbeat) = job.last_heartbeat {
+            let now = DateTime::now();
+            let elapsed = now.timestamp() - last_heartbeat.timestamp();
+            if elapsed < i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) {
+                // Heartbeat is recent, runner reconnected — schedule another timeout
+                let remaining = std::time::Duration::from_secs(
+                    u64::try_from(i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) - elapsed)
+                        .unwrap_or(0),
+                );
+                drop(conn);
+                let connection_clone = connection.clone();
+                spawn_heartbeat_timeout(log, remaining, connection_clone, job_id);
+                return;
+            }
+        }
+
+        // Mark the job as failed
+        slog::warn!(log, "Heartbeat timeout, marking job as failed"; "job_id" => ?job_id);
+        let now = DateTime::now();
+        let update = UpdateJob {
+            status: Some(JobStatus::Failed),
+            completed: Some(Some(now)),
+            modified: Some(now),
+            ..Default::default()
+        };
+
+        if let Err(e) = diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+            .set(&update)
+            .execute(&mut *conn)
+        {
+            slog::error!(log, "Failed to mark job as failed"; "job_id" => ?job_id, "error" => %e);
+        }
+    });
 }
