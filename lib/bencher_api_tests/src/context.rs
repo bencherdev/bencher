@@ -37,7 +37,7 @@ pub struct TestServer {
 
 impl TestServer {
     /// Create a new test server with an in-memory database.
-    #[expect(clippy::expect_used, clippy::unused_async)]
+    #[expect(clippy::expect_used, clippy::too_many_lines, clippy::unused_async)]
     pub async fn new() -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
@@ -82,6 +82,7 @@ impl TestServer {
         #[cfg(feature = "plus")]
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
+            request_body_max_bytes: 1024 * 1024,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),
@@ -107,6 +108,7 @@ impl TestServer {
         #[cfg(not(feature = "plus"))]
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
+            request_body_max_bytes: 1024 * 1024,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),

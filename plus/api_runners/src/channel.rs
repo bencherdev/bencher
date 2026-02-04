@@ -18,7 +18,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-use tokio_tungstenite::tungstenite::{Message, protocol::Role};
+use tokio_tungstenite::tungstenite::{
+    Message,
+    protocol::{Role, WebSocketConfig},
+};
 
 use crate::runner_token::RunnerToken;
 
@@ -87,6 +90,12 @@ pub async fn runner_job_channel(
     // Validate runner token from Authorization header
     let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
 
+    // Per-runner rate limiting
+    #[cfg(feature = "plus")]
+    context
+        .rate_limiting
+        .runner_request(runner_token.runner_uuid)?;
+
     // Verify job exists and is claimed by this runner
     let job = QueryJob::from_uuid(auth_conn!(context), path_params.job)?;
 
@@ -106,9 +115,15 @@ pub async fn runner_job_channel(
     let job_id = job.id;
 
     // Upgrade to WebSocket and handle messages
-    let ws_stream =
-        tokio_tungstenite::WebSocketStream::from_raw_socket(conn.into_inner(), Role::Server, None)
-            .await;
+    let mut ws_config = WebSocketConfig::default();
+    ws_config.max_message_size = Some(context.request_body_max_bytes);
+    ws_config.max_frame_size = Some(context.request_body_max_bytes);
+    let ws_stream = tokio_tungstenite::WebSocketStream::from_raw_socket(
+        conn.into_inner(),
+        Role::Server,
+        Some(ws_config),
+    )
+    .await;
 
     handle_websocket(&log, context, job_id, ws_stream).await?;
 

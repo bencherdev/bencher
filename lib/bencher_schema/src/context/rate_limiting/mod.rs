@@ -1,6 +1,6 @@
 use std::{net::IpAddr, time::Duration};
 
-use bencher_json::{DateTime, PlanLevel, UserUuid, system::config::JsonRateLimiting};
+use bencher_json::{DateTime, PlanLevel, RunnerUuid, UserUuid, system::config::JsonRateLimiting};
 use bencher_license::Licensor;
 #[cfg(feature = "otel")]
 use bencher_otel::AuthorizationKind;
@@ -19,10 +19,12 @@ use crate::{
 mod public;
 mod rate_limiter;
 mod remote_ip;
+mod runner;
 mod user;
 
 use public::PublicRateLimiter;
 use rate_limiter::{RateLimiter, RateLimits};
+use runner::RunnerRateLimiter;
 use user::UserRateLimiter;
 
 use super::DbConnection;
@@ -40,6 +42,7 @@ pub struct RateLimiting {
     // In-memory rate limiters
     public: PublicRateLimiter,
     user: UserRateLimiter,
+    runner: RunnerRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -85,6 +88,9 @@ pub enum RateLimitingError {
         rate_limit: u32,
     },
 
+    #[error("Too many requests for runner. Please, try again later.")]
+    RunnerRequests,
+
     #[error("Too many requests for IP address. Please, try again later.")]
     IpAddressRequests,
     #[error(
@@ -114,6 +120,7 @@ impl Default for RateLimiting {
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
             public: PublicRateLimiter::default(),
             user: UserRateLimiter::default(),
+            runner: RunnerRateLimiter::default(),
         }
     }
 }
@@ -126,6 +133,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit,
             public,
             user,
+            runner,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
@@ -133,6 +141,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
             public: public.map_or_else(PublicRateLimiter::default, Into::into),
             user: user.map_or_else(UserRateLimiter::default, Into::into),
+            runner: runner.map_or_else(RunnerRateLimiter::default, Into::into),
         }
     }
 }
@@ -187,6 +196,7 @@ impl RateLimiting {
             claimed_limit: u32::MAX,
             public: PublicRateLimiter::max(),
             user: UserRateLimiter::max(),
+            runner: RunnerRateLimiter::max(),
         }
     }
 
@@ -297,6 +307,10 @@ impl RateLimiting {
 
     pub fn claimed_run(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         self.user.check_run(user_uuid)
+    }
+
+    pub fn runner_request(&self, runner_uuid: RunnerUuid) -> Result<(), HttpError> {
+        self.runner.check_request(runner_uuid)
     }
 
     pub fn remote_ip(log: &Logger, headers: &HeaderMap) -> Option<IpAddr> {
