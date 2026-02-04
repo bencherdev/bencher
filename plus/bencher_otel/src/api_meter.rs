@@ -79,6 +79,8 @@ pub enum ApiCounter {
     OciManifestPull,
     OciTagsList,
 
+    RunnerRequestMax(IntervalKind),
+
     // Runner metrics
     RunnerCreate,
     RunnerUpdate,
@@ -144,6 +146,8 @@ impl ApiCounter {
             Self::OciManifestPush => "oci.manifest.push",
             Self::OciManifestPull => "oci.manifest.pull",
             Self::OciTagsList => "oci.tags.list",
+
+            Self::RunnerRequestMax(_) => "runner.request.max",
 
             // Runner metrics
             Self::RunnerCreate => "runner.create",
@@ -215,6 +219,8 @@ impl ApiCounter {
             Self::OciManifestPull => "Counts the number of OCI manifest pulls",
             Self::OciTagsList => "Counts the number of OCI tags list requests",
 
+            Self::RunnerRequestMax(_) => "Counts the number of runner request maximums reached",
+
             // Runner metrics
             Self::RunnerCreate => "Counts the number of runner creations",
             Self::RunnerUpdate => "Counts the number of runner updates",
@@ -267,7 +273,8 @@ impl ApiCounter {
             | Self::CreateMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
             },
-            Self::RunUnclaimedMax(interval_kind)
+            Self::RunnerRequestMax(interval_kind)
+            | Self::RunUnclaimedMax(interval_kind)
             | Self::RunClaimedMax(interval_kind)
             | Self::UserTokenMax(interval_kind)
             | Self::UserOrganizationMax(interval_kind)

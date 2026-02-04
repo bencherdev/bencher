@@ -62,17 +62,15 @@ pub async fn runner_jobs_post(
     body: TypedBody<JsonClaimJob>,
 ) -> Result<ResponseOk<Option<JsonJob>>, HttpError> {
     let context = rqctx.context();
-
-    // IP-based rate limiting
-    #[cfg(feature = "plus")]
-    if let Some(remote_ip) =
-        bencher_schema::context::RateLimiting::remote_ip(&rqctx.log, rqctx.request.headers())
-    {
-        context.rate_limiting.public_request(remote_ip)?;
-    }
-
     let path_params = path_params.into_inner();
     let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
+
+    // Per-runner rate limiting
+    #[cfg(feature = "plus")]
+    context
+        .rate_limiting
+        .runner_request(runner_token.runner_uuid)?;
+
     let json = claim_job_inner(context, runner_token, body.into_inner()).await?;
     Ok(Post::auth_response_ok(json))
 }
@@ -160,7 +158,7 @@ async fn try_claim_job(
         }))
     } else {
         // Job was claimed by another runner
-        // This is okay, and better than optimistically locking
+        // This is okay, and better than holding the lock
         Ok(None)
     }
 }
@@ -200,15 +198,17 @@ pub async fn runner_job_patch(
     path_params: Path<RunnerJobParams>,
     body: TypedBody<JsonUpdateJob>,
 ) -> Result<ResponseOk<JsonUpdateJobResponse>, HttpError> {
+    let context = rqctx.context();
     let path_params = path_params.into_inner();
     let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
-    let json = update_job_inner(
-        rqctx.context(),
-        runner_token,
-        path_params.job,
-        body.into_inner(),
-    )
-    .await?;
+
+    // Per-runner rate limiting
+    #[cfg(feature = "plus")]
+    context
+        .rate_limiting
+        .runner_request(runner_token.runner_uuid)?;
+
+    let json = update_job_inner(context, runner_token, path_params.job, body.into_inner()).await?;
     Ok(Patch::auth_response_ok(json))
 }
 

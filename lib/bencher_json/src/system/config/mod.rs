@@ -25,7 +25,9 @@ pub use plus::{
         recaptcha::JsonRecaptcha,
     },
     litestream::{JsonLitestream, JsonReplica},
-    rate_limiting::{JsonPublicRateLimiter, JsonRateLimiting, JsonUserRateLimiter},
+    rate_limiting::{
+        JsonPublicRateLimiter, JsonRateLimiting, JsonRunnerRateLimiter, JsonUserRateLimiter,
+    },
     registry::{DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
     stats::JsonStats,
 };

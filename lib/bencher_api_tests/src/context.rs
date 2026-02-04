@@ -106,6 +106,7 @@ impl TestServer {
 
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
+            request_body_max_bytes: 1024 * 1024,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),
@@ -184,6 +185,7 @@ impl TestServer {
         let _ = (upload_timeout, max_body_size);
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
+            request_body_max_bytes: 1024 * 1024,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),

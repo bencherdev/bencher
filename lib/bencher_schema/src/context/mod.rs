@@ -42,6 +42,7 @@ pub use stats::StatsSettings;
 
 pub struct ApiContext {
     pub console_url: Url,
+    pub request_body_max_bytes: usize,
     pub token_key: TokenKey,
     pub rbac: Rbac,
     pub messenger: Messenger,
