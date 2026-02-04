@@ -71,6 +71,28 @@ Firecracker is managed as an external process per VM, controlled via a REST API 
 ## Architecture Overview
 
 ```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Bencher CLI    │     │  Bencher API    │     │  Runner Agent   │
+│  (submits jobs) │────▶│  (job queue)    │◀────│  (polls/claims) │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                               │                        │
+                               ▼                        ▼
+                        ┌─────────────┐          ┌─────────────┐
+                        │   SQLite    │          │  Bare Metal │
+                        │  (jobs tbl) │          │   Machine   │
+                        └─────────────┘          └─────────────┘
+```
+
+Runners are **server-scoped** — they can execute jobs from ANY project on the server. This applies to both self-hosted and cloud deployments:
+
+- **Self-hosted**: Runners serve all projects on that Bencher instance
+- **Cloud**: Bencher-provided runners serve all organizations/projects on Bencher Cloud
+
+See `RUNNER_DESIGN.md` for the full cloud-side API design, including database schema, API endpoints, WebSocket protocol, authentication, billing, and job recovery.
+
+### Detailed Architecture
+
+```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           Bencher API Server                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐   │
@@ -78,7 +100,7 @@ Firecracker is managed as an external process per VM, controlled via a REST API 
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬───────┘   │
 │         │                │                │                │           │
 │  ┌──────┴────────────────┴────────────────┴────────────────┴───────┐   │
-│  │                        Job Queue (PostgreSQL/SQLite)             │   │
+│  │                        Job Queue (SQLite)                        │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │         │                                                              │
 │  ┌──────┴──────────────────────────────────────────────────────────┐   │
@@ -110,9 +132,9 @@ Firecracker is managed as an external process per VM, controlled via a REST API 
 | Component              | Description                                                                        |
 | ---------------------- | ---------------------------------------------------------------------------------- |
 | **Bencher API Server** | Existing API server, extended with Job, Runner, and Image APIs                     |
-| **Job Queue**          | Persistent queue for benchmark jobs (SQLite for self-hosted, PostgreSQL for Cloud) |
+| **Job Queue**          | Persistent queue for benchmark jobs (SQLite, linked to reports)                    |
 | **Image Registry**     | OCI-compliant registry for storing benchmark images                                |
-| **Runner Daemon**      | Long-running process on bare metal servers that polls for jobs and executes them   |
+| **Runner Daemon**      | Long-running process on bare metal servers that claims jobs and executes them      |
 | **Firecracker**        | AWS open-source microVM manager providing hardware-level isolation via KVM         |
 
 ---
@@ -704,10 +726,19 @@ Cache eviction policy:
 ### Overview
 
 The **Runner Daemon** (`bencher-runner`) is a long-running process that:
-1. Registers with the Bencher API server
-2. Polls for available jobs
+1. Connects to the Bencher API server using a pre-registered runner token
+2. Long-polls to claim jobs from the server-scoped job queue
 3. Executes benchmarks in isolated Firecracker microVMs
-4. Reports results back to the API
+4. Reports results back via WebSocket channel
+
+Runners are **server-scoped** — they can execute jobs from ANY project on the server. This applies to both self-hosted and Bencher Cloud deployments. See `RUNNER_DESIGN.md` for the full cloud-side API design.
+
+### Runner States
+
+| State      | Network Behavior                       | Notes                                |
+| ---------- | -------------------------------------- | ------------------------------------ |
+| **Idle**   | Long-poll for jobs                     | Can be noisy, responsiveness matters |
+| **Active** | Minimal heartbeat on separate CPU core | Benchmark cores completely isolated  |
 
 ### State Machine
 
@@ -720,21 +751,23 @@ The **Runner Daemon** (`bencher-runner`) is a long-running process that:
                              ▼
                     ┌─────────────────┐
          ┌─────────│     IDLE        │◀────────┐
-         │         │  (Poll for jobs)│         │
+         │         │ (Long-poll for  │         │
+         │         │  jobs to claim) │         │
          │         └────────┬────────┘         │
          │                  │                  │
-         │ shutdown         │ job assigned     │ job complete
+         │ shutdown         │ job claimed      │ job complete
          │                  ▼                  │
          │         ┌─────────────────┐         │
          │         │   PREPARING     │         │
-         │         │ (Pull image,    │         │
-         │         │  convert rootfs)│         │
+         │         │ (Clone repo,    │         │
+         │         │  run setup_cmd) │         │
          │         └────────┬────────┘         │
          │                  │                  │
          │                  ▼                  │
          │         ┌─────────────────┐         │
          │         │    RUNNING      │─────────┘
-         │         │ (Execute in VM) │
+         │         │ (Execute in VM, │
+         │         │  WS heartbeat)  │
          │         └─────────────────┘
          │
          ▼
@@ -743,79 +776,46 @@ The **Runner Daemon** (`bencher-runner`) is a long-running process that:
 └─────────────────┘
 ```
 
-### Runner Registration
+### Runner Authentication
 
-Runners register with the API server on startup:
+Runners authenticate using hashed bearer tokens (not JWTs):
 
-```rust
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RunnerRegistration {
-    /// Unique runner identifier
-    pub runner_id: RunnerId,
-
-    /// Human-readable name
-    pub name: String,
-
-    /// Runner capabilities
-    pub capabilities: RunnerCapabilities,
-
-    /// Runner version
-    pub version: String,
-
-    /// Authentication token
-    pub token: RunnerToken,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RunnerCapabilities {
-    /// CPU architecture
-    pub arch: Arch,  // x86_64, aarch64
-
-    /// Available vCPUs
-    pub vcpu_count: u32,
-
-    /// Available memory (MiB)
-    pub memory_mib: u64,
-
-    /// Available disk (MiB)
-    pub disk_mib: u64,
-
-    /// CPU model (for matching)
-    pub cpu_model: String,
-
-    /// Labels for job matching
-    pub labels: HashMap<String, String>,
-}
+```
+Authorization: Bearer bencher_runner_<token>
 ```
 
-### Job Polling
+- Token shown exactly once at creation via `POST /v0/runners` (cannot be retrieved later)
+- Only SHA-256 hash stored in database
+- Prefix `bencher_runner_` makes token type obvious
+- Token scoped to runner agent endpoints only
 
-The runner uses long-polling to efficiently wait for jobs:
+See `RUNNER_DESIGN.md` for token generation, validation, and rotation details.
+
+### Job Claiming (Long-Poll)
+
+The runner uses long-polling to claim jobs via `POST /v0/runners/{runner}/jobs`:
 
 ```rust
 // Runner daemon main loop
 async fn run_daemon(config: &RunnerConfig) -> Result<()> {
     let client = ApiClient::new(&config.api_url, &config.token)?;
 
-    // Register runner
-    let registration = client.register_runner(&capabilities).await?;
-
     loop {
-        // Long-poll for next job (30s timeout)
-        match client.poll_job(&registration.runner_id, Duration::from_secs(30)).await {
-            Ok(Some(job)) => {
-                // Execute the job
-                let result = execute_job(&job, config).await;
-
-                // Report result
-                client.report_result(&job.job_id, &result).await?;
+        // Long-poll to claim a job (max 60s timeout)
+        match client.claim_job(&config.runner_slug, &ClaimRequest {
+            labels: config.labels.clone(),
+            poll_timeout_seconds: 60,
+        }).await {
+            Ok(ClaimResponse { job: Some(job) }) => {
+                // Execute the job with WebSocket channel for heartbeat
+                execute_job(&job, config).await;
             }
-            Ok(None) => {
+            Ok(ClaimResponse { job: None }) => {
                 // No job available, continue polling
                 continue;
             }
             Err(e) => {
-                tracing::error!("Poll error: {}", e);
+                tracing::error!("Claim error: {}", e);
                 tokio::time::sleep(Duration::from_secs(5)).await;
             }
         }
@@ -823,28 +823,57 @@ async fn run_daemon(config: &RunnerConfig) -> Result<()> {
 }
 ```
 
+### WebSocket Job Channel
+
+After claiming a job, the runner opens a WebSocket connection at `/v0/runners/{runner}/jobs/{job}/channel` for heartbeat and status updates:
+
+```rust
+// Runner → Server messages
+enum RunnerMessage {
+    Running,                                    // Setup complete, benchmark starting
+    Heartbeat,                                  // ~1/sec, keeps job alive + triggers billing
+    Completed { exit_code: i32, output: Option<String> },
+    Failed { exit_code: Option<i32>, error: String },
+}
+
+// Server → Runner messages
+enum ServerMessage {
+    Ack,     // Acknowledge received message
+    Cancel,  // Stop execution immediately
+}
+```
+
+See `RUNNER_DESIGN.md` for the full WebSocket protocol, reconnection flow, and timeout-based job recovery.
+
 ### Job Execution Flow
 
 ```rust
 use crate::firecracker::{FirecrackerProcess, MachineConfig, BootSource, Drive, Vsock, Action};
 
-async fn execute_job(job: &Job, config: &RunnerConfig) -> JobResult {
-    // 1. Pull and convert image to ext4 rootfs
-    let rootfs_path = prepare_image(&job.image_ref).await?;
+async fn execute_job(job: &Job, config: &RunnerConfig) {
+    // 1. Open WebSocket channel for heartbeat and status
+    let ws = connect_ws(&config, &job).await?;
 
-    // 2. Create work directory for this job
-    let work_dir = config.work_dir.join(&job.job_id.to_string());
+    // 2. Clone repo and run setup_command from job spec
+    let work_dir = config.work_dir.join(&job.uuid.to_string());
     std::fs::create_dir_all(&work_dir)?;
+    clone_repo(&job.spec.repository, &job.spec.branch, &job.spec.commit, &work_dir)?;
+    if let Some(setup_cmd) = &job.spec.setup_command {
+        run_setup(setup_cmd, &work_dir)?;
+    }
+
+    // 3. Create rootfs from workspace
+    let rootfs_path = create_rootfs(&work_dir)?;
     let socket_path = work_dir.join("firecracker.sock");
     let vsock_path = work_dir.join("vsock.sock");
 
-    // 3. Start Firecracker process (via jailer in production)
-    let fc = FirecrackerProcess::start(&config.firecracker, &socket_path, &job.job_id)?;
+    // 4. Start Firecracker process (via jailer in production)
+    let fc = FirecrackerProcess::start(&config.firecracker, &socket_path, &job.uuid)?;
 
-    // 4. Configure and boot the VM
+    // 5. Configure and boot the VM
     fc.put_machine_config(&MachineConfig {
-        vcpu_count: job.resources.vcpus,
-        mem_size_mib: job.resources.memory_mib,
+        vcpu_count: config.vcpus,
+        mem_size_mib: config.memory_mib,
         smt: false,
     }).await?;
     fc.put_boot_source(&BootSource {
@@ -855,22 +884,32 @@ async fn execute_job(job: &Job, config: &RunnerConfig) -> JobResult {
     fc.put_vsock(3, &vsock_path).await?;
     fc.put_action(Action::InstanceStart).await?;
 
-    // 5. Collect results via vsock (with timeout)
-    let output = collect_results_via_vsock(&vsock_path, job.timeout).await?;
+    // 6. Send "running" over WebSocket, start heartbeat thread
+    ws.send(RunnerMessage::Running).await?;
+    let heartbeat_handle = spawn_heartbeat(&ws); // ~1/sec on separate CPU core
 
-    // 6. Shutdown and cleanup
+    // 7. Collect results via vsock (with timeout)
+    let output = collect_results_via_vsock(&vsock_path, job.timeout_seconds).await;
+
+    // 8. Shutdown and cleanup
+    heartbeat_handle.abort();
     let _ = fc.put_action(Action::SendCtrlAltDel).await;
     fc.kill_after_grace_period(Duration::from_secs(5)).await;
-    cleanup_work_dir(&work_dir)?;
 
-    // 7. Parse results based on configured adapter
-    let results = parse_results(&output, &job.output_format)?;
-
-    JobResult {
-        status: JobStatus::Success,
-        results,
-        logs: output,
+    // 9. Report result over WebSocket
+    match output {
+        Ok(output) => ws.send(RunnerMessage::Completed {
+            exit_code: output.exit_code,
+            output: Some(output.stdout),
+        }).await?,
+        Err(e) => ws.send(RunnerMessage::Failed {
+            exit_code: None,
+            error: e.to_string(),
+        }).await?,
     }
+
+    ws.close().await;
+    cleanup_work_dir(&work_dir)?;
 }
 ```
 
@@ -915,183 +954,167 @@ The init binary uses direct serial port I/O (COM1 at 0x3F8) for debug logging, e
 
 ## Job Scheduling and Queue
 
-### Job Model
+### Database Schema
 
-```rust
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Job {
-    pub job_id: JobId,
-    pub project_id: ProjectId,
-    pub branch_id: BranchId,
-    pub testbed_id: TestbedId,
-
-    /// Image reference (registry/project/image:tag)
-    pub image_ref: String,
-
-    /// Command to execute (overrides image entrypoint)
-    pub command: Option<Vec<String>>,
-
-    /// Environment variables
-    pub env: HashMap<String, String>,
-
-    /// Resource requirements
-    pub resources: ResourceRequirements,
-
-    /// Expected output format
-    pub output_format: OutputFormat,
-
-    /// Maximum execution time
-    pub timeout: Duration,
-
-    /// Labels for runner matching
-    pub labels: HashMap<String, String>,
-
-    /// Job priority (higher = more urgent)
-    pub priority: i32,
-
-    /// Job state
-    pub state: JobState,
-
-    /// Timestamps
-    pub created_at: DateTime<Utc>,
-    pub started_at: Option<DateTime<Utc>>,
-    pub completed_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum JobState {
-    Pending,
-    Assigned { runner_id: RunnerId },
-    Running { runner_id: RunnerId },
-    Completed { result: JobResult },
-    Failed { error: String },
-    Cancelled,
-}
-```
-
-### Queue Implementation
-
-For the initial implementation, use the existing SQLite database:
+The database schema follows the design in `RUNNER_DESIGN.md`:
 
 ```sql
-CREATE TABLE jobs (
-    job_id TEXT PRIMARY KEY,
-    project_id TEXT NOT NULL REFERENCES projects(id),
-    branch_id TEXT NOT NULL REFERENCES branches(id),
-    testbed_id TEXT NOT NULL REFERENCES testbeds(id),
-
-    image_ref TEXT NOT NULL,
-    command TEXT,  -- JSON array
-    env TEXT,  -- JSON object
-    resources TEXT NOT NULL,  -- JSON ResourceRequirements
-    output_format TEXT NOT NULL,
-    timeout_secs INTEGER NOT NULL,
-    labels TEXT,  -- JSON object
-    priority INTEGER NOT NULL DEFAULT 0,
-
-    state TEXT NOT NULL DEFAULT 'pending',
-    state_data TEXT,  -- JSON, varies by state
-
-    created_at TEXT NOT NULL,
-    started_at TEXT,
-    completed_at TEXT,
-
-    FOREIGN KEY (project_id) REFERENCES projects(id),
-    FOREIGN KEY (branch_id) REFERENCES branches(id),
-    FOREIGN KEY (testbed_id) REFERENCES testbeds(id)
+-- Runner registration and state (server-scoped, serves all projects)
+CREATE TABLE runner (
+    id UUID PRIMARY KEY,
+    uuid UUID NOT NULL UNIQUE,        -- Runner's self-generated ID
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,        -- URL-friendly name
+    token_hash TEXT NOT NULL,         -- SHA-256 hash of token (token itself never stored)
+    labels JSONB NOT NULL DEFAULT '[]', -- ["arch:arm64", "os:linux"]
+    state TEXT NOT NULL DEFAULT 'offline', -- offline, idle, running
+    locked TIMESTAMP,              -- If set, runner is locked (token compromised)
+    archived TIMESTAMP,               -- Soft delete
+    last_heartbeat TIMESTAMP,
+    created TIMESTAMP NOT NULL,
+    modified TIMESTAMP NOT NULL
 );
 
-CREATE INDEX idx_jobs_state ON jobs(state);
-CREATE INDEX idx_jobs_priority ON jobs(priority DESC, created_at ASC);
-CREATE INDEX idx_jobs_project ON jobs(project_id);
+-- Job queue
+CREATE TABLE job (
+    id UUID PRIMARY KEY,
+    report_id UUID NOT NULL REFERENCES report(id) ON DELETE CASCADE,
+
+    -- Job specification
+    status INTEGER NOT NULL DEFAULT 0,  -- JobStatus enum (0-5)
+    spec JSONB NOT NULL,                -- Repository, command, env, etc.
+    required_labels JSONB DEFAULT '[]',
+    timeout_seconds INTEGER NOT NULL DEFAULT 3600,
+    priority INTEGER NOT NULL DEFAULT 0,  -- 0 = free, 100 = plus
+
+    -- Execution tracking
+    runner_id UUID REFERENCES runner(id) ON DELETE RESTRICT,
+    claimed TIMESTAMP,
+    started TIMESTAMP,                -- When benchmark actually began (after setup)
+    completed TIMESTAMP,
+    last_heartbeat TIMESTAMP,
+    last_billed_minute INTEGER DEFAULT 0,  -- Minutes billed so far
+
+    -- Results
+    exit_code INTEGER,
+
+    created TIMESTAMP NOT NULL,
+    modified TIMESTAMP NOT NULL
+);
+
+-- Index for job claiming (ordered by priority, then FIFO)
+CREATE INDEX idx_job_pending
+    ON job(status, priority DESC, created ASC)
+    WHERE status = 0;  -- pending
 ```
 
-### Job Assignment Algorithm
+### Job Status Enum
 
 ```rust
-async fn assign_job_to_runner(
-    db: &Database,
-    runner: &Runner,
-) -> Result<Option<Job>> {
-    // Find the highest priority job that:
-    // 1. Is in Pending state
-    // 2. Matches runner capabilities
-    // 3. Has labels that match runner labels
-
-    // Use BEGIN IMMEDIATE for atomic claim in SQLite
-    // (SQLite doesn't support FOR UPDATE SKIP LOCKED)
-    let job = db.transaction::<_, _, Error>(|tx| {
-        Box::pin(async move {
-            let job = sqlx::query_as!(Job, r#"
-                SELECT * FROM jobs
-                WHERE state = 'pending'
-                AND (
-                    json_extract(resources, '$.vcpus') <= ?
-                    AND json_extract(resources, '$.memory_mib') <= ?
-                )
-                ORDER BY priority DESC, created_at ASC
-                LIMIT 1
-            "#, runner.capabilities.vcpu_count, runner.capabilities.memory_mib)
-            .fetch_optional(&mut **tx)
-            .await?;
-
-            if let Some(ref job) = job {
-                // Atomically assign to runner within the same transaction
-                sqlx::query!(r#"
-                    UPDATE jobs
-                    SET state = 'assigned',
-                        state_data = json_object('runner_id', ?)
-                    WHERE job_id = ? AND state = 'pending'
-                "#, runner.runner_id, job.job_id)
-                .execute(&mut **tx)
-                .await?;
-            }
-
-            Ok(job)
-        })
-    }).await?;
-
-    Ok(job)
+#[repr(u8)]
+pub enum JobStatus {
+    Pending = 0,
+    Claimed = 1,
+    Running = 2,
+    Completed = 3,
+    Failed = 4,
+    Canceled = 5,
 }
 ```
 
-### Job Timeout and Recovery
-
-Jobs that don't complete within their timeout are automatically failed:
+### Job Spec Structure
 
 ```rust
-// Background task running on API server
-async fn job_timeout_checker(db: &Database) {
-    loop {
-        // Find jobs that have been running too long
-        let stuck_jobs = sqlx::query_as!(Job, r#"
-            SELECT * FROM jobs
-            WHERE state IN ('assigned', 'running')
-            AND datetime(started_at, '+' || timeout_secs || ' seconds') < datetime('now')
-        "#)
-        .fetch_all(db)
-        .await?;
+pub struct JobSpec {
+    // Source
+    pub repository: Url,
+    pub branch: Option<String>,
+    pub commit: Option<GitHash>,
 
-        for job in stuck_jobs {
-            // Mark as failed
-            sqlx::query!(r#"
-                UPDATE jobs
-                SET state = 'failed',
-                    state_data = json_object('error', 'Job timed out'),
-                    completed_at = datetime('now')
-                WHERE job_id = ?
-            "#, job.job_id)
-            .execute(db)
-            .await?;
+    // Execution
+    pub setup_command: Option<String>,   // e.g., "cargo build --release"
+    pub benchmark_command: String,        // e.g., "cargo bench"
+    pub adapter: Option<Adapter>,         // How to parse output
 
-            // Notify user
-            notify_job_failed(&job, "Job timed out").await?;
-        }
+    // Environment
+    pub env: HashMap<String, String>,
+    pub working_dir: Option<PathBuf>,
 
-        tokio::time::sleep(Duration::from_secs(60)).await;
-    }
+    // Timing
+    pub timeout_seconds: u32,
+    pub expected_seconds: Option<u32>,    // Hint for UI
 }
 ```
+
+### Job State Machine
+
+```
+pending ───▶ claimed ───▶ running ───▶ completed
+   │            │            │
+   │            │            ├────────▶ failed
+   │            │            │
+   └────────────┴────────────┴────────▶ canceled
+```
+
+| From    | To        | Trigger                           |
+| ------- | --------- | --------------------------------- |
+| pending | claimed   | Runner claims job                 |
+| pending | canceled  | User cancels                      |
+| claimed | running   | Runner sends `Running` via WS     |
+| claimed | failed    | Runner fails during setup         |
+| claimed | canceled  | User cancels                      |
+| running | completed | Runner sends `Completed` via WS   |
+| running | failed    | Runner sends `Failed` or timeout  |
+| running | canceled  | User cancels                      |
+
+**Terminal states:** completed, failed, canceled (no transitions out)
+
+### Job Claiming
+
+The claim endpoint (`POST /v0/runners/{runner}/jobs`) handles atomic job assignment:
+
+1. Applies IP-based rate limiting to prevent abuse of long-polling
+2. Finds pending jobs across all projects where `required_labels` ⊆ runner's `labels`
+3. Atomically updates job status to `claimed`, sets `runner_id` and `claimed` timestamp
+4. If no matching jobs, holds connection open until timeout or job arrives
+5. Returns job (including project context) or empty response on timeout
+
+Jobs are ordered by `(priority DESC, created ASC)` so Bencher Plus customers always get served first, with FIFO within each tier.
+
+### Timeout-Based Job Recovery
+
+Instead of a periodic reaper, stale jobs are recovered via per-job timeout tasks:
+
+1. **Inline WS timeout** — While the WebSocket connection is open, `tokio::time::timeout(heartbeat_timeout, rx.next())` detects a "connected but silent" runner. On timeout, the job is marked `Failed`.
+
+2. **Spawned disconnect timeout** — When a WebSocket disconnects and the job is still in-flight (non-terminal), a background `tokio::spawn` task sleeps for `heartbeat_timeout`. After waking, it checks:
+   - If the job reached a terminal state: do nothing
+   - If `last_heartbeat` is recent (within the timeout window): the runner reconnected — reschedule
+   - Otherwise: mark the job as `Failed`
+
+3. **Startup recovery** — On server startup, all `Claimed` or `Running` jobs are queried and a timeout task is spawned for each.
+
+Heartbeat timeout is configurable via `ApiContext.heartbeat_timeout` (default: 90 seconds in production, 5 seconds in tests).
+
+### Billing & Priority
+
+Jobs are queued with priority based on the submitting organization's plan:
+
+| Plan                | Priority | Behavior               |
+| ------------------- | -------- | ---------------------- |
+| Bencher Plus (paid) | High     | Front of queue         |
+| Free                | Low      | Waits behind paid jobs |
+
+Usage is tracked per-minute via Stripe's usage-based pricing. Heartbeats serve double duty:
+
+1. **Liveness check** — Confirms runner is still executing the job
+2. **Billing increment** — Reports usage to Stripe
+
+On each heartbeat:
+1. Update `last_heartbeat` on job and runner
+2. Calculate `elapsed_minutes = (now - started) / 60`
+3. If `elapsed_minutes > last_billed_minute`, bill the difference to Stripe
+4. Update `last_billed_minute = elapsed_minutes`
 
 ---
 
@@ -1099,26 +1122,35 @@ async fn job_timeout_checker(db: &Database) {
 
 ### New API Endpoints
 
-#### Job API
+#### Runner Management (Server Scoped)
 
-```
-POST   /v0/projects/{project}/jobs          # Create a new job
-GET    /v0/projects/{project}/jobs          # List jobs
-GET    /v0/projects/{project}/jobs/{job}    # Get job details
-DELETE /v0/projects/{project}/jobs/{job}    # Cancel job
-GET    /v0/projects/{project}/jobs/{job}/logs  # Get job logs
-```
+Requires server admin permissions.
 
-#### Runner API (Internal)
+| Method | Endpoint                     | Description                                    |
+| ------ | ---------------------------- | ---------------------------------------------- |
+| POST   | `/v0/runners`                | Create runner, returns token                   |
+| GET    | `/v0/runners`                | List runners                                   |
+| GET    | `/v0/runners/{runner}`       | Get runner details                             |
+| PATCH  | `/v0/runners/{runner}`       | Update runner (name, labels, locked, archived) |
+| POST   | `/v0/runners/{runner}/token` | Generate new token (invalidates old)           |
 
-```
-POST   /v0/runners/register                 # Register a runner
-GET    /v0/runners/{runner}/poll            # Poll for jobs (long-poll)
-PUT    /v0/runners/{runner}/heartbeat       # Runner heartbeat
-POST   /v0/runners/{runner}/jobs/{job}/start    # Mark job as running
-POST   /v0/runners/{runner}/jobs/{job}/complete # Complete job with results
-POST   /v0/runners/{runner}/jobs/{job}/fail     # Fail job with error
-```
+#### Job Management (Project Scoped)
+
+Jobs belong to projects (via reports), but can be executed by any runner on the server.
+
+| Method | Endpoint                            | Description               |
+| ------ | ----------------------------------- | ------------------------- |
+| GET    | `/v0/projects/{project}/jobs`       | List jobs (filterable)    |
+| GET    | `/v0/projects/{project}/jobs/{job}` | Get job details + results |
+
+#### Runner Agent Endpoints
+
+Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
+
+| Method    | Endpoint                                  | Description                                            |
+| --------- | ----------------------------------------- | ------------------------------------------------------ |
+| POST      | `/v0/runners/{runner}/jobs`               | Long-poll to claim a job (from any accessible project) |
+| WebSocket | `/v0/runners/{runner}/jobs/{job}/channel` | Heartbeat and status updates during job execution      |
 
 #### Image API (OCI Distribution)
 
@@ -1183,9 +1215,25 @@ bencher runner stop
 
 # Clear image cache
 bencher runner cache clear
+```
 
-# Register runner (outputs token)
-bencher runner register --name "my-runner" --project <project>
+#### Runner Management (server admin)
+
+```bash
+# Create runner (outputs token - shown once)
+bencher runner create --name "my-runner" --labels "arch:arm64,os:linux"
+
+# List runners
+bencher runner list
+
+# View runner details
+bencher runner view <runner>
+
+# Update runner
+bencher runner update <runner> --name "new-name" --locked true
+
+# Rotate runner token (invalidates old)
+bencher runner token <runner>
 ```
 
 ### Example Workflow
@@ -1197,18 +1245,19 @@ docker build -t my-benchmark:v1 .
 # 2. Push to Bencher
 bencher image push my-benchmark:v1
 
-# 3. Run the benchmark
+# 3. Run the benchmark (creates Report + Job)
 bencher run \
     --image my-benchmark:v1 \
     --branch main \
     --testbed bare-metal-linux \
     --adapter json
 
-# Job created and queued...
-# Job assigned to runner runner-001...
-# Job running...
+# Report created...
+# Job queued (priority based on org plan)...
+# Job claimed by runner...
+# Job running (heartbeat via WebSocket)...
 # Job completed!
-# Results: ...
+# Results attached to Report
 ```
 
 ---
@@ -1224,7 +1273,7 @@ bencher run \
 | **Network attacks**          | VMs have no network access; vsock is the only communication channel              |
 | **Data exfiltration**        | No network egress; results must be returned via vsock protocol                   |
 | **VMM exploit**              | Firecracker's jailer: seccomp, namespaces, chroot, capabilities dropped           |
-| **Runner compromise**        | Runners use short-lived tokens; minimal API access                               |
+| **Runner compromise**        | Runners use hashed bearer tokens; scoped to agent endpoints only                 |
 | **Image tampering**          | Images are content-addressed (SHA256); verified on pull                          |
 | **Timing attacks**           | VMs are destroyed after each job; no persistent state                            |
 
@@ -1260,39 +1309,34 @@ KVM VM execution    <- Hardware-isolated guest
 
 ### Runner Authentication
 
-Runners authenticate using short-lived JWT tokens:
+Runners authenticate using hashed bearer tokens (not JWTs). Tokens use random bytes with a `bencher_runner_` prefix:
 
 ```rust
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RunnerToken {
-    /// Runner ID
-    pub sub: RunnerId,
+// Generation (only done once, at runner creation via POST /v0/runners)
+let random_bytes: [u8; 32] = rand::random();
+let token = format!("bencher_runner_{}", hex::encode(&random_bytes));
+// Example: bencher_runner_a1b2c3d4e5f6...
 
-    /// Organization ID (for BYOR)
-    pub org_id: Option<OrganizationId>,
-
-    /// Issued at
-    pub iat: u64,
-
-    /// Expiration (short-lived, 1 hour)
-    pub exp: u64,
-
-    /// Permissions
-    pub permissions: Vec<RunnerPermission>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum RunnerPermission {
-    /// Can poll for jobs
-    PollJobs,
-
-    /// Can pull images
-    PullImages,
-
-    /// Can report results
-    ReportResults,
-}
+// Storage (only the hash is stored, never the token itself)
+let token_hash = sha256(token.as_bytes());
 ```
+
+**Key properties:**
+- Token shown exactly once at creation (cannot be retrieved later)
+- Only SHA-256 hash stored in database
+- DB breach doesn't expose usable tokens
+- Prefix `bencher_runner_` makes token type obvious
+
+**Token scope:**
+- Only runner agent endpoints (`/v0/runners/{runner}/jobs[/{job}[/channel]]`)
+- Can claim jobs from any project on the server
+- Can only perform operations on jobs claimed by this runner
+
+**Token rotation** (if compromised):
+1. Lock the runner: `PATCH /v0/runners/{runner}` with `locked: true`
+2. Generate new token: `POST /v0/runners/{runner}/token`
+3. Update runner agent with new token
+4. Unlock the runner: `PATCH /v0/runners/{runner}` with `locked: false`
 
 ### Image Security
 
@@ -1529,45 +1573,63 @@ CLI (bencher run)
 
 ## Implementation Phases
 
-### Phase 1: Foundation (3-4 weeks)
+These phases align with the `RUNNER_DESIGN.md` implementation phases. Phases 1-2 cover the cloud-side API, phases 3-4 integrate the runner daemon, and phases 5-6 add cloud and BYOR features.
 
-**Goal**: Basic job queue and runner daemon
+### Phase 1: Runner Registration & Heartbeat
 
-1. **Job Queue**
-   - Add `jobs` table to database
-   - Implement job CRUD API endpoints
-   - Basic job state machine
+**Goal**: Runners can connect and stay alive
+
+1. **Runner Database & API**
+   - Add `runner` table to database (server-scoped)
+   - Implement runner management endpoints (`POST/GET/PATCH /v0/runners`)
+   - Hashed token authentication (`bencher_runner_<token>`)
+   - Token rotation endpoint (`POST /v0/runners/{runner}/token`)
 
 2. **Runner Daemon (MVP)**
-   - Runner registration
-   - Job polling (long-poll)
-   - Result reporting
+   - Accept pre-configured runner token
+   - Connect to API and validate token
+   - Basic idle/active state tracking
 
 3. **CLI Updates**
-   - `bencher run --image` flag (local image only)
-   - `bencher job status/logs/cancel`
+   - `bencher runner create/list/view/update/token` (admin commands)
 
-**Deliverable**: Job queue infrastructure ready for VM integration
+**Deliverable**: Runners can register, authenticate, and maintain connection
 
-### Phase 2: Image Registry (2-3 weeks)
+### Phase 2: Job Queue & Claiming
 
-**Goal**: OCI-compliant image registry
+**Goal**: Basic job distribution
 
-1. **Image Registry**
-   - Implement OCI Distribution API
-   - Blob storage (filesystem backend)
-   - Image manifest handling
+1. **Job Database & API**
+   - Add `job` table linked to `report` via `report_id`
+   - Job status enum (pending/claimed/running/completed/failed/canceled)
+   - Job spec JSONB (repository, commands, env, adapter)
+   - Priority field (0=free, 100=plus)
 
-2. **CLI Updates**
-   - `bencher image push/pull/list/delete`
+2. **Job Claiming**
+   - Long-poll endpoint (`POST /v0/runners/{runner}/jobs`)
+   - Atomic claim with label matching (`required_labels` ⊆ runner `labels`)
+   - Priority + FIFO ordering
 
-3. **Image Caching**
-   - Layer deduplication
-   - LRU cache eviction
+3. **WebSocket Job Channel**
+   - `WebSocket /v0/runners/{runner}/jobs/{job}/channel`
+   - Runner → Server: Running, Heartbeat, Completed, Failed
+   - Server → Runner: Ack, Cancel
+   - Timeout-based job recovery (inline WS timeout + spawned disconnect timeout)
+   - Startup recovery for in-flight jobs
 
-**Deliverable**: Users can push images to Bencher and reference them in jobs
+4. **Billing Integration**
+   - Per-minute usage tracking via heartbeats
+   - Stripe usage-based pricing integration
+   - `last_billed_minute` tracking to prevent double-counting
 
-### Phase 3: Firecracker Integration (2-3 weeks)
+5. **Job Management API**
+   - `GET /v0/projects/{project}/jobs` (list, filterable)
+   - `GET /v0/projects/{project}/jobs/{job}` (details + results)
+   - CLI: `bencher job status/list`
+
+**Deliverable**: Jobs can be queued, claimed by runners, and tracked through completion
+
+### Phase 3: Firecracker Integration
 
 **Goal**: Hardware-isolated job execution using Firecracker
 
@@ -1590,67 +1652,69 @@ CLI (bencher run)
 
 4. **Runner Integration**
    - Replace `bencher_vmm` calls with Firecracker client in `plus/bencher_runner/`
-   - Job queue integration with API
+   - WebSocket channel integration (heartbeat on separate CPU core)
    - Vsock result collection from Firecracker's vsock UDS
 
 **Deliverable**: Jobs run in isolated Firecracker microVMs with writable rootfs
 
-### Phase 4: Production Hardening (2-3 weeks)
+### Phase 4: Labels & Affinity + Production Hardening
 
-**Goal**: Production-ready performance and reliability
+**Goal**: Match jobs to appropriate hardware; production-ready reliability
 
-1. **Performance Tuning**
+1. **Labels & Affinity**
+   - Runner labels (e.g., `["arch:arm64", "os:linux"]`)
+   - Job `required_labels` matching
+   - Label-based job routing
+
+2. **Performance Tuning**
    - CPU pinning support
    - Boot time optimization
    - Rootfs caching
 
-2. **Reliability**
+3. **Reliability**
    - Job timeout handling (Firecracker `SendCtrlAltDel` + process kill)
-   - Runner failover
+   - WebSocket reconnection for transient disconnects
    - Graceful shutdown
    - Error recovery
 
-3. **Observability**
+4. **Observability**
    - Prometheus metrics
    - Structured logging
    - Distributed tracing
 
-**Deliverable**: Production-ready bare metal runner system
+**Deliverable**: Production-ready bare metal runner system with hardware-aware scheduling
 
-### Phase 5: Cloud Features (3-4 weeks)
+### Phase 5: Console UI
 
-**Goal**: Bencher Cloud-specific features
+**Goal**: Manage runners and view job history from the web console
 
-1. **Multi-tenant Scheduling**
-   - Fair scheduling
-   - Priority queues
-   - Resource quotas
+1. **Runner Management UI**
+   - List/view runners and their state (offline/idle/running)
+   - Create runners, view token (once)
+   - Lock/unlock/archive runners
+   - Token rotation
 
-2. **Billing Integration**
-   - Usage tracking
-   - Cost attribution
+2. **Job Dashboard**
+   - View job queue and history per project
+   - Job details with status, runner assignment, timing
+   - Cancel running jobs
 
-3. **BYOR Foundation**
-   - Runner token management
-   - Organization-scoped runners
+3. **Billing Dashboard**
+   - Usage tracking per organization
+   - Minutes consumed per project
 
-**Deliverable**: Bencher Cloud bare metal runner service
+**Deliverable**: Full console UI for runner and job management
 
-### Phase 6: BYOR (Bring Your Own Runner) (3-4 weeks)
+### Phase 6: BYOR (Bring Your Own Runner)
 
 **Goal**: Users can connect their own runners to Bencher Cloud
 
-1. **Runner Management UI**
-   - Register runner
-   - View runner status
-   - Manage runner tokens
-
-2. **Runner Security**
-   - Token rotation
+1. **BYOR Security**
    - IP allowlisting
    - Audit logging
+   - Rate limiting per runner
 
-3. **Documentation**
+2. **Documentation**
    - Runner setup guide
    - Security best practices
    - Troubleshooting
@@ -1661,6 +1725,8 @@ CLI (bencher run)
 
 ## Open Questions
 
+These open questions apply to this plan. See `RUNNER_DESIGN.md` for additional cloud-side open questions (result storage, output storage, retry policy).
+
 ### 1. Image Size Limits
 - **Question**: What's the maximum image size we should support?
 - **Considerations**: Storage costs, pull time, cache size
@@ -1669,7 +1735,7 @@ CLI (bencher run)
 ### 2. Concurrent Jobs per Runner
 - **Question**: Should runners support multiple concurrent jobs?
 - **Considerations**: Resource isolation, benchmark accuracy, utilization
-- **Proposed**: Single job per runner for Phase 1, optional concurrency later with strict CPU pinning
+- **Proposed**: Single job per runner initially, optional concurrency later with strict CPU pinning
 
 ### 3. Windows/macOS Support
 - **Question**: When/if to add non-Linux runner support?
@@ -1679,7 +1745,7 @@ CLI (bencher run)
 ### 4. ARM Production Readiness
 - **Question**: When to enable ARM runners in production?
 - **Considerations**: Firecracker supports aarch64, needs production testing
-- **Proposed**: Phase 5 or 6, after x86_64 is stable in production
+- **Proposed**: After x86_64 is stable in production
 
 ### 5. GPU/Accelerator Support
 - **Question**: Will benchmarks need GPU access?
