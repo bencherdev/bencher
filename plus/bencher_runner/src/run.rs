@@ -479,3 +479,99 @@ pub fn execute(_config: &crate::Config) -> Result<String, RunnerError> {
         "Benchmark execution requires Linux with KVM support".to_owned(),
     ))
 }
+
+#[cfg(test)]
+#[cfg(target_os = "linux")]
+mod tests {
+    use super::*;
+
+    fn env(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn sanitize_env_passes_safe_vars() {
+        let input = env(&[("PATH", "/usr/bin"), ("HOME", "/root"), ("LANG", "C")]);
+        let result = sanitize_env(&input);
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].0, "PATH");
+    }
+
+    #[test]
+    fn sanitize_env_blocks_ld_preload() {
+        let input = env(&[("LD_PRELOAD", "/evil.so"), ("PATH", "/usr/bin")]);
+        let result = sanitize_env(&input);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].0, "PATH");
+    }
+
+    #[test]
+    fn sanitize_env_blocks_ld_library_path() {
+        let input = env(&[("LD_LIBRARY_PATH", "/tmp"), ("HOME", "/root")]);
+        let result = sanitize_env(&input);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].0, "HOME");
+    }
+
+    #[test]
+    fn sanitize_env_blocks_all_known_dangerous_vars() {
+        let input = env(&[
+            ("LD_PRELOAD", "x"),
+            ("LD_LIBRARY_PATH", "x"),
+            ("LD_AUDIT", "x"),
+            ("LD_DEBUG", "x"),
+            ("LD_DEBUG_OUTPUT", "x"),
+            ("LD_DYNAMIC_WEAK", "x"),
+            ("LD_HWCAP_MASK", "x"),
+            ("LD_ORIGIN_PATH", "x"),
+            ("LD_POINTER_GUARD", "x"),
+            ("LD_PROFILE", "x"),
+            ("LD_PROFILE_OUTPUT", "x"),
+            ("LD_SHOW_AUXV", "x"),
+            ("LD_USE_LOAD_BIAS", "x"),
+            ("LD_BIND_NOW", "x"),
+            ("LD_BIND_NOT", "x"),
+            ("MALLOC_CHECK_", "x"),
+            ("MALLOC_TRACE", "x"),
+            ("BASH_ENV", "x"),
+            ("ENV", "x"),
+            ("CDPATH", "x"),
+            ("GLOBIGNORE", "x"),
+            ("IFS", "x"),
+        ]);
+        let result = sanitize_env(&input);
+        assert!(result.is_empty(), "all dangerous vars should be blocked, got: {result:?}");
+    }
+
+    #[test]
+    fn sanitize_env_case_insensitive() {
+        let input = env(&[("ld_preload", "/evil.so"), ("Ld_Library_Path", "/tmp")]);
+        let result = sanitize_env(&input);
+        assert!(result.is_empty(), "case-insensitive matching should block lowercase variants");
+    }
+
+    #[test]
+    fn sanitize_env_blocks_prefixed_variants() {
+        let input = env(&[("LD_PRELOAD_32", "/evil.so"), ("MALLOC_CHECK__FOO", "1")]);
+        let result = sanitize_env(&input);
+        assert!(result.is_empty(), "prefix-suffixed variants should be blocked");
+    }
+
+    #[test]
+    fn sanitize_env_empty_input() {
+        let result = sanitize_env(&[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn sanitize_env_preserves_order() {
+        let input = env(&[("A", "1"), ("B", "2"), ("C", "3")]);
+        let result = sanitize_env(&input);
+        assert_eq!(result[0].0, "A");
+        assert_eq!(result[1].0, "B");
+        assert_eq!(result[2].0, "C");
+    }
+}

@@ -177,3 +177,86 @@ impl Config {
             .unwrap_or_else(|| Utf8PathBuf::from("/var/cache/bencher/oci"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_new_defaults() {
+        let config = Config::new("my-image:latest");
+        assert_eq!(config.oci_image, "my-image:latest");
+        assert_eq!(config.vcpus, 1);
+        assert_eq!(config.memory_mib, 512);
+        assert_eq!(config.timeout_secs, 300);
+        assert!(config.kernel.is_none());
+        assert!(config.token.is_none());
+        assert!(config.cache_dir.is_none());
+        assert!(config.output_file.is_none());
+    }
+
+    #[test]
+    fn config_with_kernel() {
+        let config = Config::with_kernel("img", Utf8PathBuf::from("/boot/vmlinux"));
+        assert_eq!(config.kernel.unwrap().as_str(), "/boot/vmlinux");
+    }
+
+    #[test]
+    fn config_builder_chain() {
+        let config = Config::new("img")
+            .with_token("jwt-token")
+            .with_vcpus(4)
+            .with_memory_mib(2048)
+            .with_timeout_secs(600)
+            .with_output_file("/tmp/results.json")
+            .with_cache_dir(Utf8PathBuf::from("/cache"));
+
+        assert_eq!(config.token.unwrap(), "jwt-token");
+        assert_eq!(config.vcpus, 4);
+        assert_eq!(config.memory_mib, 2048);
+        assert_eq!(config.timeout_secs, 600);
+        assert_eq!(config.output_file.unwrap(), "/tmp/results.json");
+        assert_eq!(config.cache_dir.unwrap().as_str(), "/cache");
+    }
+
+    #[test]
+    fn cache_dir_default() {
+        let config = Config::new("img");
+        assert_eq!(config.cache_dir().as_str(), "/var/cache/bencher/oci");
+    }
+
+    #[test]
+    fn cache_dir_custom() {
+        let config = Config::new("img").with_cache_dir(Utf8PathBuf::from("/my/cache"));
+        assert_eq!(config.cache_dir().as_str(), "/my/cache");
+    }
+
+    #[test]
+    fn config_serde_round_trip() {
+        let config = Config::new("ghcr.io/test/bench:v1")
+            .with_vcpus(2)
+            .with_memory_mib(1024)
+            .with_output_file("/output.json");
+
+        let json = serde_json::to_string(&config).unwrap();
+        let parsed: Config = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.oci_image, "ghcr.io/test/bench:v1");
+        assert_eq!(parsed.vcpus, 2);
+        assert_eq!(parsed.memory_mib, 1024);
+        assert_eq!(parsed.output_file.unwrap(), "/output.json");
+        // Optional None fields should not appear in JSON
+        assert!(!json.contains("\"token\""));
+        assert!(!json.contains("\"kernel\""));
+    }
+
+    #[test]
+    fn config_deserialize_with_defaults() {
+        let json = r#"{"oci_image": "test:latest"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(config.oci_image, "test:latest");
+        assert_eq!(config.vcpus, 1);
+        assert_eq!(config.memory_mib, 512);
+        assert_eq!(config.timeout_secs, 300);
+    }
+}

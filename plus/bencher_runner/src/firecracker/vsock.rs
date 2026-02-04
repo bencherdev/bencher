@@ -189,3 +189,210 @@ fn try_accept_and_read(listener: &UnixListener) -> Option<Vec<u8>> {
 
     Some(data)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::io::Write;
+    use std::os::unix::net::UnixStream;
+
+    /// Helper: create a VsockListener in a temp directory.
+    fn listener_in_tmpdir() -> (tempfile::TempDir, VsockListener) {
+        let dir = tempfile::tempdir().unwrap();
+        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let listener = VsockListener::new(&base).unwrap();
+        (dir, listener)
+    }
+
+    /// Helper: connect to a vsock port and write data.
+    fn send_to_port(base: &str, port: u32, data: &[u8]) {
+        let path = format!("{base}_{port}");
+        let mut stream = UnixStream::connect(path).unwrap();
+        stream.write_all(data).unwrap();
+        // drop closes the connection, signaling EOF
+    }
+
+    #[test]
+    fn vsock_listener_creates_socket_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let _listener = VsockListener::new(&base).unwrap();
+
+        for port in [5000, 5001, 5002, 5005] {
+            let path = format!("{base}_{port}");
+            assert!(
+                std::path::Path::new(&path).exists(),
+                "socket file for port {port} should exist"
+            );
+        }
+    }
+
+    #[test]
+    fn vsock_listener_cleanup_removes_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+
+        {
+            let _listener = VsockListener::new(&base).unwrap();
+            // listener drops here
+        }
+
+        for port in [5000, 5001, 5002, 5005] {
+            let path = format!("{base}_{port}");
+            assert!(
+                !std::path::Path::new(&path).exists(),
+                "socket file for port {port} should be cleaned up"
+            );
+        }
+    }
+
+    #[test]
+    fn collect_all_ports() {
+        let (dir, listener) = listener_in_tmpdir();
+        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+
+        // Send data on all ports from a separate thread
+        let base_clone = base.clone();
+        let sender = std::thread::spawn(move || {
+            // Small delay to let collect_results start polling
+            std::thread::sleep(Duration::from_millis(50));
+            send_to_port(&base_clone, ports::STDOUT, b"benchmark output");
+            send_to_port(&base_clone, ports::STDERR, b"some warnings");
+            send_to_port(&base_clone, ports::OUTPUT_FILE, b"\x00\x01\x02");
+            send_to_port(&base_clone, ports::EXIT_CODE, b"0");
+        });
+
+        let results = listener.collect_results(Duration::from_secs(5)).unwrap();
+        sender.join().unwrap();
+
+        assert_eq!(results.stdout, "benchmark output");
+        assert_eq!(results.stderr, "some warnings");
+        assert_eq!(results.exit_code, "0");
+        assert_eq!(results.output_file, Some(vec![0x00, 0x01, 0x02]));
+    }
+
+    #[test]
+    fn collect_exit_code_only() {
+        let (dir, listener) = listener_in_tmpdir();
+        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+
+        let base_clone = base.clone();
+        let sender = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            send_to_port(&base_clone, ports::EXIT_CODE, b"1");
+        });
+
+        let results = listener.collect_results(Duration::from_secs(5)).unwrap();
+        sender.join().unwrap();
+
+        assert_eq!(results.exit_code, "1");
+        assert_eq!(results.stdout, "");
+        assert_eq!(results.stderr, "");
+        assert_eq!(results.output_file, None);
+    }
+
+    #[test]
+    fn collect_timeout_returns_empty() {
+        let (_dir, listener) = listener_in_tmpdir();
+
+        // No data sent — should timeout
+        let results = listener
+            .collect_results(Duration::from_millis(200))
+            .unwrap();
+
+        assert_eq!(results.exit_code, "");
+        assert_eq!(results.stdout, "");
+    }
+
+    #[test]
+    fn collect_non_utf8_stdout() {
+        let (dir, listener) = listener_in_tmpdir();
+        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+
+        let base_clone = base.clone();
+        let sender = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            // Invalid UTF-8 bytes
+            send_to_port(&base_clone, ports::STDOUT, b"hello \xff\xfe world");
+            send_to_port(&base_clone, ports::EXIT_CODE, b"0");
+        });
+
+        let results = listener.collect_results(Duration::from_secs(5)).unwrap();
+        sender.join().unwrap();
+
+        // Should use lossy conversion, not panic
+        assert!(results.stdout.contains("hello"));
+        assert!(results.stdout.contains("world"));
+        assert_eq!(results.exit_code, "0");
+    }
+
+    #[test]
+    fn collect_exit_code_triggers_final_pass() {
+        let (dir, listener) = listener_in_tmpdir();
+        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+
+        let base_clone = base.clone();
+        let sender = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            // Send exit code first
+            send_to_port(&base_clone, ports::EXIT_CODE, b"0");
+            // Then stdout arrives during the 100ms grace window
+            std::thread::sleep(Duration::from_millis(20));
+            send_to_port(&base_clone, ports::STDOUT, b"late output");
+        });
+
+        let results = listener.collect_results(Duration::from_secs(5)).unwrap();
+        sender.join().unwrap();
+
+        assert_eq!(results.exit_code, "0");
+        assert_eq!(results.stdout, "late output");
+    }
+
+    #[test]
+    fn try_accept_and_read_no_connection() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        listener.set_nonblocking(true).unwrap();
+
+        // No connection pending
+        assert!(try_accept_and_read(&listener).is_none());
+    }
+
+    #[test]
+    fn try_accept_and_read_with_data() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        listener.set_nonblocking(true).unwrap();
+
+        // Connect and send data
+        let mut stream = UnixStream::connect(&path).unwrap();
+        stream.write_all(b"hello").unwrap();
+        drop(stream); // close to send EOF
+
+        // Brief delay to ensure the connection is ready
+        std::thread::sleep(Duration::from_millis(10));
+
+        let data = try_accept_and_read(&listener).unwrap();
+        assert_eq!(data, b"hello");
+    }
+
+    #[test]
+    fn try_accept_and_read_empty_connection() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        listener.set_nonblocking(true).unwrap();
+
+        // Connect but send nothing
+        let stream = UnixStream::connect(&path).unwrap();
+        drop(stream); // close immediately
+
+        std::thread::sleep(Duration::from_millis(10));
+
+        let data = try_accept_and_read(&listener).unwrap();
+        assert!(data.is_empty());
+    }
+}

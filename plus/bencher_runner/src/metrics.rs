@@ -105,3 +105,190 @@ fn read_cpu_stat(cgroup_path: &Path) -> Option<CpuStat> {
 fn read_file_u64(path: &Path) -> Option<u64> {
     std::fs::read_to_string(path).ok()?.trim().parse().ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::fs;
+
+    // --- read_cpu_stat ---
+
+    #[test]
+    fn read_cpu_stat_normal() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = "usage_usec 12345\nuser_usec 6000\nsystem_usec 6345\nnr_periods 0\n";
+        fs::write(dir.path().join("cpu.stat"), content).unwrap();
+
+        let stat = read_cpu_stat(dir.path()).unwrap();
+        assert_eq!(stat.usage_usec, 12345);
+        assert_eq!(stat.user_usec, 6000);
+        assert_eq!(stat.system_usec, 6345);
+    }
+
+    #[test]
+    fn read_cpu_stat_missing_fields_default_to_zero() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("cpu.stat"), "usage_usec 100\n").unwrap();
+
+        let stat = read_cpu_stat(dir.path()).unwrap();
+        assert_eq!(stat.usage_usec, 100);
+        assert_eq!(stat.user_usec, 0);
+        assert_eq!(stat.system_usec, 0);
+    }
+
+    #[test]
+    fn read_cpu_stat_malformed_values() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("cpu.stat"),
+            "usage_usec not_a_number\nuser_usec 100\nsystem_usec\n",
+        )
+        .unwrap();
+
+        let stat = read_cpu_stat(dir.path()).unwrap();
+        assert_eq!(stat.usage_usec, 0); // parse fails -> unwrap_or(0)
+        assert_eq!(stat.user_usec, 100);
+        assert_eq!(stat.system_usec, 0); // no value at all
+    }
+
+    #[test]
+    fn read_cpu_stat_empty_file() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("cpu.stat"), "").unwrap();
+
+        let stat = read_cpu_stat(dir.path()).unwrap();
+        assert_eq!(stat.usage_usec, 0);
+        assert_eq!(stat.user_usec, 0);
+        assert_eq!(stat.system_usec, 0);
+    }
+
+    #[test]
+    fn read_cpu_stat_missing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(read_cpu_stat(dir.path()).is_none());
+    }
+
+    // --- read_file_u64 ---
+
+    #[test]
+    fn read_file_u64_normal() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("value");
+        fs::write(&path, "42\n").unwrap();
+        assert_eq!(read_file_u64(&path), Some(42));
+    }
+
+    #[test]
+    fn read_file_u64_with_whitespace() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("value");
+        fs::write(&path, "  1024  \n").unwrap();
+        assert_eq!(read_file_u64(&path), Some(1024));
+    }
+
+    #[test]
+    fn read_file_u64_non_numeric() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("value");
+        fs::write(&path, "not_a_number").unwrap();
+        assert_eq!(read_file_u64(&path), None);
+    }
+
+    #[test]
+    fn read_file_u64_missing_file() {
+        assert_eq!(read_file_u64(Path::new("/nonexistent/path")), None);
+    }
+
+    #[test]
+    fn read_file_u64_negative_number() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("value");
+        fs::write(&path, "-1\n").unwrap();
+        assert_eq!(read_file_u64(&path), None); // u64 can't parse negative
+    }
+
+    // --- read_cgroup_metrics ---
+
+    #[test]
+    fn read_cgroup_metrics_full() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("cpu.stat"),
+            "usage_usec 5000\nuser_usec 3000\nsystem_usec 2000\n",
+        )
+        .unwrap();
+        fs::write(dir.path().join("memory.peak"), "1048576\n").unwrap();
+
+        let metrics = read_cgroup_metrics(dir.path()).unwrap();
+        assert_eq!(metrics.cpu_usage_us, Some(5000));
+        assert_eq!(metrics.cpu_user_us, Some(3000));
+        assert_eq!(metrics.cpu_system_us, Some(2000));
+        assert_eq!(metrics.memory_peak_bytes, Some(1_048_576));
+    }
+
+    #[test]
+    fn read_cgroup_metrics_no_memory_peak() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("cpu.stat"),
+            "usage_usec 100\nuser_usec 50\nsystem_usec 50\n",
+        )
+        .unwrap();
+
+        let metrics = read_cgroup_metrics(dir.path()).unwrap();
+        assert_eq!(metrics.cpu_usage_us, Some(100));
+        assert_eq!(metrics.memory_peak_bytes, None);
+    }
+
+    #[test]
+    fn read_cgroup_metrics_nonexistent_path() {
+        assert!(read_cgroup_metrics(Path::new("/nonexistent")).is_none());
+    }
+
+    // --- format_metrics ---
+
+    #[test]
+    fn format_metrics_round_trip() {
+        let metrics = RunMetrics {
+            wall_clock_ms: 1500,
+            timed_out: false,
+            transport: "vsock".to_owned(),
+            cgroup: Some(CgroupMetrics {
+                cpu_usage_us: Some(1000),
+                cpu_user_us: Some(600),
+                cpu_system_us: Some(400),
+                memory_peak_bytes: Some(2048),
+            }),
+        };
+        let formatted = format_metrics(&metrics).unwrap();
+        assert!(formatted.starts_with("---BENCHER_METRICS:"));
+        assert!(formatted.ends_with("---"));
+
+        // Extract JSON and verify it parses back
+        let json = formatted
+            .strip_prefix("---BENCHER_METRICS:")
+            .unwrap()
+            .strip_suffix("---")
+            .unwrap();
+        let parsed: RunMetrics = serde_json::from_str(json).unwrap();
+        assert_eq!(parsed.wall_clock_ms, 1500);
+        assert!(!parsed.timed_out);
+        assert_eq!(parsed.transport, "vsock");
+        assert_eq!(parsed.cgroup.as_ref().unwrap().cpu_usage_us, Some(1000));
+    }
+
+    #[test]
+    fn format_metrics_no_cgroup() {
+        let metrics = RunMetrics {
+            wall_clock_ms: 500,
+            timed_out: true,
+            transport: "vsock".to_owned(),
+            cgroup: None,
+        };
+        let formatted = format_metrics(&metrics).unwrap();
+        // cgroup should be absent from JSON (skip_serializing_if)
+        assert!(!formatted.contains("\"cgroup\""));
+        assert!(formatted.contains("\"timed_out\":true"));
+    }
+}
