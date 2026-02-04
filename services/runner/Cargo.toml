@@ -12,7 +12,7 @@ plus = ["dep:bencher_runner"]
 
 [dependencies]
 anyhow = { workspace = true }
-clap = { workspace = true }
+clap = { workspace = true, features = ["env"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bencher_runner = { workspace = true, optional = true, features = ["plus"] }

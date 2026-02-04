@@ -1566,7 +1566,9 @@ dependencies = [
  "tar",
  "tempfile",
  "thiserror 2.0.17",
+ "tungstenite",
  "ureq",
+ "url",
  "uuid 1.19.0",
 ]
 

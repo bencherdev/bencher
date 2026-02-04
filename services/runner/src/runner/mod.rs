@@ -3,8 +3,12 @@ use clap::Parser as _;
 use crate::parser::{TaskRunner, TaskSub};
 
 #[cfg(all(feature = "plus", target_os = "linux"))]
+mod daemon;
+#[cfg(all(feature = "plus", target_os = "linux"))]
 mod run;
 
+#[cfg(all(feature = "plus", target_os = "linux"))]
+use daemon::DaemonRunner;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 use run::Run;
 
@@ -15,6 +19,8 @@ pub struct Runner {
 
 #[derive(Debug)]
 pub enum Sub {
+    #[cfg(all(feature = "plus", target_os = "linux"))]
+    Daemon(DaemonRunner),
     #[cfg(all(feature = "plus", target_os = "linux"))]
     Run(Run),
     #[cfg(not(all(feature = "plus", target_os = "linux")))]
@@ -37,6 +43,7 @@ impl TryFrom<TaskSub> for Sub {
     #[cfg(all(feature = "plus", target_os = "linux"))]
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
+            TaskSub::Daemon(daemon) => Self::Daemon(daemon.try_into()?),
             TaskSub::Run(run) => Self::Run(run.try_into()?),
         })
     }
@@ -60,6 +67,8 @@ impl Runner {
 impl Sub {
     pub fn exec(self) -> anyhow::Result<()> {
         match self {
+            #[cfg(all(feature = "plus", target_os = "linux"))]
+            Self::Daemon(daemon) => daemon.exec(),
             #[cfg(all(feature = "plus", target_os = "linux"))]
             Self::Run(run) => run.exec(),
             #[cfg(not(all(feature = "plus", target_os = "linux")))]

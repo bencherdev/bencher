@@ -1,52 +1,41 @@
-mod daemon;
+use clap::Parser;
 
-use clap::{Parser, Subcommand};
+#[cfg(debug_assertions)]
+const DEFAULT_HOST: &str = "http://localhost:61016";
+#[cfg(not(debug_assertions))]
+const DEFAULT_HOST: &str = "https://api.bencher.dev";
 
-pub use daemon::TaskDaemon;
-
-#[derive(Parser, Debug)]
-#[command(name = "bencher-runner")]
-#[command(about = "Execute benchmarks in isolated Firecracker microVMs", long_about = None)]
-pub struct TaskRunner {
-    #[command(subcommand)]
-    pub sub: TaskSub,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum TaskSub {
-    /// Run as a daemon, polling for and executing benchmark jobs.
-    Daemon(TaskDaemon),
-    /// Pull image, create rootfs, and execute in isolated Firecracker microVM.
-    Run(TaskRun),
-}
-
-/// Arguments for the `run` subcommand.
+/// Run as a daemon, polling for and executing benchmark jobs.
 #[expect(clippy::struct_excessive_bools, reason = "CLI flags map to independent tuning knobs")]
 #[derive(Parser, Debug)]
-pub struct TaskRun {
-    /// OCI image (local path or registry reference).
-    #[arg(long)]
-    pub image: String,
+pub struct TaskDaemon {
+    /// API server host URL.
+    #[arg(long, env = "BENCHER_HOST", default_value = DEFAULT_HOST)]
+    pub host: String,
 
-    /// JWT token for registry authentication.
-    #[arg(long)]
-    pub token: Option<String>,
+    /// Runner authentication token.
+    #[arg(long, env = "BENCHER_RUNNER_TOKEN")]
+    pub token: String,
 
-    /// Number of vCPUs.
+    /// Runner UUID or slug.
+    #[arg(long, env = "BENCHER_RUNNER")]
+    pub runner: String,
+
+    /// Comma-separated labels for job matching.
+    #[arg(long, env = "BENCHER_RUNNER_LABELS", value_delimiter = ',')]
+    pub labels: Vec<String>,
+
+    /// Long-poll timeout in seconds (max 60).
+    #[arg(long, default_value = "55")]
+    pub poll_timeout: u32,
+
+    /// Default number of vCPUs when job spec omits vcpus.
     #[arg(long, default_value = "1")]
     pub vcpus: u8,
 
-    /// Memory in MiB.
+    /// Default memory in MiB when job spec omits memory.
     #[arg(long, default_value = "512")]
     pub memory: u32,
-
-    /// Execution timeout in seconds.
-    #[arg(long, default_value = "300")]
-    pub timeout: u64,
-
-    /// Output file path inside guest.
-    #[arg(long)]
-    pub output: Option<String>,
 
     // --- Host tuning flags ---
     /// Disable all host tuning optimizations.
