@@ -173,20 +173,17 @@ pub async fn validate_push_access(
     }
 
     // Check if the project exists
-    if let Ok(query_project) = QueryProject::from_resource_id(public_conn!(context), repository) {
+    // Use a single connection for all project/org queries to reduce pool pressure
+    let conn = public_conn!(context);
+    if let Ok(query_project) = QueryProject::from_resource_id(conn, repository) {
         // Project exists - check if its organization is claimed
-        let query_organization =
-            query_project
-                .organization(public_conn!(context))
-                .map_err(|e| {
-                    HttpError::for_internal_error(format!("Failed to get organization: {e}"))
-                })?;
+        let query_organization = query_project.organization(conn).map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to get organization: {e}"))
+        })?;
 
-        let is_claimed = query_organization
-            .is_claimed(public_conn!(context))
-            .map_err(|e| {
-                HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
-            })?;
+        let is_claimed = query_organization.is_claimed(conn).map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
+        })?;
 
         if is_claimed {
             // Organization is claimed - authentication is required
@@ -352,10 +349,11 @@ async fn build_public_user(
     if let Ok(token) = token_result
         && let Ok(claims) = validate_oci_access(context, token, repository_str, "push")
     {
-        // Valid OCI token - load the user
+        // Valid OCI token - load the user with a single connection
         let email = claims.email().clone();
-        if let Ok(query_user) = QueryUser::get_with_email(public_conn!(context), &email)
-            && let Ok(auth_user) = AuthUser::load(public_conn!(context), query_user)
+        let conn = public_conn!(context);
+        if let Ok(query_user) = QueryUser::get_with_email(conn, &email)
+            && let Ok(auth_user) = AuthUser::load(conn, query_user)
         {
             slog::debug!(
                 log,

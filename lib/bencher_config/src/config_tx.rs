@@ -7,7 +7,7 @@ use std::{
 
 use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
-use bencher_json::system::config::{JsonLitestream, JsonPlus};
+use bencher_json::system::config::JsonPlus;
 use bencher_json::{
     JsonConfig,
     system::config::{
@@ -20,10 +20,9 @@ use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{context::RateLimiting, model::server::QueryServer, write_conn};
 use bencher_token::TokenKey;
-#[cfg(feature = "plus")]
-use diesel::connection::SimpleConnection as _;
 use diesel::{
     Connection as _,
+    connection::SimpleConnection as _,
     r2d2::{ConnectionManager, Pool},
 };
 use dropshot::{
@@ -33,9 +32,9 @@ use dropshot::{
 use slog::{Logger, debug, error, info};
 use tokio::sync::mpsc::Sender;
 
-use super::Config;
 #[cfg(feature = "plus")]
-use super::{DEFAULT_BUSY_TIMEOUT, plus::Plus};
+use super::plus::Plus;
+use super::{Config, DEFAULT_BUSY_TIMEOUT};
 
 const DATABASE_URL: &str = "DATABASE_URL";
 const SQLITE_TMPDIR: &str = "SQLITE_TMPDIR";
@@ -159,6 +158,10 @@ impl ConfigTx {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "Context initialization needs to handle DB setup, PRAGMAs, migrations, and pool creation"
+)]
 async fn into_context(
     log: &Logger,
     console: JsonConsole,
@@ -181,17 +184,43 @@ async fn into_context(
     let mut database_connection = DbConnection::establish(&database_path)
         .map_err(|e| ConfigTxError::DatabaseConnection(database_path.to_string(), e))?;
 
+    // Set essential SQLite PRAGMAs for concurrent access.
+    // WAL mode allows concurrent readers with a single writer.
+    // busy_timeout prevents immediate SQLITE_BUSY errors under lock contention.
+    // synchronous=NORMAL is safe with WAL mode and reduces fsync overhead.
     #[cfg(feature = "plus")]
-    if let Some(litestream) = plus.as_ref().and_then(|plus| plus.litestream.as_ref()) {
+    let busy_timeout = get_busy_timeout(plus.as_ref());
+    #[cfg(not(feature = "plus"))]
+    let busy_timeout = DEFAULT_BUSY_TIMEOUT;
+    info!(
+        log,
+        "Setting database PRAGMAs (busy_timeout: {busy_timeout}ms)"
+    );
+    database_connection
+        .batch_execute("PRAGMA journal_mode = WAL")
+        .map_err(ConfigTxError::Pragma)?;
+    database_connection
+        .batch_execute(&format!("PRAGMA busy_timeout = {busy_timeout}"))
+        .map_err(ConfigTxError::Pragma)?;
+    database_connection
+        .batch_execute("PRAGMA synchronous = NORMAL")
+        .map_err(ConfigTxError::Pragma)?;
+
+    #[cfg(feature = "plus")]
+    if plus
+        .as_ref()
+        .and_then(|plus| plus.litestream.as_ref())
+        .is_some()
+    {
         info!(log, "Configuring Litestream");
-        run_litestream(&mut database_connection, litestream)?;
+        run_litestream(&mut database_connection)?;
     }
 
     info!(log, "Running database migrations");
     bencher_schema::run_migrations(&mut database_connection)?;
 
-    let public_pool = connection_pool(log, &database_path)?;
-    let auth_pool = connection_pool(log, &database_path)?;
+    let public_pool = connection_pool(log, &database_path, busy_timeout)?;
+    let auth_pool = connection_pool(log, &database_path, busy_timeout)?;
 
     let data_store = if let Some(data_store) = json_database.data_store {
         Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
@@ -326,45 +355,55 @@ fn sqlite_tmpdir(log: &Logger, database_path: &Path) -> Result<(), ConfigTxError
 }
 
 #[cfg(feature = "plus")]
-fn run_litestream(
-    database: &mut DbConnection,
-    litestream: &JsonLitestream,
-) -> Result<(), ConfigTxError> {
-    // Enable WAL mode
-    // https://litestream.io/tips/#wal-journal-mode
-    // https://sqlite.org/wal.html
-    database
-        .batch_execute("PRAGMA journal_mode = WAL")
-        .map_err(ConfigTxError::Pragma)?;
+fn get_busy_timeout(plus: Option<&JsonPlus>) -> u32 {
+    plus.and_then(|plus| plus.litestream.as_ref())
+        .and_then(|litestream| litestream.busy_timeout)
+        .unwrap_or(DEFAULT_BUSY_TIMEOUT)
+}
+
+/// Configure litestream-specific PRAGMAs.
+///
+/// WAL mode, `busy_timeout`, and `synchronous=NORMAL` are now set unconditionally
+/// on all connections. This function only sets the litestream-specific PRAGMA
+/// to disable auto-checkpoints (so litestream can manage them).
+#[cfg(feature = "plus")]
+fn run_litestream(database: &mut DbConnection) -> Result<(), ConfigTxError> {
     // Disable auto-checkpoints
     // https://litestream.io/tips/#disable-autocheckpoints-for-high-write-load-servers
     // https://sqlite.org/wal.html#automatic_checkpoint
     database
         .batch_execute("PRAGMA wal_autocheckpoint = 0")
         .map_err(ConfigTxError::Pragma)?;
-    // Enable busy timeout
-    // https://litestream.io/tips/#busy-timeout
-    // https://www.sqlite.org/pragma.html#pragma_busy_timeout
-    let busy_timeout = format!(
-        "PRAGMA busy_timeout = {}",
-        litestream.busy_timeout.unwrap_or(DEFAULT_BUSY_TIMEOUT)
-    );
-    database
-        .batch_execute(&busy_timeout)
-        .map_err(ConfigTxError::Pragma)?;
-    // Relax synchronous mode because we are using WAL mode
-    // https://litestream.io/tips/#synchronous-pragma
-    // https://www.sqlite.org/pragma.html#pragma_synchronous
-    database
-        .batch_execute("PRAGMA synchronous = NORMAL")
-        .map_err(ConfigTxError::Pragma)?;
 
     Ok(())
+}
+
+/// Sets essential `SQLite` PRAGMAs on every new pool connection.
+///
+/// `busy_timeout` is per-connection and prevents immediate `SQLITE_BUSY` failures
+/// under lock contention. `synchronous = NORMAL` is safe with WAL mode and
+/// reduces fsync overhead.
+#[derive(Debug)]
+struct SqliteConnectionCustomizer {
+    busy_timeout: u32,
+}
+
+impl diesel::r2d2::CustomizeConnection<DbConnection, diesel::r2d2::Error>
+    for SqliteConnectionCustomizer
+{
+    fn on_acquire(&self, conn: &mut DbConnection) -> Result<(), diesel::r2d2::Error> {
+        conn.batch_execute(&format!("PRAGMA busy_timeout = {}", self.busy_timeout))
+            .map_err(diesel::r2d2::Error::QueryError)?;
+        conn.batch_execute("PRAGMA synchronous = NORMAL")
+            .map_err(diesel::r2d2::Error::QueryError)?;
+        Ok(())
+    }
 }
 
 fn connection_pool(
     log: &Logger,
     database_path: &str,
+    busy_timeout: u32,
 ) -> Result<Pool<ConnectionManager<DbConnection>>, ConfigTxError> {
     let cpu_count = std::thread::available_parallelism()
         .map(NonZeroUsize::get)
@@ -379,10 +418,12 @@ fn connection_pool(
     );
 
     let connection_manager = ConnectionManager::new(database_path);
+    let customizer = SqliteConnectionCustomizer { busy_timeout };
 
     Pool::builder()
         .max_size(max_size)
         .connection_timeout(connection_timeout)
+        .connection_customizer(Box::new(customizer))
         .build(connection_manager)
         .map_err(|e| ConfigTxError::DatabaseConnectionPool(database_path.to_owned(), e))
 }
