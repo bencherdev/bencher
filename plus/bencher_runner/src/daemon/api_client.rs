@@ -35,20 +35,37 @@ pub struct ClaimedJob {
     pub timeout_seconds: u32,
 }
 
+/// OCI-based job specification.
+///
+/// This struct mirrors `JsonJobSpec` from `bencher_json` but is kept local
+/// to avoid tight coupling between the runner and the main JSON types.
 #[derive(Debug, Deserialize)]
 pub struct JobSpec {
-    pub repository: Url,
-    pub branch: Option<String>,
-    pub commit: Option<String>,
-    pub setup_command: Option<String>,
-    pub benchmark_command: String,
-    pub adapter: Option<String>,
+    /// The OCI registry URL where the image is hosted.
+    pub registry: Url,
+    /// The project UUID that owns the image.
+    pub project: Uuid,
+    /// The image digest (e.g., "sha256:...").
+    pub digest: String,
+    /// Optional entrypoint override for the container.
     #[serde(default)]
-    pub env: HashMap<String, String>,
-    pub working_dir: Option<String>,
-    pub timeout_seconds: u32,
-    pub vcpus: Option<u8>,
-    pub memory_mib: Option<u32>,
+    pub entrypoint: Option<Vec<String>>,
+    /// Optional command override for the container.
+    #[serde(default)]
+    pub cmd: Option<Vec<String>>,
+    /// Optional environment variables for the container.
+    #[serde(default)]
+    pub env: Option<HashMap<String, String>>,
+    /// Number of vCPUs to allocate.
+    pub vcpu: u32,
+    /// Memory size in bytes.
+    pub memory: u64,
+    /// Disk size in bytes.
+    pub disk: u64,
+    /// Timeout in seconds.
+    pub timeout: u32,
+    /// Whether to enable network access.
+    pub network: bool,
 }
 
 impl RunnerApiClient {
@@ -71,15 +88,10 @@ impl RunnerApiClient {
     }
 
     pub fn claim_job(&self, request: &ClaimRequest) -> Result<Option<ClaimedJob>, ApiClientError> {
-        let url = format!(
-            "{}v0/runners/{}/jobs",
-            self.host.as_str(),
-            self.runner
-        );
+        let url = format!("{}v0/runners/{}/jobs", self.host.as_str(), self.runner);
 
-        let body = serde_json::to_value(request).map_err(|e| {
-            ApiClientError::Http(format!("Failed to serialize claim request: {e}"))
-        })?;
+        let body = serde_json::to_value(request)
+            .map_err(|e| ApiClientError::Http(format!("Failed to serialize claim request: {e}")))?;
 
         let response = self
             .agent
@@ -92,13 +104,10 @@ impl RunnerApiClient {
                 None => ApiClientError::Http(e.to_string()),
             })?;
 
-        let claim: ClaimResponse =
-            response
-                .into_body()
-                .read_json()
-                .map_err(|e| {
-                    ApiClientError::Http(format!("Failed to parse claim response: {e}"))
-                })?;
+        let claim: ClaimResponse = response
+            .into_body()
+            .read_json()
+            .map_err(|e| ApiClientError::Http(format!("Failed to parse claim response: {e}")))?;
 
         Ok(claim.job)
     }
@@ -114,11 +123,13 @@ impl RunnerApiClient {
         let without_scheme = host_str
             .strip_prefix(self.host.scheme())
             .unwrap_or(host_str);
-        let ws_url_str = format!("{scheme}{without_scheme}v0/runners/{}/jobs/{job_uuid}/ws", self.runner);
+        let ws_url_str = format!(
+            "{scheme}{without_scheme}v0/runners/{}/jobs/{job_uuid}/channel",
+            self.runner
+        );
 
-        Url::parse(&ws_url_str).map_err(|e| {
-            ApiClientError::Http(format!("Failed to build WebSocket URL: {e}"))
-        })
+        Url::parse(&ws_url_str)
+            .map_err(|e| ApiClientError::Http(format!("Failed to build WebSocket URL: {e}")))
     }
 
     pub fn token(&self) -> &str {
@@ -173,15 +184,13 @@ mod tests {
 
     #[test]
     fn new_rejects_wrong_prefix() {
-        let result =
-            RunnerApiClient::new(test_host(), "bearer_abc123".to_owned(), "r".to_owned());
+        let result = RunnerApiClient::new(test_host(), "bearer_abc123".to_owned(), "r".to_owned());
         assert!(matches!(result, Err(ApiClientError::InvalidToken)));
     }
 
     #[test]
     fn new_rejects_partial_prefix() {
-        let result =
-            RunnerApiClient::new(test_host(), "bencher_runne".to_owned(), "r".to_owned());
+        let result = RunnerApiClient::new(test_host(), "bencher_runne".to_owned(), "r".to_owned());
         assert!(matches!(result, Err(ApiClientError::InvalidToken)));
     }
 
@@ -203,7 +212,7 @@ mod tests {
         assert_eq!(ws_url.scheme(), "ws");
         assert_eq!(
             ws_url.as_str(),
-            "ws://localhost:61016/v0/runners/my-runner/jobs/550e8400-e29b-41d4-a716-446655440000/ws"
+            "ws://localhost:61016/v0/runners/my-runner/jobs/550e8400-e29b-41d4-a716-446655440000/channel"
         );
     }
 
@@ -277,9 +286,14 @@ mod tests {
                 "uuid": "550e8400-e29b-41d4-a716-446655440000",
                 "timeout_seconds": 600,
                 "spec": {
-                    "repository": "https://github.com/org/repo",
-                    "benchmark_command": "cargo bench",
-                    "timeout_seconds": 300
+                    "registry": "https://registry.bencher.dev",
+                    "project": "11111111-2222-3333-4444-555555555555",
+                    "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+                    "vcpu": 2,
+                    "memory": 1073741824,
+                    "disk": 10737418240,
+                    "timeout": 300,
+                    "network": false
                 }
             }
         }"#;
@@ -290,7 +304,8 @@ mod tests {
             Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
         );
         assert_eq!(job.timeout_seconds, 600);
-        assert_eq!(job.spec.benchmark_command, "cargo bench");
+        assert_eq!(job.spec.vcpu, 2);
+        assert_eq!(job.spec.memory, 0x4000_0000); // 1 GiB
     }
 
     // --- JobSpec deserialization ---
@@ -298,50 +313,55 @@ mod tests {
     #[test]
     fn job_spec_minimal() {
         let json = r#"{
-            "repository": "https://github.com/org/repo",
-            "benchmark_command": "make bench",
-            "timeout_seconds": 120
+            "registry": "https://registry.bencher.dev",
+            "project": "11111111-2222-3333-4444-555555555555",
+            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+            "vcpu": 1,
+            "memory": 536870912,
+            "disk": 1073741824,
+            "timeout": 60,
+            "network": false
         }"#;
         let spec: JobSpec = serde_json::from_str(json).unwrap();
-        assert_eq!(spec.benchmark_command, "make bench");
-        assert_eq!(spec.timeout_seconds, 120);
-        assert!(spec.branch.is_none());
-        assert!(spec.commit.is_none());
-        assert!(spec.setup_command.is_none());
-        assert!(spec.adapter.is_none());
-        assert!(spec.env.is_empty(), "env should default to empty HashMap");
-        assert!(spec.working_dir.is_none());
-        assert!(spec.vcpus.is_none());
-        assert!(spec.memory_mib.is_none());
+        assert_eq!(spec.vcpu, 1);
+        assert_eq!(spec.memory, 536_870_912); // 512 MiB
+        assert_eq!(spec.disk, 0x4000_0000); // 1 GiB
+        assert_eq!(spec.timeout, 60);
+        assert!(!spec.network);
+        assert!(spec.entrypoint.is_none());
+        assert!(spec.cmd.is_none());
+        assert!(spec.env.is_none());
     }
 
     #[test]
     fn job_spec_full() {
         let json = r#"{
-            "repository": "https://github.com/org/repo",
-            "branch": "feature/perf",
-            "commit": "abc123",
-            "setup_command": "apt install -y build-essential",
-            "benchmark_command": "cargo bench",
-            "adapter": "rust_criterion",
+            "registry": "https://registry.bencher.dev",
+            "project": "11111111-2222-3333-4444-555555555555",
+            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+            "entrypoint": ["/bin/sh"],
+            "cmd": ["-c", "cargo bench"],
             "env": {"RUST_LOG": "debug", "CI": "true"},
-            "working_dir": "/workspace",
-            "timeout_seconds": 300,
-            "vcpus": 4,
-            "memory_mib": 2048
+            "vcpu": 4,
+            "memory": 2147483648,
+            "disk": 10737418240,
+            "timeout": 300,
+            "network": true
         }"#;
         let spec: JobSpec = serde_json::from_str(json).unwrap();
-        assert_eq!(spec.branch.as_deref(), Some("feature/perf"));
-        assert_eq!(spec.commit.as_deref(), Some("abc123"));
         assert_eq!(
-            spec.setup_command.as_deref(),
-            Some("apt install -y build-essential")
+            spec.entrypoint.as_deref(),
+            Some(&["/bin/sh".to_owned()][..])
         );
-        assert_eq!(spec.adapter.as_deref(), Some("rust_criterion"));
-        assert_eq!(spec.env.len(), 2);
-        assert_eq!(spec.env.get("RUST_LOG").unwrap(), "debug");
-        assert_eq!(spec.working_dir.as_deref(), Some("/workspace"));
-        assert_eq!(spec.vcpus, Some(4));
-        assert_eq!(spec.memory_mib, Some(2048));
+        assert_eq!(
+            spec.cmd.as_deref(),
+            Some(&["-c".to_owned(), "cargo bench".to_owned()][..])
+        );
+        let env = spec.env.as_ref().unwrap();
+        assert_eq!(env.len(), 2);
+        assert_eq!(env.get("RUST_LOG").unwrap(), "debug");
+        assert_eq!(spec.vcpu, 4);
+        assert_eq!(spec.memory, 0x8000_0000); // 2 GiB
+        assert!(spec.network);
     }
 }

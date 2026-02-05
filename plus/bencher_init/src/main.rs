@@ -48,7 +48,7 @@ fn main() -> std::process::ExitCode {
                     options(nostack, nomem, preserves_flags)
                 );
                 if status & 0x20 != 0 {
-                    break;  // THR empty
+                    break; // THR empty
                 }
             }
             // Write byte to data register

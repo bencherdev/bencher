@@ -56,7 +56,9 @@ impl VsockConnection {
     #[cfg(target_os = "linux")]
     pub fn connect(cid: u32, port: u32) -> Result<Self, VsockError> {
         let stream = vsock::VsockStream::connect_with_cid_port(cid, port).map_err(|e| {
-            VsockError::Connection(format!("Failed to connect to vsock CID {cid} port {port}: {e}"))
+            VsockError::Connection(format!(
+                "Failed to connect to vsock CID {cid} port {port}: {e}"
+            ))
         })?;
         Ok(Self { inner: stream })
     }
@@ -146,7 +148,7 @@ pub fn send_results(results: &BenchmarkResults) -> Result<(), VsockError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{VsockError, HOST_CID};
+    use super::{HOST_CID, VsockError};
 
     #[test]
     fn test_vsock_error_display() {

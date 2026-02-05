@@ -73,7 +73,8 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         cache_dir: None,
         vcpus: args.vcpus,
         memory_mib: args.memory_mib,
-        kernel_cmdline: "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init".to_owned(),
+        kernel_cmdline: "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init"
+            .to_owned(),
         timeout_secs: args.timeout_secs,
         output_file: args.output_file.clone(),
     };
@@ -185,19 +186,15 @@ pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     println!("  OCI image: {}", config.oci_image);
     println!(
         "  Kernel: {}",
-        config
-            .kernel
-            .as_ref()
-            .map_or("(system)", |p| p.as_str())
+        config.kernel.as_ref().map_or("(system)", |p| p.as_str())
     );
     println!("  vCPUs: {}", config.vcpus);
     println!("  Memory: {} MiB", config.memory_mib);
     println!("  Timeout: {} seconds", config.timeout_secs);
 
     // Create a temporary work directory
-    let temp_dir = tempfile::tempdir().map_err(|e| {
-        RunnerError::Config(format!("Failed to create temp directory: {e}"))
-    })?;
+    let temp_dir = tempfile::tempdir()
+        .map_err(|e| RunnerError::Config(format!("Failed to create temp directory: {e}")))?;
     let work_dir = Utf8Path::from_path(temp_dir.path())
         .ok_or_else(|| RunnerError::Config("Temp directory path is not UTF-8".to_owned()))?;
 
@@ -219,11 +216,7 @@ pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     // Step 1: Resolve OCI image (local path or pull from registry)
     let cache_dir = config.cache_dir();
 
-    let oci_image_path = resolve_oci_image(
-        &config.oci_image,
-        config.token.as_deref(),
-        &cache_dir,
-    )?;
+    let oci_image_path = resolve_oci_image(&config.oci_image, config.token.as_deref(), &cache_dir)?;
 
     // Step 2: Parse OCI image config to get the command
     println!("Parsing OCI image config...");
@@ -254,7 +247,13 @@ pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
 
     // Step 4: Write command config for the VM
     println!("Writing init config...");
-    write_init_config(&unpack_dir, &command, workdir, &env, config.output_file.as_deref())?;
+    write_init_config(
+        &unpack_dir,
+        &command,
+        workdir,
+        &env,
+        config.output_file.as_deref(),
+    )?;
 
     // Step 5: Install init binary
     println!("Installing init binary...");
@@ -543,21 +542,30 @@ mod tests {
             ("IFS", "x"),
         ]);
         let result = sanitize_env(&input);
-        assert!(result.is_empty(), "all dangerous vars should be blocked, got: {result:?}");
+        assert!(
+            result.is_empty(),
+            "all dangerous vars should be blocked, got: {result:?}"
+        );
     }
 
     #[test]
     fn sanitize_env_case_insensitive() {
         let input = env(&[("ld_preload", "/evil.so"), ("Ld_Library_Path", "/tmp")]);
         let result = sanitize_env(&input);
-        assert!(result.is_empty(), "case-insensitive matching should block lowercase variants");
+        assert!(
+            result.is_empty(),
+            "case-insensitive matching should block lowercase variants"
+        );
     }
 
     #[test]
     fn sanitize_env_blocks_prefixed_variants() {
         let input = env(&[("LD_PRELOAD_32", "/evil.so"), ("MALLOC_CHECK__FOO", "1")]);
         let result = sanitize_env(&input);
-        assert!(result.is_empty(), "prefix-suffixed variants should be blocked");
+        assert!(
+            result.is_empty(),
+            "prefix-suffixed variants should be blocked"
+        );
     }
 
     #[test]

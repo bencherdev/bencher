@@ -21,7 +21,10 @@ pub enum TaskSub {
 }
 
 /// Arguments for the `run` subcommand.
-#[expect(clippy::struct_excessive_bools, reason = "CLI flags map to independent tuning knobs")]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "CLI flags map to independent tuning knobs"
+)]
 #[derive(Parser, Debug)]
 pub struct TaskRun {
     /// OCI image (local path or registry reference).

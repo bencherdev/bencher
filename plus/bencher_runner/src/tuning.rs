@@ -10,7 +10,10 @@
 use std::path::PathBuf;
 
 /// Host tuning configuration — all defaults optimize for benchmark accuracy.
-#[expect(clippy::struct_excessive_bools, reason = "each bool maps to an independent system knob")]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool maps to an independent system knob"
+)]
 #[derive(Debug, Clone)]
 pub struct TuningConfig {
     /// Disable ASLR (default: true).
@@ -155,7 +158,7 @@ fn write_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
         Err(e) => {
             println!("  Tuning: {label} — skipped (read failed: {e})");
             return;
-        }
+        },
     };
 
     if current == value {
@@ -190,7 +193,12 @@ fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
         let Some(name_str) = name.to_str() else {
             continue;
         };
-        if !name_str.starts_with("cpu") || !name_str[3..].chars().next().is_some_and(|c| c.is_ascii_digit()) {
+        if !name_str.starts_with("cpu")
+            || !name_str[3..]
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_digit())
+        {
             continue;
         }
 
@@ -237,7 +245,7 @@ fn set_smt(guard: &mut TuningGuard) {
         Err(e) => {
             println!("  Tuning: SMT — skipped (read failed: {e})");
             return;
-        }
+        },
     };
 
     if current == "off" || current == "notsupported" || current == "notimplemented" {
@@ -266,10 +274,20 @@ fn set_turbo(guard: &mut TuningGuard) {
 
     if intel_path.exists() {
         // Intel: write "1" to no_turbo to disable turbo
-        write_sysctl(guard, intel_path.to_str().unwrap_or_default(), "1", "turboboost (Intel)");
+        write_sysctl(
+            guard,
+            intel_path.to_str().unwrap_or_default(),
+            "1",
+            "turboboost (Intel)",
+        );
     } else if generic_path.exists() {
         // Generic: write "0" to boost to disable turbo
-        write_sysctl(guard, generic_path.to_str().unwrap_or_default(), "0", "turboboost (generic)");
+        write_sysctl(
+            guard,
+            generic_path.to_str().unwrap_or_default(),
+            "0",
+            "turboboost (generic)",
+        );
     } else {
         println!("  Tuning: turboboost — skipped (not available on this platform)");
     }
@@ -406,7 +424,10 @@ mod tests {
     fn write_sysctl_skips_missing_path() {
         let mut guard = TuningGuard { saved: Vec::new() };
         write_sysctl(&mut guard, "/nonexistent/path/value", "0", "test");
-        assert!(guard.saved.is_empty(), "should not save anything for missing path");
+        assert!(
+            guard.saved.is_empty(),
+            "should not save anything for missing path"
+        );
     }
 
     #[cfg(target_os = "linux")]
@@ -420,7 +441,10 @@ mod tests {
 
         let mut guard = TuningGuard { saved: Vec::new() };
         write_sysctl(&mut guard, path.to_str().unwrap(), "0", "test");
-        assert!(guard.saved.is_empty(), "should not save when value already matches");
+        assert!(
+            guard.saved.is_empty(),
+            "should not save when value already matches"
+        );
     }
 
     #[cfg(target_os = "linux")]

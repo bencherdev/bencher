@@ -3,8 +3,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::jail::ResourceLimits;
 use crate::RunnerError;
+use crate::jail::ResourceLimits;
 
 /// Default cgroup v2 mount point.
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
@@ -135,8 +135,12 @@ impl CgroupManager {
             return Ok(());
         }
 
-        let read_limit = limits.io_read_bps.map_or("max".to_owned(), |v| v.to_string());
-        let write_limit = limits.io_write_bps.map_or("max".to_owned(), |v| v.to_string());
+        let read_limit = limits
+            .io_read_bps
+            .map_or("max".to_owned(), |v| v.to_string());
+        let write_limit = limits
+            .io_write_bps
+            .map_or("max".to_owned(), |v| v.to_string());
 
         let mut io_max_content = String::new();
         for (major, minor) in devices {

@@ -1,5 +1,5 @@
-use bencher_runner::daemon::{Daemon, DaemonConfig, DaemonError};
 use bencher_runner::TuningConfig;
+use bencher_runner::daemon::{Daemon, DaemonConfig, DaemonError};
 
 use crate::parser::TaskDaemon;
 
@@ -12,8 +12,8 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
     type Error = anyhow::Error;
 
     fn try_from(task: TaskDaemon) -> Result<Self, Self::Error> {
-        let host = url::Url::parse(&task.host)
-            .map_err(|e| anyhow::anyhow!("Invalid host URL: {e}"))?;
+        let host =
+            url::Url::parse(&task.host).map_err(|e| anyhow::anyhow!("Invalid host URL: {e}"))?;
 
         let tuning = if task.no_tuning {
             TuningConfig::disabled()
@@ -37,8 +37,6 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
                 labels: task.labels,
                 poll_timeout_secs: task.poll_timeout,
                 tuning,
-                default_vcpus: task.vcpus,
-                default_memory_mib: task.memory,
             },
         })
     }

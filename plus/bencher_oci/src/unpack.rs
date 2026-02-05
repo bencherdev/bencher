@@ -3,7 +3,9 @@
 use camino::Utf8Path;
 
 use crate::error::OciError;
-use crate::image::{detect_layer_media_type, digest_to_blob_path, get_manifest, parse_index, parse_oci_layout};
+use crate::image::{
+    detect_layer_media_type, digest_to_blob_path, get_manifest, parse_index, parse_oci_layout,
+};
 use crate::layer::extract_layer;
 
 /// Unpack an OCI image to a directory.
@@ -49,7 +51,11 @@ pub fn unpack(image_dir: &Utf8Path, target_dir: &Utf8Path) -> Result<(), OciErro
 
         let compression = detect_layer_media_type(layer.media_type())?;
 
-        tracing_log(format!("Extracting layer {}/{}: {digest}", i + 1, manifest.layers.len()));
+        tracing_log(format!(
+            "Extracting layer {}/{}: {digest}",
+            i + 1,
+            manifest.layers.len()
+        ));
 
         extract_layer(
             Utf8Path::from_path(blob_path.as_std_path())

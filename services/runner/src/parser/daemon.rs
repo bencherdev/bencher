@@ -6,7 +6,10 @@ const DEFAULT_HOST: &str = "http://localhost:61016";
 const DEFAULT_HOST: &str = "https://api.bencher.dev";
 
 /// Run as a daemon, polling for and executing benchmark jobs.
-#[expect(clippy::struct_excessive_bools, reason = "CLI flags map to independent tuning knobs")]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "CLI flags map to independent tuning knobs"
+)]
 #[derive(Parser, Debug)]
 pub struct TaskDaemon {
     /// API server host URL.
@@ -28,14 +31,6 @@ pub struct TaskDaemon {
     /// Long-poll timeout in seconds (max 60).
     #[arg(long, default_value = "55")]
     pub poll_timeout: u32,
-
-    /// Default number of vCPUs when job spec omits vcpus.
-    #[arg(long, default_value = "1")]
-    pub vcpus: u8,
-
-    /// Default memory in MiB when job spec omits memory.
-    #[arg(long, default_value = "512")]
-    pub memory: u32,
 
     // --- Host tuning flags ---
     /// Disable all host tuning optimizations.

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
@@ -39,6 +41,10 @@ pub struct Config {
     #[serde(default = "default_memory_mib")]
     pub memory_mib: u32,
 
+    /// Disk size in MiB.
+    #[serde(default = "default_disk_mib")]
+    pub disk_mib: u32,
+
     /// Kernel command line arguments.
     #[serde(default = "default_kernel_cmdline")]
     pub kernel_cmdline: String,
@@ -56,6 +62,22 @@ pub struct Config {
     /// variable, and the file will be sent to the host via vsock port 5005.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output_file: Option<String>,
+
+    /// Whether to enable network access in the VM.
+    #[serde(default)]
+    pub network: bool,
+
+    /// Optional entrypoint override for the container.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entrypoint: Option<Vec<String>>,
+
+    /// Optional command override for the container.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cmd: Option<Vec<String>>,
+
+    /// Optional environment variables for the container.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub env: Option<HashMap<String, String>>,
 }
 
 const fn default_vcpus() -> u8 {
@@ -64,6 +86,10 @@ const fn default_vcpus() -> u8 {
 
 const fn default_memory_mib() -> u32 {
     512
+}
+
+const fn default_disk_mib() -> u32 {
+    1024 // 1 GiB
 }
 
 fn default_kernel_cmdline() -> String {
@@ -89,9 +115,14 @@ impl Config {
             cache_dir: None,
             vcpus: default_vcpus(),
             memory_mib: default_memory_mib(),
+            disk_mib: default_disk_mib(),
             kernel_cmdline: default_kernel_cmdline(),
             timeout_secs: default_timeout_secs(),
             output_file: None,
+            network: false,
+            entrypoint: None,
+            cmd: None,
+            env: None,
         }
     }
 
@@ -110,9 +141,14 @@ impl Config {
             cache_dir: None,
             vcpus: default_vcpus(),
             memory_mib: default_memory_mib(),
+            disk_mib: default_disk_mib(),
             kernel_cmdline: default_kernel_cmdline(),
             timeout_secs: default_timeout_secs(),
             output_file: None,
+            network: false,
+            entrypoint: None,
+            cmd: None,
+            env: None,
         }
     }
 
@@ -144,6 +180,13 @@ impl Config {
         self
     }
 
+    /// Set the disk size in MiB.
+    #[must_use]
+    pub fn with_disk_mib(mut self, disk_mib: u32) -> Self {
+        self.disk_mib = disk_mib;
+        self
+    }
+
     /// Set the kernel command line.
     #[must_use]
     pub fn with_kernel_cmdline<S: Into<String>>(mut self, cmdline: S) -> Self {
@@ -169,6 +212,55 @@ impl Config {
         self
     }
 
+    /// Enable or disable network access in the VM.
+    #[must_use]
+    pub fn with_network(mut self, network: bool) -> Self {
+        self.network = network;
+        self
+    }
+
+    /// Set the entrypoint override for the container.
+    #[must_use]
+    pub fn with_entrypoint(mut self, entrypoint: Vec<String>) -> Self {
+        self.entrypoint = Some(entrypoint);
+        self
+    }
+
+    /// Set the entrypoint override for the container from an Option.
+    #[must_use]
+    pub fn with_entrypoint_opt(mut self, entrypoint: Option<Vec<String>>) -> Self {
+        self.entrypoint = entrypoint;
+        self
+    }
+
+    /// Set the command override for the container.
+    #[must_use]
+    pub fn with_cmd(mut self, cmd: Vec<String>) -> Self {
+        self.cmd = Some(cmd);
+        self
+    }
+
+    /// Set the command override for the container from an Option.
+    #[must_use]
+    pub fn with_cmd_opt(mut self, cmd: Option<Vec<String>>) -> Self {
+        self.cmd = cmd;
+        self
+    }
+
+    /// Set the environment variables for the container.
+    #[must_use]
+    pub fn with_env(mut self, env: HashMap<String, String>) -> Self {
+        self.env = Some(env);
+        self
+    }
+
+    /// Set the environment variables for the container from an Option.
+    #[must_use]
+    pub fn with_env_opt(mut self, env: Option<HashMap<String, String>>) -> Self {
+        self.env = env;
+        self
+    }
+
     /// Get the cache directory, using the default if not set.
     #[must_use]
     pub fn cache_dir(&self) -> Utf8PathBuf {
@@ -188,11 +280,16 @@ mod tests {
         assert_eq!(config.oci_image, "my-image:latest");
         assert_eq!(config.vcpus, 1);
         assert_eq!(config.memory_mib, 512);
+        assert_eq!(config.disk_mib, 1024);
         assert_eq!(config.timeout_secs, 300);
+        assert!(!config.network);
         assert!(config.kernel.is_none());
         assert!(config.token.is_none());
         assert!(config.cache_dir.is_none());
         assert!(config.output_file.is_none());
+        assert!(config.entrypoint.is_none());
+        assert!(config.cmd.is_none());
+        assert!(config.env.is_none());
     }
 
     #[test]
@@ -203,20 +300,31 @@ mod tests {
 
     #[test]
     fn config_builder_chain() {
+        let env: HashMap<String, String> = [("RUST_LOG".to_owned(), "debug".to_owned())].into();
         let config = Config::new("img")
             .with_token("jwt-token")
             .with_vcpus(4)
             .with_memory_mib(2048)
+            .with_disk_mib(4096)
             .with_timeout_secs(600)
             .with_output_file("/tmp/results.json")
-            .with_cache_dir(Utf8PathBuf::from("/cache"));
+            .with_cache_dir(Utf8PathBuf::from("/cache"))
+            .with_network(true)
+            .with_entrypoint(vec!["/bin/sh".to_owned()])
+            .with_cmd(vec!["-c".to_owned(), "echo hello".to_owned()])
+            .with_env(env.clone());
 
         assert_eq!(config.token.unwrap(), "jwt-token");
         assert_eq!(config.vcpus, 4);
         assert_eq!(config.memory_mib, 2048);
+        assert_eq!(config.disk_mib, 4096);
         assert_eq!(config.timeout_secs, 600);
         assert_eq!(config.output_file.unwrap(), "/tmp/results.json");
         assert_eq!(config.cache_dir.unwrap().as_str(), "/cache");
+        assert!(config.network);
+        assert_eq!(config.entrypoint.unwrap(), vec!["/bin/sh"]);
+        assert_eq!(config.cmd.unwrap(), vec!["-c", "echo hello"]);
+        assert_eq!(config.env.unwrap(), env);
     }
 
     #[test]
@@ -257,6 +365,31 @@ mod tests {
         assert_eq!(config.oci_image, "test:latest");
         assert_eq!(config.vcpus, 1);
         assert_eq!(config.memory_mib, 512);
+        assert_eq!(config.disk_mib, 1024);
         assert_eq!(config.timeout_secs, 300);
+        assert!(!config.network);
+    }
+
+    #[test]
+    fn config_opt_builders() {
+        // Test *_opt builders with Some values
+        let config = Config::new("img")
+            .with_entrypoint_opt(Some(vec!["/bin/bash".to_owned()]))
+            .with_cmd_opt(Some(vec!["test".to_owned()]))
+            .with_env_opt(Some([("KEY".to_owned(), "value".to_owned())].into()));
+
+        assert_eq!(config.entrypoint.unwrap(), vec!["/bin/bash"]);
+        assert_eq!(config.cmd.unwrap(), vec!["test"]);
+        assert_eq!(config.env.unwrap().get("KEY").unwrap(), "value");
+
+        // Test *_opt builders with None values
+        let config = Config::new("img")
+            .with_entrypoint_opt(None)
+            .with_cmd_opt(None)
+            .with_env_opt(None);
+
+        assert!(config.entrypoint.is_none());
+        assert!(config.cmd.is_none());
+        assert!(config.env.is_none());
     }
 }

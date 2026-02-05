@@ -41,15 +41,15 @@ pub fn extract_layer(
     match compression {
         LayerCompression::None => {
             extract_tar(reader, target_dir)?;
-        }
+        },
         LayerCompression::Gzip => {
             let decoder = GzDecoder::new(reader);
             extract_tar(decoder, target_dir)?;
-        }
+        },
         LayerCompression::Zstd => {
             let decoder = zstd::Decoder::new(reader)?;
             extract_tar(decoder, target_dir)?;
-        }
+        },
     }
 
     Ok(())

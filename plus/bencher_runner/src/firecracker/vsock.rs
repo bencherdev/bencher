@@ -58,7 +58,12 @@ impl VsockListener {
         let output_file_path = format!("{vsock_uds_path}_{}", ports::OUTPUT_FILE);
 
         // Remove stale socket files
-        for path in [&stdout_path, &stderr_path, &exit_code_path, &output_file_path] {
+        for path in [
+            &stdout_path,
+            &stderr_path,
+            &exit_code_path,
+            &output_file_path,
+        ] {
             let _ = std::fs::remove_file(path);
         }
 
@@ -147,7 +152,12 @@ impl VsockListener {
 
     /// Remove all socket files created by this listener.
     pub fn cleanup(&self) {
-        for port in [ports::STDOUT, ports::STDERR, ports::EXIT_CODE, ports::OUTPUT_FILE] {
+        for port in [
+            ports::STDOUT,
+            ports::STDERR,
+            ports::EXIT_CODE,
+            ports::OUTPUT_FILE,
+        ] {
             let path = format!("{}_{port}", self.vsock_uds_path);
             let _ = std::fs::remove_file(path);
         }
@@ -166,9 +176,7 @@ fn try_accept_and_read(listener: &UnixListener) -> Option<Vec<u8>> {
 
     // Set blocking with a read timeout for the data stream
     stream.set_nonblocking(false).ok();
-    stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .ok();
+    stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
 
     let mut data = Vec::new();
     let mut buf = [0u8; 8192];
@@ -180,7 +188,7 @@ fn try_accept_and_read(listener: &UnixListener) -> Option<Vec<u8>> {
                 if data.len() >= MAX_DATA_SIZE {
                     break;
                 }
-            }
+            },
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
             Err(e) if e.kind() == std::io::ErrorKind::TimedOut => break,
             Err(_) => break,

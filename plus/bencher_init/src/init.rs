@@ -66,7 +66,8 @@ fn console_log(msg: &str) {
     {
         use std::io::Write;
         // Try stdout first
-        let written = unsafe { libc::write(libc::STDOUT_FILENO, bytes.as_ptr().cast(), bytes.len()) };
+        let written =
+            unsafe { libc::write(libc::STDOUT_FILENO, bytes.as_ptr().cast(), bytes.len()) };
         if written > 0 {
             return;
         }
@@ -186,9 +187,11 @@ fn run_init() -> Result<(), InitError> {
     match send_results(&result, config.output_file.as_deref()) {
         Ok(()) => console_log("results sent via vsock"),
         Err(e) => {
-            console_log(&format!("vsock failed ({e}), falling back to serial output"));
+            console_log(&format!(
+                "vsock failed ({e}), falling back to serial output"
+            ));
             output_results_serial(&result);
-        }
+        },
     }
 
     // Step 8: Shutdown
@@ -294,7 +297,7 @@ fn is_mounted(path: &str) -> bool {
     // by comparing device IDs of the path and its parent
     if let (Ok(path_stat), Ok(parent_stat)) = (
         std::fs::metadata(path),
-        std::fs::metadata(Path::new(path).parent().unwrap_or(Path::new("/")))
+        std::fs::metadata(Path::new(path).parent().unwrap_or(Path::new("/"))),
     ) {
         use std::os::unix::fs::MetadataExt;
         // Different device ID means different filesystem = mounted
@@ -432,7 +435,7 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
             // If we get here, exec failed
             eprintln!("exec failed: {}", io::Error::last_os_error());
             unsafe { libc::_exit(127) };
-        }
+        },
         child_pid => {
             // Parent process
             // Close write ends
@@ -443,7 +446,7 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
 
             // Wait for child while collecting output and reaping zombies
             wait_for_child(child_pid, stdout_read, stderr_read)
-        }
+        },
     }
 }
 
@@ -492,15 +495,15 @@ fn wait_for_child(
         // Try to read from pipes
         let mut buf = [0u8; 4096];
         match stdout_file.read(&mut buf) {
-            Ok(0) => {}
+            Ok(0) => {},
             Ok(n) => stdout_buf.extend_from_slice(&buf[..n]),
-            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {}
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {},
             Err(e) => eprintln!("stdout read error: {e}"),
         }
         match stderr_file.read(&mut buf) {
-            Ok(0) => {}
+            Ok(0) => {},
             Ok(n) => stderr_buf.extend_from_slice(&buf[..n]),
-            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {}
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {},
             Err(e) => eprintln!("stderr read error: {e}"),
         }
 
@@ -559,10 +562,7 @@ fn wait_for_child(
 }
 
 /// Send benchmark results via vsock.
-fn send_results(
-    result: &BenchmarkResult,
-    output_file: Option<&str>,
-) -> Result<(), InitError> {
+fn send_results(result: &BenchmarkResult, output_file: Option<&str>) -> Result<(), InitError> {
     // Send stdout
     send_vsock(ports::STDOUT, &result.stdout)?;
 
@@ -608,7 +608,7 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
                 last_err = Some(e);
                 // Brief backoff before retry
                 std::thread::sleep(std::time::Duration::from_millis(100 * (attempt as u64 + 1)));
-            }
+            },
         }
     }
 

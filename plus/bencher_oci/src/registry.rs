@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::fs;
 
-use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
@@ -51,19 +51,20 @@ impl ImageReference {
     /// - `registry.com/user/image:tag` -> registry.com/user/image:tag
     /// - `registry.com/image@sha256:...` -> registry.com/image@sha256:...
     pub fn parse(reference: &str) -> Result<Self, OciError> {
-        let (name, tag_or_digest, is_digest) = if let Some((name, digest)) = reference.split_once('@') {
-            (name, digest.to_owned(), true)
-        } else if let Some((name, tag)) = reference.rsplit_once(':') {
-            // Check if the colon is part of a port number
-            if name.contains('/') || !tag.chars().all(|c| c.is_ascii_digit()) {
-                (name, tag.to_owned(), false)
+        let (name, tag_or_digest, is_digest) =
+            if let Some((name, digest)) = reference.split_once('@') {
+                (name, digest.to_owned(), true)
+            } else if let Some((name, tag)) = reference.rsplit_once(':') {
+                // Check if the colon is part of a port number
+                if name.contains('/') || !tag.chars().all(|c| c.is_ascii_digit()) {
+                    (name, tag.to_owned(), false)
+                } else {
+                    // It's a port, not a tag
+                    (reference, "latest".to_owned(), false)
+                }
             } else {
-                // It's a port, not a tag
                 (reference, "latest".to_owned(), false)
-            }
-        } else {
-            (reference, "latest".to_owned(), false)
-        };
+            };
 
         // Parse registry and repository
         let (registry, repository) = Self::parse_name(name);
@@ -84,15 +85,17 @@ impl ImageReference {
             [image] => {
                 // Just image name: docker.io/library/image
                 ("docker.io".to_owned(), format!("library/{image}"))
-            }
-            [first, rest] if first.contains('.') || first.contains(':') || *first == "localhost" => {
+            },
+            [first, rest]
+                if first.contains('.') || first.contains(':') || *first == "localhost" =>
+            {
                 // Has a registry prefix
                 ((*first).to_owned(), (*rest).to_owned())
-            }
+            },
             _ => {
                 // user/image format: docker.io/user/image
                 ("docker.io".to_owned(), name.to_owned())
-            }
+            },
         }
     }
 
@@ -100,7 +103,10 @@ impl ImageReference {
     #[must_use]
     pub fn full_name(&self) -> String {
         let sep = if self.is_digest { "@" } else { ":" };
-        format!("{}/{}{}{}", self.registry, self.repository, sep, self.reference)
+        format!(
+            "{}/{}{}{}",
+            self.registry, self.repository, sep, self.reference
+        )
     }
 }
 
@@ -174,7 +180,9 @@ impl RegistryClient {
         let (manifest_digest, manifest_bytes) = self.pull_manifest(image_ref)?;
 
         // Save manifest blob
-        let manifest_hash = manifest_digest.strip_prefix("sha256:").unwrap_or(&manifest_digest);
+        let manifest_hash = manifest_digest
+            .strip_prefix("sha256:")
+            .unwrap_or(&manifest_digest);
         let manifest_path = blobs_dir.join(manifest_hash);
         fs::write(&manifest_path, &manifest_bytes)?;
 
@@ -187,7 +195,9 @@ impl RegistryClient {
             let manifests = manifest
                 .get("manifests")
                 .and_then(|m| m.as_array())
-                .ok_or_else(|| OciError::Registry("Invalid index: no manifests array".to_owned()))?;
+                .ok_or_else(|| {
+                    OciError::Registry("Invalid index: no manifests array".to_owned())
+                })?;
 
             let first = manifests
                 .first()
@@ -202,7 +212,9 @@ impl RegistryClient {
             let (_, nested_bytes) = self.pull_blob(image_ref, nested_digest)?;
 
             // Save nested manifest blob
-            let nested_hash = nested_digest.strip_prefix("sha256:").unwrap_or(nested_digest);
+            let nested_hash = nested_digest
+                .strip_prefix("sha256:")
+                .unwrap_or(nested_digest);
             let nested_path = blobs_dir.join(nested_hash);
             fs::write(&nested_path, &nested_bytes)?;
 
@@ -219,7 +231,9 @@ impl RegistryClient {
             .ok_or_else(|| OciError::Registry("Manifest missing config digest".to_owned()))?;
 
         let (_, config_bytes) = self.pull_blob(image_ref, config_digest)?;
-        let config_hash = config_digest.strip_prefix("sha256:").unwrap_or(config_digest);
+        let config_hash = config_digest
+            .strip_prefix("sha256:")
+            .unwrap_or(config_digest);
         let config_path = blobs_dir.join(config_hash);
         fs::write(&config_path, &config_bytes)?;
 
@@ -260,10 +274,7 @@ impl RegistryClient {
     }
 
     /// Pull an image manifest.
-    fn pull_manifest(
-        &mut self,
-        image_ref: &ImageReference,
-    ) -> Result<(String, Vec<u8>), OciError> {
+    fn pull_manifest(&mut self, image_ref: &ImageReference) -> Result<(String, Vec<u8>), OciError> {
         let url = format!(
             "https://{}/v2/{}/manifests/{}",
             image_ref.registry, image_ref.repository, image_ref.reference
@@ -409,10 +420,7 @@ impl RegistryClient {
 
         if !response.status().is_success() {
             let status = response.status();
-            let body = response
-                .into_body()
-                .read_to_string()
-                .unwrap_or_default();
+            let body = response.into_body().read_to_string().unwrap_or_default();
             return Err(OciError::Registry(format!(
                 "Token request failed with status {status}: {body}"
             )));

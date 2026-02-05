@@ -23,6 +23,7 @@ pub enum RunnerMessage {
         exit_code: Option<i32>,
         error: String,
     },
+    Cancelled,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,8 +50,8 @@ impl JobChannel {
             .body(())
             .map_err(|e| WebSocketError::Connection(format!("Failed to build request: {e}")))?;
 
-        let (ws, _response) = tungstenite::connect(request)
-            .map_err(|e| WebSocketError::Connection(e.to_string()))?;
+        let (ws, _response) =
+            tungstenite::connect(request).map_err(|e| WebSocketError::Connection(e.to_string()))?;
 
         Ok(Self { ws })
     }
@@ -75,30 +76,27 @@ impl JobChannel {
 
         match result {
             Ok(Message::Text(text)) => {
-                let msg: ServerMessage =
-                    serde_json::from_str(&text).map_err(|e| {
-                        WebSocketError::UnexpectedMessage(format!(
-                            "Failed to parse server message: {e} (raw: {text})"
-                        ))
-                    })?;
+                let msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
+                    WebSocketError::UnexpectedMessage(format!(
+                        "Failed to parse server message: {e} (raw: {text})"
+                    ))
+                })?;
                 Ok(Some(msg))
-            }
+            },
             Ok(Message::Ping(data)) => {
                 // Respond to ping with pong
                 self.ws
                     .send(Message::Pong(data))
                     .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 Ok(None)
-            }
+            },
             Ok(Message::Close(_)) => Err(WebSocketError::Receive(
                 "Server closed connection".to_owned(),
             )),
             Ok(_) => Ok(None),
-            Err(tungstenite::Error::Io(e))
-                if e.kind() == std::io::ErrorKind::WouldBlock =>
-            {
+            Err(tungstenite::Error::Io(e)) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 Ok(None)
-            }
+            },
             Err(e) => Err(WebSocketError::Receive(e.to_string())),
         }
     }
@@ -115,27 +113,26 @@ impl JobChannel {
 
         match result {
             Ok(Message::Text(text)) => {
-                let msg: ServerMessage =
-                    serde_json::from_str(&text).map_err(|e| {
-                        WebSocketError::UnexpectedMessage(format!(
-                            "Failed to parse server message: {e} (raw: {text})"
-                        ))
-                    })?;
+                let msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
+                    WebSocketError::UnexpectedMessage(format!(
+                        "Failed to parse server message: {e} (raw: {text})"
+                    ))
+                })?;
                 Ok(Some(msg))
-            }
+            },
             Ok(Message::Ping(data)) => {
                 self.ws
                     .send(Message::Pong(data))
                     .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 Ok(None)
-            }
+            },
             Ok(_) => Ok(None),
             Err(tungstenite::Error::Io(e))
                 if e.kind() == std::io::ErrorKind::WouldBlock
                     || e.kind() == std::io::ErrorKind::TimedOut =>
             {
                 Ok(None)
-            }
+            },
             Err(e) => Err(WebSocketError::Receive(e.to_string())),
         }
     }
@@ -146,7 +143,7 @@ impl JobChannel {
         loop {
             match self.ws.read() {
                 Ok(Message::Close(_)) | Err(_) => break,
-                Ok(_) => {}
+                Ok(_) => {},
             }
         }
     }
@@ -243,6 +240,12 @@ mod tests {
         assert_eq!(json["event"], "failed");
         assert!(json["exit_code"].is_null());
         assert_eq!(json["error"], "timeout");
+    }
+
+    #[test]
+    fn cancelled_serializes() {
+        let json = serde_json::to_string(&RunnerMessage::Cancelled).unwrap();
+        assert_eq!(json, r#"{"event":"cancelled"}"#);
     }
 
     // --- ServerMessage deserialization ---
