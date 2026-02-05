@@ -31,7 +31,8 @@ env:
   GITHUB_REGISTRY: ghcr.io
   API_DOCKER_IMAGE: bencher-api
   CONSOLE_DOCKER_IMAGE: bencher-console
-  CACHE_NAME: ${{ github.ref_name }}
+  # Use head_ref for PRs (avoids `/merge` suffix), otherwise use ref_name
+  CACHE_NAME: ${{ github.head_ref || github.ref_name }}
   WASM_BENCHER_VALID: bencher-valid-pkg
   LITESTREAM_ARCH: amd64
 
@@ -150,6 +151,9 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set cache name
+        id: cache-name
+        run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
       - name: Build API Docker Image
         uses: docker/build-push-action@v6
         with:
@@ -160,8 +164,8 @@ jobs:
             MOLD_VERSION=${{ inputs.mold-version }}
             LITESTREAM_VERSION=${{ inputs.litestream-version }}
             LITESTREAM_ARCH=${{ env.LITESTREAM_ARCH }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
           load: true
           push: false
       - name: Save API Docker Image
@@ -191,14 +195,17 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set cache name
+        id: cache-name
+        run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
       - name: Build Console Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./services/console/Dockerfile
           tags: ${{ env.CONSOLE_DOCKER_IMAGE }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
           load: true
           push: false
       - name: Save Console Docker Image

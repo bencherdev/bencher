@@ -1,4 +1,4 @@
-### `plus.oci`
+### `plus.registry`
 
 このセクションでは、OCI（Open Container Initiative）レジストリストレージの設定を指定します。
 BencherはOCI準拠のコンテナ/アーティファクトレジストリとして機能できます。
@@ -23,5 +23,5 @@ S3ベースのストレージを設定してください。
 |      data_store.service      |                              "aws_s3"                               |    ---     |  はい  |                               ストレージサービスタイプを指定します。                          |
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |    ---     |  はい  |                                         AWSアクセスキーID。                                   |
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |    ---     |  はい  |                                    AWSシークレットアクセスキー。                              |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci" |    ---     |  はい  |           S3アクセスポイントARN。アクセスポイント名の後にオプションのパスプレフィックス。     |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |    ---     |  はい  |           S3アクセスポイントARN。アクセスポイント名の後にオプションのパスプレフィックス。     |
 |       upload_timeout         |                                3600                                 |    3600    | いいえ | アップロードセッションのタイムアウト（秒）。古いアップロードは新しいアップロード開始時にクリーンアップされます。 |

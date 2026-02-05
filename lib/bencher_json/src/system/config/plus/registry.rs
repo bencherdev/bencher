@@ -6,12 +6,12 @@ use serde::{Deserialize, Serialize};
 /// Default upload timeout: 1 hour (3600 seconds)
 pub const DEFAULT_UPLOAD_TIMEOUT_SECS: u64 = 3600;
 
-/// OCI Registry configuration
+/// Container registry configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonOci {
-    /// S3 storage configuration for OCI registry
-    pub data_store: OciDataStore,
+pub struct JsonRegistry {
+    /// S3 storage configuration for the container registry
+    pub data_store: RegistryDataStore,
     /// Upload session timeout in seconds.
     /// Uploads older than this are cleaned up when new uploads start.
     /// Defaults to 3600 (1 hour).
@@ -23,27 +23,27 @@ fn default_upload_timeout() -> u64 {
     DEFAULT_UPLOAD_TIMEOUT_SECS
 }
 
-impl Sanitize for JsonOci {
+impl Sanitize for JsonRegistry {
     fn sanitize(&mut self) {
         self.data_store.sanitize();
     }
 }
 
-/// OCI Registry storage backend
+/// Container registry storage backend
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(tag = "service", rename_all = "snake_case")]
-pub enum OciDataStore {
+pub enum RegistryDataStore {
     AwsS3 {
         access_key_id: String,
         secret_access_key: Secret,
         /// S3 Access Point ARN with optional path prefix
-        /// Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/oci-path]
+        /// Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/path]
         access_point: String,
     },
 }
 
-impl Sanitize for OciDataStore {
+impl Sanitize for RegistryDataStore {
     fn sanitize(&mut self) {
         match self {
             Self::AwsS3 {

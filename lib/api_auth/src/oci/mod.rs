@@ -115,9 +115,10 @@ pub async fn auth_oci_token_get(
     // 4. Check admin status for pull requests
     // Only server admins can pull OCI images (to prevent abuse of the registry)
     if actions.contains(&"pull".to_owned()) {
-        let query_user = QueryUser::get_with_email(public_conn!(context), &email)
+        let conn = public_conn!(context);
+        let query_user = QueryUser::get_with_email(conn, &email)
             .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-        let auth_user = AuthUser::load(public_conn!(context), query_user)
+        let auth_user = AuthUser::load(conn, query_user)
             .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
 
         if !auth_user.is_admin(&context.rbac) {
@@ -136,38 +137,42 @@ pub async fn auth_oci_token_get(
         && let Some(repo_name) = &repository
         // The repository name is a project UUID or slug
         && let Ok(project_id) = repo_name.parse::<ProjectResourceId>()
-        && let Ok(query_project) =
-            QueryProject::from_resource_id(public_conn!(context), &project_id)
     {
-        // Check if the organization is claimed
-        let is_claimed = if let Ok(org) = query_project.organization(public_conn!(context)) {
-            org.is_claimed(public_conn!(context)).unwrap_or(false)
-        } else {
-            false
-        };
+        // Use a single connection for all RBAC queries to reduce pool pressure
+        let conn = public_conn!(context);
+        if let Ok(query_project) = QueryProject::from_resource_id(conn, &project_id) {
+            // Check if the organization is claimed
+            let is_claimed = if let Ok(org) = query_project.organization(conn) {
+                org.is_claimed(conn).unwrap_or(false)
+            } else {
+                false
+            };
 
-        // Only require RBAC permissions if the organization is claimed
-        if is_claimed {
-            // Load the user to check permissions
-            let query_user = QueryUser::get_with_email(public_conn!(context), &email)
-                .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-            let auth_user = AuthUser::load(public_conn!(context), query_user)
-                .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-
-            // Check if user has Create permission for push
-            query_project
-                .try_allowed(&context.rbac, &auth_user, Permission::Create)
-                .map_err(|_| {
-                    HttpError::for_client_error(
-                        None,
-                        ClientErrorStatusCode::FORBIDDEN,
-                        format!(
-                            "Access denied to repository: {repo_name}. You need Create permission to push.",
-                        ),
-                    )
+            // Only require RBAC permissions if the organization is claimed
+            if is_claimed {
+                // Load the user to check permissions
+                let query_user = QueryUser::get_with_email(conn, &email).map_err(|_| {
+                    unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref())
                 })?;
+                let auth_user = AuthUser::load(conn, query_user).map_err(|_| {
+                    unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref())
+                })?;
+
+                // Check if user has Create permission for push
+                query_project
+                    .try_allowed(&context.rbac, &auth_user, Permission::Create)
+                    .map_err(|_| {
+                        HttpError::for_client_error(
+                            None,
+                            ClientErrorStatusCode::FORBIDDEN,
+                            format!(
+                                "Access denied to repository: {repo_name}. You need Create permission to push.",
+                            ),
+                        )
+                    })?;
+            }
+            // If organization is unclaimed, skip RBAC check and issue token
         }
-        // If organization is unclaimed, skip RBAC check and issue token
     }
     // If the project doesn't exist (or we couldn't parse the repository name),
     // we still issue the token. This is intentional to avoid information disclosure

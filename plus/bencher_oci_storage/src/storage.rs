@@ -23,7 +23,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{
     ProjectResourceId, Secret,
-    system::config::{DEFAULT_UPLOAD_TIMEOUT_SECS, OciDataStore},
+    system::config::{DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
 };
 use bytes::Bytes;
 use chrono::Utc;
@@ -159,13 +159,15 @@ pub struct OciStorageConfig {
 
 /// Upload state stored in S3 for cross-instance consistency
 ///
-/// ## Buffer Chunk Storage (O(1) appends)
+/// ## Buffer Chunk Storage (O(1) appends, race-free)
 ///
 /// Instead of storing a single buffer that grows with each append (O(n²) I/O),
-/// we store each incoming chunk as a separate S3 object. At completion, we
-/// stream through all chunks to compute the hash and upload multipart parts.
+/// we store each incoming chunk as a separate S3 object with a unique key
+/// (timestamp + UUID). At completion, we list all chunks, sort by key, and
+/// stream through them to compute the hash and upload multipart parts.
 ///
-/// This reduces append operations from O(n²) to O(n) total I/O.
+/// This reduces append operations from O(n²) to O(n) total I/O, and eliminates
+/// race conditions by not relying on shared mutable state for chunk numbering.
 #[derive(Debug, Serialize, Deserialize)]
 struct UploadState {
     /// S3 multipart upload ID
@@ -174,10 +176,6 @@ struct UploadState {
     repository: String,
     /// Completed parts with their `ETag`s
     parts: Vec<CompletedPartInfo>,
-    /// Number of buffer chunks stored (each chunk is a separate S3 object)
-    buffer_chunk_count: u32,
-    /// Total bytes across all buffer chunks
-    buffer_total_size: u64,
     /// Unix timestamp when the upload was created
     created_at: i64,
 }
@@ -194,11 +192,6 @@ impl UploadState {
     /// Total bytes in completed parts
     fn completed_parts_size(&self) -> u64 {
         self.parts.iter().map(|p| p.size).sum()
-    }
-
-    /// Total bytes uploaded (completed parts + buffer chunks)
-    fn total_size(&self) -> u64 {
-        self.completed_parts_size() + self.buffer_total_size
     }
 
     /// Next part number to use
@@ -239,13 +232,13 @@ impl OciStorage {
     /// are cleaned up. Pass `None` to use the default (1 hour).
     pub fn try_from_config(
         log: Logger,
-        data_store: Option<OciDataStore>,
+        data_store: Option<RegistryDataStore>,
         database_path: &Path,
         upload_timeout: Option<u64>,
     ) -> Result<Self, OciStorageError> {
         let timeout = upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS);
         match data_store {
-            Some(OciDataStore::AwsS3 {
+            Some(RegistryDataStore::AwsS3 {
                 access_key_id,
                 secret_access_key,
                 access_point,
@@ -562,16 +555,26 @@ impl OciS3Storage {
         format!("{}/{}/state.json", self.global_prefix(), upload_id)
     }
 
-    /// Returns the S3 key for a buffer chunk
+    /// Returns the S3 key prefix for buffer chunks
     ///
     /// Buffer chunks are stored separately to avoid O(n²) read-modify-write
-    /// operations. Each append creates a new chunk object.
-    fn upload_buffer_chunk_key(&self, upload_id: &UploadId, chunk_num: u32) -> String {
+    /// operations. Each append creates a new chunk object with a unique key.
+    fn upload_chunks_prefix(&self, upload_id: &UploadId) -> String {
+        format!("{}/{}/chunks/", self.global_prefix(), upload_id)
+    }
+
+    /// Returns a unique S3 key for a new buffer chunk
+    ///
+    /// Uses timestamp (nanoseconds) + UUID for uniqueness and ordering.
+    /// The timestamp ensures chunks are sorted in creation order when listed.
+    fn new_chunk_key(&self, upload_id: &UploadId) -> String {
+        let timestamp = Utc::now().timestamp_nanos_opt().unwrap_or(0);
+        let uuid = uuid::Uuid::new_v4();
         format!(
-            "{}/{}/chunks/{:08}",
+            "{}/{}/chunks/{:020}_{uuid}",
             self.global_prefix(),
             upload_id,
-            chunk_num
+            timestamp
         )
     }
 
@@ -684,16 +687,20 @@ impl OciS3Storage {
         Ok(())
     }
 
-    /// Stores a buffer chunk to S3
+    /// Stores a buffer chunk to S3 with a unique key
     ///
-    /// This is an O(1) operation - no read-modify-write cycle.
+    /// This is an O(1) operation with no race conditions - each chunk gets
+    /// a unique key based on timestamp + UUID, so concurrent appends don't
+    /// interfere with each other.
+    ///
+    /// Returns the size of the stored chunk.
     async fn store_buffer_chunk(
         &self,
         upload_id: &UploadId,
-        chunk_num: u32,
         data: Bytes,
-    ) -> Result<(), OciStorageError> {
-        let key = self.upload_buffer_chunk_key(upload_id, chunk_num);
+    ) -> Result<u64, OciStorageError> {
+        let key = self.new_chunk_key(upload_id);
+        let size = data.len() as u64;
         self.client
             .put_object()
             .bucket(&self.config.bucket_arn)
@@ -702,21 +709,16 @@ impl OciS3Storage {
             .send()
             .await
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
-        Ok(())
+        Ok(size)
     }
 
-    /// Loads a buffer chunk from S3
-    async fn load_buffer_chunk(
-        &self,
-        upload_id: &UploadId,
-        chunk_num: u32,
-    ) -> Result<Bytes, OciStorageError> {
-        let key = self.upload_buffer_chunk_key(upload_id, chunk_num);
+    /// Loads a buffer chunk from S3 by its full key
+    async fn load_buffer_chunk_by_key(&self, key: &str) -> Result<Bytes, OciStorageError> {
         let response = self
             .client
             .get_object()
             .bucket(&self.config.bucket_arn)
-            .key(&key)
+            .key(key)
             .send()
             .await
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
@@ -731,8 +733,56 @@ impl OciS3Storage {
         Ok(data)
     }
 
+    /// Lists all buffer chunks for an upload, sorted by key (which ensures chronological order)
+    ///
+    /// Returns a list of (key, size) tuples.
+    async fn list_buffer_chunks(
+        &self,
+        upload_id: &UploadId,
+    ) -> Result<Vec<(String, u64)>, OciStorageError> {
+        let prefix = self.upload_chunks_prefix(upload_id);
+        let mut chunks = Vec::new();
+        let mut continuation_token: Option<String> = None;
+
+        loop {
+            let mut request = self
+                .client
+                .list_objects_v2()
+                .bucket(&self.config.bucket_arn)
+                .prefix(&prefix);
+
+            if let Some(token) = continuation_token.take() {
+                request = request.continuation_token(token);
+            }
+
+            let response = request
+                .send()
+                .await
+                .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+            if let Some(contents) = response.contents {
+                for object in contents {
+                    if let Some(key) = object.key {
+                        let size = u64::try_from(object.size.unwrap_or(0)).unwrap_or(0);
+                        chunks.push((key, size));
+                    }
+                }
+            }
+
+            if response.is_truncated == Some(true) {
+                continuation_token = response.next_continuation_token;
+            } else {
+                break;
+            }
+        }
+
+        // Sort by key to ensure chronological order (keys are timestamp-prefixed)
+        chunks.sort_by(|a, b| a.0.cmp(&b.0));
+        Ok(chunks)
+    }
+
     /// Deletes all upload-related objects from S3
-    async fn cleanup_upload(&self, upload_id: &UploadId, chunk_count: u32) {
+    async fn cleanup_upload(&self, upload_id: &UploadId) {
         // Best effort cleanup - ignore errors
         let state_key = self.upload_state_key(upload_id);
         let data_key = self.upload_data_key(upload_id);
@@ -755,16 +805,17 @@ impl OciS3Storage {
             .send()
             .await;
 
-        // Delete all buffer chunks
-        for i in 0..chunk_count {
-            let chunk_key = self.upload_buffer_chunk_key(upload_id, i);
-            let _unused = self
-                .client
-                .delete_object()
-                .bucket(&self.config.bucket_arn)
-                .key(&chunk_key)
-                .send()
-                .await;
+        // Delete all buffer chunks by listing them first
+        if let Ok(chunks) = self.list_buffer_chunks(upload_id).await {
+            for (chunk_key, _size) in chunks {
+                let _unused = self
+                    .client
+                    .delete_object()
+                    .bucket(&self.config.bucket_arn)
+                    .key(&chunk_key)
+                    .send()
+                    .await;
+            }
         }
     }
 
@@ -816,8 +867,6 @@ impl OciS3Storage {
             s3_upload_id,
             repository: repository.to_string(),
             parts: Vec::new(),
-            buffer_chunk_count: 0,
-            buffer_total_size: 0,
             created_at: Utc::now().timestamp(),
         };
         self.save_upload_state(&upload_id, &state).await?;
@@ -827,35 +876,39 @@ impl OciS3Storage {
 
     /// Appends data to an in-progress upload
     ///
-    /// Each append is stored as a separate chunk in S3 (O(1) operation).
-    /// Chunks are combined and hashed at completion time.
+    /// Each append is stored as a separate chunk in S3 with a unique key
+    /// (timestamp + UUID). This is race-free because concurrent appends
+    /// create independent objects rather than modifying shared state.
+    ///
+    /// Chunks are listed, sorted, and combined at completion time.
     pub async fn append_upload(
         &self,
         upload_id: &UploadId,
         data: Bytes,
     ) -> Result<u64, OciStorageError> {
-        // Load current state
-        let mut state = self.load_upload_state(upload_id).await?;
+        // Verify upload exists (we don't need to modify state for appends)
+        let state = self.load_upload_state(upload_id).await?;
 
-        // Store new data as a separate chunk (O(1) - no read-modify-write)
-        let chunk_num = state.buffer_chunk_count;
-        let data_len = data.len() as u64;
-        self.store_buffer_chunk(upload_id, chunk_num, data).await?;
+        // Store data as a new chunk with unique key (race-free)
+        self.store_buffer_chunk(upload_id, data).await?;
 
-        // Update state
-        state.buffer_chunk_count += 1;
-        state.buffer_total_size += data_len;
+        // Calculate total size from completed parts + all chunks
+        // This is the authoritative size, discovered by listing
+        let chunks = self.list_buffer_chunks(upload_id).await?;
+        let buffer_total_size: u64 = chunks.iter().map(|(_key, size)| size).sum();
 
-        // Save updated state
-        self.save_upload_state(upload_id, &state).await?;
-
-        Ok(state.total_size())
+        Ok(state.completed_parts_size() + buffer_total_size)
     }
 
     /// Gets the current size of an in-progress upload
+    ///
+    /// Lists all buffer chunks to get the authoritative total size,
+    /// avoiding race conditions from concurrent appends.
     pub async fn get_upload_size(&self, upload_id: &UploadId) -> Result<u64, OciStorageError> {
         let state = self.load_upload_state(upload_id).await?;
-        Ok(state.total_size())
+        let chunks = self.list_buffer_chunks(upload_id).await?;
+        let buffer_total_size: u64 = chunks.iter().map(|(_key, size)| size).sum();
+        Ok(state.completed_parts_size() + buffer_total_size)
     }
 
     /// Completes an upload and stores the blob
@@ -881,8 +934,10 @@ impl OciS3Storage {
     ) -> Result<Digest, OciStorageError> {
         // Load state
         let mut state = self.load_upload_state(upload_id).await?;
-        let chunk_count = state.buffer_chunk_count;
         let data_key = self.upload_data_key(upload_id);
+
+        // List all buffer chunks (sorted by key for chronological order)
+        let chunks = self.list_buffer_chunks(upload_id).await?;
 
         // If there are stale parts from an interrupted completion attempt,
         // abort the old multipart upload and start fresh to ensure consistency
@@ -914,8 +969,8 @@ impl OciS3Storage {
         }
 
         // Must have some data
-        if chunk_count == 0 && state.parts.is_empty() {
-            self.cleanup_upload(upload_id, 0).await;
+        if chunks.is_empty() && state.parts.is_empty() {
+            self.cleanup_upload(upload_id).await;
             return Err(OciStorageError::InvalidContent(
                 "Cannot complete upload with no data".to_owned(),
             ));
@@ -925,9 +980,9 @@ impl OciS3Storage {
         let mut hasher = Sha256::new();
         let mut part_buffer = Vec::new();
 
-        for chunk_num in 0..chunk_count {
-            // Load chunk
-            let chunk = self.load_buffer_chunk(upload_id, chunk_num).await?;
+        for (chunk_key, _size) in &chunks {
+            // Load chunk by key
+            let chunk = self.load_buffer_chunk_by_key(chunk_key).await?;
 
             // Update hash incrementally (no egress cost - we're reading to process)
             hasher.update(&chunk);
@@ -951,7 +1006,7 @@ impl OciS3Storage {
 
         // Must have at least one part for S3 multipart completion
         if state.parts.is_empty() {
-            self.cleanup_upload(upload_id, chunk_count).await;
+            self.cleanup_upload(upload_id).await;
             return Err(OciStorageError::InvalidContent(
                 "Cannot complete upload with no data".to_owned(),
             ));
@@ -972,7 +1027,7 @@ impl OciS3Storage {
                 .upload_id(&state.s3_upload_id)
                 .send()
                 .await;
-            self.cleanup_upload(upload_id, chunk_count).await;
+            self.cleanup_upload(upload_id).await;
             return Err(OciStorageError::DigestMismatch {
                 expected: expected_digest.to_string(),
                 actual: actual_digest.to_string(),
@@ -1029,7 +1084,7 @@ impl OciS3Storage {
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
 
         // Clean up temporary objects
-        self.cleanup_upload(upload_id, chunk_count).await;
+        self.cleanup_upload(upload_id).await;
 
         Ok(actual_digest)
     }
@@ -1072,7 +1127,7 @@ impl OciS3Storage {
 
     /// Cancels an in-progress upload
     pub async fn cancel_upload(&self, upload_id: &UploadId) -> Result<(), OciStorageError> {
-        // Load state to get S3 upload ID and chunk count
+        // Load state to get S3 upload ID
         let state = self.load_upload_state(upload_id).await?;
         let data_key = self.upload_data_key(upload_id);
 
@@ -1086,9 +1141,8 @@ impl OciS3Storage {
             .send()
             .await;
 
-        // Clean up (including all buffer chunks)
-        self.cleanup_upload(upload_id, state.buffer_chunk_count)
-            .await;
+        // Clean up (lists and deletes all buffer chunks)
+        self.cleanup_upload(upload_id).await;
 
         Ok(())
     }
@@ -1741,6 +1795,10 @@ impl S3Arn {
 /// Cleans up all stale uploads in S3 that have exceeded the timeout.
 ///
 /// This is a standalone async function that can be spawned as a background task.
+#[expect(
+    clippy::too_many_lines,
+    reason = "Stale upload cleanup logic is self-contained and benefits from being in one place"
+)]
 async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, upload_timeout: u64) {
     let global_prefix = match &config.prefix {
         Some(prefix) => format!("{prefix}/_uploads"),
@@ -1829,15 +1887,41 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
                 .send()
                 .await;
 
-            // Delete all buffer chunks
-            for i in 0..state.buffer_chunk_count {
-                let chunk_key = format!("{global_prefix}/{upload_id}/chunks/{i:08}");
-                let _unused = client
-                    .delete_object()
+            // Delete all buffer chunks by listing them
+            let chunks_prefix = format!("{global_prefix}/{upload_id}/chunks/");
+            let mut continuation_token: Option<String> = None;
+            loop {
+                let mut request = client
+                    .list_objects_v2()
                     .bucket(&config.bucket_arn)
-                    .key(&chunk_key)
-                    .send()
-                    .await;
+                    .prefix(&chunks_prefix);
+
+                if let Some(token) = continuation_token.take() {
+                    request = request.continuation_token(token);
+                }
+
+                let Ok(response) = request.send().await else {
+                    break;
+                };
+
+                if let Some(contents) = response.contents {
+                    for object in contents {
+                        if let Some(chunk_key) = object.key {
+                            let _unused = client
+                                .delete_object()
+                                .bucket(&config.bucket_arn)
+                                .key(&chunk_key)
+                                .send()
+                                .await;
+                        }
+                    }
+                }
+
+                if response.is_truncated == Some(true) {
+                    continuation_token = response.next_continuation_token;
+                } else {
+                    break;
+                }
             }
         }
     }

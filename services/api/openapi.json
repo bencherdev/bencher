@@ -10213,6 +10213,13 @@
       "JsonDatabase": {
         "type": "object",
         "properties": {
+          "busy_timeout": {
+            "nullable": true,
+            "description": "The database busy timeout in milliseconds",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "data_store": {
             "nullable": true,
             "allOf": [
@@ -10379,13 +10386,6 @@
       "JsonLitestream": {
         "type": "object",
         "properties": {
-          "busy_timeout": {
-            "nullable": true,
-            "description": "The database busy timeout in milliseconds",
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
-          },
           "replicas": {
             "description": "Disaster recovery replicas",
             "type": "array",
@@ -11461,30 +11461,6 @@
           "user"
         ]
       },
-      "JsonOci": {
-        "description": "OCI Registry configuration",
-        "type": "object",
-        "properties": {
-          "data_store": {
-            "description": "S3 storage configuration for OCI registry",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OciDataStore"
-              }
-            ]
-          },
-          "upload_timeout": {
-            "description": "Upload session timeout in seconds. Uploads older than this are cleaned up when new uploads start. Defaults to 3600 (1 hour).",
-            "default": 3600,
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "data_store"
-        ]
-      },
       "JsonOneMetric": {
         "type": "object",
         "properties": {
@@ -12081,19 +12057,19 @@
               }
             ]
           },
-          "oci": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonOci"
-              }
-            ]
-          },
           "rate_limiting": {
             "nullable": true,
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonRateLimiting"
+              }
+            ]
+          },
+          "registry": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRegistry"
               }
             ]
           },
@@ -12416,6 +12392,30 @@
         "required": [
           "min_score",
           "secret"
+        ]
+      },
+      "JsonRegistry": {
+        "description": "Container registry configuration",
+        "type": "object",
+        "properties": {
+          "data_store": {
+            "description": "S3 storage configuration for the container registry",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegistryDataStore"
+              }
+            ]
+          },
+          "upload_timeout": {
+            "description": "Upload session timeout in seconds. Uploads older than this are cleaned up when new uploads start. Defaults to 3600 (1 hour).",
+            "default": 3600,
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "data_store"
         ]
       },
       "JsonRemoveModel": {
@@ -14287,38 +14287,6 @@
       "NonEmpty": {
         "type": "string"
       },
-      "OciDataStore": {
-        "description": "OCI Registry storage backend",
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "access_key_id": {
-                "type": "string"
-              },
-              "access_point": {
-                "description": "S3 Access Point ARN with optional path prefix Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/oci-path]",
-                "type": "string"
-              },
-              "secret_access_key": {
-                "$ref": "#/components/schemas/Secret"
-              },
-              "service": {
-                "type": "string",
-                "enum": [
-                  "aws_s3"
-                ]
-              }
-            },
-            "required": [
-              "access_key_id",
-              "access_point",
-              "secret_access_key",
-              "service"
-            ]
-          }
-        ]
-      },
       "OrganizationRole": {
         "oneOf": [
           {
@@ -14397,6 +14365,38 @@
       "RecaptchaScore": {
         "type": "number",
         "format": "float"
+      },
+      "RegistryDataStore": {
+        "description": "Container registry storage backend",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "access_key_id": {
+                "type": "string"
+              },
+              "access_point": {
+                "description": "S3 Access Point ARN with optional path prefix Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/path]",
+                "type": "string"
+              },
+              "secret_access_key": {
+                "$ref": "#/components/schemas/Secret"
+              },
+              "service": {
+                "type": "string",
+                "enum": [
+                  "aws_s3"
+                ]
+              }
+            },
+            "required": [
+              "access_key_id",
+              "access_point",
+              "secret_access_key",
+              "service"
+            ]
+          }
+        ]
       },
       "ReportUuid": {
         "type": "string",

@@ -31,7 +31,8 @@
       "access_key_id": "ABC123DoRemMiABC123",
       "secret_access_key": "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7",
       "access_point": "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket/path/to/backup/dir"
-    }
+    },
+    "busy_timeout": 5000
   },
   "smtp": {
     "hostname": "mailbonobo.com",
@@ -44,7 +45,6 @@
   },
   "plus": {
     "disaster_recovery": {
-      "busy_timeout": 5000,
       "replicas": [
         {
           "scheme": "s3",
@@ -55,12 +55,12 @@
         }
       ]
     },
-    "oci": {
+    "registry": {
       "data_store": {
         "service": "aws_s3",
         "access_key_id": "AKIAIOSFODNN7EXAMPLE",
         "secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-        "access_point": "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/oci"
+        "access_point": "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry"
       },
       "upload_timeout": 3600
     },
