@@ -11,15 +11,29 @@ A pull-based runner agent architecture where runners claim jobs from the API, ex
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Bencher CLI    │     │  Bencher API    │     │  Runner Agent   │
-│  (submits jobs) │────▶│  (job queue)    │◀────│  (polls/claims) │
+│  (submits jobs) │────▶│ api.bencher.dev │◀────│  (polls/claims) │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
-                               │                        │
-                               ▼                        ▼
-                        ┌─────────────┐          ┌─────────────┐
-                        │   SQLite    │          │  Bare Metal │
-                        │  (jobs tbl) │          │   Machine   │
-                        └─────────────┘          └─────────────┘
+        │                      │                        │
+        │               ┌──────┴──────┐                 │
+        │               ▼             ▼                 │
+        │        ┌───────────┐ ┌─────────────┐          │
+        │        │  SQLite   │ │ OCI Registry│◀─────────┤
+        │        │ (jobs tbl)│ │ registry.   │  (pulls  │
+        │        └───────────┘ │ bencher.dev │  images) │
+        │                      └─────────────┘          │
+        │                             ▲                 ▼
+        └─────────────────────────────┘          ┌─────────────┐
+                (pushes images)                  │  Bare Metal │
+                                                 │   Machine   │
+                                                 └─────────────┘
 ```
+
+**Flow:**
+1. CLI pushes benchmark OCI image to `registry.bencher.dev/{project}/...`
+2. CLI submits job to API with image digest
+3. Runner claims job from API, receives `JsonJobSpec`
+4. Runner pulls image from registry using project-scoped OCI auth
+5. Runner executes image in isolated VM, reports results via WebSocket
 
 ## Runner States
 
@@ -69,11 +83,9 @@ CREATE TABLE job (
     id UUID PRIMARY KEY,
     report_id UUID NOT NULL REFERENCES report(id) ON DELETE CASCADE,
 
-    -- Job specification
+    -- Job specification (JsonJobSpec serialized as JSON)
     status INTEGER NOT NULL DEFAULT 0,  -- JobStatus enum
-    spec JSONB NOT NULL,                -- Repository, command, env, etc.
-    required_labels JSONB DEFAULT '[]',
-    timeout_seconds INTEGER NOT NULL DEFAULT 3600,
+    spec JSONB NOT NULL,                -- JsonJobSpec
     priority INTEGER NOT NULL DEFAULT 0,  -- 0 = free, 100 = plus
 
     -- Execution tracking
@@ -90,6 +102,21 @@ CREATE TABLE job (
     created TIMESTAMP NOT NULL,
     modified TIMESTAMP NOT NULL
 );
+
+-- Note: The `spec` column contains JsonJobSpec:
+-- {
+--   "registry": "https://registry.bencher.dev",
+--   "project": "<project-uuid>",
+--   "digest": "sha256:...",
+--   "entrypoint": ["./run.sh"],      // optional
+--   "cmd": ["--iterations", "100"],  // optional
+--   "env": {"KEY": "value"},         // optional
+--   "vcpu": 4,
+--   "memory": 8589934592,            // 8 GB in bytes
+--   "disk": 21474836480,             // 20 GB in bytes
+--   "timeout": 3600,
+--   "network": false
+-- }
 
 -- Index for job claiming (ordered by priority, then FIFO)
 CREATE INDEX idx_job_pending
@@ -111,27 +138,42 @@ pub enum JobStatus {
 
 ## Job Spec Structure
 
+The job spec is designed to minimize data sent to runners, reducing leakage risk. Runners only receive what's necessary to pull and execute an OCI image.
+
 ```rust
-pub struct JobSpec {
-    // Source
-    pub repository: Url,
-    pub branch: Option<String>,
-    pub commit: Option<GitHash>,
-
-    // Execution
-    pub setup_command: Option<String>,   // e.g., "cargo build --release"
-    pub benchmark_command: String,        // e.g., "cargo bench"
-    pub adapter: Option<Adapter>,         // How to parse output
-
-    // Environment
-    pub env: HashMap<String, String>,
-    pub working_dir: Option<PathBuf>,
-
-    // Timing
-    pub timeout_seconds: u32,
-    pub expected_seconds: Option<u32>,    // Hint for UI
+/// Job specification sent to runners when claiming a job.
+/// Defined in `bencher_json`, with `ImageDigest` validated in `bencher_valid`.
+pub struct JsonJobSpec {
+    /// Registry URL for pulling the OCI image (e.g., "https://registry.bencher.dev")
+    pub registry: Url,
+    /// Project UUID for OCI authentication scoping
+    pub project: ProjectUuid,
+    /// Image digest - must be immutable (e.g., "sha256:abc123...")
+    pub digest: ImageDigest,
+    /// Entrypoint override (like Docker ENTRYPOINT)
+    pub entrypoint: Option<Vec<String>>,
+    /// Command override (like Docker CMD)
+    pub cmd: Option<Vec<String>>,
+    /// Environment variables passed to the container
+    pub env: Option<HashMap<String, String>>,
+    /// Number of virtual CPUs for the VM
+    pub vcpu: u32,
+    /// Memory size in bytes
+    pub memory: u64,
+    /// Disk size in bytes
+    pub disk: u64,
+    /// Maximum execution time in seconds
+    pub timeout: u32,
+    /// Whether the VM has network access
+    pub network: bool,
 }
 ```
+
+**Design principles:**
+- **Minimal information**: Runner doesn't know repo URL, branch, commit, or benchmark commands directly
+- **Immutable reference**: Digest (not tag) ensures the image can't change between job creation and execution
+- **Isolated execution**: VM resources (vcpu, memory, disk) and network access are explicit
+- **OCI-based**: All benchmark code is packaged in an OCI image, pulled from the Bencher registry
 
 ## API Endpoints
 
@@ -187,30 +229,34 @@ pub struct RunnerCreated {
 
 ```rust
 // Request
-pub struct ClaimRequest {
-    pub labels: Vec<String>,        // Runner's current capabilities
-    pub poll_timeout_seconds: u32,  // Max 60
+pub struct JsonClaimJob {
+    pub poll_timeout: Option<u32>,  // 1-60 seconds, default 30
 }
 
 // Response (after job available or timeout)
-pub struct ClaimResponse {
-    pub job: Option<Job>,  // None if timeout with no jobs
-}
+// Returns Option<JsonJob> - None if timeout with no jobs
 
-pub struct Job {
-    pub uuid: Uuid,
-    pub project: ProjectInfo,       // Which project this job belongs to
-    pub spec: JobSpec,
-    pub timeout_seconds: u32,
+/// Job returned to runner on claim (includes spec for execution)
+pub struct JsonJob {
+    pub uuid: JobUuid,
+    pub status: JobStatus,
+    pub spec: JsonJobSpec,          // What to execute (see Job Spec Structure)
+    pub runner: Option<RunnerUuid>,
+    pub claimed: Option<DateTime>,
+    pub started: Option<DateTime>,
+    pub completed: Option<DateTime>,
+    pub exit_code: Option<i32>,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 ```
 
 The claim endpoint:
-1. Applies IP-based rate limiting to prevent abuse of long-polling
-2. Finds pending jobs across all projects where `required_labels` ⊆ runner's `labels`
+1. Applies per-runner rate limiting to prevent abuse of long-polling
+2. Finds pending jobs ordered by `(priority DESC, created ASC)`
 3. Atomically updates job status to `claimed`, sets `runner_id` and `claimed`
 4. If no matching jobs, holds connection open until timeout or job arrives
-5. Returns job (including project context) or empty response on timeout
+5. Returns job with spec or `None` on timeout
 
 ### WebSocket /v0/runners/{runner}/jobs/{job}/channel - Job Execution Channel
 
@@ -360,32 +406,38 @@ User submits job via CLI or API
 ```
 1. Idle: Long-poll POST /v0/runners/{runner}/jobs
                 │
-                ▼ (job received, includes report context)
+                ▼ (job received with JsonJobSpec)
 2. Job "claimed" implicitly via claim response
                 │
                 ▼
 3. Open WebSocket: /v0/runners/{runner}/jobs/{job}/channel
                 │
                 ▼
-4. Clone repo, run setup_command
+4. Authenticate to OCI registry using runner token + project UUID
+   Pull image from registry.bencher.dev/{project}/images@{digest}
                 │
                 ▼
-5. Send { "event": "running" } over WebSocket
+5. Create VM with spec constraints (vcpu, memory, disk, network)
+   Load OCI image into VM
+                │
+                ▼
+6. Send { "event": "running" } over WebSocket
    - Heartbeat thread starts (pinned to separate CPU core)
    - Main benchmark cores isolated
                 │
                 ▼
-6. Execute benchmark_command
+7. Execute image (with optional entrypoint/cmd/env overrides)
    - Heartbeat messages sent ~1/sec over WebSocket
    - Server may send { "event": "cancel" } at any time
    - On cancel: stop execution, send { "event": "cancelled" }, close
+   - Timeout enforced per job spec
                 │
                 ▼
-7. Send { "event": "completed", ... } or { "event": "failed", ... }
+8. Send { "event": "completed", ... } or { "event": "failed", ... }
    - Results attached to the Report
                 │
                 ▼
-8. Close WebSocket, return to idle
+9. Destroy VM, close WebSocket, return to idle
 ```
 
 ## Billing & Priority
@@ -490,9 +542,12 @@ This token is scoped to:
 - [x] **Usage billing**: ~~How to track?~~ **Decided: Stripe usage-based pricing** - Heartbeats trigger per-minute billing to Stripe
 - [x] **Heartbeat protocol**: ~~UDP? WebSocket? gRPC stream?~~ **Decided: WebSocket** - Low overhead, immediate cancellation, connection-based liveness detection
 - [x] **Stale job recovery**: ~~Periodic reaper or per-job timeout?~~ **Decided: Per-job timeout** - Spawned on WS disconnect and at startup; no periodic polling
+- [x] **Job spec design**: ~~What info does runner need?~~ **Decided: Minimal OCI-based spec** - Registry URL, project UUID, image digest, entrypoint/cmd/env overrides, VM resources (vcpu/memory/disk), timeout, network access
 - [ ] **Result storage**: Store in job table or separate results table linked to existing perf tables?
 - [ ] **Output storage**: Store benchmark output from WebSocket `completed` messages (currently dropped). Needed before the runner feature is usable end-to-end.
 - [ ] **Retry policy**: Auto-retry failed jobs? How many times?
+- [ ] **Job spec persistence**: Currently `spec` is stored as JSON string in job table. Need to implement `JsonJobSpec` type in `bencher_json` and `ImageDigest` validation in `bencher_valid`.
+- [ ] **OCI auth for runners**: How does runner authenticate to registry? Options: (a) runner token directly, (b) exchange runner token for short-lived OCI token via API, (c) job claim response includes OCI token.
 
 ## Implementation Phases
 
