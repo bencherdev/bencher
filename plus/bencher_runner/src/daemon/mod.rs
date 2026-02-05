@@ -2,10 +2,10 @@
 // where `Daemon::run()` is a stub.
 #![cfg_attr(not(target_os = "linux"), allow(dead_code))]
 
-#[cfg(target_os = "linux")]
-use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(not(target_os = "linux"))]
 use std::sync::atomic::AtomicBool;
+#[cfg(target_os = "linux")]
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use url::Url;
 
@@ -19,13 +19,13 @@ mod websocket;
 pub use error::DaemonError;
 
 #[cfg(target_os = "linux")]
-use std::time::Duration;
-#[cfg(target_os = "linux")]
 use api_client::{ClaimRequest, RunnerApiClient};
 #[cfg(target_os = "linux")]
 use error::ApiClientError;
 #[cfg(target_os = "linux")]
-use job::{execute_job, JobOutcome};
+use job::{JobOutcome, execute_job};
+#[cfg(target_os = "linux")]
+use std::time::Duration;
 
 #[cfg(target_os = "linux")]
 const TRANSIENT_RETRY_DELAY: Duration = Duration::from_secs(5);
@@ -41,8 +41,6 @@ pub struct DaemonConfig {
     pub labels: Vec<String>,
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
-    pub default_vcpus: u8,
-    pub default_memory_mib: u32,
 }
 
 pub struct Daemon {
@@ -100,44 +98,39 @@ impl Daemon {
                     match execute_job(&self.config, &job, &ws_url) {
                         Ok(JobOutcome::Completed { .. }) => {
                             println!("Job {job_uuid} completed successfully");
-                        }
+                        },
                         Ok(JobOutcome::Failed { error, .. }) => {
                             println!("Job {job_uuid} failed: {error}");
-                        }
+                        },
                         Ok(JobOutcome::Canceled) => {
                             println!("Job {job_uuid} was canceled");
-                        }
+                        },
                         Err(e) => {
                             println!("Job {job_uuid} error: {e}");
-                        }
+                        },
                     }
 
                     println!("Polling for jobs...");
-                }
+                },
                 Ok(None) => {
                     // No job available, loop back to poll
-                }
+                },
                 Err(ApiClientError::Unauthorized | ApiClientError::InvalidToken) => {
                     println!("Authentication failed. Check runner token.");
                     return Err(ApiClientError::Unauthorized.into());
-                }
+                },
                 Err(e) => {
                     println!("Error claiming job: {e}");
-                    println!(
-                        "Retrying in {} seconds...",
-                        TRANSIENT_RETRY_DELAY.as_secs()
-                    );
+                    println!("Retrying in {} seconds...", TRANSIENT_RETRY_DELAY.as_secs());
                     std::thread::sleep(TRANSIENT_RETRY_DELAY);
-                }
+                },
             }
         }
     }
 
     #[cfg(not(target_os = "linux"))]
     pub fn run(self) -> Result<(), DaemonError> {
-        Err(DaemonError::Config(
-            "Daemon requires Linux".to_owned(),
-        ))
+        Err(DaemonError::Config("Daemon requires Linux".to_owned()))
     }
 }
 

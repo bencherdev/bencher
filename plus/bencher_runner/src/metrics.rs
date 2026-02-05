@@ -72,7 +72,10 @@ pub fn format_metrics(metrics: &RunMetrics) -> Option<String> {
     Some(format!("---BENCHER_METRICS:{json}---"))
 }
 
-#[expect(clippy::struct_field_names, reason = "matches cgroup cpu.stat field names")]
+#[expect(
+    clippy::struct_field_names,
+    reason = "matches cgroup cpu.stat field names"
+)]
 struct CpuStat {
     usage_usec: u64,
     user_usec: u64,
@@ -91,7 +94,7 @@ fn read_cpu_stat(cgroup_path: &Path) -> Option<CpuStat> {
             (Some("usage_usec"), Some(v)) => usage = v.parse().ok(),
             (Some("user_usec"), Some(v)) => user = v.parse().ok(),
             (Some("system_usec"), Some(v)) => system = v.parse().ok(),
-            _ => {}
+            _ => {},
         }
     }
 

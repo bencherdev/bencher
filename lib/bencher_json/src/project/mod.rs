@@ -18,6 +18,8 @@ pub mod benchmark;
 pub mod boundary;
 pub mod branch;
 pub mod head;
+#[cfg(feature = "plus")]
+pub mod job;
 pub mod measure;
 pub mod metric;
 pub mod model;

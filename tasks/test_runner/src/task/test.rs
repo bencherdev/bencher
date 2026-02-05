@@ -201,10 +201,7 @@ fn run_benchmark() -> anyhow::Result<()> {
     println!("VM Configuration:");
     println!(
         "  Kernel: {}",
-        config
-            .kernel
-            .as_ref()
-            .map_or("(bundled)", |p| p.as_str())
+        config.kernel.as_ref().map_or("(bundled)", |p| p.as_str())
     );
     println!("  OCI Image: {}", config.oci_image);
     println!("  vCPUs: {}", config.vcpus);

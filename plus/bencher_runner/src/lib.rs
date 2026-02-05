@@ -26,15 +26,16 @@ pub mod firecracker;
 pub mod firecracker_bin;
 #[cfg(target_os = "linux")]
 pub mod init;
+pub mod jail;
 #[cfg(target_os = "linux")]
 pub mod kernel;
-pub mod jail;
 pub mod metrics;
 mod run;
 pub mod tuning;
+pub mod units;
 
 pub use config::Config;
 pub use error::RunnerError;
 pub use jail::ResourceLimits;
-pub use run::{execute, resolve_oci_image, run, run_with_args, RunArgs};
+pub use run::{RunArgs, execute, resolve_oci_image, run, run_with_args};
 pub use tuning::TuningConfig;

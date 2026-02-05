@@ -40,10 +40,10 @@ pub fn docker_available() -> bool {
                         drop(child.kill());
                         false
                     }
-                }
+                },
                 Err(_) => false,
             }
-        }
+        },
         Err(_) => false,
     }
 }

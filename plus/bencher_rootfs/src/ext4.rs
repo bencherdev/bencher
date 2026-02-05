@@ -67,10 +67,12 @@ pub fn create_ext4_with_size(
     // mkfs.ext4 -d option copies directory contents during creation
     let output = Command::new("mkfs.ext4")
         .args([
-            "-F",                    // Force, even if the file exists
-            "-q",                    // Quiet mode
-            "-m", "0",               // No reserved blocks
-            "-d", source_dir.as_str(), // Populate from directory
+            "-F", // Force, even if the file exists
+            "-q", // Quiet mode
+            "-m",
+            "0", // No reserved blocks
+            "-d",
+            source_dir.as_str(), // Populate from directory
             output_path.as_str(),
         ])
         .output()
@@ -121,7 +123,9 @@ mod tests {
     #[test]
     fn sparse_file_creation() {
         let temp_dir = tempfile::tempdir().unwrap();
-        let image_path = Utf8Path::from_path(temp_dir.path()).unwrap().join("test.img");
+        let image_path = Utf8Path::from_path(temp_dir.path())
+            .unwrap()
+            .join("test.img");
 
         create_sparse_file(&image_path, 64).unwrap();
 

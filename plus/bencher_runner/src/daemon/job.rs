@@ -6,16 +6,24 @@ use std::sync::{Arc, Mutex};
 #[cfg(target_os = "linux")]
 use std::time::Duration;
 
+#[cfg(target_os = "linux")]
+use super::DaemonConfig;
 use super::api_client::ClaimedJob;
 #[cfg(target_os = "linux")]
 use super::error::{DaemonError, WebSocketError};
 #[cfg(target_os = "linux")]
 use super::websocket::{JobChannel, RunnerMessage, ServerMessage};
-use super::DaemonConfig;
+use crate::units::bytes_to_mib;
 
 pub enum JobOutcome {
-    Completed { exit_code: i32, output: Option<String> },
-    Failed { exit_code: Option<i32>, error: String },
+    Completed {
+        exit_code: i32,
+        output: Option<String>,
+    },
+    Failed {
+        exit_code: Option<i32>,
+        error: String,
+    },
     Canceled,
 }
 
@@ -30,14 +38,14 @@ pub fn execute_job(
     let ws = JobChannel::connect(ws_url, &config.token)?;
     let ws = Arc::new(Mutex::new(ws));
 
-    // Build runner Config from claimed job spec
-    let job_config = build_config_from_job(config, job);
+    // Build runner Config from claimed job spec (all values from job spec, no defaults)
+    let job_config = build_config_from_job(job);
 
     // Send Running status
     {
-        let mut ws_guard = ws.lock().map_err(|e| {
-            WebSocketError::Send(format!("Failed to lock WebSocket: {e}"))
-        })?;
+        let mut ws_guard = ws
+            .lock()
+            .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
         ws_guard.send_message(&RunnerMessage::Running)?;
     }
 
@@ -62,9 +70,11 @@ pub fn execute_job(
     // Check if canceled
     if cancel_flag.load(Ordering::SeqCst) {
         println!("Job {} was canceled by server", job.uuid);
-        let mut ws_guard = ws.lock().map_err(|e| {
-            WebSocketError::Send(format!("Failed to lock WebSocket: {e}"))
-        })?;
+        let mut ws_guard = ws
+            .lock()
+            .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
+        // Send Cancelled message to notify server
+        drop(ws_guard.send_message(&RunnerMessage::Cancelled));
         ws_guard.close();
         return Ok(JobOutcome::Canceled);
     }
@@ -76,9 +86,9 @@ pub fn execute_job(
                 exit_code: 0,
                 output: Some(output),
             };
-            let mut ws_guard = ws.lock().map_err(|e| {
-                WebSocketError::Send(format!("Failed to lock WebSocket: {e}"))
-            })?;
+            let mut ws_guard = ws
+                .lock()
+                .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
             ws_guard.send_message(&msg)?;
             // Wait for Ack with 5s timeout
             drop(ws_guard.read_message_timeout(Duration::from_secs(5)));
@@ -87,16 +97,16 @@ pub fn execute_job(
                 exit_code: 0,
                 output: None,
             }
-        }
+        },
         Err(e) => {
             let error_msg = e.to_string();
             let msg = RunnerMessage::Failed {
                 exit_code: None,
                 error: error_msg.clone(),
             };
-            let mut ws_guard = ws.lock().map_err(|e| {
-                WebSocketError::Send(format!("Failed to lock WebSocket: {e}"))
-            })?;
+            let mut ws_guard = ws
+                .lock()
+                .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
             ws_guard.send_message(&msg)?;
             // Wait for Ack with 5s timeout
             drop(ws_guard.read_message_timeout(Duration::from_secs(5)));
@@ -105,35 +115,54 @@ pub fn execute_job(
                 exit_code: None,
                 error: error_msg,
             }
-        }
+        },
     };
 
     Ok(outcome)
 }
 
-fn build_config_from_job(
-    daemon_config: &DaemonConfig,
-    job: &ClaimedJob,
-) -> crate::Config {
-    let vcpus = job.spec.vcpus.unwrap_or(daemon_config.default_vcpus);
-    let memory_mib = job.spec.memory_mib.unwrap_or(daemon_config.default_memory_mib);
-    let timeout_secs = u64::from(job.spec.timeout_seconds);
+/// Build a runner Config from the claimed job spec.
+///
+/// All values come directly from the job spec - there are no daemon defaults.
+/// Memory and disk are converted from bytes (API) to MiB (Firecracker).
+fn build_config_from_job(job: &ClaimedJob) -> crate::Config {
+    let spec = &job.spec;
 
-    // Use the repository URL as the OCI image reference
-    let oci_image = job.spec.repository.to_string();
+    // Convert bytes to MiB for Firecracker (rounds up)
+    let memory_mib = bytes_to_mib(spec.memory);
+    let disk_mib = bytes_to_mib(spec.disk);
+
+    // Build OCI image URL: registry/project/images@digest
+    let registry_str = spec.registry.as_str().trim_end_matches('/');
+    let oci_image = format!("{registry_str}/{}/images@{}", spec.project, spec.digest);
+
+    // vcpu is u32 in the spec, but Config expects u8
+    // Clamp to u8::MAX if larger (unlikely in practice)
+    let vcpus = if spec.vcpu > u32::from(u8::MAX) {
+        u8::MAX
+    } else {
+        // This cast is safe because we just checked that vcpu <= u8::MAX
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "Checked that value fits in u8 above"
+        )]
+        let result = spec.vcpu as u8;
+        result
+    };
 
     crate::Config::new(oci_image)
         .with_vcpus(vcpus)
         .with_memory_mib(memory_mib)
-        .with_timeout_secs(timeout_secs)
+        .with_disk_mib(disk_mib)
+        .with_timeout_secs(u64::from(spec.timeout))
+        .with_network(spec.network)
+        .with_entrypoint_opt(spec.entrypoint.clone())
+        .with_cmd_opt(spec.cmd.clone())
+        .with_env_opt(spec.env.clone())
 }
 
 #[cfg(target_os = "linux")]
-fn heartbeat_loop(
-    ws: &Arc<Mutex<JobChannel>>,
-    cancel_flag: &AtomicBool,
-    stop_flag: &AtomicBool,
-) {
+fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
     loop {
         std::thread::sleep(Duration::from_secs(1));
 
@@ -153,8 +182,8 @@ fn heartbeat_loop(
             Ok(Some(ServerMessage::Cancel)) => {
                 cancel_flag.store(true, Ordering::SeqCst);
                 break;
-            }
-            Ok(_) => {}
+            },
+            Ok(_) => {},
             Err(_) => break,
         }
     }
@@ -163,31 +192,58 @@ fn heartbeat_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tuning::TuningConfig;
+    use crate::units::mib_to_bytes;
 
-    fn test_daemon_config(vcpus: u8, memory_mib: u32) -> DaemonConfig {
-        DaemonConfig {
-            host: url::Url::parse("http://localhost:61016/").unwrap(),
-            token: "bencher_runner_test".to_owned(),
-            runner: "test-runner".to_owned(),
-            labels: vec![],
-            poll_timeout_secs: 55,
-            tuning: TuningConfig::disabled(),
-            default_vcpus: vcpus,
-            default_memory_mib: memory_mib,
+    fn test_job(
+        vcpu: u32,
+        memory_bytes: u64,
+        disk_bytes: u64,
+        timeout: u32,
+        network: bool,
+    ) -> ClaimedJob {
+        let spec_json = serde_json::json!({
+            "registry": "https://registry.bencher.dev",
+            "project": "11111111-2222-3333-4444-555555555555",
+            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+            "vcpu": vcpu,
+            "memory": memory_bytes,
+            "disk": disk_bytes,
+            "timeout": timeout,
+            "network": network,
+        });
+        let spec: super::super::api_client::JobSpec = serde_json::from_value(spec_json).unwrap();
+
+        ClaimedJob {
+            uuid: uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+            spec,
+            timeout_seconds: timeout,
         }
     }
 
-    fn test_job(vcpus: Option<u8>, memory_mib: Option<u32>, timeout: u32) -> ClaimedJob {
+    fn test_job_with_options(
+        vcpu: u32,
+        memory_bytes: u64,
+        disk_bytes: u64,
+        timeout: u32,
+        network: bool,
+        entrypoint: Option<Vec<String>>,
+        cmd: Option<Vec<String>>,
+        env: Option<std::collections::HashMap<String, String>>,
+    ) -> ClaimedJob {
         let spec_json = serde_json::json!({
-            "repository": "https://github.com/org/repo",
-            "benchmark_command": "cargo bench",
-            "timeout_seconds": timeout,
-            "vcpus": vcpus,
-            "memory_mib": memory_mib,
+            "registry": "https://registry.bencher.dev",
+            "project": "11111111-2222-3333-4444-555555555555",
+            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+            "vcpu": vcpu,
+            "memory": memory_bytes,
+            "disk": disk_bytes,
+            "timeout": timeout,
+            "network": network,
+            "entrypoint": entrypoint,
+            "cmd": cmd,
+            "env": env,
         });
-        let spec: super::super::api_client::JobSpec =
-            serde_json::from_value(spec_json).unwrap();
+        let spec: super::super::api_client::JobSpec = serde_json::from_value(spec_json).unwrap();
 
         ClaimedJob {
             uuid: uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
@@ -199,60 +255,129 @@ mod tests {
     // --- build_config_from_job ---
 
     #[test]
-    fn uses_job_spec_vcpus_when_present() {
-        let config = test_daemon_config(1, 512);
-        let job = test_job(Some(4), None, 300);
-        let result = build_config_from_job(&config, &job);
+    fn uses_job_spec_vcpus() {
+        let job = test_job(4, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+        let result = build_config_from_job(&job);
         assert_eq!(result.vcpus, 4);
     }
 
     #[test]
-    fn falls_back_to_daemon_default_vcpus() {
-        let config = test_daemon_config(2, 512);
-        let job = test_job(None, None, 300);
-        let result = build_config_from_job(&config, &job);
-        assert_eq!(result.vcpus, 2);
-    }
-
-    #[test]
-    fn uses_job_spec_memory_when_present() {
-        let config = test_daemon_config(1, 512);
-        let job = test_job(None, Some(2048), 300);
-        let result = build_config_from_job(&config, &job);
+    fn converts_memory_bytes_to_mib() {
+        // 1 GiB in bytes = 1073741824
+        let job = test_job(1, mib_to_bytes(2048), mib_to_bytes(1024), 300, false);
+        let result = build_config_from_job(&job);
         assert_eq!(result.memory_mib, 2048);
     }
 
     #[test]
-    fn falls_back_to_daemon_default_memory() {
-        let config = test_daemon_config(1, 1024);
-        let job = test_job(None, None, 300);
-        let result = build_config_from_job(&config, &job);
-        assert_eq!(result.memory_mib, 1024);
+    fn converts_disk_bytes_to_mib() {
+        // 10 GiB in bytes
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(10240), 300, false);
+        let result = build_config_from_job(&job);
+        assert_eq!(result.disk_mib, 10240);
+    }
+
+    #[test]
+    fn memory_rounds_up() {
+        // 512 MiB + 1 byte should round up to 513 MiB
+        let job = test_job(1, mib_to_bytes(512) + 1, mib_to_bytes(1024), 300, false);
+        let result = build_config_from_job(&job);
+        assert_eq!(result.memory_mib, 513);
     }
 
     #[test]
     fn timeout_converts_u32_to_u64() {
-        let config = test_daemon_config(1, 512);
-        let job = test_job(None, None, 600);
-        let result = build_config_from_job(&config, &job);
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 600, false);
+        let result = build_config_from_job(&job);
         assert_eq!(result.timeout_secs, 600);
     }
 
     #[test]
-    fn repository_url_becomes_oci_image() {
-        let config = test_daemon_config(1, 512);
-        let job = test_job(None, None, 300);
-        let result = build_config_from_job(&config, &job);
-        assert_eq!(result.oci_image, "https://github.com/org/repo");
+    fn builds_oci_image_url() {
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+        let result = build_config_from_job(&job);
+        assert_eq!(
+            result.oci_image,
+            "https://registry.bencher.dev/11111111-2222-3333-4444-555555555555/images@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+        );
     }
 
     #[test]
-    fn both_overrides_present() {
-        let config = test_daemon_config(1, 512);
-        let job = test_job(Some(8), Some(4096), 900);
-        let result = build_config_from_job(&config, &job);
+    fn network_enabled() {
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, true);
+        let result = build_config_from_job(&job);
+        assert!(result.network);
+    }
+
+    #[test]
+    fn network_disabled() {
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+        let result = build_config_from_job(&job);
+        assert!(!result.network);
+    }
+
+    #[test]
+    fn entrypoint_and_cmd() {
+        let job = test_job_with_options(
+            1,
+            mib_to_bytes(512),
+            mib_to_bytes(1024),
+            300,
+            false,
+            Some(vec!["/bin/sh".to_owned()]),
+            Some(vec!["-c".to_owned(), "cargo bench".to_owned()]),
+            None,
+        );
+        let result = build_config_from_job(&job);
+        assert_eq!(result.entrypoint.unwrap(), vec!["/bin/sh"]);
+        assert_eq!(result.cmd.unwrap(), vec!["-c", "cargo bench"]);
+    }
+
+    #[test]
+    fn env_vars() {
+        let mut env = std::collections::HashMap::new();
+        env.insert("RUST_LOG".to_owned(), "debug".to_owned());
+        env.insert("CI".to_owned(), "true".to_owned());
+
+        let job = test_job_with_options(
+            1,
+            mib_to_bytes(512),
+            mib_to_bytes(1024),
+            300,
+            false,
+            None,
+            None,
+            Some(env.clone()),
+        );
+        let result = build_config_from_job(&job);
+        let result_env = result.env.unwrap();
+        assert_eq!(result_env.get("RUST_LOG").unwrap(), "debug");
+        assert_eq!(result_env.get("CI").unwrap(), "true");
+    }
+
+    #[test]
+    fn all_options() {
+        let mut env = std::collections::HashMap::new();
+        env.insert("KEY".to_owned(), "value".to_owned());
+
+        let job = test_job_with_options(
+            8,
+            mib_to_bytes(4096),
+            mib_to_bytes(20480),
+            900,
+            true,
+            Some(vec!["/bin/bash".to_owned()]),
+            Some(vec!["-c".to_owned(), "make bench".to_owned()]),
+            Some(env),
+        );
+        let result = build_config_from_job(&job);
         assert_eq!(result.vcpus, 8);
         assert_eq!(result.memory_mib, 4096);
+        assert_eq!(result.disk_mib, 20480);
         assert_eq!(result.timeout_secs, 900);
+        assert!(result.network);
+        assert!(result.entrypoint.is_some());
+        assert!(result.cmd.is_some());
+        assert!(result.env.is_some());
     }
 }

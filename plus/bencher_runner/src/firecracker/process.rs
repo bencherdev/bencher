@@ -38,9 +38,7 @@ impl FirecrackerProcess {
             .stderr(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| {
-                FirecrackerError::ProcessStart(format!(
-                    "failed to spawn {firecracker_bin}: {e}"
-                ))
+                FirecrackerError::ProcessStart(format!("failed to spawn {firecracker_bin}: {e}"))
             })?;
 
         let process = Self {
@@ -49,9 +47,7 @@ impl FirecrackerProcess {
         };
 
         // Wait for the API socket to become ready
-        process
-            .client()
-            .wait_for_ready(Duration::from_secs(5))?;
+        process.client().wait_for_ready(Duration::from_secs(5))?;
 
         Ok(process)
     }

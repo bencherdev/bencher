@@ -74,7 +74,7 @@ impl Sub {
             #[cfg(not(all(feature = "plus", target_os = "linux")))]
             Self::Unsupported => {
                 anyhow::bail!("bencher-runner requires Linux with the `plus` feature")
-            }
+            },
         }
     }
 }

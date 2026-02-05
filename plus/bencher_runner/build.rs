@@ -42,10 +42,8 @@ const DEFAULT_FIRECRACKER_VERSION: &str = "v1.12.0";
 /// Default kernel URL to download (per-architecture).
 ///
 /// Uses versioned CI build artifacts from the Firecracker project.
-const DEFAULT_KERNEL_URL_X86_64: &str =
-    "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/x86_64/vmlinux-5.10.245";
-const DEFAULT_KERNEL_URL_AARCH64: &str =
-    "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/aarch64/vmlinux-5.10.245";
+const DEFAULT_KERNEL_URL_X86_64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/x86_64/vmlinux-5.10.245";
+const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/aarch64/vmlinux-5.10.245";
 
 fn main() {
     // Only bundle on Linux where we actually use the binaries
@@ -75,8 +73,9 @@ fn main() {
     generate_binary_module("firecracker", &firecracker_path, is_release, &out_dir);
 
     // --- kernel (vmlinux) ---
-    let kernel_path = find_or_download_kernel(&out_dir)
-        .unwrap_or_else(|| panic!("vmlinux kernel not found. Set BENCHER_KERNEL_PATH or ensure download succeeds."));
+    let kernel_path = find_or_download_kernel(&out_dir).unwrap_or_else(|| {
+        panic!("vmlinux kernel not found. Set BENCHER_KERNEL_PATH or ensure download succeeds.")
+    });
     generate_binary_module("kernel", &kernel_path, is_release, &out_dir);
 
     println!("cargo:rerun-if-changed=build.rs");
@@ -96,7 +95,10 @@ fn find_init_binary() -> Option<PathBuf> {
     if let Ok(path) = env::var("BENCHER_INIT_PATH") {
         let path = PathBuf::from(path);
         if path.exists() {
-            eprintln!("Using bencher-init from BENCHER_INIT_PATH: {}", path.display());
+            eprintln!(
+                "Using bencher-init from BENCHER_INIT_PATH: {}",
+                path.display()
+            );
             return Some(path);
         }
     }
@@ -119,12 +121,17 @@ fn find_init_binary() -> Option<PathBuf> {
 
         // Prefer musl target (statically linked) over native/gnu (dynamically linked)
         let candidates = [
-            workspace_root.join("target")
+            workspace_root
+                .join("target")
                 .join(format!("{target_arch}-unknown-linux-musl"))
                 .join(&profile)
                 .join("bencher-init"),
-            workspace_root.join("target").join(&profile).join("bencher-init"),
-            workspace_root.join("target")
+            workspace_root
+                .join("target")
+                .join(&profile)
+                .join("bencher-init"),
+            workspace_root
+                .join("target")
                 .join(format!("{target_arch}-unknown-linux-gnu"))
                 .join(&profile)
                 .join("bencher-init"),
@@ -151,10 +158,16 @@ fn find_or_download_firecracker(out_dir: &Path) -> Option<PathBuf> {
     if let Ok(path) = env::var("BENCHER_FIRECRACKER_PATH") {
         let path = PathBuf::from(path);
         if path.exists() {
-            eprintln!("Using firecracker from BENCHER_FIRECRACKER_PATH: {}", path.display());
+            eprintln!(
+                "Using firecracker from BENCHER_FIRECRACKER_PATH: {}",
+                path.display()
+            );
             return Some(path);
         }
-        eprintln!("WARNING: BENCHER_FIRECRACKER_PATH set but file not found: {}", path.display());
+        eprintln!(
+            "WARNING: BENCHER_FIRECRACKER_PATH set but file not found: {}",
+            path.display()
+        );
     }
 
     // 2. Download from GitHub releases
@@ -165,7 +178,7 @@ fn find_or_download_firecracker(out_dir: &Path) -> Option<PathBuf> {
         _ => {
             eprintln!("Unsupported architecture for firecracker: {target_arch}");
             return None;
-        }
+        },
     };
 
     let dest = out_dir.join("firecracker");
@@ -189,11 +202,11 @@ fn find_or_download_firecracker(out_dir: &Path) -> Option<PathBuf> {
         Ok(()) => {
             eprintln!("Extracted firecracker to: {}", dest.display());
             Some(dest)
-        }
+        },
         Err(e) => {
             eprintln!("WARNING: Failed to download/extract firecracker: {e}");
             None
-        }
+        },
     }
 }
 
@@ -209,7 +222,10 @@ fn find_or_download_kernel(out_dir: &Path) -> Option<PathBuf> {
             eprintln!("Using kernel from BENCHER_KERNEL_PATH: {}", path.display());
             return Some(path);
         }
-        eprintln!("WARNING: BENCHER_KERNEL_PATH set but file not found: {}", path.display());
+        eprintln!(
+            "WARNING: BENCHER_KERNEL_PATH set but file not found: {}",
+            path.display()
+        );
     }
 
     // 2. Download from S3
@@ -220,7 +236,7 @@ fn find_or_download_kernel(out_dir: &Path) -> Option<PathBuf> {
         _ => {
             eprintln!("Unsupported architecture for kernel: {target_arch}");
             return None;
-        }
+        },
     };
 
     let dest = out_dir.join("vmlinux");
@@ -234,11 +250,11 @@ fn find_or_download_kernel(out_dir: &Path) -> Option<PathBuf> {
         Ok(()) => {
             eprintln!("Downloaded vmlinux to: {}", dest.display());
             Some(dest)
-        }
+        },
         Err(e) => {
             eprintln!("WARNING: Failed to download vmlinux kernel: {e}");
             None
-        }
+        },
     }
 }
 
@@ -275,7 +291,10 @@ fn download_and_extract_tgz(url: &str, entry_name: &str, dest: &Path) -> Result<
     let gz = flate2::read::GzDecoder::new(reader);
     let mut archive = tar::Archive::new(gz);
 
-    for entry in archive.entries().map_err(|e| format!("Failed to read tar entries: {e}"))? {
+    for entry in archive
+        .entries()
+        .map_err(|e| format!("Failed to read tar entries: {e}"))?
+    {
         let mut entry = entry.map_err(|e| format!("Failed to read tar entry: {e}"))?;
         let path = entry
             .path()
@@ -387,6 +406,7 @@ pub const {name_upper}_BUNDLED: bool = false;
 "#
         );
 
-        fs::write(&module_path, code).unwrap_or_else(|_| panic!("Failed to write {name} stub module"));
+        fs::write(&module_path, code)
+            .unwrap_or_else(|_| panic!("Failed to write {name} stub module"));
     }
 }

@@ -11,11 +11,9 @@ use crate::parser::TaskKernel;
 /// Uses versioned CI build artifacts for reproducibility.
 /// Format: firecracker-ci/{build-id}/{arch}/vmlinux-{version}
 #[cfg(target_arch = "x86_64")]
-const KERNEL_URL: &str =
-    "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/x86_64/vmlinux-5.10.245";
+const KERNEL_URL: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/x86_64/vmlinux-5.10.245";
 #[cfg(target_arch = "aarch64")]
-const KERNEL_URL: &str =
-    "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/aarch64/vmlinux-5.10.245";
+const KERNEL_URL: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/aarch64/vmlinux-5.10.245";
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 const KERNEL_URL: &str = "";
 

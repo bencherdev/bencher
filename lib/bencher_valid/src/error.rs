@@ -37,7 +37,7 @@ pub enum ValidError {
     #[error("Failed to validate git hash: {0}")]
     GitHash(String),
     #[cfg(feature = "plus")]
-    #[error("Failed to validate image digest: {0}")]
+    #[error("Failed to validate OCI image digest: {0}")]
     ImageDigest(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),

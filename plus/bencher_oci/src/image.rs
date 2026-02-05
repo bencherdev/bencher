@@ -85,10 +85,7 @@ impl ImageConfig {
             .and_then(|c| c.env().as_ref())
             .map(|env| {
                 env.iter()
-                    .filter_map(|e| {
-                        e.split_once('=')
-                            .map(|(k, v)| (k.to_owned(), v.to_owned()))
-                    })
+                    .filter_map(|e| e.split_once('=').map(|(k, v)| (k.to_owned(), v.to_owned())))
                     .collect()
             })
             .unwrap_or_default()

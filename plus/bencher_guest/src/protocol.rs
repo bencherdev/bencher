@@ -186,8 +186,7 @@ mod tests {
 
     #[test]
     fn test_results_serialization() {
-        let results = BenchmarkResults::new()
-            .with_metric("test", 42.0);
+        let results = BenchmarkResults::new().with_metric("test", 42.0);
 
         let json = serde_json::to_string(&results).expect("Failed to serialize");
         assert!(json.contains("\"success\":true"));

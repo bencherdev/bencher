@@ -10,8 +10,8 @@ pub use bencher_valid::{
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
-    LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction,
-    RecaptchaScore, Timeout,
+    ImageDigest, LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel, PlanStatus,
+    RecaptchaAction, RecaptchaScore, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -55,6 +55,8 @@ pub use organization::{
     usage::JsonUsage,
 };
 pub use pagination::{JsonDirection, JsonPagination};
+#[cfg(feature = "plus")]
+pub use project::job::{JobStatus, JobUuid, JsonJobSpec};
 pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectResourceId, ProjectSlug, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},
@@ -108,6 +110,7 @@ pub use system::{
 #[cfg(feature = "plus")]
 pub use system::{
     auth::{JsonOAuth, JsonOAuthUrl, JsonOAuthUser},
+    runner::RunnerUuid,
     server::{
         BooleanParam, JsonServer, JsonServerStats, SelfHostedStartup, SelfHostedStats, ServerUuid,
     },

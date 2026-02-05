@@ -30,12 +30,8 @@ impl FirecrackerClient {
             if Path::new(&self.socket_path).exists() {
                 // Try to connect
                 if let Ok(mut stream) = UnixStream::connect(&self.socket_path) {
-                    stream
-                        .set_read_timeout(Some(Duration::from_secs(1)))
-                        .ok();
-                    stream
-                        .set_write_timeout(Some(Duration::from_secs(1)))
-                        .ok();
+                    stream.set_read_timeout(Some(Duration::from_secs(1))).ok();
+                    stream.set_write_timeout(Some(Duration::from_secs(1))).ok();
 
                     let request = "GET / HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\n\r\n";
                     if stream.write_all(request.as_bytes()).is_ok() {
@@ -56,8 +52,9 @@ impl FirecrackerClient {
 
     /// Configure the machine (vCPUs, memory).
     pub fn put_machine_config(&self, config: &MachineConfig) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize machine config: {e}")))?;
+        let body = serde_json::to_string(config).map_err(|e| {
+            FirecrackerError::ProcessStart(format!("serialize machine config: {e}"))
+        })?;
         let (status, response_body) = self.http_put("/machine-config", &body)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
@@ -158,7 +155,7 @@ impl FirecrackerClient {
                     if response_complete(&response) {
                         break;
                     }
-                }
+                },
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
                 Err(e) if e.kind() == std::io::ErrorKind::TimedOut => break,
                 Err(e) => return Err(FirecrackerError::Io(e)),
@@ -195,8 +192,7 @@ fn response_complete(data: &[u8]) -> bool {
 
 /// Find the end of HTTP headers (position of first \r\n in \r\n\r\n sequence).
 fn find_header_end(data: &[u8]) -> Option<usize> {
-    data.windows(4)
-        .position(|w| w == b"\r\n\r\n")
+    data.windows(4).position(|w| w == b"\r\n\r\n")
 }
 
 /// Parse an HTTP response into status code and body.

@@ -17,7 +17,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use anyhow::{bail, Context as _, Result};
+use anyhow::{Context as _, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::parser::TaskScenarios;
@@ -122,12 +122,12 @@ fn run_all_scenarios(scenarios: &[Scenario]) -> Result<()> {
             Ok(()) => {
                 println!("PASSED");
                 passed += 1;
-            }
+            },
             Err(e) => {
                 println!("FAILED");
                 errors.push((scenario.name, format!("{e:?}")));
                 failed += 1;
-            }
+            },
         }
     }
 
@@ -163,13 +163,18 @@ fn run_scenario(scenario: &Scenario) -> Result<()> {
         .with_context(|| format!("Validation failed for {}", scenario.name))?;
 
     // Cleanup
-    drop(fs::remove_dir_all(image_path.parent().unwrap_or(&image_path)));
+    drop(fs::remove_dir_all(
+        image_path.parent().unwrap_or(&image_path),
+    ));
 
     Ok(())
 }
 
 /// Get all test scenarios.
-#[expect(clippy::too_many_lines, reason = "Each scenario needs its configuration")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "Each scenario needs its configuration"
+)]
 fn all_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
@@ -314,7 +319,10 @@ CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
                     // If SMP starts working, this is even better
                     Ok(())
                 } else {
-                    bail!("Expected timeout or '4' CPUs in output, got: {}", output.stdout)
+                    bail!(
+                        "Expected timeout or '4' CPUs in output, got: {}",
+                        output.stdout
+                    )
                 }
             },
         },
@@ -329,10 +337,7 @@ CMD ["hello", "world"]"#,
                 if output.stdout.contains("hello world") {
                     Ok(())
                 } else {
-                    bail!(
-                        "Expected 'hello world' in output, got: {}",
-                        output.stdout
-                    )
+                    bail!("Expected 'hello world' in output, got: {}", output.stdout)
                 }
             },
         },
@@ -371,9 +376,7 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
                 let combined_len = output.stdout.len() + output.stderr.len();
                 // Output should be bounded - 15MB threshold means our 10MB limit works
                 if combined_len > 15 * 1024 * 1024 {
-                    bail!(
-                        "Output too large ({combined_len} bytes), limit not enforced"
-                    )
+                    bail!("Output too large ({combined_len} bytes), limit not enforced")
                 }
                 // Runner completed (didn't hang or OOM) - that's a pass
                 Ok(())
@@ -426,11 +429,7 @@ CMD ["id"]"#,
                     )
                 }
                 if output.exit_code != 0 {
-                    bail!(
-                        "Runner failed (exit {}): {}",
-                        output.exit_code,
-                        combined
-                    )
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
                 Ok(())
             },
@@ -453,11 +452,7 @@ CMD ["echo", "kvm_test_ok"]"#,
                     )
                 }
                 if output.exit_code != 0 {
-                    bail!(
-                        "Runner failed (exit {}): {}",
-                        output.exit_code,
-                        combined
-                    )
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
                 Ok(())
             },
@@ -480,11 +475,7 @@ CMD ["cat", "/proc/version"]"#,
                     )
                 }
                 if output.exit_code != 0 {
-                    bail!(
-                        "Runner failed (exit {}): {}",
-                        output.exit_code,
-                        combined
-                    )
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
                 Ok(())
             },
@@ -509,10 +500,7 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
                             combined
                         )
                     }
-                    bail!(
-                        "Expected 'write_ok' in output, got: {}",
-                        combined
-                    )
+                    bail!("Expected 'write_ok' in output, got: {}", combined)
                 }
             },
         },
@@ -535,10 +523,7 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
                 if combined.contains("timeout") || combined.contains("Timeout") {
                     Ok(())
                 } else {
-                    bail!(
-                        "Expected timeout error in output, got: {}",
-                        combined
-                    )
+                    bail!("Expected timeout error in output, got: {}", combined)
                 }
             },
         },
@@ -609,11 +594,7 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
                 // from the host. If we see > 50 PIDs, the PID namespace is likely broken.
                 if output.exit_code != 0 {
                     let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!(
-                        "Runner failed (exit {}): {}",
-                        output.exit_code,
-                        combined
-                    )
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
                 if let Ok(count) = output.stdout.trim().parse::<u32>() {
                     if count > 50 {
@@ -642,11 +623,7 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
             validate: |output| {
                 if output.exit_code != 0 {
                     let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!(
-                        "Runner failed (exit {}): {}",
-                        output.exit_code,
-                        combined
-                    )
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
                 if output.stdout.contains("Linux version") {
                     Ok(())
@@ -690,7 +667,9 @@ CMD ["echo", "fast_benchmark"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // Parse metrics from stderr
-                let metrics_line = output.stderr.lines()
+                let metrics_line = output
+                    .stderr
+                    .lines()
                     .find(|l| l.contains("---BENCHER_METRICS:"));
                 let Some(line) = metrics_line else {
                     bail!("No BENCHER_METRICS line found in stderr")
@@ -723,7 +702,9 @@ CMD ["sleep", "3600"]"#,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // The stderr should contain metrics with timed_out: true
-                let metrics_line = output.stderr.lines()
+                let metrics_line = output
+                    .stderr
+                    .lines()
                     .find(|l| l.contains("---BENCHER_METRICS:"));
                 let Some(line) = metrics_line else {
                     // Metrics might not be emitted in all timeout paths
@@ -760,11 +741,7 @@ CMD ["echo", "hmac_test_output"]"#,
             validate: |output| {
                 if output.exit_code != 0 {
                     let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!(
-                        "Runner failed (exit {}): {}",
-                        output.exit_code,
-                        combined
-                    )
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
                 // The HMAC verification log should be in stderr
                 if output.stderr.contains("[HMAC]") {
@@ -792,7 +769,9 @@ CMD ["echo", "hmac_test_output"]"#,
 CMD ["echo", "transport_test"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                let metrics_line = output.stderr.lines()
+                let metrics_line = output
+                    .stderr
+                    .lines()
                     .find(|l| l.contains("---BENCHER_METRICS:"));
                 let Some(line) = metrics_line else {
                     bail!("No BENCHER_METRICS line found in stderr")
