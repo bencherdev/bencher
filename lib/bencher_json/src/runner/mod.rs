@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 pub mod job;
 
 pub use job::{
-    JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobs, JsonUpdateJob, JsonUpdateJobResponse,
+    JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobSpec, JsonJobs, JsonUpdateJob,
+    JsonUpdateJobResponse,
 };
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);

@@ -144,10 +144,13 @@ async fn try_claim_job(
     if updated > 0 {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
-        // Return JSON with updated status (query_job still has Pending status)
+
+        // Parse and return job with spec for runner
+        let spec = query_job.parse_spec()?;
         Ok(Some(JsonJob {
             uuid: query_job.uuid,
             status: JobStatus::Claimed,
+            spec: Some(spec),
             runner: Some(runner_token.runner_uuid),
             claimed: Some(now),
             started: None,

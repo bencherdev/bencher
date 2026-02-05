@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 // Dev dependencies used by integration tests
 #[cfg(test)]
 use bencher_api_tests as _;

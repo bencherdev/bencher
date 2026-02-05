@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JobStatus, JobUuid, JsonJob, RunnerUuid};
+use bencher_json::{DateTime, JobStatus, JobUuid, JsonJob, JsonJobSpec, RunnerUuid};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
     context::DbConnection,
+    error::bad_request_error,
     model::{
         project::report::ReportId,
         runner::{QueryRunner, RunnerId},
@@ -56,6 +57,14 @@ impl QueryJob {
             .map_err(resource_not_found_err!(Job, uuid))
     }
 
+    /// Parse the job spec from JSON string.
+    pub fn parse_spec(&self) -> Result<JsonJobSpec, HttpError> {
+        serde_json::from_str(&self.spec).map_err(|e| {
+            bad_request_error(format!("Failed to parse job spec: {e}"))
+        })
+    }
+
+    /// Convert to JSON for public API (spec is not included).
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
         let runner_uuid = if let Some(runner_id) = self.runner_id {
             QueryRunner::get(conn, runner_id).ok().map(|r| r.uuid)
@@ -66,6 +75,7 @@ impl QueryJob {
         Ok(JsonJob {
             uuid: self.uuid,
             status: self.status,
+            spec: None,
             runner: runner_uuid,
             claimed: self.claimed,
             started: self.started,
@@ -76,11 +86,29 @@ impl QueryJob {
         })
     }
 
-    /// Convert to JSON using a known runner UUID (avoids database lookup).
+    /// Convert to JSON for runner claim response (includes spec).
+    pub fn into_json_for_runner(self, runner_uuid: RunnerUuid) -> Result<JsonJob, HttpError> {
+        let spec = self.parse_spec()?;
+        Ok(JsonJob {
+            uuid: self.uuid,
+            status: self.status,
+            spec: Some(spec),
+            runner: Some(runner_uuid),
+            claimed: self.claimed,
+            started: self.started,
+            completed: self.completed,
+            exit_code: self.exit_code,
+            created: self.created,
+            modified: self.modified,
+        })
+    }
+
+    /// Convert to JSON using a known runner UUID (avoids database lookup, no spec).
     pub fn into_json_with_known_runner(self, runner_uuid: RunnerUuid) -> JsonJob {
         JsonJob {
             uuid: self.uuid,
             status: self.status,
+            spec: None,
             runner: Some(runner_uuid),
             claimed: self.claimed,
             started: self.started,
