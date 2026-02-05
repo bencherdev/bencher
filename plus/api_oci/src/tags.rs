@@ -6,8 +6,10 @@ use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::ProjectResourceId;
 use bencher_oci_storage::OciError;
 use bencher_schema::context::ApiContext;
-use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
-use http::Response;
+use dropshot::{
+    HttpError, HttpResponseHeaders, HttpResponseOk, Path, Query, RequestContext, endpoint,
+};
+use http::header::HeaderValue;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -23,10 +25,30 @@ pub struct TagsPath {
 /// Query parameters for tags list pagination
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TagsQuery {
-    /// Number of tags to return
+    /// Number of tags to return (default: 100)
     pub n: Option<u32>,
     /// Last tag from previous response (for pagination)
     pub last: Option<String>,
+}
+
+/// Headers for OCI tags list response
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OciTagsHeaders {
+    /// CORS: Allow all origins
+    pub access_control_allow_origin: String,
+    /// CORS: Expose headers to client (includes Link when pagination is present)
+    pub access_control_expose_headers: String,
+}
+
+impl OciTagsHeaders {
+    pub fn new(expose_link: bool) -> Self {
+        let expose = if expose_link { "Link" } else { "" };
+        Self {
+            access_control_allow_origin: "*".to_owned(),
+            access_control_expose_headers: expose.to_owned(),
+        }
+    }
 }
 
 /// Response for tags list
@@ -69,7 +91,7 @@ pub async fn oci_tags_list(
     rqctx: RequestContext<ApiContext>,
     path: Path<TagsPath>,
     query: Query<TagsQuery>,
-) -> Result<Response<Body>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<TagsListResponse>, OciTagsHeaders>, HttpError> {
     let context = rqctx.context();
     let path = path.into_inner();
     let query = query.into_inner();
@@ -109,36 +131,41 @@ pub async fn oci_tags_list(
     // Truncate to requested page size
     tags.truncate(page_size);
 
+    // Check if we need to add Link header for pagination
+    let link_header = if has_more {
+        tags.last().map(|last_tag| {
+            let n = query.n.unwrap_or(DEFAULT_PAGE_SIZE);
+            format!(
+                "</v2/{}/tags/list?n={}&last={}>; rel=\"next\"",
+                name_str,
+                n,
+                urlencoding::encode(last_tag)
+            )
+        })
+    } else {
+        None
+    };
+
     // Build response body
     let response_body = TagsListResponse {
-        name: name_str.clone(),
-        tags: tags.clone(),
+        name: name_str,
+        tags,
     };
-    let body = serde_json::to_vec(&response_body)
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to serialize response: {e}")))?;
 
     // Build response with OCI-compliant headers
-    let mut builder = Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, "application/json")
-        .header(http::header::CONTENT_LENGTH, body.len())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+    let mut response = HttpResponseHeaders::new(
+        HttpResponseOk(response_body),
+        OciTagsHeaders::new(link_header.is_some()),
+    );
 
     // Add Link header for pagination if there are more results
-    if has_more && let Some(last_tag) = tags.last() {
-        let n = query.n.unwrap_or(DEFAULT_PAGE_SIZE);
-        let link = format!(
-            "</v2/{}/tags/list?n={}&last={}>; rel=\"next\"",
-            name_str,
-            n,
-            urlencoding::encode(last_tag)
+    if let Some(link) = link_header {
+        response.headers_mut().insert(
+            http::header::LINK,
+            HeaderValue::from_str(&link)
+                .map_err(|e| HttpError::for_internal_error(format!("Invalid Link header: {e}")))?,
         );
-        builder = builder
-            .header("Link", link)
-            .header(http::header::ACCESS_CONTROL_EXPOSE_HEADERS, "Link");
     }
 
-    builder
-        .body(Body::from(body))
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
+    Ok(response)
 }

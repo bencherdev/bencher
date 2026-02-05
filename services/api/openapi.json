@@ -9399,7 +9399,7 @@
           {
             "in": "query",
             "name": "n",
-            "description": "Number of tags to return",
+            "description": "Number of tags to return (default: 100)",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -9409,13 +9409,39 @@
           }
         ],
         "responses": {
-          "default": {
-            "description": "",
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-origin": {
+                "description": "CORS: Allow all origins",
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "description": "CORS: Expose headers to client (includes Link when pagination is present)",
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
-              "*/*": {
-                "schema": {}
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagsListResponse"
+                }
               }
             }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -14441,6 +14467,27 @@
       "SsoUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "TagsListResponse": {
+        "description": "Response for tags list",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Repository name",
+            "type": "string"
+          },
+          "tags": {
+            "description": "List of tags",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "tags"
+        ]
       },
       "TestbedSlug": {
         "$ref": "#/components/schemas/Slug"
