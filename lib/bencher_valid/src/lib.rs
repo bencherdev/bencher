@@ -9,6 +9,8 @@ mod date_time;
 mod email;
 mod error;
 mod git_hash;
+#[cfg(feature = "plus")]
+mod image_digest;
 mod index;
 mod jwt;
 mod model;
@@ -26,6 +28,8 @@ mod user_name;
 mod wasm;
 
 pub use crate::git_hash::GitHash;
+#[cfg(feature = "plus")]
+pub use crate::image_digest::ImageDigest;
 pub use crate::slug::{BASE_36, Slug};
 pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;

@@ -1,9 +1,12 @@
-use bencher_valid::DateTime;
+use std::collections::HashMap;
+
+use bencher_valid::{DateTime, ImageDigest, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::RunnerUuid;
+use crate::ProjectUuid;
 
 crate::typed_uuid::typed_uuid!(JobUuid);
 
@@ -22,6 +25,9 @@ crate::from_vec!(JsonJobs[JsonJob]);
 pub struct JsonJob {
     pub uuid: JobUuid,
     pub status: JobStatus,
+    /// Job specification (only included when claimed by a runner)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spec: Option<JsonJobSpec>,
     pub runner: Option<RunnerUuid>,
     pub claimed: Option<DateTime>,
     pub started: Option<DateTime>,
@@ -64,6 +70,42 @@ pub struct JsonUpdateJobResponse {
 pub struct JsonClaimJob {
     /// Maximum time to wait for a job (long-poll), in seconds. Max 60 (default 30)
     pub poll_timeout: Option<u32>,
+}
+
+/// Job specification sent to runners.
+///
+/// Contains the minimal information needed for a runner to execute a job.
+/// Designed to minimize data leakage - runners only learn what's necessary
+/// to pull and execute an OCI image.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonJobSpec {
+    /// Registry URL for pulling the OCI image (e.g., `https://registry.bencher.dev`)
+    pub registry: Url,
+    /// Project UUID for OCI authentication scoping
+    pub project: ProjectUuid,
+    /// Image digest - must be immutable (e.g., "sha256:abc123...")
+    pub digest: ImageDigest,
+    /// Entrypoint override (like Docker ENTRYPOINT)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entrypoint: Option<Vec<String>>,
+    /// Command override (like Docker CMD)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cmd: Option<Vec<String>>,
+    /// Environment variables passed to the container
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub env: Option<HashMap<String, String>>,
+    /// Number of virtual CPUs for the VM
+    pub vcpu: u32,
+    /// Memory size in bytes
+    pub memory: u64,
+    /// Disk size in bytes
+    pub disk: u64,
+    /// Maximum execution time in seconds
+    pub timeout: u32,
+    /// Whether the VM has network access
+    pub network: bool,
 }
 
 const PENDING_INT: i32 = 0;
