@@ -8,7 +8,21 @@
 //! - PUT - Complete upload
 //! - DELETE - Cancel upload
 //!
-//! Note: These endpoints do NOT require Bearer token authentication.
+//! # Chunked Upload Flow
+//!
+//! For large blobs that would exceed server memory limits with monolithic uploads,
+//! use the chunked upload flow:
+//!
+//! 1. Start a session: `POST /v2/{name}/blobs/uploads` (requires authentication)
+//! 2. Upload chunks: `PATCH /v2/{name}/blobs/uploads/{session_id}` (repeated)
+//! 3. Complete: `PUT /v2/{name}/blobs/uploads/{session_id}?digest=sha256:...`
+//!
+//! Each chunk is stored on upload, so memory usage is bounded by the chunk size
+//! rather than the total blob size. Clients can use any chunk size they prefer.
+//!
+//! # Authentication
+//!
+//! These endpoints do NOT require Bearer token authentication.
 //! The session ID itself serves as authentication - it can only be obtained
 //! by authenticating to POST /v2/{name}/blobs/uploads/, and session IDs
 //! are unguessable UUIDs. This matches OCI spec behavior and is required
@@ -137,6 +151,16 @@ pub async fn oci_upload_status(
 }
 
 /// Upload a chunk of data
+///
+/// Appends a chunk of data to an in-progress upload session. This is the recommended
+/// approach for large blobs, as each chunk is stored immediately rather than buffering
+/// the entire blob in memory.
+///
+/// Clients can call this endpoint multiple times to upload a blob in pieces, then
+/// call `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` to complete the upload.
+///
+/// The `Content-Range` header is optional but recommended - if provided, the server
+/// validates that the chunk starts at the expected offset.
 #[endpoint {
     method = PATCH,
     path = "/v2/{name}/blobs/{ref}/{session_id}",

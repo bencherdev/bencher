@@ -2,19 +2,16 @@
 //!
 //! - GET /v2/<name>/tags/list - List tags for a repository
 
-use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::ProjectResourceId;
 use bencher_oci_storage::OciError;
 use bencher_schema::context::ApiContext;
-use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
+use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
+use http::Response;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "plus")]
-use crate::auth::apply_auth_rate_limit;
-use crate::auth::{
-    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
-};
+use crate::auth::require_pull_access;
 
 /// Path parameters for tags list
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -55,11 +52,14 @@ pub async fn oci_tags_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// Default number of tags to return when n is not specified
+const DEFAULT_PAGE_SIZE: u32 = 100;
+
 /// List tags for a repository
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
+///
+/// Returns a list of tags for the specified repository with optional pagination.
+/// When more results are available, a `Link` header is included with a URL to fetch
+/// the next page of results per the OCI Distribution Spec.
 #[endpoint {
     method = GET,
     path = "/v2/{name}/tags/list",
@@ -69,22 +69,14 @@ pub async fn oci_tags_list(
     rqctx: RequestContext<ApiContext>,
     path: Path<TagsPath>,
     query: Query<TagsQuery>,
-) -> Result<ResponseOk<TagsListResponse>, HttpError> {
+) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
     let path = path.into_inner();
     let query = query.into_inner();
 
-    // Authenticate
+    // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:pull");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "pull")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -102,7 +94,7 @@ pub async fn oci_tags_list(
     // Sort tags for consistent ordering
     tags.sort();
 
-    // Apply pagination
+    // Apply pagination - filter by last
     if let Some(last) = &query.last {
         // Find the position of the last tag and skip to after it
         if let Some(pos) = tags.iter().position(|t| t == last) {
@@ -110,15 +102,43 @@ pub async fn oci_tags_list(
         }
     }
 
-    // Limit number of results
-    if let Some(n) = query.n {
-        tags.truncate(n as usize);
+    // Determine page size and check if more results exist
+    let page_size = query.n.unwrap_or(DEFAULT_PAGE_SIZE) as usize;
+    let has_more = tags.len() > page_size;
+
+    // Truncate to requested page size
+    tags.truncate(page_size);
+
+    // Build response body
+    let response_body = TagsListResponse {
+        name: name_str.clone(),
+        tags: tags.clone(),
+    };
+    let body = serde_json::to_vec(&response_body)
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to serialize response: {e}")))?;
+
+    // Build response with OCI-compliant headers
+    let mut builder = Response::builder()
+        .status(http::StatusCode::OK)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .header(http::header::CONTENT_LENGTH, body.len())
+        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+
+    // Add Link header for pagination if there are more results
+    if has_more && let Some(last_tag) = tags.last() {
+        let n = query.n.unwrap_or(DEFAULT_PAGE_SIZE);
+        let link = format!(
+            "</v2/{}/tags/list?n={}&last={}>; rel=\"next\"",
+            name_str,
+            n,
+            urlencoding::encode(last_tag)
+        );
+        builder = builder
+            .header("Link", link)
+            .header(http::header::ACCESS_CONTROL_EXPOSE_HEADERS, "Link");
     }
 
-    // TODO: Add Link header for pagination if there are more results
-
-    Ok(Get::pub_response_ok(TagsListResponse {
-        name: name_str,
-        tags,
-    }))
+    builder
+        .body(Body::from(body))
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
 }

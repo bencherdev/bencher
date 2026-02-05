@@ -114,7 +114,67 @@ pub fn validate_oci_access(
     Ok(claims)
 }
 
-/// Result of push access validation
+/// Result of pull/push access validation (for simple operations that don't need project info)
+pub struct OciAccess {
+    /// The validated OCI claims
+    #[expect(dead_code, reason = "May be used in the future for audit logging")]
+    pub claims: OciClaims,
+}
+
+/// Require pull access for an OCI operation
+///
+/// Validates the bearer token and checks it grants pull access to the specified repository.
+/// Use this for simple read operations that don't need project info.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
+pub async fn require_pull_access(
+    rqctx: &RequestContext<ApiContext>,
+    repository: &str,
+) -> Result<OciAccess, HttpError> {
+    let context = rqctx.context();
+    let scope = format!("repository:{repository}:pull");
+    let token = extract_oci_bearer_token(rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+    let claims = validate_oci_access(context, &token, repository, "pull")
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+
+    // Apply rate limiting
+    #[cfg(feature = "plus")]
+    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+
+    Ok(OciAccess { claims })
+}
+
+/// Require push access for an OCI operation (simple ops like delete, not project creation)
+///
+/// Validates the bearer token and checks it grants push access to the specified repository.
+/// Use this for simple write operations that don't need the full project creation flow.
+/// For operations that may create projects, use `validate_push_access` instead.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
+pub async fn require_push_access(
+    rqctx: &RequestContext<ApiContext>,
+    repository: &str,
+) -> Result<OciAccess, HttpError> {
+    let context = rqctx.context();
+    let scope = format!("repository:{repository}:push");
+    let token = extract_oci_bearer_token(rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+    let claims = validate_oci_access(context, &token, repository, "push")
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+
+    // Apply rate limiting
+    #[cfg(feature = "plus")]
+    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+
+    Ok(OciAccess { claims })
+}
+
+/// Result of push access validation (for operations that may create projects)
 pub struct PushAccess {
     /// The project being pushed to (existing or newly created)
     pub project: QueryProject,

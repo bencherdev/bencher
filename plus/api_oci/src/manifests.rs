@@ -14,12 +14,7 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-#[cfg(feature = "plus")]
-use crate::auth::apply_auth_rate_limit;
-use crate::auth::{
-    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
-    validate_push_access,
-};
+use crate::auth::{require_pull_access, require_push_access, validate_push_access};
 
 /// Path parameters for manifest endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -45,10 +40,6 @@ pub async fn oci_manifest_options(
 }
 
 /// Check if a manifest exists
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 #[endpoint {
     method = HEAD,
     path = "/v2/{name}/manifests/{reference}",
@@ -61,17 +52,9 @@ pub async fn oci_manifest_exists(
     let context = rqctx.context();
     let path = path.into_inner();
 
-    // Authenticate
+    // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:pull");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "pull")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Parse reference
     let reference: Reference = path.reference.parse().map_err(|_err| {
@@ -125,10 +108,6 @@ pub async fn oci_manifest_exists(
 }
 
 /// Download a manifest
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 #[endpoint {
     method = GET,
     path = "/v2/{name}/manifests/{reference}",
@@ -141,17 +120,9 @@ pub async fn oci_manifest_get(
     let context = rqctx.context();
     let path = path.into_inner();
 
-    // Authenticate
+    // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:pull");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "pull")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Parse reference
     let reference: Reference = path.reference.parse().map_err(|_err| {
@@ -293,10 +264,6 @@ pub async fn oci_manifest_put(
 }
 
 /// Delete a manifest
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 #[endpoint {
     method = DELETE,
     path = "/v2/{name}/manifests/{reference}",
@@ -309,17 +276,9 @@ pub async fn oci_manifest_delete(
     let context = rqctx.context();
     let path = path.into_inner();
 
-    // Authenticate (delete requires push permission)
+    // Authenticate and apply rate limiting (delete requires push permission)
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:push");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "push")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_push_access(&rqctx, &name_str).await?;
 
     // Get storage
     let storage = context.oci_storage();

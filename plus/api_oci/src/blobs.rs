@@ -7,6 +7,21 @@
 //!
 //! This unified structure avoids Dropshot router conflicts between literal
 //! and variable path segments while maintaining OCI spec compliance.
+//!
+//! # Streaming Limitations
+//!
+//! Dropshot does not currently support streaming request bodies, so upload operations
+//! (monolithic PUT to `/v2/{name}/blobs/uploads?digest=...`) buffer the entire request
+//! body into memory via `UntypedBody`. This limits practical upload sizes to available
+//! server memory.
+//!
+//! For large blobs, clients should use chunked uploads instead:
+//!
+//! 1. `POST /v2/{name}/blobs/uploads` - Start an upload session
+//! 2. `PATCH /v2/{name}/blobs/uploads/{session_id}` - Upload chunks (repeated)
+//! 3. `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` - Complete the upload
+//!
+//! See the `uploads` module for chunked upload endpoints.
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Post, Put};
 use bencher_json::ProjectResourceId;
@@ -19,12 +34,7 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-#[cfg(feature = "plus")]
-use crate::auth::apply_auth_rate_limit;
-use crate::auth::{
-    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
-    validate_push_access,
-};
+use crate::auth::{require_pull_access, require_push_access, validate_push_access};
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -72,10 +82,6 @@ pub async fn oci_blob_options(
 }
 
 /// Check if a blob exists (HEAD) or start upload check
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 #[endpoint {
     method = HEAD,
     path = "/v2/{name}/blobs/{ref}",
@@ -97,17 +103,9 @@ pub async fn oci_blob_exists(
         ));
     }
 
-    // Authenticate
+    // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:pull");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "pull")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Parse digest
     let digest: Digest = path.reference.parse().map_err(|_err| {
@@ -144,10 +142,6 @@ pub async fn oci_blob_exists(
 ///
 /// Streams the blob content rather than loading it entirely into memory,
 /// making this suitable for large container image layers.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 #[endpoint {
     method = GET,
     path = "/v2/{name}/blobs/{ref}",
@@ -169,17 +163,9 @@ pub async fn oci_blob_get(
         ));
     }
 
-    // Authenticate
+    // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:pull");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "pull")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Parse digest
     let digest: Digest = path.reference.parse().map_err(|_err| {
@@ -217,10 +203,6 @@ pub async fn oci_blob_get(
 }
 
 /// Delete a blob (DELETE)
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 #[endpoint {
     method = DELETE,
     path = "/v2/{name}/blobs/{ref}",
@@ -242,17 +224,9 @@ pub async fn oci_blob_delete(
         ));
     }
 
-    // Authenticate (delete requires push permission)
+    // Authenticate and apply rate limiting (delete requires push permission)
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:push");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "push")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_push_access(&rqctx, &name_str).await?;
 
     // Parse digest
     let digest: Digest = path.reference.parse().map_err(|_err| {
@@ -371,6 +345,22 @@ pub async fn oci_upload_start(
 }
 
 /// Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)
+///
+/// Uploads a complete blob in a single request. This is convenient for small blobs but
+/// has memory limitations: Dropshot's `UntypedBody` buffers the entire request into memory.
+/// For large blobs, use the chunked upload flow instead (see `uploads` module).
+///
+/// # Memory Limitation
+///
+/// The entire blob content is buffered in server memory before being stored. This means
+/// practical upload sizes are limited by available server memory. For blobs larger than
+/// a few MB, consider using chunked uploads:
+///
+/// 1. `POST /v2/{name}/blobs/uploads` - Start session
+/// 2. `PATCH /v2/{name}/blobs/uploads/{session_id}` - Upload chunks
+/// 3. `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` - Complete
+///
+/// # Authentication
 ///
 /// Authentication is optional for unclaimed projects.
 /// If the project's organization is claimed, valid authentication with Create permission is required.
