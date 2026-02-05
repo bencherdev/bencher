@@ -65,3 +65,7 @@ tags
 # OCI Distribution Spec files
 distribution-spec/
 oci-conformance-results/
+
+# Nix and direnv related
+.direnv/
+result
