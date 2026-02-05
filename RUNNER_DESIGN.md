@@ -236,6 +236,8 @@ enum RunnerMessage {
         exit_code: Option<i32>,
         error: String,
     },
+    /// Acknowledge cancellation from server
+    Cancelled,
 }
 
 // Server → Runner messages (JSON)
@@ -264,6 +266,21 @@ Runner                              Server
   │  └──────────────────────────┘      │
   │                                    │
   ├──── { "event": "completed", ... } ─►│  Mark job completed, stop billing
+  │◄──── { "event": "ack" } ────────────┤
+  │                                    │
+  ├──[WS Close] ──────────────────────►│
+```
+
+**Cancellation flow:**
+```
+Runner                              Server
+  │                                    │
+  ├──── { "event": "heartbeat" } ──────►│  Detects job was canceled by user
+  │◄──── { "event": "cancel" } ─────────┤
+  │                                    │
+  │  (runner stops benchmark)          │
+  │                                    │
+  ├──── { "event": "cancelled" } ──────►│  Mark job canceled (if not already)
   │◄──── { "event": "ack" } ────────────┤
   │                                    │
   ├──[WS Close] ──────────────────────►│
@@ -361,6 +378,7 @@ User submits job via CLI or API
 6. Execute benchmark_command
    - Heartbeat messages sent ~1/sec over WebSocket
    - Server may send { "event": "cancel" } at any time
+   - On cancel: stop execution, send { "event": "cancelled" }, close
                 │
                 ▼
 7. Send { "event": "completed", ... } or { "event": "failed", ... }

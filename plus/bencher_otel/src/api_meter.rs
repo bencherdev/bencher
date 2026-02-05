@@ -418,6 +418,7 @@ pub enum JobStatusKind {
     Running,
     Completed,
     Failed,
+    Canceled,
 }
 
 impl fmt::Display for JobStatusKind {
@@ -426,6 +427,7 @@ impl fmt::Display for JobStatusKind {
             Self::Running => write!(f, "running"),
             Self::Completed => write!(f, "completed"),
             Self::Failed => write!(f, "failed"),
+            Self::Canceled => write!(f, "canceled"),
         }
     }
 }
