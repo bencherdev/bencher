@@ -26,6 +26,7 @@ jobs:
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch ${{ github.ref_name }} \
+          --hash '${{ github.sha }}' \
           --testbed ubuntu-22.04 \
           --threshold-measure latency \
           --threshold-test t_test \
