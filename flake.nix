@@ -36,6 +36,7 @@
           mold
           pkg-config
           fontconfig
+          binutils
         ];
         rust_tools = with pkgs; [
           cargo-nextest
@@ -47,7 +48,19 @@
         ];
       in {
         # Build package with `nix build`
-        packages = {};
+        packages = rec {
+          default = bencher;
+          bencher = pkgs.rustPlatform.buildRustPackage {
+            name = "bencher";
+            src = ./.;
+            cargoBuildFlags = [ "--bin" "bencher"];
+            cargoLock.lockFile = ./Cargo.lock;
+            doCheck = false;
+            inherit buildInputs;
+            nativeBuildInputs = buildInputs;
+            LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
+          };
+        };
         # Enter reproducible development shell with `nix develop`
         devShells = {
           default = pkgs.mkShell {
