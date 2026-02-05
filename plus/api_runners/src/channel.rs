@@ -58,6 +58,8 @@ pub enum RunnerMessage {
         exit_code: Option<i32>,
         error: String,
     },
+    /// Acknowledge cancellation from server.
+    Cancelled,
 }
 
 /// Messages sent from the server to the runner.
@@ -251,6 +253,10 @@ async fn handle_runner_message(
             slog::warn!(log, "Job failed"; "job_id" => ?job_id, "exit_code" => ?exit_code, "error" => &error);
             handle_failed(log, context, job_id, exit_code).await?;
         },
+        RunnerMessage::Cancelled => {
+            slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job_id);
+            handle_cancelled(log, context, job_id).await?;
+        },
     }
 
     Ok(ServerMessage::Ack)
@@ -435,6 +441,54 @@ async fn handle_failed(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
         bencher_otel::JobStatusKind::Failed,
+    ));
+
+    Ok(())
+}
+
+/// Handle a Cancelled message: runner acknowledges cancellation, ensure job is in Canceled state.
+async fn handle_cancelled(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let now = DateTime::now();
+
+    let job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(write_conn!(context))
+        .map_err(resource_not_found_err!(Job, job_id))?;
+
+    // If already canceled, just acknowledge
+    if job.status == JobStatus::Canceled {
+        slog::debug!(log, "Job already canceled"; "job_id" => ?job_id);
+        return Ok(());
+    }
+
+    // Transition to Canceled from Claimed or Running
+    if !matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
+        slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "canceled");
+        return Err(format!(
+            "Invalid state transition from {:?} to Canceled, expected Claimed or Running",
+            job.status
+        )
+        .into());
+    }
+
+    let update = UpdateJob {
+        status: Some(JobStatus::Canceled),
+        completed: Some(Some(now)),
+        modified: Some(now),
+        ..Default::default()
+    };
+
+    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+        .set(&update)
+        .execute(write_conn!(context))?;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+        bencher_otel::JobStatusKind::Canceled,
     ));
 
     Ok(())
