@@ -188,10 +188,7 @@ async fn into_context(
     // WAL mode allows concurrent readers with a single writer.
     // busy_timeout prevents immediate SQLITE_BUSY errors under lock contention.
     // synchronous=NORMAL is safe with WAL mode and reduces fsync overhead.
-    #[cfg(feature = "plus")]
-    let busy_timeout = get_busy_timeout(plus.as_ref());
-    #[cfg(not(feature = "plus"))]
-    let busy_timeout = DEFAULT_BUSY_TIMEOUT;
+    let busy_timeout = json_database.busy_timeout.unwrap_or(DEFAULT_BUSY_TIMEOUT);
     info!(
         log,
         "Setting database PRAGMAs (busy_timeout: {busy_timeout}ms)"
@@ -352,13 +349,6 @@ fn sqlite_tmpdir(log: &Logger, database_path: &Path) -> Result<(), ConfigTxError
     }
 
     Ok(())
-}
-
-#[cfg(feature = "plus")]
-fn get_busy_timeout(plus: Option<&JsonPlus>) -> u32 {
-    plus.and_then(|plus| plus.litestream.as_ref())
-        .and_then(|litestream| litestream.busy_timeout)
-        .unwrap_or(DEFAULT_BUSY_TIMEOUT)
 }
 
 /// Configure litestream-specific PRAGMAs.

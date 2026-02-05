@@ -11,6 +11,9 @@ pub struct JsonDatabase {
     pub file: PathBuf,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data_store: Option<DataStore>,
+    /// The database busy timeout in milliseconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub busy_timeout: Option<u32>,
 }
 
 impl Sanitize for JsonDatabase {

@@ -41,7 +41,6 @@ Les quatre schémas de réplique ont les options supplémentaires suivantes :
 
 |           Nom            | Exemples  | Défaut | Requis |                                              Description                                              |
 | :----------------------: | :-------: | :----: | :----: | :---------------------------------------------------------------------------------------------------: |
-|       busy_timeout       |   5000    |  5000  |  Non   |                 Spécifie le délai d'attente pour la base de données en millisecondes.                 |
 |         replicas         |  [ ... ]  |  ---   |  Oui   |                                   Spécifie un tableau de répliques.                                   |
 |    replicas[replica]     | \{ ... \} |  ---   |  Oui   |                                      Spécifie un objet réplique.                                      |
 | replicas[replica].scheme |   "s3"    |  ---   |  Oui   | Spécifie le schéma de réplication. Pour toutes les autres clés de `replica`, voir la liste ci-dessus. |

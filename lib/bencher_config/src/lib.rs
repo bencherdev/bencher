@@ -219,6 +219,7 @@ impl Default for Config {
             database: JsonDatabase {
                 file: DEFAULT_DB_PATH.into(),
                 data_store: None,
+                busy_timeout: None,
             },
             smtp: None,
             logging: JsonLogging {
