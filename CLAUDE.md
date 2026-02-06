@@ -160,12 +160,6 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Maximum cognitive complexity: 25
 - Use absolute paths sparingly (max 3 segments, diesel crate exempt)
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
-- Do **NOT** use shared, global mutable state
-- Always prefer to use `thiserror` for error types
-- Do **NOT** use `dyn std::any::Any` without explicit justification and approval
-- Use `clap` for CLI argument parsing
-  - The `clap` struct definitions should live in a separate `parser` module
-  - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates
 
 ### Frontend (TypeScript)
 

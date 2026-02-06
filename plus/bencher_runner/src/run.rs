@@ -284,6 +284,7 @@ pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
         boot_args: config.kernel_cmdline.clone(),
         timeout_secs: config.timeout_secs,
         work_dir: work_dir.to_string(),
+        cpu_layout: config.cpu_layout.clone(),
     };
 
     let output = run_firecracker(&fc_config)?;

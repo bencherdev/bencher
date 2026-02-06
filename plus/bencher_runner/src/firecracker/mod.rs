@@ -14,6 +14,7 @@ mod vsock;
 
 use std::time::{Duration, Instant};
 
+use crate::cpu::CpuLayout;
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
@@ -41,17 +42,20 @@ pub struct FirecrackerJobConfig {
     pub timeout_secs: u64,
     /// Working directory for temporary files (API socket, vsock UDS).
     pub work_dir: String,
+    /// Optional CPU layout for core isolation via cpuset.
+    pub cpu_layout: Option<CpuLayout>,
 }
 
 /// Run a benchmark inside a Firecracker microVM.
 ///
 /// This function:
-/// 1. Starts a Firecracker process
-/// 2. Configures the VM via REST API
-/// 3. Creates vsock listeners for result collection
-/// 4. Boots the VM
-/// 5. Collects results via vsock
-/// 6. Cleans up
+/// 1. Optionally creates a cgroup with cpuset for CPU isolation
+/// 2. Starts a Firecracker process (and moves it into the cgroup)
+/// 3. Configures the VM via REST API
+/// 4. Creates vsock listeners for result collection
+/// 5. Boots the VM
+/// 6. Collects results via vsock
+/// 7. Cleans up (including cgroup)
 ///
 /// Returns the benchmark stdout output.
 pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<String, FirecrackerError> {
@@ -61,10 +65,45 @@ pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<String, Firecrac
 
     let start_time = Instant::now();
 
+    // Step 0: Create cgroup with cpuset if CPU layout is provided
+    let cgroup = if let Some(ref layout) = config.cpu_layout {
+        if layout.has_isolation() {
+            match crate::jail::CgroupManager::new(&vm_id) {
+                Ok(cg) => {
+                    // Apply cpuset to pin Firecracker to benchmark cores
+                    if let Err(e) = cg.apply_cpuset(layout) {
+                        eprintln!("Warning: failed to apply cpuset: {e}");
+                    } else {
+                        println!(
+                            "CPU isolation: Firecracker pinned to cores {}",
+                            layout.benchmark_cpuset()
+                        );
+                    }
+                    Some(cg)
+                },
+                Err(e) => {
+                    eprintln!("Warning: failed to create cgroup for CPU isolation: {e}");
+                    None
+                },
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     // Step 1: Start Firecracker process
     println!("Starting Firecracker process...");
     let mut fc_process =
         FirecrackerProcess::start(&config.firecracker_bin, &api_socket_path, &vm_id)?;
+
+    // Move Firecracker process into cgroup for CPU isolation
+    if let Some(ref cg) = cgroup {
+        if let Err(e) = cg.add_pid(fc_process.pid()) {
+            eprintln!("Warning: failed to add Firecracker to cgroup: {e}");
+        }
+    }
 
     let client = fc_process.client();
 

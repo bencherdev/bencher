@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
+use crate::cpu::CpuLayout;
+
 /// Configuration for a benchmark run.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -78,6 +80,13 @@ pub struct Config {
     /// Optional environment variables for the container.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub env: Option<HashMap<String, String>>,
+
+    /// CPU layout for isolating benchmark cores from housekeeping tasks.
+    ///
+    /// When set, the Firecracker process will be pinned to benchmark cores
+    /// via cgroups cpuset. This field is not serialized.
+    #[serde(skip)]
+    pub cpu_layout: Option<CpuLayout>,
 }
 
 const fn default_vcpus() -> u8 {
@@ -123,6 +132,7 @@ impl Config {
             entrypoint: None,
             cmd: None,
             env: None,
+            cpu_layout: None,
         }
     }
 
@@ -149,6 +159,7 @@ impl Config {
             entrypoint: None,
             cmd: None,
             env: None,
+            cpu_layout: None,
         }
     }
 
@@ -261,6 +272,16 @@ impl Config {
         self
     }
 
+    /// Set the CPU layout for core isolation.
+    ///
+    /// When set, the Firecracker process will be pinned to benchmark cores
+    /// via cgroups cpuset, isolating it from housekeeping tasks.
+    #[must_use]
+    pub fn with_cpu_layout(mut self, layout: CpuLayout) -> Self {
+        self.cpu_layout = Some(layout);
+        self
+    }
+
     /// Get the cache directory, using the default if not set.
     #[must_use]
     pub fn cache_dir(&self) -> Utf8PathBuf {
@@ -290,6 +311,7 @@ mod tests {
         assert!(config.entrypoint.is_none());
         assert!(config.cmd.is_none());
         assert!(config.env.is_none());
+        assert!(config.cpu_layout.is_none());
     }
 
     #[test]
