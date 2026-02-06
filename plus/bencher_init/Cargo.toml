@@ -1,0 +1,26 @@
+[package]
+name = "bencher_init"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+description = "Minimal init system for Bencher benchmark VMs"
+
+[[bin]]
+name = "bencher-init"
+path = "src/main.rs"
+
+[features]
+default = []
+plus = []
+
+[dependencies]
+libc = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
+
+# For static builds, use: cargo build --release --target x86_64-unknown-linux-musl

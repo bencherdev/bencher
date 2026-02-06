@@ -1,0 +1,25 @@
+[package]
+name = "bencher_runner_bin"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = ["plus"]
+plus = ["dep:bencher_runner"]
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["env"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+bencher_runner = { workspace = true, optional = true, features = ["plus"] }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "runner"
+path = "src/main.rs"

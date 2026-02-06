@@ -42,6 +42,36 @@ A pull-based runner agent architecture where runners claim jobs from the API, ex
 | **Idle**   | Long-poll for jobs                     | Can be noisy, responsiveness matters |
 | **Active** | Minimal heartbeat on separate CPU core | Benchmark cores completely isolated  |
 
+## CPU Isolation
+
+The runner automatically partitions CPU cores to isolate benchmark execution from housekeeping tasks:
+
+**Core Layout** (detected at startup):
+- **1 core**: No isolation (housekeeping and benchmark share core 0)
+- **2-7 cores**: Core 0 = housekeeping, cores 1-N = benchmark
+- **8+ cores**: Cores 0-1 = housekeeping, cores 2-N = benchmark
+
+**Implementation**:
+1. **Heartbeat thread pinning**: Uses `sched_setaffinity` to pin the heartbeat thread to housekeeping cores
+2. **Firecracker cpuset**: Uses cgroups v2 `cpuset.cpus` to restrict the VM process to benchmark cores
+
+```
+Example: 8-core machine
+┌─────────────────────────────────────────────────────────────┐
+│ Housekeeping (cores 0-1)    │ Benchmark VM (cores 2-7)      │
+│ - Heartbeat thread          │ - Firecracker process         │
+│ - API polling               │ - Guest vCPUs                 │
+│ - WebSocket I/O             │ - Benchmark workload          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Benefits**:
+- Prevents heartbeat/networking from causing cache evictions on benchmark cores
+- Ensures consistent benchmark timing without scheduler interference
+- No manual configuration required - the runner binary sets this up automatically
+
+**Graceful degradation**: If cpuset fails (e.g., controller not enabled), the runner continues without CPU pinning and logs a warning.
+
 ## Runner Scope
 
 Runners are **server-scoped** - they can execute jobs from ANY project on the server. This applies to both self-hosted and cloud deployments.
@@ -428,12 +458,14 @@ User submits job via CLI or API
                 │
                 ▼
 5. Create VM with spec constraints (vcpu, memory, disk, network)
-   Load OCI image into VM
+   - Create cgroup with cpuset pinned to benchmark cores
+   - Load OCI image into VM
+   - Start Firecracker process in cgroup
                 │
                 ▼
 6. Send { "event": "running" } over WebSocket
-   - Heartbeat thread starts (pinned to separate CPU core)
-   - Main benchmark cores isolated
+   - Heartbeat thread starts (pinned to housekeeping cores via sched_setaffinity)
+   - Firecracker/VM isolated on benchmark cores via cgroups cpuset
                 │
                 ▼
 7. Execute image (with optional entrypoint/cmd/env overrides)
