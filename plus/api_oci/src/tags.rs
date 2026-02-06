@@ -103,9 +103,13 @@ pub async fn oci_tags_list(
     // Get storage
     let storage = context.oci_storage();
 
-    // List tags
+    // Determine page size
+    let page_size = query.n.unwrap_or(DEFAULT_PAGE_SIZE) as usize;
+
+    // List tags with pagination handled at storage layer
+    // Storage returns up to page_size + 1 tags to detect if more exist
     let mut tags = storage
-        .list_tags(&path.name)
+        .list_tags(&path.name, Some(page_size), query.last.as_deref())
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -113,19 +117,7 @@ pub async fn oci_tags_list(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciTagsList);
 
-    // Sort tags for consistent ordering
-    tags.sort();
-
-    // Apply pagination - filter by last
-    if let Some(last) = &query.last {
-        // Find the position of the last tag and skip to after it
-        if let Some(pos) = tags.iter().position(|t| t == last) {
-            tags = tags.into_iter().skip(pos + 1).collect();
-        }
-    }
-
-    // Determine page size and check if more results exist
-    let page_size = query.n.unwrap_or(DEFAULT_PAGE_SIZE) as usize;
+    // Check if more results exist (storage fetched page_size + 1)
     let has_more = tags.len() > page_size;
 
     // Truncate to requested page size

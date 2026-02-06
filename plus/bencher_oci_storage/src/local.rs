@@ -670,10 +670,18 @@ impl OciLocalStorage {
             .map_err(|e: crate::types::DigestError| OciStorageError::InvalidContent(e.to_string()))
     }
 
-    /// Lists all tags for a repository
+    /// Lists tags for a repository with optional pagination
+    ///
+    /// - `limit`: Maximum number of tags to return (fetches limit + 1 to detect if more exist)
+    /// - `start_after`: Tag to start listing after (for cursor-based pagination)
+    ///
+    /// Note: For local storage, we must read all directory entries first, then apply
+    /// sorting and pagination. This is less efficient than S3 for very large repositories.
     pub async fn list_tags(
         &self,
         repository: &ProjectResourceId,
+        limit: Option<usize>,
+        start_after: Option<&str>,
     ) -> Result<Vec<String>, OciStorageError> {
         let tags_dir = self.repository_dir(repository).join("tags");
 
@@ -695,6 +703,25 @@ impl OciLocalStorage {
                 tags.push(name.to_owned());
             }
         }
+
+        // Sort for consistent ordering (matches S3 behavior)
+        tags.sort();
+
+        // Apply cursor-based pagination: skip past start_after
+        let tags = if let Some(start) = start_after {
+            tags.into_iter()
+                .skip_while(|t| t.as_str() <= start)
+                .collect()
+        } else {
+            tags
+        };
+
+        // Apply limit (fetch limit + 1 to detect if more exist)
+        let tags = if let Some(limit) = limit {
+            tags.into_iter().take(limit + 1).collect()
+        } else {
+            tags
+        };
 
         Ok(tags)
     }

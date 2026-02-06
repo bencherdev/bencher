@@ -255,9 +255,9 @@ async fn handle_existing_project(
     claims: Option<OciClaims>,
 ) -> Result<PushAccess, HttpError> {
     let conn = public_conn!(context);
-    let organization = project.organization(conn).map_err(|e| {
-        HttpError::for_internal_error(format!("Failed to get organization: {e}"))
-    })?;
+    let organization = project
+        .organization(conn)
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to get organization: {e}")))?;
 
     let is_claimed = organization.is_claimed(conn).map_err(|e| {
         HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))

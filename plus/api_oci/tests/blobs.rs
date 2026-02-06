@@ -325,9 +325,7 @@ async fn test_blob_upload_authenticated_to_unclaimed_project() {
     assert_eq!(create_resp.status(), StatusCode::ACCEPTED);
 
     // Now create a user and push with authentication - should auto-claim
-    let user = server
-        .signup("Claimer User", "claimer@example.com")
-        .await;
+    let user = server.signup("Claimer User", "claimer@example.com").await;
 
     let oci_token = server.oci_token(&user, unclaimed_slug, &["push"]);
 
@@ -357,9 +355,7 @@ async fn test_blob_upload_authenticated_to_unclaimed_project() {
 #[tokio::test]
 async fn test_blob_upload_nonexistent_uuid() {
     let server = TestServer::new().await;
-    let user = server
-        .signup("UUID User", "uuidpush@example.com")
-        .await;
+    let user = server.signup("UUID User", "uuidpush@example.com").await;
 
     // Use a random UUID that doesn't exist
     let fake_uuid = "00000000-0000-0000-0000-000000000000";
@@ -381,9 +377,7 @@ async fn test_blob_upload_nonexistent_uuid() {
 #[tokio::test]
 async fn test_blob_upload_nonexistent_slug_authenticated() {
     let server = TestServer::new().await;
-    let user = server
-        .signup("Slug User", "slugpush@example.com")
-        .await;
+    let user = server.signup("Slug User", "slugpush@example.com").await;
 
     // Use a new slug that doesn't exist yet
     let new_slug = "auto-created-project";
@@ -449,7 +443,9 @@ async fn test_blob_monolithic_upload_unauthenticated_to_claimed() {
         .signup("Mono Claimed User", "monoclaimedproject@example.com")
         .await;
     let org = server.create_org(&user, "Mono Claimed Org").await;
-    let project = server.create_project(&user, &org, "Mono Claimed Project").await;
+    let project = server
+        .create_project(&user, &org, "Mono Claimed Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
 

@@ -459,7 +459,10 @@ async fn test_manifest_put_unauthenticated_to_claimed() {
 
     // Create a claimed project
     let user = server
-        .signup("Manifest Claimed User", "manifestclaimedproject@example.com")
+        .signup(
+            "Manifest Claimed User",
+            "manifestclaimedproject@example.com",
+        )
         .await;
     let org = server.create_org(&user, "Manifest Claimed Org").await;
     let project = server
