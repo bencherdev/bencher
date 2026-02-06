@@ -628,6 +628,198 @@ mod job_lifecycle {
 }
 
 // =============================================================================
+// Job Spec Tests
+// =============================================================================
+//
+// These tests verify that the job spec is correctly returned to runners
+
+mod job_spec {
+    use super::*;
+    use bencher_json::{JobStatus, JsonJobSpec};
+    use common::{
+        insert_test_job_with_invalid_spec, insert_test_job_with_optional_fields,
+        insert_test_job_with_project,
+    };
+
+    // Test that the spec is included when claiming a job
+    #[tokio::test]
+    async fn test_claim_job_includes_spec() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "spec1@example.com").await;
+        let org = server.create_org(&admin, "Spec Org").await;
+        let project = server.create_project(&admin, &org, "Spec Project").await;
+
+        let runner = create_runner(&server, &admin.token, "Spec Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+        let _job_uuid = insert_test_job_with_project(&server, report_id, project.uuid);
+
+        // Claim the job
+        let body = serde_json::json!({ "poll_timeout": 5 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let claimed_job: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+        let claimed_job = claimed_job.expect("Expected to claim a job");
+
+        // Verify spec is present and has correct values
+        let spec: &JsonJobSpec = claimed_job.spec.as_ref().expect("Expected spec to be present");
+        assert_eq!(spec.project, project.uuid);
+        assert_eq!(
+            spec.digest.as_ref(),
+            "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        );
+        assert_eq!(spec.vcpu, 2);
+        assert_eq!(spec.memory, 4294967296); // 4 GB
+        assert_eq!(spec.disk, 10737418240); // 10 GB
+        assert_eq!(spec.timeout, 3600);
+        assert!(!spec.network);
+    }
+
+    // Test that optional spec fields (entrypoint, cmd, env) are correctly returned
+    #[tokio::test]
+    async fn test_claim_job_includes_optional_spec_fields() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "spec3@example.com").await;
+        let org = server.create_org(&admin, "Spec Optional Org").await;
+        let project = server
+            .create_project(&admin, &org, "Spec Optional Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Spec Optional Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert job with optional fields populated
+        let job_uuid = insert_test_job_with_optional_fields(&server, report_id, project.uuid);
+
+        // Claim the job
+        let body = serde_json::json!({ "poll_timeout": 5 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let claimed_job: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+        let claimed_job = claimed_job.expect("Expected to claim a job");
+        assert_eq!(claimed_job.uuid, job_uuid);
+
+        let spec = claimed_job.spec.as_ref().expect("Expected spec to be present");
+
+        // Verify optional fields
+        let entrypoint = spec.entrypoint.as_ref().expect("Expected entrypoint");
+        assert_eq!(entrypoint, &vec!["/bin/sh".to_string(), "-c".to_string()]);
+
+        let cmd = spec.cmd.as_ref().expect("Expected cmd");
+        assert_eq!(cmd, &vec!["cargo".to_string(), "bench".to_string()]);
+
+        let env = spec.env.as_ref().expect("Expected env");
+        assert_eq!(env.get("RUST_LOG"), Some(&"info".to_string()));
+        assert_eq!(env.get("CI"), Some(&"true".to_string()));
+    }
+
+    // Test that invalid spec JSON returns a 400 error
+    #[tokio::test]
+    async fn test_claim_job_invalid_spec_returns_error() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "spec4@example.com").await;
+        let org = server.create_org(&admin, "Spec Invalid Org").await;
+        let project = server
+            .create_project(&admin, &org, "Spec Invalid Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Spec Invalid Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert job with invalid spec (missing required fields)
+        let _job_uuid = insert_test_job_with_invalid_spec(&server, report_id);
+
+        // Try to claim the job - should fail with 400
+        let body = serde_json::json!({ "poll_timeout": 5 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    // Test that the spec is NOT included in public job listing
+    #[tokio::test]
+    async fn test_public_job_list_excludes_spec() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "spec2@example.com").await;
+        let org = server.create_org(&admin, "Spec Public Org").await;
+        let project = server
+            .create_project(&admin, &org, "Spec Public Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Spec Public Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+        let job_uuid = insert_test_job(&server, report_id);
+
+        // Claim the job (so it has a runner assigned)
+        let body = serde_json::json!({ "poll_timeout": 5 });
+        server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Fetch the job via the public project endpoint
+        let project_slug: &str = project.slug.as_ref();
+        let resp = server
+            .client
+            .get(server.api_url(&format!(
+                "/v0/projects/{project_slug}/jobs/{job_uuid}"
+            )))
+            .header("Authorization", server.bearer(&admin.token))
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let job: JsonJob = resp.json().await.expect("Failed to parse response");
+
+        // Spec should NOT be included in public API response
+        assert!(
+            job.spec.is_none(),
+            "Expected spec to be None in public API response"
+        );
+        assert_eq!(job.status, JobStatus::Claimed);
+    }
+}
+
+// =============================================================================
 // Timing Tests
 // =============================================================================
 

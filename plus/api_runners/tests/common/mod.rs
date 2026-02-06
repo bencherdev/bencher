@@ -23,16 +23,38 @@ pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -
 /// Insert a test job directly into the database. Returns the job UUID.
 #[expect(clippy::expect_used)]
 pub fn insert_test_job(server: &TestServer, report_id: i32) -> JobUuid {
+    insert_test_job_with_project(server, report_id, bencher_json::ProjectUuid::new())
+}
+
+/// Insert a test job with a specific project UUID. Returns the job UUID.
+#[expect(clippy::expect_used)]
+pub fn insert_test_job_with_project(
+    server: &TestServer,
+    report_id: i32,
+    project_uuid: bencher_json::ProjectUuid,
+) -> JobUuid {
     let mut conn = server.db_conn();
     let now = DateTime::now();
     let job_uuid = JobUuid::new();
+
+    // Create a valid JsonJobSpec as JSON
+    let spec = serde_json::json!({
+        "registry": "https://registry.bencher.dev",
+        "project": project_uuid,
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "vcpu": 2,
+        "memory": 4294967296_u64,  // 4 GB
+        "disk": 10737418240_u64,   // 10 GB
+        "timeout": 3600,
+        "network": false
+    });
 
     diesel::insert_into(schema::job::table)
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
             schema::job::status.eq(JobStatus::Pending),
-            schema::job::spec.eq("{}"),
+            schema::job::spec.eq(spec.to_string()),
             schema::job::timeout.eq(3600),
             schema::job::priority.eq(0),
             schema::job::created.eq(&now),
@@ -138,6 +160,81 @@ pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
         .select(schema::report::id)
         .first(&mut conn)
         .expect("Failed to get report ID")
+}
+
+/// Insert a test job with optional fields populated. Returns the job UUID.
+#[expect(clippy::expect_used)]
+pub fn insert_test_job_with_optional_fields(
+    server: &TestServer,
+    report_id: i32,
+    project_uuid: bencher_json::ProjectUuid,
+) -> JobUuid {
+    let mut conn = server.db_conn();
+    let now = DateTime::now();
+    let job_uuid = JobUuid::new();
+
+    // Create a JsonJobSpec with optional fields populated
+    let spec = serde_json::json!({
+        "registry": "https://registry.bencher.dev",
+        "project": project_uuid,
+        "digest": "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        "entrypoint": ["/bin/sh", "-c"],
+        "cmd": ["cargo", "bench"],
+        "env": {
+            "RUST_LOG": "info",
+            "CI": "true"
+        },
+        "vcpu": 4,
+        "memory": 8589934592_u64,  // 8 GB
+        "disk": 21474836480_u64,   // 20 GB
+        "timeout": 7200,
+        "network": true
+    });
+
+    diesel::insert_into(schema::job::table)
+        .values((
+            schema::job::uuid.eq(&job_uuid),
+            schema::job::report_id.eq(report_id),
+            schema::job::status.eq(JobStatus::Pending),
+            schema::job::spec.eq(spec.to_string()),
+            schema::job::timeout.eq(7200),
+            schema::job::priority.eq(0),
+            schema::job::created.eq(&now),
+            schema::job::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert test job");
+
+    job_uuid
+}
+
+/// Insert a test job with invalid spec JSON (missing required fields). Returns the job UUID.
+#[expect(clippy::expect_used)]
+pub fn insert_test_job_with_invalid_spec(server: &TestServer, report_id: i32) -> JobUuid {
+    let mut conn = server.db_conn();
+    let now = DateTime::now();
+    let job_uuid = JobUuid::new();
+
+    // Invalid spec - missing required fields like digest, vcpu, memory, etc.
+    let spec = serde_json::json!({
+        "registry": "https://registry.bencher.dev"
+    });
+
+    diesel::insert_into(schema::job::table)
+        .values((
+            schema::job::uuid.eq(&job_uuid),
+            schema::job::report_id.eq(report_id),
+            schema::job::status.eq(JobStatus::Pending),
+            schema::job::spec.eq(spec.to_string()),
+            schema::job::timeout.eq(3600),
+            schema::job::priority.eq(0),
+            schema::job::created.eq(&now),
+            schema::job::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert test job");
+
+    job_uuid
 }
 
 /// Get project ID from slug.
