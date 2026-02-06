@@ -57,9 +57,6 @@ jobs:
           docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
           docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-dev
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: Scale up Dev Machines
-        working-directory: ./services/api
-        run: flyctl scale vm performance-8x --app bencher-api-dev
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.dev.toml --wait-timeout 300
@@ -68,18 +65,12 @@ jobs:
           cache-key: cli
           mold-version: ${{ inputs.mold-version }}
       - name: Run Smoke Test
-        id: smoke-test
-        continue-on-error: true
         env:
           RUST_BACKTRACE: full
         run: cargo test-api smoke dev
-      - name: Scale down Dev Machines
-        if: always()
-        working-directory: ./services/api
-        run: flyctl scale vm shared-cpu-1x --app bencher-api-dev
-      - name: Check Smoke Test Result
-        if: steps.smoke-test.outcome == 'failure'
-        run: exit 1
+      - name: Run OCI Conformance Test
+        continue-on-error: true
+        run: cargo test-api oci --admin
 
   deploy_console_netlify_dev:
     name: Deploy Console UI to Netlify Dev

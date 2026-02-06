@@ -434,14 +434,19 @@ impl OciStorage {
         }
     }
 
-    /// Lists all tags for a repository
+    /// Lists tags for a repository with optional pagination
+    ///
+    /// - `limit`: Maximum number of tags to return (fetches limit + 1 to detect if more exist)
+    /// - `start_after`: Tag to start listing after (for cursor-based pagination)
     pub async fn list_tags(
         &self,
         repository: &ProjectResourceId,
+        limit: Option<usize>,
+        start_after: Option<&str>,
     ) -> Result<Vec<String>, OciStorageError> {
         match self {
-            Self::S3(s3) => s3.list_tags(repository).await,
-            Self::Local(local) => local.list_tags(repository).await,
+            Self::S3(s3) => s3.list_tags(repository, limit, start_after).await,
+            Self::Local(local) => local.list_tags(repository, limit, start_after).await,
         }
     }
 
@@ -1490,15 +1495,26 @@ impl OciS3Storage {
             .map_err(|e: crate::types::DigestError| OciStorageError::InvalidContent(e.to_string()))
     }
 
-    /// Lists all tags for a repository
+    /// Lists tags for a repository with optional pagination
+    ///
+    /// - `limit`: Maximum number of tags to return (fetches limit + 1 to detect if more exist)
+    /// - `start_after`: Tag to start listing after (for cursor-based pagination)
+    ///
+    /// Returns tags sorted lexicographically by S3.
     pub async fn list_tags(
         &self,
         repository: &ProjectResourceId,
+        limit: Option<usize>,
+        start_after: Option<&str>,
     ) -> Result<Vec<String>, OciStorageError> {
         let prefix = format!("{}/tags/", self.key_prefix(repository));
 
         let mut tags = Vec::new();
         let mut continuation_token: Option<String> = None;
+
+        // Calculate how many we need to fetch - one extra to detect if more exist
+        let fetch_limit = limit.map(|l| l + 1);
+        let mut remaining = fetch_limit;
 
         loop {
             let mut request = self
@@ -1507,8 +1523,19 @@ impl OciS3Storage {
                 .bucket(&self.config.bucket_arn)
                 .prefix(&prefix);
 
+            // Apply max_keys limit if specified
+            if let Some(rem) = remaining {
+                // rem.min(1000) is always <= 1000 which fits in i32
+                let max_keys = i32::try_from(rem.min(1000)).unwrap_or(1000);
+                request = request.max_keys(max_keys);
+            }
+
+            // Apply continuation token or start_after (mutually exclusive in S3 API)
             if let Some(token) = continuation_token.take() {
                 request = request.continuation_token(token);
+            } else if let Some(start) = start_after {
+                // Only apply start_after on the first request
+                request = request.start_after(format!("{prefix}{start}"));
             }
 
             let response = request
@@ -1516,13 +1543,30 @@ impl OciS3Storage {
                 .await
                 .map_err(|e| OciStorageError::S3(e.to_string()))?;
 
+            let count_before = tags.len();
             if let Some(contents) = response.contents {
                 for object in contents {
                     if let Some(key) = object.key
                         && let Some(tag) = key.strip_prefix(&prefix)
                     {
                         tags.push(tag.to_owned());
+
+                        // Check if we've collected enough
+                        if let Some(limit) = fetch_limit
+                            && tags.len() >= limit
+                        {
+                            return Ok(tags);
+                        }
                     }
+                }
+            }
+
+            // Update remaining count based on items added this iteration
+            let added_this_iteration = tags.len() - count_before;
+            if let Some(rem) = remaining.as_mut() {
+                *rem = rem.saturating_sub(added_this_iteration);
+                if *rem == 0 {
+                    break;
                 }
             }
 

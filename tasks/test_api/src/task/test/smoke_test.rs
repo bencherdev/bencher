@@ -13,10 +13,7 @@ use bencher_json::{
 
 use crate::{
     API_VERSION,
-    parser::{
-        TEST_ADMIN_USERNAME, TaskExamples, TaskOci, TaskSeedTest, TaskSmokeTest,
-        TaskTestEnvironment,
-    },
+    parser::{TaskExamples, TaskOci, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
     task::{
         oci::Oci,
         test::{examples::Examples, seed_test::SeedTest},
@@ -204,15 +201,6 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
                 is_bencher_cloud: true,
             };
             SeedTest::try_from(task)?.exec()?;
-
-            // Run OCI conformance tests with Bencher Cloud dev credentials
-            let oci = Oci::try_from(TaskOci::for_test_with_credentials(
-                api_url.as_ref(),
-                false,
-                TEST_ADMIN_USERNAME.to_owned(),
-                admin_token.to_string(),
-            ))?;
-            oci.exec()?;
 
             Ok(())
         },

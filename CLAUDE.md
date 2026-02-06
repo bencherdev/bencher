@@ -33,6 +33,15 @@ cargo test-api seed            # Seed the database with sample data
 cd services/console && npm test # Run frontend tests (vitest)
 ```
 
+Running the seed tests:
+
+1. Stop the API server if it's running.
+2. Delete the existing database at `services/api/data/bencher.db` if it exists.
+3. Run the API server.
+4. In another terminal:
+  - Bencher Cloud: `cargo test-api seed --is-bencher-cloud`
+  - Bencher Self-Hosted: `cargo test-api seed`
+
 ### Linting & Formatting
 
 ```bash

@@ -57,6 +57,7 @@ jobs:
             cli:
               - 'services/cli/**'
               - 'lib/**'
+              - 'services/api/openapi.json'
             docker:
               - 'services/api/Dockerfile'
               - 'services/console/Dockerfile'

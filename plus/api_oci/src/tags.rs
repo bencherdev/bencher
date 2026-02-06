@@ -2,19 +2,18 @@
 //!
 //! - GET /v2/<name>/tags/list - List tags for a repository
 
-use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::ProjectResourceId;
 use bencher_oci_storage::OciError;
 use bencher_schema::context::ApiContext;
-use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
+use dropshot::{
+    HttpError, HttpResponseHeaders, HttpResponseOk, Path, Query, RequestContext, endpoint,
+};
+use http::header::HeaderValue;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "plus")]
-use crate::auth::apply_auth_rate_limit;
-use crate::auth::{
-    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
-};
+use crate::auth::require_pull_access;
 
 /// Path parameters for tags list
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -26,10 +25,30 @@ pub struct TagsPath {
 /// Query parameters for tags list pagination
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TagsQuery {
-    /// Number of tags to return
+    /// Number of tags to return (default: 100)
     pub n: Option<u32>,
     /// Last tag from previous response (for pagination)
     pub last: Option<String>,
+}
+
+/// Headers for OCI tags list response
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OciTagsHeaders {
+    /// CORS: Allow all origins
+    pub access_control_allow_origin: String,
+    /// CORS: Expose headers to client (includes Link when pagination is present)
+    pub access_control_expose_headers: String,
+}
+
+impl OciTagsHeaders {
+    pub fn new(expose_link: bool) -> Self {
+        let expose = if expose_link { "Link" } else { "" };
+        Self {
+            access_control_allow_origin: "*".to_owned(),
+            access_control_expose_headers: expose.to_owned(),
+        }
+    }
 }
 
 /// Response for tags list
@@ -55,11 +74,14 @@ pub async fn oci_tags_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// Default number of tags to return when n is not specified
+const DEFAULT_PAGE_SIZE: u32 = 100;
+
 /// List tags for a repository
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
+///
+/// Returns a list of tags for the specified repository with optional pagination.
+/// When more results are available, a `Link` header is included with a URL to fetch
+/// the next page of results per the OCI Distribution Spec.
 #[endpoint {
     method = GET,
     path = "/v2/{name}/tags/list",
@@ -69,29 +91,25 @@ pub async fn oci_tags_list(
     rqctx: RequestContext<ApiContext>,
     path: Path<TagsPath>,
     query: Query<TagsQuery>,
-) -> Result<ResponseOk<TagsListResponse>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<TagsListResponse>, OciTagsHeaders>, HttpError> {
     let context = rqctx.context();
     let path = path.into_inner();
     let query = query.into_inner();
 
-    // Authenticate
+    // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:pull");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "pull")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Get storage
     let storage = context.oci_storage();
 
-    // List tags
+    // Determine page size
+    let page_size = query.n.unwrap_or(DEFAULT_PAGE_SIZE) as usize;
+
+    // List tags with pagination handled at storage layer
+    // Storage returns up to page_size + 1 tags to detect if more exist
     let mut tags = storage
-        .list_tags(&path.name)
+        .list_tags(&path.name, Some(page_size), query.last.as_deref())
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -99,26 +117,47 @@ pub async fn oci_tags_list(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciTagsList);
 
-    // Sort tags for consistent ordering
-    tags.sort();
+    // Check if more results exist (storage fetched page_size + 1)
+    let has_more = tags.len() > page_size;
 
-    // Apply pagination
-    if let Some(last) = &query.last {
-        // Find the position of the last tag and skip to after it
-        if let Some(pos) = tags.iter().position(|t| t == last) {
-            tags = tags.into_iter().skip(pos + 1).collect();
-        }
-    }
+    // Truncate to requested page size
+    tags.truncate(page_size);
 
-    // Limit number of results
-    if let Some(n) = query.n {
-        tags.truncate(n as usize);
-    }
+    // Check if we need to add Link header for pagination
+    let link_header = if has_more {
+        tags.last().map(|last_tag| {
+            let n = query.n.unwrap_or(DEFAULT_PAGE_SIZE);
+            format!(
+                "</v2/{}/tags/list?n={}&last={}>; rel=\"next\"",
+                name_str,
+                n,
+                urlencoding::encode(last_tag)
+            )
+        })
+    } else {
+        None
+    };
 
-    // TODO: Add Link header for pagination if there are more results
-
-    Ok(Get::pub_response_ok(TagsListResponse {
+    // Build response body
+    let response_body = TagsListResponse {
         name: name_str,
         tags,
-    }))
+    };
+
+    // Build response with OCI-compliant headers
+    let mut response = HttpResponseHeaders::new(
+        HttpResponseOk(response_body),
+        OciTagsHeaders::new(link_header.is_some()),
+    );
+
+    // Add Link header for pagination if there are more results
+    if let Some(link) = link_header {
+        response.headers_mut().insert(
+            http::header::LINK,
+            HeaderValue::from_str(&link)
+                .map_err(|e| HttpError::for_internal_error(format!("Invalid Link header: {e}")))?,
+        );
+    }
+
+    Ok(response)
 }

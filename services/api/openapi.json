@@ -8756,7 +8756,7 @@
           "oci"
         ],
         "summary": "Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)",
-        "description": "Authentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
+        "description": "Uploads a complete blob in a single request. This is convenient for small blobs but has memory limitations: Dropshot's `UntypedBody` buffers the entire request into memory. For large blobs, use the chunked upload flow instead (see `uploads` module).\n\n# Memory Limitation\n\nThe entire blob content is buffered in server memory before being stored. This means practical upload sizes are limited by available server memory. For blobs larger than a few MB, consider using chunked uploads:\n\n1. `POST /v2/{name}/blobs/uploads` - Start session 2. `PATCH /v2/{name}/blobs/uploads/{session_id}` - Upload chunks 3. `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` - Complete\n\n# Authentication\n\nAuthentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
         "operationId": "oci_upload_monolithic",
         "parameters": [
           {
@@ -9104,6 +9104,7 @@
           "oci"
         ],
         "summary": "Upload a chunk of data",
+        "description": "Appends a chunk of data to an in-progress upload session. This is the recommended approach for large blobs, as each chunk is stored immediately rather than buffering the entire blob in memory.\n\nClients can call this endpoint multiple times to upload a blob in pieces, then call `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` to complete the upload.\n\nThe `Content-Range` header is optional but recommended - if provided, the server validates that the chunk starts at the expected offset.",
         "operationId": "oci_upload_chunk",
         "parameters": [
           {
@@ -9374,6 +9375,7 @@
           "oci"
         ],
         "summary": "List tags for a repository",
+        "description": "Returns a list of tags for the specified repository with optional pagination. When more results are available, a `Link` header is included with a URL to fetch the next page of results per the OCI Distribution Spec.",
         "operationId": "oci_tags_list",
         "parameters": [
           {
@@ -9397,7 +9399,7 @@
           {
             "in": "query",
             "name": "n",
-            "description": "Number of tags to return",
+            "description": "Number of tags to return (default: 100)",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -9410,21 +9412,8 @@
           "200": {
             "description": "successful operation",
             "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
               "access-control-allow-origin": {
+                "description": "CORS: Allow all origins",
                 "style": "simple",
                 "required": true,
                 "schema": {
@@ -9432,13 +9421,7 @@
                 }
               },
               "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
+                "description": "CORS: Expose headers to client (includes Link when pagination is present)",
                 "style": "simple",
                 "required": true,
                 "schema": {

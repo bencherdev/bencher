@@ -27,6 +27,7 @@ plus = [
     "dep:serde",
     "dep:serde_json",
     "dep:slog",
+    "dep:urlencoding",
 ]
 sentry = []
 otel = ["dep:bencher_otel"]
@@ -48,6 +49,7 @@ schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 slog = { workspace = true, optional = true }
+urlencoding = { workspace = true, optional = true }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true

@@ -14,11 +14,7 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-#[cfg(feature = "plus")]
-use crate::auth::apply_auth_rate_limit;
-use crate::auth::{
-    extract_oci_bearer_token, unauthorized_with_www_authenticate, validate_oci_access,
-};
+use crate::auth::require_pull_access;
 
 /// Path parameters for referrers endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -55,10 +51,6 @@ pub async fn oci_referrers_options(
 ///
 /// Returns an image index containing descriptors of all manifests that
 /// reference the specified digest via their `subject` field.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 #[endpoint {
     method = GET,
     path = "/v2/{name}/referrers/{digest}",
@@ -73,17 +65,9 @@ pub async fn oci_referrers_list(
     let path = path.into_inner();
     let query = query.into_inner();
 
-    // Authenticate
+    // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let scope = format!("repository:{name_str}:pull");
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, &name_str, "pull")
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, Some(&scope)))?;
-
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Parse digest
     let digest: Digest = path.digest.parse().map_err(|_err| {

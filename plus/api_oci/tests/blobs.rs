@@ -276,3 +276,194 @@ async fn test_blob_options() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert!(resp.headers().contains_key("access-control-allow-origin"));
 }
+
+// =============================================================================
+// Tests for validate_push_access branches
+// =============================================================================
+
+// Unauthenticated push to a CLAIMED project should be rejected with 401
+#[tokio::test]
+async fn test_blob_upload_unauthenticated_to_claimed_project() {
+    let server = TestServer::new().await;
+
+    // Create a user, org, and project (this makes it "claimed" since user is a member)
+    let user = server
+        .signup("Claimed User", "claimedproject@example.com")
+        .await;
+    let org = server.create_org(&user, "Claimed Org").await;
+    let project = server.create_project(&user, &org, "Claimed Project").await;
+
+    let project_slug: &str = project.slug.as_ref();
+
+    // Try to push without authentication - should fail with 401
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// Authenticated push to an UNCLAIMED project should auto-claim the org
+#[tokio::test]
+async fn test_blob_upload_authenticated_to_unclaimed_project() {
+    let server = TestServer::new().await;
+
+    // First, create an unclaimed project by pushing without authentication
+    let unclaimed_slug = "unclaimed-to-claim-project";
+
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(create_resp.status(), StatusCode::ACCEPTED);
+
+    // Now create a user and push with authentication - should auto-claim
+    let user = server.signup("Claimer User", "claimer@example.com").await;
+
+    let oci_token = server.oci_token(&user, unclaimed_slug, &["push"]);
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+    // Verify the project is now claimed by trying unauthenticated push again
+    // It should now be rejected since the org was claimed
+    let unauth_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// Push to a non-existent project by UUID should return 404
+#[tokio::test]
+async fn test_blob_upload_nonexistent_uuid() {
+    let server = TestServer::new().await;
+    let user = server.signup("UUID User", "uuidpush@example.com").await;
+
+    // Use a random UUID that doesn't exist
+    let fake_uuid = "00000000-0000-0000-0000-000000000000";
+
+    let oci_token = server.oci_token(&user, fake_uuid, &["push"]);
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", fake_uuid)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// Push to a non-existent project by slug should auto-create the project
+#[tokio::test]
+async fn test_blob_upload_nonexistent_slug_authenticated() {
+    let server = TestServer::new().await;
+    let user = server.signup("Slug User", "slugpush@example.com").await;
+
+    // Use a new slug that doesn't exist yet
+    let new_slug = "auto-created-project";
+
+    let oci_token = server.oci_token(&user, new_slug, &["push"]);
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", new_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+    assert!(resp.headers().contains_key("location"));
+
+    // The project should now exist and be claimed by the user
+    // Verify by trying unauthenticated push - should be rejected
+    let unauth_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", new_slug)))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// Monolithic upload (PUT /blobs/uploads?digest=) to unclaimed project
+#[tokio::test]
+async fn test_blob_monolithic_upload_unclaimed() {
+    let server = TestServer::new().await;
+
+    let blob_data = b"unclaimed monolithic blob content";
+    let digest = compute_digest(blob_data);
+
+    // Push to a new project slug (will auto-create unclaimed project)
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/unclaimed-monolithic-project/blobs/uploads?digest={}",
+            digest
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    assert!(resp.headers().contains_key("location"));
+    assert!(resp.headers().contains_key("docker-content-digest"));
+}
+
+// Monolithic upload to a CLAIMED project without auth should fail
+#[tokio::test]
+async fn test_blob_monolithic_upload_unauthenticated_to_claimed() {
+    let server = TestServer::new().await;
+
+    // Create a claimed project
+    let user = server
+        .signup("Mono Claimed User", "monoclaimedproject@example.com")
+        .await;
+    let org = server.create_org(&user, "Mono Claimed Org").await;
+    let project = server
+        .create_project(&user, &org, "Mono Claimed Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+
+    let blob_data = b"claimed monolithic blob content";
+    let digest = compute_digest(blob_data);
+
+    // Try to push without authentication - should fail
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}

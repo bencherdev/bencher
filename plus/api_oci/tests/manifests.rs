@@ -423,3 +423,208 @@ async fn test_manifest_options() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert!(resp.headers().contains_key("access-control-allow-origin"));
 }
+
+// =============================================================================
+// Tests for validate_push_access branches (manifest endpoints)
+// =============================================================================
+
+// Manifest upload to UNCLAIMED project (unauthenticated) should succeed
+#[tokio::test]
+async fn test_manifest_put_unclaimed() {
+    let server = TestServer::new().await;
+
+    let config_digest = "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    let layer_digest = "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    let manifest = create_test_manifest(config_digest, layer_digest);
+
+    // Push manifest to a new project slug (will auto-create unclaimed project)
+    let resp = server
+        .client
+        .put(server.api_url("/v2/unclaimed-manifest-project/manifests/latest"))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    assert!(resp.headers().contains_key("location"));
+    assert!(resp.headers().contains_key("docker-content-digest"));
+}
+
+// Manifest upload to CLAIMED project without auth should fail with 401
+#[tokio::test]
+async fn test_manifest_put_unauthenticated_to_claimed() {
+    let server = TestServer::new().await;
+
+    // Create a claimed project
+    let user = server
+        .signup(
+            "Manifest Claimed User",
+            "manifestclaimedproject@example.com",
+        )
+        .await;
+    let org = server.create_org(&user, "Manifest Claimed Org").await;
+    let project = server
+        .create_project(&user, &org, "Manifest Claimed Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+
+    let config_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
+    let layer_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
+    let manifest = create_test_manifest(config_digest, layer_digest);
+
+    // Try to push without authentication - should fail
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// Authenticated manifest upload to UNCLAIMED project should auto-claim
+#[tokio::test]
+async fn test_manifest_put_authenticated_to_unclaimed() {
+    let server = TestServer::new().await;
+
+    // First, create an unclaimed project by pushing without authentication
+    let unclaimed_slug = "unclaimed-manifest-to-claim";
+
+    let config_digest1 = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    let layer_digest1 = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    let manifest1 = create_test_manifest(config_digest1, layer_digest1);
+
+    let create_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/v1", unclaimed_slug)))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest1)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+
+    // Now create a user and push with authentication - should auto-claim
+    let user = server
+        .signup("Manifest Claimer", "manifestclaimer@example.com")
+        .await;
+
+    let oci_token = server.oci_token(&user, unclaimed_slug, &["push"]);
+
+    let config_digest2 = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+    let layer_digest2 = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+    let manifest2 = create_test_manifest(config_digest2, layer_digest2);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/v2", unclaimed_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest2)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Verify the project is now claimed by trying unauthenticated push again
+    let config_digest3 = "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    let layer_digest3 = "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    let manifest3 = create_test_manifest(config_digest3, layer_digest3);
+
+    let unauth_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/v3", unclaimed_slug)))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest3)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// Manifest upload to non-existent project by UUID should return 404
+#[tokio::test]
+async fn test_manifest_put_nonexistent_uuid() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Manifest UUID User", "manifestuuidpush@example.com")
+        .await;
+
+    // Use a random UUID that doesn't exist
+    let fake_uuid = "00000000-0000-0000-0000-000000000000";
+
+    let oci_token = server.oci_token(&user, fake_uuid, &["push"]);
+
+    let config_digest = "sha256:1234567890123456789012345678901234567890123456789012345678901234";
+    let layer_digest = "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd";
+    let manifest = create_test_manifest(config_digest, layer_digest);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/latest", fake_uuid)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// Authenticated manifest upload to non-existent slug should auto-create
+#[tokio::test]
+async fn test_manifest_put_nonexistent_slug_authenticated() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Manifest Slug User", "manifestslugpush@example.com")
+        .await;
+
+    // Use a new slug that doesn't exist yet
+    let new_slug = "auto-created-manifest-project";
+
+    let oci_token = server.oci_token(&user, new_slug, &["push"]);
+
+    let config_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
+    let layer_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
+    let manifest = create_test_manifest(config_digest, layer_digest);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/latest", new_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // The project should now exist and be claimed by the user
+    // Verify by trying unauthenticated push - should be rejected
+    let config_digest2 = "sha256:3333333333333333333333333333333333333333333333333333333333333333";
+    let layer_digest2 = "sha256:4444444444444444444444444444444444444444444444444444444444444444";
+    let manifest2 = create_test_manifest(config_digest2, layer_digest2);
+
+    let unauth_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/v2", new_slug)))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest2)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+}
