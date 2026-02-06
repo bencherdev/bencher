@@ -11,8 +11,10 @@ use crate::{
 };
 
 pub mod job;
+mod source_ip;
 
 pub use job::{InsertJob, JobId, QueryJob, UpdateJob, spawn_heartbeat_timeout};
+pub use source_ip::SourceIp;
 
 crate::macros::typed_id::typed_id!(RunnerId);
 

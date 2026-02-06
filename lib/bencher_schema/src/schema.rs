@@ -75,6 +75,8 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         report_id -> Integer,
+        organization_id -> Integer,
+        source_ip -> Text,
         status -> Integer,
         spec -> Text,
         timeout -> Integer,
@@ -373,6 +375,7 @@ diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
 diesel::joinable!(head_version -> version (version_id));
+diesel::joinable!(job -> organization (organization_id));
 diesel::joinable!(job -> report (report_id));
 diesel::joinable!(job -> runner (runner_id));
 diesel::joinable!(measure -> project (project_id));

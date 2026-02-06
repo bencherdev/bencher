@@ -470,7 +470,7 @@ Jobs are queued with priority based on the submitting organization's plan. Prior
 The claim endpoint must atomically find the highest-priority eligible job while respecting concurrency limits. This is implemented in pure Diesel using table aliases for correlated subqueries:
 
 ```rust
-use diesel::dsl::not_exists;
+use diesel::dsl::{exists, not};
 use diesel::alias;
 use crate::schema::job;
 
@@ -487,19 +487,19 @@ fn claim_next_job(conn: &mut DbConnection, runner_id: RunnerId) -> Result<Option
     // Tier 2: Free (priority 100-199) - one concurrent job per organization
     let tier_free_eligible = priority.ge(100)
         .and(priority.lt(200))
-        .and(not_exists(
+        .and(not(exists(
             job_org
                 .filter(job_org.field(status).eq(JobStatus::Running))
                 .filter(job_org.field(organization_id).eq(organization_id))
-        ));
+        )));
 
     // Tier 3: Unclaimed (priority < 100) - one concurrent job per source IP
     let tier_unclaimed_eligible = priority.lt(100)
-        .and(not_exists(
+        .and(not(exists(
             job_ip
                 .filter(job_ip.field(status).eq(JobStatus::Running))
                 .filter(job_ip.field(source_ip).eq(source_ip))
-        ));
+        )));
 
     // Combined eligibility: any tier condition passes
     let eligible = tier_unlimited
@@ -795,7 +795,7 @@ The following changes are needed to implement the tier-based scheduling with con
 ### 3. Claim Endpoint (`api_runners/src/jobs.rs`)
 
 - [ ] Define table aliases: `alias!(job as job_org: JobOrg)` and `alias!(job as job_ip: JobIp)`
-- [ ] Implement tier-based eligibility filter using `not_exists()` with correlated subqueries
+- [ ] Implement tier-based eligibility filter using `not(exists())` with correlated subqueries
 - [ ] Replace simple priority ordering with eligibility-filtered query
 
 ### 4. Job Creation (wherever jobs are created)
