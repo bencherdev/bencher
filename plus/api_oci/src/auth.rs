@@ -12,6 +12,7 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::{ApiContext, RateLimiting},
     model::{
+        organization::QueryOrganization,
         project::QueryProject,
         user::{QueryUser, auth::AuthUser, public::PublicUser},
     },
@@ -193,14 +194,6 @@ pub struct PushAccess {
 ///   - If slug is used → creates the project (under user's org if authenticated, new unclaimed org if not)
 ///
 /// Returns the project and optional claims, or an error if access is denied.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth/validation errors for security"
-)]
-#[expect(
-    clippy::too_many_lines,
-    reason = "Auth logic needs to handle multiple cases"
-)]
 pub async fn validate_push_access(
     log: &Logger,
     rqctx: &RequestContext<ApiContext>,
@@ -208,18 +201,34 @@ pub async fn validate_push_access(
 ) -> Result<PushAccess, HttpError> {
     let context = rqctx.context();
     let repository_str = repository.to_string();
-    let scope = format!("repository:{repository_str}:push");
 
-    // Try to extract bearer token (optional for unclaimed projects)
+    // Build authentication context (optional for unclaimed projects)
     let token_result = extract_oci_bearer_token(rqctx);
-
-    // Build a PublicUser based on authentication status
     let (public_user, claims) =
         build_public_user(log, context, rqctx, &token_result, &repository_str).await?;
 
     // Apply rate limiting based on authentication status
     #[cfg(feature = "plus")]
-    match &public_user {
+    apply_push_rate_limit(log, context, &public_user)?;
+
+    // Try to find existing project, or create if using a slug
+    let conn = public_conn!(context);
+    match QueryProject::from_resource_id(conn, repository) {
+        Ok(project) => {
+            handle_existing_project(log, rqctx, context, project, &public_user, claims).await
+        },
+        Err(_) => handle_nonexistent_project(log, context, repository, &public_user, claims).await,
+    }
+}
+
+/// Apply rate limiting for push operations based on authentication status
+#[cfg(feature = "plus")]
+fn apply_push_rate_limit(
+    log: &Logger,
+    context: &ApiContext,
+    public_user: &PublicUser,
+) -> Result<(), HttpError> {
+    match public_user {
         PublicUser::Public(remote_ip) => {
             if let Some(remote_ip) = remote_ip {
                 slog::debug!(log, "Applying unclaimed OCI push rate limit"; "remote_ip" => ?remote_ip);
@@ -231,101 +240,135 @@ pub async fn validate_push_access(
             context.rate_limiting.claimed_run(auth_user.user.uuid)?;
         },
     }
+    Ok(())
+}
 
-    // Check if the project exists
-    // Use a single connection for all project/org queries to reduce pool pressure
+/// Handle push access for an existing project
+///
+/// Checks if the organization is claimed or unclaimed and enforces appropriate access control.
+async fn handle_existing_project(
+    log: &Logger,
+    rqctx: &RequestContext<ApiContext>,
+    context: &ApiContext,
+    project: QueryProject,
+    public_user: &PublicUser,
+    claims: Option<OciClaims>,
+) -> Result<PushAccess, HttpError> {
     let conn = public_conn!(context);
-    if let Ok(query_project) = QueryProject::from_resource_id(conn, repository) {
-        // Project exists - check if its organization is claimed
-        let query_organization = query_project.organization(conn).map_err(|e| {
-            HttpError::for_internal_error(format!("Failed to get organization: {e}"))
+    let organization = project.organization(conn).map_err(|e| {
+        HttpError::for_internal_error(format!("Failed to get organization: {e}"))
+    })?;
+
+    let is_claimed = organization.is_claimed(conn).map_err(|e| {
+        HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
+    })?;
+
+    if is_claimed {
+        handle_claimed_project(log, rqctx, context, project, public_user, claims)
+    } else {
+        handle_unclaimed_project(log, context, project, organization, public_user, claims).await
+    }
+}
+
+/// Handle push to a claimed project (requires authentication and RBAC permission)
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding RBAC error details for security"
+)]
+fn handle_claimed_project(
+    log: &Logger,
+    rqctx: &RequestContext<ApiContext>,
+    context: &ApiContext,
+    project: QueryProject,
+    public_user: &PublicUser,
+    claims: Option<OciClaims>,
+) -> Result<PushAccess, HttpError> {
+    let scope = format!("repository:{}:push", project.slug);
+
+    // Authentication is required for claimed projects
+    let claims = claims.ok_or_else(|| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+
+    let PublicUser::Auth(auth_user) = public_user else {
+        // This shouldn't happen since we have claims
+        return Err(unauthorized_with_www_authenticate(rqctx, Some(&scope)));
+    };
+
+    slog::debug!(
+        log,
+        "Validating push access for claimed project";
+        "project" => %project.uuid
+    );
+
+    // Verify RBAC permission
+    project
+        .try_allowed(&context.rbac, auth_user, Permission::Create)
+        .map_err(|_| {
+            HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::FORBIDDEN,
+                format!(
+                    "Access denied to repository: {}. You need Create permission.",
+                    project.slug
+                ),
+            )
         })?;
 
-        let is_claimed = query_organization.is_claimed(conn).map_err(|e| {
-            HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
-        })?;
+    Ok(PushAccess {
+        project,
+        claims: Some(claims),
+    })
+}
 
-        if is_claimed {
-            // Organization is claimed - authentication is required
-            let claims =
-                claims.ok_or_else(|| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+/// Handle push to an unclaimed project (allows unauthenticated, auto-claims if authenticated)
+async fn handle_unclaimed_project(
+    log: &Logger,
+    context: &ApiContext,
+    project: QueryProject,
+    organization: QueryOrganization,
+    public_user: &PublicUser,
+    claims: Option<OciClaims>,
+) -> Result<PushAccess, HttpError> {
+    slog::info!(
+        log,
+        "Allowing push to unclaimed project";
+        "project" => %project.uuid,
+        "organization" => %organization.uuid,
+        "authenticated" => claims.is_some()
+    );
 
-            slog::debug!(
-                log,
-                "Validating push access for claimed project";
-                "project" => %query_project.uuid,
-                "organization" => %query_organization.uuid
-            );
-
-            // Verify RBAC permission on the project
-            if let PublicUser::Auth(auth_user) = &public_user {
-                query_project
-                    .try_allowed(&context.rbac, auth_user, Permission::Create)
-                    .map_err(|_| {
-                        HttpError::for_client_error(
-                            None,
-                            ClientErrorStatusCode::FORBIDDEN,
-                            format!(
-                                "Access denied to repository: {repository_str}. You need Create permission.",
-                            ),
-                        )
-                    })?;
-            } else {
-                // This shouldn't happen since we checked for claims above
-                return Err(unauthorized_with_www_authenticate(rqctx, Some(&scope)));
-            }
-
-            return Ok(PushAccess {
-                project: query_project,
-                claims: Some(claims),
-            });
-        }
-
-        // Organization is unclaimed - allow unauthenticated push
-        slog::info!(
-            log,
-            "Allowing push to unclaimed project";
-            "project" => %query_project.uuid,
-            "organization" => %query_organization.uuid,
-            "authenticated" => claims.is_some()
-        );
-
-        // If authenticated user is pushing to unclaimed project, claim the organization.
-        // This must succeed - if it fails, we reject the push to prevent the user
-        // from thinking they own the project when they don't.
-        if let PublicUser::Auth(auth_user) = &public_user {
-            query_organization
-                .claim(context, &auth_user.user)
-                .await
-                .map_err(|e| {
-                    slog::error!(
-                        log,
-                        "Failed to claim organization during OCI push - rejecting push";
-                        "organization" => %query_organization.uuid,
-                        "user" => %auth_user.user.uuid,
-                        "error" => %e
-                    );
-                    HttpError::for_internal_error(format!(
-                        "Failed to claim organization: {e}. Push rejected to prevent security issues."
-                    ))
-                })?;
-        }
-
-        return Ok(PushAccess {
-            project: query_project,
-            claims,
-        });
+    // If authenticated, claim the organization for the user
+    if let PublicUser::Auth(auth_user) = public_user {
+        organization
+            .claim(context, &auth_user.user)
+            .await
+            .map_err(|e| {
+                slog::error!(
+                    log,
+                    "Failed to claim organization during OCI push - rejecting push";
+                    "organization" => %organization.uuid,
+                    "user" => %auth_user.user.uuid,
+                    "error" => %e
+                );
+                HttpError::for_internal_error(format!(
+                    "Failed to claim organization: {e}. Push rejected to prevent security issues."
+                ))
+            })?;
     }
 
-    // Project doesn't exist - behavior depends on whether UUID or slug was used
+    Ok(PushAccess { project, claims })
+}
+
+/// Handle push to a non-existent project (UUID → 404, slug → auto-create)
+async fn handle_nonexistent_project(
+    log: &Logger,
+    context: &ApiContext,
+    repository: &ProjectResourceId,
+    public_user: &PublicUser,
+    claims: Option<OciClaims>,
+) -> Result<PushAccess, HttpError> {
     match repository.clone() {
         ProjectResourceId::Uuid(uuid) => {
-            // UUIDs must reference existing projects
-            slog::debug!(
-                log,
-                "OCI push to non-existent project by UUID";
-                "uuid" => %uuid
-            );
+            slog::debug!(log, "OCI push to non-existent project by UUID"; "uuid" => %uuid);
             Err(HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::NOT_FOUND,
@@ -333,7 +376,6 @@ pub async fn validate_push_access(
             ))
         },
         ProjectResourceId::Slug(slug) => {
-            // Slugs trigger auto-creation
             slog::info!(
                 log,
                 "Creating project on-the-fly for OCI push";
@@ -341,22 +383,18 @@ pub async fn validate_push_access(
                 "authenticated" => claims.is_some()
             );
 
-            // Use the slug as the project name (converted to ResourceName)
             let slug_str: &str = slug.as_ref();
             let project_name: ResourceName = slug_str
                 .parse()
                 .map_err(|e| HttpError::for_internal_error(format!("Invalid project name: {e}")))?;
 
-            let query_project =
-                QueryProject::get_or_create(log, context, &public_user, repository, || {
+            let project =
+                QueryProject::get_or_create(log, context, public_user, repository, || {
                     Ok(project_name)
                 })
                 .await?;
 
-            Ok(PushAccess {
-                project: query_project,
-                claims,
-            })
+            Ok(PushAccess { project, claims })
         },
     }
 }
