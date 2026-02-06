@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use url::Url;
 
+use crate::cpu::CpuLayout;
 use crate::tuning::TuningConfig;
 
 mod api_client;
@@ -41,6 +42,8 @@ pub struct DaemonConfig {
     pub labels: Vec<String>,
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
+    /// CPU layout for isolating benchmark cores from housekeeping tasks.
+    pub cpu_layout: CpuLayout,
 }
 
 pub struct Daemon {
@@ -64,6 +67,18 @@ impl Daemon {
             println!("  Labels: {}", self.config.labels.join(", "));
         }
         println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
+
+        // Log CPU layout
+        let layout = &self.config.cpu_layout;
+        if layout.has_isolation() {
+            println!(
+                "  CPU isolation: housekeeping={}, benchmark={}",
+                layout.housekeeping_cpuset(),
+                layout.benchmark_cpuset()
+            );
+        } else {
+            println!("  CPU isolation: disabled (insufficient cores)");
+        }
 
         // Apply host tuning — guard restores settings on drop
         let _tuning_guard = crate::tuning::apply(&self.config.tuning);

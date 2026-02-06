@@ -1,4 +1,5 @@
 use bencher_runner::TuningConfig;
+use bencher_runner::cpu::CpuLayout;
 use bencher_runner::daemon::{Daemon, DaemonConfig, DaemonError};
 
 use crate::parser::TaskDaemon;
@@ -29,6 +30,9 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
             }
         };
 
+        // Detect CPU layout for core isolation
+        let cpu_layout = CpuLayout::detect();
+
         Ok(Self {
             config: DaemonConfig {
                 host,
@@ -37,6 +41,7 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
                 labels: task.labels,
                 poll_timeout_secs: task.poll_timeout,
                 tuning,
+                cpu_layout,
             },
         })
     }

@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::RunnerError;
+use crate::cpu::CpuLayout;
 use crate::jail::ResourceLimits;
 
 /// Default cgroup v2 mount point.
@@ -57,21 +58,24 @@ impl CgroupManager {
 
     /// Enable controllers in a cgroup.
     ///
-    /// Enables cpu, memory, and pids controllers (required), and io controller
-    /// (optional, for I/O throttling). Returns an error if required controllers
-    /// cannot be enabled.
+    /// Enables cpu, memory, and pids controllers (required), and io/cpuset controllers
+    /// (optional, for I/O throttling and CPU pinning). Returns an error if required
+    /// controllers cannot be enabled.
     fn enable_controllers(path: &Path) -> Result<(), RunnerError> {
         let subtree_control = path.join("cgroup.subtree_control");
 
         // Try to enable all controllers at once (most efficient)
-        if fs::write(&subtree_control, "+cpu +memory +pids +io").is_err() {
-            // Fall back to enabling required controllers without io
-            fs::write(&subtree_control, "+cpu +memory +pids").map_err(|e| {
-                RunnerError::Jail(format!(
-                    "failed to enable required cgroup controllers (cpu, memory, pids) at {}: {e}",
-                    subtree_control.display()
-                ))
-            })?;
+        if fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset").is_err() {
+            // Fall back to enabling without cpuset
+            if fs::write(&subtree_control, "+cpu +memory +pids +io").is_err() {
+                // Fall back to enabling required controllers without io or cpuset
+                fs::write(&subtree_control, "+cpu +memory +pids").map_err(|e| {
+                    RunnerError::Jail(format!(
+                        "failed to enable required cgroup controllers (cpu, memory, pids) at {}: {e}",
+                        subtree_control.display()
+                    ))
+                })?;
+            }
         }
 
         // Verify that required controllers are enabled
@@ -117,6 +121,50 @@ impl CgroupManager {
         // discover common devices, but this may not work in all configurations.
         if limits.io_read_bps.is_some() || limits.io_write_bps.is_some() {
             self.apply_io_limits(limits)?;
+        }
+
+        Ok(())
+    }
+
+    /// Apply CPU pinning via cpuset controller.
+    ///
+    /// Restricts processes in this cgroup to run only on the specified CPUs.
+    /// This is used to pin Firecracker VMs to benchmark cores, isolating them
+    /// from housekeeping tasks.
+    ///
+    /// # Arguments
+    ///
+    /// * `layout` - CPU layout with benchmark cores to pin to
+    ///
+    /// # Errors
+    ///
+    /// Returns Ok even if cpuset is not available (logs a warning).
+    /// CPU pinning is best-effort for isolation but not required for correctness.
+    pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<(), RunnerError> {
+        if !layout.has_isolation() {
+            // No meaningful isolation possible (single core or overlapping sets)
+            return Ok(());
+        }
+
+        let cpuset = layout.benchmark_cpuset();
+        if cpuset.is_empty() {
+            return Ok(());
+        }
+
+        // Try to write cpuset.cpus - may fail if cpuset controller is not available
+        let path = self.cgroup_path.join("cpuset.cpus");
+        if let Err(e) = fs::write(&path, &cpuset) {
+            // Log warning but don't fail - cpuset is optional for isolation
+            eprintln!(
+                "Warning: failed to set cpuset.cpus to '{cpuset}' (cpuset controller may not be available): {e}"
+            );
+        } else {
+            // Also need to set cpuset.mems for cpuset to work
+            // Use all memory nodes (typically just "0" on most systems)
+            let mems_path = self.cgroup_path.join("cpuset.mems");
+            if let Err(e) = fs::write(&mems_path, "0") {
+                eprintln!("Warning: failed to set cpuset.mems: {e}");
+            }
         }
 
         Ok(())
@@ -189,6 +237,11 @@ impl CgroupManager {
     /// Add the current process to this cgroup.
     pub fn add_self(&self) -> Result<(), RunnerError> {
         let pid = std::process::id();
+        self.write_file("cgroup.procs", &pid.to_string())
+    }
+
+    /// Add a process by PID to this cgroup.
+    pub fn add_pid(&self, pid: u32) -> Result<(), RunnerError> {
         self.write_file("cgroup.procs", &pid.to_string())
     }
 

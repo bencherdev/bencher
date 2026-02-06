@@ -18,6 +18,7 @@
 use tempfile as _;
 
 mod config;
+pub mod cpu;
 pub mod daemon;
 mod error;
 #[cfg(target_os = "linux")]

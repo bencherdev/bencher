@@ -57,6 +57,11 @@ impl FirecrackerProcess {
         FirecrackerClient::new(&self.api_socket_path)
     }
 
+    /// Get the PID of the Firecracker process.
+    pub fn pid(&self) -> u32 {
+        self.child.id()
+    }
+
     /// Send Ctrl+Alt+Del and wait for graceful shutdown, then SIGKILL.
     pub fn kill_after_grace_period(&mut self, grace: Duration) {
         // Try graceful shutdown via API
