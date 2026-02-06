@@ -24,6 +24,17 @@ impl ApiMeter {
         let attributes = api_counter.attributes();
         counter.add(1, &attributes);
     }
+
+    pub fn record(api_histogram: ApiHistogram, value: f64) {
+        let histogram = Self::new()
+            .meter
+            .f64_histogram(api_histogram.name().to_owned())
+            .with_description(api_histogram.description().to_owned())
+            .with_unit(api_histogram.unit().to_owned())
+            .build();
+        let attributes = api_histogram.attributes();
+        histogram.record(value, &attributes);
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -446,4 +457,84 @@ fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
     const KEY: &str = "server.uuid";
 
     vec![opentelemetry::KeyValue::new(KEY, server_uuid.to_string())]
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ApiHistogram {
+    /// Time a job spent waiting in the queue before being claimed.
+    JobQueueDuration(PriorityTier),
+}
+
+impl ApiHistogram {
+    fn name(&self) -> &str {
+        match self {
+            Self::JobQueueDuration(_) => "job.queue.duration",
+        }
+    }
+
+    fn description(&self) -> &str {
+        match self {
+            Self::JobQueueDuration(_) => "Time a job spent waiting in the queue before being claimed",
+        }
+    }
+
+    fn unit(&self) -> &str {
+        match self {
+            Self::JobQueueDuration(_) => "s",
+        }
+    }
+
+    fn attributes(self) -> Vec<opentelemetry::KeyValue> {
+        match self {
+            Self::JobQueueDuration(tier) => vec![tier.into()],
+        }
+    }
+}
+
+/// Priority tier for job scheduling.
+#[derive(Debug, Clone, Copy)]
+pub enum PriorityTier {
+    /// Enterprise tier (priority >= 300) - unlimited concurrency
+    Enterprise,
+    /// Team tier (priority 200-299) - unlimited concurrency
+    Team,
+    /// Free tier (priority 100-199) - 1 concurrent job per organization
+    Free,
+    /// Unclaimed tier (priority < 100) - 1 concurrent job per source IP
+    Unclaimed,
+}
+
+impl fmt::Display for PriorityTier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Enterprise => write!(f, "enterprise"),
+            Self::Team => write!(f, "team"),
+            Self::Free => write!(f, "free"),
+            Self::Unclaimed => write!(f, "unclaimed"),
+        }
+    }
+}
+
+impl From<PriorityTier> for opentelemetry::KeyValue {
+    fn from(tier: PriorityTier) -> Self {
+        opentelemetry::KeyValue::new(PriorityTier::KEY, tier.to_string())
+    }
+}
+
+impl PriorityTier {
+    const KEY: &str = "job.priority.tier";
+
+    /// Determine the priority tier from a priority value.
+    #[must_use]
+    pub fn from_priority(priority: i32) -> Self {
+        if priority >= 300 {
+            Self::Enterprise
+        } else if priority >= 200 {
+            Self::Team
+        } else if priority >= 100 {
+            Self::Free
+        } else {
+            Self::Unclaimed
+        }
+    }
 }

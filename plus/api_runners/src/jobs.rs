@@ -12,12 +12,26 @@ use bencher_schema::{
     model::runner::{QueryJob, UpdateJob},
     schema, write_conn,
 };
-use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BoolExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
+    RunQueryDsl as _, dsl::exists, dsl::not,
+};
 use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::runner_token::RunnerToken;
+
+// Table aliases for correlated subqueries in the claim query.
+// job_org is used to check if an org already has a running job (Free tier limit).
+// job_ip is used to check if a source IP already has a running job (Unclaimed tier limit).
+diesel::alias!(schema::job as job_org: JobOrg);
+diesel::alias!(schema::job as job_ip: JobIp);
+
+/// Priority threshold for Enterprise/Team tiers (unlimited concurrency)
+const PRIORITY_UNLIMITED: i32 = 200;
+/// Priority threshold for Free tier (1 per org concurrency)
+const PRIORITY_FREE: i32 = 100;
 
 /// Poll interval for long-polling (1 second)
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -103,16 +117,52 @@ async fn claim_job_inner(
     }
 }
 
-/// Attempt to claim a pending job.
-/// Returns `Ok(Some(job_id))` if a job was claimed, `Ok(None)` if no jobs available.
+/// Attempt to claim a pending job with tier-based concurrency limits.
+///
+/// Priority tiers:
+/// - Enterprise (>= 300) / Team (>= 200): Unlimited concurrent jobs
+/// - Free (>= 100): 1 concurrent job per organization
+/// - Unclaimed (< 100): 1 concurrent job per source IP
+///
+/// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
 async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
 ) -> Result<Option<JsonJob>, HttpError> {
-    // Try to claim a pending job (ordered by priority DESC, created ASC)
+    use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
+
+    // Tier 1: Enterprise/Team (priority >= 200) - no concurrency limit
+    let tier_unlimited = priority.ge(PRIORITY_UNLIMITED);
+
+    // Tier 2: Free (priority 100-199) - one concurrent job per organization
+    // Block if the same org already has a Running job
+    let tier_free_eligible = priority
+        .ge(PRIORITY_FREE)
+        .and(priority.lt(PRIORITY_UNLIMITED))
+        .and(not(exists(
+            job_org
+                .filter(job_org.field(status).eq(JobStatus::Running))
+                .filter(job_org.field(organization_id).eq(organization_id)),
+        )));
+
+    // Tier 3: Unclaimed (priority < 100) - one concurrent job per source IP
+    // Block if the same source_ip already has a Running job
+    let tier_unclaimed_eligible = priority.lt(PRIORITY_FREE).and(not(exists(
+        job_ip
+            .filter(job_ip.field(status).eq(JobStatus::Running))
+            .filter(job_ip.field(source_ip).eq(source_ip)),
+    )));
+
+    // Combined eligibility: any tier condition passes
+    let eligible = tier_unlimited
+        .or(tier_free_eligible)
+        .or(tier_unclaimed_eligible);
+
+    // Find the highest-priority eligible pending job
     let pending_job: Option<QueryJob> = schema::job::table
-        .filter(schema::job::status.eq(JobStatus::Pending))
-        .order((schema::job::priority.desc(), schema::job::created.asc()))
+        .filter(status.eq(JobStatus::Pending))
+        .filter(eligible)
+        .order((priority.desc(), created.asc()))
         .first(auth_conn!(context))
         .optional()
         .map_err(resource_not_found_err!(Job))?;
@@ -134,8 +184,8 @@ async fn try_claim_job(
 
     let updated = diesel::update(
         schema::job::table
-            .filter(schema::job::id.eq(query_job.id))
-            .filter(schema::job::status.eq(JobStatus::Pending)),
+            .filter(id.eq(query_job.id))
+            .filter(status.eq(JobStatus::Pending)),
     )
     .set(&update_job)
     .execute(write_conn!(context))
@@ -143,14 +193,25 @@ async fn try_claim_job(
 
     if updated > 0 {
         #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
+        {
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
+
+            // Record queue duration (time from creation to claim)
+            let queue_duration_secs =
+                f64::from(now.timestamp() - query_job.created.timestamp()).max(0.0);
+            let tier = bencher_otel::PriorityTier::from_priority(query_job.priority);
+            bencher_otel::ApiMeter::record(
+                bencher_otel::ApiHistogram::JobQueueDuration(tier),
+                queue_duration_secs,
+            );
+        }
 
         // Parse and return job with spec for runner
-        let spec = query_job.parse_spec()?;
+        let job_spec = query_job.parse_spec()?;
         Ok(Some(JsonJob {
             uuid: query_job.uuid,
             status: JobStatus::Claimed,
-            spec: Some(spec),
+            spec: Some(job_spec),
             runner: Some(runner_token.runner_uuid),
             claimed: Some(now),
             started: None,

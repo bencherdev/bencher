@@ -9,8 +9,9 @@ use crate::{
     context::DbConnection,
     error::bad_request_error,
     model::{
+        organization::OrganizationId,
         project::report::ReportId,
-        runner::{QueryRunner, RunnerId},
+        runner::{QueryRunner, RunnerId, SourceIp},
     },
     resource_not_found_err,
     schema::{self, job as job_table},
@@ -27,6 +28,8 @@ pub struct QueryJob {
     pub id: JobId,
     pub uuid: JobUuid,
     pub report_id: ReportId,
+    pub organization_id: OrganizationId,
+    pub source_ip: SourceIp,
     pub status: JobStatus,
     pub spec: String,
     pub timeout: i32,
@@ -125,6 +128,8 @@ impl QueryJob {
 pub struct InsertJob {
     pub uuid: JobUuid,
     pub report_id: ReportId,
+    pub organization_id: OrganizationId,
+    pub source_ip: SourceIp,
     pub status: JobStatus,
     pub spec: String,
     pub timeout: i32,
@@ -134,11 +139,20 @@ pub struct InsertJob {
 }
 
 impl InsertJob {
-    pub fn new(report_id: ReportId, spec: String, timeout: i32, priority: i32) -> Self {
+    pub fn new(
+        report_id: ReportId,
+        organization_id: OrganizationId,
+        source_ip: SourceIp,
+        spec: String,
+        timeout: i32,
+        priority: i32,
+    ) -> Self {
         let now = DateTime::now();
         Self {
             uuid: JobUuid::new(),
             report_id,
+            organization_id,
+            source_ip,
             status: JobStatus::default(),
             spec,
             timeout,

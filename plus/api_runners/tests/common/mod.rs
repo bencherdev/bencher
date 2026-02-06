@@ -20,10 +20,14 @@ pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -
     resp.json().await.expect("Failed to parse response")
 }
 
+/// Default test source IP for job insertion.
+pub const TEST_SOURCE_IP: &str = "127.0.0.1";
+
 /// Insert a test job directly into the database. Returns the job UUID.
+/// Uses a default organization_id of 1 and source_ip of "127.0.0.1".
 #[expect(clippy::expect_used)]
 pub fn insert_test_job(server: &TestServer, report_id: i32) -> JobUuid {
-    insert_test_job_with_project(server, report_id, bencher_json::ProjectUuid::new())
+    insert_test_job_full(server, report_id, bencher_json::ProjectUuid::new(), 1, TEST_SOURCE_IP, 0)
 }
 
 /// Insert a test job with a specific project UUID. Returns the job UUID.
@@ -32,6 +36,19 @@ pub fn insert_test_job_with_project(
     server: &TestServer,
     report_id: i32,
     project_uuid: bencher_json::ProjectUuid,
+) -> JobUuid {
+    insert_test_job_full(server, report_id, project_uuid, 1, TEST_SOURCE_IP, 0)
+}
+
+/// Insert a test job with full control over scheduling parameters.
+#[expect(clippy::expect_used)]
+pub fn insert_test_job_full(
+    server: &TestServer,
+    report_id: i32,
+    project_uuid: bencher_json::ProjectUuid,
+    organization_id: i32,
+    source_ip: &str,
+    priority: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
     let now = DateTime::now();
@@ -53,10 +70,12 @@ pub fn insert_test_job_with_project(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::organization_id.eq(organization_id),
+            schema::job::source_ip.eq(source_ip),
             schema::job::status.eq(JobStatus::Pending),
             schema::job::spec.eq(spec.to_string()),
             schema::job::timeout.eq(3600),
-            schema::job::priority.eq(0),
+            schema::job::priority.eq(priority),
             schema::job::created.eq(&now),
             schema::job::modified.eq(&now),
         ))
@@ -195,6 +214,8 @@ pub fn insert_test_job_with_optional_fields(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::organization_id.eq(1),
+            schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
             schema::job::spec.eq(spec.to_string()),
             schema::job::timeout.eq(7200),
@@ -224,6 +245,8 @@ pub fn insert_test_job_with_invalid_spec(server: &TestServer, report_id: i32) ->
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::organization_id.eq(1),
+            schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
             schema::job::spec.eq(spec.to_string()),
             schema::job::timeout.eq(3600),
@@ -235,6 +258,17 @@ pub fn insert_test_job_with_invalid_spec(server: &TestServer, report_id: i32) ->
         .expect("Failed to insert test job");
 
     job_uuid
+}
+
+/// Get organization ID from project ID.
+#[expect(clippy::expect_used)]
+pub fn get_organization_id(server: &TestServer, project_id: i32) -> i32 {
+    let mut conn = server.db_conn();
+    schema::project::table
+        .filter(schema::project::id.eq(project_id))
+        .select(schema::project::organization_id)
+        .first(&mut conn)
+        .expect("Failed to get organization ID")
 }
 
 /// Get project ID from slug.

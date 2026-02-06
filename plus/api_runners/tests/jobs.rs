@@ -862,3 +862,997 @@ async fn test_claim_job_poll_timeout_timing() {
         "Expected less than 4s elapsed, got {elapsed:?}"
     );
 }
+
+// =============================================================================
+// Priority Scheduling Tests
+// =============================================================================
+//
+// These tests verify the tier-based priority scheduling system:
+// - Enterprise (>= 300) / Team (>= 200): Unlimited concurrent jobs
+// - Free (>= 100): 1 concurrent job per organization
+// - Unclaimed (< 100): 1 concurrent job per source IP
+
+mod priority_scheduling {
+    use super::*;
+    use bencher_json::JobStatus;
+    use common::{get_organization_id, insert_test_job_full};
+
+    // Test that higher priority jobs are claimed before lower priority ones
+    #[tokio::test]
+    async fn test_priority_ordering() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "priority1@example.com").await;
+        let org = server.create_org(&admin, "Priority Org").await;
+        let project = server
+            .create_project(&admin, &org, "Priority Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Priority Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert jobs with different priorities (lower priority first to test ordering)
+        let low_job = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 50);
+        let high_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 300);
+        let medium_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.3", 150);
+
+        // Claim first job - should be the high priority one
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(claimed.uuid, high_job, "Expected high priority job to be claimed first");
+
+        // Mark as completed so we can claim the next one
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, high_job)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, high_job)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim second job - should be the medium priority one
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(
+            claimed.uuid, medium_job,
+            "Expected medium priority job to be claimed second"
+        );
+
+        // Complete the medium job
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, medium_job)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, medium_job)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim third job - should be the low priority one
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(claimed.uuid, low_job, "Expected low priority job to be claimed last");
+    }
+
+    // Test Free tier concurrency limit (1 per organization)
+    #[tokio::test]
+    async fn test_free_tier_org_limit() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "freetier1@example.com").await;
+        let org = server.create_org(&admin, "Free Tier Org").await;
+        let project = server
+            .create_project(&admin, &org, "Free Tier Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Free Tier Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert two Free tier jobs (priority 100-199) for the same org
+        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
+        let _job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 150);
+
+        // Claim first job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        assert!(claimed.is_some(), "Expected to claim first job");
+
+        // Mark job as running (not completed)
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, job1)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Try to claim second job - should fail because org already has a running job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        assert!(
+            claimed.is_none(),
+            "Expected no job to be claimed due to org concurrency limit"
+        );
+    }
+
+    // Test Unclaimed tier concurrency limit (1 per source IP)
+    #[tokio::test]
+    async fn test_unclaimed_tier_ip_limit() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "unclaimed1@example.com").await;
+        let org = server.create_org(&admin, "Unclaimed Tier Org").await;
+        let project = server
+            .create_project(&admin, &org, "Unclaimed Tier Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Unclaimed Tier Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert two Unclaimed tier jobs (priority < 100) with same source IP
+        let same_ip = "192.168.1.100";
+        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
+        let _job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
+
+        // Claim first job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        assert!(claimed.is_some(), "Expected to claim first job");
+
+        // Mark job as running
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, job1)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Try to claim second job - should fail because same IP already has a running job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        assert!(
+            claimed.is_none(),
+            "Expected no job to be claimed due to IP concurrency limit"
+        );
+    }
+
+    // Test that different source IPs can run Unclaimed jobs concurrently
+    #[tokio::test]
+    async fn test_unclaimed_tier_different_ips() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "unclaimed2@example.com").await;
+        let org = server.create_org(&admin, "Unclaimed IPs Org").await;
+        let project = server
+            .create_project(&admin, &org, "Unclaimed IPs Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Unclaimed IPs Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert two Unclaimed tier jobs with DIFFERENT source IPs
+        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 50);
+        let job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 50);
+
+        // Claim first job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let first_claimed = claimed.expect("Expected to claim first job");
+
+        // Mark job as running
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, first_claimed.uuid
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim second job - should succeed because different IP
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let second_claimed = claimed.expect("Expected to claim second job with different IP");
+
+        // Verify both jobs were claimed
+        assert!(
+            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
+                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
+            "Expected both jobs to be claimed"
+        );
+    }
+
+    // Test Enterprise/Team tier unlimited concurrency
+    #[tokio::test]
+    async fn test_enterprise_tier_unlimited() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "enterprise1@example.com").await;
+        let org = server.create_org(&admin, "Enterprise Tier Org").await;
+        let project = server
+            .create_project(&admin, &org, "Enterprise Tier Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Enterprise Tier Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert multiple Enterprise tier jobs (priority >= 200) for the same org
+        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 300);
+        let job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 300);
+
+        // Claim first job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let first_claimed = claimed.expect("Expected to claim first job");
+
+        // Mark job as running (not completed)
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, first_claimed.uuid
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim second job - should succeed because Enterprise tier has no limit
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let second_claimed = claimed.expect("Enterprise tier should allow concurrent jobs");
+
+        // Verify both distinct jobs were claimed
+        assert!(
+            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
+                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
+            "Expected both Enterprise tier jobs to be claimed concurrently"
+        );
+    }
+
+    // Test that high priority job skips blocked lower priority jobs
+    #[tokio::test]
+    async fn test_high_priority_skips_blocked() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "skipblocked@example.com").await;
+        let org = server.create_org(&admin, "Skip Blocked Org").await;
+        let project = server
+            .create_project(&admin, &org, "Skip Blocked Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Skip Blocked Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert a Free tier job and mark it as running to block the org
+        let blocking_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
+
+        // Claim and start the blocking job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, blocking_job
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Insert a blocked Free tier job and an unblocked Enterprise tier job
+        let _blocked_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 150);
+        let enterprise_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.3", 300);
+
+        // Try to claim - should get the Enterprise job (skipping the blocked Free tier job)
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim Enterprise job");
+        assert_eq!(
+            claimed.uuid, enterprise_job,
+            "Expected Enterprise job to be claimed, skipping blocked Free tier job"
+        );
+        assert_eq!(claimed.status, JobStatus::Claimed);
+    }
+
+    // Test Team tier (200-299) unlimited concurrency
+    #[tokio::test]
+    async fn test_team_tier_unlimited() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "teamtier1@example.com").await;
+        let org = server.create_org(&admin, "Team Tier Org").await;
+        let project = server
+            .create_project(&admin, &org, "Team Tier Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Team Tier Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert multiple Team tier jobs (priority 200-299) for the same org and IP
+        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 250);
+        let job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 250);
+
+        // Claim first job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let first_claimed = claimed.expect("Expected to claim first job");
+
+        // Mark job as running
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, first_claimed.uuid
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim second job - should succeed because Team tier has no limit
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let second_claimed = claimed.expect("Team tier should allow concurrent jobs");
+
+        assert!(
+            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
+                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
+            "Expected both Team tier jobs to be claimed concurrently"
+        );
+    }
+
+    // Test FIFO ordering within same priority level
+    #[tokio::test]
+    async fn test_fifo_within_same_priority() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "fifo1@example.com").await;
+        let org = server.create_org(&admin, "FIFO Org").await;
+        let project = server.create_project(&admin, &org, "FIFO Project").await;
+
+        let runner = create_runner(&server, &admin.token, "FIFO Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert jobs with same priority - should be claimed in creation order (FIFO)
+        // Use Enterprise tier so there's no concurrency blocking
+        let first_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 300);
+        // Small delay to ensure different creation timestamps
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        let second_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 300);
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        let third_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.3", 300);
+
+        // Claim first - should be first_job (created first)
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(claimed.uuid, first_job, "Expected first created job to be claimed first");
+
+        // Complete the job
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, first_job)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, first_job)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim second - should be second_job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(claimed.uuid, second_job, "Expected second created job to be claimed second");
+
+        // Complete second job
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, second_job)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+        server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{}/jobs/{}", runner.uuid, second_job)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim third - should be third_job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(claimed.uuid, third_job, "Expected third created job to be claimed third");
+    }
+
+    // Test Free tier with different organizations can run concurrently
+    #[tokio::test]
+    async fn test_free_tier_different_orgs() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "freedifforg@example.com").await;
+
+        // Create two different organizations
+        let org1 = server.create_org(&admin, "Free Tier Org 1").await;
+        let org2 = server.create_org(&admin, "Free Tier Org 2").await;
+        let project1 = server
+            .create_project(&admin, &org1, "Free Tier Project 1")
+            .await;
+        let project2 = server
+            .create_project(&admin, &org2, "Free Tier Project 2")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Free Diff Org Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project1_id = get_project_id(&server, project1.slug.as_ref());
+        let org1_id = get_organization_id(&server, project1_id);
+        let report1_id = create_test_report(&server, project1_id);
+
+        let project2_id = get_project_id(&server, project2.slug.as_ref());
+        let org2_id = get_organization_id(&server, project2_id);
+        let report2_id = create_test_report(&server, project2_id);
+
+        // Insert Free tier jobs for different orgs
+        let job1 =
+            insert_test_job_full(&server, report1_id, project1.uuid, org1_id, "10.0.0.1", 150);
+        let job2 =
+            insert_test_job_full(&server, report2_id, project2.uuid, org2_id, "10.0.0.2", 150);
+
+        // Claim first job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let first_claimed = claimed.expect("Expected to claim first job");
+
+        // Mark job as running
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, first_claimed.uuid
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim second job - should succeed because different org
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let second_claimed =
+            claimed.expect("Different orgs should allow concurrent Free tier jobs");
+
+        assert!(
+            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
+                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
+            "Expected both Free tier jobs from different orgs to be claimed"
+        );
+    }
+
+    // Test that completing a job unblocks the next job
+    #[tokio::test]
+    async fn test_job_completion_unblocks() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "unblock1@example.com").await;
+        let org = server.create_org(&admin, "Unblock Org").await;
+        let project = server
+            .create_project(&admin, &org, "Unblock Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Unblock Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert two Free tier jobs for the same org
+        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
+        let job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 150);
+
+        // Claim and start first job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let first_claimed = claimed.expect("Expected to claim first job");
+
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, first_claimed.uuid
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Try to claim second job - should fail (org blocked)
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        assert!(claimed.is_none(), "Second job should be blocked while first is running");
+
+        // Complete the first job
+        let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, first_claimed.uuid
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Now try to claim second job - should succeed (org no longer blocked)
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let second_claimed = claimed.expect("Second job should be claimable after first completes");
+
+        // Verify we got the second job (not the completed first one)
+        let expected_second = if first_claimed.uuid == job1 { job2 } else { job1 };
+        assert_eq!(
+            second_claimed.uuid, expected_second,
+            "Expected second job to be claimed after first completes"
+        );
+    }
+
+    // Test boundary values for priority tiers
+    #[tokio::test]
+    async fn test_priority_boundary_values() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "boundary1@example.com").await;
+        let org = server.create_org(&admin, "Boundary Org").await;
+        let project = server
+            .create_project(&admin, &org, "Boundary Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Boundary Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Test boundary: priority 199 (Free tier, should be blocked by running Free job)
+        // vs priority 200 (Team tier, should NOT be blocked)
+        let blocking_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
+
+        // Claim and start the blocking job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, blocking_job
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Insert job at priority 199 (Free tier boundary - should be blocked)
+        let _free_boundary =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 199);
+
+        // Insert job at priority 200 (Team tier boundary - should NOT be blocked)
+        let team_boundary =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.3", 200);
+
+        // Try to claim - should get the Team tier job (priority 200), not the blocked Free tier job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim Team tier job at boundary");
+        assert_eq!(
+            claimed.uuid, team_boundary,
+            "Priority 200 should be Team tier (unlimited), not Free tier (blocked)"
+        );
+    }
+
+    // Test boundary: priority 99 vs 100 (Unclaimed vs Free tier)
+    #[tokio::test]
+    async fn test_priority_boundary_unclaimed_free() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "boundary2@example.com").await;
+        let org = server.create_org(&admin, "Boundary UF Org").await;
+        let project = server
+            .create_project(&admin, &org, "Boundary UF Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Boundary UF Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Start a job with same source IP to block Unclaimed tier
+        let same_ip = "192.168.1.50";
+        let blocking_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
+
+        // Claim and start the blocking job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, blocking_job
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Insert job at priority 99 with same IP (Unclaimed tier - should be blocked by IP)
+        let _unclaimed_boundary =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 99);
+
+        // Insert job at priority 100 (Free tier - blocked by org, not IP)
+        // But since org already has a running job, this should also be blocked
+        let _free_boundary =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 100);
+
+        // Insert a Free tier job with DIFFERENT IP and DIFFERENT org to prove Free tier works
+        let org2 = server.create_org(&admin, "Boundary UF Org 2").await;
+        let project2 = server
+            .create_project(&admin, &org2, "Boundary UF Project 2")
+            .await;
+        let project2_id = get_project_id(&server, project2.slug.as_ref());
+        let org2_id = get_organization_id(&server, project2_id);
+        let report2_id = create_test_report(&server, project2_id);
+
+        let free_unblocked =
+            insert_test_job_full(&server, report2_id, project2.uuid, org2_id, "10.0.0.99", 100);
+
+        // Try to claim - should get the Free tier job from different org
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim unblocked Free tier job");
+        assert_eq!(
+            claimed.uuid, free_unblocked,
+            "Priority 100 from different org should be claimable"
+        );
+    }
+}
