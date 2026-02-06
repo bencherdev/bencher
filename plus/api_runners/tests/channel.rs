@@ -6,7 +6,10 @@ mod common;
 use bencher_api_tests::TestServer;
 use bencher_json::{JobStatus, JobUuid, JsonJob, RunnerUuid};
 use bencher_schema::schema;
-use common::{create_runner, create_test_report, get_project_id, insert_test_job};
+use common::{
+    create_runner, create_test_report, get_project_id, insert_test_job,
+    insert_test_job_with_optional_fields,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use http::StatusCode;
@@ -506,6 +509,81 @@ async fn test_channel_ping_pong() {
         matches!(&msg, Message::Pong(data) if data.as_ref() == ping_data.as_slice()),
         "Expected Pong with matching data, got: {msg:?}"
     );
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+// =============================================================================
+// Job Spec Handling Tests
+// =============================================================================
+
+/// Full lifecycle with a job containing optional spec fields (entrypoint, cmd, env).
+/// Verifies that jobs with complete specs work correctly through the WebSocket channel.
+#[tokio::test]
+async fn test_channel_lifecycle_with_full_spec() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", "ws-fullspec@example.com")
+        .await;
+    let org = server.create_org(&admin, "Ws fullspec").await;
+    let project = server
+        .create_project(&admin, &org, "Ws fullspec proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner fullspec").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    // Use the helper that creates a job with optional fields populated
+    let job_uuid = insert_test_job_with_optional_fields(&server, report_id, project.uuid);
+
+    // Claim the job
+    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
+    assert_eq!(claimed.uuid, job_uuid);
+    assert_eq!(claimed.status, JobStatus::Claimed);
+
+    // Verify the spec has optional fields
+    let spec = claimed.spec.as_ref().expect("Expected spec");
+    assert!(spec.entrypoint.is_some());
+    assert!(spec.cmd.is_some());
+    assert!(spec.env.is_some());
+
+    // Connect to WebSocket channel
+    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Send Heartbeat
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Send Completed
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            output: Some("benchmark results with full spec".to_owned()),
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+
+    // Verify exit code in DB
+    let mut conn = server.db_conn();
+    let exit_code: Option<i32> = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::exit_code)
+        .first(&mut conn)
+        .expect("Failed to get exit code");
+    assert_eq!(exit_code, Some(0));
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
