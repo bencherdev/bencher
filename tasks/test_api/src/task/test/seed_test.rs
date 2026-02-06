@@ -1694,6 +1694,45 @@ impl SeedTest {
         assert_eq!(json.project.slug.to_string(), bencher_two);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
+        #[cfg(feature = "plus")]
+        self.plus_exec()?;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "plus")]
+    fn plus_exec(&self) -> anyhow::Result<()> {
+        if self.is_bencher_cloud {
+            self.bencher_cloud_exec()?;
+        } else {
+            self.bencher_self_hosted_exec()?;
+        }
+
+        let host = self.url.as_ref();
+        let admin_token = self.admin_token.as_ref();
+
+        // cargo run -- server stats --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["server", "stats", HOST_ARG, host, TOKEN_ARG, admin_token])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonServerStats =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        Ok(())
+    }
+
+    #[cfg(feature = "plus")]
+    #[expect(clippy::too_many_lines)]
+    fn bencher_cloud_exec(&self) -> anyhow::Result<()> {
+        let host = self.url.as_ref();
+        let admin_token = self.admin_token.as_ref();
+        let token = self.token.as_ref();
+        let bencher_cmd = Command::cargo_bin(BENCHER_CMD)?
+            .get_program()
+            .to_string_lossy()
+            .to_string();
+
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // Another unclaimed project
@@ -1788,40 +1827,6 @@ impl SeedTest {
             String::from_utf8_lossy(&output.stderr).contains("Status: 429 Too Many Requests"),
             "{output:?}"
         );
-
-        #[cfg(feature = "plus")]
-        self.plus_exec()?;
-
-        Ok(())
-    }
-
-    #[cfg(feature = "plus")]
-    fn plus_exec(&self) -> anyhow::Result<()> {
-        if self.is_bencher_cloud {
-            self.bencher_cloud_exec()?;
-        } else {
-            self.bencher_self_hosted_exec()?;
-        }
-
-        let host = self.url.as_ref();
-        let admin_token = self.admin_token.as_ref();
-
-        // cargo run -- server stats --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["server", "stats", HOST_ARG, host, TOKEN_ARG, admin_token])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonServerStats =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-        Ok(())
-    }
-
-    #[cfg(feature = "plus")]
-    fn bencher_cloud_exec(&self) -> anyhow::Result<()> {
-        let host = self.url.as_ref();
-        let admin_token = self.admin_token.as_ref();
-        let token = self.token.as_ref();
 
         // cargo run -- sso list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;

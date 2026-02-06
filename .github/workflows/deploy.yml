@@ -68,6 +68,9 @@ jobs:
         env:
           RUST_BACKTRACE: full
         run: cargo test-api smoke dev
+      - name: Run OCI Conformance Test
+        continue-on-error: true
+        run: cargo test-api oci --admin
 
   deploy_console_netlify_dev:
     name: Deploy Console UI to Netlify Dev

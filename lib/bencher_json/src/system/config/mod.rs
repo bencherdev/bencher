@@ -16,7 +16,7 @@ pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]
 pub use plus::{
-    JsonGitHub, JsonGoogle, JsonPlus,
+    JsonGitHub, JsonGoogle, JsonPlus, JsonRegistry,
     cloud::{
         JsonCloud,
         billing::{JsonBilling, JsonProduct, JsonProducts},
@@ -26,6 +26,7 @@ pub use plus::{
     },
     litestream::{JsonLitestream, JsonReplica},
     rate_limiting::{JsonPublicRateLimiter, JsonRateLimiting, JsonUserRateLimiter},
+    registry::{DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
     stats::JsonStats,
 };
 pub use security::JsonSecurity;

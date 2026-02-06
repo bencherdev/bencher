@@ -6,6 +6,8 @@ use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
+#[cfg(feature = "plus")]
+use bencher_oci_storage::OciStorage;
 use bencher_token::TokenKey;
 #[cfg(feature = "plus")]
 use dropshot::HttpError;
@@ -63,6 +65,8 @@ pub struct ApiContext {
     pub recaptcha_client: Option<RecaptchaClient>,
     #[cfg(feature = "plus")]
     pub is_bencher_cloud: bool,
+    #[cfg(feature = "plus")]
+    pub oci_storage: OciStorage,
 }
 
 #[macro_export]
@@ -110,6 +114,11 @@ impl ApiContext {
         self.biller.as_ref().ok_or_else(|| {
             crate::error::locked_error("Tried to use a Bencher Cloud route when Self-Hosted")
         })
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn oci_storage(&self) -> &OciStorage {
+        &self.oci_storage
     }
 
     #[cfg(feature = "plus")]

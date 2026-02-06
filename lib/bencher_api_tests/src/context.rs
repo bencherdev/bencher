@@ -37,6 +37,14 @@ impl TestServer {
     /// Create a new test server with an in-memory database.
     #[expect(clippy::expect_used, clippy::unused_async)]
     pub async fn new() -> Self {
+        // Create logger early so it can be used for OCI storage
+        let log_config = ConfigLogging::StderrTerminal {
+            level: ConfigLoggingLevel::Warn,
+        };
+        let log = log_config
+            .to_logger("bencher_api_tests")
+            .expect("Failed to create logger");
+
         // Create a temporary database file
         let db_file = NamedTempFile::new().expect("Failed to create temp db file");
         let db_path = db_file.path().to_str().expect("Invalid db path").to_owned();
@@ -86,6 +94,13 @@ impl TestServer {
             licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
             recaptcha_client: None,
             is_bencher_cloud: false,
+            oci_storage: bencher_oci_storage::OciStorage::try_from_config(
+                log.clone(),
+                None,
+                std::path::Path::new(&db_path),
+                None, // Use default upload timeout
+            )
+            .expect("Failed to create OCI storage"),
         };
         #[cfg(not(feature = "plus"))]
         let context = ApiContext {
@@ -120,14 +135,6 @@ impl TestServer {
             default_handler_task_mode: dropshot::HandlerTaskMode::Detached,
             log_headers: Vec::new(),
         };
-
-        // Create logger
-        let log_config = ConfigLogging::StderrTerminal {
-            level: ConfigLoggingLevel::Warn,
-        };
-        let log = log_config
-            .to_logger("bencher_api_tests")
-            .expect("Failed to create logger");
 
         // Start the server
         let server = dropshot::HttpServerStarter::new(&config, api_description, context, &log)

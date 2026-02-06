@@ -33,6 +33,14 @@ env:
   CLI_BIN_NAME: bencher
 
 jobs:
+  pr_noop:
+    name: CLI PR No-op
+    if: ${{ github.event_name == 'pull_request' && !inputs.check-cli && !inputs.build-cli }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: No-op
+        run: "true"
+
   action_main:
     name: Action `main`
     if: github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud'

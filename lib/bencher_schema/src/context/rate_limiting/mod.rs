@@ -174,10 +174,8 @@ impl RateLimiting {
                 }
             },
             (false, None) => {
-                // todo(epompeii): Add the ability to completely disable rate limiting for Bencher Self-Hosted
-                // Keeping this as `default()` instead of `max()` is a bit of a hack to make it easier to test rate limiting locally.
                 slog::info!(log, "No rate limits applied for Bencher Self-Hosted");
-                Self::default()
+                Self::max()
             },
         }
     }

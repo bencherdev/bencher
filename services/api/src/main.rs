@@ -63,6 +63,7 @@ async fn main() -> Result<(), ApiError> {
     .await
     {
         error!(&log, "Server failed to run: {e}");
+        error!(&log, "Is another instance running on the same port?");
         return Err(e);
     }
     Ok(())

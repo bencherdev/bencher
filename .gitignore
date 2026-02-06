@@ -62,3 +62,6 @@ tags
 # Persistent undo
 [._]*.un~
 
+# OCI Distribution Spec files
+distribution-spec/
+oci-conformance-results/

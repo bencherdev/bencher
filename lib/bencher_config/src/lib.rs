@@ -45,7 +45,6 @@ const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Debug;
 #[cfg(not(debug_assertions))]
 const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Info;
 
-#[cfg(feature = "plus")]
 const DEFAULT_BUSY_TIMEOUT: u32 = 5_000;
 
 const DEFAULT_CONSOLE_URL_STR: &str = "http://localhost:3000";
@@ -220,6 +219,7 @@ impl Default for Config {
             database: JsonDatabase {
                 file: DEFAULT_DB_PATH.into(),
                 data_store: None,
+                busy_timeout: None,
             },
             smtp: None,
             logging: JsonLogging {

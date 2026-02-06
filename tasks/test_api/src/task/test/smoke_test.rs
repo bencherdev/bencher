@@ -13,8 +13,11 @@ use bencher_json::{
 
 use crate::{
     API_VERSION,
-    parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
-    task::test::{examples::Examples, seed_test::SeedTest},
+    parser::{TaskExamples, TaskOci, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
+    task::{
+        oci::Oci,
+        test::{examples::Examples, seed_test::SeedTest},
+    },
 };
 
 const DEV_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo2MDYwMDI5NDE0LCJpYXQiOjE3NjUwNjIxMTksImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoiZXVzdGFjZS5iYWdnZUBub3doZXJlLmNvbSIsIm9yZyI6bnVsbCwic3RhdGUiOm51bGx9.jY6749lVWe3pJ53LBXoNSl19b59xifOLdwMwQUNMZ5g";
@@ -193,11 +196,13 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
         MockSetup::BencherCloud { admin_token, token } => {
             let task = TaskSeedTest {
                 url: Some(api_url.clone()),
-                admin_token: Some(admin_token),
+                admin_token: Some(admin_token.clone()),
                 token: Some(token),
                 is_bencher_cloud: true,
             };
-            SeedTest::try_from(task)?.exec()
+            SeedTest::try_from(task)?.exec()?;
+
+            Ok(())
         },
         MockSetup::SelfHosted { examples } => {
             let task = TaskSeedTest {
@@ -207,6 +212,10 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
                 is_bencher_cloud: false,
             };
             SeedTest::try_from(task)?.exec()?;
+
+            // Run OCI conformance tests
+            let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref(), true))?;
+            oci.exec()?;
 
             if examples {
                 let examples = Examples::try_from(TaskExamples {

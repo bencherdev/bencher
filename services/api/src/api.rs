@@ -49,6 +49,10 @@ impl Registrar for Api {
             is_bencher_cloud,
         )?;
 
+        // OCI Registry (Plus feature)
+        #[cfg(feature = "plus")]
+        api_oci::Api::register(api_description, http_options, is_bencher_cloud)?;
+
         Ok(())
     }
 }

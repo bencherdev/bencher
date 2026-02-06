@@ -52,12 +52,14 @@ COPY lib/bencher_valid bencher_valid
 RUN cargo init --lib bencher_api_tests
 
 WORKDIR /usr/src/bencher/plus
+COPY plus/api_oci api_oci
 COPY plus/bencher_billing bencher_billing
 COPY plus/bencher_bing_index bencher_bing_index
 COPY plus/bencher_github_client bencher_github_client
 COPY plus/bencher_google_client bencher_google_client
 COPY plus/bencher_google_index bencher_google_index
 COPY plus/bencher_license bencher_license
+COPY plus/bencher_oci_storage bencher_oci_storage
 COPY plus/bencher_otel bencher_otel
 COPY plus/bencher_otel_provider bencher_otel_provider
 COPY plus/bencher_recaptcha bencher_recaptcha

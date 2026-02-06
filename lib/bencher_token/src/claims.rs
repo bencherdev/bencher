@@ -11,13 +11,23 @@ use super::{TokenError, audience::Audience};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub aud: String,                // Audience
-    pub exp: i64,                   // Expiration time (as UTC timestamp)
-    pub iat: i64,                   // Issued at (as UTC timestamp)
-    pub iss: String,                // Issuer
-    pub sub: Email,                 // Subject (whom token refers to)
-    pub org: Option<OrgClaims>,     // Organization (for invitation)
-    pub state: Option<StateClaims>, // State (for OAuth)
+    pub aud: String,                 // Audience
+    pub exp: i64,                    // Expiration time (as UTC timestamp)
+    pub iat: i64,                    // Issued at (as UTC timestamp)
+    pub iss: String,                 // Issuer
+    pub sub: Email,                  // Subject (whom token refers to)
+    pub org: Option<OrgClaims>,      // Organization (for invitation)
+    pub state: Option<StateClaims>,  // State (for OAuth)
+    pub oci: Option<OciScopeClaims>, // OCI scope (for registry access)
+}
+
+/// OCI-specific scope claims for registry access tokens
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OciScopeClaims {
+    /// Repository name (e.g., `org-slug/project-slug`)
+    pub repository: Option<String>,
+    /// Allowed actions (e.g., `pull` or `push`)
+    pub actions: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +52,7 @@ impl Claims {
         ttl: u32,
         org: Option<OrgClaims>,
         state: Option<StateClaims>,
+        oci: Option<OciScopeClaims>,
     ) -> Self {
         let now = Utc::now().timestamp();
         Self {
@@ -52,6 +63,7 @@ impl Claims {
             sub: email,
             org,
             state,
+            oci,
         }
     }
 
@@ -135,5 +147,42 @@ impl TryFrom<Claims> for OAuthClaims {
                 error: JsonWebTokenErrorKind::MissingRequiredClaim("state".into()).into(),
             }),
         }
+    }
+}
+
+/// Validated OCI token claims
+#[derive(Debug, Clone)]
+pub struct OciClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub sub: Email,
+    pub oci: OciScopeClaims,
+}
+
+impl TryFrom<Claims> for OciClaims {
+    type Error = TokenError;
+
+    fn try_from(claims: Claims) -> Result<Self, Self::Error> {
+        match claims.oci {
+            Some(oci) => Ok(Self {
+                aud: claims.aud,
+                exp: claims.exp,
+                iat: claims.iat,
+                iss: claims.iss,
+                sub: claims.sub,
+                oci,
+            }),
+            None => Err(TokenError::Oci {
+                error: JsonWebTokenErrorKind::MissingRequiredClaim("oci".into()).into(),
+            }),
+        }
+    }
+}
+
+impl OciClaims {
+    pub fn email(&self) -> &Email {
+        &self.sub
     }
 }
