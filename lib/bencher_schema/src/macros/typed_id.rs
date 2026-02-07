@@ -44,6 +44,13 @@ macro_rules! typed_id {
                 Ok(Self(i32::from_sql(bytes)?))
             }
         }
+
+        #[cfg(test)]
+        impl $name {
+            pub fn from_raw(value: i32) -> Self {
+                Self(value)
+            }
+        }
     };
 }
 

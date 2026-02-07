@@ -1,5 +1,5 @@
 [package]
-name = "api_projects"
+name = "api_runners"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -9,32 +9,37 @@ publish = false
 [features]
 default = []
 plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_schema/plus"]
-sentry = ["dep:sentry", "bencher_schema/sentry"]
-otel = ["dep:bencher_otel", "bencher_endpoint/otel", "bencher_schema/otel"]
+sentry = ["bencher_schema/sentry"]
+otel = ["bencher_endpoint/otel", "bencher_schema/otel", "dep:bencher_otel"]
 
 [dependencies]
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_otel = { workspace = true, optional = true }
-bencher_plot.workspace = true
-bencher_rbac.workspace = true
 bencher_schema.workspace = true
 diesel.workspace = true
 dropshot.workspace = true
 futures.workspace = true
-http.workspace = true
 schemars.workspace = true
-sentry = { workspace = true, optional = true }
 serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
 slog.workspace = true
+rand.workspace = true
+hex.workspace = true
+tokio = { workspace = true, features = ["time"] }
+tokio-tungstenite.workspace = true
+uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
-bencher_json = { workspace = true, features = ["server", "schema"] }
+bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_schema.workspace = true
 diesel.workspace = true
+futures-concurrency.workspace = true
+http.workspace = true
 serde_json.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }
 
 [lints]
 workspace = true

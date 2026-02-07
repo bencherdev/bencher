@@ -29,13 +29,15 @@ pub struct TestServer {
     pub url: String,
     /// Token key for generating test tokens (private - use `token_key()` accessor)
     token_key: TokenKey,
+    /// Database path for test setup (private - use `db_conn()` accessor)
+    db_path: String,
     /// Keep the temp file alive for the duration of the test
     _db_file: NamedTempFile,
 }
 
 impl TestServer {
     /// Create a new test server with an in-memory database.
-    #[expect(clippy::expect_used, clippy::unused_async)]
+    #[expect(clippy::expect_used, clippy::too_many_lines, clippy::unused_async)]
     pub async fn new() -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
@@ -80,6 +82,7 @@ impl TestServer {
         #[cfg(feature = "plus")]
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
+            request_body_max_bytes: 1024 * 1024,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),
@@ -101,10 +104,13 @@ impl TestServer {
                 None, // Use default upload timeout
             )
             .expect("Failed to create OCI storage"),
+            heartbeat_timeout: std::time::Duration::from_secs(5),
+            heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
         };
         #[cfg(not(feature = "plus"))]
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
+            request_body_max_bytes: 1024 * 1024,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),
@@ -152,8 +158,16 @@ impl TestServer {
             client,
             url,
             token_key,
+            db_path,
             _db_file: db_file,
         }
+    }
+
+    /// Get a database connection for test setup.
+    /// Use this to insert test data directly into the database.
+    #[expect(clippy::expect_used)]
+    pub fn db_conn(&self) -> DbConnection {
+        DbConnection::establish(&self.db_path).expect("Failed to establish database connection")
     }
 
     /// Get the token key for generating test tokens

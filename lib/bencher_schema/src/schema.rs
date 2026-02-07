@@ -71,6 +71,29 @@ diesel::table! {
 }
 
 diesel::table! {
+    job (id) {
+        id -> Integer,
+        uuid -> Text,
+        report_id -> Integer,
+        organization_id -> Integer,
+        source_ip -> Text,
+        status -> Integer,
+        spec -> Text,
+        timeout -> Integer,
+        priority -> Integer,
+        runner_id -> Nullable<Integer>,
+        claimed -> Nullable<BigInt>,
+        started -> Nullable<BigInt>,
+        completed -> Nullable<BigInt>,
+        last_heartbeat -> Nullable<BigInt>,
+        last_billed_minute -> Nullable<Integer>,
+        exit_code -> Nullable<Integer>,
+        created -> BigInt,
+        modified -> BigInt,
+    }
+}
+
+diesel::table! {
     measure (id) {
         id -> Integer,
         uuid -> Text,
@@ -249,6 +272,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    runner (id) {
+        id -> Integer,
+        uuid -> Text,
+        name -> Text,
+        slug -> Text,
+        token_hash -> Text,
+        state -> Integer,
+        locked -> Nullable<BigInt>,
+        archived -> Nullable<BigInt>,
+        last_heartbeat -> Nullable<BigInt>,
+        created -> BigInt,
+        modified -> BigInt,
+    }
+}
+
+diesel::table! {
     server (id) {
         id -> Integer,
         uuid -> Text,
@@ -336,6 +375,9 @@ diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
 diesel::joinable!(head_version -> version (version_id));
+diesel::joinable!(job -> organization (organization_id));
+diesel::joinable!(job -> report (report_id));
+diesel::joinable!(job -> runner (runner_id));
 diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> report_benchmark (report_benchmark_id));
@@ -376,6 +418,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     branch,
     head,
     head_version,
+    job,
     measure,
     metric,
     model,
@@ -391,6 +434,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     project_role,
     report,
     report_benchmark,
+    runner,
     server,
     sso,
     testbed,
