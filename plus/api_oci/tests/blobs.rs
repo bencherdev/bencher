@@ -3,7 +3,8 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::redundant_test_prefix
+    clippy::redundant_test_prefix,
+    clippy::similar_names
 )]
 //! Integration tests for OCI blob endpoints.
 
@@ -575,5 +576,124 @@ async fn test_blob_monolithic_upload_zero_length() {
         resp.status(),
         StatusCode::BAD_REQUEST,
         "Zero-length monolithic upload should be rejected"
+    );
+}
+
+// =============================================================================
+// Cross-Repo Mount Tests
+// =============================================================================
+
+// Push blob to project A, attempt mount to project B with a token scoped only to B
+// Since user B doesn't have pull access to project A, the mount should fail silently
+// and fall through to a regular upload (returning 202 Accepted, not 201 Created)
+#[tokio::test]
+async fn test_cross_repo_mount_access_denied_fallback() {
+    let server = TestServer::new().await;
+
+    // Create user A with project A and push a blob
+    let user_a = server.signup("MountUserA", "mountusera@example.com").await;
+    let org_a = server.create_org(&user_a, "MountOrgA").await;
+    let project_a = server
+        .create_project(&user_a, &org_a, "MountProjectA")
+        .await;
+
+    let push_token_a = server.oci_push_token(&user_a, &project_a);
+    let project_a_slug: &str = project_a.slug.as_ref();
+
+    let blob_data = b"cross-repo mount test blob";
+    let digest = compute_digest(blob_data);
+
+    // Upload blob to project A
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_a_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token_a))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Upload to project A failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Create user B with project B
+    let user_b = server.signup("MountUserB", "mountuserb@example.com").await;
+    let org_b = server.create_org(&user_b, "MountOrgB").await;
+    let project_b = server
+        .create_project(&user_b, &org_b, "MountProjectB")
+        .await;
+
+    // User B's token only has push access to project B
+    let push_token_b = server.oci_push_token(&user_b, &project_b);
+    let project_b_slug: &str = project_b.slug.as_ref();
+
+    // Attempt cross-repo mount: from project A to project B using user B's token
+    // User B does NOT have pull access to project A, so mount should fail silently
+    let mount_resp = server
+        .client
+        .post(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}&from={}",
+            project_b_slug, digest, project_a_slug
+        )))
+        .header("Authorization", format!("Bearer {}", push_token_b))
+        .send()
+        .await
+        .expect("Mount request failed");
+
+    // Should get 202 Accepted (fallback to regular upload), NOT 201 Created (successful mount)
+    assert_eq!(
+        mount_resp.status(),
+        StatusCode::ACCEPTED,
+        "Cross-repo mount without pull access to source should fall back to regular upload (202)"
+    );
+    assert!(
+        mount_resp.headers().contains_key("location"),
+        "Fallback response should include upload location"
+    );
+    assert!(
+        mount_resp.headers().contains_key("docker-upload-uuid"),
+        "Fallback response should include upload UUID"
+    );
+}
+
+// =============================================================================
+// SHA-512 Digest Tests
+// =============================================================================
+
+// Upload blob with sha512 digest should fail because storage only computes sha256
+#[tokio::test]
+async fn test_blob_upload_sha512() {
+    let server = TestServer::new().await;
+    let user = server.signup("Sha512 User", "sha512blob@example.com").await;
+    let org = server.create_org(&user, "Sha512 Org").await;
+    let project = server.create_project(&user, &org, "Sha512 Project").await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let blob_data = b"sha512 digest test data";
+    // Use a valid sha512 digest (128 hex chars) - it won't match the actual content
+    // because the server computes sha256 internally
+    let sha512_digest = "sha512:cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e";
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, sha512_digest
+        )))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "SHA-512 digest should be rejected since storage only supports SHA-256"
     );
 }

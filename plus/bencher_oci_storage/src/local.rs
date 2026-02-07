@@ -330,7 +330,15 @@ impl OciLocalStorage {
             OciStorageError::LocalStorage(format!("Failed to get upload file metadata: {e}"))
         })?;
 
-        Ok(metadata.len())
+        let total_size = metadata.len();
+        if total_size > self.max_body_size {
+            return Err(OciStorageError::SizeExceeded {
+                size: total_size,
+                max: self.max_body_size,
+            });
+        }
+
+        Ok(total_size)
     }
 
     /// Gets the current size of an in-progress upload
@@ -423,7 +431,10 @@ impl OciLocalStorage {
     /// Cleans up upload files
     async fn cleanup_upload(&self, upload_id: &UploadId) {
         let upload_dir = self.upload_dir(upload_id);
-        let _unused = fs::remove_dir_all(&upload_dir).await;
+        if let Err(e) = fs::remove_dir_all(&upload_dir).await {
+            error!(self.log, "Failed to clean up upload directory"; "upload_id" => %upload_id, "error" => %e);
+            crate::storage::report_cleanup_error("cleanup_upload: remove_dir_all", &e);
+        }
     }
 
     /// Spawns a background task to clean up all stale uploads that have exceeded the timeout.
@@ -663,7 +674,7 @@ impl OciLocalStorage {
 
     /// Lists tags for a repository with optional pagination
     ///
-    /// - `limit`: Maximum number of tags to return (fetches limit + 1 to detect if more exist)
+    /// - `limit`: Maximum number of tags to return
     /// - `start_after`: Tag to start listing after (for cursor-based pagination)
     ///
     /// Note: For local storage, we must read all directory entries first, then apply
@@ -673,11 +684,14 @@ impl OciLocalStorage {
         repository: &ProjectResourceId,
         limit: Option<usize>,
         start_after: Option<&str>,
-    ) -> Result<Vec<String>, OciStorageError> {
+    ) -> Result<crate::storage::ListTagsResult, OciStorageError> {
         let tags_dir = self.repository_dir(repository).join("tags");
 
         if !tags_dir.exists() {
-            return Ok(Vec::new());
+            return Ok(crate::storage::ListTagsResult {
+                tags: Vec::new(),
+                has_more: false,
+            });
         }
 
         let mut tags = Vec::new();
@@ -707,14 +721,15 @@ impl OciLocalStorage {
             tags
         };
 
-        // Apply limit (fetch limit + 1 to detect if more exist)
+        // Apply limit and detect if more exist
+        let has_more = limit.is_some_and(|l| tags.len() > l);
         let tags = if let Some(limit) = limit {
-            tags.into_iter().take(limit + 1).collect()
+            tags.into_iter().take(limit).collect()
         } else {
             tags
         };
 
-        Ok(tags)
+        Ok(crate::storage::ListTagsResult { tags, has_more })
     }
 
     /// Deletes a manifest by digest
@@ -734,8 +749,14 @@ impl OciLocalStorage {
             && let Some(subject_digest) = crate::types::extract_subject_digest(&data)
         {
             let referrer_path = self.referrer_path(repository, &subject_digest, digest);
-            // Ignore errors - the referrer link may not exist or may have already been deleted
-            drop(fs::remove_file(&referrer_path).await);
+            if let Err(e) = fs::remove_file(&referrer_path).await
+                && e.kind() != io::ErrorKind::NotFound
+            {
+                crate::storage::report_cleanup_error(
+                    "delete_manifest: referrer link delete",
+                    &e,
+                );
+            }
         }
 
         // Delete the manifest itself

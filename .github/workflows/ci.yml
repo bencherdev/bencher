@@ -125,6 +125,7 @@ jobs:
       deploy-test: ${{ github.ref == 'refs/heads/devel'  ||  github.ref == 'refs/heads/cloud' }}
       deploy-prod: ${{ github.ref == 'refs/heads/cloud' }}
     secrets:
+      TEST_BENCHER_API_TOKEN_ADMIN: ${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

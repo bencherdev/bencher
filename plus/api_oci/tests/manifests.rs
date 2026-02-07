@@ -3,7 +3,8 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::redundant_test_prefix
+    clippy::redundant_test_prefix,
+    clippy::indexing_slicing
 )]
 //! Integration tests for OCI manifest endpoints.
 
@@ -845,4 +846,538 @@ async fn test_manifest_get_nonexistent_digest() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// =============================================================================
+// Docker Manifest V2 Tests
+// =============================================================================
+
+/// Create a Docker V2 manifest JSON for testing
+fn create_docker_v2_manifest(config_digest: &str, layer_digest: &str) -> String {
+    serde_json::json!({
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+        "config": {
+            "mediaType": "application/vnd.docker.container.image.v1+json",
+            "digest": config_digest,
+            "size": 100
+        },
+        "layers": [
+            {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "digest": layer_digest,
+                "size": 200
+            }
+        ]
+    })
+    .to_string()
+}
+
+// PUT Docker V2 manifest with correct Content-Type, verify 201, GET back and verify content-type round-trip
+#[tokio::test]
+async fn test_manifest_put_docker_v2() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("DockerV2Put User", "dockerv2put@example.com")
+        .await;
+    let org = server.create_org(&user, "DockerV2Put Org").await;
+    let project = server
+        .create_project(&user, &org, "DockerV2Put Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let config_digest = "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1";
+    let layer_digest = "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2";
+    let manifest = create_docker_v2_manifest(config_digest, layer_digest);
+    let manifest_digest = compute_digest(manifest.as_bytes());
+
+    // PUT with Docker V2 Content-Type
+    let put_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/docker-v2-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            "Content-Type",
+            "application/vnd.docker.distribution.manifest.v2+json",
+        )
+        .body(manifest.clone())
+        .send()
+        .await
+        .expect("PUT failed");
+
+    assert_eq!(put_resp.status(), StatusCode::CREATED);
+    assert!(put_resp.headers().contains_key("location"));
+    assert!(put_resp.headers().contains_key("docker-content-digest"));
+
+    // GET back and verify content-type round-trip
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v2/{}/manifests/{}",
+            project_slug, manifest_digest
+        )))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("GET failed");
+
+    assert_eq!(get_resp.status(), StatusCode::OK);
+    let get_ct = get_resp
+        .headers()
+        .get("content-type")
+        .expect("Missing content-type on GET")
+        .to_str()
+        .expect("Invalid content-type header");
+    assert_eq!(
+        get_ct, "application/vnd.docker.distribution.manifest.v2+json",
+        "GET content-type should match Docker V2 media type"
+    );
+
+    let body = get_resp.text().await.expect("Failed to read body");
+    let uploaded: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+    let downloaded: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(uploaded, downloaded);
+}
+
+// Tag-based retrieval of a Docker V2 manifest
+#[tokio::test]
+async fn test_manifest_get_docker_v2_by_tag() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("DockerV2Tag User", "dockerv2tag@example.com")
+        .await;
+    let org = server.create_org(&user, "DockerV2Tag Org").await;
+    let project = server
+        .create_project(&user, &org, "DockerV2Tag Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let config_digest = "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3";
+    let layer_digest = "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4";
+    let manifest = create_docker_v2_manifest(config_digest, layer_digest);
+
+    // Upload with tag
+    let put_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/docker-v2-get-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            "Content-Type",
+            "application/vnd.docker.distribution.manifest.v2+json",
+        )
+        .body(manifest.clone())
+        .send()
+        .await
+        .expect("PUT failed");
+    assert_eq!(put_resp.status(), StatusCode::CREATED);
+
+    // Retrieve by tag
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/manifests/docker-v2-get-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("GET failed");
+
+    assert_eq!(get_resp.status(), StatusCode::OK);
+    let get_ct = get_resp
+        .headers()
+        .get("content-type")
+        .expect("Missing content-type")
+        .to_str()
+        .expect("Invalid content-type");
+    assert_eq!(
+        get_ct, "application/vnd.docker.distribution.manifest.v2+json",
+        "Tag-based GET should return Docker V2 content-type"
+    );
+
+    let body = get_resp.text().await.expect("Failed to read body");
+    let uploaded: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+    let downloaded: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(uploaded, downloaded);
+}
+
+// =============================================================================
+// Docker Manifest List Tests
+// =============================================================================
+
+/// Create a Docker manifest list JSON for testing
+fn create_docker_manifest_list() -> String {
+    serde_json::json!({
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+        "manifests": [
+            {
+                "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+                "digest": "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+                "size": 528,
+                "platform": {
+                    "architecture": "amd64",
+                    "os": "linux"
+                }
+            },
+            {
+                "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+                "digest": "sha256:f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+                "size": 528,
+                "platform": {
+                    "architecture": "arm64",
+                    "os": "linux"
+                }
+            }
+        ]
+    })
+    .to_string()
+}
+
+// PUT Docker manifest list with platform entries, verify round-trip
+#[tokio::test]
+async fn test_manifest_put_docker_manifest_list() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("DockerList User", "dockerlist@example.com")
+        .await;
+    let org = server.create_org(&user, "DockerList Org").await;
+    let project = server
+        .create_project(&user, &org, "DockerList Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let manifest = create_docker_manifest_list();
+
+    // PUT with Docker manifest list Content-Type
+    let put_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/docker-list-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            "Content-Type",
+            "application/vnd.docker.distribution.manifest.list.v2+json",
+        )
+        .body(manifest.clone())
+        .send()
+        .await
+        .expect("PUT failed");
+
+    assert_eq!(put_resp.status(), StatusCode::CREATED);
+    assert!(put_resp.headers().contains_key("docker-content-digest"));
+
+    // GET back and verify round-trip
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/manifests/docker-list-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("GET failed");
+
+    assert_eq!(get_resp.status(), StatusCode::OK);
+    let body = get_resp.text().await.expect("Failed to read body");
+    let uploaded: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+    let downloaded: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(uploaded, downloaded);
+}
+
+// Verify platform entries are preserved in Docker manifest list
+#[tokio::test]
+async fn test_manifest_get_docker_manifest_list() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("DockerListGet User", "dockerlistget@example.com")
+        .await;
+    let org = server.create_org(&user, "DockerListGet Org").await;
+    let project = server
+        .create_project(&user, &org, "DockerListGet Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let manifest = create_docker_manifest_list();
+
+    server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/docker-list-get", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            "Content-Type",
+            "application/vnd.docker.distribution.manifest.list.v2+json",
+        )
+        .body(manifest.clone())
+        .send()
+        .await
+        .expect("PUT failed");
+
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/manifests/docker-list-get", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("GET failed");
+
+    assert_eq!(get_resp.status(), StatusCode::OK);
+
+    // Verify content-type
+    let get_ct = get_resp
+        .headers()
+        .get("content-type")
+        .expect("Missing content-type")
+        .to_str()
+        .expect("Invalid content-type");
+    assert_eq!(
+        get_ct, "application/vnd.docker.distribution.manifest.list.v2+json",
+        "Content-type should be Docker manifest list"
+    );
+
+    // Verify platform entries are preserved
+    let body = get_resp.text().await.expect("Failed to read body");
+    let downloaded: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let manifests = downloaded["manifests"]
+        .as_array()
+        .expect("manifests should be an array");
+    assert_eq!(manifests.len(), 2);
+    assert_eq!(manifests[0]["platform"]["architecture"], "amd64");
+    assert_eq!(manifests[0]["platform"]["os"], "linux");
+    assert_eq!(manifests[1]["platform"]["architecture"], "arm64");
+    assert_eq!(manifests[1]["platform"]["os"], "linux");
+}
+
+// =============================================================================
+// OCI Image Index Tests
+// =============================================================================
+
+/// Create an OCI image index JSON for testing
+fn create_oci_image_index() -> String {
+    serde_json::json!({
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "manifests": [
+            {
+                "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                "digest": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+                "size": 1024,
+                "platform": {
+                    "architecture": "amd64",
+                    "os": "linux"
+                }
+            },
+            {
+                "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                "digest": "sha256:b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+                "size": 1024,
+                "platform": {
+                    "architecture": "arm64",
+                    "os": "linux",
+                    "variant": "v8"
+                }
+            },
+            {
+                "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                "digest": "sha256:c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+                "size": 1024,
+                "platform": {
+                    "architecture": "s390x",
+                    "os": "linux"
+                }
+            }
+        ]
+    })
+    .to_string()
+}
+
+// PUT multi-platform OCI image index, verify 201
+#[tokio::test]
+async fn test_manifest_put_oci_image_index() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("OciIndex User", "ociindexput@example.com")
+        .await;
+    let org = server.create_org(&user, "OciIndex Org").await;
+    let project = server.create_project(&user, &org, "OciIndex Project").await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let manifest = create_oci_image_index();
+
+    let put_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/oci-index-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.index.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("PUT failed");
+
+    assert_eq!(put_resp.status(), StatusCode::CREATED);
+    assert!(put_resp.headers().contains_key("location"));
+    assert!(put_resp.headers().contains_key("docker-content-digest"));
+}
+
+// Verify manifests array and platform entries round-trip for OCI image index
+#[tokio::test]
+async fn test_manifest_get_oci_image_index() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("OciIndexGet User", "ociindexget@example.com")
+        .await;
+    let org = server.create_org(&user, "OciIndexGet Org").await;
+    let project = server
+        .create_project(&user, &org, "OciIndexGet Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let manifest = create_oci_image_index();
+
+    // Upload
+    server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/oci-index-get", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.index.v1+json")
+        .body(manifest.clone())
+        .send()
+        .await
+        .expect("PUT failed");
+
+    // GET back
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/manifests/oci-index-get", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("GET failed");
+
+    assert_eq!(get_resp.status(), StatusCode::OK);
+
+    // Verify content-type
+    let get_ct = get_resp
+        .headers()
+        .get("content-type")
+        .expect("Missing content-type")
+        .to_str()
+        .expect("Invalid content-type");
+    assert_eq!(
+        get_ct, "application/vnd.oci.image.index.v1+json",
+        "Content-type should be OCI image index"
+    );
+
+    // Verify manifests array and platform entries
+    let body = get_resp.text().await.expect("Failed to read body");
+    let downloaded: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let manifests = downloaded["manifests"]
+        .as_array()
+        .expect("manifests should be an array");
+    assert_eq!(manifests.len(), 3);
+    assert_eq!(manifests[0]["platform"]["architecture"], "amd64");
+    assert_eq!(manifests[0]["platform"]["os"], "linux");
+    assert_eq!(manifests[1]["platform"]["architecture"], "arm64");
+    assert_eq!(manifests[1]["platform"]["os"], "linux");
+    assert_eq!(manifests[1]["platform"]["variant"], "v8");
+    assert_eq!(manifests[2]["platform"]["architecture"], "s390x");
+    assert_eq!(manifests[2]["platform"]["os"], "linux");
+
+    // Full round-trip comparison
+    let uploaded: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+    assert_eq!(uploaded, downloaded);
+}
+
+// =============================================================================
+// Content-Type Validation Tests
+// =============================================================================
+
+// OCI body with Docker Content-Type header should return 400
+#[tokio::test]
+async fn test_manifest_put_content_type_mismatch() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("CTMismatch User", "ctmismatch@example.com")
+        .await;
+    let org = server.create_org(&user, "CTMismatch Org").await;
+    let project = server
+        .create_project(&user, &org, "CTMismatch Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Body contains OCI mediaType
+    let manifest = create_test_manifest(
+        "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+    );
+
+    // But Content-Type header is Docker V2 - mismatch!
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/ct-mismatch-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            "Content-Type",
+            "application/vnd.docker.distribution.manifest.v2+json",
+        )
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Mismatched Content-Type header and manifest mediaType should return 400"
+    );
+}
+
+// Matching Content-Type should succeed (sanity check)
+#[tokio::test]
+async fn test_manifest_put_content_type_match() {
+    let server = TestServer::new().await;
+    let user = server.signup("CTMatch User", "ctmatch@example.com").await;
+    let org = server.create_org(&user, "CTMatch Org").await;
+    let project = server.create_project(&user, &org, "CTMatch Project").await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Body and Content-Type both use Docker V2
+    let manifest = create_docker_v2_manifest(
+        "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+    );
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/ct-match-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            "Content-Type",
+            "application/vnd.docker.distribution.manifest.v2+json",
+        )
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Matching Content-Type header and manifest mediaType should return 201"
+    );
 }

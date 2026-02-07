@@ -206,7 +206,7 @@ impl Manifest {
 
         let probe: MediaTypeProbe = serde_json::from_slice(bytes)?;
 
-        match probe.media_type.as_deref() {
+        let manifest = match probe.media_type.as_deref() {
             Some(DOCKER_MANIFEST_V2_MEDIA_TYPE) => {
                 serde_json::from_slice(bytes).map(Self::DockerManifestV2)
             },
@@ -223,7 +223,69 @@ impl Manifest {
             Some(unknown) => Err(serde::de::Error::custom(format!(
                 "unsupported manifest mediaType: {unknown}"
             ))),
+        }?;
+
+        manifest.validate().map_err(serde::de::Error::custom)?;
+
+        Ok(manifest)
+    }
+
+    /// Validates that all descriptor sizes are non-negative per OCI spec
+    fn validate(&self) -> Result<(), String> {
+        fn check_descriptor(desc: &OciDescriptor, context: &str) -> Result<(), String> {
+            if desc.size < 0 {
+                return Err(format!(
+                    "{context} has negative size: {size}",
+                    size = desc.size
+                ));
+            }
+            Ok(())
         }
+
+        fn check_manifest_descriptor(
+            desc: &OciManifestDescriptor,
+            context: &str,
+        ) -> Result<(), String> {
+            if desc.size < 0 {
+                return Err(format!(
+                    "{context} has negative size: {size}",
+                    size = desc.size
+                ));
+            }
+            Ok(())
+        }
+
+        match self {
+            Self::OciImageManifest(m) => {
+                check_descriptor(&m.config, "config")?;
+                for (i, layer) in m.layers.iter().enumerate() {
+                    check_descriptor(layer, &format!("layers[{i}]"))?;
+                }
+                if let Some(subject) = &m.subject {
+                    check_descriptor(subject, "subject")?;
+                }
+            },
+            Self::OciImageIndex(m) => {
+                for (i, manifest) in m.manifests.iter().enumerate() {
+                    check_manifest_descriptor(manifest, &format!("manifests[{i}]"))?;
+                }
+                if let Some(subject) = &m.subject {
+                    check_descriptor(subject, "subject")?;
+                }
+            },
+            Self::DockerManifestV2(m) => {
+                check_descriptor(&m.config, "config")?;
+                for (i, layer) in m.layers.iter().enumerate() {
+                    check_descriptor(layer, &format!("layers[{i}]"))?;
+                }
+            },
+            Self::DockerManifestList(m) => {
+                for (i, manifest) in m.manifests.iter().enumerate() {
+                    check_manifest_descriptor(manifest, &format!("manifests[{i}]"))?;
+                }
+            },
+        }
+        Ok(())
     }
 
     /// Returns the media type string for this manifest
@@ -420,6 +482,60 @@ mod tests {
         });
         let bytes = serde_json::to_vec(&json).unwrap();
         assert!(Manifest::from_bytes(&bytes).is_err());
+    }
+
+    #[test]
+    fn parse_manifest_negative_config_size() {
+        let json = serde_json::json!({
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": "sha256:44136fa355b311bfa0680e24bf37c9e4e6e2b637bfb8e6e1e9bfb7e7e9bfb7e7",
+                "size": -1
+            },
+            "layers": []
+        });
+        let bytes = serde_json::to_vec(&json).unwrap();
+        assert!(Manifest::from_bytes(&bytes).is_err());
+    }
+
+    #[test]
+    fn parse_manifest_negative_layer_size() {
+        let json = serde_json::json!({
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": "sha256:44136fa355b311bfa0680e24bf37c9e4e6e2b637bfb8e6e1e9bfb7e7e9bfb7e7",
+                "size": 1234
+            },
+            "layers": [
+                {
+                    "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+                    "digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "size": -500
+                }
+            ]
+        });
+        let bytes = serde_json::to_vec(&json).unwrap();
+        assert!(Manifest::from_bytes(&bytes).is_err());
+    }
+
+    #[test]
+    fn parse_manifest_zero_size_ok() {
+        let json = serde_json::json!({
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": "sha256:44136fa355b311bfa0680e24bf37c9e4e6e2b637bfb8e6e1e9bfb7e7e9bfb7e7",
+                "size": 0
+            },
+            "layers": []
+        });
+        let bytes = serde_json::to_vec(&json).unwrap();
+        assert!(Manifest::from_bytes(&bytes).is_ok());
     }
 
     #[test]

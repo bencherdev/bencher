@@ -29,7 +29,7 @@ plus = [
     "dep:slog",
     "dep:urlencoding",
 ]
-sentry = []
+sentry = ["dep:sentry"]
 otel = ["dep:bencher_otel"]
 
 [dependencies]
@@ -41,6 +41,8 @@ bencher_otel = { workspace = true, optional = true }
 bencher_rbac = { workspace = true, optional = true }
 bencher_schema = { workspace = true, optional = true }
 bencher_token = { workspace = true, optional = true }
+
+sentry = { workspace = true, optional = true }
 
 bytes = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }

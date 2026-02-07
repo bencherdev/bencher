@@ -45,6 +45,13 @@ pub fn into_http_error(error: OciError) -> HttpError {
             ClientErrorStatusCode::TOO_MANY_REQUESTS,
             external_message,
         ),
+        http::StatusCode::PAYLOAD_TOO_LARGE => HttpError {
+            status_code: ErrorStatusCode::PAYLOAD_TOO_LARGE,
+            error_code: None,
+            external_message,
+            internal_message: message,
+            headers: None,
+        },
         http::StatusCode::RANGE_NOT_SATISFIABLE => HttpError::for_client_error(
             None,
             ClientErrorStatusCode::RANGE_NOT_SATISFIABLE,

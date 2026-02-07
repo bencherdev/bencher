@@ -41,12 +41,10 @@ impl TokenKey {
         oci: Option<OciScopeClaims>,
     ) -> Result<Jwt, TokenError> {
         let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, state, oci);
-        Jwt::from_str(&encode(&HEADER, &claims, &self.encoding).map_err(|e| {
-            TokenError::Encode {
-                claims: Box::new(claims),
-                error: e,
-            }
-        })?)
+        Jwt::from_str(
+            &encode(&HEADER, &claims, &self.encoding)
+                .map_err(|e| TokenError::Encode { error: e })?,
+        )
         .map_err(TokenError::Parse)
     }
 
@@ -110,10 +108,7 @@ impl TokenKey {
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
 
         let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)
-            .map_err(|error| TokenError::Decode {
-                token: token.clone(),
-                error,
-            })?;
+            .map_err(|error| TokenError::Decode { error })?;
         let exp = token_data.claims.exp;
         let now = Utc::now().timestamp();
         if exp < now {

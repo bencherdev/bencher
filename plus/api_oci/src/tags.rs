@@ -120,8 +120,7 @@ pub async fn oci_tags_list(
     };
 
     // List tags with pagination handled at storage layer
-    // Storage returns up to page_size + 1 tags to detect if more exist
-    let mut tags = storage
+    let result = storage
         .list_tags(&path.name, Some(page_size), last_tag)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
@@ -130,11 +129,8 @@ pub async fn oci_tags_list(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciTagsList);
 
-    // Check if more results exist (storage fetched page_size + 1)
-    let has_more = tags.len() > page_size;
-
-    // Truncate to requested page size
-    tags.truncate(page_size);
+    let tags = result.tags;
+    let has_more = result.has_more;
 
     // Check if we need to add Link header for pagination
     let link_header = if has_more {

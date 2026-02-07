@@ -225,6 +225,20 @@ pub async fn oci_manifest_put(
         crate::error::into_http_error(OciError::ManifestInvalid(format!("Invalid manifest: {e}")))
     })?;
 
+    // Validate Content-Type header matches manifest mediaType if present
+    if let Some(content_type) = rqctx.request.headers().get(http::header::CONTENT_TYPE)
+        && let Ok(ct_str) = content_type.to_str()
+    {
+        let manifest_media_type = parsed_manifest.media_type();
+        if ct_str != manifest_media_type {
+            return Err(crate::error::into_http_error(OciError::ManifestInvalid(
+                format!(
+                    "Content-Type '{ct_str}' does not match manifest mediaType '{manifest_media_type}'"
+                ),
+            )));
+        }
+    }
+
     // Extract subject digest from manifest if present (for OCI-Subject header)
     let subject_digest = parsed_manifest.subject().map(|s| s.digest.clone());
 

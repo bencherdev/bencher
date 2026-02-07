@@ -3,7 +3,8 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::redundant_test_prefix
+    clippy::redundant_test_prefix,
+    clippy::too_many_lines
 )]
 //! Integration tests for OCI upload session endpoints.
 
@@ -776,5 +777,151 @@ async fn test_upload_partial_content_range_bad_start() {
         resp.status(),
         StatusCode::RANGE_NOT_SATISFIABLE,
         "Partially unparseable Content-Range (bad start) should return 416"
+    );
+}
+
+// =============================================================================
+// Concurrent Upload Tests
+// =============================================================================
+
+// Start 2 upload sessions to same repo, upload chunks via tokio::join!, complete both, verify both blobs exist
+#[tokio::test]
+async fn test_concurrent_uploads_different_sessions() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Concurrent User", "concurrentupload@example.com")
+        .await;
+    let org = server.create_org(&user, "Concurrent Org").await;
+    let project = server
+        .create_project(&user, &org, "Concurrent Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start two upload sessions
+    let start1 = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload 1 failed");
+    assert_eq!(start1.status(), StatusCode::ACCEPTED);
+    let location1 = start1
+        .headers()
+        .get("location")
+        .expect("Missing location header 1")
+        .to_str()
+        .expect("Invalid location header 1")
+        .to_owned();
+    let session_id1 = extract_session_id(&location1).expect("Invalid location format 1");
+
+    let start2 = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload 2 failed");
+    assert_eq!(start2.status(), StatusCode::ACCEPTED);
+    let location2 = start2
+        .headers()
+        .get("location")
+        .expect("Missing location header 2")
+        .to_str()
+        .expect("Invalid location header 2")
+        .to_owned();
+    let session_id2 = extract_session_id(&location2).expect("Invalid location format 2");
+
+    // Upload chunks concurrently via tokio::join!
+    let chunk1 = b"concurrent blob data one";
+    let chunk2 = b"concurrent blob data two";
+
+    let patch_url1 = server.api_url(&format!(
+        "/v2/{}/blobs/uploads/{}",
+        project_slug, session_id1
+    ));
+    let patch_url2 = server.api_url(&format!(
+        "/v2/{}/blobs/uploads/{}",
+        project_slug, session_id2
+    ));
+
+    let (patch_resp1, patch_resp2) = tokio::join!(
+        server
+            .client
+            .patch(patch_url1)
+            .header("Content-Type", "application/octet-stream")
+            .body(chunk1.to_vec())
+            .send(),
+        server
+            .client
+            .patch(patch_url2)
+            .header("Content-Type", "application/octet-stream")
+            .body(chunk2.to_vec())
+            .send()
+    );
+
+    assert_eq!(
+        patch_resp1.expect("PATCH 1 failed").status(),
+        StatusCode::ACCEPTED
+    );
+    assert_eq!(
+        patch_resp2.expect("PATCH 2 failed").status(),
+        StatusCode::ACCEPTED
+    );
+
+    // Complete both uploads sequentially
+    let digest1 = compute_digest(chunk1);
+    let complete1 = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}?digest={}",
+            project_slug, session_id1, digest1
+        )))
+        .send()
+        .await
+        .expect("Complete upload 1 failed");
+    assert_eq!(complete1.status(), StatusCode::CREATED);
+
+    let digest2 = compute_digest(chunk2);
+    let complete2 = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}?digest={}",
+            project_slug, session_id2, digest2
+        )))
+        .send()
+        .await
+        .expect("Complete upload 2 failed");
+    assert_eq!(complete2.status(), StatusCode::CREATED);
+
+    // Verify both blobs exist via HEAD
+    let pull_token = server.oci_pull_token(&user, &project);
+
+    let head1 = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest1)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("HEAD blob 1 failed");
+    assert_eq!(
+        head1.status(),
+        StatusCode::OK,
+        "Blob 1 should exist after concurrent upload"
+    );
+
+    let head2 = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest2)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("HEAD blob 2 failed");
+    assert_eq!(
+        head2.status(),
+        StatusCode::OK,
+        "Blob 2 should exist after concurrent upload"
     );
 }

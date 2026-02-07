@@ -305,10 +305,11 @@ pub async fn oci_upload_start(
         })?;
 
         // Only attempt mount if caller has pull access to source repository.
-        // If pull access is denied, silently fall through to normal upload
+        // If pull access is denied, fall through to normal upload
         // to avoid revealing whether the source repository exists.
         let from_repo_str = from_repo.to_string();
-        if require_pull_access(&rqctx, &from_repo_str).await.is_ok() {
+        let pull_result = require_pull_access(&rqctx, &from_repo_str).await;
+        if pull_result.is_ok() {
             // Try to mount the blob
             let mounted = storage
                 .mount_blob(&from_repo, &path.name, &digest)
@@ -331,6 +332,17 @@ pub async fn oci_upload_start(
                 })?;
                 return Ok(response);
             }
+        } else {
+            slog::info!(rqctx.log, "Cross-repository mount access denied, falling through to upload";
+                "from_repo" => &from_repo_str, "to_repo" => %path.name, "digest" => %digest);
+            #[cfg(feature = "sentry")]
+            sentry::capture_message(
+                &format!(
+                    "OCI cross-repo mount denied: from={from_repo_str} to={} digest={digest}",
+                    path.name
+                ),
+                sentry::Level::Warning,
+            );
         }
     }
 
