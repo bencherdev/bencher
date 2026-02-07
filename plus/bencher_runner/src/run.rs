@@ -5,6 +5,15 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::error::RunnerError;
 use crate::tuning::TuningConfig;
 
+/// Output from a benchmark run.
+#[derive(Debug)]
+pub struct RunOutput {
+    /// Exit code from the guest process.
+    pub exit_code: i32,
+    /// Stdout output from the benchmark.
+    pub stdout: String,
+}
+
 /// Environment variables that are blocked for security reasons.
 ///
 /// These variables could be used to inject malicious code or libraries
@@ -82,7 +91,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     };
 
     let output = execute(&config)?;
-    println!("{output}");
+    println!("{}", output.stdout);
     Ok(())
 }
 
@@ -179,9 +188,9 @@ pub fn resolve_oci_image(
 ///
 /// # Returns
 ///
-/// The benchmark results as a string (from the VM via vsock).
+/// The benchmark output including exit code and stdout.
 #[cfg(target_os = "linux")]
-pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
+pub fn execute(config: &crate::Config) -> Result<RunOutput, RunnerError> {
     use crate::firecracker::{FirecrackerJobConfig, run_firecracker};
 
     println!("Executing benchmark run:");
@@ -289,12 +298,12 @@ pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
         cpu_layout: config.cpu_layout.clone(),
     };
 
-    let output = run_firecracker(&fc_config)?;
+    let run_output = run_firecracker(&fc_config)?;
 
     // temp_dir is automatically cleaned up when dropped
     drop(temp_dir);
 
-    Ok(output)
+    Ok(run_output)
 }
 
 /// Write the init config for the VM.
@@ -476,7 +485,7 @@ fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
 
 /// Execute a single benchmark run (non-Linux stub).
 #[cfg(not(target_os = "linux"))]
-pub fn execute(_config: &crate::Config) -> Result<String, RunnerError> {
+pub fn execute(_config: &crate::Config) -> Result<RunOutput, RunnerError> {
     Err(RunnerError::Config(
         "Benchmark execution requires Linux with KVM support".to_owned(),
     ))

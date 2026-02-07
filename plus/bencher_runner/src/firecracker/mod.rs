@@ -19,6 +19,8 @@ use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
 
+use crate::run::RunOutput;
+
 use config::{Action, ActionType, BootSource, Drive, MachineConfig, VsockConfig};
 use process::FirecrackerProcess;
 use vsock::VsockListener;
@@ -57,8 +59,8 @@ pub struct FirecrackerJobConfig {
 /// 6. Collects results via vsock
 /// 7. Cleans up (including cgroup)
 ///
-/// Returns the benchmark stdout output.
-pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<String, FirecrackerError> {
+/// Returns the benchmark output including exit code and stdout.
+pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<RunOutput, FirecrackerError> {
     let vm_id = uuid::Uuid::new_v4().to_string();
     let api_socket_path = format!("{}/firecracker-{vm_id}.sock", config.work_dir);
     let vsock_uds_path = format!("{}/vsock-{vm_id}.sock", config.work_dir);
@@ -151,15 +153,30 @@ pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<String, Firecrac
     };
 
     println!("Waiting for benchmark results (timeout: {timeout:?})...");
-    let results = vsock_listener.collect_results(timeout)?;
+    let results = match vsock_listener.collect_results(timeout) {
+        Ok(results) => results,
+        Err(e) => {
+            let elapsed = start_time.elapsed();
+            // Output metrics even on timeout
+            let run_metrics = RunMetrics {
+                wall_clock_ms: elapsed.as_millis() as u64,
+                timed_out: true,
+                transport: "vsock".to_owned(),
+                cgroup: None,
+            };
+            if let Some(line) = metrics::format_metrics(&run_metrics) {
+                eprintln!("{line}");
+            }
+            fc_process.kill_after_grace_period(Duration::from_secs(2));
+            return Err(e);
+        },
+    };
     let elapsed = start_time.elapsed();
-
-    let timed_out = results.exit_code.is_empty() && elapsed >= timeout;
 
     // Step 6: Output metrics to stderr
     let run_metrics = RunMetrics {
         wall_clock_ms: elapsed.as_millis() as u64,
-        timed_out,
+        timed_out: false,
         transport: "vsock".to_owned(),
         cgroup: None,
     };
@@ -174,12 +191,52 @@ pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<String, Firecrac
     // Step 7: Kill Firecracker process
     fc_process.kill_after_grace_period(Duration::from_secs(2));
 
-    if timed_out {
-        return Err(FirecrackerError::Timeout(format!(
-            "VM execution timed out after {} seconds",
-            config.timeout_secs
-        )));
+    // Parse exit code from string, defaulting to 1 on parse failure
+    let exit_code = parse_exit_code(&results.exit_code);
+
+    Ok(RunOutput {
+        exit_code,
+        stdout: results.stdout,
+    })
+}
+
+/// Parse an exit code string to i32, defaulting to 1 on failure.
+fn parse_exit_code(s: &str) -> i32 {
+    s.parse::<i32>().unwrap_or(1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_exit_code_zero() {
+        assert_eq!(parse_exit_code("0"), 0);
     }
 
-    Ok(results.stdout)
+    #[test]
+    fn parse_exit_code_nonzero() {
+        assert_eq!(parse_exit_code("1"), 1);
+        assert_eq!(parse_exit_code("137"), 137);
+    }
+
+    #[test]
+    fn parse_exit_code_invalid() {
+        assert_eq!(parse_exit_code("not_a_number"), 1);
+    }
+
+    #[test]
+    fn parse_exit_code_empty() {
+        assert_eq!(parse_exit_code(""), 1);
+    }
+
+    #[test]
+    fn run_output_fields() {
+        let output = RunOutput {
+            exit_code: 42,
+            stdout: "hello".to_owned(),
+        };
+        assert_eq!(output.exit_code, 42);
+        assert_eq!(output.stdout, "hello");
+    }
 }

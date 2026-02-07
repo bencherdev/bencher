@@ -44,27 +44,29 @@ fn run_test() -> anyhow::Result<()> {
     println!("KVM available: {}", if has_kvm { "Yes" } else { "No" });
     println!();
 
+    #[cfg(feature = "plus")]
     if is_linux && has_kvm {
         // Run directly on Linux
-        run_test_native()
+        return run_test_native();
+    }
+
+    print!("Checking Docker availability... ");
+    std::io::Write::flush(&mut std::io::stdout())?;
+    if docker::docker_available() {
+        println!("available");
+        // Run via Docker on macOS (or Linux without KVM)
+        run_test_docker()
     } else {
-        print!("Checking Docker availability... ");
-        std::io::Write::flush(&mut std::io::stdout())?;
-        if docker::docker_available() {
-            println!("available");
-            // Run via Docker on macOS (or Linux without KVM)
-            run_test_docker()
-        } else {
-            println!("not available");
-            println!();
-            println!("Warning: Neither KVM nor Docker is available.");
-            println!("Running in mock mode (no actual VM execution).");
-            run_test_mock()
-        }
+        println!("not available");
+        println!();
+        println!("Warning: Neither KVM nor Docker is available.");
+        println!("Running in mock mode (no actual VM execution).");
+        run_test_mock()
     }
 }
 
 /// Run the test natively on Linux with KVM.
+#[cfg(feature = "plus")]
 fn run_test_native() -> anyhow::Result<()> {
     println!("Running test natively with KVM...");
     println!();
@@ -168,6 +170,7 @@ fn run_test_mock() -> anyhow::Result<()> {
 }
 
 /// Run the actual benchmark using `bencher_runner`.
+#[cfg(feature = "plus")]
 fn run_benchmark() -> anyhow::Result<()> {
     println!("Starting benchmark VM...");
     println!();
@@ -209,18 +212,18 @@ fn run_benchmark() -> anyhow::Result<()> {
     println!();
 
     println!("Running benchmark...");
-    let result = bencher_runner::execute(&config)?;
+    let output = bencher_runner::execute(&config)?;
 
     println!();
-    println!("=== Benchmark Output ===");
-    println!("{result}");
+    println!("=== Benchmark Output (exit code: {}) ===", output.exit_code);
+    println!("{}", output.stdout);
     println!("========================");
     println!();
 
     // Verify the output contains expected benchmark results
-    if result.contains("bencher") || result.contains("mock") || result.contains("latency") {
+    if output.stdout.contains("bencher") || output.stdout.contains("mock") || output.stdout.contains("latency") {
         println!("Test PASSED: Benchmark output looks valid");
-    } else if result.contains("error") || result.contains("Error") {
+    } else if output.stdout.contains("error") || output.stdout.contains("Error") {
         println!("Test FAILED: Errors in output");
         anyhow::bail!("Benchmark execution failed");
     } else {

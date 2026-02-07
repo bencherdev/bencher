@@ -72,7 +72,7 @@ pub fn execute_job(
 
     // Stop heartbeat thread
     stop_flag.store(true, Ordering::SeqCst);
-    drop(heartbeat.join());
+    let _ = heartbeat.join();
 
     // Check if canceled
     if cancel_flag.load(Ordering::SeqCst) {
@@ -90,8 +90,8 @@ pub fn execute_job(
     let outcome = match result {
         Ok(output) => {
             let msg = RunnerMessage::Completed {
-                exit_code: 0,
-                output: Some(output),
+                exit_code: output.exit_code,
+                output: Some(output.stdout),
             };
             let mut ws_guard = ws
                 .lock()
@@ -101,7 +101,7 @@ pub fn execute_job(
             drop(ws_guard.read_message_timeout(Duration::from_secs(5)));
             ws_guard.close();
             JobOutcome::Completed {
-                exit_code: 0,
+                exit_code: output.exit_code,
                 output: None,
             }
         },

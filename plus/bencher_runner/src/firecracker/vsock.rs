@@ -140,12 +140,20 @@ impl VsockListener {
             std::thread::sleep(poll_interval);
         }
 
+        let exit_code = String::from_utf8_lossy(&exit_code_data.unwrap_or_default())
+            .trim()
+            .to_owned();
+
+        if exit_code.is_empty() {
+            return Err(FirecrackerError::Timeout(format!(
+                "VM execution timed out after {timeout:?}"
+            )));
+        }
+
         Ok(VsockResults {
             stdout: String::from_utf8_lossy(&stdout_data.unwrap_or_default()).into_owned(),
             stderr: String::from_utf8_lossy(&stderr_data.unwrap_or_default()).into_owned(),
-            exit_code: String::from_utf8_lossy(&exit_code_data.unwrap_or_default())
-                .trim()
-                .to_owned(),
+            exit_code,
             output_file: output_file_data,
         })
     }
@@ -301,16 +309,18 @@ mod tests {
     }
 
     #[test]
-    fn collect_timeout_returns_empty() {
+    fn collect_timeout_returns_error() {
         let (_dir, listener) = listener_in_tmpdir();
 
-        // No data sent — should timeout
-        let results = listener
-            .collect_results(Duration::from_millis(200))
-            .unwrap();
+        // No data sent — should timeout with an error
+        let result = listener.collect_results(Duration::from_millis(200));
 
-        assert_eq!(results.exit_code, "");
-        assert_eq!(results.stdout, "");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("timed out"),
+            "error should mention timeout, got: {err}"
+        );
     }
 
     #[test]

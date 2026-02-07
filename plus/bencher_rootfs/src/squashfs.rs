@@ -119,67 +119,12 @@ fn create_node_header(metadata: &fs::Metadata) -> NodeHeader {
     }
 }
 
-/// Options for squashfs creation.
-#[derive(Debug, Clone)]
-pub struct SquashfsOptions {
-    /// Block size in bytes.
-    pub block_size: u32,
-
-    /// Compression algorithm.
-    pub compression: Compression,
-
-    /// Whether to preserve timestamps.
-    pub preserve_timestamps: bool,
-}
-
-impl Default for SquashfsOptions {
-    fn default() -> Self {
-        Self {
-            block_size: DEFAULT_BLOCK_SIZE,
-            compression: Compression::Gzip,
-            preserve_timestamps: true,
-        }
-    }
-}
-
-/// Compression algorithms supported by squashfs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Compression {
-    /// Gzip compression (default, good compatibility).
-    Gzip,
-
-    /// LZ4 compression (fastest).
-    Lz4,
-
-    /// XZ compression (best ratio).
-    Xz,
-
-    /// Zstd compression (good balance).
-    Zstd,
-}
-
-impl Compression {
-    /// Convert to a backhand Compressor.
-    #[must_use]
-    pub fn to_compressor(self) -> Compressor {
-        match self {
-            Self::Gzip => Compressor::Gzip,
-            Self::Lz4 => Compressor::Lz4,
-            Self::Xz => Compressor::Xz,
-            Self::Zstd => Compressor::Zstd,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_default_options() {
-        let options = SquashfsOptions::default();
-        assert_eq!(options.block_size, DEFAULT_BLOCK_SIZE);
-        assert_eq!(options.compression, Compression::Gzip);
-        assert!(options.preserve_timestamps);
+    fn test_default_block_size() {
+        assert_eq!(DEFAULT_BLOCK_SIZE, 0x2_0000);
     }
 }

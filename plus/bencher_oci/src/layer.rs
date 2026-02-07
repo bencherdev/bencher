@@ -34,9 +34,14 @@ fn safe_join(
 
     let joined = target_dir.join(stripped);
 
-    // Double-check: the canonical prefix must still be target_dir.
-    // We can't canonicalize (target may not exist yet), but the component check above
-    // is sufficient since we already rejected all `..` segments.
+    // Defense-in-depth: verify the joined path starts with the target directory
+    if !joined.starts_with(target_dir) {
+        return Err(OciError::PathTraversal(format!(
+            "Path escapes target directory: {}",
+            entry_path.display()
+        )));
+    }
+
     Ok(joined)
 }
 
@@ -250,6 +255,13 @@ mod tests {
     fn safe_join_rejects_absolute_with_dotdot() {
         let dir = Utf8Path::new("/rootfs");
         assert!(safe_join(dir, std::path::Path::new("/foo/../../../etc/shadow")).is_err());
+    }
+
+    #[test]
+    fn safe_join_result_starts_with_target() {
+        let dir = Utf8Path::new("/rootfs");
+        let result = safe_join(dir, std::path::Path::new("usr/bin/hello")).unwrap();
+        assert!(result.starts_with(dir));
     }
 
     #[test]

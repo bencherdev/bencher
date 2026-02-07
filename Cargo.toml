@@ -173,7 +173,7 @@ uuid = "1.19"
 wasm-bindgen = "0.2"
 wasm-bindgen-test = "0.3"
 windows = "0.62"
-tungstenite = "0.26"
+tungstenite = { version = "0.26", features = ["__rustls-tls"] }
 ureq = "3.0"
 zstd = "0.13"
 vsock = "0.5"

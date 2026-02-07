@@ -13,7 +13,7 @@ if [ "$KSH_VERSION" = 'Version JM 93t+ 2010-03-05' ]; then
     exit 1
 fi
 
-set -u
+set -uo pipefail
 
 APP_NAME=bencher-runner
 APP_VERSION="${BENCHER_RUNNER_VERSION:-0.5.10}"
