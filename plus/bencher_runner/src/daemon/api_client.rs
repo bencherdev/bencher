@@ -8,7 +8,15 @@ use uuid::Uuid;
 use super::error::ApiClientError;
 
 const TOKEN_PREFIX: &str = "bencher_runner_";
-const AGENT_TIMEOUT: Duration = Duration::from_secs(90);
+
+/// HTTP agent timeout.
+///
+/// This must be greater than the server's `MAX_POLL_TIMEOUT` (from `bencher_json`)
+/// to avoid the client timing out before the server responds during long-polling.
+/// We add a 30-second margin for network latency and server processing.
+const AGENT_TIMEOUT_MARGIN_SECS: u64 = 30;
+const AGENT_TIMEOUT: Duration =
+    Duration::from_secs(bencher_json::MAX_POLL_TIMEOUT as u64 + AGENT_TIMEOUT_MARGIN_SECS);
 
 pub struct RunnerApiClient {
     agent: ureq::Agent,

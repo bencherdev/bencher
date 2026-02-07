@@ -102,7 +102,7 @@ const fn default_disk_mib() -> u32 {
 }
 
 fn default_kernel_cmdline() -> String {
-    "console=ttyS0 reboot=k panic=1 pci=off".to_owned()
+    "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init".to_owned()
 }
 
 const fn default_timeout_secs() -> u64 {
