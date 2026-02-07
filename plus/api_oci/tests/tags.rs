@@ -508,3 +508,133 @@ async fn test_tags_list_follow_pagination() {
         .collect();
     assert_eq!(page3_tags, vec!["eee"]);
 }
+
+// GET /v2/{name}/tags/list?n=0 - n=0 should be clamped to 1
+#[tokio::test]
+async fn test_tags_list_pagination_n_zero_clamped() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("TagsNZero User", "tagsnzero@example.com")
+        .await;
+    let org = server.create_org(&user, "TagsNZero Org").await;
+    let project = server
+        .create_project(&user, &org, "TagsNZero Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload 3 manifests
+    for i in 0..3 {
+        let manifest = create_test_manifest(&format!("nzero{}", i));
+        server
+            .client
+            .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
+            .header("Authorization", format!("Bearer {}", push_token))
+            .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+            .body(manifest)
+            .send()
+            .await
+            .expect("Upload failed");
+    }
+
+    // Request with n=0 — should clamp to 1, returning exactly 1 tag
+    let pull_token = server.oci_pull_token(&user, &project);
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?n=0", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    let tags_array = body["tags"].as_array().expect("tags should be array");
+    assert_eq!(
+        tags_array.len(),
+        1,
+        "n=0 should be clamped to 1, returning exactly 1 tag"
+    );
+}
+
+// GET /v2/{name}/tags/list?n=999999 - large n should be clamped to MAX_PAGE_SIZE
+#[tokio::test]
+async fn test_tags_list_pagination_n_large_clamped() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("TagsNLarge User", "tagsnlarge@example.com")
+        .await;
+    let org = server.create_org(&user, "TagsNLarge Org").await;
+    let project = server
+        .create_project(&user, &org, "TagsNLarge Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload 3 manifests
+    for i in 0..3 {
+        let manifest = create_test_manifest(&format!("nlarge{}", i));
+        server
+            .client
+            .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
+            .header("Authorization", format!("Bearer {}", push_token))
+            .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+            .body(manifest)
+            .send()
+            .await
+            .expect("Upload failed");
+    }
+
+    // Request with n=999999 — should succeed (clamped internally) and return all 3
+    let pull_token = server.oci_pull_token(&user, &project);
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?n=999999", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Check no Link header before consuming resp with json()
+    let has_link = resp.headers().get("link").is_some();
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    let tags_array = body["tags"].as_array().expect("tags should be array");
+    assert_eq!(tags_array.len(), 3);
+    assert!(!has_link, "No Link header since all tags fit");
+}
+
+// GET /v2/{name}/tags/list?last=<invalid> - invalid cursor should be rejected
+#[tokio::test]
+async fn test_tags_list_invalid_last_cursor() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("TagsBadCursor User", "tagsbadcursor@example.com")
+        .await;
+    let org = server.create_org(&user, "TagsBadCursor Org").await;
+    let project = server
+        .create_project(&user, &org, "TagsBadCursor Project")
+        .await;
+
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // A tag starting with '-' is invalid per OCI spec
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?last=-invalid-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Invalid last cursor should be rejected"
+    );
+}

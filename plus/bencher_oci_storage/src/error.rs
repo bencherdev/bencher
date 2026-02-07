@@ -60,7 +60,19 @@ impl OciError {
     /// Returns the OCI error code as specified in the Distribution Spec
     pub fn code(&self) -> &'static str {
         match self {
-            Self::BlobUnknown { .. } | Self::Storage(_) => "BLOB_UNKNOWN",
+            Self::BlobUnknown { .. } => "BLOB_UNKNOWN",
+            Self::Storage(storage_error) => match storage_error {
+                OciStorageError::ManifestNotFound(_) => "MANIFEST_UNKNOWN",
+                OciStorageError::DigestMismatch { .. } => "DIGEST_INVALID",
+                OciStorageError::UploadNotFound(_) => "BLOB_UPLOAD_UNKNOWN",
+                OciStorageError::InvalidContent(_) => "MANIFEST_INVALID",
+                OciStorageError::BlobNotFound(_)
+                | OciStorageError::S3(_)
+                | OciStorageError::LocalStorage(_)
+                | OciStorageError::InvalidArn(_)
+                | OciStorageError::Config(_)
+                | OciStorageError::Json(_) => "BLOB_UNKNOWN",
+            },
             Self::BlobUploadInvalid { .. } | Self::RangeNotSatisfiable(_) => "BLOB_UPLOAD_INVALID",
             Self::BlobUploadUnknown { .. } => "BLOB_UPLOAD_UNKNOWN",
             Self::DigestInvalid { .. } => "DIGEST_INVALID",
@@ -104,5 +116,72 @@ impl OciError {
 
             Self::Storage(storage_error) => storage_error.status_code(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn storage_error_codes() {
+        // Each OciStorageError variant should map to the correct OCI error code
+        assert_eq!(
+            OciError::from(OciStorageError::ManifestNotFound("m".into())).code(),
+            "MANIFEST_UNKNOWN"
+        );
+        assert_eq!(
+            OciError::from(OciStorageError::DigestMismatch {
+                expected: "a".into(),
+                actual: "b".into()
+            })
+            .code(),
+            "DIGEST_INVALID"
+        );
+        assert_eq!(
+            OciError::from(OciStorageError::UploadNotFound("u".into())).code(),
+            "BLOB_UPLOAD_UNKNOWN"
+        );
+        assert_eq!(
+            OciError::from(OciStorageError::InvalidContent("c".into())).code(),
+            "MANIFEST_INVALID"
+        );
+        assert_eq!(
+            OciError::from(OciStorageError::BlobNotFound("b".into())).code(),
+            "BLOB_UNKNOWN"
+        );
+        assert_eq!(
+            OciError::from(OciStorageError::S3("s3".into())).code(),
+            "BLOB_UNKNOWN"
+        );
+        assert_eq!(
+            OciError::from(OciStorageError::LocalStorage("fs".into())).code(),
+            "BLOB_UNKNOWN"
+        );
+        assert_eq!(
+            OciError::from(OciStorageError::Json("json".into())).code(),
+            "BLOB_UNKNOWN"
+        );
+    }
+
+    #[test]
+    fn direct_error_codes() {
+        assert_eq!(
+            OciError::BlobUnknown { digest: "d".into() }.code(),
+            "BLOB_UNKNOWN"
+        );
+        assert_eq!(
+            OciError::ManifestUnknown {
+                reference: "r".into()
+            }
+            .code(),
+            "MANIFEST_UNKNOWN"
+        );
+        assert_eq!(
+            OciError::NameInvalid { name: "n".into() }.code(),
+            "NAME_INVALID"
+        );
+        assert_eq!(OciError::Unauthorized("u".into()).code(), "UNAUTHORIZED");
+        assert_eq!(OciError::TooManyRequests.code(), "TOOMANYREQUESTS");
     }
 }

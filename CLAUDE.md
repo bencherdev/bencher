@@ -12,6 +12,8 @@ Bencher is a continuous benchmarking platform that detects and prevents performa
 
 **Tech stack:** Rust (edition 2024, toolchain 1.91.1), TypeScript, SQLite (Diesel ORM), WASM for sharing Rust types with frontend. Version control uses Jujutsu (`jj`) with Git.
 
+**Development Methodology:** Practice test-driven development (TDD) with a strong emphasis on code quality, maintainability, and clear documentation. Follow the established code style rules and project architecture to ensure consistency across the codebase.
+
 ## Common Commands
 
 ### Building & Running

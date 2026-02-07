@@ -77,6 +77,9 @@ pub async fn oci_tags_options(
 /// Default number of tags to return when n is not specified
 const DEFAULT_PAGE_SIZE: u32 = 100;
 
+/// Maximum page size to prevent excessive resource usage
+const MAX_PAGE_SIZE: u32 = 10_000;
+
 /// List tags for a repository
 ///
 /// Returns a list of tags for the specified repository with optional pagination.
@@ -103,13 +106,23 @@ pub async fn oci_tags_list(
     // Get storage
     let storage = context.oci_storage();
 
-    // Determine page size
-    let page_size = query.n.unwrap_or(DEFAULT_PAGE_SIZE) as usize;
+    // Determine page size, clamped to [1, MAX_PAGE_SIZE]
+    let page_size = query.n.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, MAX_PAGE_SIZE) as usize;
+
+    // Validate the `last` cursor if provided
+    let last_tag = if let Some(last) = &query.last {
+        let _tag: bencher_oci_storage::Tag = last.parse().map_err(|_err| {
+            crate::error::into_http_error(OciError::NameInvalid { name: last.clone() })
+        })?;
+        Some(last.as_str())
+    } else {
+        None
+    };
 
     // List tags with pagination handled at storage layer
     // Storage returns up to page_size + 1 tags to detect if more exist
     let mut tags = storage
-        .list_tags(&path.name, Some(page_size), query.last.as_deref())
+        .list_tags(&path.name, Some(page_size), last_tag)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 

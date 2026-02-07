@@ -302,25 +302,31 @@ pub async fn oci_upload_start(
             })
         })?;
 
-        // Try to mount the blob
-        let mounted = storage
-            .mount_blob(&from_repo, &path.name, &digest)
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        // Only attempt mount if caller has pull access to source repository.
+        // If pull access is denied, silently fall through to normal upload
+        // to avoid revealing whether the source repository exists.
+        let from_repo_str = from_repo.to_string();
+        if require_pull_access(&rqctx, &from_repo_str).await.is_ok() {
+            // Try to mount the blob
+            let mounted = storage
+                .mount_blob(&from_repo, &path.name, &digest)
+                .await
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
-        if mounted {
-            // Mount successful - return 201 Created
-            let location = format!("/v2/{project_slug}/blobs/{digest}");
-            let response = Response::builder()
-                .status(http::StatusCode::CREATED)
-                .header(http::header::LOCATION, location)
-                .header("Docker-Content-Digest", digest.to_string())
-                .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                .body(Body::empty())
-                .map_err(|e| {
-                    HttpError::for_internal_error(format!("Failed to build response: {e}"))
-                })?;
-            return Ok(response);
+            if mounted {
+                // Mount successful - return 201 Created
+                let location = format!("/v2/{project_slug}/blobs/{digest}");
+                let response = Response::builder()
+                    .status(http::StatusCode::CREATED)
+                    .header(http::header::LOCATION, location)
+                    .header("Docker-Content-Digest", digest.to_string())
+                    .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                    .body(Body::empty())
+                    .map_err(|e| {
+                        HttpError::for_internal_error(format!("Failed to build response: {e}"))
+                    })?;
+                return Ok(response);
+            }
         }
     }
 
@@ -410,6 +416,7 @@ pub async fn oci_upload_monolithic(
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
+    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     storage
         .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
         .await

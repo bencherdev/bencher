@@ -16,6 +16,26 @@ use serde::Deserialize;
 
 use crate::auth::{require_pull_access, require_push_access, validate_push_access};
 
+/// Extracts the mediaType from a manifest JSON, falling back to the OCI default
+fn extract_content_type(manifest: &[u8]) -> String {
+    serde_json::from_slice::<serde_json::Value>(manifest)
+        .ok()
+        .and_then(|v| {
+            v.get("mediaType")
+                .and_then(|m| m.as_str())
+                .map(ToOwned::to_owned)
+        })
+        .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned())
+}
+
+/// Valid OCI/Docker manifest media types
+const VALID_MANIFEST_MEDIA_TYPES: &[&str] = &[
+    "application/vnd.oci.image.manifest.v1+json",
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.docker.distribution.manifest.v2+json",
+    "application/vnd.docker.distribution.manifest.list.v2+json",
+];
+
 /// Path parameters for manifest endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ManifestPath {
@@ -70,7 +90,7 @@ pub async fn oci_manifest_exists(
     let digest = match &reference {
         Reference::Digest(d) => d.clone(),
         Reference::Tag(t) => storage
-            .resolve_tag(&path.name, t.as_str())
+            .resolve_tag(&path.name, t)
             .await
             .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
     };
@@ -81,15 +101,8 @@ pub async fn oci_manifest_exists(
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
-    // Determine content type from manifest (parse to get mediaType field)
-    let content_type = serde_json::from_slice::<serde_json::Value>(&manifest)
-        .ok()
-        .and_then(|v| {
-            v.get("mediaType")
-                .and_then(|m| m.as_str())
-                .map(ToOwned::to_owned)
-        })
-        .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned());
+    // Determine content type from manifest
+    let content_type = extract_content_type(&manifest);
 
     // Build response with OCI-compliant headers (no body for HEAD)
     let response = Response::builder()
@@ -138,7 +151,7 @@ pub async fn oci_manifest_get(
     let digest = match &reference {
         Reference::Digest(d) => d.clone(),
         Reference::Tag(t) => storage
-            .resolve_tag(&path.name, t.as_str())
+            .resolve_tag(&path.name, t)
             .await
             .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
     };
@@ -153,15 +166,8 @@ pub async fn oci_manifest_get(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciManifestPull);
 
-    // Determine content type from manifest (parse to get mediaType field)
-    let content_type = serde_json::from_slice::<serde_json::Value>(&manifest)
-        .ok()
-        .and_then(|v| {
-            v.get("mediaType")
-                .and_then(|m| m.as_str())
-                .map(ToOwned::to_owned)
-        })
-        .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned());
+    // Determine content type from manifest
+    let content_type = extract_content_type(&manifest);
 
     // Build response with OCI-compliant headers
     let response = Response::builder()
@@ -212,9 +218,19 @@ pub async fn oci_manifest_put(
 
     // Determine tag from reference (if it's a tag)
     let tag = match &reference {
-        Reference::Tag(t) => Some(t.as_str()),
+        Reference::Tag(t) => Some(t),
         Reference::Digest(_) => None,
     };
+
+    // Validate manifest mediaType if present
+    if let Ok(parsed) = serde_json::from_slice::<serde_json::Value>(body_bytes)
+        && let Some(media_type) = parsed.get("mediaType").and_then(|m| m.as_str())
+        && !VALID_MANIFEST_MEDIA_TYPES.contains(&media_type)
+    {
+        return Err(crate::error::into_http_error(OciError::ManifestInvalid(
+            format!("Unsupported manifest mediaType: {media_type}"),
+        )));
+    }
 
     // Extract subject digest from manifest if present (for OCI-Subject header)
     let subject_digest = serde_json::from_slice::<serde_json::Value>(body_bytes)
@@ -228,6 +244,7 @@ pub async fn oci_manifest_put(
         });
 
     // Store the manifest
+    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     let digest = storage
         .put_manifest(&path.name, bytes::Bytes::copy_from_slice(body_bytes), tag)
         .await
@@ -301,7 +318,7 @@ pub async fn oci_manifest_delete(
         Reference::Tag(tag) => {
             // Delete by tag - delete the tag link only (manifest may still exist)
             storage
-                .delete_tag(&path.name, tag.as_str())
+                .delete_tag(&path.name, &tag)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         },

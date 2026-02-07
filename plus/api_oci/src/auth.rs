@@ -18,7 +18,7 @@ use bencher_schema::{
     },
     public_conn,
 };
-use bencher_token::OciClaims;
+use bencher_token::{OciAction, OciClaims};
 use dropshot::{ClientErrorStatusCode, HttpError, RequestContext};
 use slog::Logger;
 
@@ -73,17 +73,13 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
 }
 
 /// Validate OCI token and check it grants access to the specified repository and action
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding token validation error for security"
-)]
 pub fn validate_oci_access(
     context: &ApiContext,
     token: &Jwt,
     repository: &str,
-    required_action: &str,
+    required_action: &OciAction,
 ) -> Result<OciClaims, HttpError> {
-    let claims = context.token_key.validate_oci(token).map_err(|_| {
+    let claims = context.token_key.validate_oci(token).map_err(|_err| {
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
@@ -103,12 +99,11 @@ pub fn validate_oci_access(
     }
 
     // Check action is allowed
-    let action_allowed = claims.oci.actions.iter().any(|a| a == required_action);
-    if !action_allowed {
+    if !claims.oci.actions.contains(required_action) {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::FORBIDDEN,
-            format!("Token does not permit {required_action} action"),
+            format!("Token does not permit {required_action:?} action"),
         ));
     }
 
@@ -138,7 +133,7 @@ pub async fn require_pull_access(
     let scope = format!("repository:{repository}:pull");
     let token = extract_oci_bearer_token(rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, repository, "pull")
+    let claims = validate_oci_access(context, &token, repository, &OciAction::Pull)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
 
     // Apply rate limiting
@@ -165,7 +160,7 @@ pub async fn require_push_access(
     let scope = format!("repository:{repository}:push");
     let token = extract_oci_bearer_token(rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, repository, "push")
+    let claims = validate_oci_access(context, &token, repository, &OciAction::Push)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
 
     // Apply rate limiting
@@ -444,27 +439,39 @@ async fn build_public_user(
     token_result: &Result<Jwt, HttpError>,
     repository_str: &str,
 ) -> Result<(PublicUser, Option<OciClaims>), HttpError> {
-    if let Ok(token) = token_result
-        && let Ok(claims) = validate_oci_access(context, token, repository_str, "push")
-    {
-        // Valid OCI token - load the user with a single connection
+    if let Ok(token) = token_result {
+        // Token was provided -- it MUST be valid; don't silently downgrade to public
+        let claims = validate_oci_access(context, token, repository_str, &OciAction::Push)
+            .map_err(|e| {
+                slog::warn!(log, "OCI push with invalid token"; "error" => %e);
+                e
+            })?;
         let email = claims.email().clone();
         let conn = public_conn!(context);
-        if let Ok(query_user) = QueryUser::get_with_email(conn, &email)
-            && let Ok(auth_user) = AuthUser::load(conn, query_user)
-        {
-            slog::debug!(
-                log,
-                "OCI push with valid authentication";
-                "user" => %auth_user.user.uuid
-            );
-            return Ok((PublicUser::Auth(Box::new(auth_user)), Some(claims)));
-        }
+        let query_user = QueryUser::get_with_email(conn, &email).map_err(|_err| {
+            HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::UNAUTHORIZED,
+                "User not found for token".to_owned(),
+            )
+        })?;
+        let auth_user = AuthUser::load(conn, query_user).map_err(|_err| {
+            HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::UNAUTHORIZED,
+                "Failed to load user".to_owned(),
+            )
+        })?;
+        slog::debug!(
+            log,
+            "OCI push with valid authentication";
+            "user" => %auth_user.user.uuid
+        );
+        Ok((PublicUser::Auth(Box::new(auth_user)), Some(claims)))
+    } else {
+        // No token provided -- treat as public user (for unclaimed projects)
+        let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
+        slog::debug!(log, "OCI push without authentication (public user)"; "remote_ip" => ?remote_ip);
+        Ok((PublicUser::Public(remote_ip), None))
     }
-
-    // No valid token or user not found - treat as public user
-    // Extract remote IP for rate limiting
-    let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
-    slog::debug!(log, "OCI push without authentication (public user)"; "remote_ip" => ?remote_ip);
-    Ok((PublicUser::Public(remote_ip), None))
 }

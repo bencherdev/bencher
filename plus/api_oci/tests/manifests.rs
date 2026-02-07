@@ -8,6 +8,7 @@
 //! Integration tests for OCI manifest endpoints.
 
 use bencher_api_tests::TestServer;
+use bencher_token::OciAction;
 use http::StatusCode;
 use sha2::{Digest as _, Sha256};
 
@@ -517,7 +518,7 @@ async fn test_manifest_put_authenticated_to_unclaimed() {
         .signup("Manifest Claimer", "manifestclaimer@example.com")
         .await;
 
-    let oci_token = server.oci_token(&user, unclaimed_slug, &["push"]);
+    let oci_token = server.oci_token(&user, unclaimed_slug, &[OciAction::Push]);
 
     let config_digest2 = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
     let layer_digest2 = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
@@ -563,7 +564,7 @@ async fn test_manifest_put_nonexistent_uuid() {
     // Use a random UUID that doesn't exist
     let fake_uuid = "00000000-0000-0000-0000-000000000000";
 
-    let oci_token = server.oci_token(&user, fake_uuid, &["push"]);
+    let oci_token = server.oci_token(&user, fake_uuid, &[OciAction::Push]);
 
     let config_digest = "sha256:1234567890123456789012345678901234567890123456789012345678901234";
     let layer_digest = "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd";
@@ -593,7 +594,7 @@ async fn test_manifest_put_nonexistent_slug_authenticated() {
     // Use a new slug that doesn't exist yet
     let new_slug = "auto-created-manifest-project";
 
-    let oci_token = server.oci_token(&user, new_slug, &["push"]);
+    let oci_token = server.oci_token(&user, new_slug, &[OciAction::Push]);
 
     let config_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
     let layer_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
@@ -627,4 +628,49 @@ async fn test_manifest_put_nonexistent_slug_authenticated() {
         .expect("Request failed");
 
     assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// Manifest with an unsupported media type should be rejected
+#[tokio::test]
+async fn test_manifest_put_invalid_media_type() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MediaType User", "mediatype@example.com")
+        .await;
+    let org = server.create_org(&user, "MediaType Org").await;
+    let project = server
+        .create_project(&user, &org, "MediaType Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // A manifest with an unrecognized mediaType in the body
+    let manifest = serde_json::json!({
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.evil.custom.v1+json",
+        "config": {
+            "mediaType": "application/vnd.oci.image.config.v1+json",
+            "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "size": 100
+        },
+        "layers": []
+    })
+    .to_string();
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.evil.custom.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Unsupported manifest media type should be rejected"
+    );
 }

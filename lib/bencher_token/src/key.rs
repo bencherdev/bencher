@@ -9,8 +9,8 @@ use jsonwebtoken::{
 };
 
 use crate::{
-    Audience, Claims, InviteClaims, OAuthClaims, OciClaims, OciScopeClaims, OrgClaims, StateClaims,
-    TokenError,
+    Audience, Claims, InviteClaims, OAuthClaims, OciAction, OciClaims, OciScopeClaims, OrgClaims,
+    StateClaims, TokenError,
 };
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
@@ -85,7 +85,7 @@ impl TokenKey {
         email: Email,
         ttl: u32,
         repository: Option<String>,
-        actions: Vec<String>,
+        actions: Vec<OciAction>,
     ) -> Result<Jwt, TokenError> {
         let oci_claims = OciScopeClaims {
             repository,
@@ -155,7 +155,7 @@ mod tests {
 
     use bencher_json::{Email, OrganizationUuid, organization::member::OrganizationRole};
 
-    use crate::{Audience, DEFAULT_SECRET_KEY};
+    use crate::{Audience, DEFAULT_SECRET_KEY, OciAction};
 
     use super::TokenKey;
 
@@ -264,6 +264,38 @@ mod tests {
 
         assert_eq!(claims.org.uuid, org_uuid);
         assert_eq!(claims.org.role, role);
+    }
+
+    #[test]
+    fn jwt_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let repository = Some("test-org/test-project".to_owned());
+        let actions = vec![OciAction::Pull, OciAction::Push];
+
+        let token = secret_key
+            .new_oci(EMAIL.clone(), TTL, repository.clone(), actions.clone())
+            .unwrap();
+
+        let claims = secret_key.validate_oci(&token).unwrap();
+
+        assert_eq!(claims.aud, Audience::Oci.to_string());
+        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
+        assert_eq!(claims.sub, *EMAIL);
+        assert_eq!(claims.oci.repository, repository);
+        assert_eq!(claims.oci.actions, actions);
+    }
+
+    #[test]
+    fn jwt_oci_expired() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key.new_oci(EMAIL.clone(), 0, None, vec![]).unwrap();
+
+        sleep_for_a_second();
+
+        assert!(secret_key.validate_oci(&token).is_err());
     }
 
     #[test]

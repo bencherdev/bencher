@@ -124,6 +124,12 @@ pub async fn oci_upload_status(
     // Get storage
     let storage = context.oci_storage();
 
+    // Validate upload belongs to this repository
+    storage
+        .validate_upload_repository(&upload_id, &path.name)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
     // Get current upload size
     let size = storage
         .get_upload_size(&upload_id)
@@ -195,6 +201,12 @@ pub async fn oci_upload_chunk(
     // Get storage
     let storage = context.oci_storage();
 
+    // Validate upload belongs to this repository
+    storage
+        .validate_upload_repository(&upload_id, &path.name)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
     // Get current upload size for Content-Range validation
     let current_size = storage
         .get_upload_size(&upload_id)
@@ -239,6 +251,7 @@ pub async fn oci_upload_chunk(
     }
 
     // Append data to upload
+    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     let new_size = storage
         .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
         .await
@@ -306,7 +319,14 @@ pub async fn oci_upload_complete(
     // Get storage
     let storage = context.oci_storage();
 
+    // Validate upload belongs to this repository
+    storage
+        .validate_upload_repository(&upload_id, &path.name)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
     // If there's data in the body, append it first
+    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     if !data.is_empty() {
         storage
             .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
@@ -368,6 +388,12 @@ pub async fn oci_upload_cancel(
 
     // Get storage
     let storage = context.oci_storage();
+
+    // Validate upload belongs to this repository
+    storage
+        .validate_upload_repository(&upload_id, &path.name)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Cancel the upload
     storage

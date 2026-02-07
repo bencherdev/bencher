@@ -20,19 +20,22 @@ pub enum DigestError {
 
 impl Digest {
     /// Creates a new SHA-256 digest from the given hex-encoded hash
-    pub fn sha256(hex_hash: &str) -> Self {
-        Self(format!("sha256:{hex_hash}"))
+    pub fn sha256(hex_hash: &str) -> Result<Self, DigestError> {
+        if hex_hash.is_empty() || !hex_hash.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(DigestError::InvalidFormat(format!("sha256:{hex_hash}")));
+        }
+        Ok(Self(format!("sha256:{hex_hash}")))
     }
 
     /// Returns the algorithm part of the digest (e.g., "sha256")
     pub fn algorithm(&self) -> &str {
-        // Safe: Digest is only constructed via FromStr which validates format
+        // Safe: Digest is only constructed via FromStr or sha256(), both of which validate format
         self.0.split(':').next().unwrap_or("sha256")
     }
 
     /// Returns the hex-encoded hash part of the digest
     pub fn hex_hash(&self) -> &str {
-        // Safe: Digest is only constructed via FromStr which validates format
+        // Safe: Digest is only constructed via FromStr or sha256(), both of which validate format
         self.0.split(':').nth(1).unwrap_or("")
     }
 
@@ -245,6 +248,25 @@ mod tests {
                 .parse()
                 .unwrap();
         assert!(digest_ref.is_digest());
+    }
+
+    #[test]
+    fn digest_sha256_valid() {
+        let digest =
+            Digest::sha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+                .unwrap();
+        assert_eq!(digest.algorithm(), "sha256");
+        assert_eq!(
+            digest.hex_hash(),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+    }
+
+    #[test]
+    fn digest_sha256_invalid() {
+        assert!(Digest::sha256("").is_err());
+        assert!(Digest::sha256("not-hex!").is_err());
+        assert!(Digest::sha256("ZZZZ").is_err());
     }
 
     #[test]

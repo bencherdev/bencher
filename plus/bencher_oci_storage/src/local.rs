@@ -178,8 +178,10 @@ impl OciLocalStorage {
     }
 
     /// Returns the path for a tag link
-    fn tag_path(&self, repository: &ProjectResourceId, tag: &str) -> PathBuf {
-        self.repository_dir(repository).join("tags").join(tag)
+    fn tag_path(&self, repository: &ProjectResourceId, tag: &crate::types::Tag) -> PathBuf {
+        self.repository_dir(repository)
+            .join("tags")
+            .join(tag.as_str())
     }
 
     /// Returns the directory for referrers to a given digest
@@ -205,6 +207,19 @@ impl OciLocalStorage {
     }
 
     // ==================== Upload State Management ====================
+
+    /// Validates that the upload session belongs to the expected repository
+    pub async fn validate_upload_repository(
+        &self,
+        upload_id: &UploadId,
+        expected_repository: &ProjectResourceId,
+    ) -> Result<(), OciStorageError> {
+        let state = self.load_upload_state(upload_id).await?;
+        if state.repository != expected_repository.to_string() {
+            return Err(OciStorageError::UploadNotFound(upload_id.to_string()));
+        }
+        Ok(())
+    }
 
     /// Loads upload state from disk
     async fn load_upload_state(
@@ -350,7 +365,9 @@ impl OciLocalStorage {
         let mut hasher = Sha256::new();
         hasher.update(&data);
         let hash = hasher.finalize();
-        let actual_digest = Digest::sha256(&hex::encode(hash));
+        // hex::encode always produces valid hex, so this is infallible in practice
+        let actual_digest = Digest::sha256(&hex::encode(hash))
+            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
 
         // Verify digest matches
         if actual_digest.as_str() != expected_digest.as_str() {
@@ -508,18 +525,16 @@ impl OciLocalStorage {
     }
 
     /// Mounts a blob from another repository (cross-repo blob mount)
+    ///
+    /// Attempts to copy the blob directly, avoiding a TOCTOU race between
+    /// checking existence and copying. If the source blob doesn't exist,
+    /// returns `Ok(false)`.
     pub async fn mount_blob(
         &self,
         from_repository: &ProjectResourceId,
         to_repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
-        // Check if blob exists in source
-        if !self.blob_exists(from_repository, digest).await? {
-            return Ok(false);
-        }
-
-        // Copy the blob to the new repository
         let source_path = self.blob_path(from_repository, digest);
         let dest_path = self.blob_path(to_repository, digest);
 
@@ -529,11 +544,13 @@ impl OciLocalStorage {
             })?;
         }
 
-        fs::copy(&source_path, &dest_path)
-            .await
-            .map_err(|e| OciStorageError::LocalStorage(format!("Failed to copy blob: {e}")))?;
-
-        Ok(true)
+        match fs::copy(&source_path, &dest_path).await {
+            Ok(_) => Ok(true),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+            Err(e) => Err(OciStorageError::LocalStorage(format!(
+                "Failed to copy blob: {e}"
+            ))),
+        }
     }
 
     // ==================== Manifest Operations ====================
@@ -543,13 +560,15 @@ impl OciLocalStorage {
         &self,
         repository: &ProjectResourceId,
         content: Bytes,
-        tag: Option<&str>,
+        tag: Option<&crate::types::Tag>,
     ) -> Result<Digest, OciStorageError> {
         // Compute digest
         let mut hasher = Sha256::new();
         hasher.update(&content);
         let hash = hasher.finalize();
-        let digest = Digest::sha256(&hex::encode(hash));
+        // hex::encode always produces valid hex, so this is infallible in practice
+        let digest = Digest::sha256(&hex::encode(hash))
+            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
 
         // Store manifest by digest
         let manifest_path = self.manifest_path(repository, &digest);
@@ -627,7 +646,8 @@ impl OciLocalStorage {
             }
             fs::write(
                 &referrer_path,
-                serde_json::to_vec(&descriptor).unwrap_or_default(),
+                serde_json::to_vec(&descriptor)
+                    .map_err(|e| OciStorageError::Json(e.to_string()))?,
             )
             .await
             .map_err(|e| OciStorageError::LocalStorage(format!("Failed to write referrer: {e}")))?;
@@ -656,12 +676,12 @@ impl OciLocalStorage {
     pub async fn resolve_tag(
         &self,
         repository: &ProjectResourceId,
-        tag: &str,
+        tag: &crate::types::Tag,
     ) -> Result<Digest, OciStorageError> {
         let path = self.tag_path(repository, tag);
         let data = map_io_error(
             fs::read_to_string(&path).await,
-            OciStorageError::ManifestNotFound(tag.to_owned()),
+            OciStorageError::ManifestNotFound(tag.to_string()),
             "Failed to read tag",
         )?;
 
@@ -766,7 +786,7 @@ impl OciLocalStorage {
     pub async fn delete_tag(
         &self,
         repository: &ProjectResourceId,
-        tag: &str,
+        tag: &crate::types::Tag,
     ) -> Result<(), OciStorageError> {
         let path = self.tag_path(repository, tag);
         match fs::remove_file(&path).await {

@@ -8,6 +8,7 @@
 //! Integration tests for OCI blob endpoints.
 
 use bencher_api_tests::TestServer;
+use bencher_token::OciAction;
 use http::StatusCode;
 use sha2::{Digest as _, Sha256};
 
@@ -327,7 +328,7 @@ async fn test_blob_upload_authenticated_to_unclaimed_project() {
     // Now create a user and push with authentication - should auto-claim
     let user = server.signup("Claimer User", "claimer@example.com").await;
 
-    let oci_token = server.oci_token(&user, unclaimed_slug, &["push"]);
+    let oci_token = server.oci_token(&user, unclaimed_slug, &[OciAction::Push]);
 
     let resp = server
         .client
@@ -351,6 +352,48 @@ async fn test_blob_upload_authenticated_to_unclaimed_project() {
     assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
 }
 
+// A structurally valid but wrongly-signed JWT should NOT silently downgrade
+// to public access. Even on an unclaimed project, a bad signature must be rejected.
+#[tokio::test]
+async fn test_blob_upload_invalid_token_no_downgrade() {
+    let server = TestServer::new().await;
+
+    // First, create an unclaimed project (unauthenticated push succeeds)
+    let unclaimed_slug = "auth-downgrade-test-project";
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(create_resp.status(), StatusCode::ACCEPTED);
+
+    // Get a valid token, then tamper with it to create a structurally valid
+    // but wrongly-signed JWT (flip a char in the signature)
+    let user = server
+        .signup("Downgrade User", "downgrade@example.com")
+        .await;
+    let valid_token = server.oci_token(&user, unclaimed_slug, &[OciAction::Push]);
+    // Corrupt the last character of the signature portion
+    let mut tampered = valid_token.clone();
+    let last = tampered.pop().unwrap_or('A');
+    tampered.push(if last == 'A' { 'B' } else { 'A' });
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
+        .header("Authorization", format!("Bearer {}", tampered))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNAUTHORIZED,
+        "Tampered JWT must be rejected, not silently downgraded to public access"
+    );
+}
+
 // Push to a non-existent project by UUID should return 404
 #[tokio::test]
 async fn test_blob_upload_nonexistent_uuid() {
@@ -360,7 +403,7 @@ async fn test_blob_upload_nonexistent_uuid() {
     // Use a random UUID that doesn't exist
     let fake_uuid = "00000000-0000-0000-0000-000000000000";
 
-    let oci_token = server.oci_token(&user, fake_uuid, &["push"]);
+    let oci_token = server.oci_token(&user, fake_uuid, &[OciAction::Push]);
 
     let resp = server
         .client
@@ -382,7 +425,7 @@ async fn test_blob_upload_nonexistent_slug_authenticated() {
     // Use a new slug that doesn't exist yet
     let new_slug = "auto-created-project";
 
-    let oci_token = server.oci_token(&user, new_slug, &["push"]);
+    let oci_token = server.oci_token(&user, new_slug, &[OciAction::Push]);
 
     let resp = server
         .client
