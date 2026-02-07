@@ -1,12 +1,15 @@
 #![cfg(feature = "plus")]
 
-//! Bencher guest library.
+//! Bencher guest SDK for benchmark authors.
 //!
-//! This crate provides utilities for benchmark code running inside a Bencher VM.
-//! It handles:
-//! - Communication with the host via vsock
-//! - Sending benchmark results back to the host
-//! - Receiving benchmark parameters from the host
+//! This crate provides an optional SDK for benchmark code running inside a
+//! Bencher Firecracker VM. It is **not** used by the runner itself — the runner
+//! communicates with the guest via raw vsock (see `bencher_runner::firecracker::vsock`).
+//!
+//! Benchmark authors can use this crate to:
+//! - Communicate with the host via vsock
+//! - Send structured benchmark results back to the host
+//! - Receive benchmark parameters from the host
 //!
 //! # Example
 //!

@@ -51,6 +51,10 @@ pub struct TaskRun {
     #[arg(long)]
     pub output: Option<String>,
 
+    /// Maximum size in bytes for collected stdout/stderr (default: 10 MiB).
+    #[arg(long)]
+    pub max_output_size: Option<usize>,
+
     // --- Host tuning flags ---
     /// Disable all host tuning optimizations.
     #[arg(long)]

@@ -1,5 +1,8 @@
 #![expect(clippy::print_stdout)]
 
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
@@ -62,6 +65,8 @@ pub struct RunArgs {
     pub timeout_secs: u64,
     /// Output file path inside guest.
     pub output_file: Option<String>,
+    /// Maximum size in bytes for collected stdout/stderr.
+    pub max_output_size: Option<usize>,
     /// Host tuning configuration.
     pub tuning: TuningConfig,
 }
@@ -89,8 +94,13 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     } else {
         config
     };
+    let config = if let Some(max_output_size) = args.max_output_size {
+        config.with_max_output_size(max_output_size)
+    } else {
+        config
+    };
 
-    let output = execute(&config)?;
+    let output = execute(&config, None)?;
     println!("{}", output.stdout);
     Ok(())
 }
@@ -103,29 +113,19 @@ pub fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
     ))
 }
 
-/// Run the benchmark runner.
-///
-/// This is the main entry point for the runner binary.
-pub fn run() -> Result<(), RunnerError> {
-    println!("Bencher Runner starting...");
-    println!("Pipeline: OCI (local or registry) -> Rootfs -> Firecracker -> Results");
-    println!();
-    println!("This runner requires Linux with KVM support and Firecracker.");
-    println!("Use `bencher_runner::execute()` with a Config to run benchmarks.");
-
-    Ok(())
-}
-
 /// Resolve an OCI image source to a local path.
 ///
 /// If the source is a local path that exists, returns it directly.
-/// If the source looks like a registry reference, pulls from the registry.
+/// If the source looks like a registry reference, pulls from the registry
+/// into the provided `pull_dir`. Image data is not cached between runs —
+/// the caller is expected to pass a temporary directory that is cleaned up
+/// after each job.
 ///
 /// # Arguments
 ///
 /// * `oci_image` - Local path or registry reference
 /// * `token` - Optional JWT token for registry authentication
-/// * `cache_dir` - Directory to cache pulled images
+/// * `pull_dir` - Directory to pull images into (temporary, not cached)
 ///
 /// # Returns
 ///
@@ -133,7 +133,7 @@ pub fn run() -> Result<(), RunnerError> {
 pub fn resolve_oci_image(
     oci_image: &str,
     token: Option<&str>,
-    cache_dir: &Utf8Path,
+    pull_dir: &Utf8Path,
 ) -> Result<Utf8PathBuf, RunnerError> {
     let path = Utf8Path::new(oci_image);
 
@@ -147,22 +147,14 @@ pub fn resolve_oci_image(
     println!("Parsing registry reference: {oci_image}");
     let image_ref = bencher_oci::ImageReference::parse(oci_image)?;
 
-    // Create a cache path based on the image reference
-    // Replace characters that aren't filesystem-safe
-    let cache_name = image_ref.full_name().replace(['/', ':', '@'], "_");
-    let image_cache = cache_dir.join(&cache_name);
-
-    // Check if already cached
-    if image_cache.exists() {
-        println!("Using cached image: {image_cache}");
-        return Ok(image_cache);
-    }
+    // Pull into the provided directory
+    let image_dir = pull_dir.join("oci-image");
 
     // Pull from registry
     println!("Pulling from registry: {}", image_ref.full_name());
 
-    // Create cache directory if it doesn't exist
-    std::fs::create_dir_all(cache_dir)?;
+    // Create pull directory if it doesn't exist
+    std::fs::create_dir_all(pull_dir)?;
 
     let mut client = if let Some(t) = token {
         println!("  Using authenticated client");
@@ -172,10 +164,10 @@ pub fn resolve_oci_image(
         bencher_oci::RegistryClient::new()?
     };
 
-    client.pull(&image_ref, &image_cache)?;
-    println!("Image pulled to: {image_cache}");
+    client.pull(&image_ref, &image_dir)?;
+    println!("Image pulled to: {image_dir}");
 
-    Ok(image_cache)
+    Ok(image_dir)
 }
 
 /// Execute a single benchmark run with the given configuration.
@@ -185,12 +177,17 @@ pub fn resolve_oci_image(
 /// # Arguments
 ///
 /// * `config` - The benchmark run configuration
+/// * `cancel_flag` - Optional cancellation flag; if set to `true`, the run
+///   will be aborted as soon as the vsock polling loop detects it.
 ///
 /// # Returns
 ///
 /// The benchmark output including exit code and stdout.
 #[cfg(target_os = "linux")]
-pub fn execute(config: &crate::Config) -> Result<RunOutput, RunnerError> {
+pub fn execute(
+    config: &crate::Config,
+    cancel_flag: Option<&Arc<AtomicBool>>,
+) -> Result<RunOutput, RunnerError> {
     use crate::firecracker::{FirecrackerJobConfig, run_firecracker};
 
     println!("Executing benchmark run:");
@@ -225,9 +222,7 @@ pub fn execute(config: &crate::Config) -> Result<RunOutput, RunnerError> {
     };
 
     // Step 1: Resolve OCI image (local path or pull from registry)
-    let cache_dir = config.cache_dir();
-
-    let oci_image_path = resolve_oci_image(&config.oci_image, config.token.as_deref(), &cache_dir)?;
+    let oci_image_path = resolve_oci_image(&config.oci_image, config.token.as_deref(), work_dir)?;
 
     // Step 2: Parse OCI image config to get the command
     println!("Parsing OCI image config...");
@@ -264,6 +259,7 @@ pub fn execute(config: &crate::Config) -> Result<RunOutput, RunnerError> {
         workdir,
         &env,
         config.output_file.as_deref(),
+        config.max_output_size,
     )?;
 
     // Step 5: Install init binary
@@ -271,7 +267,10 @@ pub fn execute(config: &crate::Config) -> Result<RunOutput, RunnerError> {
     install_init_binary(&unpack_dir)?;
 
     // Step 6: Create ext4 rootfs
-    println!("Creating ext4 at {rootfs_path} ({} MiB)...", config.disk_mib);
+    println!(
+        "Creating ext4 at {rootfs_path} ({} MiB)...",
+        config.disk_mib
+    );
     bencher_rootfs::create_ext4_with_size(&unpack_dir, &rootfs_path, u64::from(config.disk_mib))?;
 
     // Step 7: Find Firecracker binary - use bundled or find on system
@@ -279,7 +278,7 @@ pub fn execute(config: &crate::Config) -> Result<RunOutput, RunnerError> {
         let fc_dest = work_dir.join("firecracker");
         crate::firecracker_bin::write_firecracker_to_file(fc_dest.as_std_path())?;
         println!("  Extracted bundled firecracker to {fc_dest}");
-        fc_dest.to_string()
+        fc_dest
     } else {
         find_firecracker_binary()?
     };
@@ -298,7 +297,7 @@ pub fn execute(config: &crate::Config) -> Result<RunOutput, RunnerError> {
         cpu_layout: config.cpu_layout.clone(),
     };
 
-    let run_output = run_firecracker(&fc_config)?;
+    let run_output = run_firecracker(&fc_config, cancel_flag)?;
 
     // temp_dir is automatically cleaned up when dropped
     drop(temp_dir);
@@ -316,6 +315,7 @@ fn write_init_config(
     workdir: &str,
     env: &[(String, String)],
     output_file: Option<&str>,
+    max_output_size: usize,
 ) -> Result<(), RunnerError> {
     use std::fs;
 
@@ -328,6 +328,7 @@ fn write_init_config(
         "workdir": workdir,
         "env": env,
         "output_file": output_file,
+        "max_output_size": max_output_size,
     });
 
     let config_path = config_dir.join("config.json");
@@ -399,20 +400,20 @@ fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
 
 /// Find the Firecracker binary on the system.
 #[cfg(target_os = "linux")]
-fn find_firecracker_binary() -> Result<String, RunnerError> {
+fn find_firecracker_binary() -> Result<Utf8PathBuf, RunnerError> {
     let candidates = [
         // Next to the current executable
         std::env::current_exe()
             .ok()
             .and_then(|p| p.parent().map(|d| d.join("firecracker")))
-            .map(|p| p.to_string_lossy().into_owned()),
+            .and_then(|p| Utf8PathBuf::try_from(p).ok()),
         // Common installation paths
-        Some("/usr/local/bin/firecracker".to_owned()),
-        Some("/usr/bin/firecracker".to_owned()),
+        Some(Utf8PathBuf::from("/usr/local/bin/firecracker")),
+        Some(Utf8PathBuf::from("/usr/bin/firecracker")),
     ];
 
     for candidate in candidates.into_iter().flatten() {
-        if std::path::Path::new(&candidate).exists() {
+        if candidate.as_std_path().exists() {
             return Ok(candidate);
         }
     }
@@ -485,7 +486,10 @@ fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
 
 /// Execute a single benchmark run (non-Linux stub).
 #[cfg(not(target_os = "linux"))]
-pub fn execute(_config: &crate::Config) -> Result<RunOutput, RunnerError> {
+pub fn execute(
+    _config: &crate::Config,
+    _cancel_flag: Option<&Arc<AtomicBool>>,
+) -> Result<RunOutput, RunnerError> {
     Err(RunnerError::Config(
         "Benchmark execution requires Linux with KVM support".to_owned(),
     ))

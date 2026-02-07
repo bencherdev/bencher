@@ -42,6 +42,7 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
                 poll_timeout_secs: task.poll_timeout,
                 tuning,
                 cpu_layout,
+                max_output_size: task.max_output_size,
             },
         })
     }

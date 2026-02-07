@@ -67,8 +67,9 @@ pub fn execute_job(
         heartbeat_loop(&ws_heartbeat, &cancel_heartbeat, &stop_heartbeat);
     });
 
-    // Execute benchmark (blocking)
-    let result = crate::execute(&job_config);
+    // Execute benchmark (blocking) — pass cancel_flag so the vsock poll loop
+    // can abort early when the server sends a cancellation message.
+    let result = crate::execute(&job_config, Some(&cancel_flag));
 
     // Stop heartbeat thread
     stop_flag.store(true, Ordering::SeqCst);
@@ -174,6 +175,11 @@ fn build_config_from_job(daemon_config: &DaemonConfig, job: &ClaimedJob) -> crat
         config = config.with_cpu_layout(daemon_config.cpu_layout.clone());
     }
 
+    // Pass through max output size if configured
+    if let Some(max_output_size) = daemon_config.max_output_size {
+        config = config.with_max_output_size(max_output_size);
+    }
+
     config
 }
 
@@ -218,23 +224,16 @@ mod tests {
         timeout: u32,
         network: bool,
     ) -> ClaimedJob {
-        let spec_json = serde_json::json!({
-            "registry": "https://registry.bencher.dev",
-            "project": "11111111-2222-3333-4444-555555555555",
-            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
-            "vcpu": vcpu,
-            "memory": memory_bytes,
-            "disk": disk_bytes,
-            "timeout": timeout,
-            "network": network,
-        });
-        let spec: super::super::api_client::JobSpec = serde_json::from_value(spec_json).unwrap();
-
-        ClaimedJob {
-            uuid: uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
-            spec,
-            timeout_seconds: timeout,
-        }
+        test_job_with_options(
+            vcpu,
+            memory_bytes,
+            disk_bytes,
+            timeout,
+            network,
+            None,
+            None,
+            None,
+        )
     }
 
     fn test_job_with_options(
@@ -280,6 +279,7 @@ mod tests {
             poll_timeout_secs: 30,
             tuning: crate::TuningConfig::disabled(),
             cpu_layout: crate::cpu::CpuLayout::with_core_count(4),
+            max_output_size: None,
         }
     }
 

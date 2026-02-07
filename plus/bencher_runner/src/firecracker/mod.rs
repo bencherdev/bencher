@@ -12,12 +12,25 @@ pub mod error;
 mod process;
 mod vsock;
 
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
 
 use crate::cpu::CpuLayout;
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
+
+/// Guest CID (Context ID) for the Firecracker VM.
+///
+/// In the vsock address space:
+/// - CID 0 is reserved (hypervisor)
+/// - CID 1 is reserved (host in some implementations)
+/// - CID 2 is the host
+/// - CID 3+ are guests
+///
+/// Firecracker assigns CID 3 to the single guest VM by convention.
+const GUEST_CID: u32 = 3;
 
 use crate::run::RunOutput;
 
@@ -29,7 +42,7 @@ use vsock::VsockListener;
 #[derive(Debug)]
 pub struct FirecrackerJobConfig {
     /// Path to the Firecracker binary.
-    pub firecracker_bin: String,
+    pub firecracker_bin: camino::Utf8PathBuf,
     /// Path to the kernel image.
     pub kernel_path: String,
     /// Path to the ext4 rootfs image.
@@ -60,7 +73,10 @@ pub struct FirecrackerJobConfig {
 /// 7. Cleans up (including cgroup)
 ///
 /// Returns the benchmark output including exit code and stdout.
-pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<RunOutput, FirecrackerError> {
+pub fn run_firecracker(
+    config: &FirecrackerJobConfig,
+    cancel_flag: Option<&Arc<AtomicBool>>,
+) -> Result<RunOutput, FirecrackerError> {
     let vm_id = uuid::Uuid::new_v4().to_string();
     let api_socket_path = format!("{}/firecracker-{vm_id}.sock", config.work_dir);
     let vsock_uds_path = format!("{}/vsock-{vm_id}.sock", config.work_dir);
@@ -98,7 +114,7 @@ pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<RunOutput, Firec
     // Step 1: Start Firecracker process
     println!("Starting Firecracker process...");
     let mut fc_process =
-        FirecrackerProcess::start(&config.firecracker_bin, &api_socket_path, &vm_id)?;
+        FirecrackerProcess::start(config.firecracker_bin.as_str(), &api_socket_path, &vm_id)?;
 
     // Move Firecracker process into cgroup for CPU isolation
     if let Some(ref cg) = cgroup {
@@ -131,7 +147,7 @@ pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<RunOutput, Firec
     })?;
 
     client.put_vsock(&VsockConfig {
-        guest_cid: 3,
+        guest_cid: GUEST_CID,
         uds_path: vsock_uds_path.clone(),
     })?;
 
@@ -153,14 +169,15 @@ pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<RunOutput, Firec
     };
 
     println!("Waiting for benchmark results (timeout: {timeout:?})...");
-    let results = match vsock_listener.collect_results(timeout) {
+    let results = match vsock_listener.collect_results(timeout, cancel_flag) {
         Ok(results) => results,
         Err(e) => {
             let elapsed = start_time.elapsed();
-            // Output metrics even on timeout
+            let cancelled = matches!(e, FirecrackerError::Cancelled);
+            // Output metrics on timeout or cancellation
             let run_metrics = RunMetrics {
-                wall_clock_ms: elapsed.as_millis() as u64,
-                timed_out: true,
+                wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
+                timed_out: !cancelled,
                 transport: "vsock".to_owned(),
                 cgroup: None,
             };
@@ -175,7 +192,7 @@ pub fn run_firecracker(config: &FirecrackerJobConfig) -> Result<RunOutput, Firec
 
     // Step 6: Output metrics to stderr
     let run_metrics = RunMetrics {
-        wall_clock_ms: elapsed.as_millis() as u64,
+        wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
         timed_out: false,
         transport: "vsock".to_owned(),
         cgroup: None,
