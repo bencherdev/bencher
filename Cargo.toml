@@ -118,6 +118,7 @@ literally = "0.1"
 mail-send = "0.5"
 minijinja = "2.3"
 newline-converter = "0.3"
+nix = { version = "0.29", default-features = false }
 nom = "7.1"
 notify-rust = "4.11"
 oauth2 = "5.0"

@@ -11086,7 +11086,7 @@
         ]
       },
       "ImageDigest": {
-        "description": "An OCI image digest (e.g., \"sha256:abc123...\")",
+        "description": "An OCI image digest in the format `algorithm:hex`.\n\nSupports: - `sha256:` followed by 64 hex characters - `sha512:` followed by 128 hex characters",
         "type": "string"
       },
       "Index": {

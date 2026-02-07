@@ -47,7 +47,7 @@ pub fn unpack(image_dir: &Utf8Path, target_dir: &Utf8Path) -> Result<(), OciErro
     // Extract layers in order
     for (i, layer) in manifest.manifest.layers().iter().enumerate() {
         let digest = layer.digest().to_string();
-        let blob_path = digest_to_blob_path(image_dir, &digest);
+        let blob_path = digest_to_blob_path(image_dir, &digest)?;
 
         let compression = detect_layer_media_type(layer.media_type())?;
 

@@ -10,6 +10,36 @@ use tar::{Archive, EntryType};
 
 use crate::error::OciError;
 
+/// Safely join a path component to a target directory, preventing path traversal.
+///
+/// Strips leading `/` and rejects any path that would escape `target_dir`
+/// via `..` components.
+fn safe_join(
+    target_dir: &Utf8Path,
+    entry_path: &std::path::Path,
+) -> Result<camino::Utf8PathBuf, OciError> {
+    // Convert to string, strip leading /
+    let entry_str = entry_path.to_string_lossy();
+    let stripped = entry_str.strip_prefix('/').unwrap_or(&entry_str);
+
+    // Reject any path containing .. components
+    for component in std::path::Path::new(stripped).components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            return Err(OciError::PathTraversal(format!(
+                "Path contains `..`: {}",
+                entry_path.display()
+            )));
+        }
+    }
+
+    let joined = target_dir.join(stripped);
+
+    // Double-check: the canonical prefix must still be target_dir.
+    // We can't canonicalize (target may not exist yet), but the component check above
+    // is sufficient since we already rejected all `..` segments.
+    Ok(joined)
+}
+
 /// Layer compression type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LayerCompression {
@@ -90,7 +120,7 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
             continue;
         }
 
-        let target_path = target_dir.join(path.to_string_lossy().as_ref());
+        let target_path = safe_join(target_dir, &path)?;
 
         // Create parent directories if needed
         if let Some(parent) = target_path.parent() {
@@ -100,7 +130,7 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
         // Check if this is a hard link - defer it for later
         if entry.header().entry_type() == EntryType::Link {
             if let Ok(Some(link_name)) = entry.link_name() {
-                let link_target = target_dir.join(link_name.to_string_lossy().as_ref());
+                let link_target = safe_join(target_dir, &link_name)?;
                 deferred_hardlinks.push(DeferredHardLink {
                     link_path: target_path.into_std_path_buf(),
                     link_target: link_target.into_std_path_buf(),
@@ -145,7 +175,7 @@ fn handle_whiteout(target_dir: &Utf8Path, whiteout_path: &std::path::Path) -> Re
     if name == ".wh..wh..opq" {
         // Opaque whiteout: clear the directory
         if let Some(parent) = parent {
-            let target_path = target_dir.join(parent.to_string_lossy().as_ref());
+            let target_path = safe_join(target_dir, parent)?;
             if target_path.exists() {
                 // Remove all contents but keep the directory
                 for entry in std::fs::read_dir(&target_path)? {
@@ -161,13 +191,12 @@ fn handle_whiteout(target_dir: &Utf8Path, whiteout_path: &std::path::Path) -> Re
         }
     } else if let Some(original_name) = name.strip_prefix(".wh.") {
         // Regular whiteout: delete the specific file
-        let target_path = if let Some(parent) = parent {
-            target_dir
-                .join(parent.to_string_lossy().as_ref())
-                .join(original_name)
+        let whiteout_target = if let Some(parent) = parent {
+            parent.join(original_name)
         } else {
-            target_dir.join(original_name)
+            PathBuf::from(original_name)
         };
+        let target_path = safe_join(target_dir, &whiteout_target)?;
 
         if target_path.exists() {
             if target_path.is_dir() {
@@ -189,5 +218,44 @@ mod tests {
     fn test_layer_compression_enum() {
         assert_ne!(LayerCompression::None, LayerCompression::Gzip);
         assert_ne!(LayerCompression::Gzip, LayerCompression::Zstd);
+    }
+
+    #[test]
+    fn safe_join_normal_path() {
+        let dir = Utf8Path::new("/rootfs");
+        let result = safe_join(dir, std::path::Path::new("usr/bin/hello")).unwrap();
+        assert_eq!(result, Utf8Path::new("/rootfs/usr/bin/hello"));
+    }
+
+    #[test]
+    fn safe_join_strips_leading_slash() {
+        let dir = Utf8Path::new("/rootfs");
+        let result = safe_join(dir, std::path::Path::new("/etc/passwd")).unwrap();
+        assert_eq!(result, Utf8Path::new("/rootfs/etc/passwd"));
+    }
+
+    #[test]
+    fn safe_join_rejects_dotdot() {
+        let dir = Utf8Path::new("/rootfs");
+        assert!(safe_join(dir, std::path::Path::new("../../etc/passwd")).is_err());
+    }
+
+    #[test]
+    fn safe_join_rejects_nested_dotdot() {
+        let dir = Utf8Path::new("/rootfs");
+        assert!(safe_join(dir, std::path::Path::new("foo/../../bar")).is_err());
+    }
+
+    #[test]
+    fn safe_join_rejects_absolute_with_dotdot() {
+        let dir = Utf8Path::new("/rootfs");
+        assert!(safe_join(dir, std::path::Path::new("/foo/../../../etc/shadow")).is_err());
+    }
+
+    #[test]
+    fn safe_join_allows_dot() {
+        let dir = Utf8Path::new("/rootfs");
+        let result = safe_join(dir, std::path::Path::new("./usr/bin")).unwrap();
+        assert_eq!(result, Utf8Path::new("/rootfs/./usr/bin"));
     }
 }
