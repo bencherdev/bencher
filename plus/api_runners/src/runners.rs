@@ -26,6 +26,8 @@ use sha2::{Digest as _, Sha256};
 
 /// Runner token prefix
 pub const RUNNER_TOKEN_PREFIX: &str = "bencher_runner_";
+/// Expected total length of a runner token: prefix (15 chars) + 64 hex chars = 79
+pub const RUNNER_TOKEN_LENGTH: usize = RUNNER_TOKEN_PREFIX.len() + 64;
 
 pub type RunnersPagination = JsonPagination<RunnersSort>;
 

@@ -18,6 +18,8 @@ use url::Url;
 use crate::model::project::QueryProject;
 
 mod database;
+#[cfg(feature = "plus")]
+mod heartbeat_tasks;
 mod indexer;
 mod messenger;
 #[cfg(feature = "plus")]
@@ -26,6 +28,8 @@ mod rbac;
 #[cfg(feature = "plus")]
 mod stats;
 
+#[cfg(feature = "plus")]
+pub use heartbeat_tasks::HeartbeatTasks;
 #[cfg(feature = "plus")]
 use bencher_recaptcha::RecaptchaClient;
 pub use database::{DataStore, DataStoreError, Database, DbConnection};
@@ -70,6 +74,8 @@ pub struct ApiContext {
     pub oci_storage: OciStorage,
     #[cfg(feature = "plus")]
     pub heartbeat_timeout: std::time::Duration,
+    #[cfg(feature = "plus")]
+    pub heartbeat_tasks: HeartbeatTasks,
 }
 
 #[macro_export]

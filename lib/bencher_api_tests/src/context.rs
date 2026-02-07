@@ -131,6 +131,7 @@ impl TestServer {
             )
             .expect("Failed to create OCI storage"),
             heartbeat_timeout: std::time::Duration::from_secs(5),
+            heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
         };
 
         Self::start_server(context, &log, token_key, db_file)

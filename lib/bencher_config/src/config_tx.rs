@@ -312,6 +312,8 @@ async fn into_context(
         oci_storage,
         #[cfg(feature = "plus")]
         heartbeat_timeout: std::time::Duration::from_secs(90),
+        #[cfg(feature = "plus")]
+        heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
     })
 }
 
@@ -525,6 +527,7 @@ async fn spawn_job_recovery(log: Logger, context: &ApiContext) {
             context.heartbeat_timeout,
             context.database.connection.clone(),
             job.id,
+            &context.heartbeat_tasks,
         );
     }
 }

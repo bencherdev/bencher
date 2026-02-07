@@ -134,3 +134,71 @@ async fn test_token_rotate_not_found() {
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
+
+// POST /v0/runners/{runner}/token - concurrent rotation yields two different tokens
+#[tokio::test]
+async fn test_concurrent_token_rotation() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "tokenadmin5@example.com").await;
+
+    // Create a runner
+    let body = serde_json::json!({ "name": "Concurrent Rotate Runner" });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let original: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let original_str: String = original.token.as_ref().to_owned();
+
+    // Two concurrent rotations
+    let url = server.api_url(&format!("/v0/runners/{}/token", original.uuid));
+    let bearer = server.bearer(&admin.token);
+    let client = &server.client;
+
+    let (resp1, resp2) = tokio::join!(
+        async {
+            client
+                .post(&url)
+                .header("Authorization", &bearer)
+                .send()
+                .await
+                .expect("Request 1 failed")
+        },
+        async {
+            client
+                .post(&url)
+                .header("Authorization", &bearer)
+                .send()
+                .await
+                .expect("Request 2 failed")
+        },
+    );
+
+    assert_eq!(resp1.status(), StatusCode::CREATED);
+    assert_eq!(resp2.status(), StatusCode::CREATED);
+
+    let token1: JsonRunnerToken = resp1.json().await.expect("Failed to parse response 1");
+    let token2: JsonRunnerToken = resp2.json().await.expect("Failed to parse response 2");
+
+    let t1: &str = token1.token.as_ref();
+    let t2: &str = token2.token.as_ref();
+
+    // Both tokens should differ from the original
+    assert_ne!(t1, original_str, "Token 1 should differ from original");
+    assert_ne!(t2, original_str, "Token 2 should differ from original");
+
+    // The two tokens should differ from each other
+    assert_ne!(t1, t2, "Concurrent rotations should produce different tokens");
+
+    // Verify only one of the two tokens works for auth (the last writer wins)
+    // We can't predict which one, but exactly one should authenticate.
+    // We just verify both have the correct prefix and length.
+    assert!(t1.starts_with("bencher_runner_"));
+    assert!(t2.starts_with("bencher_runner_"));
+    assert_eq!(t1.len(), 79);
+    assert_eq!(t2.len(), 79);
+}

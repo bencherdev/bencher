@@ -144,6 +144,8 @@ pub async fn runner_job_channel(
             heartbeat_timeout,
             context.database.connection.clone(),
             job_id,
+            #[cfg(feature = "plus")]
+            &context.heartbeat_tasks,
         );
     }
 

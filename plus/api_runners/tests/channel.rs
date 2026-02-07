@@ -14,7 +14,11 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest as _};
+use tokio_tungstenite::tungstenite::{
+    Message,
+    client::IntoClientRequest as _,
+    protocol::WebSocketConfig,
+};
 
 // ---- Message types matching the server definitions ----
 
@@ -586,4 +590,49 @@ async fn test_channel_lifecycle_with_full_spec() {
     assert_eq!(exit_code, Some(0));
 
     ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+// =============================================================================
+// Large Message Test
+// =============================================================================
+
+/// Send a message that exceeds the server's `request_body_max_bytes` (1 MB).
+/// The server should close the connection gracefully.
+#[tokio::test]
+async fn test_channel_large_message() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "largemsg").await;
+
+    let request = ws_request(&server, runner_uuid, &runner_token, job_uuid);
+
+    // Use a custom config that allows 3 MB client-side
+    let mut config = WebSocketConfig::default();
+    config.max_message_size = Some(3 * 1024 * 1024);
+    config.max_frame_size = Some(3 * 1024 * 1024);
+
+    let (mut ws, _) = tokio_tungstenite::connect_async_with_config(request, Some(config), false)
+        .await
+        .expect("Failed to connect WebSocket");
+
+    // Build a 2 MB text payload (exceeds the server's 1 MB limit)
+    let payload = "x".repeat(2 * 1024 * 1024);
+    let result = ws.send(Message::Text(payload.into())).await;
+
+    // The send may succeed from the client's perspective (buffered),
+    // but the server will reject it and close the connection.
+    if result.is_ok() {
+        // Wait for the server to close the connection
+        match tokio::time::timeout(std::time::Duration::from_secs(5), ws.next()).await {
+            Ok(None) | Ok(Some(Ok(Message::Close(_)))) | Ok(Some(Err(_))) => {
+                // Connection closed as expected
+            },
+            Ok(Some(Ok(other))) => {
+                panic!("Expected connection to close after oversized message, got: {other:?}");
+            },
+            Err(_) => {
+                panic!("Timed out waiting for server to close connection");
+            },
+        }
+    }
+    // If send itself failed, that's also acceptable (connection already closing)
 }

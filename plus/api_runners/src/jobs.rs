@@ -162,7 +162,7 @@ async fn try_claim_job(
     let pending_job: Option<QueryJob> = schema::job::table
         .filter(status.eq(JobStatus::Pending))
         .filter(eligible)
-        .order((priority.desc(), created.asc()))
+        .order((priority.desc(), created.asc(), id.asc()))
         .first(auth_conn!(context))
         .optional()
         .map_err(resource_not_found_err!(Job))?;
@@ -197,8 +197,9 @@ async fn try_claim_job(
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
 
             // Record queue duration (time from creation to claim)
+            #[expect(clippy::cast_precision_loss, reason = "queue duration in seconds fits in f64 mantissa")]
             let queue_duration_secs =
-                f64::from(now.timestamp() - query_job.created.timestamp()).max(0.0);
+                ((now.timestamp() - query_job.created.timestamp()) as f64).max(0.0);
             let tier = bencher_otel::PriorityTier::from_priority(query_job.priority);
             bencher_otel::ApiMeter::record(
                 bencher_otel::ApiHistogram::JobQueueDuration(tier),

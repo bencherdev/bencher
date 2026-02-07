@@ -185,61 +185,81 @@ pub fn spawn_heartbeat_timeout(
     timeout: std::time::Duration,
     connection: Arc<Mutex<DbConnection>>,
     job_id: JobId,
+    #[cfg(feature = "plus")] heartbeat_tasks: &crate::context::HeartbeatTasks,
 ) {
-    tokio::spawn(async move {
-        tokio::time::sleep(timeout).await;
+    let join_handle = tokio::spawn({
+        #[cfg(feature = "plus")]
+        let heartbeat_tasks = heartbeat_tasks.clone();
+        async move {
+            tokio::time::sleep(timeout).await;
 
-        let mut conn = connection.lock().await;
+            let mut conn = connection.lock().await;
 
-        // Read the current job state
-        let job: QueryJob = match schema::job::table
-            .filter(schema::job::id.eq(job_id))
-            .first(&mut *conn)
-        {
-            Ok(job) => job,
-            Err(e) => {
-                slog::error!(log, "Failed to read job for heartbeat timeout"; "job_id" => ?job_id, "error" => %e);
-                return;
-            },
-        };
+            // Read the current job state
+            let job: QueryJob = match schema::job::table
+                .filter(schema::job::id.eq(job_id))
+                .first(&mut *conn)
+            {
+                Ok(job) => job,
+                Err(e) => {
+                    slog::error!(log, "Failed to read job for heartbeat timeout"; "job_id" => ?job_id, "error" => %e);
+                    return;
+                },
+            };
 
-        // If the job is already in a terminal state, nothing to do
-        if job.status.is_terminal() {
-            return;
-        }
-
-        // If the runner reconnected and sent a recent heartbeat, don't fail the job
-        if let Some(last_heartbeat) = job.last_heartbeat {
-            let now = DateTime::now();
-            let elapsed = now.timestamp() - last_heartbeat.timestamp();
-            if elapsed < i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) {
-                // Heartbeat is recent, runner reconnected — schedule another timeout
-                let remaining = std::time::Duration::from_secs(
-                    u64::try_from(i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) - elapsed)
-                        .unwrap_or(0),
-                );
-                drop(conn);
-                let connection_clone = connection.clone();
-                spawn_heartbeat_timeout(log, remaining, connection_clone, job_id);
+            // If the job is already in a terminal state, nothing to do
+            if job.status.is_terminal() {
                 return;
             }
-        }
 
-        // Mark the job as failed
-        slog::warn!(log, "Heartbeat timeout, marking job as failed"; "job_id" => ?job_id);
-        let now = DateTime::now();
-        let update = UpdateJob {
-            status: Some(JobStatus::Failed),
-            completed: Some(Some(now)),
-            modified: Some(now),
-            ..Default::default()
-        };
+            // If the runner reconnected and sent a recent heartbeat, don't fail the job
+            if let Some(last_heartbeat) = job.last_heartbeat {
+                let now = DateTime::now();
+                let elapsed = now.timestamp() - last_heartbeat.timestamp();
+                if elapsed < i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) {
+                    // Heartbeat is recent, runner reconnected — schedule another timeout
+                    let remaining = std::time::Duration::from_secs(
+                        u64::try_from(
+                            i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) - elapsed,
+                        )
+                        .unwrap_or(0),
+                    );
+                    drop(conn);
+                    let connection_clone = connection.clone();
+                    spawn_heartbeat_timeout(
+                        log,
+                        remaining,
+                        connection_clone,
+                        job_id,
+                        #[cfg(feature = "plus")]
+                        &heartbeat_tasks,
+                    );
+                    return;
+                }
+            }
 
-        if let Err(e) = diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-            .set(&update)
-            .execute(&mut *conn)
-        {
-            slog::error!(log, "Failed to mark job as failed"; "job_id" => ?job_id, "error" => %e);
+            // Mark the job as failed
+            slog::warn!(log, "Heartbeat timeout, marking job as failed"; "job_id" => ?job_id);
+            let now = DateTime::now();
+            let update = UpdateJob {
+                status: Some(JobStatus::Failed),
+                completed: Some(Some(now)),
+                modified: Some(now),
+                ..Default::default()
+            };
+
+            if let Err(e) =
+                diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+                    .set(&update)
+                    .execute(&mut *conn)
+            {
+                slog::error!(log, "Failed to mark job as failed"; "job_id" => ?job_id, "error" => %e);
+            }
         }
     });
+
+    #[cfg(feature = "plus")]
+    heartbeat_tasks.insert(job_id, join_handle.abort_handle());
+    #[cfg(not(feature = "plus"))]
+    drop(join_handle);
 }

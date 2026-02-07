@@ -52,3 +52,5 @@ CREATE INDEX index_job_org_running ON job(organization_id)
 WHERE status = 2;
 CREATE INDEX index_job_source_ip_running ON job(source_ip)
 WHERE status = 2;
+CREATE INDEX index_job_runner_id ON job(runner_id)
+WHERE runner_id IS NOT NULL;

@@ -9,7 +9,7 @@ use bencher_schema::{
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, RequestContext};
 
-use crate::runners::{RUNNER_TOKEN_PREFIX, hash_token};
+use crate::runners::{RUNNER_TOKEN_LENGTH, RUNNER_TOKEN_PREFIX, hash_token};
 
 /// Extract and validate runner token from Authorization header
 #[derive(Debug)]
@@ -41,8 +41,8 @@ impl RunnerToken {
             .and_then(|h| h.strip_prefix("Bearer "))
             .ok_or_else(|| forbidden_error("Missing or invalid Authorization header"))?;
 
-        // Validate token format
-        if !token.starts_with(RUNNER_TOKEN_PREFIX) {
+        // Validate token format (prefix + length)
+        if !token.starts_with(RUNNER_TOKEN_PREFIX) || token.len() != RUNNER_TOKEN_LENGTH {
             return Err(forbidden_error("Invalid runner token format"));
         }
 
