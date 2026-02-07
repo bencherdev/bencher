@@ -1,3 +1,5 @@
+DROP INDEX IF EXISTS index_job_report_id;
+DROP INDEX IF EXISTS index_runner_token_hash;
 DROP INDEX IF EXISTS index_job_pending;
 DROP INDEX IF EXISTS index_job_org_running;
 DROP INDEX IF EXISTS index_job_source_ip_running;

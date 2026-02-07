@@ -29,10 +29,10 @@ mod rbac;
 mod stats;
 
 #[cfg(feature = "plus")]
-pub use heartbeat_tasks::HeartbeatTasks;
-#[cfg(feature = "plus")]
 use bencher_recaptcha::RecaptchaClient;
 pub use database::{DataStore, DataStoreError, Database, DbConnection};
+#[cfg(feature = "plus")]
+pub use heartbeat_tasks::HeartbeatTasks;
 #[cfg(feature = "plus")]
 pub use indexer::{IndexError, Indexer};
 #[cfg(feature = "plus")]

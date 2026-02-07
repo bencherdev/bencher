@@ -54,3 +54,5 @@ CREATE INDEX index_job_source_ip_running ON job(source_ip)
 WHERE status = 2;
 CREATE INDEX index_job_runner_id ON job(runner_id)
 WHERE runner_id IS NOT NULL;
+CREATE INDEX index_runner_token_hash ON runner(token_hash);
+CREATE INDEX index_job_report_id ON job(report_id);

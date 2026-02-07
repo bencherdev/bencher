@@ -62,9 +62,8 @@ impl QueryJob {
 
     /// Parse the job spec from JSON string.
     pub fn parse_spec(&self) -> Result<JsonJobSpec, HttpError> {
-        serde_json::from_str(&self.spec).map_err(|e| {
-            bad_request_error(format!("Failed to parse job spec: {e}"))
-        })
+        serde_json::from_str(&self.spec)
+            .map_err(|e| bad_request_error(format!("Failed to parse job spec: {e}")))
     }
 
     /// Convert to JSON for public API (spec is not included).
@@ -248,10 +247,9 @@ pub fn spawn_heartbeat_timeout(
                 ..Default::default()
             };
 
-            if let Err(e) =
-                diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                    .set(&update)
-                    .execute(&mut *conn)
+            if let Err(e) = diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+                .set(&update)
+                .execute(&mut *conn)
             {
                 slog::error!(log, "Failed to mark job as failed"; "job_id" => ?job_id, "error" => %e);
             }

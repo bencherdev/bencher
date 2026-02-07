@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
 use bencher_json::{
@@ -99,7 +99,7 @@ async fn claim_job_inner(
         .poll_timeout
         .unwrap_or(DEFAULT_POLL_TIMEOUT)
         .clamp(MIN_POLL_TIMEOUT, MAX_POLL_TIMEOUT);
-    let deadline = Instant::now() + Duration::from_secs(u64::from(poll_timeout));
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(u64::from(poll_timeout));
 
     loop {
         // Try to claim a job (connection is released when function returns)
@@ -108,7 +108,7 @@ async fn claim_job_inner(
         }
 
         // Check if we've exceeded the timeout
-        if Instant::now() >= deadline {
+        if tokio::time::Instant::now() >= deadline {
             return Ok(None);
         }
 
@@ -197,7 +197,10 @@ async fn try_claim_job(
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
 
             // Record queue duration (time from creation to claim)
-            #[expect(clippy::cast_precision_loss, reason = "queue duration in seconds fits in f64 mantissa")]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "queue duration in seconds fits in f64 mantissa"
+            )]
             let queue_duration_secs =
                 ((now.timestamp() - query_job.created.timestamp()) as f64).max(0.0);
             let tier = bencher_otel::PriorityTier::from_priority(query_job.priority);
@@ -321,6 +324,12 @@ async fn update_job_inner(
         .set(&job_update)
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Job, job))?;
+
+    // Cancel any pending heartbeat timeout for this job
+    if update_request.status.is_terminal() {
+        #[cfg(feature = "plus")]
+        context.heartbeat_tasks.cancel(&job.id);
+    }
 
     #[cfg(feature = "otel")]
     {
