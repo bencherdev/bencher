@@ -281,3 +281,78 @@ pub fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
         .first(&mut conn)
         .expect("Failed to get project ID")
 }
+
+/// Set the job status directly in the database (for testing state transitions).
+#[expect(clippy::expect_used)]
+pub fn set_job_status(server: &TestServer, job_uuid: JobUuid, status: JobStatus) {
+    let mut conn = server.db_conn();
+    diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+        .set(schema::job::status.eq(status))
+        .execute(&mut conn)
+        .expect("Failed to set job status");
+}
+
+/// Set the runner_id directly in the database (for testing preconditions).
+#[expect(clippy::expect_used)]
+pub fn set_job_runner_id(server: &TestServer, job_uuid: JobUuid, runner_id: i32) {
+    let mut conn = server.db_conn();
+    diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+        .set(schema::job::runner_id.eq(Some(runner_id)))
+        .execute(&mut conn)
+        .expect("Failed to set job runner_id");
+}
+
+/// Insert a test job with a specific created timestamp (for FIFO tiebreaker tests).
+#[expect(clippy::expect_used)]
+pub fn insert_test_job_with_timestamp(
+    server: &TestServer,
+    report_id: i32,
+    project_uuid: bencher_json::ProjectUuid,
+    organization_id: i32,
+    source_ip: &str,
+    priority: i32,
+    created: DateTime,
+) -> JobUuid {
+    let mut conn = server.db_conn();
+    let job_uuid = JobUuid::new();
+
+    let spec = serde_json::json!({
+        "registry": "https://registry.bencher.dev",
+        "project": project_uuid,
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "vcpu": 2,
+        "memory": 4294967296_u64,
+        "disk": 10737418240_u64,
+        "timeout": 3600,
+        "network": false
+    });
+
+    diesel::insert_into(schema::job::table)
+        .values((
+            schema::job::uuid.eq(&job_uuid),
+            schema::job::report_id.eq(report_id),
+            schema::job::organization_id.eq(organization_id),
+            schema::job::source_ip.eq(source_ip),
+            schema::job::status.eq(JobStatus::Pending),
+            schema::job::spec.eq(spec.to_string()),
+            schema::job::timeout.eq(3600),
+            schema::job::priority.eq(priority),
+            schema::job::created.eq(&created),
+            schema::job::modified.eq(&created),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert test job");
+
+    job_uuid
+}
+
+/// Get runner_id (as i32) from runner UUID.
+#[expect(clippy::expect_used)]
+pub fn get_runner_id(server: &TestServer, runner_uuid: bencher_json::RunnerUuid) -> i32 {
+    let mut conn = server.db_conn();
+    schema::runner::table
+        .filter(schema::runner::uuid.eq(runner_uuid))
+        .select(schema::runner::id)
+        .first(&mut conn)
+        .expect("Failed to get runner ID")
+}

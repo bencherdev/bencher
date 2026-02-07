@@ -9,7 +9,10 @@ mod common;
 
 use bencher_api_tests::TestServer;
 use bencher_json::{JsonJob, JsonUpdateJobResponse};
-use common::{create_runner, create_test_report, get_project_id, insert_test_job};
+use common::{
+    create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
+    set_job_runner_id, set_job_status,
+};
 use http::StatusCode;
 
 // POST /v0/runners/{runner}/jobs - claim job with valid token (no jobs available)
@@ -224,6 +227,49 @@ async fn test_claim_job_no_prefix_token() {
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
         .header("Authorization", "Bearer some_random_token_without_prefix")
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// POST /v0/runners/{runner}/jobs - correct prefix but wrong length rejected
+#[tokio::test]
+async fn test_claim_job_wrong_length_token() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "jobsadmin-wl@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Wrong Length Runner").await;
+
+    let body = serde_json::json!({
+        "poll_timeout": 1
+    });
+
+    // Token has the correct prefix but is too short (15 + 32 hex = 47 chars, not 79)
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header(
+            "Authorization",
+            "Bearer bencher_runner_00112233445566778899aabbccddeeff",
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+    // Token has the correct prefix but is too long (15 + 66 hex = 81 chars, not 79)
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header(
+            "Authorization",
+            "Bearer bencher_runner_00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffab",
+        )
         .json(&body)
         .send()
         .await
@@ -1853,6 +1899,490 @@ mod priority_scheduling {
         assert_eq!(
             claimed.uuid, free_unblocked,
             "Priority 100 from different org should be claimable"
+        );
+    }
+
+    // Test that jobs with identical timestamps are ordered deterministically by id
+    #[tokio::test]
+    async fn test_fifo_same_timestamp_tiebreaker() {
+        use common::insert_test_job_with_timestamp;
+
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "fifo-tie@example.com").await;
+        let org = server.create_org(&admin, "FIFO Tie Org").await;
+        let project = server
+            .create_project(&admin, &org, "FIFO Tie Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "FIFO Tie Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Use a single fixed timestamp for all jobs so the `created` column is identical.
+        let fixed_ts = bencher_json::DateTime::now();
+
+        // Insert 3 Enterprise-tier jobs with the exact same timestamp.
+        // They will get sequential database IDs.
+        let first_job = insert_test_job_with_timestamp(
+            &server, report_id, project.uuid, org_id, "10.0.0.1", 300, fixed_ts,
+        );
+        let second_job = insert_test_job_with_timestamp(
+            &server, report_id, project.uuid, org_id, "10.0.0.2", 300, fixed_ts,
+        );
+        let third_job = insert_test_job_with_timestamp(
+            &server, report_id, project.uuid, org_id, "10.0.0.3", 300, fixed_ts,
+        );
+
+        // Claim first - should be first_job (lowest id)
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(
+            claimed.uuid, first_job,
+            "Expected first inserted job (lowest id) to be claimed first"
+        );
+
+        // Complete the job
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, first_job
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, first_job
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim second - should be second_job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(
+            claimed.uuid, second_job,
+            "Expected second inserted job to be claimed second"
+        );
+
+        // Complete the second job
+        let body = serde_json::json!({ "status": "running" });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, second_job
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+        server
+            .client
+            .patch(server.api_url(&format!(
+                "/v0/runners/{}/jobs/{}",
+                runner.uuid, second_job
+            )))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        // Claim third - should be third_job
+        let body = serde_json::json!({ "poll_timeout": 1 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed = claimed.expect("Expected to claim a job");
+        assert_eq!(
+            claimed.uuid, third_job,
+            "Expected third inserted job to be claimed last"
+        );
+    }
+}
+
+// =============================================================================
+// Invalid State Transition Tests
+// =============================================================================
+//
+// These tests verify that all invalid PATCH transitions are rejected.
+
+mod invalid_transitions {
+    use super::*;
+    use bencher_json::JobStatus;
+
+    /// Helper: claim a job, transition to Running, then to a target terminal state.
+    /// Returns the job UUID after reaching `target_status`.
+    async fn setup_job_in_state(
+        server: &TestServer,
+        suffix: &str,
+        target_status: JobStatus,
+    ) -> (bencher_json::RunnerUuid, String, bencher_json::JobUuid) {
+        let admin = server
+            .signup("Admin", &format!("inv-{suffix}@example.com"))
+            .await;
+        let org = server
+            .create_org(&admin, &format!("Inv {suffix} Org"))
+            .await;
+        let project = server
+            .create_project(&admin, &org, &format!("Inv {suffix} Proj"))
+            .await;
+
+        let runner = create_runner(server, &admin.token, &format!("Inv {suffix} Runner")).await;
+        let runner_token: String = runner.token.as_ref().to_owned();
+
+        let project_id = get_project_id(server, project.slug.as_ref());
+        let report_id = create_test_report(server, project_id);
+        let job_uuid = insert_test_job(server, report_id);
+
+        // Claim the job
+        let body = serde_json::json!({ "poll_timeout": 5 });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK);
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        assert!(claimed.is_some());
+
+        match target_status {
+            JobStatus::Claimed => {},
+            JobStatus::Running => {
+                let body = serde_json::json!({ "status": "running" });
+                let resp = server
+                    .client
+                    .patch(server.api_url(&format!(
+                        "/v0/runners/{}/jobs/{}",
+                        runner.uuid, job_uuid
+                    )))
+                    .header("Authorization", format!("Bearer {runner_token}"))
+                    .json(&body)
+                    .send()
+                    .await
+                    .expect("Request failed");
+                assert_eq!(resp.status(), StatusCode::OK);
+            },
+            JobStatus::Completed => {
+                // Claimed -> Running -> Completed
+                let body = serde_json::json!({ "status": "running" });
+                server
+                    .client
+                    .patch(server.api_url(&format!(
+                        "/v0/runners/{}/jobs/{}",
+                        runner.uuid, job_uuid
+                    )))
+                    .header("Authorization", format!("Bearer {runner_token}"))
+                    .json(&body)
+                    .send()
+                    .await
+                    .expect("Request failed");
+                let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+                let resp = server
+                    .client
+                    .patch(server.api_url(&format!(
+                        "/v0/runners/{}/jobs/{}",
+                        runner.uuid, job_uuid
+                    )))
+                    .header("Authorization", format!("Bearer {runner_token}"))
+                    .json(&body)
+                    .send()
+                    .await
+                    .expect("Request failed");
+                assert_eq!(resp.status(), StatusCode::OK);
+            },
+            JobStatus::Failed => {
+                // Claimed -> Running -> Failed
+                let body = serde_json::json!({ "status": "running" });
+                server
+                    .client
+                    .patch(server.api_url(&format!(
+                        "/v0/runners/{}/jobs/{}",
+                        runner.uuid, job_uuid
+                    )))
+                    .header("Authorization", format!("Bearer {runner_token}"))
+                    .json(&body)
+                    .send()
+                    .await
+                    .expect("Request failed");
+                let body = serde_json::json!({ "status": "failed", "exit_code": 1 });
+                let resp = server
+                    .client
+                    .patch(server.api_url(&format!(
+                        "/v0/runners/{}/jobs/{}",
+                        runner.uuid, job_uuid
+                    )))
+                    .header("Authorization", format!("Bearer {runner_token}"))
+                    .json(&body)
+                    .send()
+                    .await
+                    .expect("Request failed");
+                assert_eq!(resp.status(), StatusCode::OK);
+            },
+            JobStatus::Canceled => {
+                // Use DB helper since there's no REST path to Canceled
+                let runner_id = get_runner_id(server, runner.uuid);
+                set_job_runner_id(server, job_uuid, runner_id);
+                set_job_status(server, job_uuid, JobStatus::Canceled);
+            },
+            JobStatus::Pending => unreachable!("Cannot setup a claimed job in Pending state"),
+        }
+
+        (runner.uuid, runner_token, job_uuid)
+    }
+
+    // Running -> Claimed (invalid: cannot go backwards)
+    #[tokio::test]
+    async fn test_job_invalid_transition_running_to_claimed() {
+        let server = TestServer::new().await;
+        let (runner_uuid, runner_token, job_uuid) =
+            setup_job_in_state(&server, "run2claim", JobStatus::Running).await;
+
+        let body = serde_json::json!({ "status": "claimed" });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}")))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // Completed -> Running (invalid: terminal state)
+    #[tokio::test]
+    async fn test_job_invalid_transition_completed_to_running() {
+        let server = TestServer::new().await;
+        let (runner_uuid, runner_token, job_uuid) =
+            setup_job_in_state(&server, "comp2run", JobStatus::Completed).await;
+
+        let body = serde_json::json!({ "status": "running" });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}")))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // Completed -> Failed (invalid: terminal to terminal)
+    #[tokio::test]
+    async fn test_job_invalid_transition_completed_to_failed() {
+        let server = TestServer::new().await;
+        let (runner_uuid, runner_token, job_uuid) =
+            setup_job_in_state(&server, "comp2fail", JobStatus::Completed).await;
+
+        let body = serde_json::json!({ "status": "failed" });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}")))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // Failed -> Running (invalid: terminal state)
+    #[tokio::test]
+    async fn test_job_invalid_transition_failed_to_running() {
+        let server = TestServer::new().await;
+        let (runner_uuid, runner_token, job_uuid) =
+            setup_job_in_state(&server, "fail2run", JobStatus::Failed).await;
+
+        let body = serde_json::json!({ "status": "running" });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}")))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // Failed -> Completed (invalid: terminal to terminal)
+    #[tokio::test]
+    async fn test_job_invalid_transition_failed_to_completed() {
+        let server = TestServer::new().await;
+        let (runner_uuid, runner_token, job_uuid) =
+            setup_job_in_state(&server, "fail2comp", JobStatus::Failed).await;
+
+        let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}")))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // Canceled -> Running (invalid: terminal state)
+    #[tokio::test]
+    async fn test_job_invalid_transition_canceled_to_running() {
+        let server = TestServer::new().await;
+        let (runner_uuid, runner_token, job_uuid) =
+            setup_job_in_state(&server, "cancel2run", JobStatus::Canceled).await;
+
+        let body = serde_json::json!({ "status": "running" });
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}")))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+}
+
+// =============================================================================
+// Poll Timeout Boundary Tests
+// =============================================================================
+
+mod poll_timeout_boundaries {
+    use super::*;
+
+    // poll_timeout: 0 should be clamped to MIN_POLL_TIMEOUT (1 second)
+    #[tokio::test]
+    async fn test_poll_timeout_zero_clamps_to_min() {
+        let server = TestServer::new().await;
+        let admin = server
+            .signup("Admin", "poll-zero@example.com")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Poll Zero Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let body = serde_json::json!({ "poll_timeout": 0 });
+        let start = std::time::Instant::now();
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let elapsed = start.elapsed();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body: Option<serde_json::Value> = resp.json().await.expect("Failed to parse");
+        assert!(body.is_none());
+
+        // Clamped to 1s, so should wait at least 1 second
+        assert!(
+            elapsed >= std::time::Duration::from_secs(1),
+            "Expected at least 1s (clamped from 0), got {elapsed:?}"
+        );
+        // Should not take too long
+        assert!(
+            elapsed < std::time::Duration::from_secs(3),
+            "Expected less than 3s, got {elapsed:?}"
+        );
+    }
+
+    // poll_timeout: 61 with a job available should return immediately (clamped to 60)
+    #[tokio::test]
+    async fn test_poll_timeout_exceeds_max() {
+        let server = TestServer::new().await;
+        let admin = server
+            .signup("Admin", "poll-max@example.com")
+            .await;
+        let org = server.create_org(&admin, "Poll Max Org").await;
+        let project = server
+            .create_project(&admin, &org, "Poll Max Project")
+            .await;
+
+        let runner = create_runner(&server, &admin.token, "Poll Max Runner").await;
+        let runner_token: &str = runner.token.as_ref();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let report_id = create_test_report(&server, project_id);
+        let _job_uuid = insert_test_job(&server, report_id);
+
+        let body = serde_json::json!({ "poll_timeout": 61 });
+        let start = std::time::Instant::now();
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let elapsed = start.elapsed();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        assert!(claimed.is_some(), "Expected to claim a job");
+
+        // Job was available, so should return immediately regardless of poll_timeout
+        assert!(
+            elapsed < std::time::Duration::from_secs(5),
+            "Expected immediate return when job is available, got {elapsed:?}"
         );
     }
 }

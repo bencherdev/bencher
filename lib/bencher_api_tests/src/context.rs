@@ -105,6 +105,7 @@ impl TestServer {
             )
             .expect("Failed to create OCI storage"),
             heartbeat_timeout: std::time::Duration::from_secs(5),
+            heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
         };
         #[cfg(not(feature = "plus"))]
         let context = ApiContext {

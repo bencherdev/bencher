@@ -1,6 +1,8 @@
 #![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for runner CRUD endpoints.
 
+mod common;
+
 use bencher_api_tests::TestServer;
 use bencher_json::{JsonRunner, JsonRunnerToken, runner::JsonRunners};
 use http::StatusCode;
@@ -396,5 +398,54 @@ async fn test_runners_total_count_header() {
     assert!(
         count >= 2,
         "Expected at least 2 runners in X-Total-Count, got {count}"
+    );
+}
+
+// DELETE runner with active jobs should fail due to FK constraint (ON DELETE RESTRICT)
+#[tokio::test]
+async fn test_runner_delete_restricted_by_fk() {
+    use bencher_schema::schema;
+    use common::{create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "fkconstraint@example.com").await;
+    let org = server.create_org(&admin, "FK Constraint Org").await;
+    let project = server
+        .create_project(&admin, &org, "FK Constraint Project")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "FK Constraint Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let _job_uuid = insert_test_job(&server, report_id);
+
+    // Claim the job so runner_id is set
+    let body = serde_json::json!({ "poll_timeout": 5 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let claimed: Option<bencher_json::JsonJob> = resp.json().await.expect("Failed to parse");
+    assert!(claimed.is_some());
+
+    // Try to delete the runner directly in the DB — should fail due to ON DELETE RESTRICT
+    let runner_id = get_runner_id(&server, runner.uuid);
+    let mut conn = server.db_conn();
+    let result = diesel::delete(
+        schema::runner::table.filter(schema::runner::id.eq(runner_id)),
+    )
+    .execute(&mut conn);
+
+    assert!(
+        result.is_err(),
+        "Expected FK constraint to prevent runner deletion while jobs reference it"
     );
 }
