@@ -4,7 +4,8 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseOk};
 use bencher_json::{
-    DateTime, JobPriority, JobStatus, JsonClaimJob, JsonClaimedJob, JsonSpec, RunnerResourceId,
+    DEFAULT_POLL_TIMEOUT, DateTime, JobPriority, JobStatus, JsonClaimJob, JsonClaimedJob, JsonSpec,
+    RunnerResourceId,
 };
 use bencher_schema::{
     context::ApiContext,
@@ -39,8 +40,6 @@ const PRIORITY_FREE: JobPriority = JobPriority::Free;
 
 /// Poll interval for long-polling (1 second)
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
-/// Default poll timeout (30 seconds)
-const DEFAULT_POLL_TIMEOUT: u32 = 30;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerJobsParams {

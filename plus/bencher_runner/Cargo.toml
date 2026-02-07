@@ -9,6 +9,7 @@ publish = false
 [features]
 default = []
 plus = [
+    "dep:bencher_json",
     "dep:bencher_oci",
     "dep:bencher_rootfs",
     "dep:camino",
@@ -26,6 +27,7 @@ plus = [
 ]
 
 [dependencies]
+bencher_json = { workspace = true, optional = true }
 bencher_oci = { workspace = true, optional = true }
 bencher_rootfs = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }

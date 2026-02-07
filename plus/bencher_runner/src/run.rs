@@ -66,17 +66,19 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     let _tuning_guard = crate::tuning::apply(&args.tuning);
 
     // Build config from args
-    let config = crate::Config {
-        oci_image: args.image.clone(),
-        token: args.token.clone(),
-        kernel: None,
-        cache_dir: None,
-        vcpus: args.vcpus,
-        memory_mib: args.memory_mib,
-        kernel_cmdline: "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init"
-            .to_owned(),
-        timeout_secs: args.timeout_secs,
-        output_file: args.output_file.clone(),
+    let config = crate::Config::new(args.image.clone())
+        .with_vcpus(args.vcpus)
+        .with_memory_mib(args.memory_mib)
+        .with_timeout_secs(args.timeout_secs);
+    let config = if let Some(ref token) = args.token {
+        config.with_token(token.clone())
+    } else {
+        config
+    };
+    let config = if let Some(ref output_file) = args.output_file {
+        config.with_output_file(output_file.clone())
+    } else {
+        config
     };
 
     let output = execute(&config)?;
@@ -155,7 +157,7 @@ pub fn resolve_oci_image(
 
     let mut client = if let Some(t) = token {
         println!("  Using authenticated client");
-        bencher_oci::RegistryClient::with_token(t.to_owned())?
+        bencher_oci::RegistryClient::with_token(t)?
     } else {
         println!("  Using anonymous client");
         bencher_oci::RegistryClient::new()?
@@ -260,8 +262,8 @@ pub fn execute(config: &crate::Config) -> Result<String, RunnerError> {
     install_init_binary(&unpack_dir)?;
 
     // Step 6: Create ext4 rootfs
-    println!("Creating ext4 at {rootfs_path}...");
-    bencher_rootfs::create_ext4(&unpack_dir, &rootfs_path)?;
+    println!("Creating ext4 at {rootfs_path} ({} MiB)...", config.disk_mib);
+    bencher_rootfs::create_ext4_with_size(&unpack_dir, &rootfs_path, u64::from(config.disk_mib))?;
 
     // Step 7: Find Firecracker binary - use bundled or find on system
     let firecracker_bin = if crate::firecracker_bin::FIRECRACKER_BUNDLED {

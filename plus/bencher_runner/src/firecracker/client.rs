@@ -175,9 +175,10 @@ fn response_complete(data: &[u8]) -> bool {
 
     let headers = String::from_utf8_lossy(&data[..header_end]);
 
-    // Check for Content-Length
+    // Check for Content-Length (case-insensitive)
     for line in headers.lines() {
-        if let Some(value) = line.strip_prefix("Content-Length:") {
+        let lower = line.to_ascii_lowercase();
+        if let Some(value) = lower.strip_prefix("content-length:") {
             if let Ok(len) = value.trim().parse::<usize>() {
                 let body_start = header_end + 4; // Skip \r\n\r\n
                 return data.len() >= body_start + len;

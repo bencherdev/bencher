@@ -1436,6 +1436,7 @@ name = "bencher_oci"
 version = "0.5.10"
 dependencies = [
  "base64 0.22.1",
+ "bencher_valid",
  "camino",
  "flate2",
  "oci-spec",
@@ -1556,6 +1557,7 @@ dependencies = [
 name = "bencher_runner"
 version = "0.5.10"
 dependencies = [
+ "bencher_json",
  "bencher_oci",
  "bencher_rootfs",
  "camino",

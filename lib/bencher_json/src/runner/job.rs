@@ -65,6 +65,14 @@ pub struct JsonJobOutput {
     pub output: Option<HashMap<Utf8PathBuf, String>>,
 }
 
+/// Default poll timeout in seconds for job claiming long-poll.
+pub const DEFAULT_POLL_TIMEOUT: u32 = 30;
+/// Minimum poll timeout in seconds.
+pub const MIN_POLL_TIMEOUT: u32 = 1;
+/// Maximum poll timeout in seconds.
+pub const MAX_POLL_TIMEOUT: u32 = 60;
+
+
 /// Request to claim a job (runner agent endpoint)
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]

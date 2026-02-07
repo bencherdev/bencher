@@ -22,11 +22,13 @@ plus = [
 registry = [
     "plus",
     "dep:base64",
+    "dep:bencher_valid",
     "dep:ureq",
 ]
 
 [dependencies]
 base64 = { workspace = true, optional = true }
+bencher_valid = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
 oci-spec = { workspace = true, optional = true }

@@ -133,7 +133,7 @@ pub struct RegistryClient {
     agent: ureq::Agent,
 
     /// Base JWT token for authentication (provided at startup).
-    base_token: Option<String>,
+    base_token: Option<bencher_valid::Secret>,
 
     /// Cached bearer tokens per scope.
     bearer_tokens: HashMap<String, String>,
@@ -156,9 +156,12 @@ impl RegistryClient {
     }
 
     /// Create a new registry client with a JWT token for authentication.
-    pub fn with_token(token: String) -> Result<Self, OciError> {
+    pub fn with_token(token: &str) -> Result<Self, OciError> {
         let mut client = Self::new()?;
-        client.base_token = Some(token);
+        client.base_token = token
+            .parse()
+            .map_err(|e| OciError::Registry(format!("Invalid token: {e}")))
+            .ok();
         Ok(client)
     }
 
@@ -410,7 +413,8 @@ impl RegistryClient {
 
         // If we have a base token, use it as Basic auth password
         if let Some(base_token) = &self.base_token {
-            let credentials = BASE64_STANDARD.encode(format!("_token:{base_token}"));
+            let credentials =
+                BASE64_STANDARD.encode(format!("_token:{}", base_token.as_ref()));
             request = request.header("Authorization", &format!("Basic {credentials}"));
         }
 
