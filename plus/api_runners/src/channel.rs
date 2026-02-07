@@ -275,7 +275,7 @@ async fn handle_running(
 
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(write_conn!(context))
+        .first(auth_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
 
     match job.status {
@@ -369,7 +369,7 @@ async fn handle_completed(
     // Validate state transition: only Running -> Completed is valid
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(write_conn!(context))
+        .first(auth_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
 
     if job.status != JobStatus::Running {
@@ -416,7 +416,7 @@ async fn handle_failed(
     // Validate state transition: Claimed -> Failed or Running -> Failed
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(write_conn!(context))
+        .first(auth_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
 
     if !matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
@@ -458,7 +458,7 @@ async fn handle_cancelled(
 
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(write_conn!(context))
+        .first(auth_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
 
     // If already canceled, just acknowledge

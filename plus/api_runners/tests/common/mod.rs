@@ -27,7 +27,14 @@ pub const TEST_SOURCE_IP: &str = "127.0.0.1";
 /// Uses a default organization_id of 1 and source_ip of "127.0.0.1".
 #[expect(clippy::expect_used)]
 pub fn insert_test_job(server: &TestServer, report_id: i32) -> JobUuid {
-    insert_test_job_full(server, report_id, bencher_json::ProjectUuid::new(), 1, TEST_SOURCE_IP, 0)
+    insert_test_job_full(
+        server,
+        report_id,
+        bencher_json::ProjectUuid::new(),
+        1,
+        TEST_SOURCE_IP,
+        0,
+    )
 }
 
 /// Insert a test job with a specific project UUID. Returns the job UUID.

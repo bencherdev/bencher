@@ -405,7 +405,9 @@ async fn test_runners_total_count_header() {
 #[tokio::test]
 async fn test_runner_delete_restricted_by_fk() {
     use bencher_schema::schema;
-    use common::{create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job};
+    use common::{
+        create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
+    };
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     let server = TestServer::new().await;
@@ -439,10 +441,8 @@ async fn test_runner_delete_restricted_by_fk() {
     // Try to delete the runner directly in the DB — should fail due to ON DELETE RESTRICT
     let runner_id = get_runner_id(&server, runner.uuid);
     let mut conn = server.db_conn();
-    let result = diesel::delete(
-        schema::runner::table.filter(schema::runner::id.eq(runner_id)),
-    )
-    .execute(&mut conn);
+    let result = diesel::delete(schema::runner::table.filter(schema::runner::id.eq(runner_id)))
+        .execute(&mut conn);
 
     assert!(
         result.is_err(),

@@ -88,7 +88,8 @@ pub fn is_valid_image_digest(digest: &str) -> bool {
     }
 
     // Must be all lowercase hexadecimal
-    hash.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+    hash.bytes()
+        .all(|b| b.is_ascii_digit() || matches!(b, b'a'..=b'f'))
 }
 
 #[cfg(test)]
@@ -117,6 +118,8 @@ mod tests {
             "0000000000000000000000000000000000000000000000000000000000000000",
             // Uppercase not allowed
             "sha256:ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789",
+            // Mixed case not allowed
+            "sha256:ABCDEf0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
             // Too short
             "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b85",
             // Too long

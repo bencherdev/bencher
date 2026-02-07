@@ -70,9 +70,7 @@ where
 {
     fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
         let s = <String as FromSql<Text, DB>>::from_sql(bytes)?;
-        s.parse::<IpAddr>()
-            .map(Self)
-            .map_err(Into::into)
+        s.parse::<IpAddr>().map(Self).map_err(Into::into)
     }
 }
 

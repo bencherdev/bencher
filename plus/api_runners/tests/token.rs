@@ -192,7 +192,10 @@ async fn test_concurrent_token_rotation() {
     assert_ne!(t2, original_str, "Token 2 should differ from original");
 
     // The two tokens should differ from each other
-    assert_ne!(t1, t2, "Concurrent rotations should produce different tokens");
+    assert_ne!(
+        t1, t2,
+        "Concurrent rotations should produce different tokens"
+    );
 
     // Verify only one of the two tokens works for auth (the last writer wins)
     // We can't predict which one, but exactly one should authenticate.

@@ -8,16 +8,14 @@ use bencher_json::{JobStatus, JobUuid, JsonJob, RunnerUuid};
 use bencher_schema::schema;
 use common::{
     create_runner, create_test_report, get_project_id, insert_test_job,
-    insert_test_job_with_optional_fields,
+    insert_test_job_with_optional_fields, set_job_status,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::{
-    Message,
-    client::IntoClientRequest as _,
-    protocol::WebSocketConfig,
+    Message, client::IntoClientRequest as _, protocol::WebSocketConfig,
 };
 
 // ---- Message types matching the server definitions ----
@@ -162,13 +160,14 @@ async fn recv_msg(ws: &mut WsStream) -> ServerMessage {
 /// the connection is reset without a proper close handshake, which manifests as
 /// `Some(Err(_))` rather than `None` or `Some(Ok(Message::Close(_)))`.
 async fn assert_ws_closed(ws: &mut WsStream) {
-    // Give the server a moment to close the connection
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    match ws.next().await {
-        None => {},                        // Stream ended
-        Some(Ok(Message::Close(_))) => {}, // Explicit close frame
-        Some(Err(_)) => {},                // Connection reset (e.g. handler error)
-        Some(Ok(other)) => panic!("Expected stream to be closed, got: {other:?}"),
+    // Wait up to 1 second for the server to close the connection
+    let result = tokio::time::timeout(std::time::Duration::from_secs(1), ws.next()).await;
+    match result {
+        Err(_timeout) => panic!("WebSocket was not closed within 1 second"),
+        Ok(None) => {},                        // Stream ended
+        Ok(Some(Ok(Message::Close(_)))) => {}, // Explicit close frame
+        Ok(Some(Err(_))) => {},                // Connection reset
+        Ok(Some(Ok(other))) => panic!("Expected stream to be closed, got: {other:?}"),
     }
 }
 
@@ -181,16 +180,6 @@ fn get_job_status(server: &TestServer, job_uuid: JobUuid) -> JobStatus {
         .select(schema::job::status)
         .first(&mut conn)
         .expect("Failed to get job status")
-}
-
-/// Set the job status directly in the database (for testing cancellation).
-#[expect(clippy::expect_used)]
-fn set_job_status(server: &TestServer, job_uuid: JobUuid, status: JobStatus) {
-    let mut conn = server.db_conn();
-    diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
-        .set(schema::job::status.eq(status))
-        .execute(&mut conn)
-        .expect("Failed to set job status");
 }
 
 // =============================================================================
@@ -526,9 +515,7 @@ async fn test_channel_ping_pong() {
 #[tokio::test]
 async fn test_channel_lifecycle_with_full_spec() {
     let server = TestServer::new().await;
-    let admin = server
-        .signup("Admin", "ws-fullspec@example.com")
-        .await;
+    let admin = server.signup("Admin", "ws-fullspec@example.com").await;
     let org = server.create_org(&admin, "Ws fullspec").await;
     let project = server
         .create_project(&admin, &org, "Ws fullspec proj")

@@ -43,11 +43,8 @@ impl HeartbeatTasks {
 mod tests {
     use super::*;
 
-    /// Create a `JobId` from a raw i32 for testing purposes.
-    /// Safety: `JobId` is a newtype wrapper around `i32` with identical layout.
     fn job_id(raw: i32) -> JobId {
-        // SAFETY: JobId is #[repr(transparent)]-equivalent (single-field newtype of i32).
-        unsafe { std::mem::transmute::<i32, JobId>(raw) }
+        JobId::from_raw(raw)
     }
 
     /// Spawn a task that sleeps forever and register it in the tracker.
@@ -83,7 +80,10 @@ mod tests {
         let id = job_id(2);
 
         let handle = spawn_sleeper(&tasks, id);
-        assert!(!handle.is_finished(), "Task should be running before cancel");
+        assert!(
+            !handle.is_finished(),
+            "Task should be running before cancel"
+        );
 
         tasks.cancel(&id);
         // Give tokio a moment to propagate the abort.
